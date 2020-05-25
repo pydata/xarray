@@ -74,57 +74,6 @@ def check_result_variables(
         )
 
 
-def subset_dataset_to_block(
-    graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
-):
-    """
-    Creates a task that creates a subsets xarray dataset to a block determined by chunk_index;
-    whose extents are determined by input_chunk_bounds.
-    There are subtasks that create subsets of constituent variables.
-
-    TODO: This is modifying graph in-place!
-    """
-
-    # this will become [[name1, variable1],
-    #                     [name2, variable2],
-    #                     ...]
-    # which is passed to dict and then to Dataset
-    data_vars = []
-    coords = []
-
-    chunk_tuple = tuple(chunk_index.values())
-    for name, variable in dataset.variables.items():
-        # make a task that creates tuple of (dims, chunk)
-        if dask.is_dask_collection(variable.data):
-            # recursively index into dask_keys nested list to get chunk
-            chunk = variable.__dask_keys__()
-            for dim in variable.dims:
-                chunk = chunk[chunk_index[dim]]
-
-            chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + chunk_tuple
-            graph[chunk_variable_task] = (tuple, [variable.dims, chunk, variable.attrs])
-        else:
-            # non-dask array with possibly chunked dimensions
-            # index into variable appropriately
-            subsetter = {
-                dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
-                for dim in variable.dims
-            }
-            subset = variable.isel(subsetter)
-            chunk_variable_task = (
-                "{}-{}".format(gname, dask.base.tokenize(subset)),
-            ) + chunk_tuple
-            graph[chunk_variable_task] = (tuple, [subset.dims, subset, subset.attrs])
-
-        # this task creates dict mapping variable name to above tuple
-        if name in dataset._coord_names:
-            coords.append([name, chunk_variable_task])
-        else:
-            data_vars.append([name, chunk_variable_task])
-
-    return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
-
-
 def dataset_to_dataarray(obj: Dataset) -> DataArray:
     if not isinstance(obj, Dataset):
         raise TypeError("Expected Dataset, got %s" % type(obj))
@@ -213,55 +162,6 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
         which_chunk = chunk_index[dim]
         return slice(chunk_bounds[dim][which_chunk], chunk_bounds[dim][which_chunk + 1])
     return slice(None)
-
-
-def _wrapper(
-    func: Callable,
-    args: List,
-    kwargs: dict,
-    arg_is_array: Iterable[bool],
-    expected: dict,
-):
-    """
-    Wrapper function that receives datasets in args; converts to dataarrays when necessary;
-    passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
-    """
-
-    check_shapes = dict(args[0].dims)
-    check_shapes.update(expected["shapes"])
-
-    converted_args = [
-        dataset_to_dataarray(arg) if is_array else arg
-        for is_array, arg in zip(arg_is_array, args)
-    ]
-
-    result = func(*converted_args, **kwargs)
-
-    # check all dims are present
-    missing_dimensions = set(expected["shapes"]) - set(result.sizes)
-    if missing_dimensions:
-        raise ValueError(f"Dimensions {missing_dimensions} missing on returned object.")
-
-    # check that index lengths and values are as expected
-    for name, index in result.indexes.items():
-        if name in check_shapes:
-            if len(index) != check_shapes[name]:
-                raise ValueError(
-                    f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
-                )
-        if name in expected["indexes"]:
-            expected_index = expected["indexes"][name]
-            if not index.equals(expected_index):
-                raise ValueError(
-                    f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
-                )
-
-    # check that all expected variables were returned
-    check_result_variables(result, expected, "coords")
-    if isinstance(result, Dataset):
-        check_result_variables(result, expected, "data_vars")
-
-    return make_dict(result)
 
 
 def map_blocks(
@@ -371,6 +271,56 @@ def map_blocks(
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
+    def _wrapper(
+        func: Callable,
+        args: List,
+        kwargs: dict,
+        arg_is_array: Iterable[bool],
+        expected: dict,
+    ):
+        """
+        Wrapper function that receives datasets in args; converts to dataarrays when necessary;
+        passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
+        """
+
+        check_shapes = dict(args[0].dims)
+        check_shapes.update(expected["shapes"])
+
+        converted_args = [
+            dataset_to_dataarray(arg) if is_array else arg
+            for is_array, arg in zip(arg_is_array, args)
+        ]
+
+        result = func(*converted_args, **kwargs)
+
+        # check all dims are present
+        missing_dimensions = set(expected["shapes"]) - set(result.sizes)
+        if missing_dimensions:
+            raise ValueError(
+                f"Dimensions {missing_dimensions} missing on returned object."
+            )
+
+        # check that index lengths and values are as expected
+        for name, index in result.indexes.items():
+            if name in check_shapes:
+                if len(index) != check_shapes[name]:
+                    raise ValueError(
+                        f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
+                    )
+            if name in expected["indexes"]:
+                expected_index = expected["indexes"][name]
+                if not index.equals(expected_index):
+                    raise ValueError(
+                        f"Expected index {name!r} to be {expected_index!r}. Received {index!r} instead."
+                    )
+
+        # check that all expected variables were returned
+        check_result_variables(result, expected, "coords")
+        if isinstance(result, Dataset):
+            check_result_variables(result, expected, "data_vars")
+
+        return make_dict(result)
+
     if template is not None and not isinstance(template, (DataArray, Dataset)):
         raise TypeError(
             f"template must be a DataArray or Dataset. Received {type(template).__name__} instead."
@@ -473,6 +423,62 @@ def map_blocks(
     output_chunk_bounds = {
         dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in output_chunks.items()
     }
+
+    def subset_dataset_to_block(
+        graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
+    ):
+        """
+        Creates a task that creates a subsets xarray dataset to a block determined by chunk_index;
+        whose extents are determined by input_chunk_bounds.
+        There are subtasks that create subsets of constituent variables.
+
+        TODO: This is modifying graph in-place!
+        """
+
+        # this will become [[name1, variable1],
+        #                     [name2, variable2],
+        #                     ...]
+        # which is passed to dict and then to Dataset
+        data_vars = []
+        coords = []
+
+        chunk_tuple = tuple(chunk_index.values())
+        for name, variable in dataset.variables.items():
+            # make a task that creates tuple of (dims, chunk)
+            if dask.is_dask_collection(variable.data):
+                # recursively index into dask_keys nested list to get chunk
+                chunk = variable.__dask_keys__()
+                for dim in variable.dims:
+                    chunk = chunk[chunk_index[dim]]
+
+                chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + chunk_tuple
+                graph[chunk_variable_task] = (
+                    tuple,
+                    [variable.dims, chunk, variable.attrs],
+                )
+            else:
+                # non-dask array with possibly chunked dimensions
+                # index into variable appropriately
+                subsetter = {
+                    dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
+                    for dim in variable.dims
+                }
+                subset = variable.isel(subsetter)
+                chunk_variable_task = (
+                    "{}-{}".format(gname, dask.base.tokenize(subset)),
+                ) + chunk_tuple
+                graph[chunk_variable_task] = (
+                    tuple,
+                    [subset.dims, subset, subset.attrs],
+                )
+
+            # this task creates dict mapping variable name to above tuple
+            if name in dataset._coord_names:
+                coords.append([name, chunk_variable_task])
+            else:
+                data_vars.append([name, chunk_variable_task])
+
+        return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
 
     # iterate over all possible chunk combinations
     for chunk_tuple in itertools.product(*ichunk.values()):
