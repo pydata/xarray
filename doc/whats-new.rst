@@ -63,6 +63,8 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
+- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`). 
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
   returns the days in the month each datetime in the index.  Now days in month
