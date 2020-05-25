@@ -817,6 +817,8 @@ def test_vectorize_dask():
     )
     assert_identical(expected, actual)
 
+with raises_regex(TypeError, "Only xr.DataArray is supported"):
+    xr.corr(xr.Dataset(), xr.Dataset())
 
 def arrays_w_tuples():
     da = xr.DataArray(
