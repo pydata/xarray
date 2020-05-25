@@ -1088,6 +1088,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Returns
     -------
     covariance: DataArray
+    
     See also
     --------
     pandas.Series.cov: corresponding pandas function
@@ -1156,6 +1157,7 @@ def corr(da_a, da_b, dim=None):
     Returns
     -------
     correlation: DataArray
+
     See also
     --------
     pandas.Series.corr: corresponding pandas function
@@ -1217,15 +1219,16 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-    da_a = da_a.where(valid_values)
-    da_b = da_b.where(valid_values)
+
+    if not valid_values.all():
+        da_a = da_a.where(valid_values)
+        da_b = da_b.where(valid_values)
+
     valid_count = valid_values.sum(dim) - ddof
 
-    # 3. Compute mean and standard deviation along the given dim
+    # 3. Detrend along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
     demeaned_da_b = da_b - da_b.mean(dim=dim)
-    da_a_std = da_a.std(dim=dim)
-    da_b_std = da_b.std(dim=dim)
 
     # 4. Compute covariance along the given dim
     # N.B. `skipna=False` is required or there is a bug when computing
@@ -1237,7 +1240,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return cov
 
     else:
-        # compute corr
+        # compute std + corr
+        da_a_std = da_a.std(dim=dim)
+        da_b_std = da_b.std(dim=dim)
         corr = cov / (da_a_std * da_b_std)
         return corr
 
