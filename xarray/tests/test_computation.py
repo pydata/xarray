@@ -828,8 +828,6 @@ def arrays_w_tuples():
     arrays = [
         da.isel(time=range(0, 18)),
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
-        #xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"),
-        #xr.DataArray([1, 1, np.nan, 2, np.nan, 3, 5, 4, 6, np.nan, 7], dims="time"),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
     ]
@@ -841,9 +839,6 @@ def arrays_w_tuples():
         (arrays[2], arrays[2]),
         (arrays[2], arrays[3]),
         (arrays[3], arrays[3]),
-        #(arrays[4], arrays[4]),
-        #(arrays[4], arrays[5]),
-        #(arrays[5], arrays[5]),
     ]
 
     return arrays, array_tuples
