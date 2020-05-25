@@ -1125,6 +1125,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
     from .dataarray import DataArray
+
     if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
@@ -1189,6 +1190,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
     * space    (space) <U2 'IA' 'IL' 'IN'
     """
     from .dataarray import DataArray
+
     if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
         raise TypeError(
             "Only xr.DataArray and xr.Variable are supported."
