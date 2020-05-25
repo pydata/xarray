@@ -24,7 +24,7 @@ from typing import (
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .alignment import broadcast, deep_align
+from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
 from .pycompat import dask_array_type
@@ -1072,6 +1072,7 @@ def apply_ufunc(
 def cov(da_a, da_b, dim=None, ddof=1):
     """
     Compute covariance between two DataArray objects along a shared dimension.
+
     Parameters
     ----------
     da_a: DataArray (or Variable) object
@@ -1082,6 +1083,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
         The dimension along which the covariance will be computed
     ddof: int
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate.
+        
     Returns
     -------
     covariance: DataArray
@@ -1089,6 +1091,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     --------
     pandas.Series.cov: corresponding pandas function
     xr.corr: respective function to calculate correlation
+
     Examples
     --------
     >>> da_a = DataArray(np.random.random((3, 5)),
@@ -1126,19 +1129,20 @@ def cov(da_a, da_b, dim=None, ddof=1):
     """
     from .dataarray import DataArray
 
-    if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
+    if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
-            "Only xr.DataArray and xr.Variable are supported."
+            "Only xr.DataArray is supported."
             "Given {}.".format([type(arr) for arr in [da_a, da_b]])
         )
 
     return _cov_corr(da_a, da_b, dim=dim, ddof=ddof, method="cov")
 
 
-def corr(da_a, da_b, dim=None, ddof=0):
+def corr(da_a, da_b, dim=None):
     """
     Compute the Pearson correlation coefficient between
     two DataArray objects along a shared dimension.
+
     Parameters
     ----------
     da_a: DataArray (or Variable) object
@@ -1147,6 +1151,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
         Array to compute.
     dim: str, optional
         The dimension along which the correlation will be computed
+
     Returns
     -------
     correlation: DataArray
@@ -1154,6 +1159,7 @@ def corr(da_a, da_b, dim=None, ddof=0):
     --------
     pandas.Series.corr: corresponding pandas function
     xr.cov: underlying covariance function
+
     Examples
     --------
     >>> da_a = DataArray(np.random.random((3, 5)),
@@ -1191,9 +1197,9 @@ def corr(da_a, da_b, dim=None, ddof=0):
     """
     from .dataarray import DataArray
 
-    if any(not isinstance(arr, (Variable, DataArray)) for arr in [da_a, da_b]):
+    if any(not isinstance(arr, DataArray) for arr in [da_a, da_b]):
         raise TypeError(
-            "Only xr.DataArray and xr.Variable are supported."
+            "Only xr.DataArray is supported."
             "Given {}.".format([type(arr) for arr in [da_a, da_b]])
         )
 
@@ -1208,7 +1214,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     from .dataarray import DataArray
 
     # 1. Broadcast the two arrays
-    da_a, da_b = broadcast(da_a, da_b)
+    da_a, da_b = align(da_a, da_b, join="inner", copy=False)
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
@@ -1229,12 +1235,12 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
 
     if method == "cov":
-        return DataArray(cov)
+        return cov
 
     else:
         # compute corr
         corr = cov / (da_a_std * da_b_std)
-        return DataArray(corr)
+        return corr
 
 
 def dot(*arrays, dims=None, **kwargs):
