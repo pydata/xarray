@@ -74,6 +74,15 @@ instance, we can create the same dates and DataArray we created above using:
     dates = xr.cftime_range(start="0001", periods=24, freq="MS", calendar="noleap")
     da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
+Mirroring pandas' method with the same name, :py:meth:`~xarray.infer_freq` allows to
+infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
+:py:class:`~xarray.DataArray` containing cftime objects. It also works tranparently with
+``np.datetime64[ns]`` and ``np.timedelta64[ns]`` data.
+
+.. ipython:: python
+
+    xr.infer_freq(dates)
+
 With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
 the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
 :py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
