@@ -34,6 +34,8 @@ from xarray.tests import (
     source_ndarray,
 )
 
+from .test_dask import raise_if_dask_computes
+
 
 class TestDataArray:
     @pytest.fixture(autouse=True)
@@ -2161,9 +2163,6 @@ class TestDataArray:
         with pytest.raises(ValueError):
             da.transpose("x", "y")
 
-        with pytest.warns(FutureWarning):
-            da.transpose()
-
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
 
@@ -2752,9 +2751,6 @@ class TestDataArray:
                 lambda x: x.squeeze()
             )["c"]
             assert result.dims == expected_dims
-
-        with pytest.warns(FutureWarning):
-            array.groupby("x").map(lambda x: x.squeeze())
 
     def test_groupby_first_and_last(self):
         array = DataArray([1, 2, 3, 4, 5], dims="x")
@@ -4530,10 +4526,20 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    def test_idxmin(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask and x.dtype.kind == "M":
+            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
+        ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -4626,10 +4632,20 @@ class TestReduce1D(TestReduce):
         result7 = ar0.idxmin(fill_value=-1j)
         assert_identical(result7, expected7)
 
-    def test_idxmax(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask and x.dtype.kind == "M":
+            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
+        ar0_raw = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         # dim doesn't exist
         with pytest.raises(KeyError):
@@ -4950,13 +4966,30 @@ class TestReduce2D(TestReduce):
 
         assert_identical(result3, expected2)
 
-    def test_idxmin(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask and x.dtype.kind == "M":
+            pytest.xfail("dask operation 'argmin' breaks when dtype is datetime64 (M)")
+
+        if x.dtype.kind == "O":
+            # TODO: nanops._nan_argminmax_object computes once to check for all-NaN slices.
+            max_computes = 1
+        else:
+            max_computes = 0
+
+        ar0_raw = xr.DataArray(
             x,
             dims=["y", "x"],
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         assert_identical(ar0, ar0)
 
@@ -4988,15 +5021,18 @@ class TestReduce2D(TestReduce):
         expected0.name = "x"
 
         # Default fill value (NaN)
-        result0 = ar0.idxmin(dim="x")
+        with raise_if_dask_computes(max_computes=max_computes):
+            result0 = ar0.idxmin(dim="x")
         assert_identical(result0, expected0)
 
         # Manually specify NaN fill_value
-        result1 = ar0.idxmin(dim="x", fill_value=np.NaN)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result1 = ar0.idxmin(dim="x", fill_value=np.NaN)
         assert_identical(result1, expected0)
 
         # keep_attrs
-        result2 = ar0.idxmin(dim="x", keep_attrs=True)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result2 = ar0.idxmin(dim="x", keep_attrs=True)
         expected2 = expected0.copy()
         expected2.attrs = self.attrs
         assert_identical(result2, expected2)
@@ -5014,11 +5050,13 @@ class TestReduce2D(TestReduce):
         expected3.name = "x"
         expected3.attrs = {}
 
-        result3 = ar0.idxmin(dim="x", skipna=False)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result3 = ar0.idxmin(dim="x", skipna=False)
         assert_identical(result3, expected3)
 
         # fill_value should be ignored with skipna=False
-        result4 = ar0.idxmin(dim="x", skipna=False, fill_value=-100j)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result4 = ar0.idxmin(dim="x", skipna=False, fill_value=-100j)
         assert_identical(result4, expected3)
 
         # Float fill_value
@@ -5030,7 +5068,8 @@ class TestReduce2D(TestReduce):
         expected5 = xr.concat(expected5, dim="y")
         expected5.name = "x"
 
-        result5 = ar0.idxmin(dim="x", fill_value=-1.1)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result5 = ar0.idxmin(dim="x", fill_value=-1.1)
         assert_identical(result5, expected5)
 
         # Integer fill_value
@@ -5042,7 +5081,8 @@ class TestReduce2D(TestReduce):
         expected6 = xr.concat(expected6, dim="y")
         expected6.name = "x"
 
-        result6 = ar0.idxmin(dim="x", fill_value=-1)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result6 = ar0.idxmin(dim="x", fill_value=-1)
         assert_identical(result6, expected6)
 
         # Complex fill_value
@@ -5054,16 +5094,34 @@ class TestReduce2D(TestReduce):
         expected7 = xr.concat(expected7, dim="y")
         expected7.name = "x"
 
-        result7 = ar0.idxmin(dim="x", fill_value=-5j)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result7 = ar0.idxmin(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
-    def test_idxmax(self, x, minindex, maxindex, nanindex):
-        ar0 = xr.DataArray(
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+        if use_dask and x.dtype.kind == "M":
+            pytest.xfail("dask operation 'argmax' breaks when dtype is datetime64 (M)")
+
+        if x.dtype.kind == "O":
+            # TODO: nanops._nan_argminmax_object computes once to check for all-NaN slices.
+            max_computes = 1
+        else:
+            max_computes = 0
+
+        ar0_raw = xr.DataArray(
             x,
             dims=["y", "x"],
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
+
+        if use_dask:
+            ar0 = ar0_raw.chunk({})
+        else:
+            ar0 = ar0_raw
 
         # No dimension specified
         with pytest.raises(ValueError):
@@ -5096,15 +5154,18 @@ class TestReduce2D(TestReduce):
         expected0.name = "x"
 
         # Default fill value (NaN)
-        result0 = ar0.idxmax(dim="x")
+        with raise_if_dask_computes(max_computes=max_computes):
+            result0 = ar0.idxmax(dim="x")
         assert_identical(result0, expected0)
 
         # Manually specify NaN fill_value
-        result1 = ar0.idxmax(dim="x", fill_value=np.NaN)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result1 = ar0.idxmax(dim="x", fill_value=np.NaN)
         assert_identical(result1, expected0)
 
         # keep_attrs
-        result2 = ar0.idxmax(dim="x", keep_attrs=True)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result2 = ar0.idxmax(dim="x", keep_attrs=True)
         expected2 = expected0.copy()
         expected2.attrs = self.attrs
         assert_identical(result2, expected2)
@@ -5122,11 +5183,13 @@ class TestReduce2D(TestReduce):
         expected3.name = "x"
         expected3.attrs = {}
 
-        result3 = ar0.idxmax(dim="x", skipna=False)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result3 = ar0.idxmax(dim="x", skipna=False)
         assert_identical(result3, expected3)
 
         # fill_value should be ignored with skipna=False
-        result4 = ar0.idxmax(dim="x", skipna=False, fill_value=-100j)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result4 = ar0.idxmax(dim="x", skipna=False, fill_value=-100j)
         assert_identical(result4, expected3)
 
         # Float fill_value
@@ -5138,7 +5201,8 @@ class TestReduce2D(TestReduce):
         expected5 = xr.concat(expected5, dim="y")
         expected5.name = "x"
 
-        result5 = ar0.idxmax(dim="x", fill_value=-1.1)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result5 = ar0.idxmax(dim="x", fill_value=-1.1)
         assert_identical(result5, expected5)
 
         # Integer fill_value
@@ -5150,7 +5214,8 @@ class TestReduce2D(TestReduce):
         expected6 = xr.concat(expected6, dim="y")
         expected6.name = "x"
 
-        result6 = ar0.idxmax(dim="x", fill_value=-1)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result6 = ar0.idxmax(dim="x", fill_value=-1)
         assert_identical(result6, expected6)
 
         # Complex fill_value
@@ -5162,7 +5227,8 @@ class TestReduce2D(TestReduce):
         expected7 = xr.concat(expected7, dim="y")
         expected7.name = "x"
 
-        result7 = ar0.idxmax(dim="x", fill_value=-5j)
+        with raise_if_dask_computes(max_computes=max_computes):
+            result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
 
 
