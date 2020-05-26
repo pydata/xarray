@@ -3677,6 +3677,7 @@ class TestDataset:
             "coords",
         ),
     )
+    @pytest.mark.filterwarnings("error")
     def test_init(self, shared, unit, error, dtype):
         original_unit = unit_registry.m
         scaled_unit = unit_registry.mm
@@ -3744,7 +3745,7 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error:::pint[.*]")
+    @pytest.mark.filterwarnings("error")
     def test_repr(self, func, variant, dtype):
         unit1, unit2 = (
             (unit_registry.Pa, unit_registry.degK) if variant == "data" else (1, 1)
