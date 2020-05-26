@@ -3955,6 +3955,7 @@ class TestDataset:
 
     @pytest.mark.xfail(reason="ffill and bfill lose the unit")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
+    @pytest.mark.filterwarnings("error")
     def test_missing_value_filling(self, func, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -3968,7 +3969,7 @@ class TestDataset:
         ds = xr.Dataset({"a": ("x", array1), "b": ("y", array2)})
         units = extract_units(ds)
 
-        expected = attach_units(func(strip_units(ds), dim="x"), units,)
+        expected = attach_units(func(strip_units(ds), dim="x"), units)
         actual = func(ds, dim="x")
 
         assert_units_equal(expected, actual)
