@@ -3739,7 +3739,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+                marks=pytest.mark.skip(reason="units in indexes are not supported"),
             ),
             "coords",
         ),
@@ -3757,8 +3757,8 @@ class TestDataset:
         y = x.to(unit_registry.ms)
 
         variants = {
-            "with_dims": {"x": x},
-            "with_coords": {"y": ("x", y)},
+            "dims": {"x": x},
+            "coords": {"y": ("x", y)},
             "data": {},
         }
 
