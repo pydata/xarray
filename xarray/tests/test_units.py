@@ -5157,13 +5157,18 @@ class TestDataset:
         (
             method("pipe", lambda ds: ds * 10),
             method("assign", d=lambda ds: ds.b * 10),
-            method("assign_coords", y2=("y", np.arange(5) * unit_registry.mm)),
+            method("assign_coords", y2=("y", np.arange(4) * unit_registry.mm)),
             method("assign_attrs", attr1="value"),
             method("rename", x2="x_mm"),
             method("rename_vars", c="temperature"),
             method("rename_dims", x="offset_x"),
-            method("swap_dims", {"x": "x2"}),
-            method("expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1),
+            method("swap_dims", {"x": "u"}),
+            pytest.param(
+                method(
+                    "expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1
+                ),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
             method("drop_vars", "x"),
             method("drop_dims", "z"),
             method("set_coords", names="c"),
@@ -5172,40 +5177,56 @@ class TestDataset:
         ),
         ids=repr,
     )
-    def test_content_manipulation(self, func, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype)
-            * unit_registry.m ** 3
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
-            * unit_registry.Pa
-        )
-        array3 = np.linspace(0, 10, 10).astype(dtype) * unit_registry.degK
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.filterwarnings("error")
+    def test_content_manipulation(self, func, variant, dtype):
+        variants = {
+            "data": (
+                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                1,
+                1,
+            ),
+            "dims": ((1, 1, 1), unit_registry.m, 1),
+            "coords": ((1, 1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2, unit3), dim_unit, coord_unit = variants.get(variant)
 
-        x = np.arange(10) * unit_registry.m
-        x2 = x.to(unit_registry.mm)
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+        array1 = np.linspace(-5, 5, 5 * 4).reshape(5, 4).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 5 * 4 * 3).reshape(5, 4, 3).astype(dtype) * unit2
+        array3 = np.linspace(0, 10, 5).astype(dtype) * unit3
+
+        x = np.arange(5) * dim_unit
+        y = np.arange(4) * dim_unit
+        z = np.arange(3) * dim_unit
+
+        x2 = np.linspace(-1, 0, 5) * coord_unit
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-                "c": xr.DataArray(data=array3, dims="x"),
+                "a": (("x", "y"), array1),
+                "b": (("x", "y", "z"), array2),
+                "c": ("x", array3),
             },
             coords={"x": x, "y": y, "z": z, "x2": ("x", x2)},
         )
-        units = {
-            **extract_units(ds),
-            **{
-                "y2": unit_registry.mm,
-                "x_mm": unit_registry.mm,
-                "offset_x": unit_registry.m,
-                "d": unit_registry.Pa,
-                "temperature": unit_registry.degK,
-            },
+
+        new_units = {
+            "y2": unit_registry.mm,
+            "x_mm": coord_unit,
+            "offset_x": unit_registry.m,
+            "d": unit2,
+            "temperature": unit3,
         }
+        units = merge_mappings(extract_units(ds), new_units)
 
         stripped_kwargs = {
             key: strip_units(value) for key, value in func.kwargs.items()
@@ -5213,7 +5234,8 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
         actual = func(ds)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
