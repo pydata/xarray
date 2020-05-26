@@ -50,7 +50,7 @@ def compatible_mappings(first, second):
     }
 
 
-def merge_dicts(base, *mappings):
+def merge_mappings(base, *mappings):
     result = base.copy()
     for m in mappings:
         result.update(m)
@@ -3721,8 +3721,8 @@ class TestDataset:
 
         actual = xr.Dataset(data_vars={"a": a, "b": b})
 
-        units = dict(
-            merge_dicts(extract_units(a.rename("a")), extract_units(b.rename("b")))
+        units = merge_mappings(
+            extract_units(a.rename("a")), extract_units(b.rename("b"))
         )
         expected = attach_units(
             xr.Dataset(data_vars={"a": strip_units(a), "b": strip_units(b)}), units
@@ -4380,7 +4380,7 @@ class TestDataset:
         )
         right = xr.Dataset({"a": ("x", right_array1), "b": ("y", right_array2)})
 
-        units = merge_dicts(
+        units = merge_mappings(
             extract_units(left),
             {} if is_compatible(left_array1, unit) else {"a": None, "b": None},
         )
