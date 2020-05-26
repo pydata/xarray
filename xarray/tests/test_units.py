@@ -4730,6 +4730,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
     @pytest.mark.parametrize(
         "shape",
         (
@@ -4740,7 +4741,7 @@ class TestDataset:
             pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
         ),
     )
-    def test_squeeze(self, shape, dtype):
+    def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
         coords = {
             name: np.arange(length).astype(dtype)
@@ -4763,17 +4764,14 @@ class TestDataset:
         )
         units = extract_units(ds)
 
-        expected = attach_units(strip_units(ds).squeeze(), units)
+        kwargs = {"dim": dim} if dim != "all" and len(coords.get(dim, [])) == 1 else {}
 
-        actual = ds.squeeze()
-        assert_equal_with_units(actual, expected)
+        expected = attach_units(strip_units(ds).squeeze(**kwargs), units)
 
-        # try squeezing the dimensions separately
-        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
-        for name in names:
-            expected = attach_units(strip_units(ds).squeeze(dim=name), units)
-            actual = ds.squeeze(dim=name)
-            assert_equal_with_units(actual, expected)
+        actual = ds.squeeze(**kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
