@@ -4592,10 +4592,11 @@ class TestDataset:
             pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
             pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
+    @pytest.mark.filterwarnings("error")
     def test_drop_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4611,9 +4612,9 @@ class TestDataset:
 
         values = raw_values * unit
 
-        if error is not None and not (
-            isinstance(raw_values, (int, float)) and x.check(unit)
-        ):
+        # TODO: if we choose dm as compatible unit, single value keys
+        # can be found. Should we check that?
+        if error is not None:
             with pytest.raises(error):
                 ds.drop_sel(x=values)
 
@@ -4621,12 +4622,14 @@ class TestDataset:
 
         expected = attach_units(
             strip_units(ds).drop_sel(
-                x=strip_units(convert_units(values, {None: x.units}))
+                x=strip_units(convert_units(values, {None: unit_registry.m}))
             ),
             extract_units(ds),
         )
         actual = ds.drop_sel(x=values)
-        assert_equal_with_units(expected, actual)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
