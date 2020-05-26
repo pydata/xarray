@@ -4537,7 +4537,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted
+            is_sorted = idx.is_lexsorted()
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
