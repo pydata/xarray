@@ -4694,7 +4694,16 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.parametrize("variant", ("data", "dims", "coords"))
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     @pytest.mark.filterwarnings("error")
     def test_head_tail_thin(self, func, variant, dtype):
         variants = {
