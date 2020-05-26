@@ -46,7 +46,7 @@ def is_compatible(unit1, unit2):
 def compatible_mappings(first, second):
     return {
         key: is_compatible(unit1, unit2)
-        for key, (unit1, unit2) in merge_mappings(first, second)
+        for key, (unit1, unit2) in zip_mappings(first, second)
     }
 
 
@@ -56,6 +56,11 @@ def merge_dicts(base, *mappings):
         result.update(m)
 
     return result
+
+
+def zip_mappings(*mappings):
+    for key in set(mappings[0]).intersection(*mappings[1:]):
+        yield key, tuple(m[key] for m in mappings)
 
 
 def array_extract_units(obj):
@@ -297,11 +302,6 @@ def assert_equal_with_units(a, b):
 @pytest.fixture(params=[float, int])
 def dtype(request):
     return request.param
-
-
-def merge_mappings(*mappings):
-    for key in set(mappings[0]).intersection(*mappings[1:]):
-        yield key, tuple(m[key] for m in mappings)
 
 
 def merge_args(default_args, new_args):
@@ -4286,7 +4286,7 @@ class TestDataset:
 
         to_convert = {
             key: unit if is_compatible(unit, reference) else None
-            for key, (unit, reference) in merge_mappings(units, other_units)
+            for key, (unit, reference) in zip_mappings(units, other_units)
         }
         # convert units where possible, then attach all units to the converted dataset
         other = attach_units(strip_units(convert_units(ds, to_convert)), other_units)
@@ -4296,7 +4296,7 @@ class TestDataset:
         # convert and compare values
         equal_ds = all(
             is_compatible(unit, other_unit)
-            for _, (unit, other_unit) in merge_mappings(units, other_units)
+            for _, (unit, other_unit) in zip_mappings(units, other_units)
         ) and (strip_units(ds).equals(strip_units(convert_units(other, units))))
         equal_units = units == other_units
         expected = equal_ds and (func.name != "identical" or equal_units)
