@@ -4522,7 +4522,6 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
-        assert_equal_with_units(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
