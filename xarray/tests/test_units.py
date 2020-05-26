@@ -5259,26 +5259,31 @@ class TestDataset:
             "coords",
         ),
     )
+    @pytest.mark.filterwarnings("error")
     def test_merge(self, variant, unit, error, dtype):
-        original_data_unit = unit_registry.m
-        original_dim_unit = unit_registry.m
-        original_coord_unit = unit_registry.m
-
-        variants = {
-            "data": (unit, original_dim_unit, original_coord_unit),
-            "dims": (original_data_unit, unit, original_coord_unit),
-            "coords": (original_data_unit, original_dim_unit, unit),
+        left_variants = {
+            "data": (unit_registry.m, 1, 1),
+            "dims": (1, unit_registry.m, 1),
+            "coords": (1, 1, unit_registry.m),
         }
-        data_unit, dim_unit, coord_unit = variants.get(variant)
 
-        left_array = np.arange(10).astype(dtype) * original_data_unit
-        right_array = np.arange(-5, 5).astype(dtype) * data_unit
+        left_data_unit, left_dim_unit, left_coord_unit = left_variants.get(variant)
 
-        left_dim = np.arange(10, 20) * original_dim_unit
-        right_dim = np.arange(5, 15) * dim_unit
+        right_variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        right_data_unit, right_dim_unit, right_coord_unit = right_variants.get(variant)
 
-        left_coord = np.arange(-10, 0) * original_coord_unit
-        right_coord = np.arange(-15, -5) * coord_unit
+        left_array = np.arange(10).astype(dtype) * left_data_unit
+        right_array = np.arange(-5, 5).astype(dtype) * right_data_unit
+
+        left_dim = np.arange(10, 20) * left_dim_unit
+        right_dim = np.arange(5, 15) * right_dim_unit
+
+        left_coord = np.arange(-10, 0) * left_coord_unit
+        right_coord = np.arange(-15, -5) * right_coord_unit
 
         left = xr.Dataset(
             data_vars={"a": ("x", left_array)},
@@ -5301,4 +5306,5 @@ class TestDataset:
         expected = attach_units(strip_units(left).merge(strip_units(converted)), units)
         actual = left.merge(right)
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
