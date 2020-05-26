@@ -3660,11 +3660,11 @@ class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(1, xr.MergeError, id="no_unit"),
             pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
             ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
             pytest.param(unit_registry.mm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="same_unit"),
         ),
@@ -3673,11 +3673,8 @@ class TestDataset:
         "shared",
         (
             "nothing",
-            pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
-            pytest.param(
-                "coords",
-                marks=pytest.mark.xfail(reason="reindex does not work with pint yet"),
-            ),
+            pytest.param("dims", marks=pytest.mark.skip(reason="indexes strip units")),
+            "coords",
         ),
     )
     def test_init(self, shared, unit, error, dtype):
@@ -3685,60 +3682,53 @@ class TestDataset:
         scaled_unit = unit_registry.mm
 
         a = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
-        b = np.linspace(-1, 0, 12).astype(dtype) * unit_registry.Pa
+        b = np.linspace(-1, 0, 10).astype(dtype) * unit_registry.degK
 
-        raw_x = np.arange(a.shape[0])
-        x = raw_x * original_unit
-        x2 = x.to(scaled_unit)
+        values_a = np.arange(a.shape[0])
+        dim_a = values_a * original_unit
+        coord_a = dim_a.to(scaled_unit)
 
-        raw_y = np.arange(b.shape[0])
-        y = raw_y * unit
-        y_units = unit if isinstance(y, unit_registry.Quantity) else None
-        if isinstance(y, unit_registry.Quantity):
-            if y.check(scaled_unit):
-                y2 = y.to(scaled_unit)
-            else:
-                y2 = y * 1000
-            y2_units = y2.units
-        else:
-            y2 = y * 1000
-            y2_units = None
+        values_b = np.arange(b.shape[0])
+        dim_b = values_b * unit
+        coord_b = (
+            dim_b.to(scaled_unit)
+            if unit_registry.is_compatible_with(dim_b, scaled_unit)
+            and unit != scaled_unit
+            else dim_b * 1000
+        )
 
         variants = {
-            "nothing": ({"x": x, "x2": ("x", x2)}, {"y": y, "y2": ("y", y2)}),
-            "dims": (
-                {"x": x, "x2": ("x", strip_units(x2))},
-                {"x": y, "y2": ("x", strip_units(y2))},
+            "nothing": ({}, {}),
+            "dims": ({"x": dim_a}, {"x": dim_b}),
+            "coords": (
+                {"x": values_a, "y": ("x", coord_a)},
+                {"x": values_b, "y": ("x", coord_b)},
             ),
-            "coords": ({"x": raw_x, "y": ("x", x2)}, {"x": raw_y, "y": ("x", y2)}),
         }
         coords_a, coords_b = variants.get(shared)
 
         dims_a, dims_b = ("x", "y") if shared == "nothing" else ("x", "x")
 
-        arr1 = xr.DataArray(data=a, coords=coords_a, dims=dims_a)
-        arr2 = xr.DataArray(data=b, coords=coords_b, dims=dims_b)
+        a = xr.DataArray(data=a, coords=coords_a, dims=dims_a)
+        b = xr.DataArray(data=b, coords=coords_b, dims=dims_b)
+
         if error is not None and shared != "nothing":
             with pytest.raises(error):
-                xr.Dataset(data_vars={"a": arr1, "b": arr2})
+                xr.Dataset(data_vars={"a": a, "b": b})
 
             return
 
-        actual = xr.Dataset(data_vars={"a": arr1, "b": arr2})
+        actual = xr.Dataset(data_vars={"a": a, "b": b})
 
-        expected_units = {
-            "a": a.units,
-            "b": b.units,
-            "x": x.units,
-            "x2": x2.units,
-            "y": y_units,
-            "y2": y2_units,
-        }
-        expected = attach_units(
-            xr.Dataset(data_vars={"a": strip_units(arr1), "b": strip_units(arr2)}),
-            expected_units,
+        units = dict(
+            merge_dicts(extract_units(a.rename("a")), extract_units(b.rename("b")))
         )
-        assert_equal_with_units(actual, expected)
+        expected = attach_units(
+            xr.Dataset(data_vars={"a": strip_units(a), "b": strip_units(b)}), units
+        )
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
