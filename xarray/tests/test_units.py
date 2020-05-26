@@ -4782,7 +4782,43 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="ignores units")
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(method("interp"), marks=pytest.mark.skip(reason="uses scipy")),
+            method("reindex"),
+        ),
+        ids=repr,
+    )
+    @pytest.mark.filterwarnings("error")
+    def test_interp_reindex(self, func, variant, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-1, 0, 10).astype(dtype) * data_unit
+        array2 = np.linspace(0, 1, 10).astype(dtype) * data_unit
+
+        y = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(10) + 0.5
+
+        ds = xr.Dataset(
+            {"a": ("x", array1), "b": ("x", array2)}, coords={"x": x, "y": ("x", y)}
+        )
+        units = extract_units(ds)
+
+        expected = attach_units(func(strip_units(ds), x=new_x), units)
+        actual = func(ds, x=new_x)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4795,40 +4831,29 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_interp(self, unit, error):
-        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+    @pytest.mark.parametrize("func", (method("interp"), method("reindex")), ids=repr)
+    @pytest.mark.filterwarnings("error")
+    def test_interp_reindex_indexing(self, func, unit, error, dtype):
+        array1 = np.linspace(-1, 0, 10).astype(dtype)
+        array2 = np.linspace(0, 1, 10).astype(dtype)
 
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.s,
-        }
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(10) + 0.5) * unit
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
-
-        new_coords = (np.arange(10) + 0.5) * unit
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
+        units = extract_units(ds)
 
         if error is not None:
             with pytest.raises(error):
-                ds.interp(x=new_coords)
+                func(ds, x=new_x)
 
             return
 
-        units = extract_units(ds)
-        expected = attach_units(
-            strip_units(ds).interp(x=strip_units(convert_units(new_coords, units))),
-            units,
-        )
-        actual = ds.interp(x=new_coords)
+        expected = attach_units(func(strip_units(ds), x=new_x), units)
+        actual = func(ds, x=new_x)
 
-        assert_equal_with_units(actual, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="ignores units")
     @pytest.mark.parametrize(
@@ -4888,59 +4913,6 @@ class TestDataset:
             strip_units(ds).interp_like(strip_units(convert_units(other, units))), units
         )
         actual = ds.interp_like(other)
-
-        assert_equal_with_units(actual, expected)
-
-    @pytest.mark.xfail(reason="indexes don't support units")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_reindex(self, unit, error, dtype):
-        array1 = (
-            np.linspace(1, 2, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(1, 2, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
-
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.s,
-        }
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
-
-        new_coords = (np.arange(10) + 0.5) * unit
-
-        if error is not None:
-            with pytest.raises(error):
-                ds.reindex(x=new_coords)
-
-            return
-
-        expected = attach_units(
-            strip_units(ds).reindex(
-                x=strip_units(convert_units(new_coords, {None: coords["x"].units}))
-            ),
-            extract_units(ds),
-        )
-        actual = ds.reindex(x=new_coords)
 
         assert_equal_with_units(actual, expected)
 
