@@ -5049,23 +5049,38 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    def test_resample(self, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.filterwarnings("error")
+    def test_resample(self, variant, dtype):
+        # TODO: move this to test_computation_objects
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit2
+
         t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="1y")
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+        y = np.arange(5) * dim_unit
+        z = np.arange(8) * dim_unit
+
+        u = np.linspace(-1, 0, 5) * coord_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("time", "y")),
-                "b": xr.DataArray(data=array2, dims=("time", "z")),
-            },
-            coords={"time": t, "y": y, "z": z},
+            data_vars={"a": (("time", "y"), array1), "b": (("time", "z"), array2)},
+            coords={"time": t, "y": y, "z": z, "u": ("y", u)},
         )
         units = extract_units(ds)
 
@@ -5074,7 +5089,8 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds)).mean(), units)
         actual = func(ds).mean()
 
-        assert_equal_with_units(expected, actual)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
