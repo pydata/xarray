@@ -1069,7 +1069,7 @@ def test_infer_freq_invalid_inputs():
     with pytest.raises(ValueError, match="must contain datetime-like objects"):
         xr.infer_freq(xr.DataArray([0, 1, 2]))
 
-    indx = xr.cftime_range("1990-02-03", periods=3, freq="MS")
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="MS")
     # 2D DataArray
     with pytest.raises(ValueError, match="must be 1D"):
         xr.infer_freq(xr.DataArray([indx, indx]))
@@ -1077,6 +1077,19 @@ def test_infer_freq_invalid_inputs():
     # CFTimeIndex too short
     with pytest.raises(ValueError, match="Need at least 3 dates to infer frequency"):
         xr.infer_freq(indx[:2])
+
+    # Non-monotonic input
+    assert xr.infer_freq(indx[np.array([0, 2, 1, 3])]) is None
+
+    # Non-unique input
+    assert xr.infer_freq(indx[np.array([0, 1, 1, 2])]) is None
+
+    # No unique frequency (here 1st step is MS, second is 2MS)
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+
+    # Same, but for QS
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="QS")
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
 
 
 @requires_cftime_1_1_0
