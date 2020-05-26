@@ -121,6 +121,8 @@ Bug fixes
   By `Ryan May <https://github.com/dopplershift>`_.
 - Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix :py:meth:`DataArray.to_unstacked_dataset` for single-dimension variables. (:issue:`4049`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Documentation
 ~~~~~~~~~~~~~
