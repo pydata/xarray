@@ -430,7 +430,7 @@ def map_blocks(
 
         # this will become [[name1, variable1],
         #                   [name2, variable2],
-        #                    ...]
+        #                   ...]
         # which is passed to dict and then to Dataset
         data_vars = []
         coords = []
