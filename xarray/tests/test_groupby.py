@@ -538,4 +538,15 @@ def test_groupby_bins_timeseries():
     assert_identical(actual, expected)
 
 
+def test_groupby_none_group_name():
+    # GH158
+    # xarray should not fail if a DataArray's name attribute is None
+
+    data = np.arange(10) + 10
+    da = xr.DataArray(data)  # da.name = None
+    key = xr.DataArray(np.floor_divide(data, 2))
+
+    da.groupby(key).mean()
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
