@@ -23,6 +23,7 @@ from .core.dataset import Dataset
 
 _cache_name = "xarray_tutorial_data"
 _cache_dir = pathlib.Path.home() / ".cache"
+# I/O on import. Might not be a good idea.
 if _cache_dir.exists():
     _default_cache_dir = _cache_dir / _cache_name
 else:
@@ -44,6 +45,8 @@ def temporary_directory():
 
 def download_to(url, path):
     with requests.get(url, stream=True) as r, path.open("wb") as f:
+        if r.status_code != 200:
+            raise OSError(f"download failed: {r.reason}")
         shutil.copyfileobj(r.raw, f)
 
 
