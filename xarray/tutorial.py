@@ -70,8 +70,10 @@ def open_rasterio(
     elif path.suffix == ".byte":
         path = path.with_name(name + default_extension)
 
-    url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
+    if cache and path.is_file():
+        return _open_rasterio(path, **kws)
 
+    url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
     # make sure the directory is deleted afterwards
     with cache_dir:
         download_to(url, path)
