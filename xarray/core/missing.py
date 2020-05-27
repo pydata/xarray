@@ -208,7 +208,9 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True):
+def get_clean_interp_index(
+    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+):
     """Return index to use for x values in interpolation or curve fitting.
 
     Parameters
