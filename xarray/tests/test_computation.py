@@ -5,9 +5,10 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_allclose, assert_array_equal
 
 import xarray as xr
+from xarray.core.alignment import broadcast
 from xarray.core.computation import (
     _UFuncSignature,
     apply_ufunc,
@@ -833,6 +834,161 @@ def test_vectorize_dask():
     )
 
     assert da2.dtype == da.dtype, "wrong dtype"
+
+
+with raises_regex(TypeError, "Only xr.DataArray is supported"):
+    xr.corr(xr.Dataset(), xr.Dataset())
+
+
+def arrays_w_tuples():
+    da = xr.DataArray(
+        np.random.random((3, 21, 4)),
+        coords={"time": pd.date_range("2000-01-01", freq="1D", periods=21)},
+        dims=("a", "time", "x"),
+    )
+
+    arrays = [
+        da.isel(time=range(0, 18)),
+        da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
+        xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
+        xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
+    ]
+
+    array_tuples = [
+        (arrays[0], arrays[0]),
+        (arrays[0], arrays[1]),
+        (arrays[1], arrays[1]),
+        (arrays[2], arrays[2]),
+        (arrays[2], arrays[3]),
+        (arrays[3], arrays[3]),
+    ]
+
+    return arrays, array_tuples
+
+
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
+)
+@pytest.mark.parametrize("dim", [None, "time"])
+def test_cov(da_a, da_b, dim, ddof):
+    if dim is not None:
+
+        def np_cov_ind(ts1, ts2, a, x):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.cov(
+                ts1.sel(a=a, x=x).data.flatten(),
+                ts2.sel(a=a, x=x).data.flatten(),
+                ddof=ddof,
+            )[0, 1]
+
+        expected = np.zeros((3, 4))
+        for a in [0, 1, 2]:
+            for x in [0, 1, 2, 3]:
+                expected[a, x] = np_cov_ind(da_a, da_b, a=a, x=x)
+        actual = xr.cov(da_a, da_b, dim=dim, ddof=ddof)
+        assert_allclose(actual, expected)
+
+    else:
+
+        def np_cov(ts1, ts2):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=ddof)[0, 1]
+
+        expected = np_cov(da_a, da_b)
+        actual = xr.cov(da_a, da_b, dim=dim, ddof=ddof)
+        assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
+)
+@pytest.mark.parametrize("dim", [None, "time"])
+def test_corr(da_a, da_b, dim):
+    if dim is not None:
+
+        def np_corr_ind(ts1, ts2, a, x):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.corrcoef(
+                ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
+            )[0, 1]
+
+        expected = np.zeros((3, 4))
+        for a in [0, 1, 2]:
+            for x in [0, 1, 2, 3]:
+                expected[a, x] = np_corr_ind(da_a, da_b, a=a, x=x)
+        actual = xr.corr(da_a, da_b, dim)
+        assert_allclose(actual, expected)
+
+    else:
+
+        def np_corr(ts1, ts2):
+            # Ensure the ts are aligned and missing values ignored
+            ts1, ts2 = broadcast(ts1, ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
+
+            return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
+
+        expected = np_corr(da_a, da_b)
+        actual = xr.corr(da_a, da_b, dim)
+        assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "da_a, da_b", arrays_w_tuples()[1],
+)
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_covcorr_consistency(da_a, da_b, dim):
+    # Testing that xr.corr and xr.cov are consistent with each other
+    # 1. Broadcast the two arrays
+    da_a, da_b = broadcast(da_a, da_b)
+    # 2. Ignore the nans
+    valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values)
+    da_b = da_b.where(valid_values)
+
+    expected = xr.cov(da_a, da_b, dim=dim, ddof=0) / (
+        da_a.std(dim=dim) * da_b.std(dim=dim)
+    )
+    actual = xr.corr(da_a, da_b, dim=dim)
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "da_a", arrays_w_tuples()[0],
+)
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_autocov(da_a, dim):
+    # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
+    # 1. Ignore the nans
+    valid_values = da_a.notnull()
+    da_a = da_a.where(valid_values)
+    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
+    actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
+    assert_allclose(actual, expected)
 
 
 @requires_dask
