@@ -4964,7 +4964,13 @@ class TestDataset:
         "func",
         (
             method("groupby", "x"),
-            method("groupby_bins", "x", bins=4),
+            pytest.param(
+                method("groupby_bins", "x", bins=2),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) < "0.12",
+                    reason="needs assert_allclose but that does not work with pint",
+                ),
+            ),
             method("coarsen", x=2),
             pytest.param(
                 method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
