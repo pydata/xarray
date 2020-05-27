@@ -4100,6 +4100,7 @@ class TestDataset:
         assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
+    @pytest.mark.filterwarnings("error")
     def test_interpolate_na(self, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -5018,7 +5019,11 @@ class TestDataset:
         actual = func(ds).mean(*args)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        # TODO: remove once pint 0.12 has been released
+        if LooseVersion(pint.__version__) < "0.12":
+            assert_equal(expected, actual)
+        else:
+            assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "variant",

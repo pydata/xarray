@@ -121,7 +121,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, Variable):
         assert a.dims == b.dims
-        allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
+        allclose = _data_allclose_or_equiv(a.data, b.data, **kwargs)
         assert allclose, f"{a.values}\n{b.values}"
     elif isinstance(a, DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
@@ -130,9 +130,9 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
             # can't recurse with this function as coord is sometimes a
             # DataArray, so call into _data_allclose_or_equiv directly
             allclose = _data_allclose_or_equiv(
-                a.coords[v].values, b.coords[v].values, **kwargs
+                a.coords[v].data, b.coords[v].data, **kwargs
             )
-            assert allclose, "{}\n{}".format(a.coords[v].values, b.coords[v].values)
+            assert allclose, "{}\n{}".format(a.coords[v].data, b.coords[v].data)
     elif isinstance(a, Dataset):
         assert set(a.data_vars) == set(b.data_vars)
         assert set(a.coords) == set(b.coords)
