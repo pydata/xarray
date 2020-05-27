@@ -7,11 +7,17 @@ Useful for:
 """
 import hashlib
 import os as _os
+import pathlib
+import shutil
+import tempfile
+from contextlib import contextmanager
 from urllib.request import urlretrieve
 
 import numpy as np
+import requests
 
 from .backends.api import open_dataset as _open_dataset
+from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 
@@ -23,6 +29,45 @@ def file_md5_checksum(fname):
     with open(fname, "rb") as f:
         hash_md5.update(f.read())
     return hash_md5.hexdigest()
+
+
+@contextmanager
+def temporary_directory():
+    with tempfile.TemporaryDirectory() as directory_name:
+        yield pathlib.Path(directory_name)
+
+
+def download_to(url, path):
+    with requests.get(url, stream=True) as r, path.open("wb") as f:
+        shutil.copyfileobj(r.raw, f)
+
+
+def open_rasterio(
+    name,
+    cache=True,
+    cache_dir=_default_cache_dir,
+    github_url="https://github.com/mapbox/rasterio",
+    branch="master",
+    **kws,
+):
+    if not cache_dir.is_dir():
+        cache_dir.mkdir()
+
+    default_extension = ".tif"
+    cache_dir = cache_dir if cache else temporary_directory()
+    path = cache_dir / name
+
+    if not path.suffix:
+        path = path.with_suffix(default_extension)
+    elif path.suffix == ".byte":
+        path = path.with_name(name + default_extension)
+
+    url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
+
+    # make sure the directory is deleted afterwards
+    with cache_dir:
+        download_to(url, path)
+        return _open_rasterio(path, **kws)
 
 
 # idea borrowed from Seaborn
