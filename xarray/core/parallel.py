@@ -35,9 +35,9 @@ T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 
 def to_object_array(iterable):
+    # using empty_like calls compute
     npargs = np.empty((len(iterable),), dtype=np.object)
-    for idx, item in enumerate(iterable):
-        npargs[idx] = item
+    npargs[:] = iterable
     return npargs
 
 
@@ -180,9 +180,9 @@ def map_blocks(
     ----------
     func: callable
         User-provided function that accepts a DataArray or Dataset as its first
-        parameter. The function will receive a subset of 'obj' (see below),
+        parameter. The function will receive a subset or 'block' of 'obj' (see below),
         corresponding to one chunk along each chunked dimension. ``func`` will be
-        executed as ``func(obj_subset, *args, **kwargs)``.
+        executed as ``func(subset_obj, *subset_args, **kwargs)``.
 
         This function must return either a single DataArray or a single Dataset.
 
@@ -191,11 +191,12 @@ def map_blocks(
     obj: DataArray, Dataset
         Passed to the function as its first argument, one dask chunk at a time.
     args: Sequence
-        Passed verbatim to func after unpacking, after the sliced obj.
+        Passed verbatim to func after unpacking.
         Any xarray objects will also be split by blocks and then passed on.
+        xarray objects in args must be aligned with obj, otherwise an error is raised.
     kwargs: Mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
-        split by chunks. Passing dask collections is not allowed.
+        split by chunks. Passing dask collections in kwargs is not allowed.
     template: (optional) DataArray, Dataset
         xarray object representing the final result after compute is called. If not provided,
         the function will be first run on mocked-up data, that looks like 'obj' but
@@ -346,9 +347,8 @@ def map_blocks(
     is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in npargs]
     is_array = [isinstance(arg, DataArray) for arg in npargs]
 
-    # align all xarray objects
-    # TODO: should we allow join as a kwarg or force everything to be aligned to the first object?
-    aligned = align(*npargs[is_xarray], join="left")
+    # all xarray objects must be aligned. This is consistent with apply_ufunc.
+    aligned = align(*npargs[is_xarray], join="exact")
     # assigning to object arrays works better when RHS is object array
     # https://stackoverflow.com/questions/43645135/boolean-indexing-assignment-of-a-numpy-array-to-a-numpy-array
     npargs[is_xarray] = to_object_array(aligned)
@@ -428,14 +428,14 @@ def map_blocks(
         graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
     ):
         """
-        Creates a task that creates a subsets xarray dataset to a block determined by chunk_index;
-        whose extents are determined by input_chunk_bounds.
-        There are subtasks that create subsets of constituent variables.
+        Creates a task that subsets an xarray dataset to a block determined by chunk_index.
+        Block extents are determined by input_chunk_bounds.
+        Also subtasks that subset the constituent variables of a dataset.
         """
 
         # this will become [[name1, variable1],
-        #                     [name2, variable2],
-        #                     ...]
+        #                   [name2, variable2],
+        #                    ...]
         # which is passed to dict and then to Dataset
         data_vars = []
         coords = []
