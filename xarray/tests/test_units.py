@@ -4711,11 +4711,7 @@ class TestDataset:
     )
     def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        coords = {
-            name: np.arange(length).astype(dtype)
-            * (unit_registry.m if name != "t" else unit_registry.s)
-            for name, length in zip(names, shape)
-        }
+        dim_lengths = dict(zip(names, shape))
         array1 = (
             np.linspace(0, 1, 10 * 20).astype(dtype).reshape(shape) * unit_registry.degK
         )
@@ -4725,14 +4721,13 @@ class TestDataset:
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=tuple(names[: len(shape)])),
-                "b": xr.DataArray(data=array2, dims=tuple(names[: len(shape)])),
+                "a": (tuple(names[: len(shape)]), array1),
+                "b": (tuple(names[: len(shape)]), array2),
             },
-            coords=coords,
         )
         units = extract_units(ds)
 
-        kwargs = {"dim": dim} if dim != "all" and len(coords.get(dim, [])) == 1 else {}
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
 
         expected = attach_units(strip_units(ds).squeeze(**kwargs), units)
 
