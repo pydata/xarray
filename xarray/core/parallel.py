@@ -279,9 +279,6 @@ def map_blocks(
         passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
         """
 
-        check_shapes = dict(args[0].dims)
-        check_shapes.update(expected["shapes"])
-
         converted_args = [
             dataset_to_dataarray(arg) if is_array else arg
             for is_array, arg in zip(arg_is_array, args)
@@ -298,10 +295,10 @@ def map_blocks(
 
         # check that index lengths and values are as expected
         for name, index in result.indexes.items():
-            if name in check_shapes:
-                if len(index) != check_shapes[name]:
+            if name in expected["shapes"]:
+                if len(index) != expected["shapes"][name]:
                     raise ValueError(
-                        f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
+                        f"Received dimension {name!r} of length {len(index)}. Expected length {expected['shapes'][name]}."
                     )
             if name in expected["indexes"]:
                 expected_index = expected["indexes"][name]
