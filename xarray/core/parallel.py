@@ -180,7 +180,7 @@ def map_blocks(
     ----------
     func: callable
         User-provided function that accepts a DataArray or Dataset as its first
-        parameter. The function will receive a subset or 'block' of 'obj' (see below),
+        parameter ``obj``. The function will receive a subset or 'block' of ``obj`` (see below),
         corresponding to one chunk along each chunked dimension. ``func`` will be
         executed as ``func(subset_obj, *subset_args, **kwargs)``.
 
@@ -189,22 +189,21 @@ def map_blocks(
         This function cannot add a new chunked dimension.
 
     obj: DataArray, Dataset
-        Passed to the function as its first argument, one dask chunk at a time.
+        Passed to the function as its first argument, one block at a time.
     args: Sequence
-        Passed verbatim to func after unpacking.
-        Any xarray objects will also be split by blocks and then passed on.
+        Passed to func after unpacking and subsetting any xarray objects by blocks.
         xarray objects in args must be aligned with obj, otherwise an error is raised.
     kwargs: Mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
-        split by chunks. Passing dask collections in kwargs is not allowed.
+        subset to blocks. Passing dask collections in kwargs is not allowed.
     template: (optional) DataArray, Dataset
         xarray object representing the final result after compute is called. If not provided,
-        the function will be first run on mocked-up data, that looks like 'obj' but
+        the function will be first run on mocked-up data, that looks like ``obj`` but
         has sizes 0, to determine properties of the returned object such as dtype,
         variable names, attributes, new dimensions and new indexes (if any).
-        'template' must be provided if the function changes the size of existing dimensions.
-        When provided, `attrs` on variables in `template` are copied over to the result. Any
-        `attrs` set by `func` will be ignored.
+        ``template`` must be provided if the function changes the size of existing dimensions.
+        When provided, ``attrs`` on variables in `template` are copied over to the result. Any
+        ``attrs`` set by ``func`` will be ignored.
 
 
     Returns
@@ -214,11 +213,11 @@ def map_blocks(
 
     Notes
     -----
-    This function is designed for when one needs to manipulate a whole xarray object
-    within each chunk. In the more common case where one can work on numpy arrays, it is
-    recommended to use apply_ufunc.
+    This function is designed for when ``func`` needs to manipulate a whole xarray object
+    subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
+    recommended to use ``apply_ufunc``.
 
-    If none of the variables in obj is backed by dask, calling this function is
+    If none of the variables in ``obj`` is backed by dask arrays, calling this function is
     equivalent to calling ``func(obj, *args, **kwargs)``.
 
     See Also
@@ -236,8 +235,6 @@ def map_blocks(
     >>> def calculate_anomaly(da, groupby_type="time.month"):
     ...     # Necessary workaround to xarray's check with zero dimensions
     ...     # https://github.com/pydata/xarray/issues/3575
-    ...     if sum(da.shape) == 0:
-    ...         return da
     ...     gb = da.groupby(groupby_type)
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
@@ -246,7 +243,7 @@ def map_blocks(
     >>> array = xr.DataArray(
     ...     np.random.rand(len(time)), dims="time", coords=[time]
     ... ).chunk()
-    >>> xr.map_blocks(calculate_anomaly, array).compute()
+    >>> xr.map_blocks(calculate_anomaly, array, template=array).compute()
     <xarray.DataArray (time: 24)>
     array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
             0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
@@ -260,7 +257,7 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> xr.map_blocks(
-    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"},
+    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"}, template=array,
     ... )
     <xarray.DataArray (time: 24)>
     array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
