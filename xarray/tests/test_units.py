@@ -3621,6 +3621,7 @@ class TestDataArray:
         xr.testing.assert_identical(expected, actual)
 
 
+@pytest.mark.filterwarnings("error")
 class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
@@ -3642,7 +3643,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_init(self, shared, unit, error, dtype):
         original_unit = unit_registry.m
         scaled_unit = unit_registry.mm
@@ -3710,7 +3710,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_repr(self, func, variant, dtype):
         unit1, unit2 = (
             (unit_registry.Pa, unit_registry.degK) if variant == "data" else (1, 1)
@@ -3920,7 +3919,6 @@ class TestDataset:
 
     @pytest.mark.xfail(reason="ffill and bfill lose the unit")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
-    @pytest.mark.filterwarnings("error")
     def test_missing_value_filling(self, func, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -4100,7 +4098,6 @@ class TestDataset:
         assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
-    @pytest.mark.filterwarnings("error")
     def test_interpolate_na(self, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -4508,7 +4505,6 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4562,7 +4558,6 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_drop_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4616,7 +4611,6 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_loc(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
@@ -4670,7 +4664,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_head_tail_thin(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -4757,7 +4750,6 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.filterwarnings("error")
     def test_interp_reindex(self, func, variant, dtype):
         variants = {
             "data": (unit_registry.m, 1),
@@ -4798,7 +4790,6 @@ class TestDataset:
         ),
     )
     @pytest.mark.parametrize("func", (method("interp"), method("reindex")), ids=repr)
-    @pytest.mark.filterwarnings("error")
     def test_interp_reindex_indexing(self, func, unit, error, dtype):
         array1 = np.linspace(-1, 0, 10).astype(dtype)
         array2 = np.linspace(0, 1, 10).astype(dtype)
@@ -4832,7 +4823,6 @@ class TestDataset:
         ),
         ids=repr,
     )
-    @pytest.mark.filterwarnings("error")
     def test_interp_reindex_like(self, func, variant, dtype):
         variants = {
             "data": (unit_registry.m, 1),
@@ -4877,7 +4867,6 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func", (method("interp_like"), method("reindex_like")), ids=repr
     )
-    @pytest.mark.filterwarnings("error")
     def test_interp_reindex_like_indexing(self, func, unit, error, dtype):
         array1 = np.linspace(-1, 0, 10).astype(dtype)
         array2 = np.linspace(0, 1, 10).astype(dtype)
@@ -4930,7 +4919,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_computation(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -4993,7 +4981,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_computation_objects(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -5035,7 +5022,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_resample(self, variant, dtype):
         # TODO: move this to test_computation_objects
         variants = {
@@ -5092,7 +5078,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_grouped_operations(self, func, variant, dtype):
         variants = {
             "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
@@ -5163,7 +5148,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
@@ -5235,7 +5219,6 @@ class TestDataset:
             "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error")
     def test_merge(self, variant, unit, error, dtype):
         left_variants = {
             "data": (unit_registry.m, 1, 1),
