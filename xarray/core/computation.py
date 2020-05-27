@@ -792,7 +792,7 @@ def apply_ufunc(
         dask arrays:
 
         - 'forbidden' (default): raise an error if a dask array is encountered.
-        - 'allowed': pass dask arrays directly on to ``func``.
+        - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
           inputs are a dask array. If used, the ``output_dtypes`` argument must
           also be provided. Multiple output arguments are supported.
