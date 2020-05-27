@@ -796,6 +796,7 @@ def apply_ufunc(
         - 'parallelized': automatically parallelize ``func`` if any of the
           inputs are a dask array. If used, the ``output_dtypes`` argument must
           also be provided. Multiple output arguments are supported.
+          Only use this option if ``func`` does not support dask arrays (e.g. converts them to numpy arrays).
     output_dtypes : list of dtypes, optional
         Optional list of output dtypes. Only used if dask='parallelized'.
     output_sizes : dict, optional
