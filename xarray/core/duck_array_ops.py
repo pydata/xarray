@@ -6,6 +6,7 @@ accept or return xarray objects.
 import contextlib
 import inspect
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -199,6 +200,17 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
+    # TODO: remove after we require dask > 2.9.1
+    sufficient_dask_version = (
+        dask_array is not None and LooseVersion(dask_array.__version__) >= "2.9.1"
+    )
+    if sufficient_dask_version and any(arr.dtype.kind == "b" for arr in [arr1, arr2]):
+        if isinstance(arr1, dask_array_type):
+            arr1 = arr1.compute()
+
+        if isinstance(arr2, dask_array_type):
+            arr2 = arr2.compute()
+
     lazy_equiv = lazy_array_equiv(arr1, arr2)
     if lazy_equiv is None:
         return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
