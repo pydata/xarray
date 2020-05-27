@@ -965,7 +965,7 @@ def apply_ufunc(
             vectorize=vectorize,
         )
         return apply_groupby_func(this_apply, *args)
-    # feed datasets apply_variable_ufunc trough apply_dataset_vfunc
+    # feed datasets apply_variable_ufunc through apply_dataset_vfunc
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_vfunc(
             variables_vfunc,
