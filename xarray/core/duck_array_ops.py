@@ -215,14 +215,11 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
         sufficient_dask_version = (
             dask_version is not None and LooseVersion(dask_version) >= "2.9.1"
         )
-        if sufficient_dask_version and any(
-            arr.dtype.kind == "b" for arr in [arr1, arr2]
+        if not sufficient_dask_version and any(
+            isinstance(arr, dask_array_type) for arr in [arr1, arr2]
         ):
-            if isinstance(arr1, dask_array_type):
-                arr1 = arr1.compute()
-
-            if isinstance(arr2, dask_array_type):
-                arr2 = arr2.compute()
+            arr1 = np.array(arr1)
+            arr2 = np.array(arr2)
 
         return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
     else:
