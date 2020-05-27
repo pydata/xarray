@@ -21,7 +21,12 @@ from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 
-_default_cache_dir = _os.sep.join(("~", ".xarray_tutorial_data"))
+_cache_name = "xarray_tutorial_data"
+_cache_dir = pathlib.Path.home() / ".cache"
+if _cache_dir.exists():
+    _default_cache_dir = _cache_dir / _cache_name
+else:
+    _default_cache_dir = pathlib.Path.home() / f".{_cache_name}"
 
 
 def file_md5_checksum(fname):
