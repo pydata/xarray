@@ -3315,8 +3315,6 @@ class DataArray(AbstractArray, DataWithCoords):
         its indices, and its methods like ``.groupby()``.
 
         >>> def calculate_anomaly(da, groupby_type="time.month"):
-        ...     # Necessary workaround to xarray's check with zero dimensions
-        ...     # https://github.com/pydata/xarray/issues/3575
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
