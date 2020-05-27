@@ -3540,7 +3540,9 @@ class TestDataArray:
             ),
             pytest.param(
                 method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(reason="units not supported by numbagg"),
+                marks=pytest.mark.xfail(
+                    reason="numbagg functions are not supported by pint"
+                ),
             ),
         ),
         ids=repr,
@@ -4963,7 +4965,9 @@ class TestDataset:
             ),
             pytest.param(
                 method("rolling_exp", x=3),
-                marks=pytest.mark.xfail(reason="uses numbagg which strips units"),
+                marks=pytest.mark.xfail(
+                    reason="numbagg functions are not supported by pint"
+                ),
             ),
         ),
         ids=repr,
