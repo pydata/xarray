@@ -693,7 +693,7 @@ def apply_ufunc(
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
     meta: Any = None,
-    dask_gufunc_kwargs: Mapping = None,
+    dask_gufunc_kwargs: Dict[str, Any] = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
