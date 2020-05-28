@@ -864,12 +864,10 @@ def test_vectorize_dask_dtype_meta():
         dask="parallelized",
         output_dtypes=[int],
         meta=np.ndarray((0, 0), dtype=np.float),
-        )
+    )
 
     assert_identical(expected, actual)
     assert np.float == actual.dtype
-
-
 
 
 with raises_regex(TypeError, "Only xr.DataArray is supported"):
