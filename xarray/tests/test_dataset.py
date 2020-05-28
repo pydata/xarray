@@ -2646,6 +2646,13 @@ class TestDataset:
         obj = ds.reset_index("coord_1").rename({"coord_1_": "coord_1"})
         assert_equal(ds, obj)
 
+        newds = (
+            ds.reset_index("coord_1")
+            .reset_coords("coord_1_")
+            .rename({"coord_1_": "coord_1"})
+        )
+        assert "coord_1" not in newds.data_vars
+
     def test_rename_multiindex(self):
         mindex = pd.MultiIndex.from_tuples(
             [([1, 2]), ([3, 4])], names=["level0", "level1"]
