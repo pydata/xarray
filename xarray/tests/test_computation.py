@@ -1,6 +1,7 @@
 import functools
 import operator
 import pickle
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,8 @@ from xarray.core.computation import (
 )
 
 from . import has_dask, raises_regex, requires_dask
+
+dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
@@ -850,6 +853,7 @@ def test_vectorize_dask_dtype():
     assert expected.dtype == actual.dtype
 
 
+@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
 @requires_dask
 def test_vectorize_dask_dtype_meta():
     # meta dtype takes precedence
