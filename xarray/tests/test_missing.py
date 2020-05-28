@@ -541,7 +541,9 @@ def test_get_clean_interp_index_strict(index):
     with pytest.raises(ValueError):
         get_clean_interp_index(da, "x")
 
-    get_clean_interp_index(da, "x", strict=False)
+    clean = get_clean_interp_index(da, "x", strict=False)
+    np.testing.assert_array_equal(index, clean)
+    assert clean.dtype == np.float64
 
 
 @pytest.fixture
