@@ -92,7 +92,6 @@ New Features
 - :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
   where the result of a computation could not be inferred automatically.
   By `Deepak Cherian <https://github.com/dcherian>`_
-
 - Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
   (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
@@ -169,6 +168,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
+  :py:func:`xarray.apply_ufunc` when using `dask='parallelized'`. (:pull:`4060`)
 - Raise more informative error messages for chunk size conflicts when writing to zarr files.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Run the ``isort`` pre-commit hook only on python source files
