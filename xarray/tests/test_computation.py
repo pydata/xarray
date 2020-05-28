@@ -671,7 +671,7 @@ def test_apply_dask_parallelized_two_args():
 
     def parallel_add(x, y):
         return apply_ufunc(
-            operator.add, x, y, dask="parallelized", output_dtypes=[np.int64],
+            operator.add, x, y, dask="parallelized", output_dtypes=[np.int64]
         )
 
     def check(x, y):
@@ -686,9 +686,6 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    # todo: this raises ValueError since chunks do not match inside apply_gufunc due to
-    #  computing, could be fixed by setting `allow_rechunk=True` in the call to
-    #  apply_gufunc (or rechunking before feeding to apply_ufunc)
     with raises_regex(ValueError, "with different chunksize present"):
         check(data_array, 0 * data_array.compute())
 
@@ -704,9 +701,7 @@ def test_apply_dask_parallelized_errors():
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
-    # formerly from _apply_blockwise
-    # now from dask.apply_gufunc
-    # todo: Do we need to test for this?
+    # formerly from _apply_blockwise, now from dask.array.apply_gufunc
     with raises_regex(ValueError, "Core dimension `'y'` consists of multiple chunks"):
         apply_ufunc(
             identity,

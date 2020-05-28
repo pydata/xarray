@@ -4,6 +4,7 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
+import warnings
 from collections import Counter
 from typing import (
     TYPE_CHECKING,
@@ -545,10 +546,8 @@ def apply_variable_ufunc(
     signature,
     exclude_dims=frozenset(),
     dask="forbidden",
-    vectorize=False,
-    output_dtypes=None,
-    output_sizes=None,
     keep_attrs=False,
+    dask_gufunc_kwargs=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -582,20 +581,21 @@ def apply_variable_ufunc(
         elif dask == "parallelized":
             numpy_func = func
 
+            if dask_gufunc_kwargs is None:
+                dask_gufunc_kwargs = {}
+
             def func(*arrays):
                 import dask.array as da
 
                 res = da.apply_gufunc(
-                    numpy_func,
-                    str(signature),
-                    *arrays,
-                    output_dtypes=output_dtypes,
-                    output_sizes=output_sizes,
-                    vectorize=vectorize,
+                    numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
                 )
-                # keep until https://github.com/dask/dask/pull/6207 is available
+
+                # todo: covers for https://github.com/dask/dask/pull/6207
+                #  remove when minimal dask version >= 2.17.0
                 if signature.num_outputs > 1:
                     res = (*res,)
+
                 return res
 
         elif dask == "allowed":
@@ -605,12 +605,9 @@ def apply_variable_ufunc(
                 "unknown setting for dask array handling in "
                 "apply_ufunc: {}".format(dask)
             )
-    else:
-        # vectorize non-dask
-        if vectorize:
-            func = _vectorize(func, signature, output_dtypes)
 
     result_data = func(*input_data)
+
     if signature.num_outputs == 1:
         result_data = (result_data,)
     elif (
@@ -677,17 +674,7 @@ def apply_array_ufunc(func, *args, dask="forbidden"):
             pass
         else:
             raise ValueError(f"unknown setting for dask array handling: {dask}")
-    # maybe vectorizing??
     return func(*args)
-
-
-def _vectorize(func, signature, output_dtypes):
-    if signature.all_core_dims:
-        func = np.vectorize(func, otypes=output_dtypes, signature=str(signature))
-    else:
-        func = np.vectorize(func, otypes=output_dtypes)
-
-    return func
 
 
 def apply_ufunc(
@@ -705,7 +692,8 @@ def apply_ufunc(
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
-    # meta: Any = None,
+    meta: Any = None,
+    dask_gufunc_kwargs: Mapping = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -792,20 +780,31 @@ def apply_ufunc(
         dask arrays:
 
         - 'forbidden' (default): raise an error if a dask array is encountered.
-        - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if ``func`` natively supports dask arrays.
+        - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if
+          ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array. If used, the ``output_dtypes`` argument must
-          also be provided. Multiple output arguments are supported.
-          Only use this option if ``func`` does not support dask arrays (e.g. converts them to numpy arrays).
+          inputs are a dask array by using `dask.array.apply_gufunc`. If used,
+          the ``output_dtypes`` argument must also be provided.
+          Multiple output arguments are supported.
+          Only use this option if ``func`` does not natively support dask arrays
+          (e.g. converts them to numpy arrays).
+    dask_gufunc_kwargs : dict, optional
+        Optional keyword arguments passed to ``dask.array.apply_gufunc`` if
+        dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``
+        and ``meta``.
     output_dtypes : list of dtypes, optional
-        Optional list of output dtypes. Only used if dask='parallelized'.
+        Optional list of output dtypes. Only used if dask='parallelized' or
+        vectorize=True.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
-        on outputs.
+        on outputs. ``output_sizes`` should be given in the ``dask_gufunc_kwargs``
+        parameter. It will be removed as direct parameter in a future version.
     meta : optional
         Size-0 object representing the type of array wrapped by dask array. Passed on to
-        ``dask.array.blockwise``.
+        ``dask.array.apply_gufunc``. ``meta`` should be given in the
+        ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
+        a future version.
 
     Returns
     -------
@@ -933,9 +932,37 @@ def apply_ufunc(
             "each dimension in `exclude_dims` must also be a "
             "core dimension in the function signature"
         )
+    # handle dask_gufunc_kwargs
+    if dask == "parallelized":
+        if dask_gufunc_kwargs is None:
+            dask_gufunc_kwargs = {}
+        dask_gufunc_kwargs.setdefault("output_dtypes", output_dtypes)
+        dask_gufunc_kwargs.setdefault("vectorize", vectorize)
+        # todo: remove warnings after deprecation cycle
+        if meta is not None:
+            warnings.warn(
+                "``meta`` should be given in the ``dask_gufunc_kwargs`` parameter."
+                " It will be removed as direct parameter in a future version."
+            )
+            dask_gufunc_kwargs.setdefault("meta", meta)
+        if output_sizes is not None:
+            warnings.warn(
+                "``output_sizes`` should be given in the ``dask_gufunc_kwargs`` "
+                "parameter. It will be removed as direct parameter in a future "
+                "version."
+            )
+            dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
 
     if kwargs:
         func = functools.partial(func, **kwargs)
+
+    if vectorize and not dask == "parallelized":
+        if signature.all_core_dims:
+            func = np.vectorize(
+                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+            )
+        else:
+            func = np.vectorize(func, otypes=output_dtypes)
 
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
@@ -944,9 +971,7 @@ def apply_ufunc(
         exclude_dims=exclude_dims,
         keep_attrs=keep_attrs,
         dask=dask,
-        vectorize=vectorize,
-        output_dtypes=output_dtypes,
-        output_sizes=output_sizes,
+        dask_gufunc_kwargs=dask_gufunc_kwargs,
     )
 
     # feed groupby-apply_ufunc through apply_groupby_func
@@ -963,6 +988,7 @@ def apply_ufunc(
             keep_attrs=keep_attrs,
             dask=dask,
             vectorize=vectorize,
+            dask_gufunc_kwargs=dask_gufunc_kwargs,
         )
         return apply_groupby_func(this_apply, *args)
     # feed datasets apply_variable_ufunc through apply_dataset_vfunc
