@@ -2865,10 +2865,11 @@ class TestDataset:
             ds.reset_index("x", inplace=True)
 
     def test_reset_index_keep_attrs(self):
-        coord_1 = xr.DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
-        ds = xr.Dataset({}, {"coord_1": coord_1})
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        ds = Dataset({}, {"coord_1": coord_1})
+        expected = Dataset({}, {"coord_1_": coord_1})
         obj = ds.reset_index("coord_1").rename({"coord_1_": "coord_1"})
-        assert_identical(ds, obj)
+        assert_identical(expected, obj)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
