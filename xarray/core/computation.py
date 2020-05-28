@@ -540,6 +540,17 @@ def broadcast_compat_data(
     return data
 
 
+def _vectorize(func, signature, output_dtypes):
+    if signature.all_core_dims:
+        func = np.vectorize(
+            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+        )
+    else:
+        func = np.vectorize(func, otypes=output_dtypes)
+
+    return func
+
+
 def apply_variable_ufunc(
     func,
     *args,
@@ -605,6 +616,12 @@ def apply_variable_ufunc(
                 "unknown setting for dask array handling in "
                 "apply_ufunc: {}".format(dask)
             )
+    else:
+        if dask_gufunc_kwargs is not None:
+            if dask_gufunc_kwargs.setdefault("vectorize", False):
+                func = _vectorize(
+                    func, signature, dask_gufunc_kwargs.get("output_dtypes")
+                )
 
     result_data = func(*input_data)
 
@@ -933,7 +950,7 @@ def apply_ufunc(
             "core dimension in the function signature"
         )
     # handle dask_gufunc_kwargs
-    if dask == "parallelized":
+    if (dask == "parallelized") or vectorize:
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
         dask_gufunc_kwargs.setdefault("output_dtypes", output_dtypes)
@@ -955,14 +972,6 @@ def apply_ufunc(
 
     if kwargs:
         func = functools.partial(func, **kwargs)
-
-    if vectorize and not dask == "parallelized":
-        if signature.all_core_dims:
-            func = np.vectorize(
-                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
-            )
-        else:
-            func = np.vectorize(func, otypes=output_dtypes)
 
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
