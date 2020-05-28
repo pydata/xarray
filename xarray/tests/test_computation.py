@@ -816,19 +816,60 @@ def test_vectorize_dask():
     )
     assert_identical(expected, actual)
 
-    # test for GH 4015
-    def func(x):
-        return np.sum(x ** 2)
 
-    da = xr.DataArray(np.arange(2 * 3 * 4).reshape(2, 3, 4))
-    da = da + 1j * da
-    da = da.chunk(dict(dim_1=1))
+@requires_dask
+def test_vectorize_dask_dtype():
+    # ensure output_dtypes is preserved with vectorize=True
+    # GH4015
 
-    da2 = apply_ufunc(
-        func, da, vectorize=True, dask="parallelized", output_dtypes=[da.dtype],
+    # integer
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[int],
     )
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
 
-    assert da2.dtype == da.dtype, "wrong dtype"
+    # complex
+    data_array = xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y"))
+    expected = data_array.copy()
+    actual = apply_ufunc(
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[complex],
+    )
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+@requires_dask
+def test_vectorize_dask_dtype_meta():
+    # meta dtype takes precedence
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
+
+    actual = apply_ufunc(
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[int],
+        meta=np.ndarray((0, 0), dtype=np.float),
+        )
+
+    assert_identical(expected, actual)
+    assert np.float == actual.dtype
+
+
 
 
 with raises_regex(TypeError, "Only xr.DataArray is supported"):
