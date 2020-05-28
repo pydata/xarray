@@ -3027,6 +3027,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables, coord_names = self._rename_vars(name_dict, dims_dict)
         dims = self._rename_dims(dims_dict)
         indexes = self._rename_indexes(name_dict, dims.keys())
+
+        # Variable could be renamed to an existing dimension name
+        # in this case, convert to IndexVariable and set indexes
+        # GH4107
+        for name in coord_names:
+            indexvar = variables.pop(name).to_index_variable()
+            variables[name] = indexvar
+            if indexes is None:
+                indexes = dict()
+            indexes[name] = indexvar.to_index()
+
         return variables, coord_names, dims, indexes
 
     def rename(
