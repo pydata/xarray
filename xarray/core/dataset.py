@@ -5717,7 +5717,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         .. warning::
             This method is experimental and its signature may change.
 
-       Parameters
+        Parameters
         ----------
         func: callable
             User-provided function that accepts a Dataset as its first
