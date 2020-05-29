@@ -140,7 +140,7 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
-- Fix open_rastario() for WarpedVRT with specified src_crs. (:pull:`4104`)
+- Fix :py:func:`open_rasterio` for ``WarpedVRT`` with specified ``src_crs``. (:pull:`4104`)
   By `Dave Cole <https://github.com/dtpc>`_.
 
 Documentation
