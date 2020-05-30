@@ -100,6 +100,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- If groupby receives a ``DataArray`` with name=None, assign a default name (:issue:`158`)
+  By `Phil Butcher <https://github.com/pjbutcher>`_.
 - Support dark mode in VS code (:issue:`4024`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix bug when converting multiindexed Pandas objects to sparse xarray objects. (:issue:`4019`)
