@@ -546,7 +546,8 @@ def test_groupby_none_group_name():
     da = xr.DataArray(data)  # da.name = None
     key = xr.DataArray(np.floor_divide(data, 2))
 
-    da.groupby(key).mean()
+    mean = da.groupby(key).mean()
+    assert "group" in mean.dims
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
