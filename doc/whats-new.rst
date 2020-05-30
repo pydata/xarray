@@ -43,7 +43,8 @@ Enhancements
 
 New Features
 ~~~~~~~~~~~~
-
+- Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
   :py:meth:`Dataset.chunk`. (:issue:`4055`)
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ 
