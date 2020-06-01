@@ -233,6 +233,21 @@ Reshaping and reorganizing
    Dataset.sortby
    Dataset.broadcast_like
 
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor.rst
+
+   Dataset.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+
 DataArray
 =========
 
@@ -535,6 +550,33 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.plot.contourf
+   DataArray.plot.contour
+   DataArray.plot.hist
+   DataArray.plot.imshow
+   DataArray.plot.line
+   DataArray.plot.pcolormesh
+   DataArray.plot.step
+
 .. _api.ufuncs:
 
 Universal functions
@@ -779,30 +821,6 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
-
-Plotting
-========
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor.rst
-
-   DataArray.plot
-   Dataset.plot
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   Dataset.plot.scatter
-   DataArray.plot.contourf
-   DataArray.plot.contour
-   DataArray.plot.hist
-   DataArray.plot.imshow
-   DataArray.plot.line
-   DataArray.plot.pcolormesh
-   DataArray.plot.step
-
 
 Faceting
 --------
