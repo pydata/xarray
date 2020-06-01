@@ -26,9 +26,12 @@ Top-level functions
    combine_nested
    where
    set_options
+   infer_freq
    full_like
    zeros_like
    ones_like
+   cov
+   corr
    dot
    polyval
    map_blocks
