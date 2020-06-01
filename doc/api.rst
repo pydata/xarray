@@ -452,6 +452,72 @@ String manipulation
    DataArray.str.wrap
    DataArray.str.zfill
 
+Datetimelike properties
+-----------------------
+
+**Datetime properties**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.year
+   DataArray.dt.month
+   DataArray.dt.day
+   DataArray.dt.hour
+   DataArray.dt.minute
+   DataArray.dt.second
+   DataArray.dt.microsecond
+   DataArray.dt.nanosecond
+   DataArray.dt.weekofyear
+   DataArray.dt.week
+   DataArray.dt.dayofweek
+   DataArray.dt.weekday
+   DataArray.dt.weekday_name
+   DataArray.dt.dayofyear
+   DataArray.dt.quarter
+   DataArray.dt.days_in_month
+   DataArray.dt.daysinmonth
+   DataArray.dt.season
+   DataArray.dt.time
+   DataArray.dt.is_month_start
+   DataArray.dt.is_month_end
+   DataArray.dt.is_quarter_end
+   DataArray.dt.is_year_start
+   DataArray.dt.is_leap_year
+
+**Datetime methods**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.dt.floor
+   DataArray.dt.ceil
+   DataArray.dt.round
+   DataArray.dt.strftime
+
+**Timedelta properties**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.days
+   DataArray.dt.seconds
+   DataArray.dt.microseconds
+   DataArray.dt.nanoseconds
+
+**Timedelta methods**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.dt.floor
+   DataArray.dt.ceil
+   DataArray.dt.round
+
 
 Reshaping and reorganizing
 --------------------------
