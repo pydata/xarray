@@ -442,9 +442,12 @@ class _PlotMethods:
     def __init__(self, darray):
         self._da = darray
 
-    @functools.wraps(plot)
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
+
+    # we can't use functools.wraps here since that doesn't only modify
+    # the docstring
+    __doc__ = __call__.__doc__ = plot.__doc__
 
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
