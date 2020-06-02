@@ -238,12 +238,6 @@ Plotting
 
 .. autosummary::
    :toctree: generated/
-   :template: autosummary/accessor.rst
-
-   Dataset.plot
-
-.. autosummary::
-   :toctree: generated/
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
@@ -552,12 +546,6 @@ Reshaping and reorganizing
 
 Plotting
 --------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor.rst
-
-   DataArray.plot
 
 .. autosummary::
    :toctree: generated/
