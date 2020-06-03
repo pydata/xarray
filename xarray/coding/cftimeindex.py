@@ -263,8 +263,10 @@ class CFTimeIndex(pd.Index):
 
     def __repr__(self):
         """
-        copied from pandas.io.printing.py expect for attrs.append(("calendar", self.calendar))
         Return a string representation for this object.
+
+        copied from pandas.io.printing.py
+        expect for attrs.append(("calendar", self.calendar))
         """
         klass_name = type(self).__name__
         data = self._format_data()
@@ -289,8 +291,9 @@ class CFTimeIndex(pd.Index):
 
     def _format_data(self, name=None):
         """
-        copied from pandas.io.printing.py
         Return the formatted data as a unicode string.
+
+        copied from pandas.io.printing.py
         """
         # do we want to justify (only do so for non-objects)
         is_justify = True
@@ -307,8 +310,9 @@ class CFTimeIndex(pd.Index):
 
     def _format_attrs(self):
         """
-        copied from pandas.io.printing.py
         Return a list of tuples of the (attr,formatted_value).
+
+        copied from pandas.io.printing.py
         """
         return format_object_attrs(self)
 

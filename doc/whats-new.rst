@@ -83,7 +83,7 @@ New Features
   independently of time decoding (:issue:`1621`)
   `Aureliana Barghini <https://github.com/aurghs>`
 - Add ``calendar`` as a new property for ``cftimeindex`` and show in ``__repr__`` (:issue:`2416`, :pull:`4092`)
-`Aaron Spring <https://github.com/aaronspring>`
+  `Aaron Spring <https://github.com/aaronspring>`
 
 Bug fixes
 ~~~~~~~~~
