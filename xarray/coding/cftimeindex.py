@@ -46,8 +46,6 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
-from pandas.core.dtypes.common import is_object_dtype
-from pandas.io.formats.printing import format_object_attrs, format_object_summary
 
 from xarray.core.utils import is_scalar
 
