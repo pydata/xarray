@@ -46,6 +46,8 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
+from pandas.core.dtypes.common import is_object_dtype
+from pandas.io.formats.printing import format_object_attrs, format_object_summary
 
 from xarray.core.utils import is_scalar
 
@@ -258,6 +260,57 @@ class CFTimeIndex(pd.Index):
         result.name = name
         result._cache = {}
         return result
+
+    def __repr__(self):
+        """
+        copied from pandas.io.printing.py expect for attrs.append(("calendar", self.calendar))
+        Return a string representation for this object.
+        """
+        klass_name = type(self).__name__
+        data = self._format_data()
+        attrs = self._format_attrs()
+        # add calendar to attrs
+        attrs.append(("calendar", self.calendar))
+        space = self._format_space()
+        attrs_str = [f"{k}={v}" for k, v in attrs]
+        prepr = f",{space}".join(attrs_str)
+
+        # no data provided, just attributes
+        if data is None:
+            data = ""
+
+        res = f"{klass_name}({data}{prepr})"
+
+        return res
+
+    def _format_space(self):
+        """copied from pandas.io.printing.py"""
+        return " "
+
+    def _format_data(self, name=None):
+        """
+        copied from pandas.io.printing.py
+        Return the formatted data as a unicode string.
+        """
+        # do we want to justify (only do so for non-objects)
+        is_justify = True
+
+        if self.inferred_type == "string":
+            is_justify = False
+        elif self.inferred_type == "categorical":
+            if is_object_dtype(self.categories):  # type: ignore
+                is_justify = False
+
+        return format_object_summary(
+            self, self._formatter_func, is_justify=is_justify, name=name
+        )
+
+    def _format_attrs(self):
+        """
+        copied from pandas.io.printing.py
+        Return a list of tuples of the (attr,formatted_value).
+        """
+        return format_object_attrs(self)
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from

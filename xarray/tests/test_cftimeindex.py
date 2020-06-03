@@ -885,30 +885,38 @@ def test_cftimeindex_shift_invalid_freq():
 
 
 @requires_cftime
-@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_calendar_property(calendar):
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_property(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
-    # is this awkward here in a test?
-    if calendar == "365_day":
-        calendar = "noleap"
-    elif calendar == "366_day":
-        calendar = "all_leap"
-    assert index.calendar == calendar
+    assert index.calendar == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-@pytest.mark.skip(reason="not implemented")
-def test_cftimeindex_calendar_in_repr(calendar):
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_in_repr(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
-    # is this awkward here in a test?
     repr_str = index.__repr__()
-    if calendar == "365_day":
-        calendar = "noleap"
-    elif calendar == "366_day":
-        calendar = "all_leap"
-    assert calendar in repr_str
-    assert "calendar=" in repr_str
+    assert f" calendar={expected}" in repr_str
 
 
 @requires_cftime
