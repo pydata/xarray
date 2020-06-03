@@ -285,37 +285,6 @@ class CFTimeIndex(pd.Index):
 
         return res
 
-    def _format_space(self):
-        """copied from pandas.io.printing.py"""
-        return " "
-
-    def _format_data(self, name=None):
-        """
-        Return the formatted data as a unicode string.
-
-        copied from pandas.io.printing.py
-        """
-        # do we want to justify (only do so for non-objects)
-        is_justify = True
-
-        if self.inferred_type == "string":
-            is_justify = False
-        elif self.inferred_type == "categorical":
-            if is_object_dtype(self.categories):  # type: ignore
-                is_justify = False
-
-        return format_object_summary(
-            self, self._formatter_func, is_justify=is_justify, name=name
-        )
-
-    def _format_attrs(self):
-        """
-        Return a list of tuples of the (attr,formatted_value).
-
-        copied from pandas.io.printing.py
-        """
-        return format_object_attrs(self)
-
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._partial_date_slice
