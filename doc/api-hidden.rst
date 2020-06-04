@@ -550,8 +550,10 @@
    CFTimeIndex.asof
    CFTimeIndex.asof_locs
    CFTimeIndex.astype
+   CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
+   CFTimeIndex.days_in_month
    CFTimeIndex.delete
    CFTimeIndex.difference
    CFTimeIndex.drop
@@ -562,6 +564,7 @@
    CFTimeIndex.equals
    CFTimeIndex.factorize
    CFTimeIndex.fillna
+   CFTimeIndex.floor
    CFTimeIndex.format
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
@@ -602,6 +605,7 @@
    CFTimeIndex.reindex
    CFTimeIndex.rename
    CFTimeIndex.repeat
+   CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
    CFTimeIndex.set_value
