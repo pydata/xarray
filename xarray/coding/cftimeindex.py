@@ -270,7 +270,7 @@ class CFTimeIndex(pd.Index):
         data = self._format_data()
         attrs = self._format_attrs()
         # add calendar to attrs
-        attrs.append(("calendar", self.calendar))
+        attrs.append(("calendar", f"'{self.calendar}'"))
         space = self._format_space()
         attrs_str = [f"{k}={v}" for k, v in attrs]
         prepr = f",{space}".join(attrs_str)

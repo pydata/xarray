@@ -916,7 +916,7 @@ def test_cftimeindex_calendar_property(calendar, expected):
 def test_cftimeindex_calendar_in_repr(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
     repr_str = index.__repr__()
-    assert f" calendar={expected}" in repr_str
+    assert f" calendar='{expected}'" in repr_str
 
 
 @requires_cftime
