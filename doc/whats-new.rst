@@ -36,10 +36,12 @@ Breaking changes
 
 Enhancements
 ~~~~~~~~~~~~
-- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp` 
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially 
+- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
+  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
   rather than interpolating in multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
+  coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -47,7 +49,7 @@ New Features
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
   :py:meth:`Dataset.chunk`. (:issue:`4055`)
-  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ 
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_
 - Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:`3550`, :pull:`4089`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
 - Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`, :pull:`3733`, :pull:`4099`)
@@ -77,7 +79,7 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
-- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`). 
+- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
