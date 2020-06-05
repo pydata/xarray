@@ -329,7 +329,7 @@ def split_indexes(
         else:
             vars_to_remove.append(d)
             if not drop:
-                vars_to_create[str(d) + "_"] = Variable(d, index)
+                vars_to_create[str(d) + "_"] = Variable(d, index, variables[d].attrs)
 
     for d, levs in dim_levels.items():
         index = variables[d].to_index()
@@ -341,7 +341,7 @@ def split_indexes(
         if not drop:
             for lev in levs:
                 idx = index.get_level_values(lev)
-                vars_to_create[idx.name] = Variable(d, idx)
+                vars_to_create[idx.name] = Variable(d, idx, variables[d].attrs)
 
     new_variables = dict(variables)
     for v in set(vars_to_remove):

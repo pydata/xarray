@@ -1830,6 +1830,13 @@ class TestDataArray:
         expected = DataArray([1, 2], coords={"x_": ("x", ["a", "b"])}, dims="x")
         assert_identical(array.reset_index("x"), expected)
 
+    def test_reset_index_keep_attrs(self):
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        da = DataArray([1, 0], [coord_1])
+        expected = DataArray([1, 0], {"coord_1_": coord_1}, dims=["coord_1"])
+        obj = da.reset_index("coord_1")
+        assert_identical(expected, obj)
+
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(["level_2", "level_1"])
         expected = DataArray(self.mda.values, coords={"x": midx}, dims="x")
