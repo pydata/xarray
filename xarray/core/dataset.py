@@ -5839,7 +5839,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim)
+        x = get_clean_interp_index(self, dim, strict=False)
         xname = "{}_".format(self[dim].name)
         order = int(deg) + 1
         lhs = np.vander(x, order)

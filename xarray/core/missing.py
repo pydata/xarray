@@ -208,7 +208,9 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
+def get_clean_interp_index(
+    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+):
     """Return index to use for x values in interpolation or curve fitting.
 
     Parameters
@@ -221,6 +223,8 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
       If use_coordinate is True, the coordinate that shares the name of the
       dimension along which interpolation is being performed will be used as the
       x values. If False, the x values are set as an equally spaced sequence.
+    strict : bool
+      Whether to raise errors if the index is either non-unique or non-monotonic (default).
 
     Returns
     -------
@@ -257,11 +261,12 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
     if isinstance(index, pd.MultiIndex):
         index.name = dim
 
-    if not index.is_monotonic:
-        raise ValueError(f"Index {index.name!r} must be monotonically increasing")
+    if strict:
+        if not index.is_monotonic:
+            raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
-    if not index.is_unique:
-        raise ValueError(f"Index {index.name!r} has duplicate values")
+        if not index.is_unique:
+            raise ValueError(f"Index {index.name!r} has duplicate values")
 
     # Special case for non-standard calendar indexes
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
@@ -282,7 +287,7 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
         # xarray/numpy raise a ValueError
         raise TypeError(
             f"Index {index.name!r} must be castable to float64 to support "
-            f"interpolation, got {type(index).__name__}."
+            f"interpolation or curve fitting, got {type(index).__name__}."
         )
 
     return index
