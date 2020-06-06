@@ -239,7 +239,9 @@ class CFTimeIndex(pd.Index):
     minute = _field_accessor("minute", "The minutes of the datetime")
     second = _field_accessor("second", "The seconds of the datetime")
     microsecond = _field_accessor("microsecond", "The microseconds of the datetime")
-    dayofyear = _field_accessor("dayofyr", "The ordinal day of year of the datetime", "1.0.2.1")
+    dayofyear = _field_accessor(
+        "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
+    )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
     days_in_month = _field_accessor(
         "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"

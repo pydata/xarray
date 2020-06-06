@@ -86,6 +86,7 @@ def summarize_coords(variables):
         coords.update(**summarize_coord(k, v))
 
     vars_li = "".join(f"<li class='xr-var-item'>{v}</li>" for v in coords.values())
+    
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
