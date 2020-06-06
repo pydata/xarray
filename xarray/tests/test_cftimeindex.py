@@ -194,7 +194,8 @@ def test_assert_all_valid_date_type(date_type, index):
     with pytest.raises(TypeError):
         assert_all_valid_date_type(np.array([1, date_type(1, 1, 1)]))
 
-    assert_all_valid_date_type(np.array([date_type(1, 1, 1), date_type(1, 2, 1)]))
+    assert_all_valid_date_type(
+        np.array([date_type(1, 1, 1), date_type(1, 2, 1)]))
 
 
 @requires_cftime
@@ -261,7 +262,8 @@ def test_parse_string_to_bounds_year(date_type, dec_days):
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 1, 1)
     expected_end = date_type(2, 12, dec_days, 23, 59, 59, 999999)
-    result_start, result_end = _parsed_string_to_bounds(date_type, "year", parsed)
+    result_start, result_end = _parsed_string_to_bounds(
+        date_type, "year", parsed)
     assert result_start == expected_start
     assert result_end == expected_end
 
@@ -271,7 +273,8 @@ def test_parse_string_to_bounds_month_feb(date_type, feb_days):
     parsed = date_type(2, 2, 10, 6, 2, 8, 1)
     expected_start = date_type(2, 2, 1)
     expected_end = date_type(2, 2, feb_days, 23, 59, 59, 999999)
-    result_start, result_end = _parsed_string_to_bounds(date_type, "month", parsed)
+    result_start, result_end = _parsed_string_to_bounds(
+        date_type, "month", parsed)
     assert result_start == expected_start
     assert result_end == expected_end
 
@@ -281,7 +284,8 @@ def test_parse_string_to_bounds_month_dec(date_type, dec_days):
     parsed = date_type(2, 12, 1)
     expected_start = date_type(2, 12, 1)
     expected_end = date_type(2, 12, dec_days, 23, 59, 59, 999999)
-    result_start, result_end = _parsed_string_to_bounds(date_type, "month", parsed)
+    result_start, result_end = _parsed_string_to_bounds(
+        date_type, "month", parsed)
     assert result_start == expected_start
     assert result_end == expected_end
 
@@ -303,7 +307,8 @@ def test_parsed_string_to_bounds_sub_monthly(
     expected_start = date_type(*ex_start_args)
     expected_end = date_type(*ex_end_args)
 
-    result_start, result_end = _parsed_string_to_bounds(date_type, reso, parsed)
+    result_start, result_end = _parsed_string_to_bounds(
+        date_type, reso, parsed)
     assert result_start == expected_start
     assert result_end == expected_end
 
@@ -388,7 +393,8 @@ def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = length_one_index.get_slice_bound(
+        date_type(1, 3, 1), "right", kind)
     expected = 1
     assert result == expected
 
@@ -501,7 +507,8 @@ def test_sel_date_scalar_pad(da, date_type, index, sel_kwargs):
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "backfill"}, {"method": "backfill", "tolerance": timedelta(days=365)}],
+    [{"method": "backfill"}, {"method": "backfill",
+                              "tolerance": timedelta(days=365)}],
 )
 def test_sel_date_scalar_backfill(da, date_type, index, sel_kwargs):
     expected = xr.DataArray(3).assign_coords(time=index[2])
@@ -530,19 +537,26 @@ def test_sel_date_scalar_tolerance_raises(da, date_type, sel_kwargs):
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "nearest"}, {"method": "nearest", "tolerance": timedelta(days=70)}],
+    [{"method": "nearest"}, {"method": "nearest",
+                             "tolerance": timedelta(days=70)}],
 )
 def test_sel_date_list_nearest(da, date_type, index, sel_kwargs):
-    expected = xr.DataArray([2, 2], coords=[[index[1], index[1]]], dims=["time"])
-    result = da.sel(time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    expected = xr.DataArray(
+        [2, 2], coords=[[index[1], index[1]]], dims=["time"])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
     assert_identical(result, expected)
 
-    expected = xr.DataArray([2, 3], coords=[[index[1], index[2]]], dims=["time"])
-    result = da.sel(time=[date_type(1, 3, 1), date_type(1, 12, 1)], **sel_kwargs)
+    expected = xr.DataArray(
+        [2, 3], coords=[[index[1], index[2]]], dims=["time"])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 12, 1)], **sel_kwargs)
     assert_identical(result, expected)
 
-    expected = xr.DataArray([3, 3], coords=[[index[2], index[2]]], dims=["time"])
-    result = da.sel(time=[date_type(1, 11, 1), date_type(1, 12, 1)], **sel_kwargs)
+    expected = xr.DataArray(
+        [3, 3], coords=[[index[2], index[2]]], dims=["time"])
+    result = da.sel(time=[date_type(1, 11, 1),
+                          date_type(1, 12, 1)], **sel_kwargs)
     assert_identical(result, expected)
 
 
@@ -552,19 +566,24 @@ def test_sel_date_list_nearest(da, date_type, index, sel_kwargs):
     [{"method": "pad"}, {"method": "pad", "tolerance": timedelta(days=365)}],
 )
 def test_sel_date_list_pad(da, date_type, index, sel_kwargs):
-    expected = xr.DataArray([2, 2], coords=[[index[1], index[1]]], dims=["time"])
-    result = da.sel(time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    expected = xr.DataArray(
+        [2, 2], coords=[[index[1], index[1]]], dims=["time"])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
     assert_identical(result, expected)
 
 
 @requires_cftime
 @pytest.mark.parametrize(
     "sel_kwargs",
-    [{"method": "backfill"}, {"method": "backfill", "tolerance": timedelta(days=365)}],
+    [{"method": "backfill"}, {"method": "backfill",
+                              "tolerance": timedelta(days=365)}],
 )
 def test_sel_date_list_backfill(da, date_type, index, sel_kwargs):
-    expected = xr.DataArray([3, 3], coords=[[index[2], index[2]]], dims=["time"])
-    result = da.sel(time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
+    expected = xr.DataArray(
+        [3, 3], coords=[[index[2], index[2]]], dims=["time"])
+    result = da.sel(
+        time=[date_type(1, 3, 1), date_type(1, 4, 1)], **sel_kwargs)
     assert_identical(result, expected)
 
 
@@ -917,14 +936,35 @@ def test_cftimeindex_calendar_in_repr(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
     repr_str = index.__repr__()
     assert f" calendar='{expected}'" in repr_str
-    assert " length=3"
+    assert " length=3" in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_in_html_repr(calendar, expected):
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    index = xr.DataArray(index, dims='time')
+    with xr.set_options(display_style='html'):
+        repr_str = index.__repr__()
+        assert f" calendar='{expected}'" in repr_str
 
 
 @requires_cftime
 def test_parse_array_of_cftime_strings():
     from cftime import DatetimeNoLeap
 
-    strings = np.array([["2000-01-01", "2000-01-02"], ["2000-01-03", "2000-01-04"]])
+    strings = np.array([["2000-01-01", "2000-01-02"],
+                        ["2000-01-03", "2000-01-04"]])
     expected = np.array(
         [
             [DatetimeNoLeap(2000, 1, 1), DatetimeNoLeap(2000, 1, 2)],
@@ -1080,5 +1120,6 @@ def test_asi8_distant_date():
     date_type = cftime.DatetimeProlepticGregorian
     index = xr.CFTimeIndex([date_type(10731, 4, 22, 3, 25, 45, 123456)])
     result = index.asi8
-    expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
+    expected = np.array(
+        [1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
     np.testing.assert_array_equal(result, expected)

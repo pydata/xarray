@@ -8,11 +8,13 @@ import pkg_resources
 from .formatting import inline_variable_array_repr, short_data_repr
 
 CSS_FILE_PATH = "/".join(("static", "css", "style.css"))
-CSS_STYLE = pkg_resources.resource_string("xarray", CSS_FILE_PATH).decode("utf8")
+CSS_STYLE = pkg_resources.resource_string(
+    "xarray", CSS_FILE_PATH).decode("utf8")
 
 
 ICONS_SVG_PATH = "/".join(("static", "html", "icons-svg-inline.html"))
-ICONS_SVG = pkg_resources.resource_string("xarray", ICONS_SVG_PATH).decode("utf8")
+ICONS_SVG = pkg_resources.resource_string(
+    "xarray", ICONS_SVG_PATH).decode("utf8")
 
 
 def short_data_repr_html(array):
@@ -85,8 +87,8 @@ def summarize_coords(variables):
     for k, v in variables.items():
         coords.update(**summarize_coord(k, v))
 
-    vars_li = "".join(f"<li class='xr-var-item'>{v}</li>" for v in coords.values())
-
+    vars_li = "".join(
+        f"<li class='xr-var-item'>{v}</li>" for v in coords.values())
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
@@ -229,7 +231,8 @@ def _obj_repr(obj, header_components, sections):
 
     """
     header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
-    sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
+    sections = "".join(
+        f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
     return (
         "<div>"
