@@ -65,8 +65,7 @@ def first_n_items(array, n_desired):
         return []
 
     if n_desired < array.size:
-        indexer = _get_indexer_at_least_n_items(
-            array.shape, n_desired, from_end=False)
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=False)
         array = array[indexer]
     return np.asarray(array).flat[:n_desired]
 
@@ -81,8 +80,7 @@ def last_n_items(array, n_desired):
         return []
 
     if n_desired < array.size:
-        indexer = _get_indexer_at_least_n_items(
-            array.shape, n_desired, from_end=True)
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired, from_end=True)
         array = array[indexer]
     return np.asarray(array).flat[-n_desired:]
 
@@ -154,8 +152,7 @@ def format_items(x):
     timedelta_format = "datetime"
     if np.issubdtype(x.dtype, np.timedelta64):
         x = np.asarray(x, dtype="timedelta64[ns]")
-        day_part = x[~pd.isnull(x)].astype(
-            "timedelta64[D]").astype("timedelta64[ns]")
+        day_part = x[~pd.isnull(x)].astype("timedelta64[D]").astype("timedelta64[ns]")
         time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, "ns")
         if np.logical_not(day_needed).all():
@@ -179,8 +176,7 @@ def format_array_flat(array, max_width: int):
     relevant_front_items = format_items(
         first_n_items(array, (max_possibly_relevant + 1) // 2)
     )
-    relevant_back_items = format_items(
-        last_n_items(array, max_possibly_relevant // 2))
+    relevant_back_items = format_items(last_n_items(array, max_possibly_relevant // 2))
     # interleave relevant front and back items:
     #     [a, b, c] and [y, z] -> [a, z, b, y, c]
     relevant_items = sum(
@@ -193,8 +189,7 @@ def format_array_flat(array, max_width: int):
     ):
         padding = " ... "
         count = min(
-            array.size, max(
-                np.argmax(cum_len + len(padding) - 1 > max_width), 2)
+            array.size, max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)
         )
     else:
         count = array.size
@@ -280,8 +275,7 @@ def summarize_variable(
     if max_width is None:
         max_width_options = OPTIONS["display_width"]
         if not isinstance(max_width_options, int):
-            raise TypeError(
-                f"`max_width` value of `{max_width}` is not a valid int")
+            raise TypeError(f"`max_width` value of `{max_width}` is not a valid int")
         else:
             max_width = max_width_options
     first_col = pretty_print(f"  {marker} {name} ", col_width)
@@ -433,8 +427,7 @@ def short_numpy_repr(array):
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
-    options = {"precision": 6,
-               "linewidth": OPTIONS["display_width"], "threshold": 200}
+    options = {"precision": 6, "linewidth": OPTIONS["display_width"], "threshold": 200}
     if array.ndim < 3:
         edgeitems = 3
     elif array.ndim == 3:
@@ -449,21 +442,12 @@ def short_numpy_repr(array):
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     from ..coding.cftimeindex import CFTimeIndex
-    # try to convert to index: needed to get CFTimeIndex in html repr
-    try:
-        array2 = array.to_index()
-        # doesnt catch I dont understand why
-        assert isinstance(array2, CFTimeIndex)
-        if not isinstance(array2, CFTimeIndex):
-            print('revert')
-            array2 = array
-    except ValueError:  # catch to_index() fails
-        array2 = array
-    except AssertionError:  # catch other types than CFTimeIndex
-        array2 = array
-    except:
-        array2 = array
-    array = array2
+
+    # try to convert to index only if CFTimeIndex: needed for html repr
+    if hasattr(array, "to_index") and hasattr(array, "variable"):
+        if hasattr(array.variable._data, "array"):
+            if isinstance(array.variable._data.array, CFTimeIndex):
+                array = array.to_index()
 
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
@@ -489,8 +473,7 @@ def array_repr(arr):
         name_str = ""
 
     summary = [
-        "<xarray.{} {}({})>".format(
-            type(arr).__name__, name_str, dim_summary(arr)),
+        "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
         short_data_repr(arr),
     ]
 
@@ -596,8 +579,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
                     for var_s, attr_s in zip(temp, attrs_summary)
                 ]
 
-            diff_items += [ab_side + s[1:]
-                           for ab_side, s in zip(("L", "R"), temp)]
+            diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
     if diff_items:
         summary += ["Differing {}:".format(title.lower())] + diff_items
@@ -641,8 +623,7 @@ def diff_array_repr(a, b, compat):
     summary.append(diff_dim_summary(a, b))
 
     if not array_equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ")
-                for obj in (a, b)]
+        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
@@ -673,11 +654,9 @@ def diff_dataset_repr(a, b, compat):
     )
 
     summary.append(diff_dim_summary(a, b))
-    summary.append(diff_coords_repr(
-        a.coords, b.coords, compat, col_width=col_width))
+    summary.append(diff_coords_repr(a.coords, b.coords, compat, col_width=col_width))
     summary.append(
-        diff_data_vars_repr(a.data_vars, b.data_vars,
-                            compat, col_width=col_width)
+        diff_data_vars_repr(a.data_vars, b.data_vars, compat, col_width=col_width)
     )
 
     if compat == "identical":
