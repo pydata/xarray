@@ -56,14 +56,18 @@ class _UFuncSignature:
     __slots__ = (
         "input_core_dims",
         "output_core_dims",
+        "exclude_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
         "_all_core_dims",
     )
 
-    def __init__(self, input_core_dims, output_core_dims=((),)):
+    def __init__(
+        self, input_core_dims, output_core_dims=((),), exclude_dims=frozenset()
+    ):
         self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
         self.output_core_dims = tuple(tuple(a) for a in output_core_dims)
+        self.exclude_dims = exclude_dims
         self._all_input_core_dims = None
         self._all_output_core_dims = None
         self._all_core_dims = None
@@ -103,6 +107,7 @@ class _UFuncSignature:
             return (
                 self.input_core_dims == other.input_core_dims
                 and self.output_core_dims == other.output_core_dims
+                and self.exclude_dims == other.exclude_dims
             )
         except AttributeError:
             return False
@@ -111,12 +116,32 @@ class _UFuncSignature:
         return not self == other
 
     def __repr__(self):
-        return "{}({!r}, {!r})".format(
-            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
+        return "{}({!r}, {!r}, {!r})".format(
+            type(self).__name__,
+            list(self.input_core_dims),
+            list(self.output_core_dims),
+            self.exclude_dims,
         )
 
     def __str__(self):
-        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
+        input_core_dims = self.input_core_dims
+
+        # enumerate to make the exclude_dims unique
+        if self.exclude_dims:
+            counter = Counter()
+
+            def _enumerate(dim):
+                if dim in self.exclude_dims:
+                    n = counter[dim]
+                    counter.update([dim])
+                    dim = f"{dim}_{n}"
+                return dim
+
+            input_core_dims = [
+                [_enumerate(dim) for dim in arg] for arg in input_core_dims
+            ]
+
+        lhs = ",".join("({})".format(",".join(dims)) for dims in input_core_dims)
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
@@ -136,7 +161,9 @@ class _UFuncSignature:
             ["dim%d" % dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
-        alt_signature = type(self)(input_core_dims, output_core_dims)
+        exclude_dims = frozenset(["dim%d" % dims_map[dim] for dim in self.exclude_dims])
+
+        alt_signature = type(self)(input_core_dims, output_core_dims, exclude_dims)
         return str(alt_signature)
 
 
@@ -992,7 +1019,7 @@ def apply_ufunc(
     if kwargs is None:
         kwargs = {}
 
-    signature = _UFuncSignature(input_core_dims, output_core_dims)
+    signature = _UFuncSignature(input_core_dims, output_core_dims, exclude_dims)
 
     if exclude_dims and not exclude_dims <= signature.all_core_dims:
         raise ValueError(
