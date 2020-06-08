@@ -168,6 +168,8 @@ Documentation
   By `Justus Magin <https://github.com/keewis>`_.
 - Narrative documentation now describes :py:meth:`map_blocks`. :ref:`dask.automatic-parallelization`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Document accessors the way they are called. (:issue:`3625`, :pull:`3988`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
