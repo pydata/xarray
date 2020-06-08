@@ -1830,6 +1830,13 @@ class TestDataArray:
         expected = DataArray([1, 2], coords={"x_": ("x", ["a", "b"])}, dims="x")
         assert_identical(array.reset_index("x"), expected)
 
+    def test_reset_index_keep_attrs(self):
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        da = DataArray([1, 0], [coord_1])
+        expected = DataArray([1, 0], {"coord_1_": coord_1}, dims=["coord_1"])
+        obj = da.reset_index("coord_1")
+        assert_identical(expected, obj)
+
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(["level_2", "level_1"])
         expected = DataArray(self.mda.values, coords={"x": midx}, dims="x")
@@ -3531,6 +3538,24 @@ class TestDataArray:
         assert isinstance(actual_sparse.data, sparse.COO)
         actual_sparse.data = actual_sparse.data.todense()
         assert_identical(actual_sparse, actual_dense)
+
+    @requires_sparse
+    def test_from_multiindex_series_sparse(self):
+        # regression test for GH4019
+        import sparse
+
+        idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
+        series = pd.Series(np.random.RandomState(0).random(len(idx)), index=idx).sample(
+            n=5, random_state=3
+        )
+
+        dense = DataArray.from_series(series, sparse=False)
+        expected_coords = sparse.COO.from_numpy(dense.data, np.nan).coords
+
+        actual_sparse = xr.DataArray.from_series(series, sparse=True)
+        actual_coords = actual_sparse.data.coords
+
+        np.testing.assert_equal(actual_coords, expected_coords)
 
     def test_to_and_from_empty_series(self):
         # GH697
