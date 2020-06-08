@@ -149,6 +149,8 @@ Bug fixes
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix :py:func:`open_rasterio` for ``WarpedVRT`` with specified ``src_crs``. (:pull:`4104`)
   By `Dave Cole <https://github.com/dtpc>`_.
+- Fix :py:func:`~xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
