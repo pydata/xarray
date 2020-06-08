@@ -45,6 +45,18 @@ def test_signature_properties():
     assert _UFuncSignature([["x"]]) != _UFuncSignature([["y"]])
 
 
+def test_signature_properties_exclude():
+    sig = _UFuncSignature([["x"], ["x", "y"]], [["z"]], set("x"))
+    assert sig.input_core_dims == (("x",), ("x", "y"))
+    assert sig.output_core_dims == (("z",),)
+    assert sig.all_input_core_dims == frozenset(["x", "y"])
+    assert sig.all_output_core_dims == frozenset(["z"])
+    assert sig.num_inputs == 2
+    assert sig.num_outputs == 1
+    assert str(sig) == "(x_0),(x_1,y)->(z)"
+    assert sig.to_gufunc_string() == "(dim0_0),(dim0_1,dim1)->(dim2)"
+
+
 def test_result_name():
     class Named:
         def __init__(self, name=None):
@@ -810,6 +822,46 @@ def test_vectorize_dask():
         pandas_median,
         data_array.chunk({"x": 1}),
         input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+    )
+    assert_identical(expected, actual)
+
+
+def pandas_median_add(x, y):
+    # function which can consume input of unequal length
+    return pd.Series(x).median() + pd.Series(y).median()
+
+
+def test_vectorize_exclude_dims():
+    # GH 3890
+    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
+    expected = xr.DataArray([3, 5], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median_add,
+        data_array_a,
+        data_array_b,
+        input_core_dims=[["y"], ["y"]],
+        vectorize=True,
+        exclude_dims=set("y"),
+    )
+    assert_identical(expected, actual)
+
+
+@requires_dask
+def test_vectorize_exclude_dims_dask():
+    # GH 3890
+    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
+    expected = xr.DataArray([3, 5], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median_add,
+        data_array_a.chunk({"x": 1}),
+        data_array_b.chunk({"x": 1}),
+        input_core_dims=[["y"], ["y"]],
+        exclude_dims=set("y"),
         vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
