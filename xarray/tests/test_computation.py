@@ -851,6 +851,7 @@ def test_vectorize_exclude_dims():
     assert_identical(expected, actual)
 
 
+@pytest.mark.xfail(reason="Should work after GH: 4060")
 @requires_dask
 def test_vectorize_exclude_dims_dask():
     # GH 3890
