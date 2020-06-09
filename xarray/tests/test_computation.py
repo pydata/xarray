@@ -854,10 +854,7 @@ def test_vectorize_dask_dtype():
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = data_array.copy()
     actual = apply_ufunc(
-        identity,
-        data_array.chunk({"x": 1}),
-        vectorize=True,
-        dask="parallelized",
+        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
     )
 
     assert_identical(expected, actual)
@@ -874,7 +871,7 @@ def test_vectorize_dask_dtype():
     )
 
     assert_identical(expected, actual)
-    assert actual.dtype == 'float64'
+    assert actual.dtype == "float64"
 
 
 @pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
