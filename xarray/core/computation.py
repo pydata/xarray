@@ -597,9 +597,25 @@ def apply_variable_ufunc(
             def func(*arrays):
                 import dask.array as da
 
-                res = da.apply_gufunc(
-                    numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
-                )
+                try:
+                    res = da.apply_gufunc(
+                        numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
+                    )
+                # catch error that was not raised in earlier versions of `xr.apply_ufunc`
+                except ValueError as e:
+                    if "with different chunksize present" in str(e):
+                        warnings.warn(
+                            str(e) + " This will throw an error in the future."
+                        )
+                        res = da.apply_gufunc(
+                            numpy_func,
+                            str(signature),
+                            *arrays,
+                            **dask_gufunc_kwargs,
+                            allow_rechunk=True,
+                        )
+                    else:
+                        raise
 
                 # todo: covers for https://github.com/dask/dask/pull/6207
                 #  remove when minimal dask version >= 2.17.0
@@ -801,11 +817,9 @@ def apply_ufunc(
         - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if
           ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array by using `dask.array.apply_gufunc`. If used,
-          the ``output_dtypes`` argument must also be provided.
-          Multiple output arguments are supported.
-          Only use this option if ``func`` does not natively support dask arrays
-          (e.g. converts them to numpy arrays).
+          inputs are a dask array by using `dask.array.apply_gufunc`. Multiple output
+          arguments are supported. Only use this option if ``func`` does not natively
+          support dask arrays (e.g. converts them to numpy arrays).
     dask_gufunc_kwargs : dict, optional
         Optional keyword arguments passed to ``dask.array.apply_gufunc`` if
         dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``

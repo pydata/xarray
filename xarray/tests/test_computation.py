@@ -249,7 +249,7 @@ def test_apply_two_outputs():
 
 
 @requires_dask
-def test_apply_dask_two_outputs():
+def test_apply_dask_parallelized_two_outputs():
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
 
     def twice(obj):
@@ -689,8 +689,7 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    with raises_regex(ValueError, "with different chunksize present"):
-        check(data_array, 0 * data_array.compute())
+    check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
