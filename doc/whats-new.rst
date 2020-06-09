@@ -45,7 +45,7 @@ Enhancements
 
 New Features
 ~~~~~~~~~~~~
-- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using `dask='parallelized'`. (:issue:`1815`, :pull:`4060`)
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
@@ -180,7 +180,7 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
-  :py:func:`xarray.apply_ufunc` when using `dask='parallelized'`. (:pull:`4060`)
+  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
 - Raise more informative error messages for chunk size conflicts when writing to zarr files.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Run the ``isort`` pre-commit hook only on python source files

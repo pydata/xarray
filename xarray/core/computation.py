@@ -580,7 +580,6 @@ def apply_variable_ufunc(
     ]
 
     if any(isinstance(array, dask_array_type) for array in input_data):
-        # let dask stuff be handled by dask apply_gufunc
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -618,9 +617,11 @@ def apply_variable_ufunc(
             )
     else:
         if dask_gufunc_kwargs is not None:
-            if dask_gufunc_kwargs.setdefault("vectorize", False):
+            # if dask_gufunc_kwargs exists, keywords 'vectorize' and 'output_dtypes'
+            # should be already prefilled.
+            if dask_gufunc_kwargs.get("vectorize", False):
                 func = _vectorize(
-                    func, signature, dask_gufunc_kwargs.get("output_dtypes")
+                    func, signature, dask_gufunc_kwargs.get("output_dtypes", None)
                 )
 
     result_data = func(*input_data)
@@ -953,6 +954,7 @@ def apply_ufunc(
     if (dask == "parallelized") or vectorize:
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
+        # needed for correctly distributing keywords to vectorize
         dask_gufunc_kwargs.setdefault("output_dtypes", output_dtypes)
         dask_gufunc_kwargs.setdefault("vectorize", vectorize)
         # todo: remove warnings after deprecation cycle
