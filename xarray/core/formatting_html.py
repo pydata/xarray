@@ -18,6 +18,14 @@ ICONS_SVG = pkg_resources.resource_string("xarray", ICONS_SVG_PATH).decode("utf8
 def short_data_repr_html(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
+    from .indexing import PandasIndexAdapter
+
+    if isinstance(internal_data, PandasIndexAdapter):
+        array = array.to_index()
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if isinstance(array, CFTimeIndex):
+        return repr(array)
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
     return escape(short_data_repr(array))
