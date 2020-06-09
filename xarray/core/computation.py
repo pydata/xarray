@@ -1467,7 +1467,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     from .dataarray import DataArray
     from .missing import get_clean_interp_index
 
-    x = get_clean_interp_index(coord, coord.name)
+    x = get_clean_interp_index(coord, coord.name, strict=False)
 
     deg_coord = coeffs[degree_dim]
 
