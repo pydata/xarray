@@ -775,7 +775,7 @@ def open_mfdataset(
     combine : {'by_coords', 'nested'}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
         combine all the data. Default is to use ``xarray.combine_by_coords``.
-    compat : {'identical', 'equals', 'broadcast_equals',
+    compat : {'identical', 'equals', 'broadcast_equals', \
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
@@ -1149,7 +1149,7 @@ def save_mfdataset(
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', \
               'NETCDF3_CLASSIC'}, optional
 
         File format for the resulting netCDF file:

@@ -130,7 +130,7 @@ class Resample:
 
         Parameters
         ----------
-        kind : str {'linear', 'nearest', 'zero', 'slinear',
+        kind : {'linear', 'nearest', 'zero', 'slinear', \
                'quadratic', 'cubic'}
             Interpolation scheme to use
 

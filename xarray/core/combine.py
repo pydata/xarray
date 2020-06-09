@@ -375,7 +375,7 @@ def combine_nested(
         nested-list input along which to merge.
         Must be the same length as the depth of the list passed to
         ``datasets``.
-    compat : {'identical', 'equals', 'broadcast_equals',
+    compat : {'identical', 'equals', 'broadcast_equals', \
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
         potential merge conflicts:
