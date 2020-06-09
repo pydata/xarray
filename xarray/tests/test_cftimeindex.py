@@ -913,7 +913,7 @@ def test_cftimeindex_calendar_property(calendar, expected):
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
-def test_cftimeindex_calendar_in_repr(calendar, expected):
+def test_cftimeindex_calendar_repr(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
     repr_str = index.__repr__()
     assert f" calendar='{expected}'" in repr_str
@@ -932,11 +932,15 @@ def test_cftimeindex_calendar_in_repr(calendar, expected):
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
-def test_cftimeindex_calendar_in_dataArray_html_repr(calendar, expected):
-    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
-    index = xr.DataArray(index, dims="time")
-    with xr.set_options(display_style="html"):
-        repr_str = index.__repr__()
+@pytest.mark.parametrize("display_style", ["html", "text"])
+def test_cftimeindex_calendar_as_coord_in_dataArray_repr(
+    calendar, expected, display_style
+):
+    index = xr.DataArray(
+        xr.cftime_range(start="2000", periods=3, calendar=calendar), dims="time"
+    )
+    with xr.set_options(display_style=display_style):
+        repr_str = index.time.__repr__()
         assert f" calendar='{expected}'" in repr_str
 
 

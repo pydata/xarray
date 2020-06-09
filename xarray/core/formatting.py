@@ -440,13 +440,12 @@ def short_numpy_repr(array):
 
 
 def _maybe_convert_to_index(array):
-    # try to convert to index only if CFTimeIndex: needed for html repr
+    """convert to index only if CFTimeIndex: needed for html repr"""
     from ..coding.cftimeindex import CFTimeIndex
 
     if hasattr(array, "to_index") and hasattr(array, "variable"):
         if hasattr(array.variable._data, "array"):
             if isinstance(array.variable._data.array, CFTimeIndex):
-                print("convert to index")
                 array = array.to_index()
     return array
 
