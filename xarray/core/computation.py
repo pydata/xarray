@@ -597,25 +597,9 @@ def apply_variable_ufunc(
             def func(*arrays):
                 import dask.array as da
 
-                try:
-                    res = da.apply_gufunc(
-                        numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
-                    )
-                # catch error that was not raised in earlier versions of `xr.apply_ufunc`
-                except ValueError as e:
-                    if "with different chunksize present" in str(e):
-                        warnings.warn(
-                            str(e) + " This will throw an error in the future."
-                        )
-                        res = da.apply_gufunc(
-                            numpy_func,
-                            str(signature),
-                            *arrays,
-                            **dask_gufunc_kwargs,
-                            allow_rechunk=True,
-                        )
-                    else:
-                        raise
+                res = da.apply_gufunc(
+                    numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
+                )
 
                 # todo: covers for https://github.com/dask/dask/pull/6207
                 #  remove when minimal dask version >= 2.17.0

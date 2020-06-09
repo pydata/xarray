@@ -689,7 +689,8 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    check(data_array, 0 * data_array.compute())
+    with raises_regex(ValueError, "with different chunksize present"):
+        check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
@@ -851,6 +852,13 @@ def test_vectorize_dask_dtype():
     assert_identical(expected, actual)
     assert expected.dtype == actual.dtype
 
+
+@requires_dask
+def test_vectorize_dask_dtype_without_output_dtypes():
+    # ensure output_dtypes is preserved with vectorize=True
+    # GH4015
+
+    # integer
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = data_array.copy()
     actual = apply_ufunc(
@@ -860,18 +868,14 @@ def test_vectorize_dask_dtype():
     assert_identical(expected, actual)
     assert expected.dtype == actual.dtype
 
-    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
-    expected = xr.DataArray([1, 2], dims=["x"])
+    # complex
+    data_array = xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y"))
+    expected = data_array.copy()
     actual = apply_ufunc(
-        pandas_median,
-        data_array.chunk({"x": 1}),
-        input_core_dims=[["y"]],
-        vectorize=True,
-        dask="parallelized",
+        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
     )
-
     assert_identical(expected, actual)
-    assert actual.dtype == "float64"
+    assert expected.dtype == actual.dtype
 
 
 @pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
