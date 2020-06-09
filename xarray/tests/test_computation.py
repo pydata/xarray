@@ -1187,7 +1187,6 @@ def test_dot(use_dask):
     # dask dot processing via apply_ufunc-> apply_gufunc is broken, due to chunking
     # of core dimensions
     actual = xr.dot(da_a, da_b, dims=["a", "b"])
-
     assert actual.dims == ("c",)
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
