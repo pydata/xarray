@@ -5258,7 +5258,7 @@ class TestReduce2D(TestReduce):
 
 
 class TestReduceND(TestReduce):
-    @pytest.mark.parametrize("op", ['idxmin', 'idxmax'])
+    @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
     @pytest.mark.parametrize("ndim", [3, 5])
     def test_idxminmax_dask(self, op, ndim):
         if not has_dask:
@@ -5266,14 +5266,14 @@ class TestReduceND(TestReduce):
 
         ar0_raw = xr.DataArray(
             np.random.random_sample(size=[10] * ndim),
-            dims=[i for i in 'abcdefghij'[:ndim - 1]] + ["x"],
+            dims=[i for i in "abcdefghij"[: ndim - 1]] + ["x"],
             coords={"x": np.arange(10)},
-            attrs=self.attrs
+            attrs=self.attrs,
         )
 
         ar0_dsk = ar0_raw.chunk({})
         # Assert idx is the same with dask and without
-        assert_equal(getattr(ar0_dsk, op)(dim='x'), getattr(ar0_raw, op)(dim='x'))
+        assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
 @pytest.fixture(params=[1])
