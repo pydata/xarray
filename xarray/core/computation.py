@@ -1563,7 +1563,7 @@ def _calc_idxminmax(
 
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[(indx.data,)])
+        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:
