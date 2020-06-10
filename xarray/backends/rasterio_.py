@@ -1,3 +1,4 @@
+import io
 import os
 import warnings
 
@@ -18,6 +19,11 @@ _ERROR_MSG = (
     "valid on rasterio files. Try to load your data with ds.load()"
     "first."
 )
+
+def _file_object_opener(fobj, *args, **kwargs):
+    from rasterio.io import MemoryFile
+
+    return MemoryFile(fobj).open(*args, **kwargs)
 
 
 class RasterioArrayWrapper(BackendArray):
@@ -162,7 +168,7 @@ def _parse_envi(meta):
     return parsed_meta
 
 
-def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, lock=None):
+def open_rasterio(filename_or_obj, parse_coordinates=None, chunks=None, cache=None, lock=None):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -183,7 +189,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
 
     Parameters
     ----------
-    filename : str, rasterio.DatasetReader, or rasterio.WarpedVRT
+    filename_or_obj : str, file-like object, rasterio.DatasetReader, or rasterio.WarpedVRT
         Path to the file to open. Or already open rasterio dataset.
     parse_coordinates : bool, optional
         Whether to parse the x and y coordinates out of the file's
@@ -215,11 +221,16 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     from rasterio.vrt import WarpedVRT
 
     vrt_params = None
-    if isinstance(filename, rasterio.io.DatasetReader):
-        filename = filename.name
-    elif isinstance(filename, rasterio.vrt.WarpedVRT):
-        vrt = filename
-        filename = vrt.src_dataset.name
+    opener = rasterio.open
+    filename_token = filename_or_obj
+    if isinstance(filename_or_obj, rasterio.io.DatasetReader):
+        filename_or_obj = filename_or_obj.name
+        filename_token = filename_or_obj.name
+    elif isinstance(filename_or_obj, rasterio.vrt.WarpedVRT):
+        vrt = filename_or_obj
+        filename_or_obj = vrt.src_dataset.name
+        filename_token = filename_or_obj
+        # filename_token = filename
         vrt_params = dict(
             src_crs=vrt.src_crs.to_string(),
             crs=vrt.crs.to_string(),
@@ -234,11 +245,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             dtype=vrt.working_dtype,
             warp_extras=vrt.warp_extras,
         )
+    elif isinstance(filename_or_obj, io.IOBase):
+        opener = _file_object_opener
+        filename_token = str(filename_or_obj)
 
     if lock is None:
         lock = RASTERIO_LOCK
 
-    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode="r")
+    manager = CachingFileManager(opener, filename_or_obj, lock=lock, mode="r")
     riods = manager.acquire()
     if vrt_params is not None:
         riods = WarpedVRT(riods, **vrt_params)
@@ -352,11 +366,11 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
 
         # augment the token with the file modification time
         try:
-            mtime = os.path.getmtime(filename)
+            mtime = os.path.getmtime(filename_token)
         except OSError:
             # the filename is probably an s3 bucket rather than a regular file
             mtime = None
-        token = tokenize(filename, mtime, chunks)
+        token = tokenize(filename_token, mtime, chunks)
         name_prefix = "open_rasterio-%s" % token
         result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 

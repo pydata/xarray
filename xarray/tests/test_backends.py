@@ -4199,6 +4199,18 @@ class TestRasterio:
                         assert actual_res == expected_res
                         assert expected_val == actual_val
 
+    def test_rasterio_fileobj(self):
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with open(tmp_file, 'rb') as f:
+                with xr.open_rasterio(f) as da:
+                    assert_equal(da, expected)
+
+    def test_rasterio_fileobj_dask(self):
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with open(tmp_file, 'rb') as f:
+                with xr.open_rasterio(f, chunks=10) as da:
+                    assert_equal(da, expected)
+
 
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self):
