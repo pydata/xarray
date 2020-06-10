@@ -25,7 +25,7 @@ steps:
         pint \
         bottleneck
     python -m pip install \
-        -f https://anaconda.org/scipy-wheels-nightly/simple \
+        -i https://anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
         --pre \
         --upgrade \
