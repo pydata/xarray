@@ -12,6 +12,18 @@ steps:
 
 - bash: |
     source activate xarray-tests
+    conda uninstall --force \
+        numpy \
+        scipy \
+        pandas \
+        matplotlib \
+        dask \
+        distributed \
+        zarr \
+        cftime \
+        rasterio \
+        pint \
+        bottleneck
     python -m pip install \
         -f https://anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
