@@ -1241,13 +1241,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         and only when the key is a dict of the form {dim: labels}.
         """
         return _LocIndexer(self)
-    
 
     @overload
-    def __getitem__(self, key: Hashable) -> DataArray: ...
+    def __getitem__(self, key: Hashable) -> DataArray:
+        ...
 
     @overload
-    def __getitem__(self, key: Any) -> Dataset: ...
+    def __getitem__(self, key: Mapping) -> "Dataset":
+        ...
+
+    @overload
+    def __getitem__(self, key: List) -> "Dataset":
+        ...
 
     def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
