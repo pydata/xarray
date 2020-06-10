@@ -12,7 +12,7 @@ steps:
 
 - bash: |
     source activate xarray-tests
-    conda uninstall --force \
+    conda uninstall -y --force \
         numpy \
         scipy \
         pandas \
