@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -1240,8 +1241,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         and only when the key is a dict of the form {dim: labels}.
         """
         return _LocIndexer(self)
+    
 
-    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
+    @overload
+    def __getitem__(self, key: Hashable) -> DataArray: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Dataset: ...
+
+    def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
