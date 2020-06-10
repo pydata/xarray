@@ -20,6 +20,7 @@ _ERROR_MSG = (
     "first."
 )
 
+
 def _file_object_opener(fobj, *args, **kwargs):
     from rasterio.io import MemoryFile
 
@@ -168,7 +169,9 @@ def _parse_envi(meta):
     return parsed_meta
 
 
-def open_rasterio(filename_or_obj, parse_coordinates=None, chunks=None, cache=None, lock=None):
+def open_rasterio(
+    filename_or_obj, parse_coordinates=None, chunks=None, cache=None, lock=None
+):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
