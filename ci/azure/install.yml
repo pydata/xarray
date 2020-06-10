@@ -13,7 +13,7 @@ steps:
 - bash: |
     source activate xarray-tests
     python -m pip install \
-        -f https://anaconda.org/scipy-wheels-nightly \
+        -f https://anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
         --pre \
         --upgrade \
