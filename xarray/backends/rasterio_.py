@@ -24,6 +24,8 @@ _ERROR_MSG = (
 def _file_object_opener(fobj, *args, **kwargs):
     from rasterio.io import MemoryFile
 
+    if "mode" in kwargs:
+        del kwargs["mode"]
     return MemoryFile(fobj).open(*args, **kwargs)
 
 

@@ -4205,10 +4205,11 @@ class TestRasterio:
                 with xr.open_rasterio(f) as da:
                     assert_equal(da, expected)
 
+    @requires_dask
     def test_rasterio_fileobj_dask(self):
         with create_tmp_geotiff() as (tmp_file, expected):
             with open(tmp_file, "rb") as f:
-                with xr.open_rasterio(f, chunks=10) as da:
+                with xr.open_rasterio(f, chunks={"band": 1, "y": 3, "x": 4}) as da:
                     assert_equal(da, expected)
 
 
