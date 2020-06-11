@@ -182,7 +182,8 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
             raise ImportError(
                 "The {!r} accessor requires a minimum "
                 "version of cftime of {}. Found an "
-                "installed version of {}.".format(name, min_cftime_version, version)
+                "installed version of {}.".format(
+                    name, min_cftime_version, version)
             )
 
     f.__name__ = name
@@ -238,11 +239,13 @@ class CFTimeIndex(pd.Index):
     hour = _field_accessor("hour", "The hours of the datetime")
     minute = _field_accessor("minute", "The minutes of the datetime")
     second = _field_accessor("second", "The seconds of the datetime")
-    microsecond = _field_accessor("microsecond", "The microseconds of the datetime")
+    microsecond = _field_accessor(
+        "microsecond", "The microseconds of the datetime")
     dayofyear = _field_accessor(
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
-    dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    dayofweek = _field_accessor(
+        "dayofwk", "The day of week of the datetime", "1.0.2.1")
     days_in_month = _field_accessor(
         "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
     )
@@ -273,8 +276,6 @@ class CFTimeIndex(pd.Index):
         klass_name = type(self).__name__
         data = self._format_data()
         attrs = self._format_attrs()
-        # add length to attrs
-        attrs.append(("length", f"{len(self)}"))
         # add calendar to attrs
         attrs.append(("calendar", f"'{self.calendar}'"))
         space = self._format_space()
@@ -334,7 +335,8 @@ class CFTimeIndex(pd.Index):
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-01T01:00:00
         """
-        start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
+        start, end = _parsed_string_to_bounds(
+            self.date_type, resolution, parsed)
 
         times = self._data
 
@@ -372,13 +374,16 @@ class CFTimeIndex(pd.Index):
         right_distances = abs(self.values[right_indexer] - target.values)
 
         if self.is_monotonic_increasing:
-            condition = (left_distances < right_distances) | (right_indexer == -1)
+            condition = (left_distances < right_distances) | (
+                right_indexer == -1)
         else:
-            condition = (left_distances <= right_distances) | (right_indexer == -1)
+            condition = (left_distances <= right_distances) | (
+                right_indexer == -1)
         indexer = np.where(condition, left_indexer, right_indexer)
 
         if tolerance is not None:
-            indexer = self._filter_indexer_tolerance(target, indexer, tolerance)
+            indexer = self._filter_indexer_tolerance(
+                target, indexer, tolerance)
         return indexer
 
     def _filter_indexer_tolerance(self, target, indexer, tolerance):
@@ -401,8 +406,10 @@ class CFTimeIndex(pd.Index):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
         if isinstance(label, str):
-            parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
-            start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
+            parsed, resolution = _parse_iso8601_with_reso(
+                self.date_type, label)
+            start, end = _parsed_string_to_bounds(
+                self.date_type, resolution, parsed)
             if self.is_monotonic_decreasing and len(self) > 1:
                 return end if side == "left" else start
             return start if side == "left" else end
@@ -606,7 +613,8 @@ class CFTimeIndex(pd.Index):
         epoch = self.date_type(1970, 1, 1)
         return np.array(
             [
-                _total_microseconds(exact_cftime_datetime_difference(epoch, date))
+                _total_microseconds(
+                    exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
             ]
         )
@@ -732,7 +740,8 @@ def _cftimeindex_from_i8(values, date_type, name):
     CFTimeIndex
     """
     epoch = date_type(1970, 1, 1)
-    dates = np.array([epoch + timedelta(microseconds=int(value)) for value in values])
+    dates = np.array([epoch + timedelta(microseconds=int(value))
+                      for value in values])
     return CFTimeIndex(dates, name=name)
 
 
@@ -767,7 +776,8 @@ def _round_to_nearest_half_even(values, unit):
         return _ceil_int(values - unit // 2, unit)
     quotient, remainder = np.divmod(values, unit)
     mask = np.logical_or(
-        remainder > (unit // 2), np.logical_and(remainder == (unit // 2), quotient % 2)
+        remainder > (unit // 2), np.logical_and(remainder ==
+                                                (unit // 2), quotient % 2)
     )
     quotient[mask] += 1
     return quotient * unit
