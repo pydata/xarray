@@ -347,8 +347,8 @@ def map_blocks(
     # all xarray objects must be aligned. This is consistent with apply_ufunc.
     aligned = align(*xarray_objs, join="exact")
     xarray_objs = tuple(
-        dataarray_to_dataset(arg) if isinstance(arg, DataArray) else arg
-        for arg in aligned
+        dataarray_to_dataset(arg) if is_da else arg
+        for is_da, arg in zip(is_array, aligned)
     )
 
     _, npargs = unzip(
