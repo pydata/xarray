@@ -80,8 +80,9 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
             "the default calendar" if calendar is None else "calendar %r" % calendar
         )
         msg = (
-            "unable to decode time units %r with %s. Try "
-            "opening your dataset with decode_times=False." % (units, calendar_msg)
+            f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
+            "opening your dataset with decode_times=False or installing cftime "
+            "if it is not installed."
         )
         raise ValueError(msg)
     else:
