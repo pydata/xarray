@@ -137,7 +137,7 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, "None"):
+        with raises_regex(ValueError, "x must be one of None, 'dim_0'"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
         with raises_regex(TypeError, "complex128"):
@@ -156,14 +156,31 @@ class TestPlot(PlotTestCase):
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "Cannot specify both"):
             da.plot(x="z", y="z")
 
-        with raises_regex(ValueError, "None"):
-            da.plot(x="f", y="z")
+        error_msg = "must be one of None, 'z'"
+        with raises_regex(ValueError, f"x {error_msg}"):
+            da.plot(x="f")
 
-        with raises_regex(ValueError, "None"):
-            da.plot(x="z", y="f")
+        with raises_regex(ValueError, f"y {error_msg}"):
+            da.plot(y="f")
+
+    def test_multiindex_level_as_coord(self):
+        da = xr.DataArray(
+            np.arange(5),
+            dims="x",
+            coords=dict(a=("x", np.arange(5)), b=("x", np.arange(5, 10))),
+        )
+        da = da.set_index(x=["a", "b"])
+
+        for x in ["a", "b"]:
+            h = da.plot(x=x)[0]
+            assert_array_equal(h.get_xdata(), da[x].values)
+
+        for y in ["a", "b"]:
+            h = da.plot(y=y)[0]
+            assert_array_equal(h.get_ydata(), da[y].values)
 
     # Test for bug in GH issue #2725
     def test_infer_line_data(self):
@@ -212,7 +229,7 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x="dim_0", hue="dim_1")
         self.darray[:, :, 0].plot.line(y="dim_0", hue="dim_1")
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "Cannot"):
             self.darray[:, :, 0].plot.line(x="dim_1", y="dim_0", hue="dim_1")
 
     def test_2d_line_accepts_legend_kw(self):
@@ -855,21 +872,22 @@ class TestDetermineCmapParams:
         vmin = self.data.min()
         vmax = self.data.max()
 
-        for norm, extend in zip(
+        for norm, extend, levels in zip(
             [
+                mpl.colors.Normalize(),
                 mpl.colors.Normalize(),
                 mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
                 mpl.colors.Normalize(None, vmax - 0.1),
                 mpl.colors.Normalize(vmin + 0.1, None),
             ],
-            ["neither", "both", "max", "min"],
+            ["neither", "neither", "both", "max", "min"],
+            [7, None, None, None, None],
         ):
 
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
 
-            cmap_params = _determine_cmap_params(self.data, norm=norm)
-
+            cmap_params = _determine_cmap_params(self.data, norm=norm, levels=levels)
             assert cmap_params["vmin"] == test_min
             assert cmap_params["vmax"] == test_max
             assert cmap_params["extend"] == extend
@@ -1032,6 +1050,16 @@ class Common2dMixin:
         with raises_regex(TypeError, r"[Pp]lot"):
             self.plotfunc(a)
 
+    def test_multiindex_raises_typeerror(self):
+        a = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        a = a.set_index(y=("a", "b"))
+        with raises_regex(TypeError, r"[Pp]lot"):
+            self.plotfunc(a)
+
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.plotmethod)
 
@@ -1140,15 +1168,16 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
-        with raises_regex(ValueError, "x and y must be coordinate variables"):
+
+        with raises_regex(ValueError, "x and y cannot be equal."):
+            self.plotmethod(x="y", y="y")
+
+        error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
-        with raises_regex(
-            ValueError, "x must be a dimension name if y is not supplied"
-        ):
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
-        with raises_regex(
-            ValueError, "y must be a dimension name if x is not supplied"
-        ):
+        with raises_regex(ValueError, f"y {error_msg}"):
             self.plotmethod(y="not_a_real_dim")
         self.darray.coords["z"] = 100
 
@@ -1182,6 +1211,27 @@ class Common2dMixin:
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         assert np.min(ax.get_xlim()) > 100.0
+
+    def test_multiindex_level_as_coord(self):
+        da = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        da = da.set_index(y=["a", "b"])
+
+        for x, y in (("a", "x"), ("b", "x"), ("x", "a"), ("x", "b")):
+            self.plotfunc(da, x=x, y=y)
+
+            ax = plt.gca()
+            assert x == ax.get_xlabel()
+            assert y == ax.get_ylabel()
+
+        with raises_regex(ValueError, "levels of the same MultiIndex"):
+            self.plotfunc(da, x="a", y="b")
+
+        with raises_regex(ValueError, "y must be one of None, 'a', 'b', 'x'"):
+            self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=["a", "b", "c"])

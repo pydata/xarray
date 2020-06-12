@@ -26,9 +26,12 @@ Top-level functions
    combine_nested
    where
    set_options
+   infer_freq
    full_like
    zeros_like
    ones_like
+   cov
+   corr
    dot
    polyval
    map_blocks
@@ -173,6 +176,7 @@ Computation
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.map_blocks
    Dataset.polyfit
 
 **Aggregation**:
@@ -358,6 +362,8 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.str
+   DataArray.map_blocks
+
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -518,7 +524,6 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.unify_chunks
-   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -550,7 +555,6 @@ DataArray methods
    DataArray.load
    DataArray.chunk
    DataArray.unify_chunks
-   DataArray.map_blocks
 
 Coordinates objects
 ===================

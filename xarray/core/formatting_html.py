@@ -222,14 +222,20 @@ attr_section = partial(
 )
 
 
-def _obj_repr(header_components, sections):
+def _obj_repr(obj, header_components, sections):
+    """Return HTML repr of an xarray object.
+
+    If CSS is not injected (untrusted notebook), fallback to the plain text repr.
+
+    """
     header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
     sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
     return (
         "<div>"
         f"{ICONS_SVG}<style>{CSS_STYLE}</style>"
-        "<div class='xr-wrap'>"
+        f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
+        "<div class='xr-wrap' hidden>"
         f"{header}"
         f"<ul class='xr-sections'>{sections}</ul>"
         "</div>"
@@ -257,7 +263,7 @@ def array_repr(arr):
 
     sections.append(attr_section(arr.attrs))
 
-    return _obj_repr(header_components, sections)
+    return _obj_repr(arr, header_components, sections)
 
 
 def dataset_repr(ds):
@@ -272,4 +278,4 @@ def dataset_repr(ds):
         attr_section(ds.attrs),
     ]
 
-    return _obj_repr(header_components, sections)
+    return _obj_repr(ds, header_components, sections)

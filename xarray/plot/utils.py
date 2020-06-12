@@ -268,7 +268,7 @@ def _determine_cmap_params(
             cmap = OPTIONS["cmap_sequential"]
 
     # Handle discrete levels
-    if levels is not None and norm is None:
+    if levels is not None:
         if is_scalar(levels):
             if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
@@ -360,7 +360,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
-    assert x is None or x != y
+    if (x is not None) and (x == y):
+        raise ValueError("x and y cannot be equal.")
+
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
@@ -369,16 +371,39 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError("DataArray must be 2d")
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims and y not in darray.coords:
-            raise ValueError("y must be a dimension name if x is not supplied")
+        _assert_valid_xy(darray, y, "y")
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims and x not in darray.coords:
-            raise ValueError("x must be a dimension name if y is not supplied")
+        _assert_valid_xy(darray, x, "x")
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
-    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
-        raise ValueError("x and y must be coordinate variables")
+    else:
+        _assert_valid_xy(darray, x, "x")
+        _assert_valid_xy(darray, y, "y")
+
+        if (
+            all(k in darray._level_coords for k in (x, y))
+            and darray._level_coords[x] == darray._level_coords[y]
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
+
     return x, y
+
+
+def _assert_valid_xy(darray, xy, name):
+    """
+    make sure x and y passed to plotting functions are valid
+    """
+
+    # MultiIndex cannot be plotted; no point in allowing them here
+    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+
+    valid_xy = (
+        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    ) - multiindex
+
+    if xy not in valid_xy:
+        valid_xy_str = "', '".join(sorted(valid_xy))
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
 
 def get_axis(figsize, size, aspect, ax, **kwargs):

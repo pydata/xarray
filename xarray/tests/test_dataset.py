@@ -32,7 +32,6 @@ from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
-    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
@@ -496,16 +495,11 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=["a", "b"]),  # df
         ]
 
-        if LooseVersion(pd.__version__) < "0.25.0":
-            das.append(DataArray(np.random.rand(4, 3, 2), dims=["a", "b", "c"]))
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", r"\W*Panel is deprecated")
-            for a in das:
-                pandas_obj = a.to_pandas()
-                ds_based_on_pandas = Dataset(pandas_obj)
-                for dim in ds_based_on_pandas.data_vars:
-                    assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+        for a in das:
+            pandas_obj = a.to_pandas()
+            ds_based_on_pandas = Dataset(pandas_obj)
+            for dim in ds_based_on_pandas.data_vars:
+                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = {"x": DataArray(0, coords={"y": 1}), "y": ("z", [1, 1, 1])}
@@ -2869,6 +2863,13 @@ class TestDataset:
 
         with pytest.raises(TypeError):
             ds.reset_index("x", inplace=True)
+
+    def test_reset_index_keep_attrs(self):
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        ds = Dataset({}, {"coord_1": coord_1})
+        expected = Dataset({}, {"coord_1_": coord_1})
+        obj = ds.reset_index("coord_1")
+        assert_identical(expected, obj)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()

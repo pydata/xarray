@@ -445,18 +445,23 @@ class ZarrStore(AbstractWritableDataStore):
             fill_value = attrs.pop("_FillValue", None)
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
-            if name in self.ds:
+
+            if self.append_dim is not None and self.append_dim in dims:
+                # resize existing variable
                 zarr_array = self.ds[name]
-                if self.append_dim in dims:
-                    # this is the DataArray that has append_dim as a
-                    # dimension
-                    append_axis = dims.index(self.append_dim)
-                    new_shape = list(zarr_array.shape)
-                    new_shape[append_axis] += v.shape[append_axis]
-                    new_region = [slice(None)] * len(new_shape)
-                    new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
-                    zarr_array.resize(new_shape)
-                    writer.add(v.data, zarr_array, region=tuple(new_region))
+                append_axis = dims.index(self.append_dim)
+
+                new_region = [slice(None)] * len(dims)
+                new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
+                region = tuple(new_region)
+
+                new_shape = list(zarr_array.shape)
+                new_shape[append_axis] += v.shape[append_axis]
+                zarr_array.resize(new_shape)
+            elif name in self.ds:
+                # override existing variable
+                zarr_array = self.ds[name]
+                region = None
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -474,7 +479,9 @@ class ZarrStore(AbstractWritableDataStore):
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)
-                writer.add(v.data, zarr_array)
+                region = None
+
+            writer.add(v.data, zarr_array, region=region)
 
     def close(self):
         if self._consolidate_on_close:
@@ -496,6 +503,7 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
+    decode_timedelta=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -555,6 +563,11 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -605,6 +618,7 @@ def open_zarr(
         decode_times = False
         concat_characters = False
         decode_coords = False
+        decode_timedelta = False
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -614,6 +628,7 @@ def open_zarr(
             concat_characters=concat_characters,
             decode_coords=decode_coords,
             drop_variables=drop_variables,
+            decode_timedelta=decode_timedelta,
         )
 
         # TODO: this is where we would apply caching

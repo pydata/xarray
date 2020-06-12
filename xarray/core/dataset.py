@@ -329,7 +329,7 @@ def split_indexes(
         else:
             vars_to_remove.append(d)
             if not drop:
-                vars_to_create[str(d) + "_"] = Variable(d, index)
+                vars_to_create[str(d) + "_"] = Variable(d, index, variables[d].attrs)
 
     for d, levs in dim_levels.items():
         index = variables[d].to_index()
@@ -341,7 +341,7 @@ def split_indexes(
         if not drop:
             for lev in levs:
                 idx = index.get_level_values(lev)
-                vars_to_create[idx.name] = Variable(d, idx)
+                vars_to_create[idx.name] = Variable(d, idx, variables[d].attrs)
 
     new_variables = dict(variables)
     for v in set(vars_to_remove):
@@ -1535,7 +1535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: boolean
             Only valid along with engine='h5netcdf'. If True, allow writing
-            hdf5 files which are valid netcdf as described in
+            hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
@@ -1579,7 +1579,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
-            'a' means append (create if does not exist).
+            'a' means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
@@ -1598,11 +1598,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If set, the dimension on which the data will be appended.
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overriden variables must remain the same size.
 
         References
         ----------
         https://zarr.readthedocs.io/
+
+        Notes
+        -----
+        Zarr chunking behavior:
+            If chunks are found in the encoding argument or attribute
+            corresponding to any DataArray, those chunks are used.
+            If a DataArray is a dask array, it is written with those chunks.
+            If not other chunks are found, Zarr uses its own heuristics to
+            choose automatic chunk sizes.
         """
         if encoding is None:
             encoding = {}
@@ -1697,7 +1707,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None, Number, Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]]
+            None,
+            Number,
+            str,
+            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
         ] = None,
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1715,7 +1728,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int or mapping, optional
+        chunks : int, 'auto' or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -1732,7 +1745,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if isinstance(chunks, Number):
+        if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
@@ -1766,7 +1779,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise",
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -4524,7 +4537,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted
+            is_sorted = idx.is_lexsorted()
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -5708,57 +5721,108 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This method is experimental and
-        its signature may change.
+        Apply a function to each block of this Dataset.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a Dataset as its first parameter. The
-            function will receive a subset of this Dataset, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this
-            Dataset but has sizes 0, to determine properties of the returned object such
-            as dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a Dataset as its first
+            parameter. The function will receive a subset or 'block' of this Dataset (see below),
+            corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(subset_dataset, *subset_args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
+
+        obj: DataArray, Dataset
+            Passed to the function as its first argument, one block at a time.
         args: Sequence
-            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
-            objects, if any, will not be split by chunks. Passing dask collections is
-            not allowed.
+            Passed to func after unpacking and subsetting any xarray objects by blocks.
+            xarray objects in args must be aligned with obj, otherwise an error is raised.
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
-            split by chunks. Passing dask collections is not allowed.
+            subset to blocks. Passing dask collections in kwargs is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like ``obj`` but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, attributes, new dimensions and new indexes (if any).
+            ``template`` must be provided if the function changes the size of existing dimensions.
+            When provided, ``attrs`` on variables in `template` are copied over to the result. Any
+            ``attrs`` set by ``func`` will be ignored.
+
 
         Returns
         -------
-        A single DataArray or Dataset with dask backend, reassembled from the outputs of
-        the function.
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of the
+        function.
 
         Notes
         -----
-        This method is designed for when one needs to manipulate a whole xarray object
-        within each chunk. In the more common case where one can work on numpy arrays,
-        it is recommended to use apply_ufunc.
+        This function is designed for when ``func`` needs to manipulate a whole xarray object
+        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
+        recommended to use ``apply_ufunc``.
 
-        If none of the variables in this Dataset is backed by dask, calling this method
-        is equivalent to calling ``func(self, *args, **kwargs)``.
+        If none of the variables in ``obj`` is backed by dask arrays, calling this function is
+        equivalent to calling ``func(obj, *args, **kwargs)``.
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks,
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
         xarray.DataArray.map_blocks
+
+        Examples
+        --------
+
+        Calculate an anomaly from climatology using ``.groupby()``. Using
+        ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
+        its indices, and its methods like ``.groupby()``.
+
+        >>> def calculate_anomaly(da, groupby_type="time.month"):
+        ...     gb = da.groupby(groupby_type)
+        ...     clim = gb.mean(dim="time")
+        ...     return gb - clim
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> np.random.seed(123)
+        >>> array = xr.DataArray(
+        ...     np.random.rand(len(time)), dims="time", coords=[time]
+        ... ).chunk()
+        >>> ds = xr.Dataset({"a": array})
+        >>> ds.map_blocks(calculate_anomaly, template=ds).compute()
+        <xarray.DataArray (time: 24)>
+        array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
+                0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
+               -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
+                0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
+                0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
+        Coordinates:
+          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+
+        Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
+        to the function being applied in ``xr.map_blocks()``:
+
+        >>> ds.map_blocks(
+        ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=ds,
+        ... )
+        <xarray.DataArray (time: 24)>
+        array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
+               -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
+               -0.19967375,  0.18619794, -0.05100474, -0.42989909, -0.09153273,
+                0.24841842, -0.30708526, -0.31412523,  0.04197439,  0.0422506 ,
+                0.14482397,  0.35985481,  0.23487834,  0.12144652])
+        Coordinates:
+            * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
@@ -5822,7 +5886,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim)
+        x = get_clean_interp_index(self, dim, strict=False)
         xname = "{}_".format(self[dim].name)
         order = int(deg) + 1
         lhs = np.vander(x, order)
@@ -5933,7 +5997,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -6199,7 +6263,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
     def idxmax(
@@ -6297,7 +6361,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
 
