@@ -1242,15 +1242,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    @overload
+    @overload  # noqa: F811
     def __getitem__(self, key: Hashable) -> DataArray:
         ...
 
-    @overload
+    @overload  # noqa: F811
     def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
         ...
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # noqa: F811
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
