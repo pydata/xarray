@@ -920,6 +920,7 @@ def test_cftimeindex_calendar_repr(calendar, expected):
     assert f" calendar='{expected}'" in repr_str
 
 
+@requires_cftime
 @pytest.mark.parametrize("periods", [2, 4])
 def test_cftimeindex_periods_repr(periods):
     """Test that cftimeindex has periods property in repr."""
