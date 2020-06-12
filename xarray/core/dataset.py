@@ -1243,7 +1243,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return _LocIndexer(self)
 
     @overload  # noqa: F811
-    def __getitem__(self, key: Hashable) -> DataArray:
+    def __getitem__(self, key: Hashable) -> "DataArray":
         ...
 
     @overload  # noqa: F811
