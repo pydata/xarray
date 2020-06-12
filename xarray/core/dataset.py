@@ -1247,11 +1247,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...
 
     @overload
-    def __getitem__(self, key: Mapping) -> "Dataset":
-        ...
-
-    @overload
-    def __getitem__(self, key: List) -> "Dataset":
+    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
         ...
 
     def __getitem__(self, key):
