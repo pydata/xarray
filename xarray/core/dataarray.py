@@ -1132,15 +1132,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Returns
         -------
         obj : DataArray
-            A new DataArray with the same contents as this DataArray,
-            except the data and each dimension is indexed by the
-            appropriate indexers.  If indexer DataArrays have
-            coordinates that do not conflict with this object, then
-            these coordinates will be attached.  In general, each
-            array's data will be a view of the array's data in this
-            DataArray, unless vectorized indexing was triggered by
-            using an array indexer, in which case the data will be a
-            copy.
+            A new DataArray with the same contents as this DataArray, except the
+            data and each dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this DataArray, unless vectorized indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
 
         See Also
         --------
