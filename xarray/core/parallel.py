@@ -352,7 +352,7 @@ def map_blocks(
     )
 
     _, npargs = unzip(
-        sorted((list(zip(xarray_indices, xarray_objs)) + others), key=lambda x: x[0])
+        sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
     )
 
     # check that chunk sizes are compatible
