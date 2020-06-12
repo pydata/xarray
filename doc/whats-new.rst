@@ -36,10 +36,12 @@ Breaking changes
 
 Enhancements
 ~~~~~~~~~~~~
-- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp` 
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially 
+- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
+  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
   rather than interpolating in multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
+  coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -47,10 +49,10 @@ New Features
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
   :py:meth:`Dataset.chunk`. (:issue:`4055`)
-  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ 
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_
 - Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:`3550`, :pull:`4089`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
-- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`, :pull:`3733`, :pull:`4099`)
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
@@ -77,7 +79,7 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
-- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`). 
+- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
@@ -91,6 +93,8 @@ New Features
   By `Yunus Sevinchan <https://github.com/blsqr>`_
 - :py:meth:`map_blocks` now accepts a ``template`` kwarg. This allows use cases
   where the result of a computation could not be inferred automatically.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- :py:meth:`map_blocks` can now handle dask-backed xarray objects in ``args``. (:pull:`3818`)
   By `Deepak Cherian <https://github.com/dcherian>`_
 
 - Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
@@ -143,6 +147,8 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix :py:func:`open_rasterio` for ``WarpedVRT`` with specified ``src_crs``. (:pull:`4104`)
+  By `Dave Cole <https://github.com/dtpc>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -166,9 +172,11 @@ Documentation
   By `Matthias Riße <https://github.com/risebell>`_.
 - Apply ``black`` to all the code in the documentation (:pull:`4012`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Narrative documentation now describes :py:meth:`map_blocks`. :ref:`dask.automatic-parallelization`.
+- Narrative documentation now describes :py:meth:`map_blocks`: :ref:`dask.automatic-parallelization`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Document accessors the way they are called. (:issue:`3625`, :pull:`3988`)
+- Document ``.plot``, ``.dt``, ``.str`` accessors the way they are called. (:issue:`3625`, :pull:`3988`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add documentation for the parameters and return values of :py:meth:`DataArray.sel`.
   By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
