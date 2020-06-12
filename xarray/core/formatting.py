@@ -439,26 +439,10 @@ def short_numpy_repr(array):
         return repr(array)
 
 
-def _maybe_convert_to_index(array):
-    """convert to index only if CFTimeIndex: needed for html repr"""
-    from ..coding.cftimeindex import CFTimeIndex
-
-    if hasattr(array, "to_index") and hasattr(array, "variable"):
-        if hasattr(array.variable._data, "array"):
-            if isinstance(array.variable._data.array, CFTimeIndex):
-                array = array.to_index()
-    return array
-
-
 def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
-    from ..coding.cftimeindex import CFTimeIndex
-
-    array = _maybe_convert_to_index(array)
     internal_data = getattr(array, "variable", array)._data
-    if isinstance(array, CFTimeIndex):
-        return repr(array)
-    elif isinstance(array, np.ndarray):
+    if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
     elif hasattr(internal_data, "__array_function__") or isinstance(
         internal_data, dask_array_type
