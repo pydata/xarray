@@ -172,8 +172,10 @@ Documentation
   By `Matthias Riße <https://github.com/risebell>`_.
 - Apply ``black`` to all the code in the documentation (:pull:`4012`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Narrative documentation now describes :py:meth:`map_blocks`. :ref:`dask.automatic-parallelization`.
+- Narrative documentation now describes :py:meth:`map_blocks`: :ref:`dask.automatic-parallelization`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add documentation for the parameters and return values of :py:meth:`DataArray.sel`.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
