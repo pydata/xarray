@@ -260,7 +260,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
     _weighted_cls = weighted.DataArrayWeighted
 
-    dt = property(CombinedDatetimelikeAccessor)
+    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
@@ -2722,24 +2722,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs
 
-    @property
-    def plot(self) -> _PlotMethods:
-        """
-        Access plotting functions for DataArray's
-
-        >>> d = xr.DataArray([[1, 2], [3, 4]])
-
-        For convenience just call this directly
-
-        >>> d.plot()
-
-        Or use it as a namespace to use xarray.plot functions as
-        DataArray methods
-
-        >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
-
-        """
-        return _PlotMethods(self)
+    plot = utils.UncachedAccessor(_PlotMethods)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
@@ -3831,7 +3814,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = property(StringAccessor)
+    str = utils.UncachedAccessor(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
