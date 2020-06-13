@@ -111,6 +111,12 @@ class TestPlot(PlotTestCase):
     def setup_array(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
+    def test_accessor(self):
+        from ..plot.plot import _PlotMethods
+
+        assert DataArray.plot is _PlotMethods
+        assert isinstance(self.darray.plot, _PlotMethods)
+
     def test_label_from_attrs(self):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
@@ -2097,6 +2103,12 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds.A.attrs["units"] = "Aunits"
         ds.B.attrs["units"] = "Bunits"
         self.ds = ds
+
+    def test_accessor(self):
+        from ..plot.dataset_plot import _Dataset_PlotMethods
+
+        assert Dataset.plot is _Dataset_PlotMethods
+        assert isinstance(self.ds.plot, _Dataset_PlotMethods)
 
     @pytest.mark.parametrize(
         "add_guide, hue_style, legend, colorbar",

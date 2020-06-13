@@ -5563,16 +5563,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    @property
-    def plot(self):
-        """
-        Access plotting functions for Datasets.
-        Use it as a namespace to use xarray.plot functions as Dataset methods
-
-        >>> ds.plot.scatter(...)  # equivalent to xarray.plot.scatter(ds,...)
-
-        """
-        return _Dataset_PlotMethods(self)
+    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.

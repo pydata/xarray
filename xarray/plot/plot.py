@@ -445,6 +445,11 @@ class _PlotMethods:
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
 
+    # we can't use functools.wraps here since that also modifies the name / qualname
+    __doc__ = __call__.__doc__ = plot.__doc__
+    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__annotations__ = plot.__annotations__
+
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
         return hist(self._da, ax=ax, **kwargs)
