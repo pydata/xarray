@@ -252,6 +252,8 @@ New Features
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
   (:issue:`3843`, :pull:`3844`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
+- Add a diff summary for `testing.assert_allclose`. (:issue:`3617`, :pull:`3847`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~

@@ -384,7 +384,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
                 actual = getattr(da, func)(skipna=skipna, dim=aggdim)
                 assert_dask_array(actual, dask)
-                assert np.allclose(
+                np.testing.assert_allclose(
                     actual.values, np.array(expected), rtol=1.0e-4, equal_nan=True
                 )
             except (TypeError, AttributeError, ZeroDivisionError):
