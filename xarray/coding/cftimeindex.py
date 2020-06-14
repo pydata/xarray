@@ -50,6 +50,8 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
+from ..core.formatting import format_array_flat
+from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
@@ -267,23 +269,11 @@ class CFTimeIndex(pd.Index):
         expect for attrs.append(("calendar", self.calendar))
         """
         klass_name = type(self).__name__
-        data = self._format_data()
-        attrs = self._format_attrs()
-        # add length to attrs
-        attrs.append(("length", f"'{len(self)}'"))
-        # add calendar to attrs
-        attrs.append(("calendar", f"'{self.calendar}'"))
-        space = self._format_space()
-        attrs_str = [f"{k}={v}" for k, v in attrs]
-        prepr = f",{space}".join(attrs_str)
-
-        # no data provided, just attributes
-        if data is None:
-            data = ""
-
-        res = f"{klass_name}({data}{prepr})"
-
-        return res
+        datastr = format_array_flat(self.values, OPTIONS["display_width"])
+        attrs = {"length": f"{len(self)}", "calendar": f"'{self.calendar}'"}
+        attrs_str = [f"{k}={v}" for k, v in attrs.items()]
+        prepr = f",{' '}".join(attrs_str)
+        return f"{klass_name}([{datastr}], {prepr})"
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
