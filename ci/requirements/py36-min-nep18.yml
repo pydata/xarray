@@ -11,6 +11,7 @@ dependencies:
   - msgpack-python=0.6  # remove once distributed is bumped. distributed GH3491
   - numpy=1.17
   - pandas=0.25
+  - pint
   - pip
   - pytest
   - pytest-cov
@@ -18,5 +19,3 @@ dependencies:
   - scipy=1.2
   - setuptools=41.2
   - sparse=0.8
-  - pip:
-    - pint=0.12
