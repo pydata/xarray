@@ -393,6 +393,10 @@ def test_apply_ufunc_dataset(dtype):
     assert_identical(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -480,6 +484,10 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     assert_allclose(expected_b, actual_b)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -897,6 +905,10 @@ def test_concat_dataset(variant, unit, error, dtype):
     assert_identical(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1004,6 +1016,10 @@ def test_merge_dataarray(variant, unit, error, dtype):
     assert_allclose(expected, actual)
 
 
+# TODO: remove once pint==0.12 has been released
+@pytest.mark.xfail(
+    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1353,7 +1369,6 @@ def delete_attrs(*to_delete):
     "test_datetime64_conversion",
     "test_timedelta64_conversion",
     "test_pandas_period_index",
-    "test_1d_math",
     "test_1d_reduce",
     "test_array_interface",
     "test___array__",
@@ -1380,6 +1395,13 @@ class TestVariable(VariableSubclassobjects):
             np.array(["a", "b", "c"], dtype=object),
         ]:
             yield (self.cls("x", data), data)
+
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
+    def test_real_and_imag(self):
+        super().test_real_and_imag()
 
     @pytest.mark.parametrize(
         "func",
@@ -1418,6 +1440,22 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
+    def test_aggregate_complex(self):
+        variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
+        expected = xr.Variable((), (0.5 + 1j) * unit_registry.m)
+        actual = variable.mean()
+
+        assert_units_equal(expected, actual)
+        xr.testing.assert_allclose(expected, actual)
+
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -1716,6 +1754,10 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2192,6 +2234,10 @@ class TestDataArray:
         # warnings or errors, but does not check the result
         func(data_array)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose",
+    )
     @pytest.mark.parametrize(
         "func",
         (
@@ -2203,7 +2249,7 @@ class TestDataArray:
             function("mean"),
             pytest.param(
                 function("median"),
-                marks=pytest.mark.xfail(
+                marks=pytest.mark.skip(
                     reason="median does not work with dataarrays yet"
                 ),
             ),
@@ -3251,6 +3297,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
         "func",
@@ -3324,6 +3374,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
         "func",
@@ -3526,6 +3580,10 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         xr.testing.assert_identical(expected, actual)
 
+    # TODO: remove once pint==0.12 has been released
+    @pytest.mark.xfail(
+        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    )
     @pytest.mark.parametrize(
         "func",
         (

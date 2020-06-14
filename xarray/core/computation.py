@@ -1108,7 +1108,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_a = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...                  dims=("space", "time"),
     ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
@@ -1177,7 +1177,7 @@ def corr(da_a, da_b, dim=None):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_a = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
     ...                  dims=("space", "time"),
     ...                  coords=[('space', ['IA', 'IL', 'IN']),
     ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
@@ -1506,7 +1506,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     from .dataarray import DataArray
     from .missing import get_clean_interp_index
 
-    x = get_clean_interp_index(coord, coord.name)
+    x = get_clean_interp_index(coord, coord.name, strict=False)
 
     deg_coord = coeffs[degree_dim]
 

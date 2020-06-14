@@ -1,10 +1,11 @@
 """Testing functions exposed to the user API"""
+import functools
 from typing import Hashable, Set, Union
 
 import numpy as np
 import pandas as pd
 
-from xarray.core import duck_array_ops, formatting
+from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import default_indexes
@@ -118,27 +119,31 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """
     __tracebackhide__ = True
     assert type(a) == type(b)
-    kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
-    if isinstance(a, Variable):
-        assert a.dims == b.dims
-        allclose = _data_allclose_or_equiv(a.data, b.data, **kwargs)
-        assert allclose, f"{a.values}\n{b.values}"
-    elif isinstance(a, DataArray):
-        assert_allclose(a.variable, b.variable, **kwargs)
-        assert set(a.coords) == set(b.coords)
-        for v in a.coords.variables:
-            # can't recurse with this function as coord is sometimes a
-            # DataArray, so call into _data_allclose_or_equiv directly
-            allclose = _data_allclose_or_equiv(
-                a.coords[v].data, b.coords[v].data, **kwargs
-            )
-            assert allclose, "{}\n{}".format(a.coords[v].data, b.coords[v].data)
-    elif isinstance(a, Dataset):
-        assert set(a.data_vars) == set(b.data_vars)
-        assert set(a.coords) == set(b.coords)
-        for k in list(a.variables) + list(a.coords):
-            assert_allclose(a[k], b[k], **kwargs)
 
+    equiv = functools.partial(
+        _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
+    )
+    equiv.__name__ = "allclose"
+
+    def compat_variable(a, b):
+        a = getattr(a, "variable", a)
+        b = getattr(b, "variable", b)
+
+        return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
+
+    if isinstance(a, Variable):
+        allclose = compat_variable(a, b)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, DataArray):
+        allclose = utils.dict_equiv(
+            a.coords, b.coords, compat=compat_variable
+        ) and compat_variable(a.variable, b.variable)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, Dataset):
+        allclose = a._coord_names == b._coord_names and utils.dict_equiv(
+            a.variables, b.variables, compat=compat_variable
+        )
+        assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
