@@ -64,11 +64,6 @@ def test_interpolate_1d(method, dim, case):
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
 
-    if dim == "y" and case == 1:
-        with pytest.raises(NotImplementedError):
-            actual = da.interp(method=method, **{dim: xdest})
-        pytest.skip("interpolation along chunked dimension is " "not yet supported")
-
     actual = da.interp(method=method, **{dim: xdest})
 
     # scipy interpolation for the reference
@@ -717,3 +712,51 @@ def test_decompose(method):
     actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
     expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
     assert_allclose(actual, expected)
+    
+  
+def test_interpolate_chunk_1d():
+    if not has_scipy:
+        pytest.skip("scipy is not installed.")
+
+    if not has_dask:
+        pytest.skip("dask is not installed in the environment.")
+
+    da = get_example_data(1)
+    ydest = np.linspace(-0.1, 0.2, 80)
+
+    actual = da.interp(method="linear", y=ydest)
+    expected = da.compute().interp(method="linear", y=ydest)
+    
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("scalar_nx", [True, False])
+def test_interpolate_chunk_nd(scalar_nx):
+    if not has_scipy:
+        pytest.skip("scipy is not installed.")
+
+    if not has_dask:
+        pytest.skip("dask is not installed in the environment.")
+
+    da = get_example_data(1).chunk({"x": 50})
+    
+    if scalar_nx:
+        # 0.5 is between chunks
+        xdest = 0.5
+        dims=["y"]
+    else:
+        # -0.5 is before data
+        # 0.5 is between chunks
+        # 1.5 is after data
+        xdest = [-0.5, 0.25, 0.5, 0.75, 1.5]
+        dims=["x", "y"]
+    # -0.1 is before data
+    # 0.05 is between chunks
+    # 0.15 is after data
+    ydest = [-0.1, 0.025, 0.05, 0.075, 0.15]
+
+    actual = da.interp(method="linear", x=xdest, y=ydest)
+    expected = da.compute().interp(method="linear", x=xdest, y=ydest)
+    
+    assert_allclose(actual, expected)
+    
