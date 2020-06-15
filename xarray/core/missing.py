@@ -855,6 +855,8 @@ def _compute_chunks(x, x_with_ghost, new_x):
             l_new_x_ends.append(equil)
 
         new_x_ends = np.array(l_new_x_ends)
+        # do not forget extra points at the end
+        new_x_ends[-1] = len(arr)
         chunks = new_x_ends[0], *(new_x_ends[1:] - new_x_ends[:-1])
         total_chunks.append(tuple(chunks))
     return total_chunks
