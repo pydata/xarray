@@ -712,8 +712,8 @@ def test_decompose(method):
     actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
     expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
     assert_allclose(actual, expected)
-    
-  
+
+
 def test_interpolate_chunk_1d():
     if not has_scipy:
         pytest.skip("scipy is not installed.")
@@ -726,7 +726,7 @@ def test_interpolate_chunk_1d():
 
     actual = da.interp(method="linear", y=ydest)
     expected = da.compute().interp(method="linear", y=ydest)
-    
+
     assert_allclose(actual, expected)
 
 
@@ -739,17 +739,17 @@ def test_interpolate_chunk_nd(scalar_nx):
         pytest.skip("dask is not installed in the environment.")
 
     da = get_example_data(1).chunk({"x": 50})
-    
+
     if scalar_nx:
         # 0.5 is between chunks
         xdest = 0.5
-        dims=["y"]
+        dims = ["y"]
     else:
         # -0.5 is before data
         # 0.5 is between chunks
         # 1.5 is after data
         xdest = [-0.5, 0.25, 0.5, 0.75, 1.5]
-        dims=["x", "y"]
+        dims = ["x", "y"]
     # -0.1 is before data
     # 0.05 is between chunks
     # 0.15 is after data
@@ -757,6 +757,5 @@ def test_interpolate_chunk_nd(scalar_nx):
 
     actual = da.interp(method="linear", x=xdest, y=ydest)
     expected = da.compute().interp(method="linear", x=xdest, y=ydest)
-    
+
     assert_allclose(actual, expected)
-    

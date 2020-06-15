@@ -728,7 +728,10 @@ def interp_func(var, x, new_x, method, kwargs):
         nconst = var.ndim - len(x)
 
         # chunks x
-        x = tuple(da.from_array(_x, chunks=chunks) for _x, chunks in zip(x, var.chunks[nconst:]))
+        x = tuple(
+            da.from_array(_x, chunks=chunks)
+            for _x, chunks in zip(x, var.chunks[nconst:])
+        )
 
         # duplicate the ghost cells of the array in the interpolated dimensions
         var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst)
@@ -737,31 +740,41 @@ def interp_func(var, x, new_x, method, kwargs):
         target_dims = set.union(*[set(_x.dims) for _x in new_x])
         if target_dims - set(current_dims):
             raise NotImplementedError(
-                    "Advanced interpolation is not implemented with chunked dimension")
+                "Advanced interpolation is not implemented with chunked dimension"
+            )
         new_x = tuple([_x.set_dims(current_dims) for _x in new_x])
         total_chunks = _compute_chunks(x, x_with_ghost, new_x)
-        final_chunks = var.chunks[:-len(x)] + tuple(total_chunks)
+        final_chunks = var.chunks[: -len(x)] + tuple(total_chunks)
 
         # chunks new_x
         new_x = tuple(da.from_array(_x, chunks=total_chunks) for _x in new_x)
 
         # reshape x_with_ghost
         # TODO: remove it (see _dask_aware_interpnd)
-        x_with_ghost = da.meshgrid(*x_with_ghost, indexing='ij')
+        x_with_ghost = da.meshgrid(*x_with_ghost, indexing="ij")
 
         # compute on chunks
-        res = da.map_blocks(_dask_aware_interpnd,
-                            var_with_ghost, func, kwargs, len(x_with_ghost),
-                            *x_with_ghost, *new_x,
-                            dtype=var.dtype, chunks=final_chunks)
+        res = da.map_blocks(
+            _dask_aware_interpnd,
+            var_with_ghost,
+            func,
+            kwargs,
+            len(x_with_ghost),
+            *x_with_ghost,
+            *new_x,
+            dtype=var.dtype,
+            chunks=final_chunks,
+        )
 
         # reshape res and remove empty chunks
         # TODO: remove it by using drop_axis and new_axis in map_blocks
         res = res.squeeze()
-        new_chunks = tuple([tuple([chunk for chunk in chunks if chunk > 0]) for chunks in res.chunks])
+        new_chunks = tuple(
+            [tuple([chunk for chunk in chunks if chunk > 0]) for chunks in res.chunks]
+        )
         res = res.rechunk(new_chunks)
         return res
-        
+
     return _interpnd(var, x, new_x, func, kwargs)
 
 
@@ -790,13 +803,9 @@ def _interpnd(var, x, new_x, func, kwargs):
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
-    
-    
-def _dask_aware_interpnd(var,
-                         func: Callable[..., Any],
-                         kwargs: Any,
-                         nx: int,
-                         *arrs):
+
+
+def _dask_aware_interpnd(var, func: Callable[..., Any], kwargs: Any, nx: int, *arrs):
     """Wrapper for `_interpnd` allowing dask array to be used in `map_blocks`
 
     The first `nx` arrays in `arrs` are orginal coordinates, the rest are destination coordinate
@@ -805,11 +814,16 @@ def _dask_aware_interpnd(var,
     TODO: find a way to use 1d coordinates
     """
     from .dataarray import DataArray
+
     _old_x, _new_x = arrs[:nx], arrs[nx:]
 
     # reshape x (TODO REMOVE)
-    old_x = tuple([np.moveaxis(tmp, dim, -1)[tuple([0] * (len(tmp.shape) - 1))]
-                   for dim, tmp in enumerate(_old_x)])
+    old_x = tuple(
+        [
+            np.moveaxis(tmp, dim, -1)[tuple([0] * (len(tmp.shape) - 1))]
+            for dim, tmp in enumerate(_old_x)
+        ]
+    )
 
     new_x = tuple([DataArray(_x) for _x in _new_x])
 
@@ -819,13 +833,15 @@ def _dask_aware_interpnd(var,
 def _add_interp_ghost(var, x, nconst: int):
     """ Duplicate the ghost cells of the array (values and coordinates)"""
     import dask.array as da
+
     bnd = {i: "none" for i in range(len(var.shape))}
     depth = {i: 0 if i < nconst else 1 for i in range(len(var.shape))}
 
     var_with_ghost = da.overlap.overlap(var, depth=depth, boundary=bnd)
 
-    x_with_ghost = tuple(da.overlap.overlap(_x, depth={0: 1}, boundary={0: "none"})
-                         for _x in x)
+    x_with_ghost = tuple(
+        da.overlap.overlap(_x, depth={0: 1}, boundary={0: "none"}) for _x in x
+    )
     return var_with_ghost, x_with_ghost
 
 
@@ -835,10 +851,10 @@ def _compute_chunks(x, x_with_ghost, new_x):
     TODO: This only works if new_x is a set of 1d coordinate
           more general function is needed for advanced interpolation with chunked dimension
     """
-    chunks_end = [np.cumsum(sizes) - 1 for _x in x
-                                       for sizes in _x.chunks]
-    chunks_end_with_ghost = [np.cumsum(sizes) - 1 for _x in x_with_ghost
-                                                  for sizes in _x.chunks]
+    chunks_end = [np.cumsum(sizes) - 1 for _x in x for sizes in _x.chunks]
+    chunks_end_with_ghost = [
+        np.cumsum(sizes) - 1 for _x in x_with_ghost for sizes in _x.chunks
+    ]
     total_chunks = []
     for dim, ce in enumerate(zip(chunks_end, chunks_end_with_ghost)):
         l_new_x_ends: List[np.ndarray] = []
