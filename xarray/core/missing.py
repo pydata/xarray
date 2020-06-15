@@ -2,7 +2,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, Sequence, Union, List
+from typing import Any, Callable, Dict, Hashable, List, Sequence, Union
 
 import numpy as np
 import pandas as pd
