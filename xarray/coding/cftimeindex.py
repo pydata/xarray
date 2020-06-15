@@ -51,7 +51,6 @@ from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
 from ..core.formatting import format_array_flat
-from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
@@ -300,18 +299,14 @@ class CFTimeIndex(pd.Index):
                 if sepstr in datastr:
                     firststr, laststr = datastr.split(f" {sepstr} ")
                     firststr = insert_linebreak_after_three(
-                        join_every_second(firststr, linebreak=linebreak_add)
-                    )
+                        join_every_second(firststr), linebreak=linebreak_add)
                     laststr = insert_linebreak_after_three(
-                        join_every_second(laststr, linebreak=linebreak_add)
-                    )
+                        join_every_second(laststr), linebreak=linebreak_add)
                     datastr = f"{firststr},\n{linebreak_spaces}  {sepstr}\n{linebreak_spaces}  {laststr}"
                 else:
-                    datastr = join_every_second(datastr)
                     datastr = insert_linebreak_after_three(
-                        datastr, linebreak=linebreak_add
+                        join_every_second(datastr), linebreak=linebreak_add
                     )
-                # datastr = insert_linebreak_after_three(datastr)
 
         attrs = {
             "dtype": f"'{self.dtype}'",

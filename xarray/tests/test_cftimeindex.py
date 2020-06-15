@@ -967,7 +967,7 @@ def test_cftimeindex_repr_101_shorter(periods):
 
 
 @requires_cftime
-@pytest.mark.parametrize("periods", [3, 4, 7, 22, 50, 100, 101, 500])
+@pytest.mark.parametrize("periods", [3, 4, 100, 101])
 def test_cftimeindex_repr_compare_pandasIndex(periods):
     cfindex = xr.cftime_range(start="2000", periods=periods)
     pdindex = pd.Index(cfindex)
@@ -984,9 +984,7 @@ def test_cftimeindex_repr_compare_pandasIndex(periods):
     pdindex_repr_str = pdindex_repr_str.replace(
         ")", f", {lengthstr}calendar='gregorian')"
     )
-    print(pdindex_repr_str)
-    print(cfindex_repr_str)
-    assert pdindex_repr_str in cfindex_repr_str
+    assert pdindex_repr_str == cfindex_repr_str
 
 
 @requires_cftime
