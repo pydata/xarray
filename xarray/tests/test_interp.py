@@ -743,13 +743,11 @@ def test_interpolate_chunk_nd(scalar_nx):
     if scalar_nx:
         # 0.5 is between chunks
         xdest = 0.5
-        dims = ["y"]
     else:
         # -0.5 is before data
         # 0.5 is between chunks
         # 1.5 is after data
         xdest = [-0.5, 0.25, 0.5, 0.75, 1.5]
-        dims = ["x", "y"]
     # -0.1 is before data
     # 0.05 is between chunks
     # 0.15 is after data
