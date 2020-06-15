@@ -918,15 +918,75 @@ def test_cftimeindex_calendar_repr(calendar, expected):
     index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
     repr_str = index.__repr__()
     assert f" calendar='{expected}'" in repr_str
+    assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
 
 
 @requires_cftime
-@pytest.mark.parametrize("periods", [2, 4])
+@pytest.mark.parametrize("periods", [2, 40])
 def test_cftimeindex_periods_repr(periods):
     """Test that cftimeindex has periods property in repr."""
     index = xr.cftime_range(start="2000", periods=periods)
     repr_str = index.__repr__()
     assert f" length={periods}" in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
+def test_cftimeindex_repr_formatting(periods):
+    """Test that cftimeindex.__repr__ is formatted as pd.Index.__repr__."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    repr_str = index.__repr__()
+    print(repr_str)
+    # check for commata
+    assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
+    if periods <= 3:
+        assert "\n" not in repr_str
+        "CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00], dtype='object', calendar='standard')" == repr_str
+    else:
+        # check for linebreak
+        assert ", 2000-01-03 00:00:00,\n" in repr_str
+        # check for times have same indent
+        lines = repr_str.split("\n")
+        firststr = "2000"
+        assert lines[0].find(firststr) == lines[1].find(firststr)
+        # check for attrs line has one less indent than times
+        assert lines[-1].find("dtype") + 1 == lines[0].find(firststr)
+    # check for ... separation dots
+    if periods > 100:
+        assert "..." in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize("periods", [22, 50, 100])
+def test_cftimeindex_repr_101_shorter(periods):
+    index_101 = xr.cftime_range(start="2000", periods=101)
+    index_periods = xr.cftime_range(start="2000", periods=periods)
+    index_101_repr_str = index_101.__repr__()
+    index_periods_repr_str = index_periods.__repr__()
+    assert len(index_101_repr_str) < len(index_periods_repr_str)
+
+
+@requires_cftime
+@pytest.mark.parametrize("periods", [3, 4, 7, 22, 50, 100, 101, 500])
+def test_cftimeindex_repr_compare_pandasIndex(periods):
+    cfindex = xr.cftime_range(start="2000", periods=periods)
+    pdindex = pd.Index(cfindex)
+    cfindex_repr_str = cfindex.__repr__()
+    pdindex_repr_str = pdindex.__repr__()
+    pdindex_repr_str = pdindex_repr_str.replace("Index", "CFTimeIndex")
+    pdindex_repr_str = pdindex_repr_str.replace(f"\n{' '*7}", f"\n{' '*13}")
+    if periods > 3:
+        pdindex_repr_str = pdindex_repr_str.replace("dtype", f"{' '*6}dtype")
+    if periods <= 100:
+        lengthstr = f"length={periods}, "
+    else:
+        lengthstr = ""
+    pdindex_repr_str = pdindex_repr_str.replace(
+        ")", f", {lengthstr}calendar='gregorian')"
+    )
+    print(pdindex_repr_str)
+    print(cfindex_repr_str)
+    assert pdindex_repr_str in cfindex_repr_str
 
 
 @requires_cftime

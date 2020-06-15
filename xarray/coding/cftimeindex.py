@@ -269,11 +269,61 @@ class CFTimeIndex(pd.Index):
         expect for attrs.append(("calendar", self.calendar))
         """
         klass_name = type(self).__name__
-        datastr = format_array_flat(self.values, OPTIONS["display_width"])
-        attrs = {"length": f"{len(self)}", "calendar": f"'{self.calendar}'"}
+        len_item = 19  # length of one item in repr
+        # shorten repr for more than 100 items
+        max_width = (19 + 1) * 100 if len(self) <= 100 else 22 * len_item
+        datastr = format_array_flat(self.values, max_width)
+
+        def join_every_second(s, sep=" ", join=", "):
+            # to formatting.py
+            """Join every second item after split(sep)."""
+            ss = s.split(sep)
+            sj = [x + " " + y for x, y in zip(ss[0::2], ss[1::2])]
+            return join.join(sj)
+
+        linebreak_spaces = " " * len(klass_name)
+        linebreak_add = linebreak_spaces + " "
+
+        def insert_linebreak_after_three(s, sep=",", linebreak=" "):
+            """Linebreak after three items split(sep)."""
+            s_sep = s.split(sep)
+            for i in range(len(s_sep)):
+                if i % 3 == 0 and i != 0:
+                    s_sep[i] = f"\n{linebreak}{s_sep[i]}"
+            return sep.join(s_sep)
+
+        if datastr:
+            if len(self) <= 3:
+                datastr = join_every_second(datastr)
+            else:
+                sepstr = "..."
+                if sepstr in datastr:
+                    firststr, laststr = datastr.split(f" {sepstr} ")
+                    firststr = insert_linebreak_after_three(
+                        join_every_second(firststr, linebreak=linebreak_add)
+                    )
+                    laststr = insert_linebreak_after_three(
+                        join_every_second(laststr, linebreak=linebreak_add)
+                    )
+                    datastr = f"{firststr},\n{linebreak_spaces}  {sepstr}\n{linebreak_spaces}  {laststr}"
+                else:
+                    datastr = join_every_second(datastr)
+                    datastr = insert_linebreak_after_three(
+                        datastr, linebreak=linebreak_add
+                    )
+                # datastr = insert_linebreak_after_three(datastr)
+
+        attrs = {
+            "dtype": f"'{self.dtype}'",
+            "length": f"{len(self)}",
+            "calendar": f"'{self.calendar}'",
+        }
         attrs_str = [f"{k}={v}" for k, v in attrs.items()]
         prepr = f",{' '}".join(attrs_str)
-        return f"{klass_name}([{datastr}], {prepr})"
+        if len(self) <= 3:
+            return f"{klass_name}([{datastr}], {prepr})"
+        else:
+            return f"{klass_name}([{datastr}],\n{linebreak_spaces} {prepr})"
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
