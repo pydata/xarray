@@ -808,7 +808,7 @@ def _interpnd(var, x, new_x, func, kwargs):
 def _dask_aware_interpnd(var, func: Callable[..., Any], kwargs: Any, nx: int, *arrs):
     """Wrapper for `_interpnd` allowing dask array to be used in `map_blocks`
 
-    The first `nx` arrays in `arrs` are orginal coordinates, the rest are destination coordinate
+    The first `nx` arrays in `arrs` are original coordinates, the rest are destination coordinate
     Currently this need original coordinate to be full arrays (meshgrid)
 
     TODO: find a way to use 1d coordinates
