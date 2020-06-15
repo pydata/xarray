@@ -43,7 +43,7 @@ Enhancements
 - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
 - :py:meth:`DataArray.interp` now support simple interpolation in a chunked dimension
-  (but not advanced interpolation) (:pull:`??`). By `Alexandre Poux <https://github.com/pums974>`_.
+  (but not advanced interpolation) (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 
 New Features
 ~~~~~~~~~~~~
