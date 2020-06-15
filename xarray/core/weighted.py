@@ -72,11 +72,11 @@ class Weighted:
     def __init__(self, obj: "DataArray", weights: "DataArray") -> None:
         ...
 
-    @overload  # noqa: F811
-    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:  # noqa: F811
+    @overload
+    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:
         ...
 
-    def __init__(self, obj, weights):  # noqa: F811
+    def __init__(self, obj, weights):
         """
         Create a Weighted object
 
