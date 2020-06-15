@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -1241,13 +1242,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
+    # FIXME https://github.com/python/mypy/issues/7328
+    @overload
+    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Any) -> "Dataset":
+        ...
+
+    def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
