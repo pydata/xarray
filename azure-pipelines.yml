@@ -108,21 +108,3 @@ jobs:
       python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
       python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
     displayName: minimum versions policy
-
-- job: Docs
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-    parameters:
-      env_file: ci/requirements/doc.yml
-  - bash: |
-      source activate xarray-tests
-      # Replicate the exact environment created by the readthedocs CI
-      conda install --yes --quiet -c pkgs/main mock pillow sphinx sphinx_rtd_theme
-    displayName: Replicate readthedocs CI environment
-  - bash: |
-      source activate xarray-tests
-      cd doc
-      sphinx-build -W --keep-going -j auto -b html -d _build/doctrees . _build/html
-    displayName: Build HTML docs
