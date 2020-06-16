@@ -10,6 +10,8 @@ steps:
     conda env create -n xarray-tests --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
+# TODO: add sparse back in, once Numba works with the development version of
+# NumPy again: https://github.com/pydata/xarray/issues/4146 
 - bash: |
     source activate xarray-tests
     conda uninstall -y --force \
@@ -23,7 +25,8 @@ steps:
         cftime \
         rasterio \
         pint \
-        bottleneck
+        bottleneck \
+        sparse
     python -m pip install \
         -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
