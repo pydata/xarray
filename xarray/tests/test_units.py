@@ -3815,7 +3815,7 @@ class TestDataset:
             function("sum"),
             pytest.param(
                 function("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet",),
+                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
             ),
             function("std"),
             function("var"),
@@ -3832,7 +3832,7 @@ class TestDataset:
             method("sum"),
             pytest.param(
                 method("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet",),
+                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
             ),
             method("std"),
             method("var"),
