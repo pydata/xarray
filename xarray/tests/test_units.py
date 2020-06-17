@@ -395,7 +395,7 @@ def test_apply_ufunc_dataset(dtype):
 
 # TODO: remove once pint==0.12 has been released
 @pytest.mark.xfail(
-    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
 )
 @pytest.mark.parametrize(
     "unit,error",
@@ -486,7 +486,7 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 
 # TODO: remove once pint==0.12 has been released
 @pytest.mark.xfail(
-    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
 )
 @pytest.mark.parametrize(
     "unit,error",
@@ -907,7 +907,7 @@ def test_concat_dataset(variant, unit, error, dtype):
 
 # TODO: remove once pint==0.12 has been released
 @pytest.mark.xfail(
-    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
 )
 @pytest.mark.parametrize(
     "unit,error",
@@ -1018,7 +1018,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
 
 # TODO: remove once pint==0.12 has been released
 @pytest.mark.xfail(
-    LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+    LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
 )
 @pytest.mark.parametrize(
     "unit,error",
@@ -1398,7 +1398,7 @@ class TestVariable(VariableSubclassobjects):
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     def test_real_and_imag(self):
         super().test_real_and_imag()
@@ -1442,7 +1442,7 @@ class TestVariable(VariableSubclassobjects):
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     def test_aggregate_complex(self):
         variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
@@ -1454,7 +1454,7 @@ class TestVariable(VariableSubclassobjects):
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     @pytest.mark.parametrize(
         "func",
@@ -1756,7 +1756,7 @@ class TestVariable(VariableSubclassobjects):
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -1896,7 +1896,7 @@ class TestVariable(VariableSubclassobjects):
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.12",
+                    LooseVersion(pint.__version__) <= "0.12",
                     reason="quantile / nanquantile not implemented yet",
                 ),
             ),
@@ -2236,7 +2236,7 @@ class TestDataArray:
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose",
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose",
     )
     @pytest.mark.parametrize(
         "func",
@@ -3299,7 +3299,7 @@ class TestDataArray:
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
@@ -3376,7 +3376,7 @@ class TestDataArray:
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     @pytest.mark.parametrize("variant", ("data", "coords"))
     @pytest.mark.parametrize(
@@ -3545,7 +3545,7 @@ class TestDataArray:
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.12",
+                    LooseVersion(pint.__version__) <= "0.12",
                     reason="quantile / nanquantile not implemented yet",
                 ),
             ),
@@ -3582,7 +3582,7 @@ class TestDataArray:
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.11", reason="pint bug in isclose"
+        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
     )
     @pytest.mark.parametrize(
         "func",
@@ -3646,7 +3646,7 @@ class TestDataArray:
             pytest.param(
                 method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.12",
+                    LooseVersion(pint.__version__) <= "0.12",
                     reason="quantile / nanquantile not implemented yet",
                 ),
             ),
@@ -3815,7 +3815,10 @@ class TestDataset:
             function("sum"),
             pytest.param(
                 function("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) <= "0.12",
+                    reason="not implemented by pint",
+                ),
             ),
             function("std"),
             function("var"),
@@ -3832,7 +3835,10 @@ class TestDataset:
             method("sum"),
             pytest.param(
                 method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) <= "0.12",
+                    reason="not implemented by pint",
+                ),
             ),
             method("std"),
             method("var"),
@@ -4100,7 +4106,7 @@ class TestDataset:
 
         expected = strip_units(ds).isin(strip_units(converted_values))
         # TODO: use `unit_registry.is_compatible_with(unit, unit_registry.m)` instead.
-        # Needs `pint>=0.12`, though, so we probably should wait until that is released.
+        # Needs `pint>=0.12.1`, though, so we probably should wait until that is released.
         if not is_compatible(unit, unit_registry.m):
             expected.a[:] = False
             expected.b[:] = False
@@ -4957,7 +4963,7 @@ class TestDataset:
             pytest.param(
                 method("quantile", q=[0.25, 0.75]),
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.12",
+                    LooseVersion(pint.__version__) <= "0.12",
                     reason="nanquantile not implemented yet",
                 ),
             ),
@@ -5013,7 +5019,7 @@ class TestDataset:
             pytest.param(
                 method("groupby_bins", "x", bins=2),
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.12",
+                    LooseVersion(pint.__version__) <= "0.12",
                     reason="needs assert_allclose but that does not work with pint",
                 ),
             ),
@@ -5066,7 +5072,7 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         # TODO: remove once pint 0.12 has been released
-        if LooseVersion(pint.__version__) < "0.12":
+        if LooseVersion(pint.__version__) <= "0.12":
             assert_equal(expected, actual)
         else:
             assert_allclose(expected, actual)
@@ -5122,7 +5128,10 @@ class TestDataset:
             method("last"),
             pytest.param(
                 method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
-                marks=pytest.mark.xfail(reason="nanquantile not implemented"),
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) <= "0.12",
+                    reason="nanquantile not implemented",
+                ),
             ),
         ),
         ids=repr,
