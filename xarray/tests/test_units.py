@@ -3681,7 +3681,7 @@ class TestDataArray:
         xr.testing.assert_identical(expected, actual)
 
 
-@pytest.mark.filterwarnings("error")
+@pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")
 class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
