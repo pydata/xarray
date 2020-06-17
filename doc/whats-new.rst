@@ -72,7 +72,7 @@ New Features
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
-- More support for unit aware arrays with pint (:pull:`3643`)
+- More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
   without ``append_dim``, as long as dimension sizes do not change.
