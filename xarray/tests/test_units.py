@@ -354,14 +354,31 @@ class function:
         return f"function_{self.name}"
 
 
-def test_apply_ufunc_dataarray(dtype):
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)
+def test_apply_ufunc_dataarray(variant, dtype):
+    variants = {
+        "data": (unit_registry.m, 1, 1),
+        "dims": (1, unit_registry.m, 1),
+        "coords": (1, 1, unit_registry.m),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
     func = functools.partial(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
     )
 
-    array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.m
-    x = np.arange(20) * unit_registry.s
-    data_array = xr.DataArray(data=array, dims="x", coords={"x": x})
+    array = np.linspace(0, 10, 20).astype(dtype) * data_unit
+    x = np.arange(20) * dim_unit
+    u = np.linspace(-1, 1, 20) * coord_unit
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x, "u": ("x", u)})
 
     expected = attach_units(func(strip_units(data_array)), extract_units(data_array))
     actual = func(data_array)
@@ -370,20 +387,39 @@ def test_apply_ufunc_dataarray(dtype):
     assert_identical(expected, actual)
 
 
-def test_apply_ufunc_dataset(dtype):
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)
+def test_apply_ufunc_dataset(variant, dtype):
+    variants = {
+        "data": (unit_registry.m, 1, 1),
+        "dims": (1, unit_registry.m, 1),
+        "coords": (1, 1, unit_registry.s),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+
     func = functools.partial(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
     )
 
-    array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
-    array2 = np.linspace(0, 10, 5).astype(dtype) * unit_registry.m
+    array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+    array2 = np.linspace(0, 10, 5).astype(dtype) * data_unit
 
-    x = np.arange(5) * unit_registry.s
-    y = np.arange(10) * unit_registry.m
+    x = np.arange(5) * dim_unit
+    y = np.arange(10) * dim_unit
+
+    u = np.linspace(-1, 1, 10) * coord_unit
 
     ds = xr.Dataset(
         data_vars={"a": (("x", "y"), array1), "b": ("x", array2)},
-        coords={"x": x, "y": y},
+        coords={"x": x, "y": y, "u": ("y", u)},
     )
 
     expected = attach_units(func(strip_units(ds)), extract_units(ds))
