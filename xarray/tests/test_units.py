@@ -26,7 +26,7 @@ pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
     ),
-    # pytest.mark.filterwarnings("ignore:::pint[.*]"),
+    pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
 
@@ -2166,7 +2166,6 @@ class TestVariable(VariableSubclassobjects):
 
 
 class TestDataArray:
-    @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "variant",
         (
@@ -2201,7 +2200,6 @@ class TestDataArray:
             }.values()
         )
 
-    @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
     )
@@ -3681,7 +3679,6 @@ class TestDataArray:
         xr.testing.assert_identical(expected, actual)
 
 
-@pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")
 class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
