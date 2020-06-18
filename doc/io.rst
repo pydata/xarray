@@ -1041,6 +1041,8 @@ coordination. The ``region`` provides a mapping from dimension names to Python
 .. ipython:: python
 
 
+    # For convenience, we'll slice a single dataset, but in the real use-case
+    # we would create them separately, possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
     ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
