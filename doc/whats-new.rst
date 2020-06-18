@@ -42,9 +42,10 @@ Enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
-
-New Features
-~~~~~~~~~~~~
+- :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
+  limited regions of existing Zarr stores. See :ref:`io.zarr.appending`_ for
+  full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of

@@ -954,15 +954,7 @@ Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
 
-.. _io.cfgrib:
-
-.. ipython:: python
-    :suppress:
-
-    import shutil
-
-    shutil.rmtree("foo.zarr")
-    shutil.rmtree("path/to/directory.zarr")
+.. _io.zarr.appending:
 
 Appending to existing Zarr stores
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1054,6 +1046,16 @@ if you set ``region`` then _all_ variables included in a Dataset must have
 dimensions included in ``region``. Other variables (typically coordinates)
 should be explicitly dropped or written in a separate call to ``to_zarr`` with
 ``mode='a'``.
+
+.. _io.cfgrib:
+
+.. ipython:: python
+    :suppress:
+
+    import shutil
+
+    shutil.rmtree("foo.zarr")
+    shutil.rmtree("path/to/directory.zarr")
 
 GRIB format via cfgrib
 ----------------------
