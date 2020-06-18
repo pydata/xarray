@@ -1631,7 +1631,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - Dimensions cannot be included in both ``region`` and
               ``append_dim`` at the same time. To create empty arrays to fill
               in with ``region``, use a separate call to ``to_zarr()`` with
-              ``compute=False``.
+              ``compute=False``. See "Appending to existing Zarr stores" in
+              the reference documentation for full details.
 
         References
         ----------
