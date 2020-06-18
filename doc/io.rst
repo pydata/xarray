@@ -1026,7 +1026,8 @@ Zarr:
 
     # The values of this dask array are entirely irrelevant; only the dtype,
     # shape and chunks are used.
-    dummies = da.zeros(30, chunks=10)
+    import dask.array
+    dummies = dask.array.zeros(30, chunks=10)
     ds = xr.Dataset({"foo": ("x", dummies)})
     path = "path/to/directory.zarr"
     ds.to_zarr(path, compute=False, consolidated=True)
