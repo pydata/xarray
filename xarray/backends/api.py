@@ -1304,10 +1304,29 @@ def _validate_append_dim_and_encoding(
         if region is not None and append_dim in region:
             raise ValueError(
                 f"cannot list the same dimension in both ``append_dim`` and "
-                f"``region`` with to_zarr({append_dim}): "
+                f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
     if region is not None:
+        if not isinstance(region, dict):
+            raise TypeError(f"``region`` must be a dict, got {type(region)}")
+        for k, v in region.items():
+            if k not in ds_to_append.dims:
+                raise ValueError(
+                    f"all keys in ``region`` are not in Dataset dimensions, got "
+                    f"{list(region)} and {list(ds_to_append.dims)}"
+                )
+            if not isinstance(v, slice):
+                raise TypeError(
+                    "all values in ``region`` must be slice objects, got "
+                    f"region={region}"
+                )
+            if v.step not in {1, None}:
+                raise ValueError(
+                    "step on all slices in ``region`` must be 1 or None, got "
+                    f"region={region}"
+                )
+
         non_matching_vars = [
             k
             for k, v in ds_to_append.variables.items()
