@@ -514,6 +514,7 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
+    decode_timedelta=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -573,6 +574,11 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -623,6 +629,7 @@ def open_zarr(
         decode_times = False
         concat_characters = False
         decode_coords = False
+        decode_timedelta = False
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -632,6 +639,7 @@ def open_zarr(
             concat_characters=concat_characters,
             decode_coords=decode_coords,
             drop_variables=drop_variables,
+            decode_timedelta=decode_timedelta,
         )
 
         # TODO: this is where we would apply caching
