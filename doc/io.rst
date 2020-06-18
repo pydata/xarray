@@ -1024,12 +1024,13 @@ Zarr:
 
 .. ipython:: python
 
-    # The values of this dask array are entirely irrelevant; only the dtype,
-    # shape and chunks are used.
     import dask.array
+    # The values of this dask array are entirely irrelevant; only the dtype,
+    # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
     ds = xr.Dataset({"foo": ("x", dummies)})
     path = "path/to/directory.zarr"
+    # Now we write the metadata without computing any array values
     ds.to_zarr(path, compute=False, consolidated=True)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
@@ -1037,16 +1038,19 @@ can be filled out by subsequent calls to ``to_zarr`` without any further
 coordination. The ``region`` provides a mapping from dimension names to Python
 ``slice`` objects indicating where the data should be written, e.g.,
 
+.. ipython:: python
+
+
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
     ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 As a safety check to make it harder to inadvertently override existing values,
-if you set ``region`` then _all_ variables included in a Dataset must have
+if you set ``region`` then *all* variables included in a Dataset must have
 dimensions included in ``region``. Other variables (typically coordinates)
-should be explicitly dropped or written in a separate call to ``to_zarr`` with
-``mode='a'``.
+need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
+with ``mode='a'``.
 
 .. _io.cfgrib:
 
