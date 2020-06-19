@@ -1434,7 +1434,7 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
             other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
         )
     else:
-        data = np.full_like(other, fill_value, dtype=dtype)
+        data = np.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
