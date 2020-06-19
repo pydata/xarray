@@ -457,15 +457,14 @@ def test_apply_ufunc_dataset(variant, dtype):
         "coords",
     ),
 )
-@pytest.mark.parametrize("fill_value", (10, dtypes.NA))
-def test_align_dataarray(fill_value, variant, unit, error, dtype):
+@pytest.mark.parametrize("value", (10, dtypes.NA))
+def test_align_dataarray(value, variant, unit, error, dtype):
     if variant == "coords" and (
-        fill_value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
     ):
         pytest.xfail(reason="fill_value is used for both data and coords")
 
-    if fill_value == dtypes.NA:
-        fill_value = dtypes.get_fill_value(dtype)
+    fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
     original_unit = unit_registry.m
 
@@ -482,28 +481,26 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 
     array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit1
     array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit2
-    x = np.arange(2) * dim_unit1
 
+    x = np.arange(2) * dim_unit1
     y1 = np.arange(5) * dim_unit1
     y2 = np.arange(2, 7) * dim_unit2
 
-    y_a1 = np.array([3, 5, 7, 8, 9]) * coord_unit1
-    y_a2 = np.array([7, 8, 9, 11, 13]) * coord_unit2
+    u1 = np.array([3, 5, 7, 8, 9]) * coord_unit1
+    u2 = np.array([7, 8, 9, 11, 13]) * coord_unit2
 
     coords1 = {"x": x, "y": y1}
     coords2 = {"x": x, "y": y2}
     if variant == "coords":
-        coords1["y_a"] = ("y", y_a1)
-        coords2["y_a"] = ("y", y_a2)
+        coords1["y_a"] = ("y", u1)
+        coords2["y_a"] = ("y", u2)
 
     data_array1 = xr.DataArray(data=array1, coords=coords1, dims=("x", "y"))
     data_array2 = xr.DataArray(data=array2, coords=coords2, dims=("x", "y"))
 
     fill_value = fill_value * data_unit2
     func = function(xr.align, join="outer", fill_value=fill_value)
-    if error is not None and (
-        ~np.isnan(fill_value) or isinstance(fill_value, Quantity)
-    ):
+    if error is not None and (value != dtypes.NA or isinstance(fill_value, Quantity)):
         with pytest.raises(error):
             func(data_array1, data_array2)
 
@@ -563,15 +560,14 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
         "coords",
     ),
 )
-@pytest.mark.parametrize("fill_value", (10, dtypes.NA))
-def test_align_dataset(fill_value, unit, variant, error, dtype):
+@pytest.mark.parametrize("value", (10, dtypes.NA))
+def test_align_dataset(value, unit, variant, error, dtype):
     if variant == "coords" and (
-        fill_value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
     ):
         pytest.xfail(reason="fill_value is used for both data variables and coords")
 
-    if fill_value == dtypes.NA:
-        fill_value = dtypes.get_fill_value(dtype)
+    fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
     original_unit = unit_registry.m
 
@@ -607,9 +603,7 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
 
     fill_value = fill_value * data_unit2
     func = function(xr.align, join="outer", fill_value=fill_value)
-    if error is not None and not (
-        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
-    ):
+    if error is not None and (value != dtypes.NA or isinstance(fill_value, Quantity)):
         with pytest.raises(error):
             func(ds1, ds2)
 
@@ -617,14 +611,7 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
 
     stripped_kwargs = {
         key: strip_units(
-            convert_units(
-                value,
-                {
-                    None: data_unit1
-                    if isinstance(data_unit2, unit_registry.Unit)
-                    else None
-                },
-            )
+            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None},)
         )
         for key, value in func.kwargs.items()
     }
