@@ -1309,37 +1309,40 @@ def test_replication_dataset(func, variant, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be expected: hgrecco/pint#882"
-    )
-)
 @pytest.mark.parametrize(
-    "unit,error",
+    "variant",
     (
-        pytest.param(1, DimensionalityError, id="no_unit"),
+        "data",
         pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
         ),
-        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.ms, None, id="compatible_unit"),
-        pytest.param(unit_registry.s, None, id="identical_unit"),
+        pytest.param(
+            "coords",
+            marks=pytest.mark.xfail(reason="can't copy quantity into non-quantity"),
+        ),
     ),
-    ids=repr,
 )
-def test_replication_full_like_dataarray(unit, error, dtype):
-    array = np.linspace(0, 5, 10) * unit_registry.s
-    data_array = xr.DataArray(data=array, dims="x")
+def test_replication_full_like_dataarray(variant, dtype):
+    # since full_like will strip units and then use the units of the
+    # fill value, we don't need to try multiple units
+    unit = unit_registry.m
 
-    fill_value = -1 * unit
-    if error is not None:
-        with pytest.raises(error):
-            xr.full_like(data_array, fill_value=fill_value)
+    variants = {
+        "data": (unit, 1, 1),
+        "dims": (1, unit, 1),
+        "coords": (1, 1, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
 
-        return
+    array = np.linspace(0, 5, 10) * data_unit
+    x = np.arange(10) * dim_unit
+    u = np.linspace(0, 1, 10) * coord_unit
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x, "u": ("x", u)})
 
-    units = {**extract_units(data_array), **{None: unit if unit != 1 else None}}
+    fill_value = -1 * unit_registry.degK
+
+    units = extract_units(data_array)
+    units[data_array.name] = fill_value.units
     expected = attach_units(
         xr.full_like(strip_units(data_array), fill_value=strip_units(fill_value)), units
     )
@@ -1349,47 +1352,46 @@ def test_replication_full_like_dataarray(unit, error, dtype):
     assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be expected: hgrecco/pint#882"
-    )
-)
 @pytest.mark.parametrize(
-    "unit,error",
+    "variant",
     (
-        pytest.param(1, DimensionalityError, id="no_unit"),
+        "data",
         pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
         ),
-        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.ms, None, id="compatible_unit"),
-        pytest.param(unit_registry.s, None, id="identical_unit"),
+        pytest.param(
+            "coords",
+            marks=pytest.mark.xfail(reason="can't copy quantity into non-quantity"),
+        ),
     ),
-    ids=repr,
 )
-def test_replication_full_like_dataset(unit, error, dtype):
-    array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
-    array2 = np.linspace(5, 10, 10).astype(dtype) * unit_registry.Pa
-    x = np.arange(20).astype(dtype) * unit_registry.m
-    y = np.arange(10).astype(dtype) * unit_registry.m
-    z = y.to(unit_registry.mm)
+def test_replication_full_like_dataset(variant, dtype):
+    unit = unit_registry.m
+
+    variants = {
+        "data": ((unit_registry.s, unit_registry.Pa), 1, 1),
+        "dims": ((1, 1), unit, 1),
+        "coords": ((1, 1), 1, unit),
+    }
+    (data_unit1, data_unit2), dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 10, 20).astype(dtype) * data_unit1
+    array2 = np.linspace(5, 10, 10).astype(dtype) * data_unit2
+    x = np.arange(20).astype(dtype) * dim_unit
+    y = np.arange(10).astype(dtype) * dim_unit
+
+    u = np.linspace(0, 1, 10) * coord_unit
 
     ds = xr.Dataset(
         data_vars={"a": ("x", array1), "b": ("y", array2)},
-        coords={"x": x, "y": y, "z": ("y", z)},
+        coords={"x": x, "y": y, "u": ("y", u)},
     )
 
-    fill_value = -1 * unit
-    if error is not None:
-        with pytest.raises(error):
-            xr.full_like(ds, fill_value=fill_value)
-
-        return
+    fill_value = -1 * unit_registry.degK
 
     units = {
         **extract_units(ds),
-        **{name: unit if unit != 1 else None for name in ds.data_vars},
+        **{name: unit_registry.degK for name in ds.data_vars},
     }
     expected = attach_units(
         xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
