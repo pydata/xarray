@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.testing import assert_allclose, assert_equal, assert_identical
 
@@ -264,7 +265,7 @@ def assert_units_equal(a, b):
     assert extract_units(a) == extract_units(b)
 
 
-@pytest.fixture(params=[float, int])
+@pytest.fixture(params=[np.dtype(float), np.dtype(int)])
 def dtype(request):
     return request.param
 
@@ -456,12 +457,15 @@ def test_apply_ufunc_dataset(variant, dtype):
         "coords",
     ),
 )
-@pytest.mark.parametrize("fill_value", (10, np.nan))
+@pytest.mark.parametrize("fill_value", (10, dtypes.NA))
 def test_align_dataarray(fill_value, variant, unit, error, dtype):
     if variant == "coords" and (
-        ~np.isnan(fill_value) or isinstance(unit, unit_registry.Unit)
+        fill_value != dtypes.NA or isinstance(unit, unit_registry.Unit)
     ):
         pytest.xfail(reason="fill_value is used for both data and coords")
+
+    if fill_value == dtypes.NA:
+        fill_value = dtypes.get_fill_value(dtype)
 
     original_unit = unit_registry.m
 
