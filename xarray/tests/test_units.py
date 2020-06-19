@@ -645,6 +645,7 @@ def test_align_dataset(value, unit, variant, error, dtype):
 
 
 def test_broadcast_dataarray(dtype):
+    # uses align internally so more thorough tests are not needed
     array1 = np.linspace(0, 10, 2) * unit_registry.Pa
     array2 = np.linspace(0, 10, 3) * unit_registry.Pa
 
@@ -666,6 +667,7 @@ def test_broadcast_dataarray(dtype):
 
 
 def test_broadcast_dataset(dtype):
+    # uses align internally so more thorough tests are not needed
     array1 = np.linspace(0, 10, 2) * unit_registry.Pa
     array2 = np.linspace(0, 10, 3) * unit_registry.Pa
 
