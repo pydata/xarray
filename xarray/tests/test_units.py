@@ -1050,29 +1050,33 @@ def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * original_unit
-    x1 = np.arange(2) * original_unit
-    y1 = np.arange(3) * original_unit
-    u1 = np.linspace(10, 20, 2) * original_unit
-    v1 = np.linspace(10, 20, 3) * original_unit
+    array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit1
+    x1 = np.arange(2) * dim_unit1
+    y1 = np.arange(3) * dim_unit1
+    u1 = np.linspace(10, 20, 2) * coord_unit1
+    v1 = np.linspace(10, 20, 3) * coord_unit1
 
-    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit
-    x2 = np.arange(2, 4) * dim_unit
-    z2 = np.arange(4) * original_unit
-    u2 = np.linspace(20, 30, 2) * coord_unit
-    w2 = np.linspace(10, 20, 4) * original_unit
+    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit2
+    x2 = np.arange(2, 4) * dim_unit2
+    z2 = np.arange(4) * dim_unit1
+    u2 = np.linspace(20, 30, 2) * coord_unit2
+    w2 = np.linspace(10, 20, 4) * coord_unit1
 
-    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit
-    y3 = np.arange(3, 6) * dim_unit
-    z3 = np.arange(4, 8) * dim_unit
-    v3 = np.linspace(10, 20, 3) * coord_unit
-    w3 = np.linspace(10, 20, 4) * coord_unit
+    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit2
+    y3 = np.arange(3, 6) * dim_unit2
+    z3 = np.arange(4, 8) * dim_unit2
+    v3 = np.linspace(10, 20, 3) * coord_unit2
+    w3 = np.linspace(10, 20, 4) * coord_unit2
 
     arr1 = xr.DataArray(
         name="a",
@@ -1099,31 +1103,22 @@ def test_merge_dataarray(variant, unit, error, dtype):
 
         return
 
-    units = {name: original_unit for name in list("axyzuvw")}
-
-    convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
-    expected_units = {
-        "a": original_unit,
-        "u": original_unit,
-        "v": original_unit,
-        "w": original_unit,
-        "x": original_unit,
-        "y": original_unit,
-        "z": original_unit,
+    units = {
+        "a": data_unit1,
+        "u": coord_unit1,
+        "v": coord_unit1,
+        "w": coord_unit1,
+        "x": dim_unit1,
+        "y": dim_unit1,
+        "z": dim_unit1,
     }
+    convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
 
-    expected = convert_units(
-        attach_units(
-            xr.merge(
-                [
-                    convert_and_strip(arr1),
-                    convert_and_strip(arr2),
-                    convert_and_strip(arr3),
-                ]
-            ),
-            units,
+    expected = attach_units(
+        xr.merge(
+            [convert_and_strip(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]
         ),
-        expected_units,
+        units,
     )
 
     actual = xr.merge([arr1, arr2, arr3])
@@ -1163,43 +1158,47 @@ def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
 
-    x = np.arange(11, 14) * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    x = np.arange(11, 14) * dim_unit1
+    y = np.arange(2) * dim_unit1
+    u = np.arange(3) * coord_unit1
 
     ds1 = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
-        coords={"x": x, "y": y, "u": ("x", z)},
+        coords={"x": x, "y": y, "u": ("x", u)},
     )
     ds2 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(3) * dim_unit,
-            "y": np.arange(2, 4) * dim_unit,
-            "u": ("x", np.arange(-3, 0) * coord_unit),
+            "x": np.arange(3) * dim_unit2,
+            "y": np.arange(2, 4) * dim_unit2,
+            "u": ("x", np.arange(-3, 0) * coord_unit2),
         },
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.full_like(array1, np.nan) * data_unit),
-            "b": (("y", "x"), np.full_like(array2, np.nan) * data_unit),
+            "a": (("y", "x"), np.full_like(array1, np.nan) * data_unit2),
+            "b": (("y", "x"), np.full_like(array2, np.nan) * data_unit2),
         },
         coords={
-            "x": np.arange(3, 6) * dim_unit,
-            "y": np.arange(4, 6) * dim_unit,
-            "u": ("x", np.arange(3, 6) * coord_unit),
+            "x": np.arange(3, 6) * dim_unit2,
+            "y": np.arange(4, 6) * dim_unit2,
+            "u": ("x", np.arange(3, 6) * coord_unit2),
         },
     )
 
@@ -1212,15 +1211,9 @@ def test_merge_dataset(variant, unit, error, dtype):
 
     units = extract_units(ds1)
     convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
-    expected_units = {name: original_unit for name in list("abxyzu")}
-    expected = convert_units(
-        attach_units(
-            func(
-                [convert_and_strip(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]
-            ),
-            units,
-        ),
-        expected_units,
+    expected = attach_units(
+        func([convert_and_strip(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]),
+        units,
     )
     actual = func([ds1, ds2, ds3])
 
