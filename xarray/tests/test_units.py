@@ -462,7 +462,12 @@ def test_align_dataarray(value, variant, unit, error, dtype):
     if variant == "coords" and (
         value != dtypes.NA or isinstance(unit, unit_registry.Unit)
     ):
-        pytest.xfail(reason="fill_value is used for both data and coords")
+        pytest.xfail(
+            reason=(
+                "fill_value is used for both data variables and coords. "
+                "See https://github.com/pydata/xarray/issues/4165"
+            )
+        )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
@@ -565,7 +570,12 @@ def test_align_dataset(value, unit, variant, error, dtype):
     if variant == "coords" and (
         value != dtypes.NA or isinstance(unit, unit_registry.Unit)
     ):
-        pytest.xfail(reason="fill_value is used for both data variables and coords")
+        pytest.xfail(
+            reason=(
+                "fill_value is used for both data variables and coords. "
+                "See https://github.com/pydata/xarray/issues/4165"
+            )
+        )
 
     fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
 
@@ -611,7 +621,7 @@ def test_align_dataset(value, unit, variant, error, dtype):
 
     stripped_kwargs = {
         key: strip_units(
-            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None},)
+            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None})
         )
         for key, value in func.kwargs.items()
     }
