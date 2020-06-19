@@ -899,21 +899,34 @@ def test_combine_nested(variant, unit, error, dtype):
     (
         "data",
         pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        "coords",
     ),
 )
 def test_concat_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
-    data_unit, dims_unit = variants.get(variant)
+    variants = {
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
+    }
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
-    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
-    x1 = np.arange(5, 15) * original_unit
-    x2 = np.arange(5) * dims_unit
+    array1 = np.linspace(0, 5, 10).astype(dtype) * data_unit1
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit2
 
-    arr1 = xr.DataArray(data=array1, coords={"x": x1}, dims="x")
-    arr2 = xr.DataArray(data=array2, coords={"x": x2}, dims="x")
+    x1 = np.arange(5, 15) * dim_unit1
+    x2 = np.arange(5) * dim_unit2
+
+    u1 = np.linspace(1, 2, 10).astype(dtype) * coord_unit1
+    u2 = np.linspace(0, 1, 5).astype(dtype) * coord_unit2
+
+    arr1 = xr.DataArray(data=array1, coords={"x": x1, "u": ("x", u1)}, dims="x")
+    arr2 = xr.DataArray(data=array2, coords={"x": x2, "u": ("x", u2)}, dims="x")
 
     if error is not None:
         with pytest.raises(error):
@@ -952,21 +965,34 @@ def test_concat_dataarray(variant, unit, error, dtype):
     (
         "data",
         pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        "coords",
     ),
 )
 def test_concat_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
-    data_unit, dims_unit = variants.get(variant)
+    variants = {
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
+    }
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
-    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
-    x1 = np.arange(5, 15) * original_unit
-    x2 = np.arange(5) * dims_unit
+    array1 = np.linspace(0, 5, 10).astype(dtype) * data_unit1
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit2
 
-    ds1 = xr.Dataset(data_vars={"a": ("x", array1)}, coords={"x": x1})
-    ds2 = xr.Dataset(data_vars={"a": ("x", array2)}, coords={"x": x2})
+    x1 = np.arange(5, 15) * dim_unit1
+    x2 = np.arange(5) * dim_unit2
+
+    u1 = np.linspace(1, 2, 10).astype(dtype) * coord_unit1
+    u2 = np.linspace(0, 1, 5).astype(dtype) * coord_unit2
+
+    ds1 = xr.Dataset(data_vars={"a": ("x", array1)}, coords={"x": x1, "u": ("x", u1)})
+    ds2 = xr.Dataset(data_vars={"a": ("x", array2)}, coords={"x": x2, "u": ("x", u2)})
 
     if error is not None:
         with pytest.raises(error):
