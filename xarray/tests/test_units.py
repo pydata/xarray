@@ -265,7 +265,7 @@ def assert_units_equal(a, b):
     assert extract_units(a) == extract_units(b)
 
 
-@pytest.fixture(params=[np.dtype(float), np.dtype(int)])
+@pytest.fixture(params=[np.dtype(float), np.dtype(int)], ids=str)
 def dtype(request):
     return request.param
 
