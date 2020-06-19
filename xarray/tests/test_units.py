@@ -1455,10 +1455,9 @@ def test_where_dataarray(fill_value, unit, error, dtype):
 def test_where_dataset(fill_value, unit, error, dtype):
     array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
     array2 = np.linspace(-5, 0, 10).astype(dtype) * unit_registry.m
-    x = np.arange(10) * unit_registry.s
 
-    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
-    cond = x < 5 * unit_registry.s
+    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)})
+    cond = array1 < 2 * unit_registry.m
     fill_value = fill_value * unit
 
     if error is not None and not (
