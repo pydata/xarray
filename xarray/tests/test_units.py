@@ -725,31 +725,35 @@ def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    x = np.arange(1, 4) * 10 * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    x = np.arange(1, 4) * 10 * dim_unit1
+    y = np.arange(2) * dim_unit1
+    u = np.arange(3) * coord_unit1
 
-    other_array1 = np.ones_like(array1) * data_unit
-    other_array2 = np.ones_like(array2) * data_unit
-    other_x = np.arange(1, 4) * 10 * dim_unit
-    other_y = np.arange(2, 4) * dim_unit
-    other_z = np.arange(3, 6) * coord_unit
+    other_array1 = np.ones_like(array1) * data_unit2
+    other_array2 = np.ones_like(array2) * data_unit2
+    other_x = np.arange(1, 4) * 10 * dim_unit2
+    other_y = np.arange(2, 4) * dim_unit2
+    other_u = np.arange(3, 6) * coord_unit2
 
     ds = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
-        coords={"x": x, "y": y, "z": ("x", z)},
+        coords={"x": x, "y": y, "u": ("x", u)},
     )
     other = xr.Dataset(
         data_vars={"a": (("y", "x"), other_array1), "b": (("y", "x"), other_array2)},
-        coords={"x": other_x, "y": other_y, "z": ("x", other_z)},
+        coords={"x": other_x, "y": other_y, "u": ("x", other_u)},
     )
 
     if error is not None:
@@ -796,18 +800,22 @@ def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
 
-    x = np.arange(1, 4) * 10 * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    x = np.arange(1, 4) * 10 * dim_unit1
+    y = np.arange(2) * dim_unit1
+    z = np.arange(3) * coord_unit1
 
     ds1 = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
@@ -815,35 +823,35 @@ def test_combine_nested(variant, unit, error, dtype):
     )
     ds2 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(3) * dim_unit,
-            "y": np.arange(2, 4) * dim_unit,
-            "z": ("x", np.arange(-3, 0) * coord_unit),
+            "x": np.arange(3) * dim_unit2,
+            "y": np.arange(2, 4) * dim_unit2,
+            "z": ("x", np.arange(-3, 0) * coord_unit2),
         },
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.zeros_like(array1) * np.nan * data_unit),
-            "b": (("y", "x"), np.zeros_like(array2) * np.nan * data_unit),
+            "a": (("y", "x"), np.full_like(array1, fill_value=np.nan) * data_unit2),
+            "b": (("y", "x"), np.full_like(array2, fill_value=np.nan) * data_unit2),
         },
         coords={
-            "x": np.arange(3, 6) * dim_unit,
-            "y": np.arange(4, 6) * dim_unit,
-            "z": ("x", np.arange(3, 6) * coord_unit),
+            "x": np.arange(3, 6) * dim_unit2,
+            "y": np.arange(4, 6) * dim_unit2,
+            "z": ("x", np.arange(3, 6) * coord_unit2),
         },
     )
     ds4 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(6, 9) * dim_unit,
-            "y": np.arange(6, 8) * dim_unit,
-            "z": ("x", np.arange(6, 9) * coord_unit),
+            "x": np.arange(6, 9) * dim_unit2,
+            "y": np.arange(6, 8) * dim_unit2,
+            "z": ("x", np.arange(6, 9) * coord_unit2),
         },
     )
 
