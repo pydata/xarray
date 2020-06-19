@@ -450,29 +450,41 @@ def test_apply_ufunc_dataset(variant, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
 @pytest.mark.parametrize("fill_value", (10, np.nan))
 def test_align_dataarray(fill_value, variant, unit, error, dtype):
+    if variant == "coords" and (
+        ~np.isnan(fill_value) or isinstance(unit, unit_registry.Unit)
+    ):
+        pytest.xfail(reason="fill_value is used for both data and coords")
+
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
-    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit
-    x = np.arange(2) * original_unit
+    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit1
+    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit2
+    x = np.arange(2) * dim_unit1
 
-    y1 = np.arange(5) * original_unit
-    y2 = np.arange(2, 7) * dim_unit
-    y_a1 = np.array([3, 5, 7, 8, 9]) * original_unit
-    y_a2 = np.array([7, 8, 9, 11, 13]) * coord_unit
+    y1 = np.arange(5) * dim_unit1
+    y2 = np.arange(2, 7) * dim_unit2
+
+    y_a1 = np.array([3, 5, 7, 8, 9]) * coord_unit1
+    y_a2 = np.array([7, 8, 9, 11, 13]) * coord_unit2
 
     coords1 = {"x": x, "y": y1}
     coords2 = {"x": x, "y": y2}
@@ -483,10 +495,10 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     data_array1 = xr.DataArray(data=array1, coords=coords1, dims=("x", "y"))
     data_array2 = xr.DataArray(data=array2, coords=coords2, dims=("x", "y"))
 
-    fill_value = fill_value * data_unit
+    fill_value = fill_value * data_unit2
     func = function(xr.align, join="outer", fill_value=fill_value)
-    if error is not None and not (
-        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
+    if error is not None and (
+        ~np.isnan(fill_value) or isinstance(fill_value, Quantity)
     ):
         with pytest.raises(error):
             func(data_array1, data_array2)
@@ -495,7 +507,7 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 
     stripped_kwargs = {
         key: strip_units(
-            convert_units(value, {None: original_unit if data_unit != 1 else None})
+            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None})
         )
         for key, value in func.kwargs.items()
     }
