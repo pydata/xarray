@@ -1728,7 +1728,8 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable, *args, **kwargs)
 
         assert_units_equal(expected, actual)
-        np.testing.assert_allclose(expected, actual)
+        # can't use `np.testing.assert_allclose` since that casts to numpy.array
+        assert np.allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
