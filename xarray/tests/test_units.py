@@ -2278,15 +2278,7 @@ class TestVariable(VariableSubclassobjects):
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                DimensionalityError,
-                id="no_unit",
-                marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < LooseVersion("0.10.2"),
-                    reason="bug in pint's implementation of np.pad",
-                ),
-            ),
+            pytest.param(1, DimensionalityError, id="no_unit"),
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
