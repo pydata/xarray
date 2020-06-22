@@ -3283,10 +3283,10 @@ class TestDataArray:
         ),
     )
     def test_isel(self, indices, dtype):
+        # TODO: maybe test for units in indexes?
         array = np.arange(10).astype(dtype) * unit_registry.s
-        x = np.arange(len(array)) * unit_registry.m
 
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
+        data_array = xr.DataArray(data=array, dims="x")
 
         expected = attach_units(
             strip_units(data_array).isel(x=indices), extract_units(data_array)
