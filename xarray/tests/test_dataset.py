@@ -98,8 +98,8 @@ def create_append_test_data(seed=None):
     datetime_var_to_append = np.array(
         ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
     )
-    bool_var = np.array([True, False, True], dtype=np.bool)
-    bool_var_to_append = np.array([False, True], dtype=np.bool)
+    bool_var = np.array([True, False, True], dtype=bool)
+    bool_var_to_append = np.array([False, True], dtype=bool)
 
     ds = xr.Dataset(
         data_vars={

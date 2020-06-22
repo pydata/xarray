@@ -149,7 +149,7 @@ class TestPlot(PlotTestCase):
             (self.darray[:, 0, 0] + 1j).plot()
 
     def test_1d_bool(self):
-        xr.ones_like(self.darray[:, 0, 0], dtype=np.bool).plot()
+        xr.ones_like(self.darray[:, 0, 0], dtype=bool).plot()
 
     def test_1d_x_y_kw(self):
         z = np.arange(10)
@@ -1037,7 +1037,7 @@ class Common2dMixin:
             self.plotfunc(self.darray[0, :])
 
     def test_bool(self):
-        xr.ones_like(self.darray, dtype=np.bool).plot()
+        xr.ones_like(self.darray, dtype=bool).plot()
 
     def test_complex_raises_typeerror(self):
         with raises_regex(TypeError, "complex128"):
