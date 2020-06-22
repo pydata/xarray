@@ -2647,7 +2647,9 @@ class TestDataArray:
         expected = func(strip_units(data_array)) * unit_registry.m
         actual = func(data_array)
 
-        np.testing.assert_allclose(expected, actual)
+        # TODO: use something like np.testing.assert_allclose, but
+        # with duckarray support
+        assert np.allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
