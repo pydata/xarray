@@ -2477,7 +2477,14 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(operator.eq, id="equal"),
+            pytest.param(
+                operator.eq,
+                id="equal",
+                marks=pytest.mark.xfail(
+                    LooseVersion(pint.__version__) < "0.14",
+                    reason="inconsistencies in the return values of pint's eq",
+                ),
+            ),
         ),
     )
     @pytest.mark.parametrize(
