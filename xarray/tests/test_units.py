@@ -3478,14 +3478,10 @@ class TestDataArray:
         ids=repr,
     )
     def test_head_tail_thin(self, func, dtype):
+        # TODO: works like isel. Maybe also test units in indexes?
         array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
 
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(data=array, coords=coords, dims=("x", "y"))
+        data_array = xr.DataArray(data=array, dims=("x", "y"))
 
         expected = attach_units(
             func(strip_units(data_array)), extract_units(data_array)
