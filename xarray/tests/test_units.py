@@ -3175,45 +3175,69 @@ class TestDataArray:
         assert expected == actual
 
     @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
         "func",
         (
             method("pipe", lambda da: da * 10),
-            method("assign_coords", y2=("y", np.arange(10) * unit_registry.mm)),
+            method("assign_coords", w=("y", np.arange(10) * unit_registry.mm)),
             method("assign_attrs", attr1="value"),
-            method("rename", x2="x_mm"),
-            method("swap_dims", {"x": "x2"}),
-            method(
-                "expand_dims",
-                dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
-                axis=1,
+            method("rename", u="v"),
+            pytest.param(
+                method("swap_dims", {"x": "u"}),
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+            pytest.param(
+                method(
+                    "expand_dims",
+                    dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
+                    axis=1,
+                ),
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
             ),
             method("drop_vars", "x"),
-            method("reset_coords", names="x2"),
+            method("reset_coords", names="u"),
             method("copy"),
             method("astype", np.float32),
         ),
         ids=repr,
     )
-    def test_content_manipulation(self, func, dtype):
-        quantity = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
-            * unit_registry.pascal
-        )
-        x = np.arange(quantity.shape[0]) * unit_registry.m
-        y = np.arange(quantity.shape[1]) * unit_registry.m
-        x2 = x.to(unit_registry.mm)
+    def test_content_manipulation(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        quantity = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+        x = np.arange(quantity.shape[0]) * dim_unit
+        y = np.arange(quantity.shape[1]) * dim_unit
+        u = np.linspace(0, 1, quantity.shape[0]) * coord_unit
 
         data_array = xr.DataArray(
-            name="data",
+            name="a",
             data=quantity,
-            coords={"x": x, "x2": ("x", x2), "y": y},
+            coords={"x": x, "u": ("x", u), "y": y},
             dims=("x", "y"),
         )
 
         stripped_kwargs = {
             key: array_strip_units(value) for key, value in func.kwargs.items()
         }
-        units = {**{"x_mm": x2.units, "x2": x2.units}, **extract_units(data_array)}
+        units = extract_units(data_array)
+        units["u"] = getattr(u, "units", None)
+        units["v"] = getattr(u, "units", None)
 
         expected = attach_units(func(strip_units(data_array), **stripped_kwargs), units)
         actual = func(data_array)
