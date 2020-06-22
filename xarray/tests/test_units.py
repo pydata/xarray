@@ -3101,17 +3101,47 @@ class TestDataArray:
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
-    def test_broadcast_like(self, unit, dtype):
-        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_broadcast_like(self, variant, unit, dtype):
+        original_unit = unit_registry.m
 
-        x1 = np.arange(2) * unit_registry.m
-        x2 = np.arange(2) * unit
-        y1 = np.array([0]) * unit_registry.m
-        y2 = np.arange(3) * unit
+        variants = {
+            "data": ((original_unit, unit), (1, 1), (1, 1)),
+            "dims": ((1, 1), (original_unit, unit), (1, 1)),
+            "coords": ((1, 1), (1, 1), (original_unit, unit)),
+        }
+        (
+            (data_unit1, data_unit2),
+            (dim_unit1, dim_unit2),
+            (coord_unit1, coord_unit2),
+        ) = variants.get(variant)
 
-        arr1 = xr.DataArray(data=array1, coords={"x": x1, "y": y1}, dims=("x", "y"))
-        arr2 = xr.DataArray(data=array2, coords={"x": x2, "y": y2}, dims=("x", "y"))
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * data_unit1
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit2
+
+        x1 = np.arange(2) * dim_unit1
+        x2 = np.arange(2) * dim_unit2
+        y1 = np.array([0]) * dim_unit1
+        y2 = np.arange(3) * dim_unit2
+
+        u1 = np.linspace(0, 1, 2) * coord_unit1
+        u2 = np.linspace(0, 1, 2) * coord_unit2
+
+        arr1 = xr.DataArray(
+            data=array1, coords={"x": x1, "y": y1, "u": ("x", u1)}, dims=("x", "y")
+        )
+        arr2 = xr.DataArray(
+            data=array2, coords={"x": x2, "y": y2, "u": ("x", u2)}, dims=("x", "y")
+        )
 
         expected = attach_units(
             strip_units(arr1).broadcast_like(strip_units(arr2)), extract_units(arr1)
