@@ -3731,6 +3731,16 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
         "func",
         (
             method("diff", dim="x"),
@@ -3748,25 +3758,31 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_computation(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
 
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * unit_registry.s
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
-
         # we want to make sure the output unit is correct
-        units = {
-            **extract_units(data_array),
-            **(
-                {}
-                if isinstance(func, (function, method))
-                else extract_units(func(array.reshape(-1)))
-            ),
-        }
+        units = extract_units(data_array)
+        if not isinstance(func, (function, method)):
+            units.update(extract_units(func(array.reshape(-1))))
 
         expected = attach_units(func(strip_units(data_array)), units)
         actual = func(data_array)
@@ -3777,6 +3793,16 @@ class TestDataArray:
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
         LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
+    )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
     )
     @pytest.mark.parametrize(
         "func",
@@ -3799,15 +3825,26 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_computation_objects(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_computation_objects(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.array([0, 0, 1, 2, 2]) * dim_unit
+        y = np.arange(array.shape[1]) * 3 * dim_unit
+
+        u = np.linspace(0, 1, 5) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-
-        x = np.array([0, 0, 1, 2, 2]) * unit_registry.m
-        y = np.arange(array.shape[1]) * 3 * unit_registry.s
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
         units = extract_units(data_array)
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
@@ -3832,9 +3869,19 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
         "func",
         (
-            method("assign_coords", z=(["x"], np.arange(5) * unit_registry.s)),
+            method("assign_coords", z=("x", np.arange(5) * unit_registry.s)),
             method("first"),
             method("last"),
             pytest.param(
@@ -3847,15 +3894,25 @@ class TestDataArray:
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_grouped_operations(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * 3 * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * 3 * unit_registry.s
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
         units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
 
         stripped_kwargs = {
