@@ -2017,29 +2017,22 @@ class TestVariable(VariableSubclassobjects):
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    def test_squeeze(self, dtype):
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
+    def test_squeeze(self, dim, dtype):
         shape = (2, 1, 3, 1, 1, 2)
         names = list("abcdef")
+        dim_lengths = dict(zip(names, shape))
         array = np.ones(shape=shape) * unit_registry.m
         variable = xr.Variable(names, array)
 
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
         expected = attach_units(
-            strip_units(variable).squeeze(), extract_units(variable)
+            strip_units(variable).squeeze(**kwargs), extract_units(variable)
         )
-        actual = variable.squeeze()
+        actual = variable.squeeze(**kwargs)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
-
-        names = tuple(name for name, size in zip(names, shape) if shape == 1)
-        for name in names:
-            expected = attach_units(
-                strip_units(variable).squeeze(dim=name), extract_units(variable)
-            )
-            actual = variable.squeeze(dim=name)
-
-            assert_units_equal(expected, actual)
-            assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3431,6 +3424,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
     @pytest.mark.parametrize(
         "shape",
         (
@@ -3441,36 +3435,22 @@ class TestDataArray:
             pytest.param((1, 10, 1, 20), id="first_and_last_dimension_squeezable"),
         ),
     )
-    def test_squeeze(self, shape, dtype):
+    def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        coords = {
-            name: np.arange(length).astype(dtype)
-            * (unit_registry.m if name != "t" else unit_registry.s)
-            for name, length in zip(names, shape)
-        }
+        dim_lengths = dict(zip(names, shape))
+        names = "xyzt"
         array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
-        data_array = xr.DataArray(
-            data=array, coords=coords, dims=tuple(names[: len(shape)])
-        )
+        data_array = xr.DataArray(data=array, dims=tuple(names[: len(shape)]))
+
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
 
         expected = attach_units(
-            strip_units(data_array).squeeze(), extract_units(data_array)
+            strip_units(data_array).squeeze(**kwargs), extract_units(data_array)
         )
-        actual = data_array.squeeze()
+        actual = data_array.squeeze(**kwargs)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
-
-        # try squeezing the dimensions separately
-        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
-        for index, name in enumerate(names):
-            expected = attach_units(
-                strip_units(data_array).squeeze(dim=name), extract_units(data_array)
-            )
-            actual = data_array.squeeze(dim=name)
-
-            assert_units_equal(expected, actual)
-            assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
