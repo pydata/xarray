@@ -32,10 +32,8 @@ class TestBoolTypeArray:
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
         bx = conventions.BoolTypeArray(x)
-        assert bx.dtype == np.bool
-        assert_array_equal(
-            bx, np.array([True, False, True, True, False], dtype=np.bool)
-        )
+        assert bx.dtype == bool
+        assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
 
 class TestNativeEndiannessArray:

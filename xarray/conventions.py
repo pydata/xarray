@@ -116,7 +116,7 @@ def maybe_default_fill_value(var):
 
 def maybe_encode_bools(var):
     if (
-        (var.dtype == np.bool)
+        (var.dtype == bool)
         and ("dtype" not in var.encoding)
         and ("dtype" not in var.attrs)
     ):

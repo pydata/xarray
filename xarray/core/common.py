@@ -1481,7 +1481,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> xr.zeros_like(x, dtype=np.float)
+    >>> xr.zeros_like(x, dtype=float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
            [0., 0., 0.]])

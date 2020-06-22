@@ -140,7 +140,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
-    elif isinstance(x, (float, np.float)):
+    elif isinstance(x, (float, np.float_)):
         return f"{x:.4}"
     else:
         return str(x)
