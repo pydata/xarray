@@ -1,6 +1,15 @@
+import numpy as np
 import pytest
 
 import xarray as xr
+
+from . import requires_dask
+
+try:
+    import dask.array as da
+except ImportError:
+    da = object()
+    da.Array = lambda x: x
 
 
 def test_allclose_regression():
@@ -30,3 +39,24 @@ def test_allclose_regression():
 def test_assert_allclose(obj1, obj2):
     with pytest.raises(AssertionError):
         xr.testing.assert_allclose(obj1, obj2)
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "duckarray",
+    (pytest.param(np.array, id="numpy"), pytest.param(da.from_array, id="dask")),
+)
+@pytest.mark.parametrize(
+    ["obj1", "obj2"],
+    (
+        pytest.param([1e-10, 2], [0.0, 2.0], id="both arrays"),
+        pytest.param([1e-17, 2], 0.0, id="second scalar"),
+        pytest.param(0.0, [1e-17, 2], id="first scalar"),
+    ),
+)
+def test_assert_duckarray_equal(duckarray, obj1, obj2):
+    # TODO: actually check the repr
+    a = duckarray(obj1)
+    b = duckarray(obj2)
+    with pytest.raises(AssertionError):
+        xr.testing.assert_duckarray_equal(a, b)

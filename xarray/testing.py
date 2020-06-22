@@ -148,6 +148,57 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+def assert_duckarray_equal(x, y, err_msg="", verbose=True):
+    """ Like `np.testing.assert_array_equal`, but for duckarrays """
+    __tracebackhide__ = True
+
+    def array_like(x):
+        return hasattr(x, "ndim") and hasattr(x, "shape") and hasattr(x, "dtype")
+
+    def scalar(x):
+        return isinstance(x, (bool, int, float, complex, str)) or (
+            array_like(x) and x.ndim == 0
+        )
+
+    def format_message(x, y, err_msg, verbose):
+        diff = x - y
+        abs_diff = float(max(abs(diff)))
+        rel_diff = "not implemented"
+
+        n_diff = int(np.count_nonzero(diff))
+        n_total = diff.size
+
+        fraction = f"{n_diff} / {n_total}"
+        percentage = float(n_diff / n_total * 100)
+
+        parts = [
+            "Arrays are not equal",
+            err_msg,
+            f"Mismatched elements: {fraction} ({percentage:.0f}%)",
+            f"Max absolute difference: {abs_diff}",
+            f"Max relative difference: {rel_diff}",
+        ]
+        if verbose:
+            parts += [
+                f" x: {x!r}",
+                f" y: {y!r}",
+            ]
+
+        return "\n".join(parts)
+
+    if not scalar(x) and not array_like(x):
+        x = np.asarray(x)
+
+    if not scalar(y) and not array_like(y):
+        y = np.asarray(y)
+
+    if (array_like(x) and scalar(y)) or (scalar(x) and array_like(y)):
+        equiv = (x == y).all()
+    else:
+        equiv = duck_array_ops.array_equiv(x, y)
+    assert equiv, format_message(x, y, err_msg=err_msg, verbose=verbose)
+
+
 def assert_chunks_equal(a, b):
     """
     Assert that chunksizes along chunked dimensions are equal.
