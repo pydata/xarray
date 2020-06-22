@@ -3241,9 +3241,6 @@ class TestDataArray:
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
-        "func", (pytest.param(method("copy", data=np.arange(20))),), ids=repr
-    )
-    @pytest.mark.parametrize(
         "unit",
         (
             pytest.param(1, id="no_unit"),
@@ -3251,19 +3248,17 @@ class TestDataArray:
             pytest.param(unit_registry.degK, id="with_unit"),
         ),
     )
-    def test_content_manipulation_with_units(self, func, unit, dtype):
+    def test_copy(self, unit, dtype):
         quantity = np.linspace(0, 10, 20, dtype=dtype) * unit_registry.pascal
-        x = np.arange(len(quantity)) * unit_registry.m
+        new_data = np.arange(20)
 
-        data_array = xr.DataArray(data=quantity, coords={"x": x}, dims="x")
-
-        kwargs = {key: value * unit for key, value in func.kwargs.items()}
+        data_array = xr.DataArray(data=quantity, dims="x")
 
         expected = attach_units(
-            func(strip_units(data_array)), {None: unit, "x": x.units}
+            strip_units(data_array).copy(data=new_data), {None: unit}
         )
 
-        actual = func(data_array, **kwargs)
+        actual = data_array.copy(data=new_data * unit)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
