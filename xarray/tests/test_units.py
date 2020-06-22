@@ -181,12 +181,7 @@ def attach_units(obj, units):
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, xr.DataArray):
         # try the array name, "data" and None, then fall back to dimensionless
-        data_units = (
-            units.get(obj.name, None)
-            or units.get("data", None)
-            or units.get(None, None)
-            or 1
-        )
+        data_units = units.get(obj.name, None) or units.get(None, None) or 1
 
         data = array_attach_units(obj.data, data_units)
 
