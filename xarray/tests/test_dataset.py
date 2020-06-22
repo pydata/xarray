@@ -2943,12 +2943,12 @@ class TestDataset:
         ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
         # test fill_value
         actual = ds.unstack("index", fill_value=-1)
-        expected = ds.unstack("index").fillna(-1).astype(np.int)
-        assert actual["var"].dtype == np.int
+        expected = ds.unstack("index").fillna(-1).astype(int)
+        assert actual["var"].dtype == int
         assert_equal(actual, expected)
 
         actual = ds["var"].unstack("index", fill_value=-1)
-        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        expected = ds["var"].unstack("index").fillna(-1).astype(int)
         assert actual.equals(expected)
 
     @requires_sparse
