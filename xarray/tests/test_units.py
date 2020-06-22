@@ -1601,7 +1601,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.mean()
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -1663,7 +1663,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable, *args, **kwargs)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("item", 5), method("searchsorted", 5)), ids=repr
@@ -1966,7 +1966,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable, y)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -2431,7 +2431,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3505,7 +3505,7 @@ class TestDataArray:
         actual = func(data_array, x=new_x)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3583,7 +3583,7 @@ class TestDataArray:
         actual = func(data_array, other)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3831,7 +3831,7 @@ class TestDataArray:
         actual = func(data_array).mean()
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
