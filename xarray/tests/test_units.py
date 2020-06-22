@@ -9,8 +9,8 @@ import pytest
 import xarray as xr
 from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
-from xarray.testing import assert_allclose, assert_equal, assert_identical
 
+from . import assert_allclose, assert_equal, assert_identical
 from .test_variable import _PAD_XR_NP_ARGS, VariableSubclassobjects
 
 pint = pytest.importorskip("pint")
@@ -1594,7 +1594,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -1752,7 +1752,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -1798,7 +1798,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.fillna(value=fill_value)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -1909,7 +1909,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.isel(x=indices)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -2020,7 +2020,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable, cond, other)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_squeeze(self, dtype):
         shape = (2, 1, 3, 1, 1, 2)
@@ -2034,7 +2034,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.squeeze()
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
         names = tuple(name for name, size in zip(names, shape) if shape == 1)
         for name in names:
@@ -2044,7 +2044,7 @@ class TestVariable(VariableSubclassobjects):
             actual = variable.squeeze(dim=name)
 
             assert_units_equal(expected, actual)
-            xr.testing.assert_identical(expected, actual)
+            assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2083,7 +2083,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -2129,7 +2129,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.stack(z=("x", "y"))
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_unstack(self, dtype):
         array = np.linspace(0, 5, 3 * 10).astype(dtype) * unit_registry.m
@@ -2141,7 +2141,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.unstack(z={"x": 3, "y": 10})
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -2181,7 +2181,7 @@ class TestVariable(VariableSubclassobjects):
         actual = xr.Variable.concat([variable, other], dim="y")
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_set_dims(self, dtype):
         array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
@@ -2194,7 +2194,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.set_dims(dims)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_copy(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
@@ -2207,7 +2207,7 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.copy(data=other)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -2260,7 +2260,7 @@ class TestVariable(VariableSubclassobjects):
                 v.data.astype(float), np_arg, mode="constant", constant_values=np.nan,
             ),
         )
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
         assert_units_equal(expected, actual)
         assert isinstance(actual._data, type(v._data))
 
@@ -2272,7 +2272,7 @@ class TestVariable(VariableSubclassobjects):
             v.dims,
             np.pad(v.data, np_arg, mode="constant", constant_values=v.data.flat[0]),
         )
-        xr.testing.assert_identical(actual, expected)
+        assert_identical(actual, expected)
         assert_units_equal(expected, actual)
 
     @pytest.mark.parametrize(
@@ -2311,7 +2311,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable, constant_values=fill_value)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
 
 class TestDataArray:
@@ -2462,7 +2462,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2482,7 +2482,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "comparison",
@@ -2533,7 +2533,7 @@ class TestDataArray:
         )
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "units,error",
@@ -2562,7 +2562,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
     @pytest.mark.parametrize(
@@ -2604,11 +2604,11 @@ class TestDataArray:
 
         actual = np.maximum(data_array, 1 * unit)
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
         actual = np.maximum(1 * unit, data_array)
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize("property", ("T", "imag", "real"))
     def test_numpy_properties(self, property, dtype):
@@ -2625,7 +2625,7 @@ class TestDataArray:
         actual = getattr(data_array, property)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2641,7 +2641,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_item(self, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
@@ -2767,7 +2767,7 @@ class TestDataArray:
         actual = func(data_array, *args, **kwargs)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -2790,7 +2790,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose units in data")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -2808,7 +2808,7 @@ class TestDataArray:
         actual = func(data_array, dim="x")
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -2857,7 +2857,7 @@ class TestDataArray:
         actual = func(data_array, value=value)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_dropna(self, dtype):
         array = (
@@ -2872,7 +2872,7 @@ class TestDataArray:
         actual = data_array.dropna(dim="x")
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -2901,7 +2901,7 @@ class TestDataArray:
         actual = data_array.isin(values)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
@@ -2955,7 +2955,7 @@ class TestDataArray:
         actual = data_array.where(**kwargs)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="uses numpy.vectorize")
     def test_interpolate_na(self):
@@ -2971,7 +2971,7 @@ class TestDataArray:
         actual = data_array.interpolate_na(dim="x")
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
@@ -3012,7 +3012,7 @@ class TestDataArray:
         actual = data_array.combine_first(other)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3119,7 +3119,7 @@ class TestDataArray:
         actual = arr1.broadcast_like(arr2)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3194,7 +3194,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (pytest.param(method("copy", data=np.arange(20))),), ids=repr
@@ -3222,7 +3222,7 @@ class TestDataArray:
         actual = func(data_array, **kwargs)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "indices",
@@ -3243,7 +3243,7 @@ class TestDataArray:
         actual = data_array.isel(x=indices)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3288,7 +3288,7 @@ class TestDataArray:
         actual = data_array.sel(x=values)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3333,7 +3333,7 @@ class TestDataArray:
         actual = data_array.loc[{"x": values}]
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     @pytest.mark.parametrize(
@@ -3378,7 +3378,7 @@ class TestDataArray:
         actual = data_array.drop_sel(x=values)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "shape",
@@ -3408,7 +3408,7 @@ class TestDataArray:
         actual = data_array.squeeze()
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
         # try squeezing the dimensions separately
         names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
@@ -3419,7 +3419,7 @@ class TestDataArray:
             actual = data_array.squeeze(dim=name)
 
             assert_units_equal(expected, actual)
-            xr.testing.assert_identical(expected, actual)
+            assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3442,7 +3442,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -3519,7 +3519,7 @@ class TestDataArray:
         actual = func(data_array, x=new_x)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -3599,7 +3599,7 @@ class TestDataArray:
         actual = func(data_array, other)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3622,7 +3622,7 @@ class TestDataArray:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
@@ -3646,7 +3646,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3681,7 +3681,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3725,7 +3725,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -3782,7 +3782,7 @@ class TestDataArray:
         actual = func(data_array).mean()
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3825,7 +3825,7 @@ class TestDataArray:
         actual = func(data_array.groupby("y"))
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_identical(expected, actual)
 
 
 class TestDataset:
