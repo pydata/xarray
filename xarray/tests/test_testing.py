@@ -54,9 +54,28 @@ def test_assert_allclose(obj1, obj2):
         pytest.param(0.0, [1e-17, 2], id="first scalar"),
     ),
 )
-def test_assert_duckarray_equal(duckarray, obj1, obj2):
+def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
     # TODO: actually check the repr
     a = duckarray(obj1)
     b = duckarray(obj2)
     with pytest.raises(AssertionError):
         xr.testing.assert_duckarray_equal(a, b)
+
+
+@pytest.mark.parametrize(
+    "duckarray",
+    (pytest.param(np.array, id="numpy"), pytest.param(da.from_array, id="dask")),
+)
+@pytest.mark.parametrize(
+    ["obj1", "obj2"],
+    (
+        pytest.param([0, 2], [0.0, 2.0], id="both arrays"),
+        pytest.param([0, 0], 0.0, id="second scalar"),
+        pytest.param(0.0, [0, 0], id="first scalar"),
+    ),
+)
+def test_assert_duckarray_equal(duckarray, obj1, obj2):
+    a = duckarray(obj1)
+    b = duckarray(obj2)
+
+    xr.testing.assert_duckarray_equal(a, b)
