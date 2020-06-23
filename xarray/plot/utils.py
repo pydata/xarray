@@ -406,7 +406,7 @@ def _assert_valid_xy(darray, xy, name):
         raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
 
-def get_axis(figsize, size, aspect, ax, **kwargs):
+def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
     try:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -430,11 +430,12 @@ def get_axis(figsize, size, aspect, ax, **kwargs):
     elif aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
-    if ax is None:
-        ax = plt.gca()
-
-    if "projection" in kwargs:
+    if "projection" in kwargs and ax is not None:
+        raise ValueError("cannot use projection with existing ax")
+    elif "projection" in kwargs:
         ax = plt.axes(projection=kwargs["projection"])
+    elif ax is None:
+        ax = plt.gca()
 
     if "facecolor" in kwargs:
         ax.set_facecolor(kwargs["facecolor"])

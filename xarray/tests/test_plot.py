@@ -2396,7 +2396,7 @@ def test_get_axis(figsize, aspect, size):
         with pytest.raises(ImportError):
             ax = get_axis(figsize, size, aspect, None)
         print("matplotlib not available")
-        return None
+        return
 
     ax = "something"
     if figsize is not None:
@@ -2414,18 +2414,17 @@ def test_get_axis(figsize, aspect, size):
         with pytest.raises(ValueError):
             ax = get_axis(figsize, size, aspect, ax)
 
-    if figsize is None:
-        if aspect is not None and size is None:
-            # cannot provide aspect and size
-            with pytest.raises(ValueError):
-                ax = get_axis(figsize, size, aspect, ax)
+    if figsize is None and aspect is not None and size is None:
+        # cannot provide aspect and size
+        with pytest.raises(ValueError):
+            ax = get_axis(figsize, size, aspect, ax)
 
     try:
         ax = plt.axes()
         axtype = type(ax)
-        ax = get_axis(None, None, None, ax)
+        ax = get_axis(ax=ax)
         assert isinstance(ax, axtype)
-        ax = get_axis(None, None, None, None)
+        ax = get_axis()
         assert isinstance(ax, axtype)
     except ImportError:
         print("matplotlib not available")
@@ -2435,7 +2434,7 @@ def test_get_axis(figsize, aspect, size):
         import cartopy as ctpy  # type: ignore
 
         kwargs = {"projection": ctpy.crs.PlateCarree()}
-        ax = get_axis(None, None, None, None, **kwargs)
+        ax = get_axis(**kwargs)
         assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
     except ImportError:
         print("not testing cartopy")
