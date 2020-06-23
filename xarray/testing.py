@@ -148,6 +148,43 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+def _format_message(x, y, err_msg, verbose):
+    diff = x - y
+    abs_diff = max(abs(diff))
+    rel_diff = "not implemented"
+
+    n_diff = int(np.count_nonzero(diff))
+    n_total = diff.size
+
+    fraction = f"{n_diff} / {n_total}"
+    percentage = float(n_diff / n_total * 100)
+
+    parts = [
+        "Arrays are not equal",
+        err_msg,
+        f"Mismatched elements: {fraction} ({percentage:.0f}%)",
+        f"Max absolute difference: {abs_diff}",
+        f"Max relative difference: {rel_diff}",
+    ]
+    if verbose:
+        parts += [
+            f" x: {x!r}",
+            f" y: {y!r}",
+        ]
+
+    return "\n".join(parts)
+
+
+def assert_duckarray_allclose(
+    actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
+):
+    """ Like `np.testing.assert_allclose`, but for duckarrays. """
+    __tracebackhide__ = True
+
+    allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
+    assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
+
+
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
@@ -160,43 +197,17 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
             array_like(x) and x.ndim == 0
         )
 
-    def format_message(x, y, err_msg, verbose):
-        diff = x - y
-        abs_diff = float(max(abs(diff)))
-        rel_diff = "not implemented"
-
-        n_diff = int(np.count_nonzero(diff))
-        n_total = diff.size
-
-        fraction = f"{n_diff} / {n_total}"
-        percentage = float(n_diff / n_total * 100)
-
-        parts = [
-            "Arrays are not equal",
-            err_msg,
-            f"Mismatched elements: {fraction} ({percentage:.0f}%)",
-            f"Max absolute difference: {abs_diff}",
-            f"Max relative difference: {rel_diff}",
-        ]
-        if verbose:
-            parts += [
-                f" x: {x!r}",
-                f" y: {y!r}",
-            ]
-
-        return "\n".join(parts)
-
-    if not scalar(x) and not array_like(x):
+    if not array_like(x) and not scalar(x):
         x = np.asarray(x)
 
-    if not scalar(y) and not array_like(y):
+    if not array_like(y) and not scalar(y):
         y = np.asarray(y)
 
     if (array_like(x) and scalar(y)) or (scalar(x) and array_like(y)):
         equiv = (x == y).all()
     else:
         equiv = duck_array_ops.array_equiv(x, y)
-    assert equiv, format_message(x, y, err_msg=err_msg, verbose=verbose)
+    assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)
 
 
 def assert_chunks_equal(a, b):
