@@ -3,7 +3,7 @@ import pytest
 
 import xarray as xr
 
-from . import requires_dask
+from . import has_dask
 
 try:
     import dask.array as da
@@ -41,10 +41,16 @@ def test_assert_allclose(obj1, obj2):
         xr.testing.assert_allclose(obj1, obj2)
 
 
-@requires_dask
 @pytest.mark.parametrize(
     "duckarray",
-    (pytest.param(np.array, id="numpy"), pytest.param(da.from_array, id="dask")),
+    (
+        pytest.param(np.array, id="numpy"),
+        pytest.param(
+            da.from_array,
+            id="dask",
+            marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+        ),
+    ),
 )
 @pytest.mark.parametrize(
     ["obj1", "obj2"],
@@ -64,7 +70,14 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
 
 @pytest.mark.parametrize(
     "duckarray",
-    (pytest.param(np.array, id="numpy"), pytest.param(da.from_array, id="dask")),
+    (
+        pytest.param(np.array, id="numpy"),
+        pytest.param(
+            da.from_array,
+            id="dask",
+            marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+        ),
+    ),
 )
 @pytest.mark.parametrize(
     ["obj1", "obj2"],
