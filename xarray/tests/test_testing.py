@@ -11,6 +11,22 @@ except ImportError:
     da = object()
     da.Array = lambda x: x
 
+try:
+    import pint
+
+    unit_registry = pint.UnitRegistry(force_ndarray_like=True)
+
+    def quantity(x):
+        return unit_registry.Quantity(x, "m")
+
+    has_pint = True
+except ImportError:
+
+    def quantity(x):
+        return x
+
+    has_pint = False
+
 
 def test_allclose_regression():
     x = xr.DataArray(1.01)
@@ -41,6 +57,7 @@ def test_assert_allclose(obj1, obj2):
         xr.testing.assert_allclose(obj1, obj2)
 
 
+@pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize(
     "duckarray",
     (
@@ -49,6 +66,11 @@ def test_assert_allclose(obj1, obj2):
             da.from_array,
             id="dask",
             marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+        ),
+        pytest.param(
+            quantity,
+            id="pint",
+            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
         ),
     ),
 )
@@ -68,6 +90,7 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
         xr.testing.assert_duckarray_equal(a, b)
 
 
+@pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize(
     "duckarray",
     (
@@ -76,6 +99,11 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
             da.from_array,
             id="dask",
             marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
+        ),
+        pytest.param(
+            quantity,
+            id="pint",
+            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
         ),
     ),
 )
