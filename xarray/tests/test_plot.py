@@ -2425,7 +2425,6 @@ def test_get_axis(figsize, aspect, size):
         axtype = type(ax)
         ax = get_axis(None, None, None, ax)
         assert isinstance(ax, axtype)
-
         ax = get_axis(None, None, None, None)
         assert isinstance(ax, axtype)
     except ImportError:
