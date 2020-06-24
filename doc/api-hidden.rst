@@ -9,8 +9,6 @@
 .. autosummary::
    :toctree: generated/
 
-   auto_combine
-
    Dataset.nbytes
    Dataset.chunks
 
