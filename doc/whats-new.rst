@@ -66,6 +66,9 @@ New Features
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Limited the number of lines of large arrays when numpy reprs would have greater than 40.
+  (:pull:`3905`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
@@ -96,7 +99,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_
 - :py:meth:`map_blocks` can now handle dask-backed xarray objects in ``args``. (:pull:`3818`)
   By `Deepak Cherian <https://github.com/dcherian>`_
-
 - Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
   (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
