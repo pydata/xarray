@@ -231,6 +231,17 @@ def test_interpolate_kwargs():
     assert_equal(actual, expected)
 
 
+def test_interpolate_keep_attrs():
+    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
+    mvals = vals.copy()
+    mvals[2] = np.nan
+    missing = xr.DataArray(mvals, dims="x")
+    missing.attrs = {"test": "value"}
+
+    actual = missing.interpolate_na(dim="x", keep_attrs=True)
+    assert actual.attrs == {"test": "value"}
+
+
 def test_interpolate():
 
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
@@ -521,6 +532,18 @@ def test_get_clean_interp_index_potential_overflow():
         coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
     )
     get_clean_interp_index(da, "time")
+
+
+@pytest.mark.parametrize("index", ([0, 2, 1], [0, 1, 1]))
+def test_get_clean_interp_index_strict(index):
+    da = xr.DataArray([0, 1, 2], dims=("x",), coords={"x": index})
+
+    with pytest.raises(ValueError):
+        get_clean_interp_index(da, "x")
+
+    clean = get_clean_interp_index(da, "x", strict=False)
+    np.testing.assert_array_equal(index, clean)
+    assert clean.dtype == np.float64
 
 
 @pytest.fixture

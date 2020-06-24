@@ -243,6 +243,9 @@ class CFTimeIndex(pd.Index):
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    days_in_month = _field_accessor(
+        "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
+    )
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
@@ -575,7 +578,8 @@ class CFTimeIndex(pd.Index):
             [
                 _total_microseconds(exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
-            ]
+            ],
+            dtype=np.int64,
         )
 
     def _round_via_method(self, freq, method):

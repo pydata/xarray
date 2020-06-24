@@ -4,7 +4,6 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -23,7 +22,6 @@ from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
-    auto_combine,
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
@@ -303,6 +301,7 @@ def open_dataset(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -383,6 +382,11 @@ def open_dataset(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
@@ -435,6 +439,7 @@ def open_dataset(
         decode_times = False
         concat_characters = False
         decode_coords = False
+        decode_timedelta = False
 
     if cache is None:
         cache = chunks is None
@@ -451,6 +456,7 @@ def open_dataset(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
 
         _protect_dataset_variables_inplace(ds, cache)
@@ -477,6 +483,7 @@ def open_dataset(
                 chunks,
                 drop_variables,
                 use_cftime,
+                decode_timedelta,
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -561,6 +568,7 @@ def open_dataarray(
     drop_variables=None,
     backend_kwargs=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
@@ -640,6 +648,11 @@ def open_dataarray(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Notes
     -----
@@ -671,6 +684,7 @@ def open_dataarray(
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
     )
 
     if len(dataset.data_vars) != 1:
@@ -710,14 +724,14 @@ class _MultiFileCloser:
 def open_mfdataset(
     paths,
     chunks=None,
-    concat_dim="_not_supplied",
+    concat_dim=None,
     compat="no_conflicts",
     preprocess=None,
     engine=None,
     lock=None,
     data_vars="all",
     coords="different",
-    combine="_old_auto",
+    combine="by_coords",
     autoclose=None,
     parallel=False,
     join="outer",
@@ -730,9 +744,8 @@ def open_mfdataset(
     the datasets into one before returning the result, and if combine='nested' then
     ``combine_nested`` is used. The filepaths must be structured according to which
     combining function is used, the details of which are given in the documentation for
-    ``combine_by_coords`` and ``combine_nested``. By default the old (now deprecated)
-    ``auto_combine`` will be used, please specify either ``combine='by_coords'`` or
-    ``combine='nested'`` in future. Requires dask to be installed. See documentation for
+    ``combine_by_coords`` and ``combine_nested``. By default ``combine='by_coords'``
+    will be used. Requires dask to be installed. See documentation for
     details on dask [1]_. Global attributes from the ``attrs_file`` are used
     for the combined dataset.
 
@@ -742,7 +755,7 @@ def open_mfdataset(
         Either a string glob in the form ``"path/to/my/files/*.nc"`` or an explicit list of
         files to open. Paths can be given as strings or as pathlib Paths. If
         concatenation along more than one dimension is desired, then ``paths`` must be a
-        nested list-of-lists (see ``manual_combine`` for details). (A string glob will
+        nested list-of-lists (see ``combine_nested`` for details). (A string glob will
         be expanded to a 1-dimensional list.)
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
@@ -752,15 +765,16 @@ def open_mfdataset(
         see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
-        if any of the dimensions along which you want to concatenate is not a dimension
-        in the original datasets, e.g., if you want to stack a collection of 2D arrays
-        along a third dimension. Set ``concat_dim=[..., None, ...]`` explicitly to
-        disable concatenation along a particular dimension.
+        if ``combine='by_coords'``, and if any of the dimensions along which you want to
+        concatenate is not a dimension in the original datasets, e.g., if you want to
+        stack a collection of 2D arrays along a third dimension. Set
+        ``concat_dim=[..., None, ...]`` explicitly to disable concatenation along a
+        particular dimension. Default is None, which for a 1D list of filepaths is
+        equivalent to opening the files separately and then merging them with
+        ``xarray.merge``.
     combine : {'by_coords', 'nested'}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
-        combine all the data. If this argument is not provided, `xarray.auto_combine` is
-        used, but in the future this behavior will switch to use
-        `xarray.combine_by_coords` by default.
+        combine all the data. Default is to use ``xarray.combine_by_coords``.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts', 'override'}, optional
         String indicating how to compare variables of the same name for
@@ -853,7 +867,6 @@ def open_mfdataset(
     --------
     combine_by_coords
     combine_nested
-    auto_combine
     open_dataset
 
     References
@@ -881,11 +894,8 @@ def open_mfdataset(
     # If combine='nested' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
     if combine == "nested":
-        if str(concat_dim) == "_not_supplied":
-            raise ValueError("Must supply concat_dim when using " "combine='nested'")
-        else:
-            if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
-                concat_dim = [concat_dim]
+        if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
+            concat_dim = [concat_dim]
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
@@ -917,30 +927,7 @@ def open_mfdataset(
 
     # Combine all datasets, closing them in case of a ValueError
     try:
-        if combine == "_old_auto":
-            # Use the old auto_combine for now
-            # Remove this after deprecation cycle from #2616 is complete
-            basic_msg = dedent(
-                """\
-            In xarray version 0.15 the default behaviour of `open_mfdataset`
-            will change. To retain the existing behavior, pass
-            combine='nested'. To use future default behavior, pass
-            combine='by_coords'. See
-            http://xarray.pydata.org/en/stable/combining.html#combining-multi
-            """
-            )
-            warnings.warn(basic_msg, FutureWarning, stacklevel=2)
-
-            combined = auto_combine(
-                datasets,
-                concat_dim=concat_dim,
-                compat=compat,
-                data_vars=data_vars,
-                coords=coords,
-                join=join,
-                from_openmfds=True,
-            )
-        elif combine == "nested":
+        if combine == "nested":
             # Combined nested list by successive concat and merge operations
             # along each dimension, using structure given by "ids"
             combined = _nested_combine(
@@ -951,12 +938,18 @@ def open_mfdataset(
                 coords=coords,
                 ids=ids,
                 join=join,
+                combine_attrs="drop",
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
             # previously
             combined = combine_by_coords(
-                datasets, compat=compat, data_vars=data_vars, coords=coords, join=join
+                datasets,
+                compat=compat,
+                data_vars=data_vars,
+                coords=coords,
+                join=join,
+                combine_attrs="drop",
             )
         else:
             raise ValueError(
@@ -1279,18 +1272,35 @@ def _validate_append_dim_and_encoding(
         return
     if append_dim:
         if append_dim not in ds.dims:
-            raise ValueError(f"{append_dim} not a valid dimension in the Dataset")
-    for data_var in ds_to_append:
-        if data_var in ds:
-            if append_dim is None:
+            raise ValueError(
+                f"append_dim={append_dim!r} does not match any existing "
+                f"dataset dimensions {ds.dims}"
+            )
+    for var_name in ds_to_append:
+        if var_name in ds:
+            if ds_to_append[var_name].dims != ds[var_name].dims:
                 raise ValueError(
-                    "variable '{}' already exists, but append_dim "
-                    "was not set".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    f"dimension names {ds[var_name].dims} != "
+                    f"{ds_to_append[var_name].dims}, but changing variable "
+                    "dimensions is not supported by to_zarr()."
                 )
-            if data_var in encoding.keys():
+            existing_sizes = {
+                k: v for k, v in ds[var_name].sizes.items() if k != append_dim
+            }
+            new_sizes = {
+                k: v for k, v in ds_to_append[var_name].sizes.items() if k != append_dim
+            }
+            if existing_sizes != new_sizes:
                 raise ValueError(
-                    "variable '{}' already exists, but encoding was"
-                    "provided".format(data_var)
+                    f"variable {var_name!r} already exists with different "
+                    "dimension sizes: {existing_sizes} != {new_sizes}. "
+                    "to_zarr() only supports changing dimension sizes when "
+                    f"explicitly appending, but append_dim={append_dim!r}."
+                )
+            if var_name in encoding.keys():
+                raise ValueError(
+                    f"variable {var_name!r} already exists, but encoding was provided"
                 )
 
 

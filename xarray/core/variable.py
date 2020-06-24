@@ -2582,7 +2582,7 @@ def assert_unique_multiindex_level_names(variables):
 
     duplicate_names = [v for v in level_names.values() if len(v) > 1]
     if duplicate_names:
-        conflict_str = "\n".join([", ".join(v) for v in duplicate_names])
+        conflict_str = "\n".join(", ".join(v) for v in duplicate_names)
         raise ValueError("conflicting MultiIndex level name(s):\n%s" % conflict_str)
     # Check confliction between level names and dimensions GH:2299
     for k, v in variables.items():

@@ -14,6 +14,7 @@ import pandas as pd
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -29,19 +30,17 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
-    )
+
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError("x " + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError("y " + error_msg)
-
     if x is not None and y is not None:
-        raise ValueError("You cannot specify both x and y kwargs" "for line plots.")
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        _assert_valid_xy(darray, x, "x")
+
+    if y is not None:
+        _assert_valid_xy(darray, y, "y")
 
     if ndims == 1:
         huename = None
@@ -252,7 +251,7 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Dimensions or coordinates for x, y axis.
+        Dimension, coordinate or MultiIndex level for x, y axis.
         Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
@@ -445,6 +444,11 @@ class _PlotMethods:
 
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
+
+    # we can't use functools.wraps here since that also modifies the name / qualname
+    __doc__ = __call__.__doc__ = plot.__doc__
+    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__annotations__ = plot.__annotations__
 
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
@@ -693,7 +697,10 @@ def _plot2d(plotfunc):
         _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:

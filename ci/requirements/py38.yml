@@ -22,13 +22,12 @@ dependencies:
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.761  # Must match .pre-commit-config.yaml
+  - mypy=0.780  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
   - numpy
   - pandas
-  - pint
   - pip
   - pseudonetcdf
   - pydap
@@ -45,3 +44,4 @@ dependencies:
   - zarr
   - pip:
     - numbagg
+    - pint

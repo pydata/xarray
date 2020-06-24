@@ -48,7 +48,7 @@ def dataset():
 
 def test_short_data_repr_html(dataarray):
     data_repr = fh.short_data_repr_html(dataarray)
-    assert data_repr.startswith("array")
+    assert data_repr.startswith("<pre>array")
 
 
 def test_short_data_repr_html_non_str_keys(dataset):
@@ -137,3 +137,22 @@ def test_repr_of_dataset(dataset):
     )
     assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+
+def test_repr_text_fallback(dataset):
+    formatted = fh.dataset_repr(dataset)
+
+    # Just test that the "pre" block used for fallback to plain text is present.
+    assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
+def test_variable_repr_html():
+    v = xr.Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
+    assert hasattr(v, "_repr_html_")
+    with xr.set_options(display_style="html"):
+        html = v._repr_html_().strip()
+    # We don't do a complete string identity since
+    # html output is probably subject to change, is long and... reasons.
+    # Just test that something reasonable was produced.
+    assert html.startswith("<div") and html.endswith("</div>")
+    assert "xarray.Variable" in html

@@ -15,7 +15,7 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import raises_regex, requires_cftime
+from . import raises_regex, requires_cftime, requires_cftime_1_1_0
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
@@ -226,6 +226,13 @@ def test_cftimeindex_dayofyear_accessor(index):
 def test_cftimeindex_dayofweek_accessor(index):
     result = index.dayofweek
     expected = [date.dayofwk for date in index]
+    assert_array_equal(result, expected)
+
+
+@requires_cftime_1_1_0
+def test_cftimeindex_days_in_month_accessor(index):
+    result = index.days_in_month
+    expected = [date.daysinmonth for date in index]
     assert_array_equal(result, expected)
 
 
@@ -1039,3 +1046,73 @@ def test_asi8_distant_date():
     result = index.asi8
     expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
     np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime_1_1_0
+def test_infer_freq_valid_types():
+    cf_indx = xr.cftime_range("2000-01-01", periods=3, freq="D")
+    assert xr.infer_freq(cf_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
+
+    pd_indx = pd.date_range("2000-01-01", periods=3, freq="D")
+    assert xr.infer_freq(pd_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_indx)) == "D"
+
+    pd_td_indx = pd.timedelta_range(start="1D", periods=3, freq="D")
+    assert xr.infer_freq(pd_td_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_td_indx)) == "D"
+
+
+@requires_cftime_1_1_0
+def test_infer_freq_invalid_inputs():
+    # Non-datetime DataArray
+    with pytest.raises(ValueError, match="must contain datetime-like objects"):
+        xr.infer_freq(xr.DataArray([0, 1, 2]))
+
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="MS")
+    # 2D DataArray
+    with pytest.raises(ValueError, match="must be 1D"):
+        xr.infer_freq(xr.DataArray([indx, indx]))
+
+    # CFTimeIndex too short
+    with pytest.raises(ValueError, match="Need at least 3 dates to infer frequency"):
+        xr.infer_freq(indx[:2])
+
+    # Non-monotonic input
+    assert xr.infer_freq(indx[np.array([0, 2, 1, 3])]) is None
+
+    # Non-unique input
+    assert xr.infer_freq(indx[np.array([0, 1, 1, 2])]) is None
+
+    # No unique frequency (here 1st step is MS, second is 2MS)
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+
+    # Same, but for QS
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="QS")
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize(
+    "freq",
+    [
+        "300AS-JAN",
+        "A-DEC",
+        "AS-JUL",
+        "2AS-FEB",
+        "Q-NOV",
+        "3QS-DEC",
+        "MS",
+        "4M",
+        "7D",
+        "D",
+        "30H",
+        "5T",
+        "40S",
+    ],
+)
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_infer_freq(freq, calendar):
+    indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
+    out = xr.infer_freq(indx)
+    assert out == freq

@@ -11,6 +11,7 @@ from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
+from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -207,7 +208,9 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
+def get_clean_interp_index(
+    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+):
     """Return index to use for x values in interpolation or curve fitting.
 
     Parameters
@@ -220,6 +223,8 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
       If use_coordinate is True, the coordinate that shares the name of the
       dimension along which interpolation is being performed will be used as the
       x values. If False, the x values are set as an equally spaced sequence.
+    strict : bool
+      Whether to raise errors if the index is either non-unique or non-monotonic (default).
 
     Returns
     -------
@@ -256,11 +261,12 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
     if isinstance(index, pd.MultiIndex):
         index.name = dim
 
-    if not index.is_monotonic:
-        raise ValueError(f"Index {index.name!r} must be monotonically increasing")
+    if strict:
+        if not index.is_monotonic:
+            raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
-    if not index.is_unique:
-        raise ValueError(f"Index {index.name!r} has duplicate values")
+        if not index.is_unique:
+            raise ValueError(f"Index {index.name!r} has duplicate values")
 
     # Special case for non-standard calendar indexes
     # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
@@ -281,7 +287,7 @@ def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] 
         # xarray/numpy raise a ValueError
         raise TypeError(
             f"Index {index.name!r} must be castable to float64 to support "
-            f"interpolation, got {type(index).__name__}."
+            f"interpolation or curve fitting, got {type(index).__name__}."
         )
 
     return index
@@ -294,6 +300,7 @@ def interp_na(
     method: str = "linear",
     limit: int = None,
     max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+    keep_attrs: bool = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
@@ -330,19 +337,22 @@ def interp_na(
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=True)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "overflow", RuntimeWarning)
         warnings.filterwarnings("ignore", "invalid value", RuntimeWarning)
         arr = apply_ufunc(
             interpolator,
-            index,
             self,
+            index,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
             output_dtypes=[self.dtype],
             dask="parallelized",
             vectorize=True,
-            keep_attrs=True,
+            keep_attrs=keep_attrs,
         ).transpose(*self.dims)
 
     if limit is not None:
@@ -359,8 +369,9 @@ def interp_na(
     return arr
 
 
-def func_interpolate_na(interpolator, x, y, **kwargs):
+def func_interpolate_na(interpolator, y, x, **kwargs):
     """helper function to apply interpolation along 1 dimension"""
+    # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
     out = y.copy()
@@ -613,6 +624,19 @@ def interp(var, indexes_coords, method, **kwargs):
     # default behavior
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
+    # check if the interpolation can be done in orthogonal manner
+    if (
+        len(indexes_coords) > 1
+        and method in ["linear", "nearest"]
+        and all(dest[1].ndim == 1 for dest in indexes_coords.values())
+        and len(set([d[1].dims[0] for d in indexes_coords.values()]))
+        == len(indexes_coords)
+    ):
+        # interpolate sequentially
+        for dim, dest in indexes_coords.items():
+            var = interp(var, {dim: dest}, method, **kwargs)
+        return var
+
     # target dimensions
     dims = list(indexes_coords)
     x, new_x = zip(*[indexes_coords[d] for d in dims])
@@ -653,7 +677,7 @@ def interp_func(var, x, new_x, method, kwargs):
         New coordinates. Should not contain NaN.
     method: string
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
-        1-dimensional itnterpolation.
+        1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
     **kwargs:
         Optional keyword arguments to be passed to scipy.interpolator
