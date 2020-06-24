@@ -111,6 +111,12 @@ class TestPlot(PlotTestCase):
     def setup_array(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
+    def test_accessor(self):
+        from ..plot.plot import _PlotMethods
+
+        assert DataArray.plot is _PlotMethods
+        assert isinstance(self.darray.plot, _PlotMethods)
+
     def test_label_from_attrs(self):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
@@ -143,7 +149,7 @@ class TestPlot(PlotTestCase):
             (self.darray[:, 0, 0] + 1j).plot()
 
     def test_1d_bool(self):
-        xr.ones_like(self.darray[:, 0, 0], dtype=np.bool).plot()
+        xr.ones_like(self.darray[:, 0, 0], dtype=bool).plot()
 
     def test_1d_x_y_kw(self):
         z = np.arange(10)
@@ -1031,7 +1037,7 @@ class Common2dMixin:
             self.plotfunc(self.darray[0, :])
 
     def test_bool(self):
-        xr.ones_like(self.darray, dtype=np.bool).plot()
+        xr.ones_like(self.darray, dtype=bool).plot()
 
     def test_complex_raises_typeerror(self):
         with raises_regex(TypeError, "complex128"):
@@ -2097,6 +2103,12 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds.A.attrs["units"] = "Aunits"
         ds.B.attrs["units"] = "Bunits"
         self.ds = ds
+
+    def test_accessor(self):
+        from ..plot.dataset_plot import _Dataset_PlotMethods
+
+        assert Dataset.plot is _Dataset_PlotMethods
+        assert isinstance(self.ds.plot, _Dataset_PlotMethods)
 
     @pytest.mark.parametrize(
         "add_guide, hue_style, legend, colorbar",

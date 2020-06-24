@@ -994,8 +994,8 @@ be done directly from zarr, as described in the
 GRIB format via cfgrib
 ----------------------
 
-xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
-C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
+xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
+if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset`:
 
 .. ipython::
@@ -1003,13 +1003,11 @@ to :py:func:`open_dataset`:
 
     In [1]: ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 
-We recommend installing ecCodes via conda::
+We recommend installing cfgrib via conda::
 
-    conda install -c conda-forge eccodes
-    pip install cfgrib
+    conda install -c conda-forge cfgrib
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
-.. _ecCodes: https://confluence.ecmwf.int/display/ECC/ecCodes+Home
 
 .. _io.pynio:
 

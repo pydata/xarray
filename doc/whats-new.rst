@@ -72,7 +72,7 @@ New Features
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`, :pull:`4135`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Pascal Bourgault <https://github.com/aulemahal>`_.
-- More support for unit aware arrays with pint (:pull:`3643`)
+- More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
   without ``append_dim``, as long as dimension sizes do not change.
@@ -172,8 +172,12 @@ Documentation
   By `Matthias Riße <https://github.com/risebell>`_.
 - Apply ``black`` to all the code in the documentation (:pull:`4012`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Narrative documentation now describes :py:meth:`map_blocks`. :ref:`dask.automatic-parallelization`.
+- Narrative documentation now describes :py:meth:`map_blocks`: :ref:`dask.automatic-parallelization`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Document ``.plot``, ``.dt``, ``.str`` accessors the way they are called. (:issue:`3625`, :pull:`3988`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add documentation for the parameters and return values of :py:meth:`DataArray.sel`.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -248,6 +252,8 @@ New Features
   :py:meth:`core.groupby.DatasetGroupBy.quantile`, :py:meth:`core.groupby.DataArrayGroupBy.quantile`
   (:issue:`3843`, :pull:`3844`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
+- Add a diff summary for `testing.assert_allclose`. (:issue:`3617`, :pull:`3847`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
