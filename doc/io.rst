@@ -463,7 +463,7 @@ This is not CF-compliant but again facilitates roundtripping of xarray datasets.
 Invalid netCDF files
 ~~~~~~~~~~~~~~~~~~~~
 
-The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't 
+The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
 This feature is availabe through :py:meth:`DataArray.to_netcdf` and
@@ -837,7 +837,9 @@ Xarray's Zarr backend allows xarray to leverage these capabilities.
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
-xarray. To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
+xarray. For implementation details, see :ref:`zarr_encoding`.
+
+To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
 To write to a local directory, we pass a path to a directory
 
 .. ipython:: python
@@ -992,8 +994,8 @@ be done directly from zarr, as described in the
 GRIB format via cfgrib
 ----------------------
 
-xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
-C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
+xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
+if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset`:
 
 .. ipython::
@@ -1001,13 +1003,11 @@ to :py:func:`open_dataset`:
 
     In [1]: ds_grib = xr.open_dataset("example.grib", engine="cfgrib")
 
-We recommend installing ecCodes via conda::
+We recommend installing cfgrib via conda::
 
-    conda install -c conda-forge eccodes
-    pip install cfgrib
+    conda install -c conda-forge cfgrib
 
 .. _cfgrib: https://github.com/ecmwf/cfgrib
-.. _ecCodes: https://confluence.ecmwf.int/display/ECC/ecCodes+Home
 
 .. _io.pynio:
 

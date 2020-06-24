@@ -80,8 +80,9 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
             "the default calendar" if calendar is None else "calendar %r" % calendar
         )
         msg = (
-            "unable to decode time units %r with %s. Try "
-            "opening your dataset with decode_times=False." % (units, calendar_msg)
+            f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
+            "opening your dataset with decode_times=False or installing cftime "
+            "if it is not installed."
         )
         raise ValueError(msg)
     else:
@@ -157,7 +158,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
             dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
         except (KeyError, OutOfBoundsDatetime, OverflowError):
             dates = _decode_datetime_with_cftime(
-                flat_num_dates.astype(np.float), units, calendar
+                flat_num_dates.astype(float), units, calendar
             )
 
             if (
@@ -178,7 +179,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(np.float), units, calendar
+            flat_num_dates.astype(float), units, calendar
         )
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)

@@ -16,6 +16,8 @@ from typing import (
     DefaultDict,
     Dict,
     Hashable,
+    Iterable,
+    List,
     Mapping,
     Sequence,
     Tuple,
@@ -25,10 +27,24 @@ from typing import (
 
 import numpy as np
 
+from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
 
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+
+
+def unzip(iterable):
+    return zip(*iterable)
+
+
+def assert_chunks_compatible(a: Dataset, b: Dataset):
+    a = a.unify_chunks()
+    b = b.unify_chunks()
+
+    for dim in set(a.chunks).intersection(set(b.chunks)):
+        if a.chunks[dim] != b.chunks[dim]:
+            raise ValueError(f"Chunk sizes along dimension {dim!r} are not equal.")
 
 
 def check_result_variables(
@@ -65,6 +81,17 @@ def dataset_to_dataarray(obj: Dataset) -> DataArray:
         )
 
     return next(iter(obj.data_vars.values()))
+
+
+def dataarray_to_dataset(obj: DataArray) -> Dataset:
+    # only using _to_temp_dataset would break
+    # func = lambda x: x.to_dataset()
+    # since that relies on preserving name.
+    if obj.name is None:
+        dataset = obj._to_temp_dataset()
+    else:
+        dataset = obj.to_dataset()
+    return dataset
 
 
 def make_meta(obj):
@@ -150,30 +177,30 @@ def map_blocks(
     ----------
     func: callable
         User-provided function that accepts a DataArray or Dataset as its first
-        parameter. The function will receive a subset of 'obj' (see below),
+        parameter ``obj``. The function will receive a subset or 'block' of ``obj`` (see below),
         corresponding to one chunk along each chunked dimension. ``func`` will be
-        executed as ``func(obj_subset, *args, **kwargs)``.
+        executed as ``func(subset_obj, *subset_args, **kwargs)``.
 
         This function must return either a single DataArray or a single Dataset.
 
         This function cannot add a new chunked dimension.
 
     obj: DataArray, Dataset
-        Passed to the function as its first argument, one dask chunk at a time.
+        Passed to the function as its first argument, one block at a time.
     args: Sequence
-        Passed verbatim to func after unpacking, after the sliced obj. xarray objects,
-        if any, will not be split by chunks. Passing dask collections is not allowed.
+        Passed to func after unpacking and subsetting any xarray objects by blocks.
+        xarray objects in args must be aligned with obj, otherwise an error is raised.
     kwargs: Mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
-        split by chunks. Passing dask collections is not allowed.
+        subset to blocks. Passing dask collections in kwargs is not allowed.
     template: (optional) DataArray, Dataset
         xarray object representing the final result after compute is called. If not provided,
-        the function will be first run on mocked-up data, that looks like 'obj' but
+        the function will be first run on mocked-up data, that looks like ``obj`` but
         has sizes 0, to determine properties of the returned object such as dtype,
         variable names, attributes, new dimensions and new indexes (if any).
-        'template' must be provided if the function changes the size of existing dimensions.
-        When provided, `attrs` on variables in `template` are copied over to the result. Any
-        `attrs` set by `func` will be ignored.
+        ``template`` must be provided if the function changes the size of existing dimensions.
+        When provided, ``attrs`` on variables in `template` are copied over to the result. Any
+        ``attrs`` set by ``func`` will be ignored.
 
 
     Returns
@@ -183,11 +210,11 @@ def map_blocks(
 
     Notes
     -----
-    This function is designed for when one needs to manipulate a whole xarray object
-    within each chunk. In the more common case where one can work on numpy arrays, it is
-    recommended to use apply_ufunc.
+    This function is designed for when ``func`` needs to manipulate a whole xarray object
+    subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
+    recommended to use ``apply_ufunc``.
 
-    If none of the variables in obj is backed by dask, calling this function is
+    If none of the variables in ``obj`` is backed by dask arrays, calling this function is
     equivalent to calling ``func(obj, *args, **kwargs)``.
 
     See Also
@@ -203,10 +230,6 @@ def map_blocks(
     its indices, and its methods like ``.groupby()``.
 
     >>> def calculate_anomaly(da, groupby_type="time.month"):
-    ...     # Necessary workaround to xarray's check with zero dimensions
-    ...     # https://github.com/pydata/xarray/issues/3575
-    ...     if sum(da.shape) == 0:
-    ...         return da
     ...     gb = da.groupby(groupby_type)
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
@@ -215,7 +238,7 @@ def map_blocks(
     >>> array = xr.DataArray(
     ...     np.random.rand(len(time)), dims="time", coords=[time]
     ... ).chunk()
-    >>> xr.map_blocks(calculate_anomaly, array).compute()
+    >>> xr.map_blocks(calculate_anomaly, array, template=array).compute()
     <xarray.DataArray (time: 24)>
     array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
             0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
@@ -229,7 +252,7 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> xr.map_blocks(
-    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"},
+    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"}, template=array,
     ... )
     <xarray.DataArray (time: 24)>
     array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
@@ -241,14 +264,24 @@ def map_blocks(
         * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
     """
 
-    def _wrapper(func, obj, to_array, args, kwargs, expected):
-        check_shapes = dict(obj.dims)
-        check_shapes.update(expected["shapes"])
+    def _wrapper(
+        func: Callable,
+        args: List,
+        kwargs: dict,
+        arg_is_array: Iterable[bool],
+        expected: dict,
+    ):
+        """
+        Wrapper function that receives datasets in args; converts to dataarrays when necessary;
+        passes these to the user function `func` and checks returned objects for expected shapes/sizes/etc.
+        """
 
-        if to_array:
-            obj = dataset_to_dataarray(obj)
+        converted_args = [
+            dataset_to_dataarray(arg) if is_array else arg
+            for is_array, arg in zip(arg_is_array, args)
+        ]
 
-        result = func(obj, *args, **kwargs)
+        result = func(*converted_args, **kwargs)
 
         # check all dims are present
         missing_dimensions = set(expected["shapes"]) - set(result.sizes)
@@ -259,10 +292,10 @@ def map_blocks(
 
         # check that index lengths and values are as expected
         for name, index in result.indexes.items():
-            if name in check_shapes:
-                if len(index) != check_shapes[name]:
+            if name in expected["shapes"]:
+                if len(index) != expected["shapes"][name]:
                     raise ValueError(
-                        f"Received dimension {name!r} of length {len(index)}. Expected length {check_shapes[name]}."
+                        f"Received dimension {name!r} of length {len(index)}. Expected length {expected['shapes'][name]}."
                     )
             if name in expected["indexes"]:
                 expected_index = expected["indexes"][name]
@@ -289,38 +322,54 @@ def map_blocks(
     elif not isinstance(kwargs, Mapping):
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
-    for value in list(args) + list(kwargs.values()):
+    for value in kwargs.values():
         if dask.is_dask_collection(value):
             raise TypeError(
-                "Cannot pass dask collections in args or kwargs yet. Please compute or "
+                "Cannot pass dask collections in kwargs yet. Please compute or "
                 "load values before passing to map_blocks."
             )
 
     if not dask.is_dask_collection(obj):
         return func(obj, *args, **kwargs)
 
-    if isinstance(obj, DataArray):
-        # only using _to_temp_dataset would break
-        # func = lambda x: x.to_dataset()
-        # since that relies on preserving name.
-        if obj.name is None:
-            dataset = obj._to_temp_dataset()
-        else:
-            dataset = obj.to_dataset()
-        input_is_array = True
-    else:
-        dataset = obj
-        input_is_array = False
+    all_args = [obj] + list(args)
+    is_xarray = [isinstance(arg, (Dataset, DataArray)) for arg in all_args]
+    is_array = [isinstance(arg, DataArray) for arg in all_args]
 
-    input_chunks = dataset.chunks
-    dataset_indexes = set(dataset.indexes)
+    # there should be a better way to group this. partition?
+    xarray_indices, xarray_objs = unzip(
+        (index, arg) for index, arg in enumerate(all_args) if is_xarray[index]
+    )
+    others = [
+        (index, arg) for index, arg in enumerate(all_args) if not is_xarray[index]
+    ]
+
+    # all xarray objects must be aligned. This is consistent with apply_ufunc.
+    aligned = align(*xarray_objs, join="exact")
+    xarray_objs = tuple(
+        dataarray_to_dataset(arg) if is_da else arg
+        for is_da, arg in zip(is_array, aligned)
+    )
+
+    _, npargs = unzip(
+        sorted(list(zip(xarray_indices, xarray_objs)) + others, key=lambda x: x[0])
+    )
+
+    # check that chunk sizes are compatible
+    input_chunks = dict(npargs[0].chunks)
+    input_indexes = dict(npargs[0].indexes)
+    for arg in xarray_objs[1:]:
+        assert_chunks_compatible(npargs[0], arg)
+        input_chunks.update(arg.chunks)
+        input_indexes.update(arg.indexes)
+
     if template is None:
         # infer template by providing zero-shaped arrays
-        template = infer_template(func, obj, *args, **kwargs)
+        template = infer_template(func, aligned[0], *args, **kwargs)
         template_indexes = set(template.indexes)
-        preserved_indexes = template_indexes & dataset_indexes
-        new_indexes = template_indexes - dataset_indexes
-        indexes = {dim: dataset.indexes[dim] for dim in preserved_indexes}
+        preserved_indexes = template_indexes & set(input_indexes)
+        new_indexes = template_indexes - set(input_indexes)
+        indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
         indexes.update({k: template.indexes[k] for k in new_indexes})
         output_chunks = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
@@ -328,13 +377,11 @@ def map_blocks(
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        template_indexes = set(template.indexes)
-        indexes = {dim: dataset.indexes[dim] for dim in dataset_indexes}
-        indexes.update({k: template.indexes[k] for k in template_indexes})
+        indexes = dict(template.indexes)
         if isinstance(template, DataArray):
             output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
         else:
-            output_chunks = template.chunks  # type: ignore
+            output_chunks = dict(template.chunks)
 
     for dim in output_chunks:
         if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
@@ -363,7 +410,7 @@ def map_blocks(
     graph: Dict[Any, Any] = {}
     new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
     gname = "{}-{}".format(
-        dask.utils.funcname(func), dask.base.tokenize(dataset, args, kwargs)
+        dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
     )
 
     # map dims to list of chunk indexes
@@ -376,9 +423,14 @@ def map_blocks(
         dim: np.cumsum((0,) + chunks_v) for dim, chunks_v in output_chunks.items()
     }
 
-    # iterate over all possible chunk combinations
-    for v in itertools.product(*ichunk.values()):
-        chunk_index = dict(zip(dataset.dims, v))
+    def subset_dataset_to_block(
+        graph: dict, gname: str, dataset: Dataset, input_chunk_bounds, chunk_index
+    ):
+        """
+        Creates a task that subsets an xarray dataset to a block determined by chunk_index.
+        Block extents are determined by input_chunk_bounds.
+        Also subtasks that subset the constituent variables of a dataset.
+        """
 
         # this will become [[name1, variable1],
         #                   [name2, variable2],
@@ -387,6 +439,7 @@ def map_blocks(
         data_vars = []
         coords = []
 
+        chunk_tuple = tuple(chunk_index.values())
         for name, variable in dataset.variables.items():
             # make a task that creates tuple of (dims, chunk)
             if dask.is_dask_collection(variable.data):
@@ -395,13 +448,13 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index[dim]]
 
-                chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + v
+                chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
                 )
             else:
-                # non-dask array with possibly chunked dimensions
+                # non-dask array possibly with dimensions chunked on other variables
                 # index into variable appropriately
                 subsetter = {
                     dim: _get_chunk_slicer(dim, chunk_index, input_chunk_bounds)
@@ -410,7 +463,7 @@ def map_blocks(
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (
                     "{}-{}".format(gname, dask.base.tokenize(subset)),
-                ) + v
+                ) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [subset.dims, subset, subset.attrs],
@@ -422,7 +475,22 @@ def map_blocks(
             else:
                 data_vars.append([name, chunk_variable_task])
 
-        # expected["shapes", "coords", "data_vars", "indexes"] are used to raise nice error messages in _wrapper
+        return (Dataset, (dict, data_vars), (dict, coords), dataset.attrs)
+
+    # iterate over all possible chunk combinations
+    for chunk_tuple in itertools.product(*ichunk.values()):
+        # mapping from dimension name to chunk index
+        chunk_index = dict(zip(ichunk.keys(), chunk_tuple))
+
+        blocked_args = [
+            subset_dataset_to_block(graph, gname, arg, input_chunk_bounds, chunk_index)
+            if isxr
+            else arg
+            for isxr, arg in zip(is_xarray, npargs)
+        ]
+
+        # expected["shapes", "coords", "data_vars", "indexes"] are used to
+        # raise nice error messages in _wrapper
         expected = {}
         # input chunk 0 along a dimension maps to output chunk 0 along the same dimension
         # even if length of dimension is changed by the applied function
@@ -436,16 +504,8 @@ def map_blocks(
             for dim in indexes
         }
 
-        from_wrapper = (gname,) + v
-        graph[from_wrapper] = (
-            _wrapper,
-            func,
-            (Dataset, (dict, data_vars), (dict, coords), dataset.attrs),
-            input_is_array,
-            args,
-            kwargs,
-            expected,
-        )
+        from_wrapper = (gname,) + chunk_tuple
+        graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
 
         # mapping from variable name to dask graph key
         var_key_map: Dict[Hashable, str] = {}
@@ -472,7 +532,11 @@ def map_blocks(
             # layer.
             new_layers[gname_l][key] = (operator.getitem, from_wrapper, name)
 
-    hlg = HighLevelGraph.from_collections(gname, graph, dependencies=[dataset])
+    hlg = HighLevelGraph.from_collections(
+        gname,
+        graph,
+        dependencies=[arg for arg in npargs if dask.is_dask_collection(arg)],
+    )
 
     for gname_l, layer in new_layers.items():
         # This adds in the getitems for each variable in the dataset.
@@ -480,6 +544,10 @@ def map_blocks(
         hlg.layers[gname_l] = layer
 
     result = Dataset(coords=indexes, attrs=template.attrs)
+    for index in result.indexes:
+        result[index].attrs = template[index].attrs
+        result[index].encoding = template[index].encoding
+
     for name, gname_l in var_key_map.items():
         dims = template[name].dims
         var_chunks = []
@@ -496,6 +564,7 @@ def map_blocks(
             hlg, name=gname_l, chunks=var_chunks, dtype=template[name].dtype
         )
         result[name] = (dims, data, template[name].attrs)
+        result[name].encoding = template[name].encoding
 
     result = result.set_coords(template._coord_names)
 

@@ -699,3 +699,21 @@ def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
+
+
+@requires_scipy
+@pytest.mark.parametrize("method", ["nearest", "linear"])
+def test_decompose(method):
+    da = xr.DataArray(
+        np.arange(6).reshape(3, 2),
+        dims=["x", "y"],
+        coords={"x": [0, 1, 2], "y": [-0.1, -0.3]},
+    )
+    x_new = xr.DataArray([0.5, 1.5, 2.5], dims=["x1"])
+    y_new = xr.DataArray([-0.15, -0.25], dims=["y1"])
+    x_broadcast, y_broadcast = xr.broadcast(x_new, y_new)
+    assert x_broadcast.ndim == 2
+
+    actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
+    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
+    assert_allclose(actual, expected)
