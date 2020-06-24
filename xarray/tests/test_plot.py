@@ -2384,51 +2384,42 @@ def test_facetgrid_single_contour():
     ds.plot.contour(col="time", levels=[4], colors=["k"])
 
 
+@requires_matplotlib
 @pytest.mark.parametrize("figsize", [[4, 4], None])
 @pytest.mark.parametrize("aspect", [4 / 3, None])
 @pytest.mark.parametrize("size", [200, None])
 def test_get_axis(figsize, aspect, size):
     # test get_axis works with different args combinations
     # and return the right type
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        with pytest.raises(ImportError):
-            ax = get_axis(figsize, size, aspect, None)
-        print("matplotlib not available")
-        return
 
     ax = "something"
     if figsize is not None:
         # cannot provide both ax and figsize
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="both `figsize` and `ax`"):
             ax = get_axis(figsize, size, aspect, ax)
-    if size is not None:
+    if figsize is None and size is not None:
         # cannot provide both ax and size
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="both `size` and `ax`"):
             ax = get_axis(figsize, size, aspect, ax)
 
     ax = None
     if figsize is not None and size is not None:
         # cannot provide both size and figsize
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="both `figsize` and " "`size`"):
             ax = get_axis(figsize, size, aspect, ax)
 
     if figsize is None and aspect is not None and size is None:
         # cannot provide aspect and size
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError,
+                           match="`aspect` argument without `size`"):
             ax = get_axis(figsize, size, aspect, ax)
 
-    try:
-        ax = plt.axes()
-        axtype = type(ax)
-        ax = get_axis(ax=ax)
-        assert isinstance(ax, axtype)
-        ax = get_axis()
-        assert isinstance(ax, axtype)
-    except ImportError:
-        print("matplotlib not available")
-        pass
+    ax = plt.axes()
+    axtype = type(ax)
+    ax = get_axis(ax=ax)
+    assert isinstance(ax, axtype)
+    ax = get_axis()
+    assert isinstance(ax, axtype)
 
     try:
         import cartopy as ctpy  # type: ignore
