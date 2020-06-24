@@ -885,7 +885,7 @@ class CFEncodedBase(DatasetIOBase):
                 "x": np.arange(3, 10, dtype=">i2"),
                 "y": np.arange(3, 20, dtype="<i4"),
                 "z": np.arange(3, 30, dtype="=i8"),
-                "w": ("x", np.arange(3, 10, dtype=np.float)),
+                "w": ("x", np.arange(3, 10, dtype=float)),
             }
         )
 
@@ -4159,6 +4159,19 @@ class TestRasterio:
                         assert actual_res == expected_res
                         assert actual_shape == expected_shape
                         assert actual_transform == expected_transform
+
+    def test_rasterio_vrt_with_src_crs(self):
+        # Test open_rasterio() support of WarpedVRT with specified src_crs
+        import rasterio
+
+        # create geotiff with no CRS and specify it manually
+        with create_tmp_geotiff(crs=None) as (tmp_file, expected):
+            src_crs = rasterio.crs.CRS({"init": "epsg:32618"})
+            with rasterio.open(tmp_file) as src:
+                assert src.crs is None
+                with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
+                    with xr.open_rasterio(vrt) as da:
+                        assert da.crs == src_crs
 
     @network
     def test_rasterio_vrt_network(self):

@@ -321,7 +321,7 @@ class GroupBy(SupportsArithmetic):
                 group = _DummyGroup(obj, group.name, group.coords)
 
         if getattr(group, "name", None) is None:
-            raise ValueError("`group` must have a name")
+            group.name = "group"
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
