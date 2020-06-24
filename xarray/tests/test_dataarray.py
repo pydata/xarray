@@ -5739,8 +5739,10 @@ class TestReduce3D(TestReduce):
 
         minindices_x = {
             key: xr.where(
-                nanindices_x[key] == None, minindices_x[key], nanindices_x[key],
-            )  # noqa: E711
+                nanindices_x[key] == None,  # noqa: E711
+                minindices_x[key],
+                nanindices_x[key],
+            )
             for key in minindices_x
         }
         expected7 = {
@@ -5754,8 +5756,10 @@ class TestReduce3D(TestReduce):
 
         minindices_y = {
             key: xr.where(
-                nanindices_y[key] == None, minindices_y[key], nanindices_y[key],
-            )  # noqa: E711
+                nanindices_y[key] == None,  # noqa: E711
+                minindices_y[key],
+                nanindices_y[key],
+            )
             for key in minindices_y
         }
         expected8 = {
@@ -5769,8 +5773,10 @@ class TestReduce3D(TestReduce):
 
         minindices_z = {
             key: xr.where(
-                nanindices_z[key] == None, minindices_z[key], nanindices_z[key],
-            )  # noqa: E711
+                nanindices_z[key] == None,  # noqa: E711
+                minindices_z[key],
+                nanindices_z[key],
+            )
             for key in minindices_z
         }
         expected9 = {
@@ -5784,8 +5790,10 @@ class TestReduce3D(TestReduce):
 
         minindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None, minindices_xy[key], nanindices_xy[key],
-            )  # noqa: E711
+                nanindices_xy[key] == None,  # noqa: E711
+                minindices_xy[key],
+                nanindices_xy[key],
+            )
             for key in minindices_xy
         }
         expected10 = {
@@ -5798,8 +5806,10 @@ class TestReduce3D(TestReduce):
 
         minindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None, minindices_xz[key], nanindices_xz[key],
-            )  # noqa: E711
+                nanindices_xz[key] == None,  # noqa: E711
+                minindices_xz[key],
+                nanindices_xz[key],
+            )
             for key in minindices_xz
         }
         expected11 = {
@@ -5812,8 +5822,10 @@ class TestReduce3D(TestReduce):
 
         minindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None, minindices_yz[key], nanindices_yz[key],
-            )  # noqa: E711
+                nanindices_yz[key] == None,  # noqa: E711
+                minindices_yz[key],
+                nanindices_yz[key],
+            )
             for key in minindices_yz
         }
         expected12 = {
@@ -5826,8 +5838,10 @@ class TestReduce3D(TestReduce):
 
         minindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None, minindices_xyz[key], nanindices_xyz[key],
-            )  # noqa: E711
+                nanindices_xyz[key] == None,  # noqa: E711
+                minindices_xyz[key],
+                nanindices_xyz[key],
+            )
             for key in minindices_xyz
         }
         expected13 = {key: xr.DataArray(value) for key, value in minindices_xyz.items()}
@@ -5954,8 +5968,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_x = {
             key: xr.where(
-                nanindices_x[key] == None, maxindices_x[key], nanindices_x[key],
-            )  # noqa: E711
+                nanindices_x[key] == None,  # noqa: E711
+                maxindices_x[key],
+                nanindices_x[key],
+            )
             for key in maxindices_x
         }
         expected7 = {
@@ -5969,8 +5985,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_y = {
             key: xr.where(
-                nanindices_y[key] == None, maxindices_y[key], nanindices_y[key],
-            )  # noqa: E711
+                nanindices_y[key] == None,  # noqa: E711
+                maxindices_y[key],
+                nanindices_y[key],
+            )
             for key in maxindices_y
         }
         expected8 = {
@@ -5984,8 +6002,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_z = {
             key: xr.where(
-                nanindices_z[key] == None, maxindices_z[key], nanindices_z[key],
-            )  # noqa: E711
+                nanindices_z[key] == None,  # noqa: E711
+                maxindices_z[key],
+                nanindices_z[key],
+            )
             for key in maxindices_z
         }
         expected9 = {
@@ -5999,8 +6019,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_xy = {
             key: xr.where(
-                nanindices_xy[key] == None, maxindices_xy[key], nanindices_xy[key],
-            )  # noqa: E711
+                nanindices_xy[key] == None,  # noqa: E711
+                maxindices_xy[key],
+                nanindices_xy[key],
+            )
             for key in maxindices_xy
         }
         expected10 = {
@@ -6013,8 +6035,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_xz = {
             key: xr.where(
-                nanindices_xz[key] == None, maxindices_xz[key], nanindices_xz[key],
-            )  # noqa: E711
+                nanindices_xz[key] == None,  # noqa: E711
+                maxindices_xz[key],
+                nanindices_xz[key],
+            )
             for key in maxindices_xz
         }
         expected11 = {
@@ -6027,8 +6051,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_yz = {
             key: xr.where(
-                nanindices_yz[key] == None, maxindices_yz[key], nanindices_yz[key],
-            )  # noqa: E711
+                nanindices_yz[key] == None,  # noqa: E711
+                maxindices_yz[key],
+                nanindices_yz[key],
+            )
             for key in maxindices_yz
         }
         expected12 = {
@@ -6041,8 +6067,10 @@ class TestReduce3D(TestReduce):
 
         maxindices_xyz = {
             key: xr.where(
-                nanindices_xyz[key] == None, maxindices_xyz[key], nanindices_xyz[key],
-            )  # noqa: E711
+                nanindices_xyz[key] == None,  # noqa: E711
+                maxindices_xyz[key],
+                nanindices_xyz[key],
+            )
             for key in maxindices_xyz
         }
         expected13 = {key: xr.DataArray(value) for key, value in maxindices_xyz.items()}
