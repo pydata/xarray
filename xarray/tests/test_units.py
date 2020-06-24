@@ -1438,7 +1438,7 @@ class TestVariable(VariableSubclassobjects):
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_identical(expected, actual)
+        assert_allclose(expected, actual)
 
     # TODO: remove once pint==0.12 has been released
     @pytest.mark.xfail(
@@ -2296,7 +2296,7 @@ class TestDataArray:
         actual = func(data_array)
 
         assert_units_equal(expected, actual)
-        xr.testing.assert_allclose(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -3861,7 +3861,7 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds)), units)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
