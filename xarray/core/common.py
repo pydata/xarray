@@ -25,7 +25,7 @@ from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
@@ -447,7 +447,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         New coordinate can also be attached to an existing dimension:
 
         >>> lon_2 = np.array([300, 289, 0, 1])
-        >>> da.assign_coords(lon_2=('lon', lon_2))
+        >>> da.assign_coords(lon_2=("lon", lon_2))
         <xarray.DataArray (lon: 4)>
         array([0.28298 , 0.667347, 0.657938, 0.177683])
         Coordinates:
@@ -456,7 +456,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Note that the same result can also be obtained with a dict e.g.
 
-        >>> _ = da.assign_coords({"lon_2": ('lon', lon_2)})
+        >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
 
         Notes
         -----
@@ -1397,6 +1397,9 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
+    if not is_scalar(fill_value):
+        raise ValueError(f"fill_value must be scalar. Received {fill_value} instead.")
+
     if isinstance(other, Dataset):
         data_vars = {
             k: _full_like_variable(v, fill_value, dtype)
@@ -1478,7 +1481,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> xr.zeros_like(x, dtype=np.float)
+    >>> xr.zeros_like(x, dtype=float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
            [0., 0., 0.]])

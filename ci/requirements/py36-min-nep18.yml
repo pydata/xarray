@@ -6,12 +6,11 @@ dependencies:
   # require drastically newer packages than everything else
   - python=3.6
   - coveralls
-  - dask=2.4
-  - distributed=2.4
+  - dask=2.5
+  - distributed=2.5
   - msgpack-python=0.6  # remove once distributed is bumped. distributed GH3491
   - numpy=1.17
   - pandas=0.25
-  - pint=0.11
   - pip
   - pytest
   - pytest-cov
@@ -19,3 +18,5 @@ dependencies:
   - scipy=1.2
   - setuptools=41.2
   - sparse=0.8
+  - pip:
+      - pint==0.13

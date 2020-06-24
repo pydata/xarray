@@ -578,7 +578,8 @@ class CFTimeIndex(pd.Index):
             [
                 _total_microseconds(exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
-            ]
+            ],
+            dtype=np.int64,
         )
 
     def _round_via_method(self, freq, method):
