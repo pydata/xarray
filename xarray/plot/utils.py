@@ -430,15 +430,13 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
     elif aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
-    if "projection" in kwargs and ax is not None:
-        raise ValueError("cannot use projection with existing ax")
-    elif "projection" in kwargs:
-        ax = plt.axes(projection=kwargs["projection"])
-    elif ax is None:
-        ax = plt.gca()
+    if kwargs and ax is not None:
+        raise ValueError("cannot use subplot_kws with existing ax")
 
-    if "facecolor" in kwargs:
-        ax.set_facecolor(kwargs["facecolor"])
+    kwargs = kwargs if kwargs else dict()
+
+    if ax is None:
+        ax = plt.gca(**kwargs)
 
     return ax
 

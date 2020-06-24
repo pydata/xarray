@@ -743,12 +743,13 @@ This script will plot the air temperature on a map.
 
     air = xr.tutorial.open_dataset("air_temperature").air
 
-    ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree())
-    ax.set_global()
+    p = air.isel(time=0).plot(subplot_kws=dict(projection=ccrs.Orthographic(-80, 35),
+                                               facecolor="gray"),
+                              transform=ccrs.PlateCarree())
+    p.axes.set_global()
 
     @savefig plotting_maps_cartopy.png width=100%
-    ax.coastlines()
+    p.axes.coastlines()
 
 When faceting on maps, the projection can be transferred to the ``plot``
 function using the ``subplot_kws`` keyword. The axes for the subplots created
