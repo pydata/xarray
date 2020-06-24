@@ -28,7 +28,6 @@ dependencies:
   - numba
   - numpy
   - pandas
-  - pint
   - pip
   - pseudonetcdf
   - pydap
@@ -45,3 +44,4 @@ dependencies:
   - zarr
   - pip:
     - numbagg
+    - pint
