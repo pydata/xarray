@@ -32,7 +32,6 @@ from xarray.core.utils import is_scalar
 
 from . import (
     InaccessibleArray,
-    LooseVersion,
     UnexpectedDataAccess,
     assert_allclose,
     assert_array_equal,
@@ -99,8 +98,8 @@ def create_append_test_data(seed=None):
     datetime_var_to_append = np.array(
         ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
     )
-    bool_var = np.array([True, False, True], dtype=np.bool)
-    bool_var_to_append = np.array([False, True], dtype=np.bool)
+    bool_var = np.array([True, False, True], dtype=bool)
+    bool_var_to_append = np.array([False, True], dtype=bool)
 
     ds = xr.Dataset(
         data_vars={
@@ -496,16 +495,11 @@ class TestDataset:
             DataArray(np.random.rand(4, 3), dims=["a", "b"]),  # df
         ]
 
-        if LooseVersion(pd.__version__) < "0.25.0":
-            das.append(DataArray(np.random.rand(4, 3, 2), dims=["a", "b", "c"]))
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", r"\W*Panel is deprecated")
-            for a in das:
-                pandas_obj = a.to_pandas()
-                ds_based_on_pandas = Dataset(pandas_obj)
-                for dim in ds_based_on_pandas.data_vars:
-                    assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+        for a in das:
+            pandas_obj = a.to_pandas()
+            ds_based_on_pandas = Dataset(pandas_obj)
+            for dim in ds_based_on_pandas.data_vars:
+                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = {"x": DataArray(0, coords={"y": 1}), "y": ("z", [1, 1, 1])}
@@ -1023,6 +1017,21 @@ class TestDataset:
 
         with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
+        with raises_regex(
+            ValueError,
+            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2))
+        with pytest.warns(
+            UserWarning,
+            match=r"dimensions {'not_a_dim'} do not exist. "
+            r"Expected one or more of "
+            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+        ):
+            data.isel(not_a_dim=slice(0, 2), missing_dims="warn")
+        assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
 
         ret = data.isel(dim1=0)
         assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
@@ -2855,6 +2864,13 @@ class TestDataset:
         with pytest.raises(TypeError):
             ds.reset_index("x", inplace=True)
 
+    def test_reset_index_keep_attrs(self):
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        ds = Dataset({}, {"coord_1": coord_1})
+        expected = Dataset({}, {"coord_1_": coord_1})
+        obj = ds.reset_index("coord_1")
+        assert_identical(expected, obj)
+
     def test_reorder_levels(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
@@ -2927,12 +2943,12 @@ class TestDataset:
         ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
         # test fill_value
         actual = ds.unstack("index", fill_value=-1)
-        expected = ds.unstack("index").fillna(-1).astype(np.int)
-        assert actual["var"].dtype == np.int
+        expected = ds.unstack("index").fillna(-1).astype(int)
+        assert actual["var"].dtype == int
         assert_equal(actual, expected)
 
         actual = ds["var"].unstack("index", fill_value=-1)
-        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        expected = ds["var"].unstack("index").fillna(-1).astype(int)
         assert actual.equals(expected)
 
     @requires_sparse

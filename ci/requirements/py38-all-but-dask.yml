@@ -11,18 +11,15 @@ dependencies:
   - cfgrib
   - cftime
   - coveralls
-  - dask
-  - distributed
   - flake8
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
-  - iris
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.780  # Must match .pre-commit-config.yaml
+  - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba

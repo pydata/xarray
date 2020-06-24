@@ -30,6 +30,7 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.netcdf3 import _nc3_dtype_coercions
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.coding.variables import SerializationWarning
@@ -86,6 +87,7 @@ except ImportError:
     dask_version = "10.0"
 
 ON_WINDOWS = sys.platform == "win32"
+default_value = object()
 
 
 def open_example_dataset(name, *args, **kwargs):
@@ -227,7 +229,27 @@ class TestCommon:
 
 
 class NetCDF3Only:
-    pass
+    netcdf3_formats = ("NETCDF3_CLASSIC", "NETCDF3_64BIT")
+
+    @requires_scipy
+    def test_dtype_coercion_error(self):
+        """Failing dtype coercion should lead to an error"""
+        for dtype, format in itertools.product(
+            _nc3_dtype_coercions, self.netcdf3_formats
+        ):
+            if dtype == "bool":
+                # coerced upcast (bool to int8) ==> can never fail
+                continue
+
+            # Using the largest representable value, create some data that will
+            # no longer compare equal after the coerced downcast
+            maxval = np.iinfo(dtype).max
+            x = np.array([0, 1, 2, maxval], dtype=dtype)
+            ds = Dataset({"x": ("t", x, {})})
+
+            with create_tmp_file(allow_cleanup_failure=False) as path:
+                with pytest.raises(ValueError, match="could not safely cast"):
+                    ds.to_netcdf(path, format=format)
 
 
 class DatasetIOBase:
@@ -296,9 +318,14 @@ class DatasetIOBase:
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected.variables:
             expected_dtype = expected.variables[k].dtype
-            if isinstance(self, NetCDF3Only) and expected_dtype == "int64":
-                # downcast
-                expected_dtype = np.dtype("int32")
+
+            # For NetCDF3, the backend should perform dtype coercion
+            if (
+                isinstance(self, NetCDF3Only)
+                and str(expected_dtype) in _nc3_dtype_coercions
+            ):
+                expected_dtype = np.dtype(_nc3_dtype_coercions[str(expected_dtype)])
+
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
             string_kinds = {"O", "S", "U"}
@@ -581,6 +608,10 @@ class DatasetIOBase:
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
+    @pytest.mark.xfail(
+        not has_dask,
+        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+    )
     def test_vectorized_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -854,7 +885,7 @@ class CFEncodedBase(DatasetIOBase):
                 "x": np.arange(3, 10, dtype=">i2"),
                 "y": np.arange(3, 20, dtype="<i4"),
                 "z": np.arange(3, 30, dtype="=i8"),
-                "w": ("x", np.arange(3, 10, dtype=np.float)),
+                "w": ("x", np.arange(3, 10, dtype=float)),
             }
         )
 
@@ -1522,12 +1553,6 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
-    @contextlib.contextmanager
-    def roundtrip_append(
-        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
-    ):
-        pytest.skip("zarr backend does not support appending")
-
     def test_roundtrip_consolidated(self):
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
         expected = create_test_data()
@@ -1539,6 +1564,7 @@ class ZarrBase(CFEncodedBase):
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    @requires_dask
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1556,6 +1582,7 @@ class ZarrBase(CFEncodedBase):
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
 
+    @requires_dask
     @pytest.mark.filterwarnings("ignore:Specified Dask chunks")
     def test_manual_chunk(self):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
@@ -1598,6 +1625,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
 
+    @requires_dask
     def test_warning_on_bad_chunks(self):
         original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 5})
 
@@ -1620,6 +1648,7 @@ class ZarrBase(CFEncodedBase):
                         assert v._in_memory == (k in actual.dims)
             assert len(record) == 0
 
+    @requires_dask
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
         with pytest.warns(FutureWarning):
@@ -1638,6 +1667,7 @@ class ZarrBase(CFEncodedBase):
                     # there should be no chunks
                     assert v.chunks is None
 
+    @requires_dask
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
@@ -1662,6 +1692,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(data) as actual:
                 pass
 
+    @requires_dask
     def test_chunk_encoding_with_dask(self):
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
@@ -1675,11 +1706,27 @@ class ZarrBase(CFEncodedBase):
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({"x": (5, 4, 3)})
-        with pytest.raises(ValueError) as e_info:
+        with raises_regex(ValueError, "uniform chunk sizes."):
             with self.roundtrip(ds_chunk_irreg) as actual:
                 pass
-        # make sure this error message is correct and not some other error
-        assert e_info.match("chunks")
+
+        # should fail if encoding["chunks"] clashes with dask_chunks
+        badenc = ds.chunk({"x": 4})
+        badenc.var1.encoding["chunks"] = (6,)
+        with raises_regex(NotImplementedError, "named 'var1' would overlap"):
+            with self.roundtrip(badenc) as actual:
+                pass
+
+        badenc.var1.encoding["chunks"] = (2,)
+        with raises_regex(ValueError, "Specified Zarr chunk encoding"):
+            with self.roundtrip(badenc) as actual:
+                pass
+
+        badenc = badenc.chunk({"x": (3, 3, 6)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with raises_regex(ValueError, "incompatible with this encoding"):
+            with self.roundtrip(badenc) as actual:
+                pass
 
         # ... except if the last chunk is smaller than the first
         ds_chunk_irreg = ds.chunk({"x": (5, 5, 2)})
@@ -1800,7 +1847,7 @@ class ZarrBase(CFEncodedBase):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
-    # TODO: someone who understand caching figure out whether chaching
+    # TODO: someone who understand caching figure out whether caching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
@@ -1808,55 +1855,44 @@ class ZarrBase(CFEncodedBase):
 
     @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
+        super().test_append_write()
+
+    def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
-            ds_to_append.to_zarr(store_target, append_dim="time")
-            original = xr.concat([ds, ds_to_append], dim="time")
-            assert_identical(original, xr.open_zarr(store_target))
-
-    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
-    def test_append_overwrite_values(self):
-        super().test_append_overwrite_values()
-
-    def test_append_with_invalid_dim_raises(self):
-
-        ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim not valid
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+            with pytest.raises(
+                ValueError, match="does not match any existing dataset dimensions"
+            ):
                 ds_to_append.to_zarr(store_target, append_dim="notvalid")
 
+    def test_append_with_no_dims_raises(self):
+        with self.create_zarr_target() as store_target:
+            Dataset({"foo": ("x", [1])}).to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="different dimension names"):
+                Dataset({"foo": ("y", [2])}).to_zarr(store_target, mode="a")
+
     def test_append_with_append_dim_not_set_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim not set
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="different dimension sizes"):
                 ds_to_append.to_zarr(store_target, mode="a")
 
     def test_append_with_mode_not_a_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when append_dim is set and mode != 'a'
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(
+                ValueError, match="append_dim was set along with mode='w'"
+            ):
                 ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
 
     def test_append_with_existing_encoding_raises(self):
-
         ds, ds_to_append, _ = create_append_test_data()
-
-        # check failure when providing encoding to existing variable
-        with pytest.raises(ValueError):
-            with self.create_zarr_target() as store_target:
-                ds.to_zarr(store_target, mode="w")
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="but encoding was provided"):
                 ds_to_append.to_zarr(
                     store_target,
                     append_dim="time",
@@ -1896,6 +1932,7 @@ class ZarrBase(CFEncodedBase):
             combined["new_var"] = ds_with_new_var["new_var"]
             assert_identical(combined, xr.open_zarr(store_target))
 
+    @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -1915,6 +1952,7 @@ class ZarrBase(CFEncodedBase):
             with self.open(store) as actual:
                 assert_identical(original, actual)
 
+    @requires_dask
     def test_to_zarr_append_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -1951,6 +1989,7 @@ class ZarrBase(CFEncodedBase):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
+    @requires_dask
     def test_encoding_chunksizes(self):
         # regression test for GH2278
         # see also test_encoding_chunksizes_unlimited
@@ -2144,7 +2183,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
             valid_engines.add("scipy")
 
         for write_engine in valid_engines:
-            for format in ["NETCDF3_CLASSIC", "NETCDF3_64BIT"]:
+            for format in self.netcdf3_formats:
                 with create_tmp_file() as tmp_file:
                     data.to_netcdf(tmp_file, format=format, engine=write_engine)
                     for read_engine in valid_engines:
@@ -3445,6 +3484,7 @@ class TestPseudoNetCDFFormat:
         assert_allclose(expected, actual)
         camxfile.close()
 
+    @requires_dask
     def test_uamiv_format_mfread(self):
         """
         Open a CAMx file and test data variables
@@ -3523,11 +3563,21 @@ def create_tmp_geotiff(
     ny=3,
     nz=3,
     transform=None,
-    transform_args=[5000, 80000, 1000, 2000.0],
-    crs={"units": "m", "no_defs": True, "ellps": "WGS84", "proj": "utm", "zone": 18},
+    transform_args=default_value,
+    crs=default_value,
     open_kwargs=None,
     additional_attrs=None,
 ):
+    if transform_args is default_value:
+        transform_args = [5000, 80000, 1000, 2000.0]
+    if crs is default_value:
+        crs = {
+            "units": "m",
+            "no_defs": True,
+            "ellps": "WGS84",
+            "proj": "utm",
+            "zone": 18,
+        }
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -3871,6 +3921,9 @@ class TestRasterio:
                 ex = expected.sel(band=1).mean(dim="x")
                 assert_allclose(ac, ex)
 
+    @pytest.mark.xfail(
+        not has_dask, reason="without dask, a non-serializable lock is used"
+    )
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
@@ -3944,6 +3997,7 @@ class TestRasterio:
             with xr.open_rasterio(tmp_file) as rioda:
                 assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
 
+    @requires_dask
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,
         # including paths to remote files.
@@ -4037,6 +4091,19 @@ class TestRasterio:
                         assert actual_res == expected_res
                         assert actual_shape == expected_shape
                         assert actual_transform == expected_transform
+
+    def test_rasterio_vrt_with_src_crs(self):
+        # Test open_rasterio() support of WarpedVRT with specified src_crs
+        import rasterio
+
+        # create geotiff with no CRS and specify it manually
+        with create_tmp_geotiff(crs=None) as (tmp_file, expected):
+            src_crs = rasterio.crs.CRS({"init": "epsg:32618"})
+            with rasterio.open(tmp_file) as src:
+                assert src.crs is None
+                with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
+                    with xr.open_rasterio(vrt) as da:
+                        assert da.crs == src_crs
 
     @network
     def test_rasterio_vrt_network(self):
@@ -4266,6 +4333,12 @@ def test_source_encoding_always_present():
             assert ds.encoding["source"] == tmp
 
 
+def _assert_no_dates_out_of_range_warning(record):
+    undesired_message = "dates out of range"
+    for warning in record:
+        assert undesired_message not in str(warning.message)
+
+
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 def test_use_cftime_standard_calendar_default_in_range(calendar):
@@ -4292,7 +4365,7 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
             with open_dataset(tmp_file) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_cftime
@@ -4355,7 +4428,7 @@ def test_use_cftime_true(calendar, units_year):
             with open_dataset(tmp_file, use_cftime=True) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_scipy_or_netCDF4
@@ -4384,7 +4457,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
             with open_dataset(tmp_file, use_cftime=False) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
-            assert not record
+            _assert_no_dates_out_of_range_warning(record)
 
 
 @requires_scipy_or_netCDF4

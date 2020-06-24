@@ -62,6 +62,7 @@ Extend xarray capabilities
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
+- `xarray-custom <https://github.com/astropenguin/xarray-custom>`_: Data classes for custom xarray creation.
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
@@ -75,6 +76,7 @@ Visualization
 - `Datashader <https://datashader.org>`_, `geoviews <http://geo.holoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
+- `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiles map plotting based on ipyleaflet.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~

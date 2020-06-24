@@ -153,6 +153,7 @@ def _determine_cmap_params(
     levels=None,
     filled=True,
     norm=None,
+    _is_facetgrid=False,
 ):
     """
     Use some heuristics to set good defaults for colorbar and range.
@@ -168,6 +169,9 @@ def _determine_cmap_params(
         Use depends on the type of the plotting function
     """
     import matplotlib as mpl
+
+    if isinstance(levels, Iterable):
+        levels = sorted(levels)
 
     calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
@@ -216,8 +220,13 @@ def _determine_cmap_params(
         vlim = abs(vmax - center)
 
     if possibly_divergent:
+        levels_are_divergent = (
+            isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
+        )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = ((vmin < 0) and (vmax > 0)) or not center_is_none
+        divergent = (
+            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
+        )
     else:
         divergent = False
 
@@ -237,18 +246,14 @@ def _determine_cmap_params(
             norm.vmin = vmin
         else:
             if not vmin_was_none and vmin != norm.vmin:
-                raise ValueError(
-                    "Cannot supply vmin and a norm" + " with a different vmin."
-                )
+                raise ValueError("Cannot supply vmin and a norm with a different vmin.")
             vmin = norm.vmin
 
         if norm.vmax is None:
             norm.vmax = vmax
         else:
             if not vmax_was_none and vmax != norm.vmax:
-                raise ValueError(
-                    "Cannot supply vmax and a norm" + " with a different vmax."
-                )
+                raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
     # if BoundaryNorm, then set levels
@@ -263,7 +268,7 @@ def _determine_cmap_params(
             cmap = OPTIONS["cmap_sequential"]
 
     # Handle discrete levels
-    if levels is not None and norm is None:
+    if levels is not None:
         if is_scalar(levels):
             if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
@@ -274,6 +279,10 @@ def _determine_cmap_params(
                 ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
+
+    # GH3734
+    if vmin == vmax:
+        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
@@ -351,7 +360,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
-    assert x is None or x != y
+    if (x is not None) and (x == y):
+        raise ValueError("x and y cannot be equal.")
+
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
@@ -360,16 +371,39 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError("DataArray must be 2d")
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims and y not in darray.coords:
-            raise ValueError("y must be a dimension name if x is not supplied")
+        _assert_valid_xy(darray, y, "y")
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims and x not in darray.coords:
-            raise ValueError("x must be a dimension name if y is not supplied")
+        _assert_valid_xy(darray, x, "x")
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
-    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
-        raise ValueError("x and y must be coordinate variables")
+    else:
+        _assert_valid_xy(darray, x, "x")
+        _assert_valid_xy(darray, y, "y")
+
+        if (
+            all(k in darray._level_coords for k in (x, y))
+            and darray._level_coords[x] == darray._level_coords[y]
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
+
     return x, y
+
+
+def _assert_valid_xy(darray, xy, name):
+    """
+    make sure x and y passed to plotting functions are valid
+    """
+
+    # MultiIndex cannot be plotted; no point in allowing them here
+    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+
+    valid_xy = (
+        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    ) - multiindex
+
+    if xy not in valid_xy:
+        valid_xy_str = "', '".join(sorted(valid_xy))
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
 
 def get_axis(figsize, size, aspect, ax):
@@ -534,7 +568,7 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
     other_types = [datetime]
     try:
         import cftime
@@ -549,10 +583,10 @@ def _ensure_plottable(*args):
             or _valid_other_type(np.array(x), other_types)
         ):
             raise TypeError(
-                "Plotting requires coordinates to be numeric "
-                "or dates of type np.datetime64, "
+                "Plotting requires coordinates to be numeric, boolean, "
+                "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                "pd.Interval."
+                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
             _valid_other_type(np.array(x), cftime_datetime)
@@ -573,14 +607,15 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = import_matplotlib_pyplot()
+
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
 
-    cbar = plt.colorbar(primitive, **cbar_kwargs)
+    fig = ax.get_figure()
+    cbar = fig.colorbar(primitive, **cbar_kwargs)
 
     return cbar
 
@@ -727,6 +762,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
+    _is_facetgrid=False,
     **kwargs,
 ):
     """
@@ -773,6 +809,12 @@ def _process_cmap_cbar_kwargs(
 
     cmap_args = getfullargspec(_determine_cmap_params).args
     cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-    cmap_params = _determine_cmap_params(**cmap_kwargs)
+    if not _is_facetgrid:
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+    else:
+        cmap_params = {
+            k: cmap_kwargs[k]
+            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+        }
 
     return cmap_params, cbar_kwargs
