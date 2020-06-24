@@ -3,7 +3,7 @@
 import contextlib
 import functools
 from datetime import datetime, timedelta
-from itertools import zip_longest
+from itertools import chain, zip_longest
 from typing import Hashable
 
 import numpy as np
@@ -422,6 +422,17 @@ def set_numpy_options(*args, **kwargs):
         np.set_printoptions(**original)
 
 
+def limit_lines(string: str, *, limit: int):
+    """
+    If the string is more lines than the limit,
+    this returns the middle lines replaced by an ellipsis
+    """
+    lines = string.splitlines()
+    if len(lines) > limit:
+        string = "\n".join(chain(lines[: limit // 2], ["..."], lines[-limit // 2 :]))
+    return string
+
+
 def short_numpy_repr(array):
     array = np.asarray(array)
 
@@ -447,7 +458,7 @@ def short_data_repr(array):
     elif hasattr(internal_data, "__array_function__") or isinstance(
         internal_data, dask_array_type
     ):
-        return repr(array.data)
+        return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
     else:
