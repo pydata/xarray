@@ -6,10 +6,10 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 from typing import Dict, Iterator, Optional, Tuple
 
 import yaml
+from dateutil.relativedelta import relativedelta
 
 IGNORE_DEPS = {
     "black",
