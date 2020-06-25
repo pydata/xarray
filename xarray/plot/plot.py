@@ -548,7 +548,8 @@ def _plot2d(plotfunc):
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots.
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for 2D and FacetGrid plots.
     cbar_ax : matplotlib Axes, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional

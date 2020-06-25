@@ -2413,19 +2413,14 @@ def test_get_axis(figsize, aspect, size):
         with pytest.raises(ValueError, match="`aspect` argument without `size`"):
             ax = get_axis(figsize, size, aspect, ax)
 
-    ax = plt.axes()
-    axtype = type(ax)
     ax = get_axis(ax=ax)
-    assert isinstance(ax, axtype)
+    assert isinstance(ax, mpl.axes.Axes)
     ax = get_axis()
-    assert isinstance(ax, axtype)
+    assert isinstance(ax, mpl.axes.Axes)
 
-    try:
-        import cartopy as ctpy  # type: ignore
 
-        kwargs = {"projection": ctpy.crs.PlateCarree()}
-        ax = get_axis(**kwargs)
-        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
-    except ImportError:
-        # not testing cartopy
-        pass
+def test_get_axis_cartopy():
+    ctpy = pytest.importorskip("cartopy")
+    kwargs = {"projection": ctpy.crs.PlateCarree()}
+    ax = get_axis(**kwargs)
+    assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
