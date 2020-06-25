@@ -28,6 +28,7 @@ from . import (
     requires_matplotlib,
     requires_nc_time_axis,
     requires_seaborn,
+    requires_cartopy,
 )
 
 # import mpl and change the backend before other mpl imports
@@ -2421,6 +2422,8 @@ def test_get_axis(figsize, aspect, size):
 
 @requires_cartopy
 def test_get_axis_cartopy():
+    import cartopy as ctpy
+
     kwargs = {"projection": ctpy.crs.PlateCarree()}
     ax = get_axis(**kwargs)
     assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
