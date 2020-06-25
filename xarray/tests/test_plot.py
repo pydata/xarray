@@ -24,11 +24,11 @@ from . import (
     assert_equal,
     has_nc_time_axis,
     raises_regex,
+    requires_cartopy,
     requires_cftime,
     requires_matplotlib,
     requires_nc_time_axis,
     requires_seaborn,
-    requires_cartopy,
 )
 
 # import mpl and change the backend before other mpl imports
@@ -37,6 +37,11 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
+
+try:
+    import cartopy as ctpy  # type: ignore
+except ImportError:
+    ctpy = None
 
 
 @pytest.mark.flaky
