@@ -6,7 +6,7 @@ dependencies:
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
   # doc/installing.rst and setup.py.
-  - python=3.6
+  - python=3.8
   - black
   - boto3=1.9
   - bottleneck=1.2
