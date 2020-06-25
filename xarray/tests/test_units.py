@@ -11,7 +11,7 @@ from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import assert_allclose, assert_equal, assert_identical
-from .test_variable import _PAD_XR_NP_ARGS, VariableSubclassobjects
+from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
@@ -1499,61 +1499,7 @@ def test_dot_dataarray(dtype):
     assert_identical(expected, actual)
 
 
-def delete_attrs(*to_delete):
-    def wrapper(cls):
-        for item in to_delete:
-            setattr(cls, item, None)
-
-        return cls
-
-    return wrapper
-
-
-@delete_attrs(
-    "test_getitem_with_mask",
-    "test_getitem_with_mask_nd_indexer",
-    "test_index_0d_string",
-    "test_index_0d_datetime",
-    "test_index_0d_timedelta64",
-    "test_0d_time_data",
-    "test_index_0d_not_a_time",
-    "test_datetime64_conversion",
-    "test_timedelta64_conversion",
-    "test_pandas_period_index",
-    "test_1d_reduce",
-    "test_array_interface",
-    "test___array__",
-    "test_copy_index",
-    "test_concat_number_strings",
-    "test_concat_fixed_len_str",
-    "test_concat_mixed_dtypes",
-    "test_pandas_datetime64_with_tz",
-    "test_pandas_data",
-    "test_multiindex",
-)
-class TestVariable(VariableSubclassobjects):
-    @staticmethod
-    def cls(dims, data, *args, **kwargs):
-        return xr.Variable(
-            dims, unit_registry.Quantity(data, unit_registry.m), *args, **kwargs
-        )
-
-    def example_1d_objects(self):
-        for data in [
-            range(3),
-            0.5 * np.arange(3),
-            0.5 * np.arange(3, dtype=np.float32),
-            np.array(["a", "b", "c"], dtype=object),
-        ]:
-            yield (self.cls("x", data), data)
-
-    # TODO: remove once pint==0.12 has been released
-    @pytest.mark.xfail(
-        LooseVersion(pint.__version__) <= "0.12", reason="pint bug in isclose"
-    )
-    def test_real_and_imag(self):
-        super().test_real_and_imag()
-
+class TestVariable:
     @pytest.mark.parametrize(
         "func",
         (
@@ -2235,6 +2181,39 @@ class TestVariable(VariableSubclassobjects):
         actual = variable.no_conflicts(other)
 
         assert expected == actual
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "mean",
+            "median",
+            "reflect",
+            "edge",
+            pytest.param(
+                "linear_ramp",
+                marks=pytest.mark.xfail(
+                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
+                ),
+            ),
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad(self, mode, xr_arg, np_arg):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2) * unit_registry.m
+        v = xr.Variable(["x", "y", "z"], data)
+
+        expected = attach_units(
+            strip_units(v).pad(mode=mode, **xr_arg), extract_units(v),
+        )
+        actual = v.pad(mode=mode, **xr_arg)
+
+        assert_units_equal(expected, actual)
+        assert_equal(actual, expected)
+        assert isinstance(actual._data, type(v._data))
 
     @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
     def test_pad_constant_values(self, dtype, xr_arg, np_arg):
