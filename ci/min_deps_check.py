@@ -5,7 +5,7 @@ policy on obsolete dependencies is being followed. Print a pretty report :)
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from typing import Dict, Iterator, Optional, Tuple
 
@@ -195,8 +195,8 @@ def main() -> None:
     for row in rows:
         print(fmt.format(*row))
 
-    assert not has_errors
+    return has_errors
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
