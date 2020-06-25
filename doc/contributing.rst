@@ -347,7 +347,10 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
+  code formatting
+- `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
+  standardized code formatting in documentation
 - `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
 - `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
   See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
@@ -356,12 +359,13 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 
 ``pip``::
 
-   pip install black flake8 isort mypy
+   pip install black flake8 isort mypy blackdoc
 
 and then run from the root of the Xarray repository::
 
    isort -rc .
    black -t py36 .
+   blackdoc -t py36 .
    flake8
    mypy .
 
