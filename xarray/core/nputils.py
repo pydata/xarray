@@ -16,7 +16,7 @@ except ImportError:
 def normalize_axis_index(data, axis):
     # matches numpy.core.multiarray.normalize_axis_index
     # duplicated here because the NumPy function is not a public API
-    ndim = data.ndim
+    ndim = np.ndim(data)
     if not -ndim <= axis < ndim:
         raise np.AxisError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
     if axis < 0:
