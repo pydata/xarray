@@ -2419,8 +2419,8 @@ def test_get_axis(figsize, aspect, size):
     assert isinstance(ax, mpl.axes.Axes)
 
 
+@requires_cartopy
 def test_get_axis_cartopy():
-    ctpy = pytest.importorskip("cartopy")
     kwargs = {"projection": ctpy.crs.PlateCarree()}
     ax = get_axis(**kwargs)
     assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
