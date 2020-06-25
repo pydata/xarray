@@ -13,10 +13,9 @@ except ImportError:
     _USE_BOTTLENECK = False
 
 
-def normalize_axis_index(data, axis):
+def normalize_axis_index(axis, ndim):
     # matches numpy.core.multiarray.normalize_axis_index
     # duplicated here because the NumPy function is not a public API
-    ndim = np.ndim(data)
     if not -ndim <= axis < ndim:
         raise np.AxisError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
     if axis < 0:
