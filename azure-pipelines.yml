@@ -104,7 +104,7 @@ jobs:
   steps:
   - template: ci/azure/add-conda-to-path.yml
   - bash: |
-      conda install -y pyyaml
+      conda install -y pyyaml python-dateutil
       python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
       python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
     displayName: minimum versions policy
