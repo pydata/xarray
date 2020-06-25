@@ -1503,7 +1503,7 @@ class TestDataArray:
             da.reindex(time=time2)
 
         # regression test for #736, reindex can not change complex nums dtype
-        x = np.array([1, 2, 3], dtype=np.complex)
+        x = np.array([1, 2, 3], dtype=complex)
         x = DataArray(x, coords=[[0.1, 0.2, 0.3]])
         y = DataArray([2, 5, 6, 7, 8], coords=[[-1.1, 0.21, 0.31, 0.41, 0.51]])
         re_dtype = x.reindex_like(y, method="pad").dtype
@@ -1930,9 +1930,9 @@ class TestDataArray:
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
             a += b
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
             b += a
 
     def test_math_name(self):
@@ -5255,6 +5255,25 @@ class TestReduce2D(TestReduce):
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
+
+
+class TestReduceND(TestReduce):
+    @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("ndim", [3, 5])
+    def test_idxminmax_dask(self, op, ndim):
+        if not has_dask:
+            pytest.skip("requires dask")
+
+        ar0_raw = xr.DataArray(
+            np.random.random_sample(size=[10] * ndim),
+            dims=[i for i in "abcdefghij"[: ndim - 1]] + ["x"],
+            coords={"x": np.arange(10)},
+            attrs=self.attrs,
+        )
+
+        ar0_dsk = ar0_raw.chunk({})
+        # Assert idx is the same with dask and without
+        assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
 @pytest.fixture(params=[1])
