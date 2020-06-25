@@ -33,6 +33,13 @@ Breaking changes
   <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
+- The old :py:func:`auto_combine` function has now been removed in
+  favour of the :py:func:`combine_by_coords` and
+  :py:func:`combine_nested` functions. This also means that
+  the default behaviour of :py:func:`open_mfdataset` has changed to use
+  ``combine='by_coords'`` as the default argument value. (:issue:`2616`, :pull:`3926`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Enhancements
 ~~~~~~~~~~~~
@@ -66,12 +73,15 @@ New Features
 - Limited the length of array items with long string reprs to a
   reasonable width (:pull:`3900`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
+- Limited the number of lines of large arrays when numpy reprs would have greater than 40.
+  (:pull:`3905`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
-  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`, :pull:`4135`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Pascal Bourgault <https://github.com/aulemahal>`_.
 - More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
@@ -96,7 +106,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_
 - :py:meth:`map_blocks` can now handle dask-backed xarray objects in ``args``. (:pull:`3818`)
   By `Deepak Cherian <https://github.com/dcherian>`_
-
 - Add keyword ``decode_timedelta`` to :py:func:`xarray.open_dataset`,
   (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
@@ -105,6 +114,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix errors combining attrs in :py:func:`open_mfdataset` (:issue:`4009`, :pull:`4173`)
+  By `John Omotani <https://github.com/johnomotani>`_
 - If groupby receives a ``DataArray`` with name=None, assign a default name (:issue:`158`)
   By `Phil Butcher <https://github.com/pjbutcher>`_.
 - Support dark mode in VS code (:issue:`4024`)

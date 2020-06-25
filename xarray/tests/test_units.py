@@ -1519,7 +1519,7 @@ class TestVariable:
         actual = func(variable)
 
         assert_units_equal(expected, actual)
-        assert_identical(expected, actual)
+        assert_allclose(expected, actual)
 
     def test_aggregate_complex(self):
         variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
@@ -3982,7 +3982,7 @@ class TestDataset:
         expected = attach_units(func(strip_units(ds)), units)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):

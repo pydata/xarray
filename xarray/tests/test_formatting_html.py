@@ -48,7 +48,7 @@ def dataset():
 
 def test_short_data_repr_html(dataarray):
     data_repr = fh.short_data_repr_html(dataarray)
-    assert data_repr.startswith("array")
+    assert data_repr.startswith("<pre>array")
 
 
 def test_short_data_repr_html_non_str_keys(dataset):
