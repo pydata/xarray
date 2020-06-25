@@ -1,6 +1,5 @@
 import functools
 import operator
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -2395,7 +2394,7 @@ class TestDataArray:
                 operator.eq,
                 id="equal",
                 marks=pytest.mark.xfail(
-                    LooseVersion(pint.__version__) < "0.14",
+                    # LooseVersion(pint.__version__) < "0.14",
                     reason="inconsistencies in the return values of pint's eq",
                 ),
             ),
