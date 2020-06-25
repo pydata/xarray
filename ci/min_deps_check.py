@@ -141,11 +141,9 @@ def process_pkg(
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
     policy_published = datetime.now() - timedelta(days=policy_months * 30)
 
-    policy_versions = {
-        version: date for version, date in versions.items() if date < policy_published
-    }
-    version_and_date = lambda version: (version, policy_versions[version])
-    policy_major, policy_minor = max(policy_versions, key=version_and_date)
+    policy_major, policy_minor = max(
+        version for version, date in versions.items() if date < policy_published
+    )
     policy_published_actual = versions[policy_major, policy_minor]
 
     if (req_major, req_minor) < (policy_major, policy_minor):
