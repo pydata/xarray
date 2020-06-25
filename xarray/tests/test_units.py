@@ -2185,6 +2185,7 @@ class TestVariable:
     @pytest.mark.parametrize(
         "mode",
         [
+            "constant",
             "mean",
             "median",
             "reflect",
@@ -2213,34 +2214,6 @@ class TestVariable:
 
         assert_units_equal(expected, actual)
         assert_equal(actual, expected)
-        assert isinstance(actual._data, type(v._data))
-
-    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
-    def test_pad_constant_values(self, dtype, xr_arg, np_arg):
-        data = np.arange(4 * 3 * 2).reshape(4, 3, 2).astype(dtype) * unit_registry.m
-        v = xr.Variable(["x", "y", "z"], data)
-
-        actual = v.pad(**xr_arg, mode="constant")
-        expected = xr.Variable(
-            v.dims,
-            np.pad(
-                v.data.astype(float), np_arg, mode="constant", constant_values=np.nan,
-            ),
-        )
-        assert_identical(expected, actual)
-        assert_units_equal(expected, actual)
-        assert isinstance(actual._data, type(v._data))
-
-        # for the boolean array, we pad False
-        data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
-        v = xr.Variable(["x", "y", "z"], data)
-        actual = v.pad(**xr_arg, mode="constant", constant_values=data.flat[0])
-        expected = xr.Variable(
-            v.dims,
-            np.pad(v.data, np_arg, mode="constant", constant_values=v.data.flat[0]),
-        )
-        assert_identical(actual, expected)
-        assert_units_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
