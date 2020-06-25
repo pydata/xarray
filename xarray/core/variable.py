@@ -1774,13 +1774,19 @@ class Variable(
 
         from .computation import apply_ufunc
 
-        _quantile_func = np.nanquantile if skipna else np.quantile
+        # TODO: switch to nanquantile/quantile once numpy >= 1.15.0 is the
+        # minimum requirement
+        _percentile_func = np.nanpercentile if skipna else np.percentile
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
         scalar = utils.is_scalar(q)
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        # TODO: remove once numpy >= 1.15.0 is the minimum requirement
+        if np.count_nonzero(q < 0.0) or np.count_nonzero(q > 1.0):
+            raise ValueError("Quantiles must be in the range [0, 1]")
 
         if dim is None:
             dim = self.dims
@@ -1790,7 +1796,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+            return np.moveaxis(_percentile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1802,7 +1808,7 @@ class Variable(
             output_dtypes=[np.float64],
             output_sizes={"quantile": len(q)},
             dask="parallelized",
-            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
+            kwargs={"q": q * 100, "axis": axis, "interpolation": interpolation},
         )
 
         # for backward compatibility

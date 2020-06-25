@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index
 
 try:
     import bottleneck as bn
@@ -12,6 +11,17 @@ except ImportError:
     # use numpy methods instead
     bn = np
     _USE_BOTTLENECK = False
+
+
+def normalize_axis_index(data, axis):
+    # matches numpy.core.multiarray.normalize_axis_index
+    # duplicated here because the NumPy function is not a public API
+    ndim = data.ndim
+    if not -ndim <= axis < ndim:
+        raise np.AxisError(f"axis {axis!r} out of bounds [-{ndim}, {ndim})")
+    if axis < 0:
+        axis += ndim
+    return axis
 
 
 def _select_along_axis(values, idx, axis):
