@@ -2410,8 +2410,7 @@ def test_get_axis(figsize, aspect, size):
 
     if figsize is None and aspect is not None and size is None:
         # cannot provide aspect and size
-        with pytest.raises(ValueError,
-                           match="`aspect` argument without `size`"):
+        with pytest.raises(ValueError, match="`aspect` argument without `size`"):
             ax = get_axis(figsize, size, aspect, ax)
 
     ax = plt.axes()
