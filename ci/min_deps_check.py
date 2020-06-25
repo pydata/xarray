@@ -139,7 +139,7 @@ def process_pkg(
         return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
-    policy_published = datetime.now() - timedelta(days=policy_months * 30)
+    policy_published = datetime.utcnow() - timedelta(days=policy_months * 30.44)
 
     policy_major, policy_minor = max(
         version for version, date in versions.items() if date < policy_published
