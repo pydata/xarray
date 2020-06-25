@@ -23,7 +23,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Minimum supported versions for the following packages have changed: ``dask >=2.9``,
-  ``distributed>=2.9``, ``scipy>=1.4``.
+  ``distributed>=2.9``.
   By `Deepak Cherian <https://github.com/dcherian>`_
 - ``groupby`` operations will restore coord dimension order. Pass ``restore_coord_dims=False``
   to revert to previous behavior.
