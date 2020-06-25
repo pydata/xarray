@@ -141,21 +141,22 @@ def process_pkg(
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
     policy_published = datetime.now() - timedelta(days=policy_months * 30)
 
-    policy_major = req_major
-    policy_minor = req_minor
-    policy_published_actual = req_published
-    for (major, minor), published in reversed(sorted(versions.items())):
-        if published < policy_published:
-            break
-        policy_major = major
-        policy_minor = minor
-        policy_published_actual = published
+    policy_versions = {
+        version: date for version, date in versions.items() if date < policy_published
+    }
+    version_and_date = lambda version: (version, policy_versions[version])
+    policy_major, policy_minor = max(policy_versions, key=version_and_date)
+    policy_published_actual = versions[policy_major, policy_minor]
 
     if (req_major, req_minor) < (policy_major, policy_minor):
         status = "<"
     elif (req_major, req_minor) > (policy_major, policy_minor):
         status = "> (!)"
-        error("Package is too new: " + pkg)
+        error(
+            f"Package is too new: {pkg}={req_major}.{req_minor} was "
+            f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
+            f"(within the past {policy_months} months)"
+        )
     else:
         status = "="
 
