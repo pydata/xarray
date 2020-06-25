@@ -6,6 +6,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from typing import Dict, Iterator, Optional, Tuple
 
 import yaml
@@ -139,7 +140,7 @@ def process_pkg(
         return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
-    policy_published = datetime.utcnow() - timedelta(days=policy_months * 30.44)
+    policy_published = datetime.utcnow() - relativedelta(months=policy_months)
 
     policy_major, policy_minor = max(
         version for version, date in versions.items() if date < policy_published
@@ -188,9 +189,9 @@ def main() -> None:
         ]
         rows = [f.result() for f in futures]
 
-    print("Package       Required             Policy               Status")
-    print("------------- -------------------- -------------------- ------")
-    fmt = "{:13} {:7} ({:10}) {:7} ({:10}) {}"
+    print("Package        Required             Policy               Status")
+    print("-------------- -------------------- -------------------- ------")
+    fmt = "{:14} {:7} ({:10}) {:7} ({:10}) {}"
     for row in rows:
         print(fmt.format(*row))
 
