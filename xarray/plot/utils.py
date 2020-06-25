@@ -433,8 +433,6 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
     if kwargs and ax is not None:
         raise ValueError("cannot use subplot_kws with existing ax")
 
-    kwargs = kwargs if kwargs else dict()
-
     if ax is None:
         ax = plt.gca(**kwargs)
 

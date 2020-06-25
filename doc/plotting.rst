@@ -743,9 +743,9 @@ This script will plot the air temperature on a map.
 
     air = xr.tutorial.open_dataset("air_temperature").air
 
-    p = air.isel(time=0).plot(subplot_kws=dict(projection=ccrs.Orthographic(-80, 35),
-                                               facecolor="gray"),
-                              transform=ccrs.PlateCarree())
+    p = air.isel(time=0).plot(
+        subplot_kws=dict(projection=ccrs.Orthographic(-80, 35), facecolor="gray"),
+        transform=ccrs.PlateCarree())
     p.axes.set_global()
 
     @savefig plotting_maps_cartopy.png width=100%

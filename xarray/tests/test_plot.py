@@ -2427,5 +2427,5 @@ def test_get_axis(figsize, aspect, size):
         ax = get_axis(**kwargs)
         assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
     except ImportError:
-        print("not testing cartopy")
+        # not testing cartopy
         pass

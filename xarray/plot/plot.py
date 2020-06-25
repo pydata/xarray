@@ -121,7 +121,7 @@ def plot(
     ax=None,
     hue=None,
     rtol=0.01,
-    subplot_kws=dict(),
+    subplot_kws=None,
     **kwargs,
 ):
     """
@@ -591,7 +591,7 @@ def _plot2d(plotfunc):
         levels=None,
         infer_intervals=None,
         colors=None,
-        subplot_kws=dict(),
+        subplot_kws=None,
         cbar_ax=None,
         cbar_kwargs=None,
         xscale=None,
@@ -718,6 +718,8 @@ def _plot2d(plotfunc):
                 "plt.imshow's `aspect` kwarg is not available " "in xarray"
             )
 
+        if subplot_kws is None:
+            subplot_kws = dict()
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
@@ -793,7 +795,7 @@ def _plot2d(plotfunc):
         extend=None,
         levels=None,
         infer_intervals=None,
-        subplot_kws=dict(),
+        subplot_kws=None,
         cbar_ax=None,
         cbar_kwargs=None,
         xscale=None,
