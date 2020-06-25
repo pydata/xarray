@@ -8,8 +8,8 @@ Required dependencies
 
 - Python (3.6 or later)
 - setuptools
-- `numpy <http://www.numpy.org/>`__ (1.15 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
+- `numpy <http://www.numpy.org/>`__ (1.14 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.24 or later)
 
 .. _optional-dependencies:
 
