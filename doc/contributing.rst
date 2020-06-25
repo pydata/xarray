@@ -148,7 +148,7 @@ We'll now kick off a two-step process:
 1. Install the build dependencies
 2. Build and install xarray
 
-.. code-block:: none
+.. code-block:: sh
 
    # Create and activate the build environment
    # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
@@ -162,7 +162,10 @@ We'll now kick off a two-step process:
    # Build and install xarray
    pip install -e .
 
-At this point you should be able to import *xarray* from your locally built version::
+At this point you should be able to import *xarray* from your locally
+built version:
+
+.. code-block:: sh
 
    $ python  # start an interpreter
    >>> import xarray
@@ -256,7 +259,9 @@ Some other important things to know about the docs:
 - The tutorials make heavy use of the `ipython directive
   <http://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
   This directive lets you put code in the documentation which will be run
-  during the doc build. For example::
+  during the doc build. For example:
+
+  .. code:: rst
 
       .. ipython:: python
 
@@ -290,7 +295,7 @@ Requirements
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
-.. code-block:: none
+.. code-block:: sh
 
     # Create and activate the docs environment
     conda env create -f ci/requirements/doc.yml
