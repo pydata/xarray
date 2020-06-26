@@ -6369,8 +6369,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
     def argmin(self, dim=None, axis=None, **kwargs):
-        """Apply argmin() to each variable in the Dataset
-        """
+        """Indices of the minima of the member variables.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmin
+
+       """
         if dim is None and axis is None:
             warnings.warn(
                 "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
@@ -6399,8 +6432,41 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
     def argmax(self, dim=None, axis=None, **kwargs):
-        """Apply argmax() to each variable in the Dataset
-        """
+        """Indices of the maxima of the member variables.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmax will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmax
+
+       """
         if dim is None and axis is None:
             warnings.warn(
                 "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
