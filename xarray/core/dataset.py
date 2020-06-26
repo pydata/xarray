@@ -4295,15 +4295,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
-                    if len(reduce_dims) == var.ndim:
+                    if len(reduce_dims) == 1:
+                        # unpack dimensions for the benefit of functions
+                        # like np.argmin which can't handle tuple arguments
+                        (reduce_dims,) = reduce_dims
+                    elif len(reduce_dims) == var.ndim:
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
                         # the former is often more efficient
                         reduce_dims = None  # type: ignore
-                    elif len(reduce_dims) == 1:
-                        # unpack dimensions for the benefit of functions
-                        # like np.argmin which can't handle tuple arguments
-                        (reduce_dims,) = reduce_dims
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_dims,
