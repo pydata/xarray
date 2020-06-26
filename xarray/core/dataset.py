@@ -4582,17 +4582,49 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _set_numpy_data_from_dataframe(
         self, dataframe: pd.DataFrame, dims: tuple
     ) -> None:
+
         idx = dataframe.index
-        if isinstance(idx, pd.MultiIndex):
-            # expand the DataFrame to include the product of all levels
+
+        if not isinstance(idx, pd.MultiIndex):
+            for name, series in dataframe.items():
+                self[name] = (dims, np.asarray(series))
+            return
+
+        shape = tuple(lev.size for lev in idx.levels)
+
+        # all elements in the result index a unique combination of MultiIndex
+        # levels, so if there are more of them than elements in the source,
+        # then we *must* be inserting missing values
+        definitely_inserting_na = np.prod(shape) > dataframe.shape[0]
+
+        if definitely_inserting_na or all(
+            issubclass(dtype.type, dtypes.TYPES_WITH_NA) for dtype in dataframe.dtypes
+        ):
+            full_indexer = tuple(idx.codes)
+            for name, series in dataframe.items():
+                data = np.asarray(series)
+                dtype, fill_value = dtypes.maybe_promote(data.dtype)
+                # much faster than reindex:
+                # https://stackoverflow.com/a/35049899/809705
+                new_data = np.full(shape, fill_value, dtype)
+                new_data[full_indexer] = data
+                self[name] = (dims, new_data)
+        else:
+            # It can be very expensive to use get_indexer/reindex to check
+            # whether all values are found in a MultiIndex:
+            # https://github.com/pydata/xarray/issues/2459
+
+            # Unfortunately, we sometimes need to do this in order to return
+            # the correct dtype for columns that don't support NA: if there are
+            # no missing values, then the dtype should be preserved and we
+            # cannot insert a fill value.
+
             full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
             dataframe = dataframe.reindex(full_idx)
             shape = tuple(lev.size for lev in idx.levels)
-        else:
-            shape = (idx.size,)
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
-            self[name] = (dims, data)
+            for name, series in dataframe.items():
+                data = np.asarray(series).reshape(shape)
+                self[name] = (dims, data)
 
     @classmethod
     def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":

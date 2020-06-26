@@ -42,6 +42,9 @@ PROMOTE_TO_OBJECT = [
 ]
 
 
+TYPES_WITH_NA = (np.inexact, np.timedelta64, np.datetime64)
+
+
 def maybe_promote(dtype):
     """Simpler equivalent of pandas.core.common._maybe_promote
 
