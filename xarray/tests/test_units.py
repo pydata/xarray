@@ -3711,6 +3711,7 @@ class TestDataArray:
                     reason="numbagg functions are not supported by pint"
                 ),
             ),
+            method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
@@ -5160,6 +5161,7 @@ class TestDataset:
                     reason="numbagg functions are not supported by pint"
                 ),
             ),
+            method("weighted", xr.DataArray(data=np.linspace(0, 1, 5), dims="y")),
         ),
         ids=repr,
     )
