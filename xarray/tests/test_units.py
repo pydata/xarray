@@ -3089,6 +3089,18 @@ class TestDataArray:
 
         assert expected == actual
 
+    def test_pad(self, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+
+        data_array = xr.DataArray(data=array, dims="x")
+        units = extract_units(data_array)
+
+        expected = attach_units(strip_units(data_array).pad(x=(2, 3)), units)
+        actual = data_array.pad(x=(2, 3))
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
     @pytest.mark.parametrize(
         "variant",
         (
@@ -4535,6 +4547,19 @@ class TestDataset:
         actual = left.broadcast_equals(right)
 
         assert expected == actual
+
+    def test_pad(self, dtype):
+        a = np.linspace(0, 5, 10).astype(dtype) * unit_registry.Pa
+        b = np.linspace(-5, 0, 10).astype(dtype) * unit_registry.degK
+
+        ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        units = extract_units(ds)
+
+        expected = attach_units(strip_units(ds).pad(x=(2, 3)), units)
+        actual = ds.pad(x=(2, 3))
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
