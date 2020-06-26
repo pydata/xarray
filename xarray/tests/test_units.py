@@ -3865,8 +3865,8 @@ class TestDataset:
             function("cumprod"),
             method("all"),
             method("any"),
-            method("argmax", dim=...),
-            method("argmin", dim=...),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("max"),
             method("min"),
             method("mean"),
@@ -3895,13 +3895,23 @@ class TestDataset:
 
         ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
 
-        numpy_kwargs = func.kwargs.copy()
-        if "dim" in numpy_kwargs:
-            # can't translate dimension to axis: no guaranteed order
-            numpy_kwargs["axis"] = None
+        if "dim" in func.kwargs:
+            numpy_kwargs = func.kwargs.copy()
+            dim = numpy_kwargs.pop("dim")
 
-        units_a = array_extract_units(func(a))
-        units_b = array_extract_units(func(b))
+            axis_a = ds.a.get_axis_num(dim)
+            axis_b = ds.b.get_axis_num(dim)
+
+            numpy_kwargs_a = numpy_kwargs.copy()
+            numpy_kwargs_a["axis"] = axis_a
+            numpy_kwargs_b = numpy_kwargs.copy()
+            numpy_kwargs_b["axis"] = axis_b
+        else:
+            numpy_kwargs_a = {}
+            numpy_kwargs_b = {}
+
+        units_a = array_extract_units(func(a, **numpy_kwargs_a))
+        units_b = array_extract_units(func(b, **numpy_kwargs_b))
         units = {"a": units_a, "b": units_b}
 
         actual = func(ds)
