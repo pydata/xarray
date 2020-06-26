@@ -3822,7 +3822,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def argmin(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        axis: Union[int, None] = None,
+        axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
@@ -3830,7 +3830,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
-        returns an int.
+        returns a DataArray with dtype int.
 
         If there are multiple minima, the indices of the first one found will be
         returned.
@@ -3923,7 +3923,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def argmax(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        axis: Union[int, None] = None,
+        axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
@@ -3931,7 +3931,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
-        returns an int.
+        returns a DataArray with dtype int.
 
         If there are multiple maxima, the indices of the first one found will be
         returned.

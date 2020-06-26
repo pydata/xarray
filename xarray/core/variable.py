@@ -2152,14 +2152,14 @@ class Variable(
     def argmin(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        axis: Union[int, None] = None,
+        axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
-        returns an int.
+        returns a Variable with dtype int.
 
         If there are multiple minima, the indices of the first one found will be
         returned.
@@ -2197,14 +2197,14 @@ class Variable(
     def argmax(
         self,
         dim: Union[Hashable, Sequence[Hashable]] = None,
-        axis: Union[int, None] = None,
+        axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
     ) -> Union["Variable", Dict[Hashable, "Variable"]]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
-        returns an int.
+        returns a Variable with dtype int.
 
         If there are multiple maxima, the indices of the first one found will be
         returned.
