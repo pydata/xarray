@@ -6384,7 +6384,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if (
             dim is None
             or axis is not None
-            or not isinstance(dim, Sequence)
+            or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
@@ -6393,9 +6393,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
         else:
             raise ValueError(
-                "When dim is a sequence, DataArray.argmin() returns a "
-                "dict. dicts cannot be contained in a Dataset, so cannot "
-                "call Dataset.argmin() with a sequence for dim"
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
             )
 
     def argmax(self, dim=None, axis=None, **kwargs):
@@ -6414,7 +6414,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if (
             dim is None
             or axis is not None
-            or not isinstance(dim, Sequence)
+            or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
@@ -6423,9 +6423,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
         else:
             raise ValueError(
-                "When dim is a sequence, DataArray.argmax() returns a "
-                "dict. dicts cannot be contained in a Dataset, so cannot "
-                "call Dataset.argmax() with a sequence for dim"
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
             )
 
 
