@@ -1408,8 +1408,8 @@ class TestVariable(VariableSubclassobjects):
         (
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", axis=0),
+            method("argmin", axis=0),
             method("argsort"),
             method("cumprod"),
             method("cumsum"),
@@ -1426,9 +1426,6 @@ class TestVariable(VariableSubclassobjects):
             method("var"),
         ),
         ids=repr,
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
     def test_aggregation(self, func, dtype):
         array = np.linspace(0, 1, 10).astype(dtype) * (
@@ -2280,8 +2277,8 @@ class TestDataArray:
             function("cumprod"),
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", axis=0),
+            method("argmin", axis=0),
             method("max"),
             method("mean"),
             method("median"),
@@ -2297,9 +2294,6 @@ class TestDataArray:
             method("cumprod"),
         ),
         ids=repr,
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
     def test_aggregation(self, func, dtype):
         array = np.arange(10).astype(dtype) * (
@@ -3853,8 +3847,8 @@ class TestDataset:
             function("cumprod"),
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", axis=0),
+            method("argmin", axis=0),
             method("max"),
             method("min"),
             method("mean"),
@@ -3870,12 +3864,6 @@ class TestDataset:
             method("cumprod"),
         ),
         ids=repr,
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:Once the behaviour of DataArray:DeprecationWarning"
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
     def test_aggregation(self, func, dtype):
         unit_a, unit_b = (

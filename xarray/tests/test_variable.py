@@ -1639,9 +1639,6 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable([], 5)
         assert_identical(expected, v.sum())
 
-    @pytest.mark.filterwarnings(
-        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
-    )
     def test_reduce_funcs(self):
         v = Variable("x", np.array([1, np.nan, 2, 3]))
         assert_identical(v.mean(), Variable([], 2))
@@ -1660,7 +1657,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.all(dim="x"), Variable([], False))
 
         v = Variable("t", pd.date_range("2000-01-01", periods=3))
-        assert v.argmax(skipna=True) == 2
+        assert v.argmax(skipna=True, dim="t") == 2
 
         assert_identical(v.max(), Variable([], pd.Timestamp("2000-01-03")))
 
