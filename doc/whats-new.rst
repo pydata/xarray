@@ -47,7 +47,10 @@ Enhancements
   For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
   rather than interpolating in multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
+- Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
+  dataframe has a MultiIndex (:pull:`4184`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+  - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
 
 New Features
