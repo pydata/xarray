@@ -432,6 +432,7 @@ received by the applied function.
         print(da.sizes)
         return da.time
 
+
     mapped = xr.map_blocks(func, ds.temperature)
     mapped
 
@@ -461,8 +462,9 @@ Here is a common example where automated inference will not work.
     :okexcept:
 
     def func(da):
-	print(da.sizes)
+        print(da.sizes)
         return da.isel(time=[1])
+
 
     mapped = xr.map_blocks(func, ds.temperature)
 
@@ -500,6 +502,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 
     def func(obj, a, b=0):
         return obj + a + b
+
 
     mapped = ds.map_blocks(func, args=[10], kwargs={"b": 10})
     expected = ds + 10 + 10

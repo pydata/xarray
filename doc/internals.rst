@@ -182,9 +182,10 @@ re-open it directly with Zarr:
 
 .. ipython:: python
 
-    ds = xr.tutorial.load_dataset('rasm')
-    ds.to_zarr('rasm.zarr', mode='w')
+    ds = xr.tutorial.load_dataset("rasm")
+    ds.to_zarr("rasm.zarr", mode="w")
     import zarr
-    zgroup = zarr.open('rasm.zarr')
+
+    zgroup = zarr.open("rasm.zarr")
     print(zgroup.tree())
-    dict(zgroup['Tair'].attrs)
+    dict(zgroup["Tair"].attrs)

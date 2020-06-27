@@ -148,7 +148,7 @@ We'll now kick off a two-step process:
 1. Install the build dependencies
 2. Build and install xarray
 
-.. code-block:: none
+.. code-block:: sh
 
    # Create and activate the build environment
    # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
@@ -162,7 +162,10 @@ We'll now kick off a two-step process:
    # Build and install xarray
    pip install -e .
 
-At this point you should be able to import *xarray* from your locally built version::
+At this point you should be able to import *xarray* from your locally
+built version:
+
+.. code-block:: sh
 
    $ python  # start an interpreter
    >>> import xarray
@@ -256,7 +259,9 @@ Some other important things to know about the docs:
 - The tutorials make heavy use of the `ipython directive
   <http://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
   This directive lets you put code in the documentation which will be run
-  during the doc build. For example::
+  during the doc build. For example:
+
+  .. code:: rst
 
       .. ipython:: python
 
@@ -290,7 +295,7 @@ Requirements
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
-.. code-block:: none
+.. code-block:: sh
 
     # Create and activate the docs environment
     conda env create -f ci/requirements/doc.yml
@@ -347,7 +352,10 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
+  code formatting
+- `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
+  standardized code formatting in documentation
 - `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
 - `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
   See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
@@ -356,12 +364,13 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 
 ``pip``::
 
-   pip install black flake8 isort mypy
+   pip install black flake8 isort mypy blackdoc
 
 and then run from the root of the Xarray repository::
 
    isort -rc .
    black -t py36 .
+   blackdoc -t py36 .
    flake8
    mypy .
 
