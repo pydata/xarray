@@ -59,7 +59,6 @@ New Features
   (:pull:`3936`)
   By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
   <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
-- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`)
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
