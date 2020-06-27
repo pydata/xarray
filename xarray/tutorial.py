@@ -10,7 +10,6 @@ import os as _os
 import pathlib
 import shutil
 import tempfile
-from contextlib import contextmanager
 from urllib.request import urlretrieve
 
 import numpy as np
@@ -23,7 +22,7 @@ from .core.dataset import Dataset
 
 _cache_name = "xarray_tutorial_data"
 _cache_dir = pathlib.Path.home() / ".cache"
-# I/O on import. Might not be a good idea.
+# TODO: I/O on import. Might not be a good idea.
 if _cache_dir.exists():
     _default_cache_dir = _cache_dir / _cache_name
 else:
@@ -35,12 +34,6 @@ def file_md5_checksum(fname):
     with open(fname, "rb") as f:
         hash_md5.update(f.read())
     return hash_md5.hexdigest()
-
-
-@contextmanager
-def temporary_directory():
-    with tempfile.TemporaryDirectory() as directory_name:
-        yield pathlib.Path(directory_name)
 
 
 def download_to(url, path):
@@ -62,8 +55,12 @@ def open_rasterio(
         cache_dir.mkdir()
 
     default_extension = ".tif"
-    cache_dir = cache_dir if cache else temporary_directory()
-    path = cache_dir / name
+
+    if cache:
+        path = cache_dir / name
+    else:
+        cache_dir = tempfile.TemporaryDirectory()
+        path = pathlib.Path(cache_dir.name) / name
 
     if not path.suffix:
         path = path.with_suffix(default_extension)
