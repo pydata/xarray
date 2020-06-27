@@ -59,6 +59,8 @@ def open_rasterio(
 
     if cache:
         path = cache_dir / name
+        # need to always do that, otherwise the context manager might fail
+        cache_dir = pathlib.Path(cache_dir)
     else:
         cache_dir = tempfile.TemporaryDirectory()
         path = pathlib.Path(cache_dir.name) / name
@@ -125,6 +127,8 @@ def open_dataset(
 
     if cache:
         path = cache_dir / name
+        # need to always do that, otherwise the context manager might fail
+        cache_dir = pathlib.Path(cache_dir)
     else:
         cache_dir = tempfile.TemporaryDirectory()
         path = pathlib.Path(cache_dir.name) / name
