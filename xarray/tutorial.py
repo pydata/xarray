@@ -6,11 +6,9 @@ Useful for:
 
 """
 import hashlib
-import os as _os
 import pathlib
 import shutil
 import tempfile
-from urllib.request import urlretrieve
 
 import numpy as np
 import requests
@@ -29,17 +27,20 @@ else:
     _default_cache_dir = pathlib.Path.home() / f".{_cache_name}"
 
 
-def file_md5_checksum(fname):
-    hash_md5 = hashlib.md5()
-    with open(fname, "rb") as f:
-        hash_md5.update(f.read())
-    return hash_md5.hexdigest()
+def check_md5sum(content, checksum):
+    md5 = hashlib.md5()
+    md5.update(content)
+    md5sum = md5.hexdigest()
+
+    return md5sum == checksum
 
 
 def download_to(url, path):
     with requests.get(url, stream=True) as r, path.open("wb") as f:
         if r.status_code != 200:
             raise OSError(f"download failed: {r.reason}")
+
+        r.raw.decode_content = True
         shutil.copyfileobj(r.raw, f)
 
 
@@ -113,44 +114,43 @@ def open_dataset(
     xarray.open_dataset
 
     """
-    root, ext = _os.path.splitext(name)
-    if not ext:
-        ext = ".nc"
-    fullname = root + ext
-    longdir = _os.path.expanduser(cache_dir)
-    localfile = _os.sep.join((longdir, fullname))
-    md5name = fullname + ".md5"
-    md5file = _os.sep.join((longdir, md5name))
 
-    if not _os.path.exists(localfile):
+    def construct_url(full_name):
+        return f"{github_url}/raw/{branch}/{full_name}"
 
-        # This will always leave this directory on disk.
-        # May want to add an option to remove it.
-        if not _os.path.isdir(longdir):
-            _os.mkdir(longdir)
+    if not cache_dir.is_dir():
+        cache_dir.mkdir()
 
-        url = "/".join((github_url, "raw", branch, fullname))
-        urlretrieve(url, localfile)
-        url = "/".join((github_url, "raw", branch, md5name))
-        urlretrieve(url, md5file)
+    default_extension = ".nc"
 
-        localmd5 = file_md5_checksum(localfile)
-        with open(md5file, "r") as f:
-            remotemd5 = f.read()
-        if localmd5 != remotemd5:
-            _os.remove(localfile)
+    if cache:
+        path = cache_dir / name
+    else:
+        cache_dir = tempfile.TemporaryDirectory()
+        path = pathlib.Path(cache_dir.name) / name
+
+    if not path.suffix:
+        path = path.with_suffix(default_extension)
+
+    if cache and path.is_file():
+        return _open_dataset(path, **kws)
+
+    # make sure the directory is deleted afterwards if it was temporary
+    with cache_dir:
+        download_to(construct_url(path.name), path)
+
+        # verify the checksum (md5 guards only against transport corruption)
+        md5_path = path.with_name(path.name + ".md5")
+        download_to(construct_url(md5_path.name), md5_path)
+        if not check_md5sum(path.read_bytes(), md5_path.read_text()):
+            path.unlink()
+            md5_path.unlink()
             msg = """
             MD5 checksum does not match, try downloading dataset again.
             """
             raise OSError(msg)
 
-    ds = _open_dataset(localfile, **kws)
-
-    if not cache:
-        ds = ds.load()
-        _os.remove(localfile)
-
-    return ds
+        return _open_dataset(path, **kws)
 
 
 def load_dataset(*args, **kwargs):

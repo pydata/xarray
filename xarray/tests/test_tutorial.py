@@ -13,9 +13,7 @@ class TestLoadDataset:
     @pytest.fixture(autouse=True)
     def setUp(self):
         self.testfile = "tiny"
-        self.testfilepath = os.path.expanduser(
-            os.sep.join(("~", ".xarray_tutorial_data", self.testfile))
-        )
+        self.testfilepath = tutorial._default_cache_dir / self.testfile
         with suppress(OSError):
             os.remove(f"{self.testfilepath}.nc")
         with suppress(OSError):
