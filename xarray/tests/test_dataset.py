@@ -4013,6 +4013,15 @@ class TestDataset:
         assert len(actual) == 0
         assert expected.equals(actual)
 
+    def test_from_dataframe_non_unique_levels(self):
+        index = pd.MultiIndex.from_product(
+            [list("abc"), [1, 2, 3]], names=["letters", "numbers"]
+        )
+        df = pd.DataFrame(np.arange(9), index=index)
+        df_nonunique = df.iloc[[0, 0], :]
+        with raises_regex(ValueError, "non-unique MultiIndex"):
+            Dataset.from_dataframe(df_nonunique)
+
     def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))

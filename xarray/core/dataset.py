@@ -4590,41 +4590,65 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self[name] = (dims, np.asarray(series))
             return
 
+        if not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
+
         shape = tuple(lev.size for lev in idx.levels)
+        full_indexer = tuple(idx.codes)
 
-        # all elements in the result index a unique combination of MultiIndex
-        # levels, so if there are more of them than elements in the source,
-        # then we *must* be inserting missing values
-        definitely_inserting_na = np.prod(shape) > dataframe.shape[0]
+        # We already verified that the MultiIndex has all unique values, so
+        # there are missing values if and only if the size of output arrays is
+        # larger that the index.
+        missing_values = np.prod(shape) > idx.shape[0]
 
-        if definitely_inserting_na or all(
-            issubclass(dtype.type, dtypes.TYPES_WITH_NA) for dtype in dataframe.dtypes
-        ):
-            full_indexer = tuple(idx.codes)
-            for name, series in dataframe.items():
-                data = np.asarray(series)
+        for name, series in dataframe.items():
+            data = np.asarray(series)
+            # NumPy indexing is much faster than using DataFrame.reindex to
+            # fill in missing values:
+            # https://stackoverflow.com/a/35049899/809705
+            if missing_values:
                 dtype, fill_value = dtypes.maybe_promote(data.dtype)
-                # much faster than reindex:
-                # https://stackoverflow.com/a/35049899/809705
                 new_data = np.full(shape, fill_value, dtype)
-                new_data[full_indexer] = data
-                self[name] = (dims, new_data)
-        else:
-            # It can be very expensive to use get_indexer/reindex to check
-            # whether all values are found in a MultiIndex:
-            # https://github.com/pydata/xarray/issues/2459
+            else:
+                new_data = np.zeros(shape, data.dtype)
+            new_data[full_indexer] = data
+            self[name] = (dims, new_data)
 
-            # Unfortunately, we sometimes need to do this in order to return
-            # the correct dtype for columns that don't support NA: if there are
-            # no missing values, then the dtype should be preserved and we
-            # cannot insert a fill value.
+        # # all elements in the result index a unique combination of MultiIndex
+        # # levels, so if there are more of them than elements in the source,
+        # # then we *must* be inserting missing values
+        # definitely_inserting_na = np.prod(shape) > dataframe.shape[0]
 
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            shape = tuple(lev.size for lev in idx.levels)
-            for name, series in dataframe.items():
-                data = np.asarray(series).reshape(shape)
-                self[name] = (dims, data)
+        # if definitely_inserting_na or all(
+        #     issubclass(dtype.type, dtypes.TYPES_WITH_NA) for dtype in dataframe.dtypes
+        # ):
+        #     full_indexer = tuple(idx.codes)
+        #     for name, series in dataframe.items():
+        #         data = np.asarray(series)
+        #         dtype, fill_value = dtypes.maybe_promote(data.dtype)
+        #         # much faster than reindex:
+        #         # https://stackoverflow.com/a/35049899/809705
+        #         new_data = np.full(shape, fill_value, dtype)
+        #         new_data[full_indexer] = data
+        #         self[name] = (dims, new_data)
+        # else:
+        #     # It can be very expensive to use get_indexer/reindex to check
+        #     # whether all values are found in a MultiIndex:
+        #     # https://github.com/pydata/xarray/issues/2459
+
+        #     # Unfortunately, we sometimes need to do this in order to return
+        #     # the correct dtype for columns that don't support NA: if there are
+        #     # no missing values, then the dtype should be preserved and we
+        #     # cannot insert a fill value.
+
+        #     full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
+        #     dataframe = dataframe.reindex(full_idx)
+        #     shape = tuple(lev.size for lev in idx.levels)
+        #     for name, series in dataframe.items():
+        #         data = np.asarray(series).reshape(shape)
+        #         self[name] = (dims, data)
 
     @classmethod
     def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":
