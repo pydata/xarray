@@ -11,7 +11,14 @@ from xarray.core.dataset import Dataset
 from xarray.core.indexes import default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
-__all__ = ("assert_allclose", "assert_chunks_equal", "assert_equal", "assert_identical")
+__all__ = (
+    "assert_allclose",
+    "assert_chunks_equal",
+    "assert_duckarray_equal",
+    "assert_duckarray_allclose",
+    "assert_equal",
+    "assert_identical",
+)
 
 
 def _decode_string_data(data):
@@ -146,6 +153,68 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
+
+
+def _format_message(x, y, err_msg, verbose):
+    diff = x - y
+    abs_diff = max(abs(diff))
+    rel_diff = "not implemented"
+
+    n_diff = int(np.count_nonzero(diff))
+    n_total = diff.size
+
+    fraction = f"{n_diff} / {n_total}"
+    percentage = float(n_diff / n_total * 100)
+
+    parts = [
+        "Arrays are not equal",
+        err_msg,
+        f"Mismatched elements: {fraction} ({percentage:.0f}%)",
+        f"Max absolute difference: {abs_diff}",
+        f"Max relative difference: {rel_diff}",
+    ]
+    if verbose:
+        parts += [
+            f" x: {x!r}",
+            f" y: {y!r}",
+        ]
+
+    return "\n".join(parts)
+
+
+def assert_duckarray_allclose(
+    actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
+):
+    """ Like `np.testing.assert_allclose`, but for duckarrays. """
+    __tracebackhide__ = True
+
+    allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
+    assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
+
+
+def assert_duckarray_equal(x, y, err_msg="", verbose=True):
+    """ Like `np.testing.assert_array_equal`, but for duckarrays """
+    __tracebackhide__ = True
+
+    def array_like(x):
+        return hasattr(x, "ndim") and hasattr(x, "shape") and hasattr(x, "dtype")
+
+    def scalar(x):
+        return isinstance(x, (bool, int, float, complex, str)) or (
+            array_like(x) and x.ndim == 0
+        )
+
+    if not array_like(x) and not scalar(x):
+        x = np.asarray(x)
+
+    if not array_like(y) and not scalar(y):
+        y = np.asarray(y)
+
+    if (array_like(x) and scalar(y)) or (scalar(x) and array_like(y)):
+        equiv = (x == y).all()
+    else:
+        equiv = duck_array_ops.array_equiv(x, y)
+    assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)
 
 
 def assert_chunks_equal(a, b):
