@@ -9,7 +9,7 @@ import xarray as xr
 from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import assert_allclose, assert_equal, assert_identical
+from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
 from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
@@ -1644,8 +1644,7 @@ class TestVariable:
         actual = func(variable, *args, **kwargs)
 
         assert_units_equal(expected, actual)
-        # can't use `np.testing.assert_allclose` since that casts to numpy.array
-        assert np.allclose(expected, actual)
+        assert_duckarray_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -2560,9 +2559,7 @@ class TestDataArray:
         expected = func(strip_units(data_array)) * unit_registry.m
         actual = func(data_array)
 
-        # TODO: use something like np.testing.assert_allclose, but
-        # with duckarray support
-        assert np.allclose(expected, actual)
+        assert_duckarray_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
