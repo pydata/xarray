@@ -6,10 +6,9 @@ import xarray as xr
 from . import has_dask
 
 try:
-    import dask.array as da
+    from dask.array import from_array as dask_from_array
 except ImportError:
-    da = object()
-    da.Array = lambda x: x
+    dask_from_array = lambda x: x
 
 try:
     import pint
@@ -63,7 +62,7 @@ def test_assert_allclose(obj1, obj2):
     (
         pytest.param(np.array, id="numpy"),
         pytest.param(
-            da.from_array,
+            dask_from_array,
             id="dask",
             marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
         ),
@@ -96,7 +95,7 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
     (
         pytest.param(np.array, id="numpy"),
         pytest.param(
-            da.from_array,
+            dask_from_array,
             id="dask",
             marks=pytest.mark.skipif(not has_dask, reason="requires dask"),
         ),
