@@ -39,7 +39,9 @@ Breaking changes
   the default behaviour of :py:func:`open_mfdataset` has changed to use
   ``combine='by_coords'`` as the default argument value. (:issue:`2616`, :pull:`3926`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- The ``DataArray`` and ``Variable`` HTML reprs now expand the data section by
+  default (:issue:`4176`)
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Enhancements
 ~~~~~~~~~~~~
