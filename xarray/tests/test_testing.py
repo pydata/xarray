@@ -69,7 +69,12 @@ def test_assert_allclose(obj1, obj2):
         pytest.param(
             quantity,
             id="pint",
-            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
+            marks=[
+                pytest.mark.skipif(not has_pint, reason="requires pint"),
+                pytest.mark.xfail(
+                    reason="inconsistencies in the return value of pint's implementation of eq"
+                ),
+            ],
         ),
     ),
 )
@@ -102,7 +107,12 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
         pytest.param(
             quantity,
             id="pint",
-            marks=pytest.mark.skipif(not has_pint, reason="requires pint"),
+            marks=[
+                pytest.mark.skipif(not has_pint, reason="requires pint"),
+                pytest.mark.xfail(
+                    reason="inconsistencies in the return value of pint's implementation of eq"
+                ),
+            ],
         ),
     ),
 )
