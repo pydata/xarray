@@ -29,7 +29,7 @@ dependencies:
   - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
-  - numba=0.47
+  - numba=0.46
   - numpy=1.15
   - pandas=0.25
   # - pint  # See py36-min-nep18.yml
