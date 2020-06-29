@@ -4493,6 +4493,9 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmin(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -4522,6 +4525,9 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
     def test_argmax(self, x, minindex, maxindex, nanindex):
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
@@ -4762,6 +4768,78 @@ class TestReduce1D(TestReduce):
 
         result7 = ar0.idxmax(fill_value=-1j)
         assert_identical(result7, expected7)
+
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
+    def test_argmin_dim(self, x, minindex, maxindex, nanindex):
+        ar = xr.DataArray(
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
+        )
+        indarr = xr.DataArray(np.arange(x.size, dtype=np.intp), dims=["x"])
+
+        if np.isnan(minindex):
+            with pytest.raises(ValueError):
+                ar.argmin()
+            return
+
+        expected0 = {"x": indarr[minindex]}
+        result0 = ar.argmin(...)
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.argmin(..., keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        for da in expected1.values():
+            da.attrs = self.attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        result2 = ar.argmin(..., skipna=False)
+        if nanindex is not None and ar.dtype.kind != "O":
+            expected2 = {"x": indarr.isel(x=nanindex, drop=True)}
+            expected2["x"].attrs = {}
+        else:
+            expected2 = expected0
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
+    def test_argmax_dim(self, x, minindex, maxindex, nanindex):
+        ar = xr.DataArray(
+            x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
+        )
+        indarr = xr.DataArray(np.arange(x.size, dtype=np.intp), dims=["x"])
+
+        if np.isnan(maxindex):
+            with pytest.raises(ValueError):
+                ar.argmax()
+            return
+
+        expected0 = {"x": indarr[maxindex]}
+        result0 = ar.argmax(...)
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.argmax(..., keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        for da in expected1.values():
+            da.attrs = self.attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        result2 = ar.argmax(..., skipna=False)
+        if nanindex is not None and ar.dtype.kind != "O":
+            expected2 = {"x": indarr.isel(x=nanindex, drop=True)}
+            expected2["x"].attrs = {}
+        else:
+            expected2 = expected0
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
 
 
 @pytest.mark.parametrize(
@@ -5255,6 +5333,751 @@ class TestReduce2D(TestReduce):
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
+
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
+    def test_argmin_dim(self, x, minindex, maxindex, nanindex):
+        ar = xr.DataArray(
+            x,
+            dims=["y", "x"],
+            coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
+            attrs=self.attrs,
+        )
+        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+
+        if np.isnan(minindex).any():
+            with pytest.raises(ValueError):
+                ar.argmin(dim="x")
+            return
+
+        expected0 = [
+            indarr.isel(y=yi).isel(x=indi, drop=True)
+            for yi, indi in enumerate(minindex)
+        ]
+        expected0 = {"x": xr.concat(expected0, dim="y")}
+
+        result0 = ar.argmin(dim=["x"])
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.argmin(dim=["x"], keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        expected1["x"].attrs = self.attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        minindex = [
+            x if y is None or ar.dtype.kind == "O" else y
+            for x, y in zip(minindex, nanindex)
+        ]
+        expected2 = [
+            indarr.isel(y=yi).isel(x=indi, drop=True)
+            for yi, indi in enumerate(minindex)
+        ]
+        expected2 = {"x": xr.concat(expected2, dim="y")}
+        expected2["x"].attrs = {}
+
+        result2 = ar.argmin(dim=["x"], skipna=False)
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+        result3 = ar.argmin(...)
+        min_xind = ar.isel(expected0).argmin()
+        expected3 = {
+            "y": DataArray(min_xind),
+            "x": DataArray(minindex[min_xind.item()]),
+        }
+
+        for key in expected3:
+            assert_identical(result3[key], expected3[key])
+
+    @pytest.mark.filterwarnings(
+        "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
+    )
+    def test_argmax_dim(self, x, minindex, maxindex, nanindex):
+        ar = xr.DataArray(
+            x,
+            dims=["y", "x"],
+            coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
+            attrs=self.attrs,
+        )
+        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+
+        if np.isnan(maxindex).any():
+            with pytest.raises(ValueError):
+                ar.argmax(dim="x")
+            return
+
+        expected0 = [
+            indarr.isel(y=yi).isel(x=indi, drop=True)
+            for yi, indi in enumerate(maxindex)
+        ]
+        expected0 = {"x": xr.concat(expected0, dim="y")}
+
+        result0 = ar.argmax(dim=["x"])
+        for key in expected0:
+            assert_identical(result0[key], expected0[key])
+
+        result1 = ar.argmax(dim=["x"], keep_attrs=True)
+        expected1 = deepcopy(expected0)
+        expected1["x"].attrs = self.attrs
+        for key in expected1:
+            assert_identical(result1[key], expected1[key])
+
+        maxindex = [
+            x if y is None or ar.dtype.kind == "O" else y
+            for x, y in zip(maxindex, nanindex)
+        ]
+        expected2 = [
+            indarr.isel(y=yi).isel(x=indi, drop=True)
+            for yi, indi in enumerate(maxindex)
+        ]
+        expected2 = {"x": xr.concat(expected2, dim="y")}
+        expected2["x"].attrs = {}
+
+        result2 = ar.argmax(dim=["x"], skipna=False)
+
+        for key in expected2:
+            assert_identical(result2[key], expected2[key])
+
+        result3 = ar.argmax(...)
+        max_xind = ar.isel(expected0).argmax()
+        expected3 = {
+            "y": DataArray(max_xind),
+            "x": DataArray(maxindex[max_xind.item()]),
+        }
+
+        for key in expected3:
+            assert_identical(result3[key], expected3[key])
+
+
+@pytest.mark.parametrize(
+    "x, minindices_x, minindices_y, minindices_z, minindices_xy, "
+    "minindices_xz, minindices_yz, minindices_xyz, maxindices_x, "
+    "maxindices_y, maxindices_z, maxindices_xy, maxindices_xz, maxindices_yz, "
+    "maxindices_xyz, nanindices_x, nanindices_y, nanindices_z, nanindices_xy, "
+    "nanindices_xz, nanindices_yz, nanindices_xyz",
+    [
+        (
+            np.array(
+                [
+                    [[0, 1, 2, 0], [-2, -4, 2, 0]],
+                    [[1, 1, 1, 1], [1, 1, 1, 1]],
+                    [[0, 0, -10, 5], [20, 0, 0, 0]],
+                ]
+            ),
+            {"x": np.array([[0, 2, 2, 0], [0, 0, 2, 0]])},
+            {"y": np.array([[1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]])},
+            {"z": np.array([[0, 1], [0, 0], [2, 1]])},
+            {"x": np.array([0, 0, 2, 0]), "y": np.array([1, 1, 0, 0])},
+            {"x": np.array([2, 0]), "z": np.array([2, 1])},
+            {"y": np.array([1, 0, 0]), "z": np.array([1, 0, 2])},
+            {"x": np.array(2), "y": np.array(0), "z": np.array(2)},
+            {"x": np.array([[1, 0, 0, 2], [2, 1, 0, 1]])},
+            {"y": np.array([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 1, 0]])},
+            {"z": np.array([[2, 2], [0, 0], [3, 0]])},
+            {"x": np.array([2, 0, 0, 2]), "y": np.array([1, 0, 0, 0])},
+            {"x": np.array([2, 2]), "z": np.array([3, 0])},
+            {"y": np.array([0, 0, 1]), "z": np.array([2, 0, 0])},
+            {"x": np.array(2), "y": np.array(1), "z": np.array(0)},
+            {"x": np.array([[None, None, None, None], [None, None, None, None]])},
+            {
+                "y": np.array(
+                    [
+                        [None, None, None, None],
+                        [None, None, None, None],
+                        [None, None, None, None],
+                    ]
+                )
+            },
+            {"z": np.array([[None, None], [None, None], [None, None]])},
+            {
+                "x": np.array([None, None, None, None]),
+                "y": np.array([None, None, None, None]),
+            },
+            {"x": np.array([None, None]), "z": np.array([None, None])},
+            {"y": np.array([None, None, None]), "z": np.array([None, None, None])},
+            {"x": np.array(None), "y": np.array(None), "z": np.array(None)},
+        ),
+        (
+            np.array(
+                [
+                    [[2.0, 1.0, 2.0, 0.0], [-2.0, -4.0, 2.0, 0.0]],
+                    [[-4.0, np.NaN, 2.0, np.NaN], [-2.0, -4.0, 2.0, 0.0]],
+                    [[np.NaN] * 4, [np.NaN] * 4],
+                ]
+            ),
+            {"x": np.array([[1, 0, 0, 0], [0, 0, 0, 0]])},
+            {
+                "y": np.array(
+                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                )
+            },
+            {"z": np.array([[3, 1], [0, 1], [np.NaN, np.NaN]])},
+            {"x": np.array([1, 0, 0, 0]), "y": np.array([0, 1, 0, 0])},
+            {"x": np.array([1, 0]), "z": np.array([0, 1])},
+            {"y": np.array([1, 0, np.NaN]), "z": np.array([1, 0, np.NaN])},
+            {"x": np.array(0), "y": np.array(1), "z": np.array(1)},
+            {"x": np.array([[0, 0, 0, 0], [0, 0, 0, 0]])},
+            {
+                "y": np.array(
+                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                )
+            },
+            {"z": np.array([[0, 2], [2, 2], [np.NaN, np.NaN]])},
+            {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
+            {"x": np.array([0, 0]), "z": np.array([2, 2])},
+            {"y": np.array([0, 0, np.NaN]), "z": np.array([0, 2, np.NaN])},
+            {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
+            {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
+            {
+                "y": np.array(
+                    [[None, None, None, None], [None, 0, None, 0], [0, 0, 0, 0]]
+                )
+            },
+            {"z": np.array([[None, None], [1, None], [0, 0]])},
+            {"x": np.array([2, 1, 2, 1]), "y": np.array([0, 0, 0, 0])},
+            {"x": np.array([1, 2]), "z": np.array([1, 0])},
+            {"y": np.array([None, 0, 0]), "z": np.array([None, 1, 0])},
+            {"x": np.array(1), "y": np.array(0), "z": np.array(1)},
+        ),
+        (
+            np.array(
+                [
+                    [[2.0, 1.0, 2.0, 0.0], [-2.0, -4.0, 2.0, 0.0]],
+                    [[-4.0, np.NaN, 2.0, np.NaN], [-2.0, -4.0, 2.0, 0.0]],
+                    [[np.NaN] * 4, [np.NaN] * 4],
+                ]
+            ).astype("object"),
+            {"x": np.array([[1, 0, 0, 0], [0, 0, 0, 0]])},
+            {
+                "y": np.array(
+                    [[1, 1, 0, 0], [0, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                )
+            },
+            {"z": np.array([[3, 1], [0, 1], [np.NaN, np.NaN]])},
+            {"x": np.array([1, 0, 0, 0]), "y": np.array([0, 1, 0, 0])},
+            {"x": np.array([1, 0]), "z": np.array([0, 1])},
+            {"y": np.array([1, 0, np.NaN]), "z": np.array([1, 0, np.NaN])},
+            {"x": np.array(0), "y": np.array(1), "z": np.array(1)},
+            {"x": np.array([[0, 0, 0, 0], [0, 0, 0, 0]])},
+            {
+                "y": np.array(
+                    [[0, 0, 0, 0], [1, 1, 0, 1], [np.NaN, np.NaN, np.NaN, np.NaN]]
+                )
+            },
+            {"z": np.array([[0, 2], [2, 2], [np.NaN, np.NaN]])},
+            {"x": np.array([0, 0, 0, 0]), "y": np.array([0, 0, 0, 0])},
+            {"x": np.array([0, 0]), "z": np.array([2, 2])},
+            {"y": np.array([0, 0, np.NaN]), "z": np.array([0, 2, np.NaN])},
+            {"x": np.array(0), "y": np.array(0), "z": np.array(0)},
+            {"x": np.array([[2, 1, 2, 1], [2, 2, 2, 2]])},
+            {
+                "y": np.array(
+                    [[None, None, None, None], [None, 0, None, 0], [0, 0, 0, 0]]
+                )
+            },
+            {"z": np.array([[None, None], [1, None], [0, 0]])},
+            {"x": np.array([2, 1, 2, 1]), "y": np.array([0, 0, 0, 0])},
+            {"x": np.array([1, 2]), "z": np.array([1, 0])},
+            {"y": np.array([None, 0, 0]), "z": np.array([None, 1, 0])},
+            {"x": np.array(1), "y": np.array(0), "z": np.array(1)},
+        ),
+        (
+            np.array(
+                [
+                    [["2015-12-31", "2020-01-02"], ["2020-01-01", "2016-01-01"]],
+                    [["2020-01-02", "2020-01-02"], ["2020-01-02", "2020-01-02"]],
+                    [["1900-01-01", "1-02-03"], ["1900-01-02", "1-02-03"]],
+                ],
+                dtype="datetime64[ns]",
+            ),
+            {"x": np.array([[2, 2], [2, 2]])},
+            {"y": np.array([[0, 1], [0, 0], [0, 0]])},
+            {"z": np.array([[0, 1], [0, 0], [1, 1]])},
+            {"x": np.array([2, 2]), "y": np.array([0, 0])},
+            {"x": np.array([2, 2]), "z": np.array([1, 1])},
+            {"y": np.array([0, 0, 0]), "z": np.array([0, 0, 1])},
+            {"x": np.array(2), "y": np.array(0), "z": np.array(1)},
+            {"x": np.array([[1, 0], [1, 1]])},
+            {"y": np.array([[1, 0], [0, 0], [1, 0]])},
+            {"z": np.array([[1, 0], [0, 0], [0, 0]])},
+            {"x": np.array([1, 0]), "y": np.array([0, 0])},
+            {"x": np.array([0, 1]), "z": np.array([1, 0])},
+            {"y": np.array([0, 0, 1]), "z": np.array([1, 0, 0])},
+            {"x": np.array(0), "y": np.array(0), "z": np.array(1)},
+            {"x": np.array([[None, None], [None, None]])},
+            {"y": np.array([[None, None], [None, None], [None, None]])},
+            {"z": np.array([[None, None], [None, None], [None, None]])},
+            {"x": np.array([None, None]), "y": np.array([None, None])},
+            {"x": np.array([None, None]), "z": np.array([None, None])},
+            {"y": np.array([None, None, None]), "z": np.array([None, None, None])},
+            {"x": np.array(None), "y": np.array(None), "z": np.array(None)},
+        ),
+    ],
+)
+class TestReduce3D(TestReduce):
+    def test_argmin_dim(
+        self,
+        x,
+        minindices_x,
+        minindices_y,
+        minindices_z,
+        minindices_xy,
+        minindices_xz,
+        minindices_yz,
+        minindices_xyz,
+        maxindices_x,
+        maxindices_y,
+        maxindices_z,
+        maxindices_xy,
+        maxindices_xz,
+        maxindices_yz,
+        maxindices_xyz,
+        nanindices_x,
+        nanindices_y,
+        nanindices_z,
+        nanindices_xy,
+        nanindices_xz,
+        nanindices_yz,
+        nanindices_xyz,
+    ):
+
+        ar = xr.DataArray(
+            x,
+            dims=["x", "y", "z"],
+            coords={
+                "x": np.arange(x.shape[0]) * 4,
+                "y": 1 - np.arange(x.shape[1]),
+                "z": 2 + 3 * np.arange(x.shape[2]),
+            },
+            attrs=self.attrs,
+        )
+        xindarr = np.tile(
+            np.arange(x.shape[0], dtype=np.intp)[:, np.newaxis, np.newaxis],
+            [1, x.shape[1], x.shape[2]],
+        )
+        xindarr = xr.DataArray(xindarr, dims=ar.dims, coords=ar.coords)
+        yindarr = np.tile(
+            np.arange(x.shape[1], dtype=np.intp)[np.newaxis, :, np.newaxis],
+            [x.shape[0], 1, x.shape[2]],
+        )
+        yindarr = xr.DataArray(yindarr, dims=ar.dims, coords=ar.coords)
+        zindarr = np.tile(
+            np.arange(x.shape[2], dtype=np.intp)[np.newaxis, np.newaxis, :],
+            [x.shape[0], x.shape[1], 1],
+        )
+        zindarr = xr.DataArray(zindarr, dims=ar.dims, coords=ar.coords)
+
+        for inds in [
+            minindices_x,
+            minindices_y,
+            minindices_z,
+            minindices_xy,
+            minindices_xz,
+            minindices_yz,
+            minindices_xyz,
+        ]:
+            if np.array([np.isnan(i) for i in inds.values()]).any():
+                with pytest.raises(ValueError):
+                    ar.argmin(dim=[d for d in inds])
+                return
+
+        result0 = ar.argmin(dim=["x"])
+        expected0 = {
+            key: xr.DataArray(value, dims=("y", "z"))
+            for key, value in minindices_x.items()
+        }
+        for key in expected0:
+            assert_identical(result0[key].drop_vars(["y", "z"]), expected0[key])
+
+        result1 = ar.argmin(dim=["y"])
+        expected1 = {
+            key: xr.DataArray(value, dims=("x", "z"))
+            for key, value in minindices_y.items()
+        }
+        for key in expected1:
+            assert_identical(result1[key].drop_vars(["x", "z"]), expected1[key])
+
+        result2 = ar.argmin(dim=["z"])
+        expected2 = {
+            key: xr.DataArray(value, dims=("x", "y"))
+            for key, value in minindices_z.items()
+        }
+        for key in expected2:
+            assert_identical(result2[key].drop_vars(["x", "y"]), expected2[key])
+
+        result3 = ar.argmin(dim=("x", "y"))
+        expected3 = {
+            key: xr.DataArray(value, dims=("z")) for key, value in minindices_xy.items()
+        }
+        for key in expected3:
+            assert_identical(result3[key].drop_vars("z"), expected3[key])
+
+        result4 = ar.argmin(dim=("x", "z"))
+        expected4 = {
+            key: xr.DataArray(value, dims=("y")) for key, value in minindices_xz.items()
+        }
+        for key in expected4:
+            assert_identical(result4[key].drop_vars("y"), expected4[key])
+
+        result5 = ar.argmin(dim=("y", "z"))
+        expected5 = {
+            key: xr.DataArray(value, dims=("x")) for key, value in minindices_yz.items()
+        }
+        for key in expected5:
+            assert_identical(result5[key].drop_vars("x"), expected5[key])
+
+        result6 = ar.argmin(...)
+        expected6 = {key: xr.DataArray(value) for key, value in minindices_xyz.items()}
+        for key in expected6:
+            assert_identical(result6[key], expected6[key])
+
+        minindices_x = {
+            key: xr.where(
+                nanindices_x[key] == None,  # noqa: E711
+                minindices_x[key],
+                nanindices_x[key],
+            )
+            for key in minindices_x
+        }
+        expected7 = {
+            key: xr.DataArray(value, dims=("y", "z"))
+            for key, value in minindices_x.items()
+        }
+
+        result7 = ar.argmin(dim=["x"], skipna=False)
+        for key in expected7:
+            assert_identical(result7[key].drop_vars(["y", "z"]), expected7[key])
+
+        minindices_y = {
+            key: xr.where(
+                nanindices_y[key] == None,  # noqa: E711
+                minindices_y[key],
+                nanindices_y[key],
+            )
+            for key in minindices_y
+        }
+        expected8 = {
+            key: xr.DataArray(value, dims=("x", "z"))
+            for key, value in minindices_y.items()
+        }
+
+        result8 = ar.argmin(dim=["y"], skipna=False)
+        for key in expected8:
+            assert_identical(result8[key].drop_vars(["x", "z"]), expected8[key])
+
+        minindices_z = {
+            key: xr.where(
+                nanindices_z[key] == None,  # noqa: E711
+                minindices_z[key],
+                nanindices_z[key],
+            )
+            for key in minindices_z
+        }
+        expected9 = {
+            key: xr.DataArray(value, dims=("x", "y"))
+            for key, value in minindices_z.items()
+        }
+
+        result9 = ar.argmin(dim=["z"], skipna=False)
+        for key in expected9:
+            assert_identical(result9[key].drop_vars(["x", "y"]), expected9[key])
+
+        minindices_xy = {
+            key: xr.where(
+                nanindices_xy[key] == None,  # noqa: E711
+                minindices_xy[key],
+                nanindices_xy[key],
+            )
+            for key in minindices_xy
+        }
+        expected10 = {
+            key: xr.DataArray(value, dims="z") for key, value in minindices_xy.items()
+        }
+
+        result10 = ar.argmin(dim=("x", "y"), skipna=False)
+        for key in expected10:
+            assert_identical(result10[key].drop_vars("z"), expected10[key])
+
+        minindices_xz = {
+            key: xr.where(
+                nanindices_xz[key] == None,  # noqa: E711
+                minindices_xz[key],
+                nanindices_xz[key],
+            )
+            for key in minindices_xz
+        }
+        expected11 = {
+            key: xr.DataArray(value, dims="y") for key, value in minindices_xz.items()
+        }
+
+        result11 = ar.argmin(dim=("x", "z"), skipna=False)
+        for key in expected11:
+            assert_identical(result11[key].drop_vars("y"), expected11[key])
+
+        minindices_yz = {
+            key: xr.where(
+                nanindices_yz[key] == None,  # noqa: E711
+                minindices_yz[key],
+                nanindices_yz[key],
+            )
+            for key in minindices_yz
+        }
+        expected12 = {
+            key: xr.DataArray(value, dims="x") for key, value in minindices_yz.items()
+        }
+
+        result12 = ar.argmin(dim=("y", "z"), skipna=False)
+        for key in expected12:
+            assert_identical(result12[key].drop_vars("x"), expected12[key])
+
+        minindices_xyz = {
+            key: xr.where(
+                nanindices_xyz[key] == None,  # noqa: E711
+                minindices_xyz[key],
+                nanindices_xyz[key],
+            )
+            for key in minindices_xyz
+        }
+        expected13 = {key: xr.DataArray(value) for key, value in minindices_xyz.items()}
+
+        result13 = ar.argmin(..., skipna=False)
+        for key in expected13:
+            assert_identical(result13[key], expected13[key])
+
+    def test_argmax_dim(
+        self,
+        x,
+        minindices_x,
+        minindices_y,
+        minindices_z,
+        minindices_xy,
+        minindices_xz,
+        minindices_yz,
+        minindices_xyz,
+        maxindices_x,
+        maxindices_y,
+        maxindices_z,
+        maxindices_xy,
+        maxindices_xz,
+        maxindices_yz,
+        maxindices_xyz,
+        nanindices_x,
+        nanindices_y,
+        nanindices_z,
+        nanindices_xy,
+        nanindices_xz,
+        nanindices_yz,
+        nanindices_xyz,
+    ):
+
+        ar = xr.DataArray(
+            x,
+            dims=["x", "y", "z"],
+            coords={
+                "x": np.arange(x.shape[0]) * 4,
+                "y": 1 - np.arange(x.shape[1]),
+                "z": 2 + 3 * np.arange(x.shape[2]),
+            },
+            attrs=self.attrs,
+        )
+        xindarr = np.tile(
+            np.arange(x.shape[0], dtype=np.intp)[:, np.newaxis, np.newaxis],
+            [1, x.shape[1], x.shape[2]],
+        )
+        xindarr = xr.DataArray(xindarr, dims=ar.dims, coords=ar.coords)
+        yindarr = np.tile(
+            np.arange(x.shape[1], dtype=np.intp)[np.newaxis, :, np.newaxis],
+            [x.shape[0], 1, x.shape[2]],
+        )
+        yindarr = xr.DataArray(yindarr, dims=ar.dims, coords=ar.coords)
+        zindarr = np.tile(
+            np.arange(x.shape[2], dtype=np.intp)[np.newaxis, np.newaxis, :],
+            [x.shape[0], x.shape[1], 1],
+        )
+        zindarr = xr.DataArray(zindarr, dims=ar.dims, coords=ar.coords)
+
+        for inds in [
+            maxindices_x,
+            maxindices_y,
+            maxindices_z,
+            maxindices_xy,
+            maxindices_xz,
+            maxindices_yz,
+            maxindices_xyz,
+        ]:
+            if np.array([np.isnan(i) for i in inds.values()]).any():
+                with pytest.raises(ValueError):
+                    ar.argmax(dim=[d for d in inds])
+                return
+
+        result0 = ar.argmax(dim=["x"])
+        expected0 = {
+            key: xr.DataArray(value, dims=("y", "z"))
+            for key, value in maxindices_x.items()
+        }
+        for key in expected0:
+            assert_identical(result0[key].drop_vars(["y", "z"]), expected0[key])
+
+        result1 = ar.argmax(dim=["y"])
+        expected1 = {
+            key: xr.DataArray(value, dims=("x", "z"))
+            for key, value in maxindices_y.items()
+        }
+        for key in expected1:
+            assert_identical(result1[key].drop_vars(["x", "z"]), expected1[key])
+
+        result2 = ar.argmax(dim=["z"])
+        expected2 = {
+            key: xr.DataArray(value, dims=("x", "y"))
+            for key, value in maxindices_z.items()
+        }
+        for key in expected2:
+            assert_identical(result2[key].drop_vars(["x", "y"]), expected2[key])
+
+        result3 = ar.argmax(dim=("x", "y"))
+        expected3 = {
+            key: xr.DataArray(value, dims=("z")) for key, value in maxindices_xy.items()
+        }
+        for key in expected3:
+            assert_identical(result3[key].drop_vars("z"), expected3[key])
+
+        result4 = ar.argmax(dim=("x", "z"))
+        expected4 = {
+            key: xr.DataArray(value, dims=("y")) for key, value in maxindices_xz.items()
+        }
+        for key in expected4:
+            assert_identical(result4[key].drop_vars("y"), expected4[key])
+
+        result5 = ar.argmax(dim=("y", "z"))
+        expected5 = {
+            key: xr.DataArray(value, dims=("x")) for key, value in maxindices_yz.items()
+        }
+        for key in expected5:
+            assert_identical(result5[key].drop_vars("x"), expected5[key])
+
+        result6 = ar.argmax(...)
+        expected6 = {key: xr.DataArray(value) for key, value in maxindices_xyz.items()}
+        for key in expected6:
+            assert_identical(result6[key], expected6[key])
+
+        maxindices_x = {
+            key: xr.where(
+                nanindices_x[key] == None,  # noqa: E711
+                maxindices_x[key],
+                nanindices_x[key],
+            )
+            for key in maxindices_x
+        }
+        expected7 = {
+            key: xr.DataArray(value, dims=("y", "z"))
+            for key, value in maxindices_x.items()
+        }
+
+        result7 = ar.argmax(dim=["x"], skipna=False)
+        for key in expected7:
+            assert_identical(result7[key].drop_vars(["y", "z"]), expected7[key])
+
+        maxindices_y = {
+            key: xr.where(
+                nanindices_y[key] == None,  # noqa: E711
+                maxindices_y[key],
+                nanindices_y[key],
+            )
+            for key in maxindices_y
+        }
+        expected8 = {
+            key: xr.DataArray(value, dims=("x", "z"))
+            for key, value in maxindices_y.items()
+        }
+
+        result8 = ar.argmax(dim=["y"], skipna=False)
+        for key in expected8:
+            assert_identical(result8[key].drop_vars(["x", "z"]), expected8[key])
+
+        maxindices_z = {
+            key: xr.where(
+                nanindices_z[key] == None,  # noqa: E711
+                maxindices_z[key],
+                nanindices_z[key],
+            )
+            for key in maxindices_z
+        }
+        expected9 = {
+            key: xr.DataArray(value, dims=("x", "y"))
+            for key, value in maxindices_z.items()
+        }
+
+        result9 = ar.argmax(dim=["z"], skipna=False)
+        for key in expected9:
+            assert_identical(result9[key].drop_vars(["x", "y"]), expected9[key])
+
+        maxindices_xy = {
+            key: xr.where(
+                nanindices_xy[key] == None,  # noqa: E711
+                maxindices_xy[key],
+                nanindices_xy[key],
+            )
+            for key in maxindices_xy
+        }
+        expected10 = {
+            key: xr.DataArray(value, dims="z") for key, value in maxindices_xy.items()
+        }
+
+        result10 = ar.argmax(dim=("x", "y"), skipna=False)
+        for key in expected10:
+            assert_identical(result10[key].drop_vars("z"), expected10[key])
+
+        maxindices_xz = {
+            key: xr.where(
+                nanindices_xz[key] == None,  # noqa: E711
+                maxindices_xz[key],
+                nanindices_xz[key],
+            )
+            for key in maxindices_xz
+        }
+        expected11 = {
+            key: xr.DataArray(value, dims="y") for key, value in maxindices_xz.items()
+        }
+
+        result11 = ar.argmax(dim=("x", "z"), skipna=False)
+        for key in expected11:
+            assert_identical(result11[key].drop_vars("y"), expected11[key])
+
+        maxindices_yz = {
+            key: xr.where(
+                nanindices_yz[key] == None,  # noqa: E711
+                maxindices_yz[key],
+                nanindices_yz[key],
+            )
+            for key in maxindices_yz
+        }
+        expected12 = {
+            key: xr.DataArray(value, dims="x") for key, value in maxindices_yz.items()
+        }
+
+        result12 = ar.argmax(dim=("y", "z"), skipna=False)
+        for key in expected12:
+            assert_identical(result12[key].drop_vars("x"), expected12[key])
+
+        maxindices_xyz = {
+            key: xr.where(
+                nanindices_xyz[key] == None,  # noqa: E711
+                maxindices_xyz[key],
+                nanindices_xyz[key],
+            )
+            for key in maxindices_xyz
+        }
+        expected13 = {key: xr.DataArray(value) for key, value in maxindices_xyz.items()}
+
+        result13 = ar.argmax(..., skipna=False)
+        for key in expected13:
+            assert_identical(result13[key], expected13[key])
 
 
 class TestReduceND(TestReduce):

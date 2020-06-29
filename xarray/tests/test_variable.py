@@ -1657,7 +1657,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.all(dim="x"), Variable([], False))
 
         v = Variable("t", pd.date_range("2000-01-01", periods=3))
-        assert v.argmax(skipna=True) == 2
+        assert v.argmax(skipna=True, dim="t") == 2
 
         assert_identical(v.max(), Variable([], pd.Timestamp("2000-01-03")))
 

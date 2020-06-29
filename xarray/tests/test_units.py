@@ -297,19 +297,29 @@ class method:
         all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
+        xarray_classes = (
+            xr.Variable,
+            xr.DataArray,
+            xr.Dataset,
+            xr.core.groupby.GroupBy,
+        )
+
+        if not isinstance(obj, xarray_classes):
+            # remove typical xarray args like "dim"
+            exclude_kwargs = ("dim", "dims")
+            all_kwargs = {
+                key: value
+                for key, value in all_kwargs.items()
+                if key not in exclude_kwargs
+            }
+
         func = getattr(obj, self.name, None)
+
         if func is None or not isinstance(func, Callable):
             # fall back to module level numpy functions if not a xarray object
             if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
                 numpy_func = getattr(np, self.name)
                 func = partial(numpy_func, obj)
-                # remove typical xarray args like "dim"
-                exclude_kwargs = ("dim", "dims")
-                all_kwargs = {
-                    key: value
-                    for key, value in all_kwargs.items()
-                    if key not in exclude_kwargs
-                }
             else:
                 raise AttributeError(f"{obj} has no method named '{self.name}'")
 
@@ -1408,8 +1418,8 @@ class TestVariable(VariableSubclassobjects):
         (
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("argsort"),
             method("cumprod"),
             method("cumsum"),
@@ -1433,7 +1443,11 @@ class TestVariable(VariableSubclassobjects):
         )
         variable = xr.Variable("x", array)
 
-        units = extract_units(func(array))
+        numpy_kwargs = func.kwargs.copy()
+        if "dim" in func.kwargs:
+            numpy_kwargs["axis"] = variable.get_axis_num(numpy_kwargs.pop("dim"))
+
+        units = extract_units(func(array, **numpy_kwargs))
         expected = attach_units(func(strip_units(variable)), units)
         actual = func(variable)
 
@@ -2243,8 +2257,20 @@ class TestDataArray:
         (
             function("all"),
             function("any"),
-            function("argmax"),
-            function("argmin"),
+            pytest.param(
+                function("argmax"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                    "supported"
+                ),
+            ),
+            pytest.param(
+                function("argmin"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                    "supported"
+                ),
+            ),
             function("max"),
             function("mean"),
             pytest.param(
@@ -2265,8 +2291,8 @@ class TestDataArray:
             function("cumprod"),
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("max"),
             method("mean"),
             method("median"),
@@ -2288,6 +2314,10 @@ class TestDataArray:
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
         data_array = xr.DataArray(data=array, dims="x")
+
+        numpy_kwargs = func.kwargs.copy()
+        if "dim" in numpy_kwargs:
+            numpy_kwargs["axis"] = data_array.get_axis_num(numpy_kwargs.pop("dim"))
 
         # units differ based on the applied function, so we need to
         # first compute the units
@@ -3803,8 +3833,20 @@ class TestDataset:
         (
             function("all"),
             function("any"),
-            function("argmax"),
-            function("argmin"),
+            pytest.param(
+                function("argmax"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                    "supported"
+                ),
+            ),
+            pytest.param(
+                function("argmin"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                    "supported"
+                ),
+            ),
             function("max"),
             function("min"),
             function("mean"),
@@ -3823,8 +3865,8 @@ class TestDataset:
             function("cumprod"),
             method("all"),
             method("any"),
-            method("argmax"),
-            method("argmin"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("max"),
             method("min"),
             method("mean"),
@@ -3853,8 +3895,23 @@ class TestDataset:
 
         ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
 
-        units_a = array_extract_units(func(a))
-        units_b = array_extract_units(func(b))
+        if "dim" in func.kwargs:
+            numpy_kwargs = func.kwargs.copy()
+            dim = numpy_kwargs.pop("dim")
+
+            axis_a = ds.a.get_axis_num(dim)
+            axis_b = ds.b.get_axis_num(dim)
+
+            numpy_kwargs_a = numpy_kwargs.copy()
+            numpy_kwargs_a["axis"] = axis_a
+            numpy_kwargs_b = numpy_kwargs.copy()
+            numpy_kwargs_b["axis"] = axis_b
+        else:
+            numpy_kwargs_a = {}
+            numpy_kwargs_b = {}
+
+        units_a = array_extract_units(func(a, **numpy_kwargs_a))
+        units_b = array_extract_units(func(b, **numpy_kwargs_b))
         units = {"a": units_a, "b": units_b}
 
         actual = func(ds)
