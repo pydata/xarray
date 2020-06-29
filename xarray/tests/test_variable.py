@@ -1657,7 +1657,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.all(dim="x"), Variable([], False))
 
         v = Variable("t", pd.date_range("2000-01-01", periods=3))
-        assert v.argmax(skipna=True) == 2
+        assert v.argmax(skipna=True, dim="t") == 2
 
         assert_identical(v.max(), Variable([], pd.Timestamp("2000-01-03")))
 
@@ -2212,6 +2212,10 @@ class TestAsCompatibleData:
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, full_like(orig, True, dtype=bool))
+
+        # raise error on non-scalar fill_value
+        with raises_regex(ValueError, "must be scalar"):
+            full_like(orig, [1.0, 2.0])
 
     @requires_dask
     def test_full_like_dask(self):

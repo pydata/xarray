@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -329,7 +330,7 @@ def split_indexes(
         else:
             vars_to_remove.append(d)
             if not drop:
-                vars_to_create[str(d) + "_"] = Variable(d, index)
+                vars_to_create[str(d) + "_"] = Variable(d, index, variables[d].attrs)
 
     for d, levs in dim_levels.items():
         index = variables[d].to_index()
@@ -341,7 +342,7 @@ def split_indexes(
         if not drop:
             for lev in levs:
                 idx = index.get_level_values(lev)
-                vars_to_create[idx.name] = Variable(d, idx)
+                vars_to_create[idx.name] = Variable(d, idx, variables[d].attrs)
 
     new_variables = dict(variables)
     for v in set(vars_to_remove):
@@ -1055,9 +1056,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         structure of the original object, but with the new data. Original
         object is unaffected.
 
-        >>> ds.copy(
-        ...     data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]}
-        ... )
+        >>> ds.copy(data={"foo": np.arange(6).reshape(2, 3), "bar": ["a", "b"]})
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
@@ -1243,13 +1242,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
+    # FIXME https://github.com/python/mypy/issues/7328
+    @overload
+    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Any) -> "Dataset":
+        ...
+
+    def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
@@ -1537,7 +1548,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: boolean
             Only valid along with engine='h5netcdf'. If True, allow writing
-            hdf5 files which are valid netcdf as described in
+            hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
         """
         if encoding is None:
@@ -1581,7 +1592,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         mode : {'w', 'w-', 'a', None}
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
-            'a' means append (create if does not exist).
+            'a' means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``'a'``. Otherwise, ``mode`` will default to
             `w-` if not set.
@@ -1600,11 +1611,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
         append_dim: hashable, optional
-            If set, the dimension on which the data will be appended.
+            If set, the dimension along which the data will be appended. All
+            other dimensions on overriden variables must remain the same size.
 
         References
         ----------
         https://zarr.readthedocs.io/
+
+        Notes
+        -----
+        Zarr chunking behavior:
+            If chunks are found in the encoding argument or attribute
+            corresponding to any DataArray, those chunks are used.
+            If a DataArray is a dask array, it is written with those chunks.
+            If not other chunks are found, Zarr uses its own heuristics to
+            choose automatic chunk sizes.
         """
         if encoding is None:
             encoding = {}
@@ -1699,7 +1720,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None, Number, Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]]
+            None,
+            Number,
+            str,
+            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
         ] = None,
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1717,7 +1741,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        chunks : int or mapping, optional
+        chunks : int, 'auto' or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
             ``{'x': 5, 'y': 5}``.
         name_prefix : str, optional
@@ -1734,7 +1758,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from dask.base import tokenize
 
-        if isinstance(chunks, Number):
+        if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         if chunks is not None:
@@ -1768,7 +1792,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise",
+        self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
         """ Here we make sure
         + indexer has a valid keys
@@ -4526,7 +4550,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted
+            is_sorted = idx.is_lexsorted()
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -4598,6 +4622,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
         """
         # TODO: Add an option to remove dimensions along which the variables
         # are constant, to enable consistent serialization to/from a dataframe,
@@ -5551,16 +5576,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    @property
-    def plot(self):
-        """
-        Access plotting functions for Datasets.
-        Use it as a namespace to use xarray.plot functions as Dataset methods
-
-        >>> ds.plot.scatter(...)  # equivalent to xarray.plot.scatter(ds,...)
-
-        """
-        return _Dataset_PlotMethods(self)
+    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
@@ -5709,57 +5725,108 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         func: "Callable[..., T_DSorDA]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
+        template: Union["DataArray", "Dataset"] = None,
     ) -> "T_DSorDA":
         """
-        Apply a function to each chunk of this Dataset. This method is experimental and
-        its signature may change.
+        Apply a function to each block of this Dataset.
+
+        .. warning::
+            This method is experimental and its signature may change.
 
         Parameters
         ----------
         func: callable
-            User-provided function that accepts a Dataset as its first parameter. The
-            function will receive a subset of this Dataset, corresponding to one chunk
-            along each chunked dimension. ``func`` will be executed as
-            ``func(obj_subset, *args, **kwargs)``.
-
-            The function will be first run on mocked-up data, that looks like this
-            Dataset but has sizes 0, to determine properties of the returned object such
-            as dtype, variable names, new dimensions and new indexes (if any).
+            User-provided function that accepts a Dataset as its first
+            parameter. The function will receive a subset or 'block' of this Dataset (see below),
+            corresponding to one chunk along each chunked dimension. ``func`` will be
+            executed as ``func(subset_dataset, *subset_args, **kwargs)``.
 
             This function must return either a single DataArray or a single Dataset.
 
-            This function cannot change size of existing dimensions, or add new chunked
-            dimensions.
+            This function cannot add a new chunked dimension.
+
+        obj: DataArray, Dataset
+            Passed to the function as its first argument, one block at a time.
         args: Sequence
-            Passed verbatim to func after unpacking, after the sliced DataArray. xarray
-            objects, if any, will not be split by chunks. Passing dask collections is
-            not allowed.
+            Passed to func after unpacking and subsetting any xarray objects by blocks.
+            xarray objects in args must be aligned with obj, otherwise an error is raised.
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
-            split by chunks. Passing dask collections is not allowed.
+            subset to blocks. Passing dask collections in kwargs is not allowed.
+        template: (optional) DataArray, Dataset
+            xarray object representing the final result after compute is called. If not provided,
+            the function will be first run on mocked-up data, that looks like ``obj`` but
+            has sizes 0, to determine properties of the returned object such as dtype,
+            variable names, attributes, new dimensions and new indexes (if any).
+            ``template`` must be provided if the function changes the size of existing dimensions.
+            When provided, ``attrs`` on variables in `template` are copied over to the result. Any
+            ``attrs`` set by ``func`` will be ignored.
+
 
         Returns
         -------
-        A single DataArray or Dataset with dask backend, reassembled from the outputs of
-        the function.
+        A single DataArray or Dataset with dask backend, reassembled from the outputs of the
+        function.
 
         Notes
         -----
-        This method is designed for when one needs to manipulate a whole xarray object
-        within each chunk. In the more common case where one can work on numpy arrays,
-        it is recommended to use apply_ufunc.
+        This function is designed for when ``func`` needs to manipulate a whole xarray object
+        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
+        recommended to use ``apply_ufunc``.
 
-        If none of the variables in this Dataset is backed by dask, calling this method
-        is equivalent to calling ``func(self, *args, **kwargs)``.
+        If none of the variables in ``obj`` is backed by dask arrays, calling this function is
+        equivalent to calling ``func(obj, *args, **kwargs)``.
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.map_blocks,
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
         xarray.DataArray.map_blocks
+
+        Examples
+        --------
+
+        Calculate an anomaly from climatology using ``.groupby()``. Using
+        ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
+        its indices, and its methods like ``.groupby()``.
+
+        >>> def calculate_anomaly(da, groupby_type="time.month"):
+        ...     gb = da.groupby(groupby_type)
+        ...     clim = gb.mean(dim="time")
+        ...     return gb - clim
+        >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> np.random.seed(123)
+        >>> array = xr.DataArray(
+        ...     np.random.rand(len(time)), dims="time", coords=[time]
+        ... ).chunk()
+        >>> ds = xr.Dataset({"a": array})
+        >>> ds.map_blocks(calculate_anomaly, template=ds).compute()
+        <xarray.DataArray (time: 24)>
+        array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
+                0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
+               -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
+                0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
+                0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
+        Coordinates:
+          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+
+        Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
+        to the function being applied in ``xr.map_blocks()``:
+
+        >>> ds.map_blocks(
+        ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=ds,
+        ... )
+        <xarray.DataArray (time: 24)>
+        array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
+               -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
+               -0.19967375,  0.18619794, -0.05100474, -0.42989909, -0.09153273,
+                0.24841842, -0.30708526, -0.31412523,  0.04197439,  0.0422506 ,
+                0.14482397,  0.35985481,  0.23487834,  0.12144652])
+        Coordinates:
+            * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         """
         from .parallel import map_blocks
 
-        return map_blocks(func, self, args, kwargs)
+        return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
         self,
@@ -5823,7 +5890,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
         skipna_da = skipna
 
-        x = get_clean_interp_index(self, dim)
+        x = get_clean_interp_index(self, dim, strict=False)
         xname = "{}_".format(self[dim].name)
         order = int(deg) + 1
         lhs = np.vander(x, order)
@@ -5934,7 +6001,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j"),) * fac
+                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -6060,8 +6127,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> ds = xr.Dataset({'foo': ('x', range(5))})
-        >>> ds.pad(x=(1,2))
+        >>> ds = xr.Dataset({"foo": ("x", range(5))})
+        >>> ds.pad(x=(1, 2))
         <xarray.Dataset>
         Dimensions:  (x: 8)
         Dimensions without coordinates: x
@@ -6155,17 +6222,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.min(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.min(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6173,7 +6243,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 -2
             float    (y) float64 -2.0 -4.0 1.0
-        >>> ds.argmin(dim='x')
+        >>> ds.argmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6181,7 +6251,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 4
             float    (y) int64 4 0 2
-        >>> ds.idxmin(dim='x')
+        >>> ds.idxmin(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6197,7 +6267,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
 
     def idxmax(
@@ -6250,17 +6320,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
 
-        >>> array1 = xr.DataArray([0, 2, 1, 0, -2], dims="x",
-        ...                       coords={"x": ['a', 'b', 'c', 'd', 'e']})
-        >>> array2 = xr.DataArray([[2.0, 1.0, 2.0, 0.0, -2.0],
-        ...                        [-4.0, np.NaN, 2.0, np.NaN, -2.0],
-        ...                        [np.NaN, np.NaN, 1., np.NaN, np.NaN]],
-        ...                       dims=["y", "x"],
-        ...                       coords={"y": [-1, 0, 1],
-        ...                               "x": ['a', 'b', 'c', 'd', 'e']}
-        ...                       )
-        >>> ds = xr.Dataset({'int': array1, 'float': array2})
-        >>> ds.max(dim='x')
+        >>> array1 = xr.DataArray(
+        ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
+        ... )
+        >>> array2 = xr.DataArray(
+        ...     [
+        ...         [2.0, 1.0, 2.0, 0.0, -2.0],
+        ...         [-4.0, np.NaN, 2.0, np.NaN, -2.0],
+        ...         [np.NaN, np.NaN, 1.0, np.NaN, np.NaN],
+        ...     ],
+        ...     dims=["y", "x"],
+        ...     coords={"y": [-1, 0, 1], "x": ["a", "b", "c", "d", "e"]},
+        ... )
+        >>> ds = xr.Dataset({"int": array1, "float": array2})
+        >>> ds.max(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6268,7 +6341,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 2
             float    (y) float64 2.0 2.0 1.0
-        >>> ds.argmax(dim='x')
+        >>> ds.argmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6276,7 +6349,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             int      int64 1
             float    (y) int64 0 2 2
-        >>> ds.idxmax(dim='x')
+        >>> ds.idxmax(dim="x")
         <xarray.Dataset>
         Dimensions:  (y: 3)
         Coordinates:
@@ -6292,8 +6365,134 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 skipna=skipna,
                 fill_value=fill_value,
                 keep_attrs=keep_attrs,
-            ),
+            )
         )
+
+    def argmin(self, dim=None, axis=None, **kwargs):
+        """Indices of the minima of the member variables.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmin
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmin() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmin_func = getattr(duck_array_ops, "argmin")
+            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
+
+    def argmax(self, dim=None, axis=None, **kwargs):
+        """Indices of the maxima of the member variables.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmax will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmax
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmax() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmax_func = getattr(duck_array_ops, "argmax")
+            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

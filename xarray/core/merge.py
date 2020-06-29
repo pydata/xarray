@@ -841,7 +841,7 @@ def merge(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    dict_like_objects = list()
+    dict_like_objects = []
     for obj in objects:
         if not isinstance(obj, (DataArray, Dataset, dict)):
             raise TypeError(

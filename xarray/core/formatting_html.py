@@ -20,7 +20,9 @@ def short_data_repr_html(array):
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
-    return escape(short_data_repr(array))
+    else:
+        text = escape(short_data_repr(array))
+        return f"<pre>{text}</pre>"
 
 
 def format_dims(dims, coord_names):
@@ -123,7 +125,7 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
         f"<label for='{data_id}' title='Show/Hide data repr'>"
         f"{data_icon}</label>"
         f"<div class='xr-var-attrs'>{attrs_ul}</div>"
-        f"<pre class='xr-var-data'>{data_repr}</pre>"
+        f"<div class='xr-var-data'>{data_repr}</div>"
     )
 
 
@@ -182,8 +184,9 @@ def dim_section(obj):
 def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
-    collapsed = ""
-    preview = escape(inline_variable_array_repr(obj.variable, max_width=70))
+    collapsed = "checked"
+    variable = getattr(obj, "variable", obj)
+    preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)
     data_icon = _icon("icon-database")
 
@@ -192,7 +195,7 @@ def array_section(obj):
         f"<input id='{data_id}' class='xr-array-in' type='checkbox' {collapsed}>"
         f"<label for='{data_id}' title='Show/hide data repr'>{data_icon}</label>"
         f"<div class='xr-array-preview xr-preview'><span>{preview}</span></div>"
-        f"<pre class='xr-array-data'>{data_repr}</pre>"
+        f"<div class='xr-array-data'>{data_repr}</div>"
         "</div>"
     )
 
@@ -221,14 +224,20 @@ attr_section = partial(
 )
 
 
-def _obj_repr(header_components, sections):
+def _obj_repr(obj, header_components, sections):
+    """Return HTML repr of an xarray object.
+
+    If CSS is not injected (untrusted notebook), fallback to the plain text repr.
+
+    """
     header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
     sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
     return (
         "<div>"
         f"{ICONS_SVG}<style>{CSS_STYLE}</style>"
-        "<div class='xr-wrap'>"
+        f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
+        "<div class='xr-wrap' hidden>"
         f"{header}"
         f"<ul class='xr-sections'>{sections}</ul>"
         "</div>"
@@ -256,7 +265,7 @@ def array_repr(arr):
 
     sections.append(attr_section(arr.attrs))
 
-    return _obj_repr(header_components, sections)
+    return _obj_repr(arr, header_components, sections)
 
 
 def dataset_repr(ds):
@@ -271,4 +280,4 @@ def dataset_repr(ds):
         attr_section(ds.attrs),
     ]
 
-    return _obj_repr(header_components, sections)
+    return _obj_repr(ds, header_components, sections)
