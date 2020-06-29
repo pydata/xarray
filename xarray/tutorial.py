@@ -36,12 +36,13 @@ def check_md5sum(content, checksum):
 
 
 def download_to(url, path):
-    with requests.get(url, stream=True) as r, path.open("wb") as f:
-        if r.status_code != 200:
-            raise OSError(f"download failed: {r.reason}")
+    with path.open("wb") as f:
+        with requests.get(url, stream=True) as r:
+            if r.status_code != 200:
+                raise OSError(f"download failed: {r.reason}")
 
-        r.raw.decode_content = True
-        shutil.copyfileobj(r.raw, f)
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, f)
 
 
 def open_rasterio(
