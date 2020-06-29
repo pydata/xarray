@@ -621,7 +621,7 @@ def apply_variable_ufunc(
 
                 if LooseVersion(dask_version) < LooseVersion("2.17.0"):
                     if signature.num_outputs > 1:
-                        res = tuple(*res,)
+                        res = tuple(r for r in res)
 
                 return res
 
