@@ -21,7 +21,7 @@ from .core.dataset import Dataset
 _cache_name = "xarray_tutorial_data"
 _cache_dir = pathlib.Path.home() / ".cache"
 # TODO: I/O on import. Might not be a good idea.
-if _cache_dir.exists():
+if _cache_dir.is_dir():
     _default_cache_dir = _cache_dir / _cache_name
 else:
     _default_cache_dir = pathlib.Path.home() / f".{_cache_name}"
