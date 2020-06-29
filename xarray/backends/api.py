@@ -388,9 +388,6 @@ def open_dataset(
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    overwrite_encoded_chunks: bool, optional
-        Whether to drop the zarr chunks encoded for each variable when a
-        dataset is loaded with specified chunk sizes (default: False)
 
 
     Returns
@@ -479,9 +476,10 @@ def open_dataset(
     if isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
         # on ZarrStore, mode='r', synchronizer=None, group=None,
         # consolidated=False.
-        overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
+        _backend_kwargs = backend_kwargs.copy()
+        overwrite_encoded_chunks = _backend_kwargs.pop("overwrite_encoded_chunks", None)
         store = backends.ZarrStore.open_group(
-            filename_or_obj, group=group, **backend_kwargs
+            filename_or_obj, group=group, **_backend_kwargs
         )
 
     elif isinstance(filename_or_obj, str):
@@ -514,11 +512,12 @@ def open_dataset(
         elif engine == "zarr":
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
-            overwrite_encoded_chunks = backend_kwargs.pop(
+            _backend_kwargs = backend_kwargs.copy()
+            overwrite_encoded_chunks = _backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
             store = backends.ZarrStore.open_group(
-                filename_or_obj, group=group, **backend_kwargs
+                filename_or_obj, group=group, **_backend_kwargs
             )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
