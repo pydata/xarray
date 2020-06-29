@@ -1123,10 +1123,14 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Examples
     --------
-    >>> da_a = DataArray(np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_a = DataArray(
+    ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_a
     <xarray.DataArray (space: 3, time: 3)>
     array([[1. , 2. , 3. ],
@@ -1135,10 +1139,14 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_b = DataArray(
+    ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_b
     <xarray.DataArray (space: 3, time: 3)>
     array([[ 0.2,  0.4,  0.6],
@@ -1150,7 +1158,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     >>> xr.cov(da_a, da_b)
     <xarray.DataArray ()>
     array(-3.53055556)
-    >>> xr.cov(da_a, da_b, dim='time')
+    >>> xr.cov(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
     array([ 0.2, -0.5,  1.69333333])
     Coordinates:
@@ -1192,10 +1200,14 @@ def corr(da_a, da_b, dim=None):
 
     Examples
     --------
-    >>> da_a = DataArray(np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_a = DataArray(
+    ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_a
     <xarray.DataArray (space: 3, time: 3)>
     array([[1. , 2. , 3. ],
@@ -1204,10 +1216,14 @@ def corr(da_a, da_b, dim=None):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_b = DataArray(
+    ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_b
     <xarray.DataArray (space: 3, time: 3)>
     array([[ 0.2,  0.4,  0.6],
@@ -1219,7 +1235,7 @@ def corr(da_a, da_b, dim=None):
     >>> xr.corr(da_a, da_b)
     <xarray.DataArray ()>
     array(-0.57087777)
-    >>> xr.corr(da_a, da_b, dim='time')
+    >>> xr.corr(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
     array([ 1., -1.,  1.])
     Coordinates:
@@ -1590,7 +1606,7 @@ def _calc_idxminmax(
 
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[(indx.data,)])
+        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:

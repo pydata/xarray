@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -1241,13 +1242,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         return _LocIndexer(self)
 
-    def __getitem__(self, key: Any) -> "Union[DataArray, Dataset]":
+    # FIXME https://github.com/python/mypy/issues/7328
+    @overload
+    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
+        ...
+
+    @overload
+    def __getitem__(self, key: Any) -> "Dataset":
+        ...
+
+    def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
         Indexing with a list of names will return a new ``Dataset`` object.
         """
-        # TODO(shoyer): type this properly: https://github.com/python/mypy/issues/7328
         if utils.is_dict_like(key):
             return self.isel(**cast(Mapping, key))
 
@@ -5563,16 +5576,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    @property
-    def plot(self):
-        """
-        Access plotting functions for Datasets.
-        Use it as a namespace to use xarray.plot functions as Dataset methods
-
-        >>> ds.plot.scatter(...)  # equivalent to xarray.plot.scatter(ds,...)
-
-        """
-        return _Dataset_PlotMethods(self)
+    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.

@@ -53,7 +53,7 @@ from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
-from .merge import PANDAS_TYPES, _extract_indexes_from_coords
+from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
@@ -260,7 +260,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _resample_cls = resample.DataArrayResample
     _weighted_cls = weighted.DataArrayWeighted
 
-    dt = property(CombinedDatetimelikeAccessor)
+    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor)
 
     def __init__(
         self,
@@ -1076,6 +1076,19 @@ class DataArray(AbstractArray, DataWithCoords):
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
 
+        In contrast to `DataArray.isel`, indexers for this method should use
+        labels instead of integers.
+
+        Under the hood, this method is powered by using pandas's powerful Index
+        objects. This makes label based indexing essentially just as fast as
+        using integer indexing.
+
+        It also means this method uses pandas's (well documented) logic for
+        indexing. This means you can use string shortcuts for datetime indexes
+        (e.g., '2000-01' to select all values in January 2000). It also means
+        that slices are treated as inclusive of both the start and stop values,
+        unlike normal Python indexing.
+
         .. warning::
 
           Do not try to assign values when using any of the indexing methods
@@ -1087,6 +1100,45 @@ class DataArray(AbstractArray, DataWithCoords):
 
           Assigning values with the chained indexing using ``.sel`` or
           ``.isel`` fails silently.
+
+        Parameters
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and values given
+            by scalars, slices or arrays of tick labels. For dimensions with
+            multi-index, the indexer may also be a dict-like object with keys
+            matching index level names.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
+            One of indexers or indexers_kwargs must be provided.
+        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+            Method to use for inexact matches:
+
+            * None (default): only exact matches
+            * pad / ffill: propagate last valid index value forward
+            * backfill / bfill: propagate next valid index value backward
+            * nearest: use nearest valid index value
+        tolerance : optional
+            Maximum distance between original and new labels for inexact
+            matches. The values of the index at the matching locations must
+            satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+        drop : bool, optional
+            If ``drop=True``, drop coordinates variables in `indexers` instead
+            of making them scalar.
+        **indexers_kwargs : {dim: indexer, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
+
+        Returns
+        -------
+        obj : DataArray
+            A new DataArray with the same contents as this DataArray, except the
+            data and each dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this DataArray, unless vectorized indexing was triggered by using
+            an array indexer, in which case the data will be a copy.
 
         See Also
         --------
@@ -2661,8 +2713,15 @@ class DataArray(AbstractArray, DataWithCoords):
             # don't support automatic alignment with in-place arithmetic.
             other_coords = getattr(other, "coords", None)
             other_variable = getattr(other, "variable", other)
-            with self.coords._merge_inplace(other_coords):
-                f(self.variable, other_variable)
+            try:
+                with self.coords._merge_inplace(other_coords):
+                    f(self.variable, other_variable)
+            except MergeError as exc:
+                raise MergeError(
+                    "Automatic alignment is not supported for in-place operations.\n"
+                    "Consider aligning the indices manually or using a not-in-place operation.\n"
+                    "See https://github.com/pydata/xarray/issues/3910 for more explanations."
+                ) from exc
             return self
 
         return func
@@ -2670,24 +2729,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs
 
-    @property
-    def plot(self) -> _PlotMethods:
-        """
-        Access plotting functions for DataArray's
-
-        >>> d = xr.DataArray([[1, 2], [3, 4]])
-
-        For convenience just call this directly
-
-        >>> d.plot()
-
-        Or use it as a namespace to use xarray.plot functions as
-        DataArray methods
-
-        >>> d.plot.imshow()  # equivalent to xarray.plot.imshow(d)
-
-        """
-        return _PlotMethods(self)
+    plot = utils.UncachedAccessor(_PlotMethods)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
@@ -3779,7 +3821,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = property(StringAccessor)
+    str = utils.UncachedAccessor(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
