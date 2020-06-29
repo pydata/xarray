@@ -9,6 +9,7 @@ import hashlib
 import pathlib
 import shutil
 import tempfile
+from contextlib import contextmanager
 
 import numpy as np
 import requests
@@ -35,9 +36,18 @@ def check_md5sum(content, checksum):
     return md5sum == checksum
 
 
+# based on https://stackoverflow.com/a/29491523
+@contextmanager
+def open_atomic(path, mode=None):
+    temporary_path = path.with_name(f".{path.name}")
+    with temporary_path.open(mode=mode) as f:
+        yield f
+        temporary_path.rename(path)
+
+
 def download_to(url, path):
     # based on https://stackoverflow.com/a/39217788
-    with path.open("wb") as f:
+    with open_atomic(path, mode="wb") as f:
         with requests.get(url, stream=True) as r:
             if r.status_code != 200:
                 raise OSError(f"download failed: {r.reason}")
