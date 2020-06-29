@@ -39,7 +39,9 @@ Breaking changes
   the default behaviour of :py:func:`open_mfdataset` has changed to use
   ``combine='by_coords'`` as the default argument value. (:issue:`2616`, :pull:`3926`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- The ``DataArray`` and ``Variable`` HTML reprs now expand the data section by
+  default (:issue:`4176`)
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -52,6 +54,13 @@ Enhancements
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
+  sequences of 'dim' arguments, and if a sequence is passed return a dict
+  (which can be passed to :py:meth:`isel` to get the value of the minimum) of
+  the indices for each dimension of the minimum or maximum of a DataArray.
+  (:pull:`3936`)
+  By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
+  <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of

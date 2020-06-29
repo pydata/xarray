@@ -6368,5 +6368,131 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
         )
 
+    def argmin(self, dim=None, axis=None, **kwargs):
+        """Indices of the minima of the member variables.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmin
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmin() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmin_func = getattr(duck_array_ops, "argmin")
+            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
+
+    def argmax(self, dim=None, axis=None, **kwargs):
+        """Indices of the maxima of the member variables.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmax will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmax
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmax() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmax_func = getattr(duck_array_ops, "argmax")
+            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
