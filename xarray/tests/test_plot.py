@@ -2391,28 +2391,25 @@ def test_facetgrid_single_contour():
 
 
 @requires_matplotlib
-def test_get_axis(figsize, aspect, size):
+def test_get_axis():
     # test get_axis works with different args combinations
     # and return the right type
 
     # cannot provide both ax and figsize
     with pytest.raises(ValueError, match="both `figsize` and `ax`"):
-        ax = get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
+        get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
 
     # cannot provide both ax and size
     with pytest.raises(ValueError, match="both `size` and `ax`"):
-        ax = get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
+        get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
 
     # cannot provide both size and figsize
     with pytest.raises(ValueError, match="both `figsize` and `size`"):
-        ax = get_axis(figsize=[4, 4], size=200, aspect=None, ax=None)
+        get_axis(figsize=[4, 4], size=200, aspect=None, ax=None)
 
     # cannot provide aspect and size
     with pytest.raises(ValueError, match="`aspect` argument without `size`"):
-        ax = get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
-
-    ax = get_axis(ax=ax)
-    assert isinstance(ax, mpl.axes.Axes)
+        get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
 
     ax = get_axis()
     assert isinstance(ax, mpl.axes.Axes)
