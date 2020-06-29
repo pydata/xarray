@@ -39,10 +39,21 @@ def check_md5sum(content, checksum):
 # based on https://stackoverflow.com/a/29491523
 @contextmanager
 def open_atomic(path, mode=None):
-    temporary_path = path.with_name(f".{path.name}")
-    with temporary_path.open(mode=mode) as f:
+    folder = path.parent
+    prefix = f".{path.name}"
+
+    try:
+        f = tempfile.NamedTemporaryFile(dir=folder, prefix=prefix, delete=False)
+        temporary_path = pathlib.Path(f.name)
+
         yield f
+
         temporary_path.rename(path)
+    except Exception:
+        temporary_path.unlink()
+        raise
+    finally:
+        pass
 
 
 def download_to(url, path):
