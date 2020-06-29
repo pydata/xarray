@@ -476,16 +476,13 @@ def open_dataset(
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
 
-    if isinstance(filename_or_obj, MutableMapping):
-        if engine == "zarr":
-            # on ZarrStore, mode='r', synchronizer=None, group=None,
-            # consolidated=False.
-            overwrite_encoded_chunks = backend_kwargs.pop(
-                "overwrite_encoded_chunks", None
-            )
-            store = backends.ZarrStore.open_group(
-                filename_or_obj, group=group, **backend_kwargs
-            )
+    if isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
+        # on ZarrStore, mode='r', synchronizer=None, group=None,
+        # consolidated=False.
+        overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
+        store = backends.ZarrStore.open_group(
+            filename_or_obj, group=group, **backend_kwargs
+        )
 
     elif isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
