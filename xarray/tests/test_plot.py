@@ -2391,36 +2391,29 @@ def test_facetgrid_single_contour():
 
 
 @requires_matplotlib
-@pytest.mark.parametrize("figsize", [[4, 4], None])
-@pytest.mark.parametrize("aspect", [4 / 3, None])
-@pytest.mark.parametrize("size", [200, None])
 def test_get_axis(figsize, aspect, size):
     # test get_axis works with different args combinations
     # and return the right type
 
-    ax = "something"
-    if figsize is not None:
-        # cannot provide both ax and figsize
-        with pytest.raises(ValueError, match="both `figsize` and `ax`"):
-            ax = get_axis(figsize, size, aspect, ax)
-    if figsize is None and size is not None:
-        # cannot provide both ax and size
-        with pytest.raises(ValueError, match="both `size` and `ax`"):
-            ax = get_axis(figsize, size, aspect, ax)
+    # cannot provide both ax and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `ax`"):
+        ax = get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
 
-    ax = None
-    if figsize is not None and size is not None:
-        # cannot provide both size and figsize
-        with pytest.raises(ValueError, match="both `figsize` and " "`size`"):
-            ax = get_axis(figsize, size, aspect, ax)
+    # cannot provide both ax and size
+    with pytest.raises(ValueError, match="both `size` and `ax`"):
+        ax = get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
 
-    if figsize is None and aspect is not None and size is None:
-        # cannot provide aspect and size
-        with pytest.raises(ValueError, match="`aspect` argument without `size`"):
-            ax = get_axis(figsize, size, aspect, ax)
+    # cannot provide both size and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `size`"):
+        ax = get_axis(figsize=[4, 4], size=200, aspect=None, ax=None)
+
+    # cannot provide aspect and size
+    with pytest.raises(ValueError, match="`aspect` argument without `size`"):
+        ax = get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
 
     ax = get_axis(ax=ax)
     assert isinstance(ax, mpl.axes.Axes)
+
     ax = get_axis()
     assert isinstance(ax, mpl.axes.Axes)
 
