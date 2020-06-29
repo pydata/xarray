@@ -196,21 +196,15 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
 
-    def array_like(x):
-        return hasattr(x, "ndim") and hasattr(x, "shape") and hasattr(x, "dtype")
-
-    def scalar(x):
-        return isinstance(x, (bool, int, float, complex, str)) or (
-            array_like(x) and x.ndim == 0
-        )
-
-    if not array_like(x) and not scalar(x):
+    if not utils.is_array_like(x) and not utils.is_scalar(x):
         x = np.asarray(x)
 
-    if not array_like(y) and not scalar(y):
+    if not utils.is_array_like(y) and not utils.is_scalar(y):
         y = np.asarray(y)
 
-    if (array_like(x) and scalar(y)) or (scalar(x) and array_like(y)):
+    if (utils.is_array_like(x) and utils.is_scalar(y)) or (
+        utils.is_scalar(x) and utils.is_array_like(y)
+    ):
         equiv = (x == y).all()
     else:
         equiv = duck_array_ops.array_equiv(x, y)
