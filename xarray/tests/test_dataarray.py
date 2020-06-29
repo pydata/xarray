@@ -1503,7 +1503,7 @@ class TestDataArray:
             da.reindex(time=time2)
 
         # regression test for #736, reindex can not change complex nums dtype
-        x = np.array([1, 2, 3], dtype=np.complex)
+        x = np.array([1, 2, 3], dtype=complex)
         x = DataArray(x, coords=[[0.1, 0.2, 0.3]])
         y = DataArray([2, 5, 6, 7, 8], coords=[[-1.1, 0.21, 0.31, 0.41, 0.51]])
         re_dtype = x.reindex_like(y, method="pad").dtype
@@ -1830,6 +1830,13 @@ class TestDataArray:
         expected = DataArray([1, 2], coords={"x_": ("x", ["a", "b"])}, dims="x")
         assert_identical(array.reset_index("x"), expected)
 
+    def test_reset_index_keep_attrs(self):
+        coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
+        da = DataArray([1, 0], [coord_1])
+        expected = DataArray([1, 0], {"coord_1_": coord_1}, dims=["coord_1"])
+        obj = da.reset_index("coord_1")
+        assert_identical(expected, obj)
+
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(["level_2", "level_1"])
         expected = DataArray(self.mda.values, coords={"x": midx}, dims="x")
@@ -1923,9 +1930,9 @@ class TestDataArray:
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
             a += b
-        with pytest.raises(xr.MergeError):
+        with pytest.raises(xr.MergeError, match="Automatic alignment is not supported"):
             b += a
 
     def test_math_name(self):
@@ -3531,6 +3538,24 @@ class TestDataArray:
         assert isinstance(actual_sparse.data, sparse.COO)
         actual_sparse.data = actual_sparse.data.todense()
         assert_identical(actual_sparse, actual_dense)
+
+    @requires_sparse
+    def test_from_multiindex_series_sparse(self):
+        # regression test for GH4019
+        import sparse
+
+        idx = pd.MultiIndex.from_product([np.arange(3), np.arange(5)], names=["a", "b"])
+        series = pd.Series(np.random.RandomState(0).random(len(idx)), index=idx).sample(
+            n=5, random_state=3
+        )
+
+        dense = DataArray.from_series(series, sparse=False)
+        expected_coords = sparse.COO.from_numpy(dense.data, np.nan).coords
+
+        actual_sparse = xr.DataArray.from_series(series, sparse=True)
+        actual_coords = actual_sparse.data.coords
+
+        np.testing.assert_equal(actual_coords, expected_coords)
 
     def test_to_and_from_empty_series(self):
         # GH697
@@ -5230,6 +5255,25 @@ class TestReduce2D(TestReduce):
         with raise_if_dask_computes(max_computes=max_computes):
             result7 = ar0.idxmax(dim="x", fill_value=-5j)
         assert_identical(result7, expected7)
+
+
+class TestReduceND(TestReduce):
+    @pytest.mark.parametrize("op", ["idxmin", "idxmax"])
+    @pytest.mark.parametrize("ndim", [3, 5])
+    def test_idxminmax_dask(self, op, ndim):
+        if not has_dask:
+            pytest.skip("requires dask")
+
+        ar0_raw = xr.DataArray(
+            np.random.random_sample(size=[10] * ndim),
+            dims=[i for i in "abcdefghij"[: ndim - 1]] + ["x"],
+            coords={"x": np.arange(10)},
+            attrs=self.attrs,
+        )
+
+        ar0_dsk = ar0_raw.chunk({})
+        # Assert idx is the same with dask and without
+        assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
 @pytest.fixture(params=[1])

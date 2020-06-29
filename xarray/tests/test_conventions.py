@@ -32,10 +32,8 @@ class TestBoolTypeArray:
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
         bx = conventions.BoolTypeArray(x)
-        assert bx.dtype == np.bool
-        assert_array_equal(
-            bx, np.array([True, False, True, True, False], dtype=np.bool)
-        )
+        assert bx.dtype == bool
+        assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
 
 class TestNativeEndiannessArray:
@@ -363,8 +361,12 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     @contextlib.contextmanager
     def roundtrip(
-        self, data, save_kwargs={}, open_kwargs={}, allow_cleanup_failure=False
+        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
     ):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)

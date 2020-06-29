@@ -240,12 +240,6 @@ class DatetimeAccessor(Properties):
     Fields can be accessed through the `.dt` attribute
     for applicable DataArrays.
 
-    Notes
-    ------
-    Note that these fields are not calendar-aware; if your datetimes are encoded
-    with a non-Gregorian calendar (e.g. a 360-day calendar) using cftime,
-    then some fields like `dayofyear` may not be accurate.
-
     Examples
     ---------
     >>> import xarray as xr

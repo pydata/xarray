@@ -20,7 +20,9 @@ def short_data_repr_html(array):
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
-    return escape(short_data_repr(array))
+    else:
+        text = escape(short_data_repr(array))
+        return f"<pre>{text}</pre>"
 
 
 def format_dims(dims, coord_names):
@@ -123,7 +125,7 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
         f"<label for='{data_id}' title='Show/Hide data repr'>"
         f"{data_icon}</label>"
         f"<div class='xr-var-attrs'>{attrs_ul}</div>"
-        f"<pre class='xr-var-data'>{data_repr}</pre>"
+        f"<div class='xr-var-data'>{data_repr}</div>"
     )
 
 
@@ -182,7 +184,7 @@ def dim_section(obj):
 def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
-    collapsed = ""
+    collapsed = "checked"
     variable = getattr(obj, "variable", obj)
     preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)
@@ -193,7 +195,7 @@ def array_section(obj):
         f"<input id='{data_id}' class='xr-array-in' type='checkbox' {collapsed}>"
         f"<label for='{data_id}' title='Show/hide data repr'>{data_icon}</label>"
         f"<div class='xr-array-preview xr-preview'><span>{preview}</span></div>"
-        f"<pre class='xr-array-data'>{data_repr}</pre>"
+        f"<div class='xr-array-data'>{data_repr}</div>"
         "</div>"
     )
 

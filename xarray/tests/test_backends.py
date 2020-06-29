@@ -87,6 +87,7 @@ except ImportError:
     dask_version = "10.0"
 
 ON_WINDOWS = sys.platform == "win32"
+default_value = object()
 
 
 def open_example_dataset(name, *args, **kwargs):
@@ -884,7 +885,7 @@ class CFEncodedBase(DatasetIOBase):
                 "x": np.arange(3, 10, dtype=">i2"),
                 "y": np.arange(3, 20, dtype="<i4"),
                 "z": np.arange(3, 30, dtype="=i8"),
-                "w": ("x", np.arange(3, 10, dtype=np.float)),
+                "w": ("x", np.arange(3, 10, dtype=float)),
             }
         )
 
@@ -2661,6 +2662,36 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
 
+    def test_open_mfdataset_dataset_attr_by_coords(self):
+        """
+        Case when an attribute differs across the multiple files
+        """
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # Give the files an inconsistent attribute
+            for i, f in enumerate(files):
+                ds = open_dataset(f).load()
+                ds.attrs["test_dataset_attr"] = 10 + i
+                ds.close()
+                ds.to_netcdf(f)
+
+            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+                assert ds.test_dataset_attr == 10
+
+    def test_open_mfdataset_dataarray_attr_by_coords(self):
+        """
+        Case when an attribute of a member DataArray differs across the multiple files
+        """
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # Give the files an inconsistent attribute
+            for i, f in enumerate(files):
+                ds = open_dataset(f).load()
+                ds["v1"].attrs["test_dataarray_attr"] = i
+                ds.close()
+                ds.to_netcdf(f)
+
+            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+                assert ds["v1"].test_dataarray_attr == 0
+
     @pytest.mark.parametrize("combine", ["nested", "by_coords"])
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
@@ -2946,16 +2977,6 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
-    def test_open_mfdataset_combine_nested_no_concat_dim(self):
-        original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                original.isel(x=slice(5)).to_netcdf(tmp1)
-                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-
-                with raises_regex(ValueError, "Must supply concat_dim"):
-                    open_mfdataset([tmp2, tmp1], combine="nested")
-
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self):
         original = Dataset(
@@ -3047,6 +3068,15 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim=None, combine="nested"
                 ) as actual:
+                    assert_identical(data, actual)
+
+    def test_open_mfdataset_concat_dim_default_none(self):
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                data = Dataset({"x": 0})
+                data.to_netcdf(tmp1)
+                Dataset({"x": np.nan}).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
                     assert_identical(data, actual)
 
     def test_open_dataset(self):
@@ -3170,73 +3200,6 @@ class TestDask(DatasetIOBase):
             # this would fail if we used open_dataarray instead of
             # load_dataarray
             ds.to_netcdf(tmp)
-
-
-@requires_scipy_or_netCDF4
-@requires_dask
-class TestOpenMFDataSetDeprecation:
-    """
-    Set of tests to check that FutureWarnings are correctly raised until the
-    deprecation cycle is complete. #2616
-    """
-
-    def test_open_mfdataset_default(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(
-                    FutureWarning, match="default behaviour of" " `open_mfdataset`"
-                ):
-                    open_mfdataset([tmp1, tmp2])
-
-    def test_open_mfdataset_with_concat_dim(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="`concat_dim`"):
-                    open_mfdataset([tmp1, tmp2], concat_dim="x")
-
-    def test_auto_combine_with_merge_and_concat(self):
-        ds1, ds2 = Dataset({"x": [0]}), Dataset({"x": [1]})
-        ds3 = Dataset({"z": ((), 99)})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                with create_tmp_file() as tmp3:
-                    ds1.to_netcdf(tmp1)
-                    ds2.to_netcdf(tmp2)
-                    ds3.to_netcdf(tmp3)
-
-                    with pytest.warns(
-                        FutureWarning, match="require both concatenation"
-                    ):
-                        open_mfdataset([tmp1, tmp2, tmp3])
-
-    def test_auto_combine_with_coords(self):
-        ds1 = Dataset({"foo": ("x", [0])}, coords={"x": ("x", [0])})
-        ds2 = Dataset({"foo": ("x", [1])}, coords={"x": ("x", [1])})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="supplied have global"):
-                    open_mfdataset([tmp1, tmp2])
-
-    def test_auto_combine_without_coords(self):
-        ds1, ds2 = Dataset({"foo": ("x", [0])}), Dataset({"foo": ("x", [1])})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                ds1.to_netcdf(tmp1)
-                ds2.to_netcdf(tmp2)
-
-                with pytest.warns(FutureWarning, match="supplied do not have global"):
-                    open_mfdataset([tmp1, tmp2])
 
 
 @requires_scipy_or_netCDF4
@@ -3630,11 +3593,21 @@ def create_tmp_geotiff(
     ny=3,
     nz=3,
     transform=None,
-    transform_args=[5000, 80000, 1000, 2000.0],
-    crs={"units": "m", "no_defs": True, "ellps": "WGS84", "proj": "utm", "zone": 18},
+    transform_args=default_value,
+    crs=default_value,
     open_kwargs=None,
     additional_attrs=None,
 ):
+    if transform_args is default_value:
+        transform_args = [5000, 80000, 1000, 2000.0]
+    if crs is default_value:
+        crs = {
+            "units": "m",
+            "no_defs": True,
+            "ellps": "WGS84",
+            "proj": "utm",
+            "zone": 18,
+        }
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -4148,6 +4121,19 @@ class TestRasterio:
                         assert actual_res == expected_res
                         assert actual_shape == expected_shape
                         assert actual_transform == expected_transform
+
+    def test_rasterio_vrt_with_src_crs(self):
+        # Test open_rasterio() support of WarpedVRT with specified src_crs
+        import rasterio
+
+        # create geotiff with no CRS and specify it manually
+        with create_tmp_geotiff(crs=None) as (tmp_file, expected):
+            src_crs = rasterio.crs.CRS({"init": "epsg:32618"})
+            with rasterio.open(tmp_file) as src:
+                assert src.crs is None
+                with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
+                    with xr.open_rasterio(vrt) as da:
+                        assert da.crs == src_crs
 
     @network
     def test_rasterio_vrt_network(self):
