@@ -36,6 +36,7 @@ def check_md5sum(content, checksum):
 
 
 def download_to(url, path):
+    # based on https://stackoverflow.com/a/39217788
     with path.open("wb") as f:
         with requests.get(url, stream=True) as r:
             if r.status_code != 200:
