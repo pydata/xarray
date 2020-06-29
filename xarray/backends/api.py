@@ -471,14 +471,14 @@ def open_dataset(
         store = filename_or_obj
 
     if isinstance(filename_or_obj, MutableMapping):
-        if engine == 'zarr':
+        if engine == "zarr":
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
-            overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
+            overwrite_encoded_chunks = backend_kwargs.pop(
+                "overwrite_encoded_chunks", None
+            )
             store = backends.ZarrStore.open_group(
-                filename_or_obj,
-                group=group,
-                **backend_kwargs
+                filename_or_obj, group=group, **backend_kwargs
             )
 
     elif isinstance(filename_or_obj, str):
@@ -508,14 +508,14 @@ def open_dataset(
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs
             )
-        elif engine == 'zarr':
+        elif engine == "zarr":
             # on ZarrStore, mode='r', synchronizer=None, group=None,
             # consolidated=False.
-            overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
+            overwrite_encoded_chunks = backend_kwargs.pop(
+                "overwrite_encoded_chunks", None
+            )
             store = backends.ZarrStore.open_group(
-                filename_or_obj,
-                group=group,
-                **backend_kwargs
+                filename_or_obj, group=group, **backend_kwargs
             )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
@@ -541,7 +541,8 @@ def open_dataset(
 
     if chunks is not None:
         from dask.base import tokenize
-        if engine != 'zarr':
+
+        if engine != "zarr":
 
             # if passed an actual file path, augment the token with
             # the file modification time
@@ -579,7 +580,10 @@ def open_dataset(
             if isinstance(chunks, int):
                 chunks = dict.fromkeys(ds.dims, chunks)
 
-            variables = {k: backends.ZarrStore.open_group.maybe_chunk(k, v, chunks) for k, v in ds.variables.items()}
+            variables = {
+                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
             ds2 = ds._replace_vars_and_dims(variables)
         return ds2
     else:

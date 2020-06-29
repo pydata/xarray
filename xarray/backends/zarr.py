@@ -358,8 +358,7 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-
-    def get_chunk(name, var, chunks):
+    def get_chunk(self, name, var, chunks):
         chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
 
         # Coordinate labels aren't chunked
@@ -388,15 +387,17 @@ class ZarrStore(AbstractWritableDataStore):
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
 
-    def maybe_chunk(name, var, chunks):
-        chunk_spec = get_chunk(name, var, chunks)
+    def maybe_chunk(self, name, var, chunks, overwrite_encoded_chunks):
+        chunk_spec = self.get_chunk(name, var, chunks)
 
         if (var.ndim > 0) and (chunk_spec is not None):
+            from dask.base import tokenize
+
             # does this cause any data to be read?
             token2 = tokenize(name, var._data)
             name2 = "zarr-%s" % token2
             var = var.chunk(chunk_spec, name=name2, lock=None)
-            if overwrite_encoded_chunks and var.chunks is not None:
+            if open_kwargs["overwrite_encoded_chunks"] and var.chunks is not None:
                 var.encoding["chunks"] = tuple(x[0] for x in var.chunk)
         return var
 
