@@ -60,7 +60,8 @@ def open_rasterio(
 
     if cache:
         path = cache_dir / name
-        # need to always do that, otherwise the context manager might fail
+        # need to always do that, otherwise we might close the
+        # path using the context manager
         cache_dir = pathlib.Path(cache_dir)
     else:
         cache_dir = tempfile.TemporaryDirectory()
@@ -75,7 +76,8 @@ def open_rasterio(
         return _open_rasterio(path, **kws)
 
     url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
-    # make sure the directory is deleted afterwards
+    # if cache_dir points to a temporary directory, make sure it is
+    # deleted afterwards
     with cache_dir:
         download_to(url, path)
         return _open_rasterio(path, **kws)
@@ -128,7 +130,8 @@ def open_dataset(
 
     if cache:
         path = cache_dir / name
-        # need to always do that, otherwise the context manager might fail
+        # need to always do that, otherwise we might close the
+        # path using the context manager
         cache_dir = pathlib.Path(cache_dir)
     else:
         cache_dir = tempfile.TemporaryDirectory()
@@ -140,7 +143,8 @@ def open_dataset(
     if cache and path.is_file():
         return _open_dataset(path, **kws)
 
-    # make sure the directory is deleted afterwards if it was temporary
+    # if cache_dir points to a temporary directory, make sure it is
+    # deleted afterwards
     with cache_dir:
         download_to(construct_url(path.name), path)
 
