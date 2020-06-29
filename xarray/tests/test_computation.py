@@ -705,7 +705,7 @@ def test_apply_dask_parallelized_errors():
         apply_ufunc(identity, array, dask="parallelized")
 
     # formerly from _apply_blockwise, now from dask.array.apply_gufunc
-    with raises_regex(ValueError, "Core dimension `'y'` consists of multiple chunks"):
+    with raises_regex(ValueError, "consists of multiple chunks"):
         apply_ufunc(
             identity,
             data_array,

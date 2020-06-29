@@ -6,6 +6,7 @@ import itertools
 import operator
 import warnings
 from collections import Counter
+from distutils.version import LooseVersion
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -92,6 +93,10 @@ class _UFuncSignature:
         return self._all_core_dims
 
     @property
+    def dims_map(self):
+        return dict(zip(sorted(self.all_core_dims), range(len(self.all_core_dims))))
+
+    @property
     def num_inputs(self):
         return len(self.input_core_dims)
 
@@ -127,14 +132,12 @@ class _UFuncSignature:
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
         """
-        all_dims = self.all_core_dims
-        dims_map = dict(zip(sorted(all_dims), range(len(all_dims))))
         input_core_dims = [
-            ["dim%d" % dims_map[dim] for dim in core_dims]
+            ["dim%d" % self.dims_map[dim] for dim in core_dims]
             for core_dims in self.input_core_dims
         ]
         output_core_dims = [
-            ["dim%d" % dims_map[dim] for dim in core_dims]
+            ["dim%d" % self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
         alt_signature = type(self)(input_core_dims, output_core_dims)
@@ -594,17 +597,31 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
+            output_sizes = dask_gufunc_kwargs.pop("output_sizes", None)
+            if output_sizes is not None:
+                output_sizes = {
+                    "dim{}".format(signature.dims_map[key]): value
+                    for key, value in output_sizes.items()
+                }
+                dask_gufunc_kwargs["output_sizes"] = output_sizes
+
             def func(*arrays):
                 import dask.array as da
 
                 res = da.apply_gufunc(
-                    numpy_func, str(signature), *arrays, **dask_gufunc_kwargs,
+                    numpy_func,
+                    signature.to_gufunc_string(),
+                    *arrays,
+                    **dask_gufunc_kwargs,
                 )
 
                 # todo: covers for https://github.com/dask/dask/pull/6207
                 #  remove when minimal dask version >= 2.17.0
-                if signature.num_outputs > 1:
-                    res = (*res,)
+                from dask import __version__ as dask_version
+
+                if LooseVersion(dask_version) < LooseVersion("2.17.0"):
+                    if signature.num_outputs > 1:
+                        res = tuple(*res,)
 
                 return res
 
