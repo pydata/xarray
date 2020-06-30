@@ -7,9 +7,8 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict
 from ..core.variable import Variable
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
-
 from .api import open_dataset
+from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
