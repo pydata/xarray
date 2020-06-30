@@ -397,7 +397,7 @@ class ZarrStore(AbstractWritableDataStore):
             token2 = tokenize(name, var._data)
             name2 = "zarr-%s" % token2
             var = var.chunk(chunk_spec, name=name2, lock=None)
-            if open_kwargs["overwrite_encoded_chunks"] and var.chunks is not None:
+            if overwrite_encoded_chunks and var.chunks is not None:
                 var.encoding["chunks"] = tuple(x[0] for x in var.chunk)
         return var
 

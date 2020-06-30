@@ -1537,7 +1537,9 @@ class ZarrBase(CFEncodedBase):
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
-        with xr.open_dataset(store_target, engine="zarr", chunks="auto" **kwargs) as ds:
+        with xr.open_dataset(
+            store_target, engine="zarr", chunks="auto", **kwargs
+        ) as ds:
             yield ds
 
     @contextlib.contextmanager
@@ -1820,7 +1822,9 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, mode="w", group=group)
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_dataset(store_target, group=group, engine="zarr", chunks="auto")
+            actual = xr.open_dataset(
+                store_target, group=group, engine="zarr", chunks="auto"
+            )
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
