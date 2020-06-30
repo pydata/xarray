@@ -4040,6 +4040,22 @@ class TestDataset:
         with raises_regex(ValueError, "non-unique MultiIndex"):
             Dataset.from_dataframe(df_nonunique)
 
+    def test_from_dataframe_unsorted_levels(self):
+        # regression test for GH-4186
+        index = pd.MultiIndex(
+            levels=[["b", "a"], ["foo"]], codes=[[0, 1], [0, 0]], names=["lev1", "lev2"]
+        )
+        df = pd.DataFrame({"c1": [0, 2], "c2": [1, 3]}, index=index)
+        expected = Dataset(
+            {
+                "c1": (("lev1", "lev2"), [[0], [2]]),
+                "c2": (("lev1", "lev2"), [[1], [3]]),
+            },
+            coords={"lev1": ["b", "a"], "lev2": ["foo"]},
+        )
+        actual = Dataset.from_dataframe(df)
+        assert_identical(actual, expected)
+
     def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))

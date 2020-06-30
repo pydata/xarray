@@ -127,8 +127,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
   By `Huite Bootsma <https://github.com/huite>`_.
-- Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``.
+  (:issue:`3951`, :issue:`4186`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix renaming of coords when one or more stacked coords is not in
   sorted order during stack+groupby+apply operations. (:issue:`3287`,
   :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_

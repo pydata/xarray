@@ -4543,11 +4543,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._to_dataframe(self.dims)
 
     def _set_sparse_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, dataframe: pd.DataFrame, dims: tuple
     ) -> None:
         from sparse import COO
 
-        idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted()
@@ -4580,11 +4579,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, dataframe: pd.DataFrame, dims: tuple
     ) -> None:
-
-        idx = dataframe.index
-
         if not isinstance(idx, pd.MultiIndex):
             for name, series in dataframe.items():
                 self[name] = (dims, np.asarray(series))
@@ -4653,7 +4649,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
+        idx = remove_unused_levels_categories(dataframe.index)
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4669,9 +4665,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             obj[index_name] = (dims, idx)
 
         if sparse:
-            obj._set_sparse_data_from_dataframe(dataframe, dims)
+            obj._set_sparse_data_from_dataframe(idx, dataframe, dims)
         else:
-            obj._set_numpy_data_from_dataframe(dataframe, dims)
+            obj._set_numpy_data_from_dataframe(idx, dataframe, dims)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
