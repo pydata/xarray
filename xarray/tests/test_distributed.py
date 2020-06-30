@@ -151,7 +151,9 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
                 )
                 if not compute:
                     maybe_futures.compute()
-                with xr.open_dataset(filename, chunks="auto", **read_kwargs) as restored:
+                with xr.open_dataset(
+                    filename, chunks="auto", engine="zarr", **read_kwargs
+                ) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
