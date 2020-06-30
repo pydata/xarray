@@ -389,7 +389,6 @@ def open_dataset(
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
 
-
     Returns
     -------
     dataset : Dataset
@@ -417,7 +416,6 @@ def open_dataset(
         "pseudonetcdf",
         "zarr",
     ]
-
     if engine not in engines:
         raise ValueError(
             "unrecognized engine for open_dataset: {}\n"
@@ -465,7 +463,59 @@ def open_dataset(
 
         _protect_dataset_variables_inplace(ds, cache)
 
-        return ds
+        if chunks is not None:
+            from dask.base import tokenize
+
+            if engine != "zarr":
+
+                # if passed an actual file path, augment the token with
+                # the file modification time
+                if isinstance(filename_or_obj, str) and not is_remote_uri(
+                    filename_or_obj
+                ):
+                    mtime = os.path.getmtime(filename_or_obj)
+                else:
+                    mtime = None
+                token = tokenize(
+                    filename_or_obj,
+                    mtime,
+                    group,
+                    decode_cf,
+                    mask_and_scale,
+                    decode_times,
+                    concat_characters,
+                    decode_coords,
+                    engine,
+                    chunks,
+                    drop_variables,
+                    use_cftime,
+                )
+                name_prefix = "open_dataset-%s" % token
+                ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+                ds2._file_obj = ds._file_obj
+
+            else:
+
+                # adapted from Dataset.Chunk() and taken from open_zarr
+                if not isinstance(chunks, (int, dict)):
+                    if chunks != "auto":
+                        raise ValueError(
+                            "chunks must be an int, dict, 'auto', or None. "
+                            "Instead found %s. " % chunks
+                        )
+                if isinstance(chunks, int):
+                    chunks = dict.fromkeys(ds.dims, chunks)
+
+                variables = {
+                    k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                    for k, v in ds.variables.items()
+                }
+                ds2 = ds._replace_vars_and_dims(variables)
+            return ds2
+        else:
+            ds2 = ds
+
+        return ds2
 
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
@@ -541,56 +591,7 @@ def open_dataset(
         if isinstance(filename_or_obj, str):
             ds.encoding["source"] = filename_or_obj
 
-    if chunks is not None:
-        from dask.base import tokenize
-
-        if engine != "zarr":
-
-            # if passed an actual file path, augment the token with
-            # the file modification time
-            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-                mtime = os.path.getmtime(filename_or_obj)
-            else:
-                mtime = None
-            token = tokenize(
-                filename_or_obj,
-                mtime,
-                group,
-                decode_cf,
-                mask_and_scale,
-                decode_times,
-                concat_characters,
-                decode_coords,
-                engine,
-                chunks,
-                drop_variables,
-                use_cftime,
-            )
-            name_prefix = "open_dataset-%s" % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-            ds2._file_obj = ds._file_obj
-
-        else:
-
-            # adapted from Dataset.Chunk() and taken from open_zarr
-            if not isinstance(chunks, (int, dict)):
-                if chunks != "auto":
-                    raise ValueError(
-                        "chunks must be an int, dict, 'auto', or None. "
-                        "Instead found %s. " % chunks
-                    )
-            if isinstance(chunks, int):
-                chunks = dict.fromkeys(ds.dims, chunks)
-
-            variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-                for k, v in ds.variables.items()
-            }
-            ds2 = ds._replace_vars_and_dims(variables)
-        return ds2
-    else:
-        ds2 = ds
-    return ds2
+    return ds
 
 
 def open_dataarray(

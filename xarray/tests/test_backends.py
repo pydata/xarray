@@ -1915,11 +1915,11 @@ class ZarrBase(CFEncodedBase):
             encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding)
             ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, chunks="auto")
+            actual_ds = xr.open_dataset(store_target, engine="zarr", chunks="auto")
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, chunks="auto").compute(),
+                xr.open_dataset(store_target, engine="zarr", chunks="auto").compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -1934,7 +1934,9 @@ class ZarrBase(CFEncodedBase):
             ds_with_new_var.to_zarr(store_target, mode="a")
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(combined, xr.open_dataset(store_target, chunks="auto"))
+            assert_identical(
+                combined, xr.open_dataset(store_target, engine="zarr", chunks="auto")
+            )
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
