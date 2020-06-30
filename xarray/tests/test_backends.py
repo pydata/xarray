@@ -1537,9 +1537,7 @@ class ZarrBase(CFEncodedBase):
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
-        with xr.open_dataset(
-            store_target, engine="zarr", chunks="auto", **kwargs
-        ) as ds:
+        with xr.open_dataset(store_target, engine="zarr", **kwargs) as ds:
             yield ds
 
     @contextlib.contextmanager
@@ -1561,7 +1559,7 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(
             expected,
             save_kwargs={"consolidated": True},
-            open_kwargs={"consolidated": True},
+            open_kwargs={"backend_kwargs": {"consolidated": True}},
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
@@ -1614,7 +1612,10 @@ class ZarrBase(CFEncodedBase):
         chunks = {"dim1": 2, "dim2": 3, "dim3": 5}
         rechunked = original.chunk(chunks=chunks)
 
-        open_kwargs = {"chunks": chunks, "overwrite_encoded_chunks": True}
+        open_kwargs = {
+            "chunks": chunks,
+            "backend_kwargs": {"overwrite_encoded_chunks": True},
+        }
         with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
             for k, v in actual.variables.items():
                 assert v.chunks == rechunked[k].chunks
@@ -1653,7 +1654,7 @@ class ZarrBase(CFEncodedBase):
     @requires_dask
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             with self.roundtrip(original, open_kwargs={"auto_chunk": True}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
@@ -1661,7 +1662,7 @@ class ZarrBase(CFEncodedBase):
                     # chunk size should be the same as original
                     assert v.chunks == original[k].chunks
 
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             with self.roundtrip(original, open_kwargs={"auto_chunk": False}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
