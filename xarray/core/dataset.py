@@ -4582,11 +4582,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self[name] = (dims, values)
             return
 
-        if not idx.is_unique:
-            raise ValueError(
-                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
-            )
-
         shape = tuple(lev.size for lev in idx.levels)
         indexer = tuple(idx.codes)
 
@@ -4647,6 +4642,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
         idx = remove_unused_levels_categories(dataframe.index)
+
+        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
 
         # Cast to a NumPy array first, in case the Series is a pandas Extension
         # array (which doesn't have a valid NumPy dtype)
