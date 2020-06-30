@@ -1093,6 +1093,7 @@ def test_vectorize_dask_new_output_dims():
             output_dtypes=[float],
         )
 
+
 def test_output_wrong_number():
     variable = xr.Variable("x", np.arange(10))
 

@@ -94,8 +94,12 @@ class _UFuncSignature:
 
     @property
     def dims_map(self):
-        return dict(zip(sorted(self.all_core_dims),
-                        ["dim{}".format(d) for d in range(len(self.all_core_dims))]))
+        return dict(
+            zip(
+                sorted(self.all_core_dims),
+                ["dim{}".format(d) for d in range(len(self.all_core_dims))],
+            )
+        )
 
     @property
     def num_inputs(self):
