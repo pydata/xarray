@@ -449,7 +449,7 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    def maybe_decode_store(store, lock=False):
+    def maybe_decode_store(store, chunks, lock=False):
         ds = conventions.decode_cf(
             store,
             mask_and_scale=mask_and_scale,
@@ -511,7 +511,7 @@ def open_dataset(
                     for k, v in ds.variables.items()
                 }
                 ds2 = ds._replace_vars_and_dims(variables)
-            return ds2
+
         else:
             ds2 = ds
 
@@ -584,7 +584,7 @@ def open_dataset(
             )
 
     with close_on_error(store):
-        ds = maybe_decode_store(store)
+        ds = maybe_decode_store(store, chunks)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
