@@ -39,7 +39,9 @@ Breaking changes
   the default behaviour of :py:func:`open_mfdataset` has changed to use
   ``combine='by_coords'`` as the default argument value. (:issue:`2616`, :pull:`3926`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- The ``DataArray`` and ``Variable`` HTML reprs now expand the data section by
+  default (:issue:`4176`)
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -52,6 +54,13 @@ Enhancements
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
+  sequences of 'dim' arguments, and if a sequence is passed return a dict
+  (which can be passed to :py:meth:`isel` to get the value of the minimum) of
+  the indices for each dimension of the minimum or maximum of a DataArray.
+  (:pull:`3936`)
+  By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
+  <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
@@ -80,8 +89,8 @@ New Features
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
   By `Todd Jennings <https://github.com/toddrjen>`_
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
-  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`, :pull:`4135`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Pascal Bourgault <https://github.com/aulemahal>`_.
 - More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
@@ -196,6 +205,9 @@ Internal Changes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Run the ``isort`` pre-commit hook only on python source files
   and update the ``flake8`` version. (:issue:`3750`, :pull:`3711`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add `blackdoc <https://blackdoc.readthedocs.io>`_ to the list of
+  checkers for development. (:pull:`4177`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Add a CI job that runs the tests with every optional dependency
   except ``dask``. (:issue:`3794`, :pull:`3919`)
