@@ -602,8 +602,8 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
-            output_sizes = dask_gufunc_kwargs.pop("output_sizes", None)
-            if output_sizes is not None:
+            output_sizes = dask_gufunc_kwargs.pop("output_sizes", dict())
+            if output_sizes:
                 output_sizes_renamed = dict()
                 for key, value in output_sizes.items():
                     if key not in signature.all_output_core_dims:
@@ -612,9 +612,10 @@ def apply_variable_ufunc(
                         )
                     output_sizes_renamed[signature.dims_map[key]] = value
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
-            else:
-                for key in signature.all_output_core_dims:
-                    if key not in signature.all_input_core_dims:
+
+            for key in signature.all_output_core_dims:
+                if key not in signature.all_input_core_dims:
+                    if key not in output_sizes:
                         raise ValueError(
                             f"dimension name '{key}' in 'output_core_dims' needs corresponding (key,value) in 'output_sizes'"
                         )
