@@ -94,7 +94,8 @@ class _UFuncSignature:
 
     @property
     def dims_map(self):
-        return dict(zip(sorted(self.all_core_dims), range(len(self.all_core_dims))))
+        return dict(zip(sorted(self.all_core_dims),
+                        ["dim{}".format(d) for d in range(len(self.all_core_dims))]))
 
     @property
     def num_inputs(self):
@@ -133,11 +134,11 @@ class _UFuncSignature:
         identifiers.
         """
         input_core_dims = [
-            ["dim%d" % self.dims_map[dim] for dim in core_dims]
+            [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.input_core_dims
         ]
         output_core_dims = [
-            ["dim%d" % self.dims_map[dim] for dim in core_dims]
+            [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
         alt_signature = type(self)(input_core_dims, output_core_dims)
@@ -600,7 +601,7 @@ def apply_variable_ufunc(
             output_sizes = dask_gufunc_kwargs.pop("output_sizes", None)
             if output_sizes is not None:
                 output_sizes = {
-                    "dim{}".format(signature.dims_map[key]): value
+                    signature.dims_map[key]: value
                     for key, value in output_sizes.items()
                 }
                 dask_gufunc_kwargs["output_sizes"] = output_sizes

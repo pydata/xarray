@@ -1072,6 +1072,26 @@ def test_vectorize_dask_new_output_dims():
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
+    with pytest.raises(KeyError):
+        apply_ufunc(
+            func,
+            data_array.chunk({"x": 1}),
+            output_core_dims=[["z"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[float],
+            output_sizes={"z1": 1},
+        )
+
+    with pytest.raises(KeyError):
+        apply_ufunc(
+            func,
+            data_array.chunk({"x": 1}),
+            output_core_dims=[["z"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[float],
+        )
 
 def test_output_wrong_number():
     variable = xr.Variable("x", np.arange(10))
