@@ -25,6 +25,11 @@ def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
                 else:
                     level = level[index.codes[i]]
                 levels.append(level)
+            # TODO: calling from_array() reorders MultiIndex levels. It would
+            # be best to avoid this, if possible, e.g., by using
+            # MultiIndex.remove_unused_levels() (which does not reorder) on the
+            # part of the MultiIndex that is not categorical, or by fixing this
+            # upstream in pandas.
             index = pd.MultiIndex.from_arrays(levels, names=index.names)
     elif isinstance(index, pd.CategoricalIndex):
         index = index.remove_unused_categories()
