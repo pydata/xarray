@@ -656,6 +656,7 @@ def open_zarr(
         chunks=chunks,
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
+        decode_timedelta=decode_timedelta,
     )
 
     return ds

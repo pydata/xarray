@@ -489,6 +489,7 @@ def open_dataset(
                     chunks,
                     drop_variables,
                     use_cftime,
+                    decode_timedelta,
                 )
                 name_prefix = "open_dataset-%s" % token
                 ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
