@@ -1072,7 +1072,7 @@ def test_vectorize_dask_new_output_dims():
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
-    with pytest.raises(KeyError):
+    with raises_regex(ValueError, "dimension name in 'output_sizes' must correspond"):
         apply_ufunc(
             func,
             data_array.chunk({"x": 1}),
