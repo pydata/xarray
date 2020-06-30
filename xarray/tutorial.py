@@ -9,7 +9,7 @@ import hashlib
 import pathlib
 import shutil
 import tempfile
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 
 import numpy as np
 import requests
@@ -45,10 +45,9 @@ def open_atomic(path, mode=None):
 
         temporary_path.rename(path)
     except Exception:
-        temporary_path.unlink()
+        with suppress(FileNotFoundError):
+            temporary_path.unlink()
         raise
-    finally:
-        pass
 
 
 def download_to(url, path):
