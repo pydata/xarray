@@ -20,7 +20,7 @@ from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .vendor import appdirs
 
-_default_cache_dir = appdirs.user_cache_dir("xarray_tutorial_data")
+_default_cache_dir = pathlib.Path(appdirs.user_cache_dir("xarray_tutorial_data"))
 
 
 def check_md5sum(content, checksum):
