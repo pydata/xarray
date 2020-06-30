@@ -464,9 +464,8 @@ def open_dataset(
         _protect_dataset_variables_inplace(ds, cache)
 
         if chunks is not None:
-            from dask.base import tokenize
-
             if engine != "zarr":
+                from dask.base import tokenize
 
                 # if passed an actual file path, augment the token with
                 # the file modification time
@@ -524,7 +523,7 @@ def open_dataset(
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
 
-    if isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
+    elif isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
         # on ZarrStore, mode='r', synchronizer=None, group=None,
         # consolidated=False.
         _backend_kwargs = backend_kwargs.copy()
