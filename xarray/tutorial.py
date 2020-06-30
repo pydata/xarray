@@ -45,6 +45,7 @@ def open_atomic(path, mode=None):
 
         temporary_path.rename(path)
     except Exception:
+        # switch to path.unlink(missing_ok=True) for Python 3.8+
         with suppress(FileNotFoundError):
             temporary_path.unlink()
         raise
