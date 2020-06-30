@@ -898,11 +898,11 @@ can be omitted as it will internally be set to ``'a'``.
 To store variable length strings use ``dtype=object``.
 
 To read back a zarr dataset that has been created this way, we use the
-:py:func:`open_zarr` method:
+:py:func:`open_dataset` method with ``engine="zarr"``:
 
 .. ipython:: python
 
-    ds_zarr = xr.open_zarr("path/to/directory.zarr")
+    ds_zarr = xr.open_dataset("path/to/directory.zarr", engine="zarr")
     ds_zarr
 
 Cloud Storage Buckets
@@ -919,7 +919,7 @@ pass to xarray::
     # write to the bucket
     ds.to_zarr(store=gcsmap)
     # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
+    ds_gcs = xr.open_dataset(gcsmap, engine="zarr")
 
 .. _Zarr: http://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
@@ -970,12 +970,12 @@ with consolidated metadata. To write consolidated metadata, pass the
 ``consolidated=True`` option to the
 :py:attr:`Dataset.to_zarr` method::
 
-    ds.to_zarr('foo.zarr', consolidated=True)
+    ds.to_zarr("foo.zarr", consolidated=True)
 
-To read a consolidated store, pass the ``consolidated=True`` option to
-:py:func:`open_zarr`::
+To read a consolidated store, pass ``{"consolidated": True}`` to the
+backend_kwargs option when using :py:func:`open_dataset` with ``engine="zarr"``::
 
-    ds = xr.open_zarr('foo.zarr', consolidated=True)
+    ds = xr.open_dataset("foo.zarr", engine="zarr", backend_kwargs={"consolidated": True})
 
 Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
