@@ -2507,7 +2507,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio"])
+@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
 def readengine(request):
     return request.param
 
@@ -2567,7 +2567,10 @@ def test_open_mfdataset_manyfiles(
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
-            subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            if writeengine != "zarr":
+                subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            else:  # if writeengine == "zarr":
+                subds.to_zarr(store=tmpfiles[ii])
 
         # check that calculation on opened datasets works properly
         with open_mfdataset(

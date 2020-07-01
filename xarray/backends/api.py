@@ -774,7 +774,10 @@ class _MultiFileCloser:
 
     def close(self):
         for f in self.file_objs:
-            f.close()
+            try:
+                f.close()
+            except AttributeError:  # 'NoneType' object has no attribute 'close'
+                pass
 
 
 def open_mfdataset(
