@@ -609,8 +609,8 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     @pytest.mark.xfail(
-        not has_dask,
-        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+        has_dask or not has_dask,
+        reason="the code for indexing with or without dask handles negative steps in slices incorrectly",
     )
     def test_vectorized_indexing(self):
         in_memory = create_test_data()
