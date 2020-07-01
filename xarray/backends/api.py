@@ -524,12 +524,14 @@ def open_dataset(
         store = filename_or_obj
 
     elif isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
-        # on ZarrStore, mode='r', synchronizer=None, group=None,
-        # consolidated=False.
+        # Zarr supports a wide range of access modes, but for now xarray either
+        # reads or writes from a store, never both.
+        # For open_dataset(engine="zarr"), we only read (i.e. mode="r")
+        mode = "r"
         _backend_kwargs = backend_kwargs.copy()
         overwrite_encoded_chunks = _backend_kwargs.pop("overwrite_encoded_chunks", None)
         store = backends.ZarrStore.open_group(
-            filename_or_obj, group=group, **_backend_kwargs
+            filename_or_obj, mode=mode, group=group, **_backend_kwargs
         )
 
     elif isinstance(filename_or_obj, str):
