@@ -503,6 +503,13 @@ def open_dataset(
                             "chunks must be an int, dict, 'auto', or None. "
                             "Instead found %s. " % chunks
                         )
+
+                if chunks == "auto":
+                    try:
+                        import dask.array  # noqa
+                    except ImportError:
+                        chunks = None
+
                 if isinstance(chunks, int):
                     chunks = dict.fromkeys(ds.dims, chunks)
 
