@@ -42,6 +42,9 @@ Enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
+- Axes kwargs such as ``facecolor`` can now be passed to :py:meth:`DataArray.plot` in ``subplot_kws``.
+  This works for both single axes plots and FacetGrid plots.
+  By `Raphael Dussin <https://github.com/raphaeldussin`_.
 
 New Features
 ~~~~~~~~~~~~
