@@ -494,7 +494,12 @@ def open_dataset(
                 ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
                 ds2._file_obj = ds._file_obj
 
-            else:
+            else:  # if engine=="zarr":
+                # auto chunking needs to be here and not in ZarrStore because
+                # the variable chunks does not survive decode_cf
+                # return trivial case
+                if not chunks:  # e.g. chunks is 0 or chunks is {}
+                    return ds
 
                 # adapted from Dataset.Chunk() and taken from open_zarr
                 if not isinstance(chunks, (int, dict)):
