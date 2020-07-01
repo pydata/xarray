@@ -350,7 +350,7 @@ def open_dataset(
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
     chunks : int or dict, optional
-        If chunks is provided, it used to load the new dataset into dask
+        If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
         chunk for all arrays.
     lock : False or duck threading.Lock, optional
