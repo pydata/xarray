@@ -98,8 +98,8 @@ def create_append_test_data(seed=None):
     datetime_var_to_append = np.array(
         ["2019-01-04", "2019-01-05"], dtype="datetime64[s]"
     )
-    bool_var = np.array([True, False, True], dtype=np.bool)
-    bool_var_to_append = np.array([False, True], dtype=np.bool)
+    bool_var = np.array([True, False, True], dtype=bool)
+    bool_var_to_append = np.array([False, True], dtype=bool)
 
     ds = xr.Dataset(
         data_vars={
@@ -2943,12 +2943,12 @@ class TestDataset:
         ds = ds.isel(x=[0, 2, 3, 4]).set_index(index=["x", "y"])
         # test fill_value
         actual = ds.unstack("index", fill_value=-1)
-        expected = ds.unstack("index").fillna(-1).astype(np.int)
-        assert actual["var"].dtype == np.int
+        expected = ds.unstack("index").fillna(-1).astype(int)
+        assert actual["var"].dtype == int
         assert_equal(actual, expected)
 
         actual = ds["var"].unstack("index", fill_value=-1)
-        expected = ds["var"].unstack("index").fillna(-1).astype(np.int)
+        expected = ds["var"].unstack("index").fillna(-1).astype(int)
         assert actual.equals(expected)
 
     @requires_sparse
@@ -4597,6 +4597,9 @@ class TestDataset:
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_strings(self):
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
@@ -4668,6 +4671,9 @@ class TestDataset:
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_argmin(self):
         # regression test for #205
         ds = Dataset({"a": ("x", [0, 1])})
