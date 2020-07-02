@@ -2582,8 +2582,14 @@ def test_open_mfdataset_manyfiles(
             chunks=chunks,
         ) as actual:
 
-            # check that using open_mfdataset returns dask arrays for variables
-            assert isinstance(actual["foo"].data, dask_array_type)
+            try:
+                # check that using open_mfdataset returns dask arrays for variables
+                assert isinstance(actual["foo"].data, dask_array_type)
+            except AssertionError:
+                # A numpy array is returned instead of a dask array
+                # when reading with Zarr and chunks is None
+                if readengine == "zarr" and chunks is None:
+                    assert isinstance(actual["foo"].data, np.ndarray)
 
             assert_identical(original, actual)
 
