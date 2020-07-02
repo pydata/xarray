@@ -393,8 +393,8 @@ class ZarrStore(AbstractWritableDataStore):
             from dask.base import tokenize
 
             # does this cause any data to be read?
-            token2 = tokenize(name, var._data)
-            name2 = "zarr-%s" % token2
+            token2 = tokenize(name, var._data, chunks)
+            name2 = f"xarray-{name}-{token2}"
             var = var.chunk(chunk_spec, name=name2, lock=None)
             if overwrite_encoded_chunks and var.chunks is not None:
                 var.encoding["chunks"] = tuple(x[0] for x in var.chunks)

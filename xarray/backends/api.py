@@ -521,7 +521,7 @@ def open_dataset(
                     k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
                     for k, v in ds.variables.items()
                 }
-                ds2 = ds._replace_vars_and_dims(variables)
+                ds2 = ds._replace(variables)
 
             ds2._file_obj = ds._file_obj
         else:
