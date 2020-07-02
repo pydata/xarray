@@ -126,6 +126,9 @@ New Features
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
   independently of time decoding (:issue:`1621`)
   `Aureliana Barghini <https://github.com/aurghs>`
+- :py:func:`open_dataset` and :py:func:`open_mfdataset`
+  now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 
 Bug fixes
 ~~~~~~~~~
