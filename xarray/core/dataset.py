@@ -4598,8 +4598,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 dtype, fill_value = dtypes.maybe_promote(values.dtype)
                 data = np.full(shape, fill_value, dtype)
             else:
-                # TODO: consider removing this special case, which can
-                # sometimes result in a different dtype (e.g., for int)
+                # If there are no missing values, keep the existing dtype
+                # instead of promoting to support NA, e.g., keep integer
+                # columns as integers.
+                # TODO: consider removing this special case, which doesn't
+                # exist for sparse=True.
                 data = np.zeros(shape, values.dtype)
             data[indexer] = values
             self[name] = (dims, data)
