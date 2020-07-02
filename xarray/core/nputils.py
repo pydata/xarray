@@ -224,7 +224,8 @@ def _nanpolyfit_1d(arr, x, rcond=None):
     out = np.full((x.shape[1] + 1,), np.nan)
     mask = np.isnan(arr)
     if not np.all(mask):
-        out[:-1], out[-1], _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+        out[:-1], resid, _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+        out[-1] = resid or np.nan
     return out
 
 
