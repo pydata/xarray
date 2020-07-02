@@ -62,7 +62,7 @@ def _infer_line_data(darray, x, y, hue):
 
     else:
         if x is None and y is None and hue is None:
-            raise ValueError("For 2D inputs, please" "specify either hue, x or y.")
+            raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
@@ -155,8 +155,7 @@ def plot(
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots.
     **kwargs : optional
         Additional keyword arguments to matplotlib
 
@@ -177,10 +176,10 @@ def plot(
 
     if ndims in [1, 2]:
         if row or col:
+            kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
             kwargs["col"] = col
             kwargs["col_wrap"] = col_wrap
-            kwargs["subplot_kws"] = subplot_kws
         if ndims == 1:
             plotfunc = line
             kwargs["hue"] = hue
@@ -190,6 +189,7 @@ def plot(
                 kwargs["hue"] = hue
             else:
                 plotfunc = pcolormesh
+                kwargs["subplot_kws"] = subplot_kws
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -553,8 +553,8 @@ def _plot2d(plotfunc):
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for 2D and FacetGrid plots.
     cbar_ax : matplotlib Axes, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
@@ -724,7 +724,10 @@ def _plot2d(plotfunc):
                 "plt.imshow's `aspect` kwarg is not available " "in xarray"
             )
 
-        ax = get_axis(figsize, size, aspect, ax)
+        if subplot_kws is None:
+            subplot_kws = dict()
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
         primitive = plotfunc(
             xplt,
             yplt,

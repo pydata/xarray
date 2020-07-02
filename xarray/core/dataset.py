@@ -4543,11 +4543,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._to_dataframe(self.dims)
 
     def _set_sparse_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
         from sparse import COO
 
-        idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted()
@@ -4557,11 +4556,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             is_sorted = True
             shape = (idx.size,)
 
-        for name, series in dataframe.items():
-            # Cast to a NumPy array first, in case the Series is a pandas
-            # Extension array (which doesn't have a valid NumPy dtype)
-            values = np.asarray(series)
-
+        for name, values in arrays:
             # In virtually all real use cases, the sparse array will now have
             # missing values and needs a fill_value. For consistency, don't
             # special case the rare exceptions (e.g., dtype=int without a
@@ -4580,18 +4575,36 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
-        idx = dataframe.index
-        if isinstance(idx, pd.MultiIndex):
-            # expand the DataFrame to include the product of all levels
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            shape = tuple(lev.size for lev in idx.levels)
-        else:
-            shape = (idx.size,)
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
+        if not isinstance(idx, pd.MultiIndex):
+            for name, values in arrays:
+                self[name] = (dims, values)
+            return
+
+        shape = tuple(lev.size for lev in idx.levels)
+        indexer = tuple(idx.codes)
+
+        # We already verified that the MultiIndex has all unique values, so
+        # there are missing values if and only if the size of output arrays is
+        # larger that the index.
+        missing_values = np.prod(shape) > idx.shape[0]
+
+        for name, values in arrays:
+            # NumPy indexing is much faster than using DataFrame.reindex() to
+            # fill in missing values:
+            # https://stackoverflow.com/a/35049899/809705
+            if missing_values:
+                dtype, fill_value = dtypes.maybe_promote(values.dtype)
+                data = np.full(shape, fill_value, dtype)
+            else:
+                # If there are no missing values, keep the existing dtype
+                # instead of promoting to support NA, e.g., keep integer
+                # columns as integers.
+                # TODO: consider removing this special case, which doesn't
+                # exist for sparse=True.
+                data = np.zeros(shape, values.dtype)
+            data[indexer] = values
             self[name] = (dims, data)
 
     @classmethod
@@ -4631,7 +4644,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
+        idx = remove_unused_levels_categories(dataframe.index)
+
+        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
+
+        # Cast to a NumPy array first, in case the Series is a pandas Extension
+        # array (which doesn't have a valid NumPy dtype)
+        # TODO: allow users to control how this casting happens, e.g., by
+        # forwarding arguments to pandas.Series.to_numpy?
+        arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
+
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4647,9 +4672,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             obj[index_name] = (dims, idx)
 
         if sparse:
-            obj._set_sparse_data_from_dataframe(dataframe, dims)
+            obj._set_sparse_data_from_dataframe(idx, arrays, dims)
         else:
-            obj._set_numpy_data_from_dataframe(dataframe, dims)
+            obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):

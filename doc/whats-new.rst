@@ -49,8 +49,14 @@ Enhancements
   For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
   rather than interpolating in multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
+- Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
+  dataframe has a MultiIndex (:pull:`4184`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+  - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
+- Axes kwargs such as ``facecolor`` can now be passed to :py:meth:`DataArray.plot` in ``subplot_kws``.
+  This works for both single axes plots and FacetGrid plots.
+  By `Raphael Dussin <https://github.com/raphaeldussin`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -91,7 +97,7 @@ New Features
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`, :pull:`4135`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Pascal Bourgault <https://github.com/aulemahal>`_.
-- More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`)
+- More support for unit aware arrays with pint (:pull:`3643`, :pull:`3975`, :pull:`4163`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Support overriding existing variables in ``to_zarr()`` with ``mode='a'`` even
   without ``append_dim``, as long as dimension sizes do not change.
@@ -133,8 +139,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
   By `Huite Bootsma <https://github.com/huite>`_.
-- Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``. (:issue:`3951`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fix wrong order in converting a ``pd.Series`` with a MultiIndex to ``DataArray``.
+  (:issue:`3951`, :issue:`4186`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix renaming of coords when one or more stacked coords is not in
   sorted order during stack+groupby+apply operations. (:issue:`3287`,
   :pull:`3906`) By `Spencer Hill <https://github.com/spencerahill>`_
@@ -167,6 +174,8 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix html repr in untrusted notebooks: fallback to plain text repr. (:pull:`4053`)
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix :py:meth:`DataArray.to_unstacked_dataset` for single-dimension variables. (:issue:`4049`)
+  By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix :py:func:`open_rasterio` for ``WarpedVRT`` with specified ``src_crs``. (:pull:`4104`)
   By `Dave Cole <https://github.com/dtpc>`_.
 
