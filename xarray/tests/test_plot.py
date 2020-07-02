@@ -15,6 +15,7 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
+    get_axis,
     label_from_attrs,
 )
 
@@ -23,6 +24,7 @@ from . import (
     assert_equal,
     has_nc_time_axis,
     raises_regex,
+    requires_cartopy,
     requires_cftime,
     requires_matplotlib,
     requires_nc_time_axis,
@@ -35,6 +37,11 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
+
+try:
+    import cartopy as ctpy  # type: ignore
+except ImportError:
+    ctpy = None
 
 
 @pytest.mark.flaky
@@ -2393,3 +2400,36 @@ def test_facetgrid_single_contour():
     ds["time"] = [0, 1]
 
     ds.plot.contour(col="time", levels=[4], colors=["k"])
+
+
+@requires_matplotlib
+def test_get_axis():
+    # test get_axis works with different args combinations
+    # and return the right type
+
+    # cannot provide both ax and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `ax`"):
+        get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
+
+    # cannot provide both ax and size
+    with pytest.raises(ValueError, match="both `size` and `ax`"):
+        get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
+
+    # cannot provide both size and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `size`"):
+        get_axis(figsize=[4, 4], size=200, aspect=None, ax=None)
+
+    # cannot provide aspect and size
+    with pytest.raises(ValueError, match="`aspect` argument without `size`"):
+        get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
+
+    ax = get_axis()
+    assert isinstance(ax, mpl.axes.Axes)
+
+
+@requires_cartopy
+def test_get_axis_cartopy():
+
+    kwargs = {"projection": ctpy.crs.PlateCarree()}
+    ax = get_axis(**kwargs)
+    assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
