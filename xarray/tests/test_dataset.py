@@ -3031,6 +3031,14 @@ class TestDataset:
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self):
+
+        # single dimension: regression test for GH4049
+        arr = xr.DataArray(np.arange(3), coords=[("x", [0, 1, 2])])
+        data = xr.Dataset({"a": arr, "b": arr})
+        stacked = data.to_stacked_array("y", sample_dims=["x"])
+        unstacked = stacked.to_unstacked_dataset("y")
+        assert_identical(unstacked, data)
+
         # make a two dimensional dataset
         a, b = create_test_stacked_array()
         D = xr.Dataset({"a": a, "b": b})
