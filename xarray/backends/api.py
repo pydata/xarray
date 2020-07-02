@@ -492,7 +492,6 @@ def open_dataset(
                 )
                 name_prefix = "open_dataset-%s" % token
                 ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-                ds2._file_obj = ds._file_obj
 
             else:  # if engine=="zarr":
                 # adapted from Dataset.Chunk() and taken from open_zarr
@@ -524,6 +523,7 @@ def open_dataset(
                 }
                 ds2 = ds._replace_vars_and_dims(variables)
 
+            ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
 
@@ -774,10 +774,7 @@ class _MultiFileCloser:
 
     def close(self):
         for f in self.file_objs:
-            try:
-                f.close()
-            except AttributeError:  # 'NoneType' object has no attribute 'close'
-                pass
+            f.close()
 
 
 def open_mfdataset(
