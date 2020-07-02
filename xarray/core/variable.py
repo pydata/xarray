@@ -2024,7 +2024,9 @@ class Variable(
         return type(self)(self.dims, self.data.imag, self._attrs)
 
     def __array_wrap__(self, obj, context=None):
-        return Variable(self.dims, obj)
+        keep_attrs = _get_keep_attrs(default=False)
+        attrs = self._attrs if keep_attrs else {}
+        return Variable(self.dims, obj, attrs)
 
     @staticmethod
     def _unary_op(f):

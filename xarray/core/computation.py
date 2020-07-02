@@ -223,8 +223,13 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs and hasattr(args[0], "name"):
-        name = args[0].name
+    for arg in args:
+        first_obj = arg
+        if isinstance(arg, DataArray):
+            break
+
+    if keep_attrs and hasattr(first_obj, "name"):
+        name = first_obj.name
     else:
         name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
@@ -240,6 +245,12 @@ def apply_dataarray_vfunc(
     else:
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
+
+    if keep_attrs and hasattr(first_obj, "attrs"):
+        if isinstance(out, tuple):
+            out = tuple(da._copy_attrs_from(first_obj) for da in out)
+        else:
+            out._copy_attrs_from(first_obj)
 
     return out
 
@@ -361,7 +372,10 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
+    for arg in args:
+        first_obj = args
+        if isinstance(first_obj, Dataset):
+            break
 
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
@@ -554,6 +568,11 @@ def apply_variable_ufunc(
     """
     from .variable import Variable, as_compatible_data
 
+    for arg in args:
+        first_obj = arg
+        if isinstance(arg, Variable):
+            break
+
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
     )
@@ -639,8 +658,8 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs and isinstance(args[0], Variable):
-            var.attrs.update(args[0].attrs)
+        if keep_attrs and isinstance(first_obj, Variable):
+            var.attrs.update(first_obj.attrs)
         output.append(var)
 
     if signature.num_outputs == 1:
