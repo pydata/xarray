@@ -5876,8 +5876,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 The coefficients of the best fit for each variable in this dataset.
             [var]_polyfit_residuals
                 The residuals of the least-square computation for each variable (only included if `full=True`)
+                When the matrix rank is deficient, np.nan is returned.
             [dim]_matrix_rank
                 The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+                The rank is computed ignoring the NaN values that might be skipped.
             [dim]_singular_values
                 The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [var]_polyfit_covariance
@@ -5916,10 +5918,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         degree_dim = utils.get_temp_dimname(self.dims, "degree")
 
         rank = np.linalg.matrix_rank(lhs)
-        if rank != order and not full:
-            warnings.warn(
-                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
-            )
 
         if full:
             rank = xr.DataArray(rank, name=xname + "matrix_rank")
@@ -5959,9 +5957,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if w is not None:
                 rhs *= w[:, np.newaxis]
 
-            coeffs, residuals = duck_array_ops.least_squares(
-                lhs, rhs.data, rcond=rcond, skipna=skipna_da
-            )
+            with warnings.catch_warnings():
+                if not full:
+                    warnings.simplefilter("ignore", np.RankWarning)
+                coeffs, residuals = duck_array_ops.least_squares(
+                    lhs, rhs.data, rcond=rcond, skipna=skipna_da
+                )
 
             if isinstance(name, str):
                 name = "{}_".format(name)

@@ -224,9 +224,15 @@ def _nanpolyfit_1d(arr, x, rcond=None):
     out = np.full((x.shape[1] + 1,), np.nan)
     mask = np.isnan(arr)
     if not np.all(mask):
-        out[:-1], resid, _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+        out[:-1], resid, rank, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
         out[-1] = resid or np.nan
+        warn_on_deficient_rank(rank, x.shape[1])
     return out
+
+
+def warn_on_deficient_rank(rank, order):
+    if rank != order:
+        warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=5)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -241,16 +247,18 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
                 _nanpolyfit_1d, 0, rhs[:, nan_cols], lhs
             )
         if np.any(~nan_cols):
-            out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+            out[:-1, ~nan_cols], out[-1, ~nan_cols], rank, _ = np.linalg.lstsq(
                 lhs, rhs[:, ~nan_cols], rcond=rcond
             )
+            warn_on_deficient_rank(rank, lhs.shape[1])
         coeffs = out[:-1, :]
         residuals = out[-1, :]
         if added_dim:
             coeffs = coeffs.reshape(coeffs.shape[0])
             residuals = residuals.reshape(residuals.shape[0])
     else:
-        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+        coeffs, residuals, rank, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+        warn_on_deficient_rank(rank, lhs.shape[1])
     return coeffs, residuals
 
 
