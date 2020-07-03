@@ -280,8 +280,10 @@ class ZarrStore(AbstractWritableDataStore):
     ):
         import zarr
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group,
-                           chunk_store=chunk_store)
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        if chunk_store:
+            open_kwargs['chunk_store'] = chunk_store
+
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
