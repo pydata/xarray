@@ -1823,9 +1823,7 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, mode="w", group=group)
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_dataset(
-                store_target, group=group, engine="zarr", chunks="auto"
-            )
+            actual = xr.open_dataset(store_target, group=group, engine="zarr")
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
@@ -1916,11 +1914,11 @@ class ZarrBase(CFEncodedBase):
             encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding)
             ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, engine="zarr", chunks="auto")
+            actual_ds = xr.open_dataset(store_target, engine="zarr")
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, engine="zarr", chunks="auto").compute(),
+                xr.open_dataset(store_target, engine="zarr").compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -1935,9 +1933,7 @@ class ZarrBase(CFEncodedBase):
             ds_with_new_var.to_zarr(store_target, mode="a")
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(
-                combined, xr.open_dataset(store_target, engine="zarr", chunks="auto")
-            )
+            assert_identical(combined, xr.open_dataset(store_target, engine="zarr"))
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
@@ -2579,17 +2575,11 @@ def test_open_mfdataset_manyfiles(
             concat_dim="x",
             engine=readengine,
             parallel=parallel,
-            chunks=chunks,
+            chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
 
-            try:
-                # check that using open_mfdataset returns dask arrays for variables
-                assert isinstance(actual["foo"].data, dask_array_type)
-            except AssertionError:
-                # A numpy array is returned instead of a dask array
-                # when reading with Zarr and chunks is None
-                if readengine == "zarr" and chunks is None:
-                    assert isinstance(actual["foo"].data, np.ndarray)
+            # check that using open_mfdataset returns dask arrays for variables
+            assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
 

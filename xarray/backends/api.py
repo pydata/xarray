@@ -463,70 +463,66 @@ def open_dataset(
 
         _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None:
-            if engine != "zarr":
-                from dask.base import tokenize
+        if chunks is not None and engine != "zarr":
+            from dask.base import tokenize
 
-                # if passed an actual file path, augment the token with
-                # the file modification time
-                if isinstance(filename_or_obj, str) and not is_remote_uri(
-                    filename_or_obj
-                ):
-                    mtime = os.path.getmtime(filename_or_obj)
-                else:
-                    mtime = None
-                token = tokenize(
-                    filename_or_obj,
-                    mtime,
-                    group,
-                    decode_cf,
-                    mask_and_scale,
-                    decode_times,
-                    concat_characters,
-                    decode_coords,
-                    engine,
-                    chunks,
-                    drop_variables,
-                    use_cftime,
-                    decode_timedelta,
-                )
-                name_prefix = "open_dataset-%s" % token
-                ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+            # if passed an actual file path, augment the token with
+            # the file modification time
+            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+                mtime = os.path.getmtime(filename_or_obj)
+            else:
+                mtime = None
+            token = tokenize(
+                filename_or_obj,
+                mtime,
+                group,
+                decode_cf,
+                mask_and_scale,
+                decode_times,
+                concat_characters,
+                decode_coords,
+                engine,
+                chunks,
+                drop_variables,
+                use_cftime,
+                decode_timedelta,
+            )
+            name_prefix = "open_dataset-%s" % token
+            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
-            else:  # if engine=="zarr":
-                # adapted from Dataset.Chunk() and taken from open_zarr
-                if not isinstance(chunks, (int, dict)):
-                    if chunks != "auto":
-                        raise ValueError(
-                            "chunks must be an int, dict, 'auto', or None. "
-                            "Instead found %s. " % chunks
-                        )
+        elif engine == "zarr":
+            # adapted from Dataset.Chunk() and taken from open_zarr
+            if not (isinstance(chunks, (int, dict)) or chunks is None):
+                if chunks != "auto":
+                    raise ValueError(
+                        "chunks must be an int, dict, 'auto', or None. "
+                        "Instead found %s. " % chunks
+                    )
 
-                if chunks == "auto":
-                    try:
-                        import dask.array  # noqa
-                    except ImportError:
-                        chunks = None
+            if chunks == "auto":
+                try:
+                    import dask.array  # noqa
+                except ImportError:
+                    chunks = None
 
-                # auto chunking needs to be here and not in ZarrStore because
-                # the variable chunks does not survive decode_cf
-                # return trivial case
-                if not chunks:  # e.g. chunks is 0, None or {}
-                    return ds
+            # auto chunking needs to be here and not in ZarrStore because
+            # the variable chunks does not survive decode_cf
+            # return trivial case
+            if not chunks:  # e.g. chunks is 0, None or {}
+                return ds
 
-                if isinstance(chunks, int):
-                    chunks = dict.fromkeys(ds.dims, chunks)
+            if isinstance(chunks, int):
+                chunks = dict.fromkeys(ds.dims, chunks)
 
-                variables = {
-                    k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-                    for k, v in ds.variables.items()
-                }
-                ds2 = ds._replace(variables)
+            variables = {
+                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
+            ds2 = ds._replace(variables)
 
-            ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
-
+        ds2._file_obj = ds._file_obj
         return ds2
 
     if isinstance(filename_or_obj, Path):
