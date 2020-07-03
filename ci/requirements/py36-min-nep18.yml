@@ -6,9 +6,8 @@ dependencies:
   # require drastically newer packages than everything else
   - python=3.6
   - coveralls
-  - dask=2.5
-  - distributed=2.5
-  - msgpack-python=0.6  # remove once distributed is bumped. distributed GH3491
+  - dask=2.9
+  - distributed=2.9
   - numpy=1.17
   - pandas=0.25
   - pint=0.13
