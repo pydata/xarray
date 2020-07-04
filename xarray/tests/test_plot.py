@@ -88,6 +88,13 @@ def easy_array(shape, start=0, stop=1):
     return a.reshape(shape)
 
 
+def get_colorbar_label(colorbar):
+    if colorbar.orientation == "vertical":
+        return colorbar.ax.get_ylabel()
+    else:
+        return colorbar.ax.get_xlabel()
+
+
 @requires_matplotlib
 class PlotTestCase:
     @pytest.fixture(autouse=True)
@@ -1414,7 +1421,7 @@ class Common2dMixin:
 
         # catch contour case
         if hasattr(g, "cbar"):
-            assert g.cbar._label == "test_label"
+            assert get_colorbar_label(g.cbar) == "test_label"
 
     def test_facetgrid_no_cbar_ax(self):
         a = easy_array((10, 15, 2, 3))
