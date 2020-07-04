@@ -6,4 +6,7 @@ build:
 conda:
     environment: ci/requirements/doc.yml
 
+sphinx:
+  fail_on_warning: True
+
 formats: []
