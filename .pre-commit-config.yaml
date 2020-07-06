@@ -2,10 +2,9 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 4.3.21-2
+    rev: 5.0.4
     hooks:
       - id: isort
-        files: .+\.py$
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
     rev: stable
