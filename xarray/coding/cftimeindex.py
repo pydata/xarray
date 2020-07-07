@@ -50,7 +50,7 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
-from ..core.formatting import format_array_flat
+from ..core.formatting import format_cftimeindex_array
 from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
@@ -264,60 +264,15 @@ class CFTimeIndex(pd.Index):
     def __repr__(self):
         """
         Return a string representation for this object.
-
-        copied from pandas.io.printing.py
-        expect for attrs.append(("calendar", self.calendar))
         """
         klass_name = type(self).__name__
-        len_item = 19  # length of one item assuming 4 digit year
         display_width = OPTIONS["display_width"]
-        # separate by newline after sep_after items
-        sep_after = (display_width - len("CFTimeIndex([")) // len_item
-        # shorten repr for more than 100 items
-        max_width = (19 + 1) * 100 if len(self) <= 100 else 22 * len_item
-        datastr = format_array_flat(self.values, max_width)
-
-        def join_every_second(s, sep=" ", join=", "):
-            """Join every second item after split(sep)."""
-            ss = s.split(sep)
-            sj = [x + " " + y for x, y in zip(ss[0::2], ss[1::2])]
-            return join.join(sj)
-
+        len_item = 19  # length of one item assuming 4 digit year
+        sep_after = display_width // (len_item + 1)
         linebreak_spaces = " " * len(klass_name)
-        linebreak_add = linebreak_spaces + " "
-
-        def insert_linebreak_after_x_items(
-            s, sep_after=sep_after, sep=",", linebreak=" "
-        ):
-            """Linebreak after `sep_after` items split(sep)."""
-            s_sep = s.split(sep)
-            for i in range(len(s_sep)):
-                if i % sep_after == 0 and i != 0:
-                    s_sep[i] = f"\n{linebreak}{s_sep[i]}"
-            return sep.join(s_sep)
-
-        if datastr:
-            if len(self) <= sep_after:
-                # timeitems as oneliner
-                datastr = join_every_second(datastr)
-            else:
-                # linebreak after sep_after time items
-                sepstr = "..."
-                if sepstr in datastr:
-                    # separate upper and lower time items when '...' truncatation
-                    firststr, laststr = datastr.split(f" {sepstr} ")
-                    firststr = insert_linebreak_after_x_items(
-                        join_every_second(firststr), linebreak=linebreak_add
-                    )
-                    laststr = insert_linebreak_after_x_items(
-                        join_every_second(laststr), linebreak=linebreak_add
-                    )
-                    datastr = f"{firststr},\n{linebreak_spaces}  {sepstr}\n{linebreak_spaces}  {laststr}"
-                else:
-                    datastr = insert_linebreak_after_x_items(
-                        join_every_second(datastr), linebreak=linebreak_add
-                    )
-
+        datastr = format_cftimeindex_array(
+            self.values, display_width - len(klass_name), linebreak_spaces + 2
+        )
         attrs = {
             "dtype": f"'{self.dtype}'",
             "length": f"{len(self)}",

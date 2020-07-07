@@ -1010,7 +1010,7 @@ def test_cftimeindex_repr_compare_pandasIndex(periods):
         ")", f", {lengthstr}calendar='gregorian')"
     )
     assert pdindex_repr_str == cfindex_repr_str, print(
-        f"pandas: {pdindex_repr_str}\n vs.\ncftime: {cfindex_repr_str}"
+        f"pandas:\n{pdindex_repr_str}\n vs.\ncftime: \n{cfindex_repr_str}"
     )
 
 
