@@ -269,9 +269,10 @@ class CFTimeIndex(pd.Index):
         display_width = OPTIONS["display_width"]
         len_item = 19  # length of one item assuming 4 digit year
         sep_after = display_width // (len_item + 1)
-        linebreak_spaces = " " * len(klass_name)
+        linebreak_nspaces = len(klass_name)
+        linebreak_spaces = " " * linebreak_nspaces
         datastr = format_cftimeindex_array(
-            self.values, display_width - len(klass_name), linebreak_spaces + 2
+            self.values, display_width - len(klass_name), linebreak_nspaces + 2
         )
         attrs = {
             "dtype": f"'{self.dtype}'",

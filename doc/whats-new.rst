@@ -82,8 +82,9 @@ New Features
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
   independently of time decoding (:issue:`1621`)
   `Aureliana Barghini <https://github.com/aurghs>`
-- Add ``calendar`` as a new property for ``CFTimeIndex`` and show in ``calendar`` and
-  ``length`` in  ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
+- Build CFTimeIndex.__repr__ explicitly as pandas.Index. Add ``calendar`` as a new
+  property for ``CFTimeIndex`` and show in ``calendar`` and ``length`` in
+  ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
   `Aaron Spring <https://github.com/aaronspring>`
 
 Bug fixes
