@@ -51,6 +51,7 @@ from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
 from ..core.formatting import format_array_flat
+from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
@@ -268,13 +269,15 @@ class CFTimeIndex(pd.Index):
         expect for attrs.append(("calendar", self.calendar))
         """
         klass_name = type(self).__name__
-        len_item = 19  # length of one item in repr
+        len_item = 19  # length of one item assuming 4 digit year
+        display_width = OPTIONS["display_width"]
+        # separate by newline after sep_after items
+        sep_after = (display_width - len("CFTimeIndex([")) // len_item
         # shorten repr for more than 100 items
         max_width = (19 + 1) * 100 if len(self) <= 100 else 22 * len_item
         datastr = format_array_flat(self.values, max_width)
 
         def join_every_second(s, sep=" ", join=", "):
-            # to formatting.py
             """Join every second item after split(sep)."""
             ss = s.split(sep)
             sj = [x + " " + y for x, y in zip(ss[0::2], ss[1::2])]
@@ -283,28 +286,35 @@ class CFTimeIndex(pd.Index):
         linebreak_spaces = " " * len(klass_name)
         linebreak_add = linebreak_spaces + " "
 
-        def insert_linebreak_after_three(s, sep=",", linebreak=" "):
-            """Linebreak after three items split(sep)."""
+        def insert_linebreak_after_x_items(
+            s, sep_after=sep_after, sep=",", linebreak=" "
+        ):
+            """Linebreak after `sep_after` items split(sep)."""
             s_sep = s.split(sep)
             for i in range(len(s_sep)):
-                if i % 3 == 0 and i != 0:
+                if i % sep_after == 0 and i != 0:
                     s_sep[i] = f"\n{linebreak}{s_sep[i]}"
             return sep.join(s_sep)
 
         if datastr:
-            if len(self) <= 3:
+            if len(self) <= sep_after:
+                # timeitems as oneliner
                 datastr = join_every_second(datastr)
             else:
+                # linebreak after sep_after time items
                 sepstr = "..."
                 if sepstr in datastr:
+                    # separate upper and lower time items when '...' truncatation
                     firststr, laststr = datastr.split(f" {sepstr} ")
-                    firststr = insert_linebreak_after_three(
-                        join_every_second(firststr), linebreak=linebreak_add)
-                    laststr = insert_linebreak_after_three(
-                        join_every_second(laststr), linebreak=linebreak_add)
+                    firststr = insert_linebreak_after_x_items(
+                        join_every_second(firststr), linebreak=linebreak_add
+                    )
+                    laststr = insert_linebreak_after_x_items(
+                        join_every_second(laststr), linebreak=linebreak_add
+                    )
                     datastr = f"{firststr},\n{linebreak_spaces}  {sepstr}\n{linebreak_spaces}  {laststr}"
                 else:
-                    datastr = insert_linebreak_after_three(
+                    datastr = insert_linebreak_after_x_items(
                         join_every_second(datastr), linebreak=linebreak_add
                     )
 
@@ -314,11 +324,19 @@ class CFTimeIndex(pd.Index):
             "calendar": f"'{self.calendar}'",
         }
         attrs_str = [f"{k}={v}" for k, v in attrs.items()]
-        prepr = f",{' '}".join(attrs_str)
-        if len(self) <= 3:
-            return f"{klass_name}([{datastr}], {prepr})"
+        attrs_str = f",{' '}".join(attrs_str)
+        # oneliner only if smaller than display_width
+        full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
+        if len(self) <= sep_after and len(full_repr_str) <= display_width:
+            return full_repr_str
         else:
-            return f"{klass_name}([{datastr}],\n{linebreak_spaces} {prepr})"
+            # if attrs_str too long, one per line
+            if len(attrs_str) >= display_width - len(linebreak_spaces):
+                attrs_str = attrs_str.replace(",", f",\n{linebreak_spaces}")
+            full_repr_str = (
+                f"{klass_name}([{datastr}],\n{linebreak_spaces} {attrs_str})"
+            )
+            return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from

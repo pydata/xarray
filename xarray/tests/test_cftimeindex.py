@@ -13,6 +13,7 @@ from xarray.coding.cftimeindex import (
     assert_all_valid_date_type,
     parse_iso8601,
 )
+from xarray.core.options import OPTIONS
 from xarray.tests import assert_array_equal, assert_identical
 
 from . import raises_regex, requires_cftime, requires_cftime_1_1_0
@@ -936,15 +937,15 @@ def test_cftimeindex_repr_formatting(periods):
     """Test that cftimeindex.__repr__ is formatted as pd.Index.__repr__."""
     index = xr.cftime_range(start="2000", periods=periods)
     repr_str = index.__repr__()
-    print(repr_str)
     # check for commata
     assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
-    if periods <= 3:
+    # check oneline repr
+    if len(repr_str) <= OPTIONS["display_width"]:
         assert "\n" not in repr_str
-        "CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00], dtype='object', calendar='standard')" == repr_str
+    # if time items in first line only
+    elif periods * 19 < OPTIONS["display_width"]:
+        assert "\n" in repr_str
     else:
-        # check for linebreak
-        assert ", 2000-01-03 00:00:00,\n" in repr_str
         # check for times have same indent
         lines = repr_str.split("\n")
         firststr = "2000"
@@ -954,6 +955,24 @@ def test_cftimeindex_repr_formatting(periods):
     # check for ... separation dots
     if periods > 100:
         assert "..." in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize("display_width", [40, 80, 100])
+@pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
+def test_cftimeindex_repr_formatting_width(periods, display_width):
+    """Test that cftimeindex is sensitive to OPTIONS['display_width']."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    len_intro_str = len("CFTimeIndex(")
+    with xr.set_options(display_width=display_width):
+        repr_str = index.__repr__()
+        splitted = repr_str.split("\n")
+        for i, s in enumerate(splitted):
+            # check that lines not longer than OPTIONS['display_width']
+            assert len(s) <= display_width, f"{len(s)} {s} {display_width}"
+            if i > 0:
+                # check for initial spaces
+                assert s[:len_intro_str] == " " * len_intro_str
 
 
 @requires_cftime
@@ -969,14 +988,20 @@ def test_cftimeindex_repr_101_shorter(periods):
 @requires_cftime
 @pytest.mark.parametrize("periods", [3, 4, 100, 101])
 def test_cftimeindex_repr_compare_pandasIndex(periods):
+    """Test xr.cftimeindex.__repr__ against previous pandas.Index.__repr__. Small adjustments to similarize visuals like indent."""
     cfindex = xr.cftime_range(start="2000", periods=periods)
     pdindex = pd.Index(cfindex)
     cfindex_repr_str = cfindex.__repr__()
     pdindex_repr_str = pdindex.__repr__()
     pdindex_repr_str = pdindex_repr_str.replace("Index", "CFTimeIndex")
     pdindex_repr_str = pdindex_repr_str.replace(f"\n{' '*7}", f"\n{' '*13}")
+    if periods <= 3:
+        # pd.Index doesnt worry about display_width
+        cfindex_repr_str = cfindex_repr_str.replace("\n", "").replace(" " * 12, " ")
     if periods > 3:
+        # indent similarly
         pdindex_repr_str = pdindex_repr_str.replace("dtype", f"{' '*6}dtype")
+    # add length attribute if many periods
     if periods <= 100:
         lengthstr = f"length={periods}, "
     else:
@@ -984,7 +1009,9 @@ def test_cftimeindex_repr_compare_pandasIndex(periods):
     pdindex_repr_str = pdindex_repr_str.replace(
         ")", f", {lengthstr}calendar='gregorian')"
     )
-    assert pdindex_repr_str == cfindex_repr_str
+    assert pdindex_repr_str == cfindex_repr_str, print(
+        f"pandas: {pdindex_repr_str}\n vs.\ncftime: {cfindex_repr_str}"
+    )
 
 
 @requires_cftime
