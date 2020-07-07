@@ -59,7 +59,7 @@ Enhancements
   coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
 - Axes kwargs such as ``facecolor`` can now be passed to :py:meth:`DataArray.plot` in ``subplot_kws``.
   This works for both single axes plots and FacetGrid plots.
-  By `Raphael Dussin <https://github.com/raphaeldussin`_.
+  By `Raphael Dussin <https://github.com/raphaeldussin>`_.
 
 New Features
 ~~~~~~~~~~~~
