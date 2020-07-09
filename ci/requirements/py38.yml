@@ -19,7 +19,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - isort
+  - isort=4.3.21
   - lxml    # Optional dep of pydap
   - matplotlib
   - mypy=0.780  # Must match .pre-commit-config.yaml
@@ -28,6 +28,7 @@ dependencies:
   - numba
   - numpy
   - pandas
+  - pint
   - pip
   - pseudonetcdf
   - pydap
@@ -44,4 +45,3 @@ dependencies:
   - zarr
   - pip:
     - numbagg
-    - pint
