@@ -509,11 +509,10 @@ def decode_cf_variables(
                 bounds_str = var_attrs["bounds"]
                 if bounds_str in variables:
                     new_vars[k].encoding["bounds"] = bounds_str
-                    coord_names.update(var_bounds_names)
+                    coord_names.add(bounds_str)
                 else:
                     warnings.warn(
-                        "Bounds variable \"{0:s}\" not in variables"
-                        .format(bounds_str)
+                        'Bounds variable "{0:s}" not in variables'.format(bounds_str)
                     )
                 del var_attrs["bounds"]
             if "grid_mapping" in var_attrs:
@@ -524,9 +523,13 @@ def decode_cf_variables(
                     coord_names.update(var_proj_names)
                 else:
                     warnings.warn(
-                        "Grid mappings not in variables: {0:s}"
-                        .format([proj_name for grid_map in var_proj_names
-                                 if proj_name not in variables])
+                        "Grid mappings not in variables: {0:s}".format(
+                            [
+                                proj_name
+                                for proj_name in var_proj_names
+                                if proj_name not in variables
+                            ]
+                        )
                     )
                 del var_attrs["grid_mapping"]
 
