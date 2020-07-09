@@ -255,10 +255,8 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
 
-    if "grid_mapping" in var.encoding:
-        var.attrs["grid_mapping"] = var.encoding.pop("grid_mapping")
-    if "bounds" in var.encoding:
-        var.attrs["bounds"] = var.encoding.pop("bounds")
+    pop_to(var.encoding, var.attrs, "grid_mapping")
+    pop_to(var.encoding, var.attrs, "bounds")
     return var
 
 
@@ -509,10 +507,14 @@ def decode_cf_variables(
                     coord_names.update(var_coord_names)
             if "bounds" in var_attrs:
                 bounds_str = var_attrs["bounds"]
-                var_bounds_names = [bounds_str]
-                if all(k in variables for k in var_bounds_names):
+                if bounds_str in variables:
                     new_vars[k].encoding["bounds"] = bounds_str
                     coord_names.update(var_bounds_names)
+                else:
+                    warnings.warn(
+                        "Bounds variable \"{0:s}\" not in variables"
+                        .format(bounds_str)
+                    )
                 del var_attrs["bounds"]
             if "grid_mapping" in var_attrs:
                 proj_str = var_attrs["grid_mapping"]
@@ -520,6 +522,12 @@ def decode_cf_variables(
                 if all(k in variables for k in var_proj_names):
                     new_vars[k].encoding["grid_mapping"] = proj_str
                     coord_names.update(var_proj_names)
+                else:
+                    warnings.warn(
+                        "Grid mappings not in variables: {0:s}"
+                        .format([proj_name for grid_map in var_proj_names
+                                 if proj_name not in variables])
+                    )
                 del var_attrs["grid_mapping"]
 
     if decode_coords and "coordinates" in attributes:
@@ -681,10 +689,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             ):
                 variable_coordinates[k].add(coord_name)
 
-            encoding_val = v.encoding.get
             if (
-                encoding_val("bounds") == coord_name
-                or encoding_val("grid_mapping") == coord_name
+                v.encoding.get("bounds") == coord_name
+                or v.encoding.get("grid_mapping") == coord_name
             ):
                 not_technically_coordinates.add(coord_name)
                 global_coordinates.discard(coord_name)
