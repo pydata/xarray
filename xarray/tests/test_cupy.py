@@ -9,6 +9,14 @@ cp = pytest.importorskip("cupy")
 
 @pytest.fixture
 def toy_weather_data():
+    """Construct the example DataSet from the Toy weather data example.
+
+    http://xarray.pydata.org/en/stable/examples/weather-data.html
+
+    Here we construct the DataSet exactly as shown in the example and then
+    convert the numpy arrays to cupy.
+
+    """
     np.random.seed(123)
     times = pd.date_range("2000-01-01", "2001-12-31", name="time")
     annual_cycle = np.sin(2 * np.pi * (times.dayofyear.values / 365.25 - 0.28))
@@ -32,9 +40,11 @@ def toy_weather_data():
 
 
 def test_cupy_import():
+    """Check the import worked."""
     assert cp
 
 
-def test_check_mean(toy_weather_data):
+def test_check_data_stays_on_gpu(toy_weather_data):
+    """Perform some operations and check the data stays on the GPU."""
     freeze = (toy_weather_data["tmin"] <= 0).groupby("time.month").mean("time")
     assert isinstance(freeze.data, cp.core.core.ndarray)
