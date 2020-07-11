@@ -44,7 +44,11 @@ Internal Changes
 v0.16.0 (2020-07-11)
 ---------------------
 
-Thank you to all contributors who built this release:
+This release adds `xarray.cov` & `xarray.corr` for covariance & correlation
+respectively; the `idxmax` & `idxmin` methods, the `polyfit` method &
+`xarray.polyval` for fitting polynomials, as well as a number of documentation
+improvements, other features, and bug fixes. Many thanks to all 44 contributors
+who contributed to this release:
 
 Akio Taniguchi, Andrew Williams, Aurélien Ponte, Benoit Bovy, Dave Cole, David
 Brochart, Deepak Cherian, Elliott Sales de Andrade, Etienne Combrisson, Hossein
