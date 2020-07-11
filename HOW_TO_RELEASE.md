@@ -119,8 +119,8 @@ upstream        https://github.com/pydata/xarray (push)
 16. Update the docs. Login to https://readthedocs.org/projects/xray/versions/
     and switch your new release tag (at the bottom) from "Inactive" to "Active".
     It should now build automatically.
-17. Issue the release announcement! For bug fix releases, I usually only email
-    xarray@googlegroups.com. For major/feature releases, I will email a broader
+17. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I 
+    usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com
       - xarray@googlegroups.com
