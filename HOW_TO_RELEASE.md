@@ -10,11 +10,6 @@ upstream        https://github.com/pydata/xarray (fetch)
 upstream        https://github.com/pydata/xarray (push)
 ```
 
- 0. Write a release summary: ~50 words describing the high level features. This
-    will be used in the release emails, tweets, GitHub release notes, etc. 
-    I (@max) find it helpful to use a PR given I'm not always familiar with all the
-    features of the release, and the summary is distributed widely.
-
  1. Ensure your master branch is synced to upstream:
      ```sh
      git pull upstream master
@@ -28,6 +23,8 @@ upstream        https://github.com/pydata/xarray (push)
     git log v{0.X.Y-1}.. --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
     Add these into `whats-new.rst` somewhere :)
+ 2. Write a release summary: ~50 words describing the high level features. This
+    will be used in the release emails, tweets, GitHub release notes, etc. 
  3. Look over whats-new.rst and the docs. Make sure "What's New" is complete
     (check the date!) and add the release summary at the top.
     Things to watch out for:
@@ -37,6 +34,11 @@ upstream        https://github.com/pydata/xarray (push)
       due to a bad merge. Check for these before a release by using git diff,
       e.g., `git diff v{0.X.Y-1} whats-new.rst` where {0.X.Y-1} is the previous
       release.
+ 4. If possible, open a PR with the release summary and whatsnew changes.
+ 4. After merging, again ensure your master branch is synced to upstream:
+     ```sh
+     git pull upstream master
+     ```
  4. If you have any doubts, run the full test suite one final time!
       ```sh
       pytest
