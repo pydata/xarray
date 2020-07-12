@@ -75,26 +75,28 @@ class Rolling:
         -------
         rolling : type of input argument
         """
-        dim = list(windows.keys())
-        window = list(windows.values())
+        self.dim, self.window = [], []
+        for d, w in windows.items():
+            self.dim.append(d)
+            if w <= 0:
+                raise ValueError("window must be > 0")
+            self.window.append(w)
 
-        if any([w <= 0 for w in window]):
-            raise ValueError("window must be > 0")
-
-        if center is None or isinstance(center, bool):
-            center = [center] * len(dim)
+        if utils.is_dict_like(center):
+            self.center = [center.get(d, False) for d in self.dim]
+        elif isinstance(center, bool) or center is None:
+            self.center = [center] * len(self.dim)
+        else:
+            raise ValueError('center should be boolean or a mapping. '
+                             'Given {}'.format(center))
 
         self.obj = obj
 
         # attributes
-        self.window = window
         if min_periods is not None and min_periods <= 0:
             raise ValueError("min_periods must be greater than zero or None")
         
-        self.min_periods = np.prod(window) if min_periods is None else min_periods
-
-        self.center = center
-        self.dim = dim
+        self.min_periods = np.prod(self.window) if min_periods is None else min_periods
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -148,6 +150,11 @@ class Rolling:
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
 
+    def _dict_to_list(self, arg, default=None):
+        if utils.is_dict_like(arg):
+            return [arg.get(d, default) for d in self.dim]
+        else:  # for single argument
+            return [arg] * len(self.dim)
 
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
@@ -213,7 +220,10 @@ class DataArrayRolling(Rolling):
 
             yield (label, window)
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(
+        self, window_dim=None, stride=1, fill_value=dtypes.NA,
+        **window_dim_kwargs
+    ):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -254,10 +264,22 @@ class DataArrayRolling(Rolling):
 
         from .dataarray import DataArray
 
-        if len(self.dim) == 1 and not isinstance(window_dim, list):
+        if window_dim is None:
+            if len(window_dim_kwargs) == 0:
+                raise ValueError('Either window_dim or window_dim_kwargs need to be specified.')
+            window_dim = {d: window_dim_kwargs[d] for d in self.dim}        
+
+        if len(self.dim) == 1 and not utils.is_dict_like(window_dim):
             window_dim = [window_dim]
+        else:
+            # make window_dim a list
+            window_dim = [window_dim[d] for d in self.dim]
+
         if isinstance(stride, int):
             stride = [stride] * len(self.dim)
+        else:
+            stride = [stride.get(d) for d in self.dim]
+
         window = self.obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
         )
@@ -309,12 +331,12 @@ class DataArrayRolling(Rolling):
                [ 4.,  9., 15., 18.]])
 
         """
-        rolling_dim = [
-            utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+        rolling_dim = {
+            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
             for d in self.dim
-        ]
+        }
         windows = self.construct(rolling_dim)
-        result = windows.reduce(func, dim=rolling_dim, **kwargs)
+        result = windows.reduce(func, dim=list(rolling_dim.values()), **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts()
@@ -323,10 +345,10 @@ class DataArrayRolling(Rolling):
     def _counts(self):
         """ Number of non-nan entries in each rolling window. """
 
-        rolling_dim = [
-            utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+        rolling_dim = {
+            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
             for d in self.dim
-        ]
+        }
         # We use False as the fill_value instead of np.nan, since boolean
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
@@ -334,10 +356,11 @@ class DataArrayRolling(Rolling):
         counts = (
             self.obj.notnull()
             .rolling(
-                center=self.center, **{d: w for d, w in zip(self.dim, self.window)}
+                center={d: self.center[i] for i, d in enumerate(self.dim)},
+                **{d: w for d, w in zip(self.dim, self.window)}
             )
             .construct(rolling_dim, fill_value=False)
-            .sum(dim=rolling_dim, skipna=False)
+            .sum(dim=list(rolling_dim.values()), skipna=False)
         )
         return counts
 
@@ -457,11 +480,11 @@ class DatasetRolling(Rolling):
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
-            dims, center = [], []
+            dims, center = [], {}
             for i, d in enumerate(self.dim):
                 if d in da.dims:
                     dims.append(d)
-                    center.append(self.center[i])
+                    center[d] = self.center[i]
 
             if len(dims) > 0:
                 self.rollings[key] = DataArrayRolling(
@@ -547,11 +570,7 @@ class DatasetRolling(Rolling):
         dataset = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
-            dims, center = [], []
-            for i, d in enumerate(self.dim):
-                if d in da.dims:
-                    dims.append(d)
-                    center.append(self.center[i])
+            dims = [d for d in self.dim if d in da.dims]
 
             if len(dims) > 0:
                 dataset[key] = self.rollings[key].construct(
