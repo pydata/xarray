@@ -82,20 +82,13 @@ class Rolling:
                 raise ValueError("window must be > 0")
             self.window.append(w)
 
-        if utils.is_dict_like(center):
-            self.center = [center.get(d, False) for d in self.dim]
-        elif isinstance(center, bool) or center is None:
-            self.center = [center] * len(self.dim)
-        else:
-            raise ValueError('center should be boolean or a mapping. '
-                             'Given {}'.format(center))
-
+        self.center = self._mapping_to_list(center, default=False)
         self.obj = obj
 
         # attributes
         if min_periods is not None and min_periods <= 0:
             raise ValueError("min_periods must be greater than zero or None")
-        
+
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
 
         if keep_attrs is None:
@@ -150,11 +143,21 @@ class Rolling:
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
 
-    def _dict_to_list(self, arg, default=None):
+    def _mapping_to_list(
+        self, arg, default=None, allow_default=True, allow_allsame=True
+    ):
         if utils.is_dict_like(arg):
-            return [arg.get(d, default) for d in self.dim]
-        else:  # for single argument
+            if allow_default:
+                return [arg.get(d, default) for d in self.dim]
+            else:
+                return [arg.get(d, default) for d in self.dim]
+        elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
+        elif len(self.dim) == 1:
+            return [arg]
+        else:
+            raise ValueError("Mapping argument is necessary.")
+
 
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
@@ -221,8 +224,7 @@ class DataArrayRolling(Rolling):
             yield (label, window)
 
     def construct(
-        self, window_dim=None, stride=1, fill_value=dtypes.NA,
-        **window_dim_kwargs
+        self, window_dim=None, stride=1, fill_value=dtypes.NA, **window_dim_kwargs
     ):
         """
         Convert this rolling object to xr.DataArray,
@@ -266,19 +268,15 @@ class DataArrayRolling(Rolling):
 
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
-                raise ValueError('Either window_dim or window_dim_kwargs need to be specified.')
-            window_dim = {d: window_dim_kwargs[d] for d in self.dim}        
+                raise ValueError(
+                    "Either window_dim or window_dim_kwargs need to be specified."
+                )
+            window_dim = {d: window_dim_kwargs[d] for d in self.dim}
 
-        if len(self.dim) == 1 and not utils.is_dict_like(window_dim):
-            window_dim = [window_dim]
-        else:
-            # make window_dim a list
-            window_dim = [window_dim[d] for d in self.dim]
-
-        if isinstance(stride, int):
-            stride = [stride] * len(self.dim)
-        else:
-            stride = [stride.get(d) for d in self.dim]
+        window_dim = self._mapping_to_list(
+            window_dim, allow_default=False, allow_allsame=False
+        )
+        stride = self._mapping_to_list(stride, default=1)
 
         window = self.obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
@@ -357,7 +355,7 @@ class DataArrayRolling(Rolling):
             self.obj.notnull()
             .rolling(
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
-                **{d: w for d, w in zip(self.dim, self.window)}
+                **{d: w for d, w in zip(self.dim, self.window)},
             )
             .construct(rolling_dim, fill_value=False)
             .sum(dim=list(rolling_dim.values()), skipna=False)
@@ -561,8 +559,7 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
-        if isinstance(stride, int):
-            stride = [stride] * len(self.dim)
+        stride = self._mapping_to_list(stride, default=1)
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)

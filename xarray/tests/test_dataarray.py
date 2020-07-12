@@ -6405,8 +6405,11 @@ def test_ndrolling_reduce(da, center, min_periods):
 
     actual = rolling_obj.sum()
     expected = (
-        da.rolling(time=3, center=center, min_periods=min_periods).sum()
-        .rolling(x=2, center=center, min_periods=min_periods).sum())
+        da.rolling(time=3, center=center, min_periods=min_periods)
+        .sum()
+        .rolling(x=2, center=center, min_periods=min_periods)
+        .sum()
+    )
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
