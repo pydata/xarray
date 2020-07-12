@@ -6397,9 +6397,9 @@ def test_rolling_count_correct():
         assert_equal(result, expected)
 
 
-@pytest.mark.parametrize("da", (1, ), indirect=True)
+@pytest.mark.parametrize("da", (1,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
-@pytest.mark.parametrize("min_periods", (None, 1, ))
+@pytest.mark.parametrize("min_periods", (None, 1))
 def test_ndrolling_reduce(da, center, min_periods):
     rolling_obj = da.rolling(time=3, a=2, center=center, min_periods=min_periods)
 

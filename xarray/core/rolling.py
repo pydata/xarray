@@ -83,10 +83,10 @@ class Rolling:
 
         if center is None or isinstance(center, bool):
             center = [center] * len(dim)
-        
+
         # TODO support nd-min_periods
-        if hasattr(min_periods, '__len__'):
-            raise NotImplementedError('multiple min_periods is not yet supported.')
+        if hasattr(min_periods, "__len__"):
+            raise NotImplementedError("multiple min_periods is not yet supported.")
         min_periods = [min_periods] * len(dim)
 
         self.obj = obj
@@ -95,7 +95,9 @@ class Rolling:
         self.window = window
         if any(mp is not None and mp <= 0 for mp in min_periods):
             raise ValueError("min_periods must be greater than zero or None")
-        self.min_periods = [w if mp is None else mp for mp, w in zip(min_periods, window)]
+        self.min_periods = [
+            w if mp is None else mp for mp, w in zip(min_periods, window)
+        ]
 
         self.center = center
         self.dim = dim
@@ -109,8 +111,10 @@ class Rolling:
 
         attrs = [
             "{k}->{v}".format(k=k, v=getattr(self, k))
-            for k in 
-            list(self.dim) + list(self.window) + list(self.center) + list(self.min_periods)
+            for k in list(self.dim)
+            + list(self.window)
+            + list(self.center)
+            + list(self.min_periods)
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
@@ -145,7 +149,7 @@ class Rolling:
 
     def count(self):
         if len(self.dim) > 1:
-            raise NotImplementedError('count is not implemented for nd-rolling.')
+            raise NotImplementedError("count is not implemented for nd-rolling.")
         rolling_count = self._counts()
         enough_periods = rolling_count >= self.min_periods[0]
         return rolling_count.where(enough_periods)
@@ -199,13 +203,13 @@ class DataArrayRolling(Rolling):
         super().__init__(
             obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
         )
-    
+
         # TODO legacy attribute
         self.window_labels = self.obj[self.dim[0]]
 
     def __iter__(self):
         if len(self.dim) > 1:
-            raise ValueError('__iter__ is only supported for 1d-rolling')
+            raise ValueError("__iter__ is only supported for 1d-rolling")
         stops = np.arange(1, len(self.window_labels) + 1)
         starts = stops - int(self.window[0])
         starts[: int(self.window[0])] = 0
@@ -257,7 +261,7 @@ class DataArrayRolling(Rolling):
         """
 
         from .dataarray import DataArray
-        
+
         if len(self.dim) == 1 and not isinstance(window_dim, list):
             window_dim = [window_dim]
         if isinstance(stride, int):
@@ -268,7 +272,9 @@ class DataArrayRolling(Rolling):
         result = DataArray(
             window, dims=self.obj.dims + tuple(window_dim), coords=self.obj.coords
         )
-        return result.isel(**{d: slice(None, None, s) for d, s in zip(self.dim, stride)})
+        return result.isel(
+            **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
+        )
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -313,7 +319,8 @@ class DataArrayRolling(Rolling):
         """
         rolling_dim = [
             utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
-            for d in self.dim]
+            for d in self.dim
+        ]
         windows = self.construct(rolling_dim)
         result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
@@ -326,14 +333,17 @@ class DataArrayRolling(Rolling):
 
         rolling_dim = [
             utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
-            for d in self.dim]
+            for d in self.dim
+        ]
         # We use False as the fill_value instead of np.nan, since boolean
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
         counts = (
             self.obj.notnull()
-            .rolling(center=self.center, **{d: w for d, w in zip(self.dim, self.window)})
+            .rolling(
+                center=self.center, **{d: w for d, w in zip(self.dim, self.window)}
+            )
             .construct(rolling_dim, fill_value=False)
             .sum(dim=rolling_dim, skipna=False)
         )
@@ -394,9 +404,11 @@ class DataArrayRolling(Rolling):
             )
             del kwargs["dim"]
 
-        if bottleneck_move_func is not None and not isinstance(
-            self.obj.data, dask_array_type
-        ) and len(self.dim) == 1:
+        if (
+            bottleneck_move_func is not None
+            and not isinstance(self.obj.data, dask_array_type)
+            and len(self.dim) == 1
+        ):
             # TODO: renable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
@@ -458,7 +470,7 @@ class DatasetRolling(Rolling):
                 if d in da.dims:
                     dims.append(d)
                     center.append(self.center[i])
-                    
+
             if len(dims) > 0:
                 self.rollings[key] = DataArrayRolling(
                     da, windows, min_periods, center, keep_attrs
@@ -533,6 +545,7 @@ class DatasetRolling(Rolling):
         """
 
         from .dataset import Dataset
+
         if isinstance(stride, int):
             stride = [stride] * len(self.dim)
 
@@ -547,7 +560,7 @@ class DatasetRolling(Rolling):
                 if d in da.dims:
                     dims.append(d)
                     center.append(self.center[i])
-                    
+
             if len(dims) > 0:
                 dataset[key] = self.rollings[key].construct(
                     window_dim, fill_value=fill_value

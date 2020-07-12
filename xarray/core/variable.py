@@ -1921,7 +1921,7 @@ class Variable(
         else:
             dtype = self.dtype
             array = self.data
-        
+
         if isinstance(dim, list):
             assert len(dim) == len(window)
             assert len(dim) == len(window_dim)
@@ -1936,11 +1936,7 @@ class Variable(
         return Variable(
             new_dims,
             duck_array_ops.rolling_window(
-                array,
-                axis=axis,
-                window=window,
-                center=center,
-                fill_value=fill_value,
+                array, axis=axis, window=window, center=center, fill_value=fill_value
             ),
         )
 

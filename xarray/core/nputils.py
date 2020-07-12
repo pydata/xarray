@@ -135,7 +135,7 @@ class NumpyVIndexAdapter:
 def rolling_window(a, axis, window, center, fill_value):
     """ rolling window with padding. """
     pads = [(0, 0) for s in a.shape]
-    if not hasattr(axis, '__len__'):
+    if not hasattr(axis, "__len__"):
         axis = [axis]
         window = [window]
         center = [center]
