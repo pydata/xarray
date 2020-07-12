@@ -158,7 +158,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
             dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
         except (KeyError, OutOfBoundsDatetime, OverflowError):
             dates = _decode_datetime_with_cftime(
-                flat_num_dates.astype(np.float), units, calendar
+                flat_num_dates.astype(float), units, calendar
             )
 
             if (
@@ -179,7 +179,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(np.float), units, calendar
+            flat_num_dates.astype(float), units, calendar
         )
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)

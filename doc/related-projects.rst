@@ -76,7 +76,7 @@ Visualization
 - `Datashader <https://datashader.org>`_, `geoviews <http://geo.holoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
-- `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiles map plotting based on ipyleaflet.
+- `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
