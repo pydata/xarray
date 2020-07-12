@@ -5962,7 +5962,6 @@ def test_rolling_construct(center, window):
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
     ds_rolling = ds.rolling(index=window, center=center)
 
-    print(ds_rolling.construct("window"))
     ds_rolling_mean = ds_rolling.construct("window").mean("window")
     np.testing.assert_allclose(df_rolling["x"].values, ds_rolling_mean["x"].values)
     np.testing.assert_allclose(df_rolling.index, ds_rolling_mean["index"])
