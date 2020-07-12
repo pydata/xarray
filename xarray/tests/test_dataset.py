@@ -5881,8 +5881,6 @@ def test_rolling_keep_attrs():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError, match="exactly one dim/window should"):
-        ds.rolling(time=7, x=2)
     with pytest.raises(ValueError, match="window must be > 0"):
         ds.rolling(time=-2)
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
