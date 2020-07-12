@@ -6401,11 +6401,14 @@ def test_rolling_count_correct():
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
 def test_ndrolling_reduce(da, center, min_periods):
-    rolling_obj = da.rolling(time=3, a=2, center=center, min_periods=min_periods)
+    rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
-    actual = rolling_obj.reduce(np.nansum)
-    expected = rolling_obj.sum()
+    actual = rolling_obj.sum(skipna=False)
+    expected = (
+        da.rolling(time=3, center=center, min_periods=min_periods).sum(skipna=False)
+        .rolling(x=2, center=center, min_periods=min_periods).sum(skipna=False))
+
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
 
