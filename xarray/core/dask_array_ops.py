@@ -32,6 +32,14 @@ def rolling_window(a, axis, window, center, fill_value):
     """
     import dask.array as da
 
+    # for nd-rolling. 
+    # TODO It can be more efficient. Currently, the chunks at the boundaries
+    # will be copied, but it might be OK for many-chunked-arrays.
+    if hasattr(axis, '__len__'):
+        for ax, win, cen in zip(axis, window, center):
+            a = rolling_window(a, ax, win, cen, fill_value)
+        return a
+
     orig_shape = a.shape
     if axis < 0:
         axis = a.ndim + axis

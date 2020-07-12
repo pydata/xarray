@@ -1881,11 +1881,14 @@ class Variable(
         Parameters
         ----------
         dim: str
-            Dimension over which to compute rolling_window
+            Dimension over which to compute rolling_window.
+            For nd-rolling, should be list of dimensions.
         window: int
             Window size of the rolling
+            For nd-rolling, should be list of integers.
         window_dim: str
             New name of the window dimension.
+            For nd-rolling, should be list of integers.
         center: boolean. default False.
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -1918,13 +1921,23 @@ class Variable(
         else:
             dtype = self.dtype
             array = self.data
-
-        new_dims = self.dims + (window_dim,)
+        
+        if isinstance(dim, list):
+            assert len(dim) == len(window)
+            assert len(dim) == len(window_dim)
+            assert len(dim) == len(center)
+        else:
+            dim = [dim]
+            window = [window]
+            window_dim = [window_dim]
+            center = [center]
+        axis = [self.get_axis_num(d) for d in dim]
+        new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
             duck_array_ops.rolling_window(
                 array,
-                axis=self.get_axis_num(dim),
+                axis=axis,
                 window=window,
                 center=center,
                 fill_value=fill_value,

@@ -6193,8 +6193,6 @@ def test_rolling_properties(da):
     assert rolling_obj.obj.get_axis_num("time") == 1
 
     # catching invalid args
-    with pytest.raises(ValueError, match="exactly one dim/window should"):
-        da.rolling(time=7, x=2)
     with pytest.raises(ValueError, match="window must be > 0"):
         da.rolling(time=-2)
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
@@ -6397,6 +6395,19 @@ def test_rolling_count_correct():
 
         result = da.to_dataset(name="var1").rolling(**kwarg).count()["var1"]
         assert_equal(result, expected)
+
+
+@pytest.mark.parametrize("da", (1, ), indirect=True)
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("min_periods", (None, 1, ))
+def test_ndrolling_reduce(da, center, min_periods):
+    rolling_obj = da.rolling(time=3, a=2, center=center, min_periods=min_periods)
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = rolling_obj.reduce(np.nansum)
+    expected = rolling_obj.sum()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

@@ -135,14 +135,22 @@ class NumpyVIndexAdapter:
 def rolling_window(a, axis, window, center, fill_value):
     """ rolling window with padding. """
     pads = [(0, 0) for s in a.shape]
-    if center:
-        start = int(window / 2)  # 10 -> 5,  9 -> 4
-        end = window - 1 - start
-        pads[axis] = (start, end)
-    else:
-        pads[axis] = (window - 1, 0)
+    if not hasattr(axis, '__len__'):
+        axis = [axis]
+        window = [window]
+        center = [center]
+
+    for ax, win, cent in zip(axis, window, center):
+        if cent:
+            start = int(win / 2)  # 10 -> 5,  9 -> 4
+            end = win - 1 - start
+            pads[ax] = (start, end)
+        else:
+            pads[ax] = (win - 1, 0)
     a = np.pad(a, pads, mode="constant", constant_values=fill_value)
-    return _rolling_window(a, window, axis)
+    for ax, win in zip(axis, window):
+        a = _rolling_window(a, win, ax)
+    return a
 
 
 def _rolling_window(a, window, axis=-1):
