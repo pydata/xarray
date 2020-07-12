@@ -6403,11 +6403,10 @@ def test_rolling_count_correct():
 def test_ndrolling_reduce(da, center, min_periods):
     rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
 
-    # add nan prefix to numpy methods to get similar # behavior as bottleneck
-    actual = rolling_obj.sum(skipna=False)
+    actual = rolling_obj.sum()
     expected = (
-        da.rolling(time=3, center=center, min_periods=min_periods).sum(skipna=False)
-        .rolling(x=2, center=center, min_periods=min_periods).sum(skipna=False))
+        da.rolling(time=3, center=center, min_periods=min_periods).sum()
+        .rolling(x=2, center=center, min_periods=min_periods).sum())
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims

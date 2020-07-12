@@ -84,20 +84,14 @@ class Rolling:
         if center is None or isinstance(center, bool):
             center = [center] * len(dim)
 
-        # TODO support nd-min_periods
-        if hasattr(min_periods, "__len__"):
-            raise NotImplementedError("multiple min_periods is not yet supported.")
-        min_periods = [min_periods] * len(dim)
-
         self.obj = obj
 
         # attributes
         self.window = window
-        if any(mp is not None and mp <= 0 for mp in min_periods):
+        if min_periods is not None and min_periods <= 0:
             raise ValueError("min_periods must be greater than zero or None")
-        self.min_periods = [
-            w if mp is None else mp for mp, w in zip(min_periods, window)
-        ]
+        
+        self.min_periods = np.prod(window) if min_periods is None else min_periods
 
         self.center = center
         self.dim = dim
@@ -114,7 +108,7 @@ class Rolling:
             for k in list(self.dim)
             + list(self.window)
             + list(self.center)
-            + list(self.min_periods)
+            + [self.min_periods]
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
@@ -148,10 +142,8 @@ class Rolling:
     median = _reduce_method("median")
 
     def count(self):
-        if len(self.dim) > 1:
-            raise NotImplementedError("count is not implemented for nd-rolling.")
         rolling_count = self._counts()
-        enough_periods = rolling_count >= self.min_periods[0]
+        enough_periods = rolling_count >= self.min_periods
         return rolling_count.where(enough_periods)
 
     count.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="count")
@@ -217,7 +209,7 @@ class DataArrayRolling(Rolling):
             window = self.obj.isel(**{self.dim[0]: slice(start, stop)})
 
             counts = window.count(dim=self.dim[0])
-            window = window.where(counts >= self.min_periods[0])
+            window = window.where(counts >= self.min_periods)
 
             yield (label, window)
 
@@ -326,7 +318,7 @@ class DataArrayRolling(Rolling):
 
         # Find valid windows based on count.
         counts = self._counts()
-        return result.where(counts >= self.min_periods[0])
+        return result.where(counts >= self.min_periods)
 
     def _counts(self):
         """ Number of non-nan entries in each rolling window. """
@@ -355,10 +347,10 @@ class DataArrayRolling(Rolling):
         # bottleneck doesn't allow min_count to be 0, although it should
         # work the same as if min_count = 1
         # Note bottleneck only works with 1d-rolling.
-        if self.min_periods[0] is not None and self.min_periods[0] == 0:
+        if self.min_periods is not None and self.min_periods == 0:
             min_count = 1
         else:
-            min_count = self.min_periods[0]
+            min_count = self.min_periods
 
         axis = self.obj.get_axis_num(self.dim[0])
 
