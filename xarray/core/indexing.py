@@ -11,7 +11,8 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import dask_array_type, integer_types, sparse_array_type
+from .pycompat import integer_types, sparse_array_type
+from .dask_array_compat import is_duck_dask_array
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
@@ -699,7 +700,7 @@ def as_indexable(array):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
         return PandasIndexAdapter(array)
-    if isinstance(array, dask_array_type):
+    if is_duck_dask_array(array):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
@@ -1111,7 +1112,7 @@ def _masked_result_drop_slice(key, data=None):
     new_keys = []
     for k in key:
         if isinstance(k, np.ndarray):
-            if isinstance(data, dask_array_type):
+            if is_duck_dask_array(data):
                 new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
             elif isinstance(data, sparse_array_type):
                 import sparse

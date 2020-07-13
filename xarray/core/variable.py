@@ -34,6 +34,7 @@ from .indexing import (
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import dask_array_type, integer_types
+from .dask_array_compat import is_duck_dask_array
 from .utils import (
     OrderedSet,
     _default,
@@ -341,9 +342,7 @@ class Variable(
 
     @property
     def data(self):
-        if hasattr(self._data, "__array_function__") or isinstance(
-            self._data, dask_array_type
-        ):
+        if hasattr(self._data, "__array_function__") or is_duck_dask_array(self._data):
             return self._data
         else:
             return self.values
@@ -375,7 +374,7 @@ class Variable(
         --------
         dask.array.compute
         """
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             self._data = as_compatible_data(self._data.compute(**kwargs))
         elif not hasattr(self._data, "__array_function__"):
             self._data = np.asarray(self._data)
@@ -410,7 +409,7 @@ class Variable(
         return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             return self._data.__dask_graph__()
         else:
             return None
@@ -738,7 +737,7 @@ class Variable(
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-            if isinstance(self._data, dask_array_type):
+            if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
                 # https://github.com/dask/dask/pull/2967
@@ -885,9 +884,7 @@ class Variable(
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if hasattr(data, "__array_function__") or isinstance(
-                    data, dask_array_type
-                ):
+                if hasattr(data, "__array_function__") or is_duck_dask_array(data):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
@@ -977,7 +974,7 @@ class Variable(
             chunks = self.chunks or self.shape
 
         data = self._data
-        if isinstance(data, da.Array):
+        if is_duck_dask_array(data):
             data = data.rechunk(chunks)
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
@@ -1124,7 +1121,7 @@ class Variable(
             constant_values=fill_value,
         )
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1282,7 +1279,7 @@ class Variable(
 
         data = duck_array_ops.concatenate(arrays, axis)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1853,7 +1850,7 @@ class Variable(
 
         data = self.data
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             raise TypeError(
                 "rank does not work for arrays stored as dask "
                 "arrays. Load the data via .compute() or .load() "

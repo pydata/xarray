@@ -254,7 +254,7 @@ def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
-    from xarray.core.pycompat import dask_array_type
+    from xarray.core.dask_array_compat import is_duck_dask_array
 
     name = _name(cube)
     if name == "unknown":
@@ -290,7 +290,7 @@ def from_iris(cube):
     cube_data = cube.core_data() if hasattr(cube, "core_data") else cube.data
 
     # Deal with dask and numpy masked arrays
-    if isinstance(cube_data, dask_array_type):
+    if is_duck_dask_array(cube_data):
         from dask.array import ma as dask_ma
 
         filled_data = dask_ma.filled(cube_data, get_fill_value(cube.dtype))

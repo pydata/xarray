@@ -14,7 +14,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
+from .dask_array_compat import is_duck_dask_array
 
 try:
     import dask.array as dask_array
@@ -46,7 +46,7 @@ def _dask_or_eager_func(
                 dispatch_args = args[0]
             else:
                 dispatch_args = args[array_args]
-            if any(isinstance(a, dask_array_type) for a in dispatch_args):
+            if any(is_duck_dask_array(a) for a in dispatch_args):
                 try:
                     wrapped = getattr(dask_module, name)
                 except AttributeError as e:
@@ -64,7 +64,7 @@ def _dask_or_eager_func(
 
 
 def fail_on_dask_array_input(values, msg=None, func_name=None):
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         if msg is None:
             msg = "%r is not yet a valid method on dask arrays"
         if func_name is None:
@@ -104,7 +104,7 @@ def isnull(data):
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, (np.ndarray, dask_array_type)):
+        if is_duck_dask_array(data) or isinstance(data, np.ndarray):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -136,7 +136,7 @@ einsum = _dask_or_eager_func("einsum", array_args=slice(1, None))
 
 
 def gradient(x, coord, axis, edge_order):
-    if isinstance(x, dask_array_type):
+    if is_duck_dask_array(x):
         return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
     return np.gradient(x, coord, axis=axis, edge_order=edge_order)
 
@@ -161,7 +161,7 @@ masked_invalid = _dask_or_eager_func(
 def asarray(data):
     return (
         data
-        if (isinstance(data, dask_array_type) or hasattr(data, "__array_function__"))
+        if (is_duck_dask_array(data) or hasattr(data, "__array_function__"))
         else np.asarray(data)
     )
 
@@ -192,8 +192,8 @@ def lazy_array_equiv(arr1, arr2):
         return False
     if (
         dask_array
-        and isinstance(arr1, dask_array_type)
-        and isinstance(arr2, dask_array_type)
+        and is_duck_dask_array(arr1)
+        and is_duck_dask_array(arr2)
     ):
         # GH3068
         if arr1.name == arr2.name:
@@ -216,7 +216,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
             dask_version is not None and LooseVersion(dask_version) >= "2.9.1"
         )
         if not sufficient_dask_version and any(
-            isinstance(arr, dask_array_type) for arr in [arr1, arr2]
+            is_duck_dask_array(arr) for arr in [arr1, arr2]
         ):
             arr1 = np.array(arr1)
             arr2 = np.array(arr2)
@@ -323,7 +323,7 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
         try:
             return func(values, axis=axis, **kwargs)
         except AttributeError:
-            if not isinstance(values, dask_array_type):
+            if not is_duck_dask_array(values):
                 raise
             try:  # dask/dask#3133 dask sometimes needs dtype argument
                 # if func does not accept dtype, then raises TypeError
@@ -539,7 +539,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
             + offset
         )
     elif _contains_cftime_datetimes(array):
-        if isinstance(array, dask_array_type):
+        if is_duck_dask_array(array):
             raise NotImplementedError(
                 "Computing the mean of an array containing "
                 "cftime.datetime objects is not yet implemented on "
@@ -610,7 +610,7 @@ def rolling_window(array, axis, window, center, fill_value):
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
-    if isinstance(array, dask_array_type):
+    if is_duck_dask_array(array):
         return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
     else:  # np.ndarray
         return nputils.rolling_window(array, axis, window, center, fill_value)
@@ -619,7 +619,7 @@ def rolling_window(array, axis, window, center, fill_value):
 def least_squares(lhs, rhs, rcond=None, skipna=False):
     """Return the coefficients and residuals of a least-squares fit.
     """
-    if isinstance(rhs, dask_array_type):
+    if is_duck_dask_array(rhs):
         return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
     else:
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)

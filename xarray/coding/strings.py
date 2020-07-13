@@ -4,7 +4,7 @@ from functools import partial
 import numpy as np
 
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.dask_array_compat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     VariableCoder,
@@ -130,7 +130,7 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         return da.map_blocks(
@@ -167,7 +167,7 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.string_)
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         if len(arr.chunks[-1]) > 1:

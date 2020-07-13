@@ -8,7 +8,7 @@ from .coding import strings, times, variables
 from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
-from .core.pycompat import dask_array_type
+from .core.dask_array_compat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -178,7 +178,7 @@ def ensure_dtype_not_object(var, name=None):
     if var.dtype.kind == "O":
         dims, data, attrs, encoding = _var_as_tuple(var)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             warnings.warn(
                 "variable {} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
@@ -351,7 +351,7 @@ def decode_cf_variable(
         del attributes["dtype"]
         data = BoolTypeArray(data)
 
-    if not isinstance(data, dask_array_type):
+    if not is_duck_dask_array(data):
         data = indexing.LazilyOuterIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding)

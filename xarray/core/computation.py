@@ -27,7 +27,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
-from .pycompat import dask_array_type
+from .dask_array_compat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -569,7 +569,7 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(isinstance(array, dask_array_type) for array in input_data):
+    if any(is_duck_dask_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -698,7 +698,7 @@ def _apply_blockwise(
         )
 
     for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # core dimensions cannot span multiple chunks
             for axis, dim in enumerate(core_dims, start=-len(core_dims)):
                 if len(data.chunks[axis]) != 1:
@@ -735,7 +735,7 @@ def _apply_blockwise(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(isinstance(arg, dask_array_type) for arg in args):
+    if any(is_duck_dask_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -1574,7 +1574,7 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle dask arrays.
-    if isinstance(array.data, dask_array_type):
+    if is_duck_dask_array(array.data):
         import dask.array
 
         chunks = dict(zip(array.dims, array.chunks))

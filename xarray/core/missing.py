@@ -10,7 +10,8 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
+from .duck_array_ops import datetime_to_numeric, timedelta_to_numeric
+from .dask_array_compat import is_duck_dask_array
 from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
@@ -703,7 +704,7 @@ def interp_func(var, x, new_x, method, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if isinstance(var, dask_array_type):
+    if is_duck_dask_array(var):
         import dask.array as da
 
         _assert_single_chunk(var, range(var.ndim - len(x), var.ndim))

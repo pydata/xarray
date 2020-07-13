@@ -12,7 +12,8 @@ from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
-from .pycompat import dask_array_type, sparse_array_type
+from .pycompat import sparse_array_type
+from .dask_array_compat import is_duck_dask_array
 
 
 def pretty_print(x, numchars: int):
@@ -228,7 +229,7 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert isinstance(array, dask_array_type), array
+    assert is_duck_dask_array(array), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
@@ -257,7 +258,7 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
-    elif isinstance(var._data, dask_array_type):
+    elif is_duck_dask_array(var._data):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
@@ -455,9 +456,7 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__") or isinstance(
-        internal_data, dask_array_type
-    ):
+    elif hasattr(internal_data, "__array_function__") or is_duck_dask_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)

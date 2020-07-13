@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type
+from .dask_array_compat import is_duck_dask_array
 
 try:
     import bottleneck
@@ -338,7 +338,7 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center:
-            if isinstance(padded.data, dask_array_type):
+            if is_duck_dask_array(padded.data):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1
                 shift = -(self.window + 1) // 2
@@ -351,7 +351,7 @@ class DataArrayRolling(Rolling):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim: (0, -shift)}, mode="constant")
 
-        if isinstance(padded.data, dask_array_type):
+        if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
             values = dask_rolling_wrapper(
                 func, padded.data, window=self.window, min_count=min_count, axis=axis
@@ -378,9 +378,7 @@ class DataArrayRolling(Rolling):
             )
             del kwargs["dim"]
 
-        if bottleneck_move_func is not None and not isinstance(
-            self.obj.data, dask_array_type
-        ):
+        if bottleneck_move_func is not None and not is_duck_dask_array(self.obj.data):
             # TODO: renable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.

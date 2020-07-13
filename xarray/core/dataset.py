@@ -80,7 +80,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .dask_array_compat import is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
@@ -649,7 +649,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lazy_data = {
             k: v._data
             for k, v in self.variables.items()
-            if isinstance(v._data, dask_array_type)
+            if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask.array as da
@@ -820,7 +820,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lazy_data = {
             k: v._data
             for k, v in self.variables.items()
-            if isinstance(v._data, dask_array_type)
+            if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask
@@ -5963,7 +5963,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 continue
 
             if skipna is None:
-                if isinstance(da.data, dask_array_type):
+                if is_duck_dask_array(da.data):
                     skipna_da = True
                 else:
                     skipna_da = np.any(da.isnull())
