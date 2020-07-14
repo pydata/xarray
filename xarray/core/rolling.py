@@ -150,7 +150,10 @@ class Rolling:
             if allow_default:
                 return [arg.get(d, default) for d in self.dim]
             else:
-                return [arg.get(d, default) for d in self.dim]
+                for d in self.dim:
+                    if d not in arg:
+                        raise KeyError("argument has no key {}.".format(d))
+                return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
         elif len(self.dim) == 1:
@@ -485,8 +488,9 @@ class DatasetRolling(Rolling):
                     center[d] = self.center[i]
 
             if len(dims) > 0:
+                w = {d: windows[d] for d in dims}
                 self.rollings[key] = DataArrayRolling(
-                    da, windows, min_periods, center, keep_attrs
+                    da, w, min_periods, center, keep_attrs
                 )
 
     def _dataset_implementation(self, func, **kwargs):
@@ -538,7 +542,14 @@ class DatasetRolling(Rolling):
             **kwargs,
         )
 
-    def construct(self, window_dim, stride=1, fill_value=dtypes.NA, keep_attrs=None):
+    def construct(
+        self,
+        window_dim=None,
+        stride=1,
+        fill_value=dtypes.NA,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -559,6 +570,16 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
+        if window_dim is None:
+            if len(window_dim_kwargs) == 0:
+                raise ValueError(
+                    "Either window_dim or window_dim_kwargs need to be specified."
+                )
+            window_dim = {d: window_dim_kwargs[d] for d in self.dim}
+
+        window_dim = self._mapping_to_list(
+            window_dim, allow_default=False, allow_allsame=False
+        )
         stride = self._mapping_to_list(stride, default=1)
 
         if keep_attrs is None:
@@ -568,10 +589,11 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             dims = [d for d in self.dim if d in da.dims]
-
             if len(dims) > 0:
+                wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
+                st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
                 dataset[key] = self.rollings[key].construct(
-                    window_dim, fill_value=fill_value
+                    window_dim=wi, fill_value=fill_value, stride=st
                 )
             else:
                 dataset[key] = da
