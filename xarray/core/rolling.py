@@ -235,12 +235,15 @@ class DataArrayRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str
-            New name of the window dimension.
-        stride: integer, optional
+        window_dim: str or a mapping, optional
+            A mapping from dimension name to the new window dimension names.
+            Just a string can be used for 1d-rolling.
+        stride: integer or a mapping, optional
             Size of stride for the rolling window.
         fill_value: optional. Default dtypes.NA
             Filling value to match the dimension size.
+        **window_dim_kwargs : {dim: new_name, ...}, optional
+            The keyword arguments form of ``window_dim``.
 
         Returns
         -------
@@ -456,7 +459,7 @@ class DatasetRolling(Rolling):
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : boolean, or a mapping from dimension name to boolean, default False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -556,12 +559,15 @@ class DatasetRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str
-            New name of the window dimension.
+        window_dim: str or a mapping, optional
+            A mapping from dimension name to the new window dimension names.
+            Just a string can be used for 1d-rolling.
         stride: integer, optional
             size of stride for the rolling window.
         fill_value: optional. Default dtypes.NA
             Filling value to match the dimension size.
+        **window_dim_kwargs : {dim: new_name, ...}, optional
+            The keyword arguments form of ``window_dim``.
 
         Returns
         -------

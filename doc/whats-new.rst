@@ -89,6 +89,9 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
+  now accept more than 1 dimension.(:pull:`4219`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
   sequences of 'dim' arguments, and if a sequence is passed return a dict
   (which can be passed to :py:meth:`isel` to get the value of the minimum) of
