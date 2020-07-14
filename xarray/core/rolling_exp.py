@@ -14,7 +14,7 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
 def move_exp_nanmean(array, *, axis, alpha):
     if is_duck_dask_array(array):
-        raise TypeError("rolling_exp is not currently support for dask arrays")
+        raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
 
     if axis == ():

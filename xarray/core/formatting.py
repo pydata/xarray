@@ -12,7 +12,7 @@ from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
-from .pycompat import sparse_array_type
+from .pycompat import dask_array_type =, sparse_array_type
 from .dask_array_compat import is_duck_dask_array
 
 
@@ -229,7 +229,7 @@ def inline_dask_repr(array):
     redundant information that's already printed by the repr
     function of the xarray wrapper.
     """
-    assert is_duck_dask_array(array), array
+    assert isinstance(array, dask_array_type), array
 
     chunksize = tuple(c[0] for c in array.chunks)
 
@@ -258,7 +258,7 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
-    elif is_duck_dask_array(var._data):
+    elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
