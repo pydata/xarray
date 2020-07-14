@@ -12,7 +12,7 @@ from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
-from .pycompat import dask_array_type =, sparse_array_type
+from .pycompat import dask_array_type, sparse_array_type
 from .dask_array_compat import is_duck_dask_array
 
 
