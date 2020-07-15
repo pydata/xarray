@@ -2,7 +2,7 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.0.4
+    rev: 5.1.0
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
