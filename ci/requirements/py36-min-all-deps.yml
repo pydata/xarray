@@ -15,22 +15,21 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=2.2
-  - distributed=2.2
+  - dask=2.9
+  - distributed=2.9
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
   - hdf5=1.10
   - hypothesis
   - iris=2.2
-  - isort
+  - isort=4.3.21
   - lxml=4.4  # Optional dep of pydap
   - matplotlib=3.1
-  - msgpack-python=0.6  # remove once distributed is bumped. distributed GH3491
   - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
-  - numba=0.44
+  - numba=0.46
   - numpy=1.15
   - pandas=0.25
   # - pint  # See py36-min-nep18.yml

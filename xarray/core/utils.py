@@ -247,6 +247,12 @@ def is_list_like(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple)
 
 
+def is_array_like(value: Any) -> bool:
+    return (
+        hasattr(value, "ndim") and hasattr(value, "shape") and hasattr(value, "dtype")
+    )
+
+
 def either_dict_or_kwargs(
     pos_kwargs: Optional[Mapping[Hashable, T]],
     kw_kwargs: Mapping[str, T],
@@ -785,6 +791,24 @@ def drop_dims_from_indexers(
         raise ValueError(
             f"Unrecognised option {missing_dims} for missing_dims argument"
         )
+
+
+class UncachedAccessor:
+    """ Acts like a property, but on both classes and class instances
+
+    This class is necessary because some tools (e.g. pydoc and sphinx)
+    inspect classes for which property returns itself and not the
+    accessor.
+    """
+
+    def __init__(self, accessor):
+        self._accessor = accessor
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self._accessor
+
+        return self._accessor(obj)
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

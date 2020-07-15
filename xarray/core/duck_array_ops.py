@@ -6,6 +6,7 @@ accept or return xarray objects.
 import contextlib
 import inspect
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -19,6 +20,14 @@ try:
     import dask.array as dask_array
 except ImportError:
     dask_array = None  # type: ignore
+
+# TODO: remove after we stop supporting dask < 2.9.1
+try:
+    import dask
+
+    dask_version = dask.__version__
+except ImportError:
+    dask_version = None
 
 
 def _dask_or_eager_func(
@@ -199,8 +208,19 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
     """
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
+
     lazy_equiv = lazy_array_equiv(arr1, arr2)
     if lazy_equiv is None:
+        # TODO: remove after we require dask >= 2.9.1
+        sufficient_dask_version = (
+            dask_version is not None and LooseVersion(dask_version) >= "2.9.1"
+        )
+        if not sufficient_dask_version and any(
+            isinstance(arr, dask_array_type) for arr in [arr1, arr2]
+        ):
+            arr1 = np.array(arr1)
+            arr2 = np.array(arr2)
+
         return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
     else:
         return lazy_equiv
@@ -339,6 +359,7 @@ cumprod_1d = _create_nan_agg_method("cumprod")
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum")
 cumsum_1d.numeric_only = True
+unravel_index = _dask_or_eager_func("unravel_index")
 
 
 _mean = _create_nan_agg_method("mean")
