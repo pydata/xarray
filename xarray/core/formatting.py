@@ -216,84 +216,33 @@ def format_array_flat(array, max_width: int):
     return pprint_str
 
 
-def format_cftimeindex_array(array, display_width, spaces):
-    """Return a formatted string for as many items in the flattened version of
-    array that will fit within display_width characters.
-    """
-    # largely copied from xr.core.formatting.format_array_flat
+def format_row(times, indent=0, separator=", ", row_end=",\n"):
+    return indent * " " + separator.join(map(str, times)) + row_end
 
-    # every item will take up at least two characters, but we always want to
-    # print at least first and last items
-    len_item = 19  # length of one item assuming 4 digit year
-    sep_after = display_width // (len_item + 1)
-    # use ellipsis ... for more than 100 items shows 10 front and back items
-    max_width = (len_item + 1) * 100 if len(array) <= 100 else 22 * len_item
-    max_possibly_relevant = min(
-        max(array.size, 1), max(int(np.ceil(max_width / 2.0)), 2)
-    )
-    relevant_front_items = format_items(
-        first_n_items(array, (max_possibly_relevant + 1) // 2)
-    )
-    relevant_back_items = format_items(last_n_items(array, max_possibly_relevant // 2))
-    # interleave relevant front and back items:
-    #     [a, b, c] and [y, z] -> [a, z, b, y, c]
-    relevant_items = sum(
-        zip_longest(relevant_front_items, reversed(relevant_back_items)), ()
-    )[:max_possibly_relevant]
 
-    cum_len = np.cumsum([len(s) + 1 for s in relevant_items]) - 1
+def format_times(
+    index,
+    max_width,
+    offset,
+    separator=", ",
+    first_row_offset=0,
+    intermediate_row_end=",\n",
+    last_row_end="",
+):
+    CFTIME_REPR_LENGTH = 19
+    n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
+    n_rows = int(np.ceil(len(index) / n_per_row))
 
-    if (array.size > 2) and (
-        (max_possibly_relevant < array.size) or (cum_len > max_width).any()
-    ):
-        padding = " ... "
-        count = min(
-            array.size, max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)
+    representation = ""
+    for row in range(n_rows):
+        indent = first_row_offset if row == 0 else offset
+        row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
+        times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
+        representation = representation + format_row(
+            times_for_row, indent=indent, separator=separator, row_end=row_end
         )
-    else:
-        count = array.size
-        padding = "" if (count <= 1) else ", "
 
-    def insert_linebreak_after_x_items(s, sep_after=sep_after, sep=",", spaces=spaces):
-        """Linebreak after `sep_after` items from split(sep)."""
-        s_sep = s.split(sep)
-        for i in range(len(s_sep)):
-            if i % sep_after == 0 and i != 0:
-                s_sep[i] = f"\n{' '*spaces}{s_sep[i]}"
-        return sep.join(s_sep).replace("\n ", "\n")
-
-    num_front = (count + 1) // 2
-    num_back = count - num_front
-    # note that num_back is 0 <--> array.size is 0 or 1
-    #                         <--> relevant_back_items is []
-    if padding == " ... ":
-        padding = f"\n{' '*(spaces)}{padding[1:-1]}\n"
-
-    if "..." in padding:
-        pprint_str = "".join(
-            [
-                insert_linebreak_after_x_items(
-                    ", ".join(relevant_front_items[:num_front])
-                )
-                + ",",
-                padding,
-                " " * spaces
-                + insert_linebreak_after_x_items(
-                    ", ".join(relevant_back_items[-num_back:])
-                ),
-            ]
-        )
-    else:
-        pprint_str = insert_linebreak_after_x_items(
-            "".join(
-                [
-                    ", ".join(relevant_front_items[:num_front]),
-                    padding,
-                    ", ".join(relevant_back_items[-num_back:]),
-                ]
-            )
-        )
-    return pprint_str
+    return representation
 
 
 _KNOWN_TYPE_REPRS = {np.ndarray: "np.ndarray"}

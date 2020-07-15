@@ -50,7 +50,7 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
-from ..core.formatting import format_cftimeindex_array
+from ..core.formatting import format_times
 from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
@@ -267,13 +267,30 @@ class CFTimeIndex(pd.Index):
         """
         klass_name = type(self).__name__
         display_width = OPTIONS["display_width"]
-        len_item = 19  # length of one item assuming 4 digit year
-        sep_after = display_width // (len_item + 1)
-        linebreak_nspaces = len(klass_name)
-        linebreak_spaces = " " * linebreak_nspaces
-        datastr = format_cftimeindex_array(
-            self.values, display_width - len(klass_name), linebreak_nspaces + 2
-        )
+        offset = len(klass_name) + 2
+        ITEMS_IN_REPR_MAX = 100
+
+        if len(self) <= ITEMS_IN_REPR_MAX:
+            datastr = format_times(
+                self.values, display_width, offset=offset, first_row_offset=0
+            )
+        else:
+            SHOW_ITEMS_FRONT_END = 10
+            front_str = format_times(
+                self.values[:SHOW_ITEMS_FRONT_END],
+                display_width,
+                offset=offset,
+                first_row_offset=0,
+                last_row_end=",",
+            )
+            end_str = format_times(
+                self.values[-SHOW_ITEMS_FRONT_END:],
+                display_width,
+                offset=offset,
+                first_row_offset=offset,
+            )
+            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+
         attrs = {
             "dtype": f"'{self.dtype}'",
             "length": f"{len(self)}",
@@ -283,15 +300,13 @@ class CFTimeIndex(pd.Index):
         attrs_str = f",{' '}".join(attrs_str)
         # oneliner only if smaller than display_width
         full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
-        if len(self) <= sep_after and len(full_repr_str) <= display_width:
+        if len(full_repr_str) <= display_width:
             return full_repr_str
         else:
             # if attrs_str too long, one per line
-            if len(attrs_str) >= display_width - len(linebreak_spaces):
-                attrs_str = attrs_str.replace(",", f",\n{linebreak_spaces}")
-            full_repr_str = (
-                f"{klass_name}([{datastr}],\n{linebreak_spaces} {attrs_str})"
-            )
+            if len(attrs_str) >= display_width - offset:
+                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-1)}")
+            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
             return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
