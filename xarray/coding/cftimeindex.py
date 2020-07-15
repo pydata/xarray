@@ -305,7 +305,7 @@ class CFTimeIndex(pd.Index):
         else:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
-                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-1)}")
+                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
             full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
             return full_repr_str
 
