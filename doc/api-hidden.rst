@@ -9,8 +9,6 @@
 .. autosummary::
    :toctree: generated/
 
-   auto_combine
-
    Dataset.nbytes
    Dataset.chunks
 
@@ -43,8 +41,6 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
-   core.rolling.DatasetCoarsen.argmax
-   core.rolling.DatasetCoarsen.argmin
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
@@ -70,8 +66,6 @@
    core.groupby.DatasetGroupBy.where
    core.groupby.DatasetGroupBy.all
    core.groupby.DatasetGroupBy.any
-   core.groupby.DatasetGroupBy.argmax
-   core.groupby.DatasetGroupBy.argmin
    core.groupby.DatasetGroupBy.count
    core.groupby.DatasetGroupBy.max
    core.groupby.DatasetGroupBy.mean
@@ -87,8 +81,6 @@
    core.resample.DatasetResample.all
    core.resample.DatasetResample.any
    core.resample.DatasetResample.apply
-   core.resample.DatasetResample.argmax
-   core.resample.DatasetResample.argmin
    core.resample.DatasetResample.assign
    core.resample.DatasetResample.assign_coords
    core.resample.DatasetResample.bfill
@@ -112,8 +104,6 @@
    core.resample.DatasetResample.dims
    core.resample.DatasetResample.groups
 
-   core.rolling.DatasetRolling.argmax
-   core.rolling.DatasetRolling.argmin
    core.rolling.DatasetRolling.count
    core.rolling.DatasetRolling.max
    core.rolling.DatasetRolling.mean
@@ -187,8 +177,6 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
-   core.rolling.DataArrayCoarsen.argmax
-   core.rolling.DataArrayCoarsen.argmin
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean
@@ -213,8 +201,6 @@
    core.groupby.DataArrayGroupBy.where
    core.groupby.DataArrayGroupBy.all
    core.groupby.DataArrayGroupBy.any
-   core.groupby.DataArrayGroupBy.argmax
-   core.groupby.DataArrayGroupBy.argmin
    core.groupby.DataArrayGroupBy.count
    core.groupby.DataArrayGroupBy.max
    core.groupby.DataArrayGroupBy.mean
@@ -230,8 +216,6 @@
    core.resample.DataArrayResample.all
    core.resample.DataArrayResample.any
    core.resample.DataArrayResample.apply
-   core.resample.DataArrayResample.argmax
-   core.resample.DataArrayResample.argmin
    core.resample.DataArrayResample.assign_coords
    core.resample.DataArrayResample.bfill
    core.resample.DataArrayResample.count
@@ -254,8 +238,6 @@
    core.resample.DataArrayResample.dims
    core.resample.DataArrayResample.groups
 
-   core.rolling.DataArrayRolling.argmax
-   core.rolling.DataArrayRolling.argmin
    core.rolling.DataArrayRolling.count
    core.rolling.DataArrayRolling.max
    core.rolling.DataArrayRolling.mean
@@ -425,8 +407,6 @@
 
    IndexVariable.all
    IndexVariable.any
-   IndexVariable.argmax
-   IndexVariable.argmin
    IndexVariable.argsort
    IndexVariable.astype
    IndexVariable.broadcast_equals
@@ -566,8 +546,6 @@
    CFTimeIndex.all
    CFTimeIndex.any
    CFTimeIndex.append
-   CFTimeIndex.argmax
-   CFTimeIndex.argmin
    CFTimeIndex.argsort
    CFTimeIndex.asof
    CFTimeIndex.asof_locs

@@ -972,6 +972,7 @@ def make_da():
         coords={"x": np.arange(10), "y": np.arange(100, 120)},
         name="a",
     ).chunk({"x": 4, "y": 5})
+    da.x.attrs["long_name"] = "x"
     da.attrs["test"] = "test"
     da.coords["c2"] = 0.5
     da.coords["ndcoord"] = da.x * 2
@@ -994,6 +995,9 @@ def make_ds():
     map_ds.coords["cx"].attrs["test2"] = "test2"
     map_ds.attrs["test"] = "test"
     map_ds.coords["xx"] = map_ds["a"] * map_ds.y
+
+    map_ds.x.attrs["long_name"] = "x"
+    map_ds.y.attrs["long_name"] = "y"
 
     return map_ds
 
@@ -1035,6 +1039,14 @@ def test_unify_chunks_shallow_copy(obj, transform):
     assert_identical(obj, unified) and obj is not obj.unify_chunks()
 
 
+@pytest.mark.parametrize("obj", [make_da()])
+def test_auto_chunk_da(obj):
+    actual = obj.chunk("auto").data
+    expected = obj.data.rechunk("auto")
+    np.testing.assert_array_equal(actual, expected)
+    assert actual.chunks == expected.chunks
+
+
 def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
@@ -1067,9 +1079,6 @@ def test_map_blocks_error(map_da, map_ds):
         xr.map_blocks(bad_func, ds_copy)
 
     with raises_regex(TypeError, "Cannot pass dask collections"):
-        xr.map_blocks(bad_func, map_da, args=[map_da.chunk()])
-
-    with raises_regex(TypeError, "Cannot pass dask collections"):
         xr.map_blocks(bad_func, map_da, kwargs=dict(a=map_da.chunk()))
 
 
@@ -1093,6 +1102,58 @@ def test_map_blocks_convert_args_to_list(obj):
         actual = xr.map_blocks(operator.add, obj, [10])
     assert_chunks_equal(expected.chunk(), actual)
     assert_identical(actual, expected)
+
+
+def test_map_blocks_dask_args():
+    da1 = xr.DataArray(
+        np.ones((10, 20)),
+        dims=["x", "y"],
+        coords={"x": np.arange(10), "y": np.arange(20)},
+    ).chunk({"x": 5, "y": 4})
+
+    # check that block shapes are the same
+    def sumda(da1, da2):
+        assert da1.shape == da2.shape
+        return da1 + da2
+
+    da2 = da1 + 1
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(sumda, da1, args=[da2])
+    xr.testing.assert_equal(da1 + da2, mapped)
+
+    # one dimension in common
+    da2 = (da1 + 1).isel(x=1, drop=True)
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(operator.add, da1, args=[da2])
+    xr.testing.assert_equal(da1 + da2, mapped)
+
+    # test that everything works when dimension names are different
+    da2 = (da1 + 1).isel(x=1, drop=True).rename({"y": "k"})
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(operator.add, da1, args=[da2])
+    xr.testing.assert_equal(da1 + da2, mapped)
+
+    with raises_regex(ValueError, "Chunk sizes along dimension 'x'"):
+        xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
+
+    with raises_regex(ValueError, "indexes along dimension 'x' are not equal"):
+        xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
+
+    # reduction
+    da1 = da1.chunk({"x": -1})
+    da2 = da1 + 1
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(lambda a, b: (a + b).sum("x"), da1, args=[da2])
+    xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
+
+    # reduction with template
+    da1 = da1.chunk({"x": -1})
+    da2 = da1 + 1
+    with raise_if_dask_computes():
+        mapped = xr.map_blocks(
+            lambda a, b: (a + b).sum("x"), da1, args=[da2], template=da1.sum("x")
+        )
+    xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])

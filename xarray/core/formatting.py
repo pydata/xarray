@@ -3,7 +3,7 @@
 import contextlib
 import functools
 from datetime import datetime, timedelta
-from itertools import zip_longest
+from itertools import chain, zip_longest
 from typing import Hashable
 
 import numpy as np
@@ -140,7 +140,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
-    elif isinstance(x, (float, np.float)):
+    elif isinstance(x, (float, np.float_)):
         return f"{x:.4}"
     else:
         return str(x)
@@ -451,6 +451,17 @@ def set_numpy_options(*args, **kwargs):
         np.set_printoptions(**original)
 
 
+def limit_lines(string: str, *, limit: int):
+    """
+    If the string is more lines than the limit,
+    this returns the middle lines replaced by an ellipsis
+    """
+    lines = string.splitlines()
+    if len(lines) > limit:
+        string = "\n".join(chain(lines[: limit // 2], ["..."], lines[-limit // 2 :]))
+    return string
+
+
 def short_numpy_repr(array):
     array = np.asarray(array)
 
@@ -476,7 +487,7 @@ def short_data_repr(array):
     elif hasattr(internal_data, "__array_function__") or isinstance(
         internal_data, dask_array_type
     ):
-        return repr(array.data)
+        return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
     else:
@@ -568,7 +579,10 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     for k in a_keys & b_keys:
         try:
             # compare xarray variable
-            compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            if not callable(compat):
+                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            else:
+                compatible = compat(a_mapping[k], b_mapping[k])
             is_variable = True
         except AttributeError:
             # compare attribute value
@@ -625,8 +639,13 @@ diff_attrs_repr = functools.partial(
 
 
 def _compat_to_str(compat):
+    if callable(compat):
+        compat = compat.__name__
+
     if compat == "equals":
         return "equal"
+    elif compat == "allclose":
+        return "close"
     else:
         return compat
 
@@ -640,8 +659,12 @@ def diff_array_repr(a, b, compat):
     ]
 
     summary.append(diff_dim_summary(a, b))
+    if callable(compat):
+        equiv = compat
+    else:
+        equiv = array_equiv
 
-    if not array_equiv(a.data, b.data):
+    if not equiv(a.data, b.data):
         temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr

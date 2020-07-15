@@ -13,7 +13,7 @@ labels can also be used to easily create informative plots.
 xarray's plotting capabilities are centered around
 :py:class:`DataArray` objects.
 To plot :py:class:`Dataset` objects
-simply access the relevant DataArrays, ie ``dset['var1']``.
+simply access the relevant DataArrays, i.e. ``dset['var1']``.
 Dataset specific plotting routines are also available (see :ref:`plot-dataset`).
 Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
@@ -208,6 +208,44 @@ entire figure (as for matplotlib's ``figsize`` argument).
 
 
 .. _plotting.multiplelines:
+
+=========================
+ Determine x-axis values
+=========================
+
+Per default dimension coordinates are used for the x-axis (here the time coordinates).
+However, you can also use non-dimension coordinates, MultiIndex levels, and dimensions
+without coordinates along the x-axis. To illustrate this, let's calculate a 'decimal day' (epoch)
+from the time and assign it as a non-dimension coordinate:
+
+.. ipython:: python
+
+    decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1d")
+    air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day))
+    air1d_multi
+
+To use ``'decimal_day'`` as x coordinate it must be explicitly specified:
+
+.. ipython:: python
+
+    air1d_multi.plot(x="decimal_day")
+
+Creating a new MultiIndex named ``'date'`` from ``'time'`` and ``'decimal_day'``,
+it is also possible to use a MultiIndex level as x-axis:
+
+.. ipython:: python
+
+    air1d_multi = air1d_multi.set_index(date=("time", "decimal_day"))
+    air1d_multi.plot(x="decimal_day")
+
+Finally, if a dataset does not have any coordinates it enumerates all data points:
+
+.. ipython:: python
+
+    air1d_multi = air1d_multi.drop("date")
+    air1d_multi.plot()
+
+The same applies to 2D plots below.
 
 ====================================================
  Multiple lines showing variation along a dimension
@@ -705,12 +743,13 @@ This script will plot the air temperature on a map.
 
     air = xr.tutorial.open_dataset("air_temperature").air
 
-    ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree())
-    ax.set_global()
+    p = air.isel(time=0).plot(
+        subplot_kws=dict(projection=ccrs.Orthographic(-80, 35), facecolor="gray"),
+        transform=ccrs.PlateCarree())
+    p.axes.set_global()
 
     @savefig plotting_maps_cartopy.png width=100%
-    ax.coastlines()
+    p.axes.coastlines()
 
 When faceting on maps, the projection can be transferred to the ``plot``
 function using the ``subplot_kws`` keyword. The axes for the subplots created

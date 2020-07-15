@@ -48,7 +48,7 @@ def dataset():
 
 def test_short_data_repr_html(dataarray):
     data_repr = fh.short_data_repr_html(dataarray)
-    assert data_repr.startswith("array")
+    assert data_repr.startswith("<pre>array")
 
 
 def test_short_data_repr_html_non_str_keys(dataset):
@@ -108,8 +108,8 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value():
 def test_repr_of_dataarray(dataarray):
     formatted = fh.array_repr(dataarray)
     assert "dim_0" in formatted
-    # has an expandable data section
-    assert formatted.count("class='xr-array-in' type='checkbox' >") == 1
+    # has an expanded data section
+    assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
     # coords and attrs don't have an items so they'll be be disabled and collapsed
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2
