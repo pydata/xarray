@@ -1248,14 +1248,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore # noqa: F811
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
         ...
 
     @overload
-    def __getitem__(self, key: Any) -> "Dataset":  # noqa: F811
+    def __getitem__(self, key: Any) -> "Dataset":
         ...
 
-    def __getitem__(self, key):  # noqa: F811
+    def __getitem__(self, key):
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
