@@ -1248,14 +1248,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore # noqa: F811
         ...
 
     @overload
-    def __getitem__(self, key: Any) -> "Dataset":
+    def __getitem__(self, key: Any) -> "Dataset":  # noqa: F811
         ...
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # noqa: F811
         """Access variables or coordinates this dataset as a
         :py:class:`~xarray.DataArray`.
 
@@ -4144,7 +4144,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         numpy.interp
         scipy.interpolate
         """
-        from .missing import interp_na, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, interp_na
 
         new = _apply_over_vars_with_dim(
             interp_na,
@@ -4178,7 +4178,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import ffill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
@@ -4203,7 +4203,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import bfill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new

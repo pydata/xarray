@@ -222,8 +222,9 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_dates_outside_timestamp_range(calendar):
-    import cftime
     from datetime import datetime
+
+    import cftime
 
     units = "days since 0001-01-01"
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
@@ -358,8 +359,9 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(calend
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_multidim_time_outside_timestamp_range(calendar):
-    import cftime
     from datetime import datetime
+
+    import cftime
 
     units = "days since 0001-01-01"
     times1 = [datetime(1, 4, day) for day in range(1, 6)]

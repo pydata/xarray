@@ -976,8 +976,8 @@ def apply_ufunc(
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
-    from .groupby import GroupBy
     from .dataarray import DataArray
+    from .groupby import GroupBy
     from .variable import Variable
 
     if input_core_dims is None:
