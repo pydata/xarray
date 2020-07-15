@@ -33,7 +33,7 @@ dependencies:
   - pseudonetcdf
   - pydap
   - pynio
-  - pytest
+  - pytest!=6.0.0rc1
   - pytest-cov
   - pytest-env
   - rasterio
