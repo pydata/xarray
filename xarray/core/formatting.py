@@ -217,6 +217,7 @@ def format_array_flat(array, max_width: int):
 
 
 def format_row(times, indent=0, separator=", ", row_end=",\n"):
+    """Format a single row from format_times."""
     return indent * " " + separator.join(map(str, times)) + row_end
 
 
@@ -229,6 +230,7 @@ def format_times(
     intermediate_row_end=",\n",
     last_row_end="",
 ):
+    """Format values of cftimeindex as pd.Index."""
     CFTIME_REPR_LENGTH = 19
     n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
     n_rows = int(np.ceil(len(index) / n_per_row))
