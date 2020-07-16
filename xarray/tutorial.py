@@ -5,7 +5,6 @@ Useful for:
 * building tutorials in the documentation.
 
 """
-import hashlib
 import pathlib
 import shutil
 import tempfile
@@ -21,14 +20,6 @@ from .core.dataset import Dataset
 from .vendor import appdirs
 
 _default_cache_dir = pathlib.Path(appdirs.user_cache_dir("xarray_tutorial_data"))
-
-
-def check_md5sum(content, checksum):
-    md5 = hashlib.md5()
-    md5.update(content)
-    md5sum = md5.hexdigest()
-
-    return md5sum == checksum
 
 
 # based on https://stackoverflow.com/a/29491523
@@ -198,17 +189,6 @@ def open_dataset(
     # deleted afterwards
     with cache_dir:
         download_to(construct_url(path.name), path)
-
-        # verify the checksum (md5 guards only against transport corruption)
-        md5_path = path.with_name(path.name + ".md5")
-        download_to(construct_url(md5_path.name), md5_path)
-        if not check_md5sum(path.read_bytes(), md5_path.read_text()):
-            path.unlink()
-            md5_path.unlink()
-            msg = """
-            MD5 checksum does not match, try downloading dataset again.
-            """
-            raise OSError(msg)
 
         return _open_dataset(path, **kws)
 
