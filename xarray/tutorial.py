@@ -55,7 +55,7 @@ def download_to(url, path):
     # based on https://stackoverflow.com/a/39217788
     with open_atomic(path, mode="wb") as f:
         with requests.get(url, stream=True) as r:
-            if r.status_code != 200:
+            if r.status_code != requests.codes.ok:
                 raise OSError(f"download failed: {r.reason}")
 
             r.raw.decode_content = True
