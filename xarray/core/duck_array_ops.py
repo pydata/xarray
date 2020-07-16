@@ -14,7 +14,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type, cupy_array_type
+from .pycompat import cupy_array_type, dask_array_type
 
 try:
     import dask.array as dask_array
