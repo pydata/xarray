@@ -115,8 +115,9 @@ def open_rasterio(
         return _open_rasterio(path, **kws)
 
     url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
-    # if cache_dir points to a temporary directory, make sure it is
-    # deleted afterwards
+    # if path points to is a file in a temporary directory (cache_dir
+    # is a TemporaryDirectory object), make sure it is deleted
+    # afterwards
     with cache_dir:
         download_to(url, path)
         return _open_rasterio(path, **kws)
@@ -185,8 +186,9 @@ def open_dataset(
     if cache and path.is_file():
         return _open_dataset(path, **kws)
 
-    # if cache_dir points to a temporary directory, make sure it is
-    # deleted afterwards
+    # if path points to is a file in a temporary directory (cache_dir
+    # is a TemporaryDirectory object), make sure it is deleted
+    # afterwards
     with cache_dir:
         download_to(construct_url(path.name), path)
 
