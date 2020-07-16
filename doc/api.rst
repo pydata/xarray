@@ -360,7 +360,6 @@ Computation
    DataArray.rolling_exp
    DataArray.weighted
    DataArray.coarsen
-   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
@@ -369,7 +368,6 @@ Computation
    DataArray.differentiate
    DataArray.integrate
    DataArray.polyfit
-   DataArray.str
    DataArray.map_blocks
 
 
