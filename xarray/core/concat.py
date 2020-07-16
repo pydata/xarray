@@ -116,8 +116,8 @@ def concat(
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     try:
         first_obj, objs = utils.peek_at(objs)

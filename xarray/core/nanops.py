@@ -6,6 +6,7 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
+
     from . import dask_array_compat
 except ImportError:
     dask_array = None
@@ -118,7 +119,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """ In house nanmean. ddof argument will be used in _nanvar method """
-    from .duck_array_ops import count, fillna, _dask_or_eager_func, where_method
+    from .duck_array_ops import _dask_or_eager_func, count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)

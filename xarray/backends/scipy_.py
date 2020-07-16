@@ -57,8 +57,9 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
-    import scipy.io
     import gzip
+
+    import scipy.io
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):

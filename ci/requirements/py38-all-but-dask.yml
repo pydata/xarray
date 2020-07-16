@@ -16,7 +16,7 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - isort=4.3.21
+  - isort
   - lxml    # Optional dep of pydap
   - matplotlib
   - mypy=0.761  # Must match .pre-commit-config.yaml

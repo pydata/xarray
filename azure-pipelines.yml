@@ -95,7 +95,7 @@ jobs:
   - template: ci/azure/install.yml
   - bash: |
       source activate xarray-tests
-      isort -rc --check .
+      isort --check .
     displayName: isort formatting checks
 
 - job: MinimumVersionsPolicy

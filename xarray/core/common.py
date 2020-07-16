@@ -1088,9 +1088,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
-        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1283,8 +1283,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         numpy.isin
         """
         from .computation import apply_ufunc
-        from .dataset import Dataset
         from .dataarray import DataArray
+        from .dataset import Dataset
         from .variable import Variable
 
         if isinstance(test_elements, Dataset):

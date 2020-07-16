@@ -64,8 +64,8 @@ def unique_value_groups(ar, sort=True):
 
 
 def _dummy_copy(xarray_obj):
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     if isinstance(xarray_obj, Dataset):
         res = Dataset(

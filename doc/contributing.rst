@@ -368,7 +368,7 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 
 and then run from the root of the Xarray repository::
 
-   isort -rc .
+   isort .
    black -t py36 .
    blackdoc -t py36 .
    flake8
