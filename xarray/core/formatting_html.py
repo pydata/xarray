@@ -2,11 +2,11 @@ import uuid
 from collections import OrderedDict
 from functools import partial
 from html import escape
-from .options import OPTIONS
 
 import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
+from .options import OPTIONS
 
 CSS_FILE_PATH = "/".join(("static", "css", "style.css"))
 CSS_STYLE = pkg_resources.resource_string("xarray", CSS_FILE_PATH).decode("utf8")
