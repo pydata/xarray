@@ -14,7 +14,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, cupy_array_type
 
 try:
     import dask.array as dask_array
@@ -158,17 +158,23 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def asarray(data):
+def asarray(data, xp=np):
     return (
         data
         if (isinstance(data, dask_array_type) or hasattr(data, "__array_function__"))
-        else np.asarray(data)
+        else xp.asarray(data)
     )
 
 
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    arrays = [asarray(x) for x in scalars_or_arrays]
+
+    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+        import cupy as cp
+
+        arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
+    else:
+        arrays = [asarray(x) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
