@@ -274,7 +274,6 @@ def test_interpolate_nd_nd():
         da.interp(a=ia)
 
 
-@pytest.mark.xfail
 def test_interpolate_nd_with_nan():
     """Interpolate an array with an nd indexer."""
 
