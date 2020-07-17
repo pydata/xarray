@@ -1831,6 +1831,15 @@ class TestDataset:
             dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10, "var2": -20}
         )
         assert_identical(actual, expected)
+        # use the default value
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(
+                data=[[np.nan, np.nan, np.nan, np.nan]] * len(ds.dim1)
+            ),
+        )
+        actual = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10})
+        assert_identical(actual, expected)
 
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
