@@ -567,8 +567,8 @@ def decode_cf(
     -------
     decoded : Dataset
     """
-    from .core.dataset import Dataset
     from .backends.common import AbstractDataStore
+    from .core.dataset import Dataset
 
     if isinstance(obj, Dataset):
         vars = obj._variables

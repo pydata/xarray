@@ -51,8 +51,8 @@ def _expand_slice(slice_, size):
 
 
 def _sanitize_slice_element(x):
-    from .variable import Variable
     from .dataarray import DataArray
+    from .variable import Variable
 
     if isinstance(x, (Variable, DataArray)):
         x = x.values
