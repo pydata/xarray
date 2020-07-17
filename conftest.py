@@ -27,6 +27,7 @@ def pytest_runtest_setup(item):
 def add_standard_imports(doctest_namespace):
     import numpy as np
     import pandas as pd
+
     import xarray as xr
 
     doctest_namespace["np"] = np

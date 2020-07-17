@@ -6456,8 +6456,8 @@ def test_name_in_masking():
 class TestIrisConversion:
     @requires_iris
     def test_to_and_from_iris(self):
-        import iris
         import cf_units  # iris requirement
+        import iris
 
         # to iris
         coord_dict = {}
@@ -6527,9 +6527,9 @@ class TestIrisConversion:
     @requires_iris
     @requires_dask
     def test_to_and_from_iris_dask(self):
+        import cf_units  # iris requirement
         import dask.array as da
         import iris
-        import cf_units  # iris requirement
 
         coord_dict = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
@@ -6662,8 +6662,8 @@ class TestIrisConversion:
         ],
     )
     def test_da_coord_name_from_cube(self, std_name, long_name, var_name, name, attrs):
-        from iris.cube import Cube
         from iris.coords import DimCoord
+        from iris.cube import Cube
 
         latitude = DimCoord(
             [-90, 0, 90], standard_name=std_name, var_name=var_name, long_name=long_name
@@ -6676,8 +6676,8 @@ class TestIrisConversion:
 
     @requires_iris
     def test_prevent_duplicate_coord_names(self):
-        from iris.cube import Cube
         from iris.coords import DimCoord
+        from iris.cube import Cube
 
         # Iris enforces unique coordinate names. Because we use a different
         # name resolution order a valid iris Cube with coords that have the
@@ -6698,8 +6698,8 @@ class TestIrisConversion:
         [["IA", "IL", "IN"], [0, 2, 1]],  # non-numeric values  # non-monotonic values
     )
     def test_fallback_to_iris_AuxCoord(self, coord_values):
-        from iris.cube import Cube
         from iris.coords import AuxCoord
+        from iris.cube import Cube
 
         data = [0, 0, 0]
         da = xr.DataArray(data, coords=[coord_values], dims=["space"])
