@@ -274,6 +274,7 @@ def test_interpolate_nd_nd():
         da.interp(a=ia)
 
 
+@requires_scipy
 def test_interpolate_nd_with_nan():
     """Interpolate an array with an nd indexer."""
 

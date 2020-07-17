@@ -29,6 +29,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fix `KeyError` when doing linear interpolation to an nd `DataArray`
+  that contains NaNs (:pull:`4233`).
+  By `Jens Svensmark <https://github.com/jenssss>`_
 
 
 Documentation
