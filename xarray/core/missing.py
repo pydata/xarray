@@ -761,7 +761,7 @@ def interp_func(var, x, new_x, method, kwargs):
             *new_x,
             interp_func=func,
             interp_kwargs=kwargs,
-            n_coord=len(x_with_ghost),
+            n_coords=len(x_with_ghost),
             dtype=var.dtype,
             chunks=final_chunks,
         )
