@@ -1822,6 +1822,16 @@ class TestDataset:
         actual = data.reindex(dim2=data["dim2"][:5:-1])
         assert_identical(actual, expected)
 
+        # multiple fill values
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(data=[[-20, -20, -20, -20]] * len(ds.dim1)),
+        )
+        actual = data.reindex(
+            dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10, "var2": -20}
+        )
+        assert_identical(actual, expected)
+
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
@@ -5175,7 +5185,7 @@ class TestDataset:
         with raises_regex(ValueError, "'label' argument has to"):
             ds.diff("dim2", label="raise_me")
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value):
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
         attrs = {"meta": "data"}
@@ -5185,6 +5195,8 @@ class TestDataset:
             # if we supply the default, we expect the missing value for a
             # float array
             fill_value = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value = fill_value.get("foo", np.nan)
         expected = Dataset({"foo": ("x", [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 

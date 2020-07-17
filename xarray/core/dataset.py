@@ -5094,8 +5094,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
         for name, var in self.variables.items():
             if name in self.data_vars:
+                fill_value_ = (
+                    fill_value.get(name, dtypes.NA)
+                    if isinstance(fill_value, dict)
+                    else fill_value
+                )
+
                 var_shifts = {k: v for k, v in shifts.items() if k in var.dims}
-                variables[name] = var.shift(fill_value=fill_value, shifts=var_shifts)
+                variables[name] = var.shift(fill_value=fill_value_, shifts=var_shifts)
             else:
                 variables[name] = var
 

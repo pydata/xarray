@@ -580,8 +580,13 @@ def reindex_variables(
 
     for name, var in variables.items():
         if name not in indexers:
+            if isinstance(fill_value, dict):
+                fill_value_ = fill_value.get(name, dtypes.NA)
+            else:
+                fill_value_ = fill_value
+
             if sparse:
-                var = var._as_sparse(fill_value=fill_value)
+                var = var._as_sparse(fill_value=fill_value_)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims
@@ -589,7 +594,7 @@ def reindex_variables(
             needs_masking = any(d in masked_dims for d in var.dims)
 
             if needs_masking:
-                new_var = var._getitem_with_mask(key, fill_value=fill_value)
+                new_var = var._getitem_with_mask(key, fill_value=fill_value_)
             elif all(is_full_slice(k) for k in key):
                 # no reindexing necessary
                 # here we need to manually deal with copying data, since
