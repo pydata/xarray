@@ -757,11 +757,11 @@ def interp_func(var, x, new_x, method, kwargs):
         res = da.map_blocks(
             _dask_aware_interpnd,
             var_with_ghost,
-            func,
-            kwargs,
-            len(x_with_ghost),
             *x_with_ghost,
             *new_x,
+            interp_func=func,
+            interp_kwargs=kwargs,
+            n_coord=len(x_with_ghost),
             dtype=var.dtype,
             chunks=final_chunks,
         )
@@ -805,17 +805,17 @@ def _interpnd(var, x, new_x, func, kwargs):
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, func: Callable[..., Any], kwargs: Any, nx: int, *arrs):
+def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs):
     """Wrapper for `_interpnd` allowing dask array to be used in `map_blocks`
 
-    The first `nx` arrays in `arrs` are original coordinates, the rest are destination coordinate
+    The first `n_coords` arrays in `coords` are original coordinates, the rest are destination coordinate
     Currently this need original coordinate to be full arrays (meshgrid)
 
     TODO: find a way to use 1d coordinates
     """
     from .dataarray import DataArray
 
-    _old_x, _new_x = arrs[:nx], arrs[nx:]
+    _old_x, _new_x = coords[:n_coords], coords[n_coords:]
 
     # reshape x (TODO REMOVE)
     old_x = tuple(
@@ -827,7 +827,7 @@ def _dask_aware_interpnd(var, func: Callable[..., Any], kwargs: Any, nx: int, *a
 
     new_x = tuple([DataArray(_x) for _x in _new_x])
 
-    return _interpnd(var, old_x, new_x, func, kwargs)
+    return _interpnd(var, old_x, new_x, interp_func, interp_kwargs)
 
 
 def _add_interp_ghost(var, x, nconst: int):
