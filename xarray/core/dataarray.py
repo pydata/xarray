@@ -1390,7 +1390,7 @@ class DataArray(AbstractArray, DataWithCoords):
             sentinel = object()
             value = fill_value.pop(self.name, sentinel)
             if value is not sentinel:
-                fill_value["<this-array>"] = value
+                fill_value[_THIS_ARRAY] = value
 
         ds = self._to_temp_dataset().reindex(
             indexers=indexers,
