@@ -274,6 +274,26 @@ def test_interpolate_nd_nd():
         da.interp(a=ia)
 
 
+@pytest.mark.xfail
+def test_interpolate_nd_with_nan():
+    """Interpolate an array with an nd indexer."""
+
+    # Create indexer into `a` with dimensions (y, x)
+    x = [0, 1, 2]
+    y = [10, 20]
+    c = {"x": x, "y": y}
+    a = np.arange(6, dtype=float).reshape(2, 3)
+    a[0, 1] = np.nan
+    ia = xr.DataArray(a, dims=("y", "x"), coords=c)
+
+    da = xr.DataArray([1, 2, 2], dims=("a"), coords={"a": [0, 2, 4]})
+    out = da.interp(a=ia)
+    expected = xr.DataArray(
+        [[1.0, np.nan, 2.0], [2.0, 2.0, np.nan]], dims=("y", "x"), coords=c
+    )
+    xr.testing.assert_allclose(out.drop_vars("a"), expected)
+
+
 @pytest.mark.parametrize("method", ["linear"])
 @pytest.mark.parametrize("case", [0, 1])
 def test_interpolate_scalar(method, case):
