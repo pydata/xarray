@@ -28,7 +28,7 @@ New Features
 - Build :py:meth:`CFTimeIndex.__repr__` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
-  `Aaron Spring <https://github.com/aaronspring>`.
+  `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
