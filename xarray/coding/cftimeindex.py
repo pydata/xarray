@@ -251,8 +251,13 @@ def format_times(
     return representation
 
 
-def format_attrs(attrs, separator=", "):
-    """Format attrs dict."""
+def format_attrs(index, separator=", "):
+    """Format attributes of CFTimeIndex for __repr__."""
+    attrs = {
+        "dtype": f"'{index.dtype}'",
+        "length": f"{len(index)}",
+        "calendar": f"'{index.calendar}'",
+    }
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
@@ -330,12 +335,7 @@ class CFTimeIndex(pd.Index):
             )
             datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
 
-        attrs = {
-            "dtype": f"'{self.dtype}'",
-            "length": f"{len(self)}",
-            "calendar": f"'{self.calendar}'",
-        }
-        attrs_str = format_attrs(attrs)
+        attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
         full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
         if len(full_repr_str) <= display_width:
