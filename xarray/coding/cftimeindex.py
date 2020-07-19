@@ -672,6 +672,7 @@ class CFTimeIndex(pd.Index):
 
     @property
     def calendar(self):
+        """The calendar used by the datetimes in the index."""
         from .times import infer_calendar_name
 
         return infer_calendar_name(self)
