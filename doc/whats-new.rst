@@ -14,10 +14,54 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.16.1:
+
+v0.16.1 (unreleased)
+---------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+New Features
+~~~~~~~~~~~~
+- :py:func:`open_dataset` and :py:func:`open_mfdataset`
+  now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.0.16.0:
 
-v0.16.0 (unreleased)
+v0.16.0 (2020-07-11)
 ---------------------
+
+This release adds `xarray.cov` & `xarray.corr` for covariance & correlation
+respectively; the `idxmax` & `idxmin` methods, the `polyfit` method &
+`xarray.polyval` for fitting polynomials, as well as a number of documentation
+improvements, other features, and bug fixes. Many thanks to all 44 contributors
+who contributed to this release:
+
+Akio Taniguchi, Andrew Williams, Aurélien Ponte, Benoit Bovy, Dave Cole, David
+Brochart, Deepak Cherian, Elliott Sales de Andrade, Etienne Combrisson, Hossein
+Madadi, Huite, Joe Hamman, Kai Mühlbauer, Keisuke Fujii, Maik Riechert, Marek
+Jacob, Mathias Hauser, Matthieu Ancellin, Maximilian Roos, Noah D Brenowitz,
+Oriol Abril, Pascal Bourgault, Phillip Butcher, Prajjwal Nijhara, Ray Bell, Ryan
+Abernathey, Ryan May, Spencer Clark, Spencer Hill, Srijan Saurav, Stephan Hoyer,
+Taher Chegini, Todd, Tom Nicholas, Yohai Bar Sinai, Yunus Sevinchan,
+arabidopsis, aurghs, clausmichele, dmey, johnomotani, keewis, raphael dussin,
+risebell
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -46,21 +90,6 @@ Breaking changes
   default (:issue:`4176`)
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-Enhancements
-~~~~~~~~~~~~
-- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
-  dataframe has a MultiIndex (:pull:`4184`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-  - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
-  coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
-- Axes kwargs such as ``facecolor`` can now be passed to :py:meth:`DataArray.plot` in ``subplot_kws``.
-  This works for both single axes plots and FacetGrid plots.
-  By `Raphael Dussin <https://github.com/raphaeldussin`_.
-
 New Features
 ~~~~~~~~~~~~
 - :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
@@ -70,15 +99,19 @@ New Features
   (:pull:`3936`)
   By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
   <https://github.com/fujiisoup>`_ for work in :pull:`1469`.
+- Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:`3550`, :pull:`4089`).
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
+- Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
+  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
+- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting
+  polynomials. (:issue:`3349`, :pull:`3733`, :pull:`4099`)
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Added :py:meth:`xarray.infer_freq` for extending frequency inferring to CFTime indexes and data (:pull:`4033`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - ``chunks='auto'`` is now supported in the ``chunks`` argument of
   :py:meth:`Dataset.chunk`. (:issue:`4055`)
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_
-- Added :py:func:`xarray.cov` and :py:func:`xarray.corr` (:issue:`3784`, :pull:`3550`, :pull:`4089`).
-  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_ and `Robin Beer <https://github.com/r-beer>`_.
-- Added :py:meth:`DataArray.polyfit` and :py:func:`xarray.polyval` for fitting polynomials. (:issue:`3349`, :pull:`3733`, :pull:`4099`)
-  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Control over attributes of result in :py:func:`merge`, :py:func:`concat`,
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
@@ -88,15 +121,6 @@ New Features
   the exception when a dimension passed to ``isel`` is not present with a
   warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
-- Limited the length of array items with long string reprs to a
-  reasonable width (:pull:`3900`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_
-- Limited the number of lines of large arrays when numpy reprs would have greater than 40.
-  (:pull:`3905`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_
-- Implement :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
-  :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:issue:`60`, :pull:`3871`)
-  By `Todd Jennings <https://github.com/toddrjen>`_
 - Support dask handling for :py:meth:`DataArray.idxmax`, :py:meth:`DataArray.idxmin`,
   :py:meth:`Dataset.idxmax`, :py:meth:`Dataset.idxmin`.  (:pull:`3922`, :pull:`4135`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_ and `Pascal Bourgault <https://github.com/aulemahal>`_.
@@ -128,10 +152,30 @@ New Features
   (:py:func:`xarray.open_dataarray`, :py:func:`xarray.open_dataarray`,
   :py:func:`xarray.decode_cf`) that allows to disable/enable the decoding of timedeltas
   independently of time decoding (:issue:`1621`)
-  `Aureliana Barghini <https://github.com/aurghs>`
-- :py:func:`open_dataset` and :py:func:`open_mfdataset`
-  now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
-  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+  `Aureliana Barghini <https://github.com/aurghs>`_
+
+Enhancements
+~~~~~~~~~~~~
+- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
+  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
+  rather than interpolating in multidimensional space. (:issue:`2223`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
+  dataframe has a MultiIndex (:pull:`4184`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+  - :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
+  coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
+- Axes kwargs such as ``facecolor`` can now be passed to :py:meth:`DataArray.plot` in ``subplot_kws``.
+  This works for both single axes plots and FacetGrid plots.
+  By `Raphael Dussin <https://github.com/raphaeldussin>`_.
+- Array items with long string reprs are now limited to a
+  reasonable width (:pull:`3900`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+- Large arrays whose numpy reprs would have greater than 40 lines are now
+  limited to a reasonable length.
+  (:pull:`3905`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
 
 Bug fixes
 ~~~~~~~~~
