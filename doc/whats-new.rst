@@ -77,17 +77,6 @@ Breaking changes
   <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
-
-Enhancements
-~~~~~~~~~~~~
-- Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- :py:meth:`DataArray.reset_index` and :py:meth:`Dataset.reset_index` now keep
-  coordinate attributes (:pull:`4103`). By `Oriol Abril <https://github.com/OriolAbril>`_.
-- :py:meth:`DataArray.interp` now support simple interpolation in a chunked dimension
-  (but not advanced interpolation) (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - The old :py:func:`auto_combine` function has now been removed in
   favour of the :py:func:`combine_by_coords` and
   :py:func:`combine_nested` functions. This also means that
@@ -168,6 +157,8 @@ Enhancements
   For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
   rather than interpolating in multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.interp` now support some interpolations over a chunked dimension
+  (low order and not advanced interpolation) (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
   dataframe has a MultiIndex (:pull:`4184`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
