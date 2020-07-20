@@ -3147,7 +3147,8 @@ class TestDataArray:
 
     @requires_dask
     @requires_scipy
-    def test_upsample_interpolate_dask(self):
+    @pytest.mark.parametrize("chunked_time", [True, False])
+    def test_upsample_interpolate_dask(self, chunked_time):
         from scipy.interpolate import interp1d
 
         xs = np.arange(6)
@@ -3158,13 +3159,27 @@ class TestDataArray:
         data = np.tile(z, (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
         chunks = {"x": 2, "y": 1}
+        if chunked_time:
+            chunks["time"] = 3
 
         expected_times = times.to_series().resample("1H").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.chunk(chunks).resample(time="1H").interpolate(kind)
+            actual = array.chunk(chunks).resample(time="1H")
+
+            if chunked_time and (kind in ["quadratic", "cubic"]):
+                # Check that an error is raised if an attempt is made to interpolate
+                # over a chunked dimension with high order method
+                with raises_regex(
+                    NotImplementedError,
+                    "Only constant or linear interpolation are available in a chunked direction",
+                ):
+                    actual.interpolate(kind)
+                continue
+
+            actual = actual.interpolate(kind)
             actual = actual.compute()
             f = interp1d(
                 np.arange(len(times)),
@@ -3184,13 +3199,6 @@ class TestDataArray:
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
-
-        # Check that an error is raised if an attempt is made to interpolate
-        # over a chunked dimension
-        with raises_regex(
-            NotImplementedError, "Chunking along the dimension to be interpolated"
-        ):
-            array.chunk({"time": 1}).resample(time="1H").interpolate("linear")
 
     def test_align(self):
         array = DataArray(
@@ -5575,8 +5583,8 @@ def test_name_in_masking():
 class TestIrisConversion:
     @requires_iris
     def test_to_and_from_iris(self):
-        import iris
         import cf_units  # iris requirement
+        import iris
 
         # to iris
         coord_dict = {}
@@ -5646,9 +5654,9 @@ class TestIrisConversion:
     @requires_iris
     @requires_dask
     def test_to_and_from_iris_dask(self):
+        import cf_units  # iris requirement
         import dask.array as da
         import iris
-        import cf_units  # iris requirement
 
         coord_dict = {}
         coord_dict["distance"] = ("distance", [-2, 2], {"units": "meters"})
@@ -5781,8 +5789,8 @@ class TestIrisConversion:
         ],
     )
     def test_da_coord_name_from_cube(self, std_name, long_name, var_name, name, attrs):
-        from iris.cube import Cube
         from iris.coords import DimCoord
+        from iris.cube import Cube
 
         latitude = DimCoord(
             [-90, 0, 90], standard_name=std_name, var_name=var_name, long_name=long_name
@@ -5795,8 +5803,8 @@ class TestIrisConversion:
 
     @requires_iris
     def test_prevent_duplicate_coord_names(self):
-        from iris.cube import Cube
         from iris.coords import DimCoord
+        from iris.cube import Cube
 
         # Iris enforces unique coordinate names. Because we use a different
         # name resolution order a valid iris Cube with coords that have the
@@ -5817,8 +5825,8 @@ class TestIrisConversion:
         [["IA", "IL", "IN"], [0, 2, 1]],  # non-numeric values  # non-monotonic values
     )
     def test_fallback_to_iris_AuxCoord(self, coord_values):
-        from iris.cube import Cube
         from iris.coords import AuxCoord
+        from iris.cube import Cube
 
         data = [0, 0, 0]
         da = xr.DataArray(data, coords=[coord_values], dims=["space"])

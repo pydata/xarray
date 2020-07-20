@@ -722,6 +722,11 @@ def interp_func(var, x, new_x, method, kwargs):
                 drop_axis=drop_axis,
             )
 
+        if method in ["quadratic", "cubic"]:
+            raise NotImplementedError(
+                "Only constant or linear interpolation are available in a chunked direction"
+            )
+
         current_dims = [_x.name for _x in x]
 
         # number of non interpolated dimensions

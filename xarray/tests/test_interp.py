@@ -3,7 +3,13 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_equal, requires_cftime, requires_scipy
+from xarray.tests import (
+    assert_allclose,
+    assert_equal,
+    raises_regex,
+    requires_cftime,
+    requires_scipy,
+)
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from . import has_dask, has_scipy
@@ -63,6 +69,16 @@ def test_interpolate_1d(method, dim, case):
 
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
+
+    if method == "cubic" and dim == "y" and case == 1:
+        # Check that an error is raised if an attempt is made to interpolate
+        # over a chunked dimension with high order method
+        with raises_regex(
+            NotImplementedError,
+            "Only constant or linear interpolation are available in a chunked direction",
+        ):
+            da.interp(method=method, **{dim: xdest})
+        return
 
     actual = da.interp(method=method, **{dim: xdest})
 
