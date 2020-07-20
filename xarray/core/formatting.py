@@ -456,7 +456,9 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__") or is_duck_dask_array(internal_data):
+    elif hasattr(internal_data, "__array_function__") or is_duck_dask_array(
+        internal_data
+    ):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)

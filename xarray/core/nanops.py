@@ -1,8 +1,8 @@
 import numpy as np
 
 from . import dtypes, nputils, utils
+from .pycompat import dask_array_type
 from .duck_array_ops import _dask_or_eager_func, count, fillna, isnull, where_method
-from .dask_array_compat import is_duck_dask_array
 
 try:
     import dask.array as dask_array
@@ -78,7 +78,7 @@ def nanmin(a, axis=None, out=None):
     if a.dtype.kind == "O":
         return _nan_minmax_object("min", dtypes.get_pos_infinity(a.dtype), a, axis)
 
-    module = dask_array if is_duck_dask_array(a) else nputils
+    module = dask_array if isinstance(a, dask_array_type) else nputils
     return module.nanmin(a, axis=axis)
 
 
@@ -86,7 +86,7 @@ def nanmax(a, axis=None, out=None):
     if a.dtype.kind == "O":
         return _nan_minmax_object("max", dtypes.get_neg_infinity(a.dtype), a, axis)
 
-    module = dask_array if is_duck_dask_array(a) else nputils
+    module = dask_array if isinstance(a, dask_array_type) else nputils
     return module.nanmax(a, axis=axis)
 
 
@@ -95,7 +95,7 @@ def nanargmin(a, axis=None):
         fill_value = dtypes.get_pos_infinity(a.dtype)
         return _nan_argminmax_object("argmin", fill_value, a, axis=axis)
 
-    module = dask_array if is_duck_dask_array(a) else nputils
+    module = dask_array if isinstance(a, dask_array_type) else nputils
     return module.nanargmin(a, axis=axis)
 
 
@@ -104,7 +104,7 @@ def nanargmax(a, axis=None):
         fill_value = dtypes.get_neg_infinity(a.dtype)
         return _nan_argminmax_object("argmax", fill_value, a, axis=axis)
 
-    module = dask_array if is_duck_dask_array(a) else nputils
+    module = dask_array if isinstance(a, dask_array_type) else nputils
     return module.nanargmax(a, axis=axis)
 
 
@@ -137,7 +137,7 @@ def nanmean(a, axis=None, dtype=None, out=None):
     if a.dtype.kind == "O":
         return _nanmean_ddof_object(0, a, axis=axis, dtype=dtype)
 
-    if is_duck_dask_array(a):
+    if isinstance(a, dask_array_type):
         return dask_array.nanmean(a, axis=axis, dtype=dtype)
 
     return np.nanmean(a, axis=axis, dtype=dtype)

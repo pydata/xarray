@@ -647,9 +647,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data
-            for k, v in self.variables.items()
-            if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask.array as da
@@ -818,9 +816,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data
-            for k, v in self.variables.items()
-            if is_duck_dask_array(v._data)
+            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask

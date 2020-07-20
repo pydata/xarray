@@ -254,7 +254,7 @@ def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
-    
+
     from xarray.core.dask_array_compat import is_duck_dask_array
 
     name = _name(cube)

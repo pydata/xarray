@@ -14,6 +14,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
+from .pycompat import dask_array_type
 from .dask_array_compat import is_duck_dask_array
 
 try:
@@ -104,7 +105,7 @@ def isnull(data):
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
-        if is_duck_dask_array(data) or isinstance(data, np.ndarray):
+        if isinstance(data, (np.ndarray, dask_array_type)):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -190,11 +191,7 @@ def lazy_array_equiv(arr1, arr2):
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    if (
-        dask_array
-        and is_duck_dask_array(arr1)
-        and is_duck_dask_array(arr2)
-    ):
+    if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
         # GH3068
         if arr1.name == arr2.name:
             return True
