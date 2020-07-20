@@ -818,8 +818,6 @@ def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs
 
     TODO: find a way to use 1d coordinates
     """
-    from .dataarray import DataArray
-
     _old_x, _new_x = coords[:n_coords], coords[n_coords:]
 
     # reshape x (TODO REMOVE)
