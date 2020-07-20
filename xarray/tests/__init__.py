@@ -16,6 +16,10 @@ from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.testing import (  # noqa: F401
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
+)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -73,6 +77,7 @@ has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
+has_cartopy, requires_cartopy = _importorskip("cartopy")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

@@ -2,6 +2,7 @@ try:
     import dask
     import dask.array
     from dask.highlevelgraph import HighLevelGraph
+
     from .dask_array_compat import meta_from_array
 
 except ImportError:
@@ -252,7 +253,10 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> xr.map_blocks(
-    ...     calculate_anomaly, array, kwargs={"groupby_type": "time.year"}, template=array,
+    ...     calculate_anomaly,
+    ...     array,
+    ...     kwargs={"groupby_type": "time.year"},
+    ...     template=array,
     ... )
     <xarray.DataArray (time: 24)>
     array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,

@@ -247,6 +247,12 @@ def is_list_like(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple)
 
 
+def is_array_like(value: Any) -> bool:
+    return (
+        hasattr(value, "ndim") and hasattr(value, "shape") and hasattr(value, "dtype")
+    )
+
+
 def either_dict_or_kwargs(
     pos_kwargs: Optional[Mapping[Hashable, T]],
     kw_kwargs: Mapping[str, T],

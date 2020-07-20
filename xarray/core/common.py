@@ -1088,9 +1088,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
-        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1283,8 +1283,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         numpy.isin
         """
         from .computation import apply_ufunc
-        from .dataset import Dataset
         from .dataarray import DataArray
+        from .dataset import Dataset
         from .variable import Variable
 
         if isinstance(test_elements, Dataset):
@@ -1434,7 +1434,7 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
             other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
         )
     else:
-        data = np.full_like(other, fill_value, dtype=dtype)
+        data = np.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
@@ -1481,7 +1481,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> xr.zeros_like(x, dtype=np.float)
+    >>> xr.zeros_like(x, dtype=float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
            [0., 0., 0.]])

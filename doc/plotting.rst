@@ -220,7 +220,7 @@ from the time and assign it as a non-dimension coordinate:
 
 .. ipython:: python
 
-    decimal_day = (air1d.time - air1d.time[0]) /  pd.Timedelta('1d')
+    decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1d")
     air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day))
     air1d_multi
 
@@ -743,12 +743,13 @@ This script will plot the air temperature on a map.
 
     air = xr.tutorial.open_dataset("air_temperature").air
 
-    ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
-    air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree())
-    ax.set_global()
+    p = air.isel(time=0).plot(
+        subplot_kws=dict(projection=ccrs.Orthographic(-80, 35), facecolor="gray"),
+        transform=ccrs.PlateCarree())
+    p.axes.set_global()
 
     @savefig plotting_maps_cartopy.png width=100%
-    ax.coastlines()
+    p.axes.coastlines()
 
 When faceting on maps, the projection can be transferred to the ``plot``
 function using the ``subplot_kws`` keyword. The axes for the subplots created

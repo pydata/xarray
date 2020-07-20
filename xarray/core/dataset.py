@@ -4144,7 +4144,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         numpy.interp
         scipy.interpolate
         """
-        from .missing import interp_na, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, interp_na
 
         new = _apply_over_vars_with_dim(
             interp_na,
@@ -4178,7 +4178,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import ffill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
@@ -4203,7 +4203,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import bfill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
@@ -4543,11 +4543,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._to_dataframe(self.dims)
 
     def _set_sparse_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
         from sparse import COO
 
-        idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted()
@@ -4557,11 +4556,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             is_sorted = True
             shape = (idx.size,)
 
-        for name, series in dataframe.items():
-            # Cast to a NumPy array first, in case the Series is a pandas
-            # Extension array (which doesn't have a valid NumPy dtype)
-            values = np.asarray(series)
-
+        for name, values in arrays:
             # In virtually all real use cases, the sparse array will now have
             # missing values and needs a fill_value. For consistency, don't
             # special case the rare exceptions (e.g., dtype=int without a
@@ -4580,18 +4575,36 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
-        idx = dataframe.index
-        if isinstance(idx, pd.MultiIndex):
-            # expand the DataFrame to include the product of all levels
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            shape = tuple(lev.size for lev in idx.levels)
-        else:
-            shape = (idx.size,)
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
+        if not isinstance(idx, pd.MultiIndex):
+            for name, values in arrays:
+                self[name] = (dims, values)
+            return
+
+        shape = tuple(lev.size for lev in idx.levels)
+        indexer = tuple(idx.codes)
+
+        # We already verified that the MultiIndex has all unique values, so
+        # there are missing values if and only if the size of output arrays is
+        # larger that the index.
+        missing_values = np.prod(shape) > idx.shape[0]
+
+        for name, values in arrays:
+            # NumPy indexing is much faster than using DataFrame.reindex() to
+            # fill in missing values:
+            # https://stackoverflow.com/a/35049899/809705
+            if missing_values:
+                dtype, fill_value = dtypes.maybe_promote(values.dtype)
+                data = np.full(shape, fill_value, dtype)
+            else:
+                # If there are no missing values, keep the existing dtype
+                # instead of promoting to support NA, e.g., keep integer
+                # columns as integers.
+                # TODO: consider removing this special case, which doesn't
+                # exist for sparse=True.
+                data = np.zeros(shape, values.dtype)
+            data[indexer] = values
             self[name] = (dims, data)
 
     @classmethod
@@ -4631,7 +4644,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
+        idx = remove_unused_levels_categories(dataframe.index)
+
+        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
+
+        # Cast to a NumPy array first, in case the Series is a pandas Extension
+        # array (which doesn't have a valid NumPy dtype)
+        # TODO: allow users to control how this casting happens, e.g., by
+        # forwarding arguments to pandas.Series.to_numpy?
+        arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
+
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4647,9 +4672,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             obj[index_name] = (dims, idx)
 
         if sparse:
-            obj._set_sparse_data_from_dataframe(dataframe, dims)
+            obj._set_sparse_data_from_dataframe(idx, arrays, dims)
         else:
-            obj._set_numpy_data_from_dataframe(dataframe, dims)
+            obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
@@ -6367,6 +6392,132 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 keep_attrs=keep_attrs,
             )
         )
+
+    def argmin(self, dim=None, axis=None, **kwargs):
+        """Indices of the minima of the member variables.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmin will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmin
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmin() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmin_func = getattr(duck_array_ops, "argmin")
+            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
+
+    def argmax(self, dim=None, axis=None, **kwargs):
+        """Indices of the maxima of the member variables.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : str, optional
+            The dimension over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will be an error, since DataArray.argmax will
+            return a dict with indices for all dimensions, which does not make sense for
+            a Dataset.
+        axis : int, optional
+            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Dataset
+
+        See also
+        --------
+        DataArray.argmax
+
+       """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
+                "neither dim nor axis argument changes to return a dict of indices of "
+                "each dimension, for consistency it will be an error to call "
+                "Dataset.argmax() with no argument, since we don't return a dict of "
+                "Datasets.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if (
+            dim is None
+            or axis is not None
+            or (not isinstance(dim, Sequence) and dim is not ...)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            argmax_func = getattr(duck_array_ops, "argmax")
+            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
+        else:
+            raise ValueError(
+                "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
+                "dicts cannot be contained in a Dataset, so cannot call "
+                "Dataset.argmin() with a sequence or ... for dim"
+            )
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
