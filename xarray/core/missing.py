@@ -823,9 +823,7 @@ def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs
     # reshape x (TODO REMOVE)
     old_x = tuple(
         [
-            Variable(
-                str(dim), np.moveaxis(tmp, dim, -1)[(0, ) * (len(tmp.shape) - 1)]
-            )
+            Variable(str(dim), np.moveaxis(tmp, dim, -1)[(0,) * (len(tmp.shape) - 1)])
             for dim, tmp in enumerate(_old_x)
         ]
     )
@@ -873,7 +871,7 @@ def _compute_chunks(x, x_with_ghost, new_x):
         for iend, iend_with_ghost in zip(*ce):
 
             arr = np.moveaxis(new_x[dim].data, dim, -1)
-            arr = arr[(0, ) * (len(arr.shape) - 1)]
+            arr = arr[(0,) * (len(arr.shape) - 1)]
 
             n_no_ghost = (arr <= x[dim][iend]).sum()
             n_ghost = (arr <= x_with_ghost[dim][iend_with_ghost]).sum()
