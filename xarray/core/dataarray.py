@@ -1928,7 +1928,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def drop_vars(
         self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "DataArray":
-        """Drop variables from this DataArray.
+        """Drop variables from this DataArray. *Not* done inplace.
 
         Parameters
         ----------
@@ -1942,7 +1942,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Returns
         -------
         dropped : Dataset
-
+            New Dataset copied from ``self`` with variables removed.
         """
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
