@@ -2,7 +2,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, List, Sequence, Union
+from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -858,6 +858,8 @@ def _add_interp_ghost(var, x, nconst: int):
 def _compute_chunks(x, x_with_ghost, new_x):
     """Compute equilibrated chunks of new_x
 
+    This routine assumes that x, x_with_ghost and new_x are sorted
+
     TODO: This only works if new_x is a set of 1d coordinate
           more general function is needed for advanced interpolation with chunked dimension
     """
@@ -867,22 +869,29 @@ def _compute_chunks(x, x_with_ghost, new_x):
     ]
     total_chunks = []
     for dim, ce in enumerate(zip(chunks_end, chunks_end_with_ghost)):
-        l_new_x_ends: List[np.ndarray] = []
-        for iend, iend_with_ghost in zip(*ce):
 
-            arr = np.moveaxis(new_x[dim].data, dim, -1)
-            arr = arr[(0,) * (len(arr.shape) - 1)]
+        # select one line along dim
+        line_x = new_x[dim].data[
+            (0,) * dim + (slice(None),) + (0,) * (len(new_x) - dim - 1)
+        ]
 
-            n_no_ghost = (arr <= x[dim][iend]).sum()
-            n_ghost = (arr <= x_with_ghost[dim][iend_with_ghost]).sum()
+        # the number of chunk of the output must be the same as the input (map_blocks)
+        new_x_ends = np.copy(ce[0])
+        for i, (iend, iend_with_ghost) in enumerate(list(zip(*ce))[:-1]):
+            # number of points in line_x before the end of the current chunck
+            # with and without overlap
+            n_ghost = (line_x <= x_with_ghost[dim][iend_with_ghost]).sum()
+            n_no_ghost = (line_x <= x[dim][iend]).sum()
 
-            equil = np.ceil(0.5 * (n_no_ghost + n_ghost)).astype(int)
+            # put half of the points inside the overlap on the left
+            # and the other half on the right
+            n_plus_half = np.ceil(0.5 * (n_no_ghost + n_ghost)).astype(int)
 
-            l_new_x_ends.append(equil)
+            new_x_ends[i] = n_plus_half
 
-        new_x_ends = np.array(l_new_x_ends)
         # do not forget extra points at the end
-        new_x_ends[-1] = len(arr)
+        new_x_ends[-1] = len(line_x)
+
         chunks = new_x_ends[0], *(new_x_ends[1:] - new_x_ends[:-1])
-        total_chunks.append(tuple(chunks))
+        total_chunks.append(chunks)
     return total_chunks
