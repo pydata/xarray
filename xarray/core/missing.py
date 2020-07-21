@@ -13,7 +13,7 @@ from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
 from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
-from .variable import IndexVariable, Variable, broadcast_variables
+from .variable import Variable, broadcast_variables
 
 
 def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
@@ -823,7 +823,7 @@ def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs
     # reshape x (TODO REMOVE)
     old_x = tuple(
         [
-            IndexVariable(
+            Variable(
                 str(dim), np.moveaxis(tmp, dim, -1)[tuple([0] * (len(tmp.shape) - 1))]
             )
             for dim, tmp in enumerate(_old_x)
