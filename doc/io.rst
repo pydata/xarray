@@ -26,7 +26,7 @@ The recommended way to store xarray data structures is `netCDF`__, which
 is a binary file format for self-described datasets that originated
 in the geosciences. xarray is based on the netCDF data model, so netCDF files
 on disk directly correspond to :py:class:`Dataset` objects (more accurately,
-a group in a netCDF file directly corresponds to a to :py:class:`Dataset` object.
+a group in a netCDF file directly corresponds to a :py:class:`Dataset` object.
 See :ref:`io.netcdf_groups` for more.)
 
 NetCDF is supported on almost all platforms, and parsers exist
