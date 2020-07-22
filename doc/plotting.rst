@@ -126,6 +126,7 @@ can be used:
 .. _matplotlib.pyplot.plot: http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
 
 .. ipython:: python
+    :okwarning:
 
     @savefig plotting_1d_additional_args.png width=4in
     air1d[:200].plot.line("b-^")
@@ -138,6 +139,7 @@ can be used:
 Keyword arguments work the same way, and are more explicit.
 
 .. ipython:: python
+    :okwarning:
 
     @savefig plotting_example_sin3.png width=4in
     air1d[:200].plot.line(color="purple", marker="o")
@@ -152,6 +154,7 @@ In this example ``axes`` is an array consisting of the left and right
 axes created by ``plt.subplots``.
 
 .. ipython:: python
+    :okwarning:
 
     fig, axes = plt.subplots(ncols=2)
 
