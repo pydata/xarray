@@ -33,6 +33,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
 
 
 Internal Changes
@@ -254,8 +256,6 @@ Documentation
   By `Justus Magin <https://github.com/keewis>`_.
 - Add documentation for the parameters and return values of :py:meth:`DataArray.sel`.
   By `Justus Magin <https://github.com/keewis>`_.
-- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
-  By `Sander van Rijn <https://github.com/sjvrijn>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
