@@ -99,6 +99,7 @@ One Dimension
 The simplest way to make a plot is to call the :py:func:`DataArray.plot()` method.
 
 .. ipython:: python
+    :okwarning:
 
     air1d = air.isel(lat=10, lon=10)
 
@@ -745,7 +746,8 @@ This script will plot the air temperature on a map.
 
     p = air.isel(time=0).plot(
         subplot_kws=dict(projection=ccrs.Orthographic(-80, 35), facecolor="gray"),
-        transform=ccrs.PlateCarree())
+        transform=ccrs.PlateCarree(),
+    )
     p.axes.set_global()
 
     @savefig plotting_maps_cartopy.png width=100%
