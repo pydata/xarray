@@ -2990,7 +2990,7 @@ class TestDataset:
 
     def test_unstack_fill_value(self):
         ds = xr.Dataset(
-            {"var": (("x",), np.arange(6))},
+            {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
             coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
         )
         # make ds incomplete
@@ -3003,7 +3003,11 @@ class TestDataset:
 
         actual = ds["var"].unstack("index", fill_value=-1)
         expected = ds["var"].unstack("index").fillna(-1).astype(int)
-        assert actual.equals(expected)
+        assert_equal(actual, expected)
+
+        actual = ds.unstack("index", fill_value={"var": -1, "other_var": 1})
+        expected = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
+        assert_equal(actual, expected)
 
     @requires_sparse
     def test_unstack_sparse(self):
