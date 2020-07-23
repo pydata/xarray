@@ -3,9 +3,11 @@
 Xarray related projects
 -----------------------
 
-Here below is a list of existing open source projects that build
+Below is a list of existing open source projects that build
 functionality upon xarray. See also section :ref:`internals` for more
-details on how to build xarray extensions.
+details on how to build xarray extensions. We also maintain the 
+`xarray-contrib <https://github.com/xarray-contrib>`_ GitHub organization
+as a place to curate projects that build upon xarray.
 
 Geosciences
 ~~~~~~~~~~~
