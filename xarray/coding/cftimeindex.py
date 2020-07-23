@@ -50,7 +50,13 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
+from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
+
+# constants for cftimeindex.repr
+CFTIME_REPR_LENGTH = 19
+ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
+REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
 def named(name, pattern):
@@ -215,6 +221,48 @@ def assert_all_valid_date_type(data):
             )
 
 
+def format_row(times, indent=0, separator=", ", row_end=",\n"):
+    """Format a single row from format_times."""
+    return indent * " " + separator.join(map(str, times)) + row_end
+
+
+def format_times(
+    index,
+    max_width,
+    offset,
+    separator=", ",
+    first_row_offset=0,
+    intermediate_row_end=",\n",
+    last_row_end="",
+):
+    """Format values of cftimeindex as pd.Index."""
+    n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
+    n_rows = int(np.ceil(len(index) / n_per_row))
+
+    representation = ""
+    for row in range(n_rows):
+        indent = first_row_offset if row == 0 else offset
+        row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
+        times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
+        representation = representation + format_row(
+            times_for_row, indent=indent, separator=separator, row_end=row_end
+        )
+
+    return representation
+
+
+def format_attrs(index, separator=", "):
+    """Format attributes of CFTimeIndex for __repr__."""
+    attrs = {
+        "dtype": f"'{index.dtype}'",
+        "length": f"{len(index)}",
+        "calendar": f"'{index.calendar}'",
+    }
+    attrs_str = [f"{k}={v}" for k, v in attrs.items()]
+    attrs_str = f"{separator}".join(attrs_str)
+    return attrs_str
+
+
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
@@ -258,6 +306,46 @@ class CFTimeIndex(pd.Index):
         result.name = name
         result._cache = {}
         return result
+
+    def __repr__(self):
+        """
+        Return a string representation for this object.
+        """
+        klass_name = type(self).__name__
+        display_width = OPTIONS["display_width"]
+        offset = len(klass_name) + 2
+
+        if len(self) <= ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS:
+            datastr = format_times(
+                self.values, display_width, offset=offset, first_row_offset=0
+            )
+        else:
+            front_str = format_times(
+                self.values[:REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END],
+                display_width,
+                offset=offset,
+                first_row_offset=0,
+                last_row_end=",",
+            )
+            end_str = format_times(
+                self.values[-REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END:],
+                display_width,
+                offset=offset,
+                first_row_offset=offset,
+            )
+            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+
+        attrs_str = format_attrs(self)
+        # oneliner only if smaller than display_width
+        full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
+        if len(full_repr_str) <= display_width:
+            return full_repr_str
+        else:
+            # if attrs_str too long, one per line
+            if len(attrs_str) >= display_width - offset:
+                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
+            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+            return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
@@ -581,6 +669,13 @@ class CFTimeIndex(pd.Index):
             ],
             dtype=np.int64,
         )
+
+    @property
+    def calendar(self):
+        """The calendar used by the datetimes in the index."""
+        from .times import infer_calendar_name
+
+        return infer_calendar_name(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""

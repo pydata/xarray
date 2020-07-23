@@ -1,4 +1,5 @@
 from datetime import timedelta
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -882,6 +883,120 @@ def test_cftimeindex_shift_invalid_freq():
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift(1, 1)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_property(calendar, expected):
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    assert index.calendar == expected
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_repr(calendar, expected):
+    """Test that cftimeindex has calendar property in repr."""
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    repr_str = index.__repr__()
+    assert f" calendar='{expected}'" in repr_str
+    assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize("periods", [2, 40])
+def test_cftimeindex_periods_repr(periods):
+    """Test that cftimeindex has periods property in repr."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    repr_str = index.__repr__()
+    assert f" length={periods}" in repr_str
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "periods,expected",
+    [
+        (
+            2,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
+            dtype='object', length=2, calendar='gregorian')""",
+        ),
+        (
+            4,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
+             2000-01-04 00:00:00],
+            dtype='object', length=4, calendar='gregorian')""",
+        ),
+        (
+            101,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
+             2000-01-04 00:00:00, 2000-01-05 00:00:00, 2000-01-06 00:00:00,
+             2000-01-07 00:00:00, 2000-01-08 00:00:00, 2000-01-09 00:00:00,
+             2000-01-10 00:00:00,
+             ...
+             2000-04-01 00:00:00, 2000-04-02 00:00:00, 2000-04-03 00:00:00,
+             2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
+             2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
+             2000-04-10 00:00:00],
+            dtype='object', length=101, calendar='gregorian')""",
+        ),
+    ],
+)
+def test_cftimeindex_repr_formatting(periods, expected):
+    """Test that cftimeindex.__repr__ is formatted similar to pd.Index.__repr__."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    expected = dedent(expected)
+    assert expected == repr(index)
+
+
+@requires_cftime
+@pytest.mark.parametrize("display_width", [40, 80, 100])
+@pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
+def test_cftimeindex_repr_formatting_width(periods, display_width):
+    """Test that cftimeindex is sensitive to OPTIONS['display_width']."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    len_intro_str = len("CFTimeIndex(")
+    with xr.set_options(display_width=display_width):
+        repr_str = index.__repr__()
+        splitted = repr_str.split("\n")
+        for i, s in enumerate(splitted):
+            # check that lines not longer than OPTIONS['display_width']
+            assert len(s) <= display_width, f"{len(s)} {s} {display_width}"
+            if i > 0:
+                # check for initial spaces
+                assert s[:len_intro_str] == " " * len_intro_str
+
+
+@requires_cftime
+@pytest.mark.parametrize("periods", [22, 50, 100])
+def test_cftimeindex_repr_101_shorter(periods):
+    index_101 = xr.cftime_range(start="2000", periods=101)
+    index_periods = xr.cftime_range(start="2000", periods=periods)
+    index_101_repr_str = index_101.__repr__()
+    index_periods_repr_str = index_periods.__repr__()
+    assert len(index_101_repr_str) < len(index_periods_repr_str)
 
 
 @requires_cftime
