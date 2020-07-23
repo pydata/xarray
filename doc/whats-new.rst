@@ -33,7 +33,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- removed skipna argument from :py:meth:`DataArray.count`, any, all. (:issue:`755`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
