@@ -22,6 +22,6 @@ try:
     # solely for isinstance checks
     import cupy
 
-    cupy_array_type = (cupy.core.core.ndarray,)
+    cupy_array_type = (cupy.ndarray,)
 except ImportError:  # pragma: no cover
     cupy_array_type = ()
