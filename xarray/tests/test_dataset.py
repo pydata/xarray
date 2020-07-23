@@ -1944,7 +1944,7 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value):
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
         y = Dataset({"bar": DataArray([1, 2], dims=["x"], coords={"x": [1, 3]})})
@@ -1952,13 +1952,26 @@ class TestDataset:
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_foo = fill_value_bar = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_foo = fill_value["foo"]
+            fill_value_bar = fill_value["bar"]
+        else:
+            fill_value_foo = fill_value_bar = fill_value
 
         expected_x2 = Dataset(
-            {"foo": DataArray([1, 2, fill_value], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "foo": DataArray(
+                    [1, 2, fill_value_foo], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         expected_y2 = Dataset(
-            {"bar": DataArray([1, fill_value, 2], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "bar": DataArray(
+                    [1, fill_value_bar, 2], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
