@@ -1897,29 +1897,51 @@ class TestDataset:
         actual = ds.reindex_like(alt, method="pad")
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         actual = ds.reindex(y=y, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_like_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         alt = Dataset({"y": y})
         actual = ds.reindex_like(alt, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
