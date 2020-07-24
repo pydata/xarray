@@ -734,6 +734,12 @@ def interp_func(var, x, new_x, method, kwargs):
                 "Only constant or linear interpolation are available in a chunked direction"
             )
 
+        for _x in new_x:
+            if sum([s > 1 for s in _x.shape]) > 1:
+                raise NotImplementedError(
+                    "Advanced interpolation is not implemented with chunked dimension"
+                )
+
         current_dims = [_x.name for _x in x]
 
         # number of non interpolated dimensions
@@ -750,10 +756,6 @@ def interp_func(var, x, new_x, method, kwargs):
 
         # compute final chunks
         target_dims = set.union(*[set(_x.dims) for _x in new_x])
-        if target_dims - set(current_dims):
-            raise NotImplementedError(
-                "Advanced interpolation is not implemented with chunked dimension"
-            )
         new_x = tuple([_x.set_dims(current_dims) for _x in new_x])
         total_chunks = _compute_chunks(x, x_with_ghost, new_x)
         final_chunks = var.chunks[: -len(x)] + tuple(total_chunks)
