@@ -566,6 +566,16 @@ def _localize(var, indexes_coords):
     return var.isel(**indexes), indexes_coords
 
 
+def _floatize_one_x(x):
+    """ Make x float.
+    This is particulary useful for datetime dtype.
+    x: np.ndarray
+    """
+    if _contains_datetime_like_objects(x):
+        return x._to_numeric(dtype=np.float64)
+    return x
+
+
 def _floatize_x(x, new_x):
     """ Make x and new_x float.
     This is particulary useful for datetime dtype.
@@ -769,11 +779,14 @@ def interp_func(var, x, new_x, method, kwargs):
 
         new_x = [rename_index(_x, dim) for dim, _x in zip(interp_dims, new_x)]
 
-        unsorted = any((np.any(np.diff(_x.data) < 0) for _x in new_x if _x.size > 1))
+        new_x_float = [_floatize_one_x(_x) for _x in new_x]
+        unsorted = any(
+            (np.any(np.diff(_x.data) < 0) for _x in new_x_float if _x.size > 1)
+        )
         if unsorted:
             sorted_idx = {
                 dim: _x.data.argsort()
-                for dim, _x in zip(interp_dims, new_x)
+                for dim, _x in zip(interp_dims, new_x_float)
                 if _x.size > 1
             }
 
