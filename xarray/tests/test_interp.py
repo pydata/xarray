@@ -1,3 +1,5 @@
+from itertools import combinations, permutations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -8,6 +10,7 @@ from xarray.tests import (
     assert_equal,
     raises_regex,
     requires_cftime,
+    requires_dask,
     requires_scipy,
 )
 
@@ -730,46 +733,110 @@ def test_decompose(method):
     assert_allclose(actual, expected)
 
 
-def test_interpolate_chunk_1d():
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
+@requires_scipy
+@requires_dask
+@pytest.mark.parametrize(
+    "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+)
+@pytest.mark.parametrize("sorted", [True, False])
+@pytest.mark.parametrize(
+    "data_ndim,interp_ndim,nscalar",
+    [
+        (data_ndim, interp_ndim, nscalar)
+        for data_ndim in range(1, 4)
+        for interp_ndim in range(1, data_ndim + 1)
+        for nscalar in range(0, interp_ndim + 1)
+    ],
+)
+def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
+    # 3d non chunked data
+    x = np.linspace(0, 1, 5)
+    y = np.linspace(2, 4, 7)
+    z = np.linspace(-0.5, 0.5, 11)
+    da = xr.DataArray(
+        data=np.sin(x[:, np.newaxis, np.newaxis])
+        * np.cos(y[:, np.newaxis])
+        * np.exp(z),
+        coords=[("x", x), ("y", y), ("z", z)],
+    )
 
-    if not has_dask:
-        pytest.skip("dask is not installed in the environment.")
+    # choose the data dimensions
+    for data_dims in permutations(da.dims, data_ndim):
 
-    da = get_example_data(1)
-    ydest = np.linspace(-0.1, 0.2, 80)
+        # select only data_ndim dim
+        da = da.isel(
+            {dim: len(da.coords[dim]) // 2 for dim in da.dims if dim not in data_dims}
+        )
 
-    actual = da.interp(method="linear", y=ydest)
-    expected = da.compute().interp(method="linear", y=ydest)
+        # chunk data
+        da = da.chunk(chunks={dim: len(da.coords[dim]) // 3 for dim in da.dims})
 
-    assert_allclose(actual, expected)
+        # choose the interpolation dimensions
+        for interp_dims in permutations(da.dims, interp_ndim):
+            # choose the scalar interpolation dimensions
+            for scalar_dims in combinations(interp_dims, nscalar):
+                dest = {}
+                for dim in interp_dims:
+                    # choose a point between chunks
+                    first_chunks = da.chunks[da.get_axis_num(dim)][0]
+                    middle_point = 0.5 * (
+                        da.coords[dim][first_chunks - 1] + da.coords[dim][first_chunks]
+                    )
+                    if dim in scalar_dims:
+                        # choose a point between chunks
+                        dest[dim] = middle_point
+                    else:
+                        # pick some points, including outside the domain and bewteen chunks
+                        before = 2 * da.coords[dim][0] - da.coords[dim][1]
+                        after = 2 * da.coords[dim][-1] - da.coords[dim][-2]
+                        inside = da.coords[dim][first_chunks // 2]
+
+                        xdest = np.linspace(
+                            inside, middle_point, 2 * (first_chunks // 2),
+                        )
+                        xdest = np.concatenate([[before], xdest, [after]])
+                        if not sorted:
+                            xdest = xdest.reshape((-1, 2))
+                            xdest[:, 1] = xdest[::-1, 1]
+                            xdest = xdest.flatten()
+                        dest[dim] = xdest
+
+                if interp_ndim > 1 and method not in ["linear", "nearest"]:
+                    # Check that an error is raised if an attempt is made to interpolate
+                    # over a chunked dimension with high order method
+                    with raises_regex(
+                        ValueError,
+                        f"{method} is not a valid interpolator for interpolating over multiple dimensions.",
+                    ):
+                        da.interp(method=method, **dest)
+                    return
+
+                if method in ["quadratic", "cubic"]:
+                    # Check that an error is raised if an attempt is made to interpolate
+                    # over a chunked dimension with high order method
+                    with raises_regex(
+                        NotImplementedError,
+                        "Only constant or linear interpolation are available in a chunked direction",
+                    ):
+                        da.interp(method=method, **dest)
+                    return
+
+                actual = da.interp(method=method, **dest)
+                expected = da.compute().interp(method=method, **dest)
+
+                assert_allclose(actual, expected)
+                break
+            break
 
 
-@pytest.mark.parametrize("scalar_nx", [True, False])
-def test_interpolate_chunk_nd(scalar_nx):
-    if not has_scipy:
-        pytest.skip("scipy is not installed.")
+@requires_scipy
+@requires_dask
+def test_interpolate_chunk_rename():
+    da = get_example_data(0).chunk({"x": 5})
 
-    if not has_dask:
-        pytest.skip("dask is not installed in the environment.")
-
-    da = get_example_data(1).chunk({"x": 50})
-
-    if scalar_nx:
-        # 0.5 is between chunks
-        xdest = 0.5
-    else:
-        # -0.5 is before data
-        # 0.5 is between chunks
-        # 1.5 is after data
-        xdest = [-0.5, 0.25, 0.5, 0.75, 1.5]
-    # -0.1 is before data
-    # 0.05 is between chunks
-    # 0.15 is after data
-    ydest = [-0.1, 0.025, 0.05, 0.075, 0.15]
-
-    actual = da.interp(method="linear", x=xdest, y=ydest)
-    expected = da.compute().interp(method="linear", x=xdest, y=ydest)
+    # grid -> 1d-sample
+    xdest = xr.DataArray(np.linspace(0.1, 1.0, 11), dims="renamed")
+    actual = da.interp(x=xdest, method="linear")
+    expected = da.compute().interp(x=xdest, method="linear")
 
     assert_allclose(actual, expected)
