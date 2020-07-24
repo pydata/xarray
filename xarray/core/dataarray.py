@@ -862,8 +862,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
-        Otherwise, a shallow copy is made, so each variable in the new
-        array's dataset is also a variable in this array's dataset.
+        Otherwise, a shallow copy is made, and the returned data array's
+        values are a new view of this data array's values.
 
         Use `data` to create a new object with the same structure as
         original but entirely new data.

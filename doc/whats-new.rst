@@ -37,7 +37,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- removed skipna argument from :py:meth:`DataArray.count`, any, all. (:issue:`755`)
+
+- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 
 Internal Changes
