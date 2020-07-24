@@ -28,6 +28,10 @@ New Features
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
   now accept more than 1 dimension.(:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Build :py:meth:`CFTimeIndex.__repr__` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
+  property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
+  :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
+  `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
@@ -116,8 +120,8 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
-- 'missing_dims' argument to :py:meth:`Dataset.isel`,
-  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+- `missing_dims` argument to :py:meth:`Dataset.isel`,
+  :py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
   the exception when a dimension passed to ``isel`` is not present with a
   warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
@@ -131,7 +135,7 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
-- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`).
+- Enable using MultiIndex levels as coordinates in 1D and 2D plots (:issue:`3927`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
@@ -175,7 +179,6 @@ Enhancements
   limited to a reasonable length.
   (:pull:`3905`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-
 
 Bug fixes
 ~~~~~~~~~
