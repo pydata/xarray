@@ -55,4 +55,6 @@ def test_where():
 
     data = cp.zeros(10)
 
-    assert where(data < 1, 1, data).all()
+    output = where(data < 1, 1, data).all()
+    assert output
+    assert isinstance(output, cp.ndarray)
