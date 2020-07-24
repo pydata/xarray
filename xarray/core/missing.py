@@ -840,10 +840,9 @@ def interp_func(var, x, new_x, method, kwargs):
 
         if unsorted:
             # Reorder the output
-            # use DataArray for isel
-            from .dataarray import DataArray
+            # use Variable for isel
 
-            res = DataArray(data=res, dims=final_dims.values())
+            res = Variable(data=res, dims=final_dims.values())
             for dim, idx in sorted_idx.items():
                 res = res.isel({final_dims[dim]: np.argsort(idx)})
 
