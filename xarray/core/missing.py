@@ -13,7 +13,7 @@ from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
 from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
-from .variable import Variable, broadcast_variables
+from .variable import IndexVariable, Variable, broadcast_variables
 
 
 def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
@@ -740,10 +740,49 @@ def interp_func(var, x, new_x, method, kwargs):
                     "Advanced interpolation is not implemented with chunked dimension"
                 )
 
-        current_dims = [_x.name for _x in x]
-
         # number of non interpolated dimensions
         nconst = var.ndim - len(x)
+        const_dims = [f"dim_{i}" for i in range(nconst)]
+
+        # list of interpolated dimensions source
+        interp_dims = [_x.name for _x in x]
+
+        # mapping to the interpolated dimensions destination
+        # (if interpolating on a point, removes de dim)
+        final_dims = dict(
+            **{d: d for d in const_dims},
+            **{dim: _x.name for dim, _x in zip(interp_dims, new_x) if _x.size > 1},
+        )
+
+        # rename new_x to correspond to source dimension
+        def rename_index(index, dim):
+            if index.size == 1:
+                # a scalar has no name
+                return index
+            return IndexVariable(
+                dims=[dim],
+                data=index,
+                attrs=index.attrs,
+                encoding=index.encoding,
+                fastpath=True,
+            )
+
+        new_x = [rename_index(_x, dim) for dim, _x in zip(interp_dims, new_x)]
+
+        unsorted = any((np.any(np.diff(_x.data) < 0) for _x in new_x if _x.size > 1))
+        if unsorted:
+            sorted_idx = {
+                dim: _x.data.argsort()
+                for dim, _x in zip(interp_dims, new_x)
+                if _x.size > 1
+            }
+
+            new_x = [
+                _x[sorted_idx[dim]] if dim in sorted_idx else _x
+                for dim, _x in zip(interp_dims, new_x)
+            ]
+        # add missing dimensions to new_x
+        new_x = tuple([_x.set_dims(interp_dims) for _x in new_x])
 
         # chunks x
         x = tuple(
@@ -755,8 +794,6 @@ def interp_func(var, x, new_x, method, kwargs):
         var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst)
 
         # compute final chunks
-        target_dims = set.union(*[set(_x.dims) for _x in new_x])
-        new_x = tuple([_x.set_dims(current_dims) for _x in new_x])
         total_chunks = _compute_chunks(x, x_with_ghost, new_x)
         final_chunks = var.chunks[: -len(x)] + tuple(total_chunks)
 
@@ -787,6 +824,19 @@ def interp_func(var, x, new_x, method, kwargs):
             [tuple([chunk for chunk in chunks if chunk > 0]) for chunks in res.chunks]
         )
         res = res.rechunk(new_chunks)
+
+        if unsorted:
+            # Reorder the output
+            # use DataArray for isel
+            from .dataarray import DataArray
+
+            res = DataArray(data=res, dims=final_dims.values())
+            for dim, idx in sorted_idx.items():
+                res = res.isel({final_dims[dim]: np.argsort(idx)})
+
+            # rechunk because out-of-order isel generates a lot of chunks
+            res = res.data.rechunk()
+
         return res
 
     return _interpnd(var, x, new_x, func, kwargs)
