@@ -5438,21 +5438,28 @@ class TestDataset:
         )
         actual = full_like(ds, 2)
 
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [2, 2, 2]
-        expect["d2"].values = [2.0, 2.0, 2.0]
-        assert expect["d1"].dtype == int
-        assert expect["d2"].dtype == float
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [2, 2, 2]
+        expected["d2"].values = [2.0, 2.0, 2.0]
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [True, True, True]
-        expect["d2"].values = [True, True, True]
-        assert expect["d1"].dtype == bool
-        assert expect["d2"].dtype == bool
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [True, True, True]
+        expected["d2"].values = [True, True, True]
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == bool
+        assert_identical(expected, actual)
+
+        # with multiple fill values
+        actual = full_like(ds, {"d1": 1, "d2": 2.3})
+        expected = ds.assign(d1=("x", [1, 1, 1]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
     def test_combine_first(self):
         dsx0 = DataArray([0, 0], [("x", ["a", "b"])]).to_dataset(name="dsx0")
