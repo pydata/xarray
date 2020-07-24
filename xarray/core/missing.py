@@ -626,8 +626,15 @@ def interp(var, indexes_coords, method, **kwargs):
     if (
         len(indexes_coords) > 1
         and method in ["linear", "nearest"]
-        and all(dest[1].ndim == 1 for dest in indexes_coords.values())
-        and len(set([d[1].dims[0] for d in indexes_coords.values()]))
+        and all(dest[1].ndim <= 1 for dest in indexes_coords.values())
+        and len(
+            set(
+                [
+                    dest[1].dims[0] if dest[1].ndim == 1 else d
+                    for d, dest in indexes_coords.items()
+                ]
+            )
+        )
         == len(indexes_coords)
     ):
         # interpolate sequentially
