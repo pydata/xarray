@@ -17,3 +17,11 @@ try:
     sparse_array_type = (sparse.SparseArray,)
 except ImportError:  # pragma: no cover
     sparse_array_type = ()
+
+try:
+    # solely for isinstance checks
+    import cupy
+
+    cupy_array_type = (cupy.ndarray,)
+except ImportError:  # pragma: no cover
+    cupy_array_type = ()
