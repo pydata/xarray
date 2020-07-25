@@ -2251,6 +2251,7 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@pytest.mark.xfail(reason="Failing on upstream tests asof 2020-07-25")
 @requires_nc_time_axis
 @requires_cftime
 class TestCFDatetimePlot(PlotTestCase):
