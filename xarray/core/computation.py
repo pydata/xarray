@@ -40,6 +40,12 @@ _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
+def _first_of_type(args, kind):
+    for arg in args:
+        if isinstance(arg, kind):
+            return arg
+
+
 class _UFuncSignature:
     """Core dimensions signature for a given function.
 
@@ -223,10 +229,7 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    for arg in args:
-        first_obj = arg
-        if isinstance(arg, DataArray):
-            break
+    first_obj = _first_of_type(args, DataArray)
 
     if keep_attrs and hasattr(first_obj, "name"):
         name = first_obj.name
@@ -372,10 +375,7 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    for arg in args:
-        first_obj = args
-        if isinstance(first_obj, Dataset):
-            break
+    first_obj = _first_of_type(args, Dataset)
 
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
@@ -568,10 +568,7 @@ def apply_variable_ufunc(
     """
     from .variable import Variable, as_compatible_data
 
-    for arg in args:
-        first_obj = arg
-        if isinstance(arg, Variable):
-            break
+    first_obj = _first_of_type(args, Variable)
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
