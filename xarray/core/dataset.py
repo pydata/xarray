@@ -4853,7 +4853,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     @staticmethod
-    def _unary_op(f, keep_attrs=False):
+    def _unary_op(f, keep_attrs=None):
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             variables = {}

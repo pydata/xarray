@@ -2470,16 +2470,17 @@ class TestDataArray:
         da = DataArray(self.va)
 
         # test defaults
+        assert (np.float64(1.0) * da).attrs == da.attrs
+        assert np.abs(da).attrs == da.attrs
+        # not sure about the next two
         assert da.clip(0, 1).attrs != da.attrs
-        assert (np.float64(1.0) * da).attrs != da.attrs
-        assert np.abs(da).attrs != da.attrs
         assert abs(da).attrs != da.attrs
 
-        with set_options(keep_attrs=True):
-            assert da.clip(0, 1).attrs == da.attrs
-            assert (np.float64(1.0) * da).attrs == da.attrs
-            assert np.abs(da).attrs == da.attrs
-            assert abs(da).attrs == da.attrs
+        with set_options(keep_attrs=False):
+            assert da.clip(0, 1).attrs != da.attrs
+            assert (np.float64(1.0) * da).attrs != da.attrs
+            assert np.abs(da).attrs != da.attrs
+            assert abs(da).attrs != da.attrs
 
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")

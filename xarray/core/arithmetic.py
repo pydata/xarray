@@ -77,7 +77,7 @@ class SupportsArithmetic:
             dataset_fill_value=np.nan,
             kwargs=kwargs,
             dask="allowed",
-            keep_attrs=_get_keep_attrs(default=False),
+            keep_attrs=_get_keep_attrs(default=True),
         )
 
     # this has no runtime function - these are listed so IDEs know these

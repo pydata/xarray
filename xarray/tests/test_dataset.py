@@ -4388,6 +4388,23 @@ class TestDataset:
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
 
+    def test_propagate_attrs(self):
+
+        da = DataArray(range(5), name="a", attrs={"attr": "da"})
+        ds = Dataset({"a": da}, attrs={"attr": "ds"})
+
+        # test defaults
+        assert ds.clip(0, 1).attrs == ds.attrs
+        assert (np.float64(1.0) * ds).attrs == ds.attrs
+        assert np.abs(ds).attrs == ds.attrs
+        assert abs(ds).attrs == ds.attrs
+
+        with set_options(keep_attrs=False):
+            assert ds.clip(0, 1).attrs != ds.attrs
+            assert (np.float64(1.0) * ds).attrs != ds.attrs
+            assert np.abs(ds).attrs != ds.attrs
+            assert abs(ds).attrs != ds.attrs
+
     def test_where(self):
         ds = Dataset({"a": ("x", range(5))})
         expected = Dataset({"a": ("x", [np.nan, np.nan, 2, 3, 4])})
