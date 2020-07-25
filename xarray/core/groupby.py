@@ -310,7 +310,8 @@ class GroupBy(SupportsArithmetic):
             if not hashable(group):
                 raise TypeError(
                     "`group` must be an xarray.DataArray or the "
-                    "name of an xarray variable or dimension"
+                    "name of an xarray variable or dimension."
+                    f"Received {group!r} instead."
                 )
             group = obj[group]
             if len(group) == 0:
