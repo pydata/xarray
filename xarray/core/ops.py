@@ -90,12 +90,7 @@ Reduce this {cls}'s data by applying `{name}` along some dimension(s).
 
 Parameters
 ----------
-{extra_args}
-skipna : bool, optional
-    If True, skip missing values (as marked by NaN). By default, only
-    skips missing values for float dtypes; other dtypes either do not
-    have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64).{min_count_docs}
+{extra_args}{skip_na_docs}{min_count_docs}
 keep_attrs : bool, optional
     If True, the attributes (`attrs`) will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -110,6 +105,13 @@ reduced : {cls}
     New {cls} object with `{name}` applied to its data and the
     indicated dimension(s) removed.
 """
+
+_SKIPNA_DOCSTRING = """
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64)."""
 
 _MINCOUNT_DOCSTRING = """
 min_count : int, default None
@@ -260,6 +262,7 @@ def inject_reduce_methods(cls):
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, "numeric_only", False)
         available_min_count = getattr(f, "available_min_count", False)
+        skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
         min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
 
         func = cls._reduce_method(f, include_skipna, numeric_only)
@@ -268,6 +271,7 @@ def inject_reduce_methods(cls):
             name=name,
             cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring.format(name=name),
+            skip_na_docs=skip_na_docs,
             min_count_docs=min_count_docs,
         )
         setattr(cls, name, func)
