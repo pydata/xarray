@@ -557,9 +557,12 @@
    CFTimeIndex.any
    CFTimeIndex.append
    CFTimeIndex.argsort
+   CFTimeIndex.argmax
+   CFTimeIndex.argmin
    CFTimeIndex.asof
    CFTimeIndex.asof_locs
    CFTimeIndex.astype
+   CFTimeIndex.calendar
    CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
