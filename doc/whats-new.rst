@@ -85,7 +85,7 @@ Breaking changes
   <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
-- The old :py:func:`auto_combine` function has now been removed in
+- The old ``auto_combine`` function has now been removed in
   favour of the :py:func:`combine_by_coords` and
   :py:func:`combine_nested` functions. This also means that
   the default behaviour of :py:func:`open_mfdataset` has changed to use
@@ -99,7 +99,7 @@ New Features
 ~~~~~~~~~~~~
 - :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
   sequences of 'dim' arguments, and if a sequence is passed return a dict
-  (which can be passed to :py:meth:`isel` to get the value of the minimum) of
+  (which can be passed to :py:meth:`DataArray.isel` to get the value of the minimum) of
   the indices for each dimension of the minimum or maximum of a DataArray.
   (:pull:`3936`)
   By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
@@ -1104,7 +1104,7 @@ New functions/methods
   ``combine_by_coords`` to combine datasets along multiple dimensions, by
   specifying the argument ``combine='nested'`` or ``combine='by_coords'``.
 
-  The older function :py:func:`~xarray.auto_combine` has been deprecated,
+  The older function ``auto_combine`` has been deprecated,
   because its functionality has been subsumed by the new functions.
   To avoid FutureWarnings switch to using ``combine_nested`` or
   ``combine_by_coords``, (or set the ``combine`` argument in

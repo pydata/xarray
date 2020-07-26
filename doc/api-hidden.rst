@@ -538,6 +538,16 @@
    ufuncs.tanh
    ufuncs.trunc
 
+   plot.plot
+   plot.line
+   plot.step
+   plot.hist
+   plot.contour
+   plot.contourf
+   plot.imshow
+   plot.pcolormesh
+   plot.scatter
+
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles
    plot.FacetGrid.set_ticks
