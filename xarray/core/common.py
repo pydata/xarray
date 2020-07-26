@@ -1452,7 +1452,7 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Returns
     -------
-    out : same as object
+    out
         New object of zeros with the same shape and type as other.
 
     Examples

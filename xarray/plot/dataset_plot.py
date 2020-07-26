@@ -212,14 +212,16 @@ def _dsplot(plotfunc):
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : matplotlib colormap name or object, optional
-        The mapping from data values to color space. If not provided, this
-        will be either be ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
-        color palette. If ``cmap`` is seaborn color palette and the plot type
-        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
-    colors : discrete colors to plot, optional
+    cmap : str or matplotlib.colors.Colormap, optional
+        The mapping from data values to color space. Either a
+        matplotlib colormap name or object. If not provided, this will
+        be either ``viridis`` (if the function infers a sequential
+        dataset) or ``RdBu_r`` (if the function infers a diverging
+        dataset).  When `Seaborn` is installed, ``cmap`` may also be a
+        `seaborn` color palette. If ``cmap`` is seaborn color palette
+        and the plot type is not ``contour`` or ``contourf``, ``levels``
+        must also be specified.
+    colors : color-like or list of color-like, optional
         A single color or a list of colors. If the plot type is not ``contour``
         or ``contourf``, the ``levels`` argument is required.
     center : float, optional

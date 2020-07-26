@@ -120,13 +120,17 @@ napoleon_type_aliases = {
     "dict_like": ":term:`dict-like <mapping>`",
     "dict-like": ":term:`dict-like <mapping>`",
     "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
     # numpy terms
     "array_like": ":term:`array_like`",
     "array-like": ":term:`array-like <array_like>`",
     # "scalar": ":term:`scalar`",
     "array": ":term:`array`",
+    # matplotlib terms
+    "color-like": ":py:func:`is_color_like`",
     # objects without namespace
     "ndarray": "~numpy.ndarray",
+    "dtype": "~numpy.dtype",
     "ComplexWarning": "~numpy.ComplexWarning",
     "Path": "~pathlib.Path",
 }
