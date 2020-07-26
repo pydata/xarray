@@ -127,7 +127,7 @@ napoleon_type_aliases = {
     "array": ":term:`array`",
     # objects without namespace
     "ndarray": "~numpy.ndarray",
-    "ComplexWarning": "",
+    "ComplexWarning": "~numpy.ComplexWarning",
     "Path": "~pathlib.Path",
 }
 
