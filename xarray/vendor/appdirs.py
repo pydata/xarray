@@ -519,6 +519,7 @@ def _get_win_folder_with_ctypes(csidl_name):
 
 def _get_win_folder_with_jna(csidl_name):
     import array
+
     from com.sun import jna
     from com.sun.jna.platform import win32
 
