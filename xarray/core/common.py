@@ -1011,7 +1011,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
             Side of each interval to treat as closed.
-        label : 'left or 'right', optional
+        label : 'left' or 'right', optional
             Side of each interval to use for labeling.
         base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
