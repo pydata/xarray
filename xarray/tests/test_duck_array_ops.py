@@ -36,6 +36,7 @@ from . import (
     raises_regex,
     requires_cftime,
     requires_dask,
+    requires_scipy,
 )
 
 
@@ -764,6 +765,7 @@ def test_timedelta_to_numeric(td):
     assert isinstance(out, float)
 
 
+@requires_scipy
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("skipna", [True, False])
 def test_least_squares(use_dask, skipna):
