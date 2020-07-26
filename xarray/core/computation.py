@@ -1414,22 +1414,24 @@ def where(cond, x, y):
 
     Performs xarray-like broadcasting across input arguments.
 
+    All dimension coordinates on `x` and `y`  must be aligned with each
+    other and with `cond`.
+
+
     Parameters
     ----------
-    cond : scalar, array, Variable, DataArray or Dataset with boolean dtype
+    cond : scalar, array, Variable, DataArray or Dataset
         When True, return values from `x`, otherwise returns values from `y`.
     x : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
 
-    All dimension coordinates on these objects must be aligned with each
-    other and with `cond`.
-
     Returns
     -------
-    In priority order: Dataset, DataArray, Variable or array, whichever
-    type appears as an input argument.
+    Dataset, DataArray, Variable or array
+        In priority order: Dataset, DataArray, Variable or array, whichever
+        type appears as an input argument.
 
     Examples
     --------

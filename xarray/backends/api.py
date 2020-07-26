@@ -1144,7 +1144,7 @@ def save_mfdataset(
     ----------
     datasets : list of xarray.Dataset
         List of datasets to save.
-    paths : list of str or list of Paths
+    paths : list of str or list of Path
         List of paths to which to save each corresponding dataset.
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
@@ -1180,7 +1180,7 @@ def save_mfdataset(
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
         See `Dataset.to_netcdf` for additional information.
-    compute: boolean
+    compute: bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
 

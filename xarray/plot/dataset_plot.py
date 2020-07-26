@@ -170,14 +170,14 @@ def _dsplot(plotfunc):
     ----------
 
     ds : Dataset
-    x, y : string
+    x, y : str
         Variable names for x, y axis.
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
         Can be either 'discrete' (legend) or 'continuous' (color bar).
-    markersize: str, optional (scatter only)
-        Variably by which to vary size of scattered points
+    markersize: str, optional
+        scatter only. Variable by which to vary size of scattered points.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
     add_guide: bool, optional
@@ -185,13 +185,13 @@ def _dsplot(plotfunc):
             - for "discrete", build a legend.
               This is the default for non-numeric `hue` variables.
             - for "continuous",  build a colorbar
-    row : string, optional
+    row : str, optional
         If passed, make row faceted plots on this dimension name
-    col : string, optional
+    col : str, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes, optional
+    ax : matplotlib.axes.Axes, optional
         If None, uses the current axis. Not applicable when using facets.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies

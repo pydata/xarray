@@ -1321,7 +1321,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
     Parameters
     ----------
-    other : DataArray, Dataset, or Variable
+    other : DataArray, Dataset or Variable
         The reference object in input
     fill_value : scalar
         Value to fill the new object with before returning it.
@@ -1445,7 +1445,7 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Parameters
     ----------
-    other : DataArray, Dataset, or Variable
+    other : DataArray, Dataset or Variable
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
