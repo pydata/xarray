@@ -85,7 +85,7 @@ infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
 
 With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
 the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
-:py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
+``dt`` accessor for a :py:class:`~xarray.DataArray`
 using the same formatting as the standard `datetime.strftime`_ convention .
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
