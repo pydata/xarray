@@ -111,6 +111,25 @@ autodoc_typehints = "none"
 
 napoleon_use_param = True
 napoleon_use_rtype = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "hashable": ":term:`hashable`",
+    "iterable": ":term:`iterable`",
+    "callable": ":term:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "mapping": ":term:`mapping`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    # "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    # objects without namespace
+    "ndarray": "~numpy.ndarray",
+    "ComplexWarning": "",
+    "Path": "~pathlib.Path",
+}
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
