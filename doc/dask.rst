@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _dask:
 
 Parallel computing with Dask
