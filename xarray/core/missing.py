@@ -739,11 +739,6 @@ def interp_func(var, x, new_x, method, kwargs):
                 drop_axis=drop_axis,
             )
 
-        if method in ["quadratic", "cubic"]:
-            raise NotImplementedError(
-                "Only constant or linear interpolation are available in a chunked direction"
-            )
-
         for _x in new_x:
             if sum([s > 1 for s in _x.shape]) > 1:
                 raise NotImplementedError(
@@ -808,7 +803,8 @@ def interp_func(var, x, new_x, method, kwargs):
         )
 
         # duplicate the ghost cells of the array in the interpolated dimensions
-        var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst)
+        depth = {"quadratic": 2, "cubic": 3}.get(method, 1)
+        var, x, var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst, depth=depth)
 
         # compute final chunks
         total_chunks = _compute_chunks(x, new_x)
@@ -917,19 +913,31 @@ def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs
     return _interpnd(var, old_x, new_x, interp_func, interp_kwargs)
 
 
-def _add_interp_ghost(var, x, nconst: int):
+def _add_interp_ghost(var, x, nconst: int, depth=1):
     """ Duplicate the ghost cells of the array (values and coordinates)"""
     import dask.array as da
 
     bnd = {i: "none" for i in range(len(var.shape))}
-    depth = {i: 0 if i < nconst else 1 for i in range(len(var.shape))}
+    depths = {i: 0 if i < nconst else depth for i in range(len(var.shape))}
 
-    var_with_ghost = da.overlap.overlap(var, depth=depth, boundary=bnd)
+    minchunk = min((min(chunks) for chunks in var.chunks[nconst:]))
+    if minchunk < depth:
+        warnings.warn(
+                "Chunks are too small to interpolate, rechunking.",
+                da.PerformanceWarning)
+        var = var.rechunk()
+        # rechunks x
+        x = tuple(
+                _x.rechunk(chunks)
+                for _x, chunks in zip(x, var.chunks[nconst:])
+                )
+
+    var_with_ghost = da.overlap.overlap(var, depth=depths, boundary=bnd)
 
     x_with_ghost = tuple(
-        da.overlap.overlap(_x, depth={0: 1}, boundary={0: "none"}) for _x in x
+        da.overlap.overlap(_x, depth={0: depth}, boundary={0: "none"}) for _x in x
     )
-    return var_with_ghost, x_with_ghost
+    return var, x, var_with_ghost, x_with_ghost
 
 
 def _compute_chunks(x, new_x):
