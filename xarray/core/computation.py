@@ -27,7 +27,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 

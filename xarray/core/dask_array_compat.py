@@ -4,16 +4,14 @@ from typing import Iterable
 
 import numpy as np
 
-from .utils import is_array_like
+from .pycompat import is_duck_dask_array
 
 try:
     import dask.array as da
     from dask import __version__ as dask_version
-    from dask.base import is_dask_collection
 except ImportError:
     dask_version = "0.0.0"
     da = None
-    is_dask_collection = lambda _: False
 
 if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
     meta_from_array = da.utils.meta_from_array
@@ -130,10 +128,6 @@ def _validate_pad_output_shape(input_shape, pad_width, output_shape):
             "your DataArray/Dataset to one backed by a numpy array by calling the `compute()` method."
             "See: https://github.com/dask/dask/issues/5303"
         )
-
-
-def is_duck_dask_array(x):
-    return is_array_like(x) and is_dask_collection(x)
 
 
 def pad(array, pad_width, mode="constant", **kwargs):

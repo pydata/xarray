@@ -23,7 +23,7 @@ from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 

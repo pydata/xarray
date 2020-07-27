@@ -1,8 +1,8 @@
 import numpy as np
 
 from . import dtypes, nputils, utils
-from .pycompat import dask_array_type
 from .duck_array_ops import _dask_or_eager_func, count, fillna, isnull, where_method
+from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array

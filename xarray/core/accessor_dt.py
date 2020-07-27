@@ -6,7 +6,7 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import is_duck_dask_array
 
 
 def _season_from_months(months):

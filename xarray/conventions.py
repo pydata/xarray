@@ -8,7 +8,7 @@ from .coding import strings, times, variables
 from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
-from .core.dask_array_compat import is_duck_dask_array
+from .core.pycompat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
 
 

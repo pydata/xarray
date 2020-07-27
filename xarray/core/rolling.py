@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import is_duck_dask_array
 
 try:
     import bottleneck

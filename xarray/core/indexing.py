@@ -11,8 +11,12 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import integer_types, sparse_array_type, dask_array_type
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import (
+    integer_types,
+    sparse_array_type,
+    dask_array_type,
+    is_duck_dask_array,
+)
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 

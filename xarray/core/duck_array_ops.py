@@ -17,6 +17,7 @@ from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
 
 try:
     import dask.array as dask_array
+    from dask.base import tokenize
 except ImportError:
     dask_array = None  # type: ignore
 
@@ -176,10 +177,10 @@ def as_shared_dtype(scalars_or_arrays):
 
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
-       Returns True when arr1, arr2 identical or their dask names are equal.
+       Returns True when arr1, arr2 identical or their dask tokens are equal.
        Returns False when shapes are not equal.
        Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
-       or their dask names are not equal
+       or their dask tokens are not equal
     """
     if arr1 is arr2:
         return True
@@ -188,8 +189,8 @@ def lazy_array_equiv(arr1, arr2):
     if arr1.shape != arr2.shape:
         return False
     if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
-        # GH3068
-        if arr1.name == arr2.name:
+        # GH3068, GH4221
+        if tokenize(arr1) == tokenize(arr2):
             return True
         else:
             return None

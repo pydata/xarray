@@ -1,7 +1,7 @@
 import numpy as np
 
 from .pdcompat import count_not_none
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import is_duck_dask_array
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):

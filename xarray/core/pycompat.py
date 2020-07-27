@@ -1,14 +1,24 @@
 import numpy as np
 
+from .utils import is_array_like
+
 integer_types = (int, np.integer)
 
 try:
-    # solely for isinstance checks
     import dask.array
+    from dask.base import is_dask_collection
 
+    # solely for isinstance checks
     dask_array_type = (dask.array.Array,)
+
+    def is_duck_dask_array(x):
+        return is_array_like(x) and is_dask_collection(x)
+
+
 except ImportError:  # pragma: no cover
     dask_array_type = ()
+    is_duck_dask_array = lambda _: False
+    is_dask_collection = lambda _: False
 
 try:
     # solely for isinstance checks

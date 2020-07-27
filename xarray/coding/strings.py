@@ -4,7 +4,7 @@ from functools import partial
 import numpy as np
 
 from ..core import indexing
-from ..core.dask_array_compat import is_duck_dask_array
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     VariableCoder,

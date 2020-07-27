@@ -33,7 +33,12 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import cupy_array_type, dask_array_type, integer_types, is_duck_dask_array
+from .pycompat import (
+    cupy_array_type,
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+)
 from .utils import (
     OrderedSet,
     _default,

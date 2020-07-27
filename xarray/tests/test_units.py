@@ -9,7 +9,13 @@ import xarray as xr
 from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
+from . import (
+    assert_allclose,
+    assert_duckarray_allclose,
+    assert_equal,
+    assert_identical,
+    requires_dask,
+)
 from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
@@ -2231,6 +2237,21 @@ class TestVariable:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
+    @requires_dask
+    @pytest.mark.xfail
+    def test_tokenize_duck_dask_array(self, dtype):
+        import dask
+
+        array = dask.array.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype)
+        q = unit_registry.Quantity(array, unit_registry.m)
+        variable = xr.Variable(("x", "y"), q)
+
+        token = dask.base.tokenize(variable)
+        post_op = variable + 5 * unit_registry.m
+
+        assert dask.base.tokenize(variable) != dask.base.tokenize(post_op)
+        assert dask.base.tokenize(variable) == token
+
 
 class TestDataArray:
     @pytest.mark.parametrize(
@@ -3841,6 +3862,22 @@ class TestDataArray:
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
+
+    @requires_dask
+    @pytest.mark.xfail
+    def test_tokenize_duck_dask_array(self, dtype):
+        import dask
+
+        array = dask.array.linspace(0, 5, 10).astype(dtype)
+        time = pd.date_range("10-09-2010", periods=len(array), freq="1y")
+        q = unit_registry.Quantity(array, unit_registry.m)
+        data_array = xr.DataArray(data=q, coords={"time": time}, dims="time")
+
+        token = dask.base.tokenize(data_array)
+        post_op = data_array + 5 * unit_registry.m
+
+        assert dask.base.tokenize(data_array) != dask.base.tokenize(post_op)
+        assert dask.base.tokenize(data_array) == token
 
 
 class TestDataset:

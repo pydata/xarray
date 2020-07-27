@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
-from ..core.dask_array_compat import is_duck_dask_array
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 
 
