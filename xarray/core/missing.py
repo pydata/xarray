@@ -11,8 +11,8 @@ from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, timedelta_to_numeric
-from .pycompat import is_duck_dask_array
 from .options import _get_keep_attrs
+from .pycompat import is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
