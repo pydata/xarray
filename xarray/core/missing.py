@@ -784,6 +784,10 @@ def interp_func(var, x, new_x, method, kwargs):
             (np.any(np.diff(_x.data) < 0) for _x in new_x_float if _x.size > 1)
         )
         if unsorted:
+            warnings.warn(
+                    "Interpolating to unsorted destination will rechunk the result",
+                    da.PerformanceWarning)
+
             sorted_idx = {
                 dim: _x.data.argsort()
                 for dim, _x in zip(interp_dims, new_x_float)
@@ -843,8 +847,10 @@ def interp_func(var, x, new_x, method, kwargs):
             # use Variable for isel
 
             res = Variable(data=res, dims=final_dims.values())
-            for dim, idx in sorted_idx.items():
-                res = res.isel({final_dims[dim]: np.argsort(idx)})
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "out-of-order", da.PerformanceWarning)
+                for dim, idx in sorted_idx.items():
+                    res = res.isel({final_dims[dim]: np.argsort(idx)})
 
             # rechunk because out-of-order isel generates a lot of chunks
             res = res.data.rechunk()
