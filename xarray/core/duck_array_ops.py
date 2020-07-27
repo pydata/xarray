@@ -6,7 +6,6 @@ accept or return xarray objects.
 import contextlib
 import inspect
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -14,21 +13,12 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import dask_array_type
-from .dask_array_compat import is_duck_dask_array
+from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
 
 try:
     import dask.array as dask_array
 except ImportError:
     dask_array = None  # type: ignore
-
-# TODO: remove after we stop supporting dask < 2.9.1
-try:
-    import dask
-
-    dask_version = dask.__version__
-except ImportError:
-    dask_version = None
 
 
 def _dask_or_eager_func(
@@ -159,17 +149,23 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def asarray(data):
+def asarray(data, xp=np):
     return (
         data
         if (is_duck_dask_array(data) or hasattr(data, "__array_function__"))
-        else np.asarray(data)
+        else xp.asarray(data)
     )
 
 
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
-    arrays = [asarray(x) for x in scalars_or_arrays]
+
+    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+        import cupy as cp
+
+        arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
+    else:
+        arrays = [asarray(x) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
     # get handled properly.
     # Note that result_type() safely gets the dtype from dask arrays without
@@ -208,16 +204,6 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
     lazy_equiv = lazy_array_equiv(arr1, arr2)
     if lazy_equiv is None:
-        # TODO: remove after we require dask >= 2.9.1
-        sufficient_dask_version = (
-            dask_version is not None and LooseVersion(dask_version) >= "2.9.1"
-        )
-        if not sufficient_dask_version and any(
-            is_duck_dask_array(arr) for arr in [arr1, arr2]
-        ):
-            arr1 = np.array(arr1)
-            arr2 = np.array(arr2)
-
         return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
     else:
         return lazy_equiv

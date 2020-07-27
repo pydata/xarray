@@ -48,3 +48,13 @@ def test_check_data_stays_on_gpu(toy_weather_data):
     """Perform some operations and check the data stays on the GPU."""
     freeze = (toy_weather_data["tmin"] <= 0).groupby("time.month").mean("time")
     assert isinstance(freeze.data, cp.core.core.ndarray)
+
+
+def test_where():
+    from xarray.core.duck_array_ops import where
+
+    data = cp.zeros(10)
+
+    output = where(data < 1, 1, data).all()
+    assert output
+    assert isinstance(output, cp.ndarray)
