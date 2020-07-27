@@ -780,8 +780,9 @@ def interp_func(var, x, new_x, method, kwargs):
         )
         if unsorted:
             warnings.warn(
-                    "Interpolating to unsorted destination will rechunk the result",
-                    da.PerformanceWarning)
+                "Interpolating to unsorted destination will rechunk the result",
+                da.PerformanceWarning,
+            )
 
             sorted_idx = {
                 dim: _x.data.argsort()
@@ -804,7 +805,9 @@ def interp_func(var, x, new_x, method, kwargs):
 
         # duplicate the ghost cells of the array in the interpolated dimensions
         depth = {"quadratic": 2, "cubic": 3}.get(method, 1)
-        var, x, var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst, depth=depth)
+        var, x, var_with_ghost, x_with_ghost = _add_interp_ghost(
+            var, x, nconst, depth=depth
+        )
 
         # compute final chunks
         total_chunks = _compute_chunks(x, new_x)
@@ -923,14 +926,11 @@ def _add_interp_ghost(var, x, nconst: int, depth=1):
     minchunk = min((min(chunks) for chunks in var.chunks[nconst:]))
     if minchunk < depth:
         warnings.warn(
-                "Chunks are too small to interpolate, rechunking.",
-                da.PerformanceWarning)
+            "Chunks are too small to interpolate, rechunking.", da.PerformanceWarning
+        )
         var = var.rechunk()
         # rechunks x
-        x = tuple(
-                _x.rechunk(chunks)
-                for _x, chunks in zip(x, var.chunks[nconst:])
-                )
+        x = tuple(_x.rechunk(chunks) for _x, chunks in zip(x, var.chunks[nconst:]))
 
     var_with_ghost = da.overlap.overlap(var, depth=depths, boundary=bnd)
 
@@ -963,7 +963,7 @@ def _compute_chunks(x, new_x):
             # number of points in line_x before the end of the current chunck
             n_end = (line_x <= x[dim][chunk_end]).sum()
             # number of points in line_x before the start of the next chunck
-            n_start = (line_x <= x[dim][chunk_end+1]).sum()
+            n_start = (line_x <= x[dim][chunk_end + 1]).sum()
 
             # put half of the points between two consecutive chunk
             # on the left and the other half on the right
