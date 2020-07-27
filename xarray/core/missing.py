@@ -811,7 +811,7 @@ def interp_func(var, x, new_x, method, kwargs):
         var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst)
 
         # compute final chunks
-        total_chunks = _compute_chunks(x, x_with_ghost, new_x)
+        total_chunks = _compute_chunks(x, new_x)
         final_chunks = var.chunks[: -len(x)] + tuple(total_chunks)
 
         # chunks new_x
@@ -932,7 +932,7 @@ def _add_interp_ghost(var, x, nconst: int):
     return var_with_ghost, x_with_ghost
 
 
-def _compute_chunks(x, x_with_ghost, new_x):
+def _compute_chunks(x, new_x):
     """Compute equilibrated chunks of new_x
 
     This routine assumes that x, x_with_ghost and new_x are sorted
@@ -940,12 +940,9 @@ def _compute_chunks(x, x_with_ghost, new_x):
     TODO: This only works if new_x is a set of 1d coordinate
           more general function is needed for advanced interpolation with chunked dimension
     """
-    chunks_end = [np.cumsum(sizes) - 1 for _x in x for sizes in _x.chunks]
-    chunks_end_with_ghost = [
-        np.cumsum(sizes) - 1 for _x in x_with_ghost for sizes in _x.chunks
-    ]
+    chunks_ends = [np.cumsum(sizes) - 1 for _x in x for sizes in _x.chunks]
     total_chunks = []
-    for dim, ce in enumerate(zip(chunks_end, chunks_end_with_ghost)):
+    for dim, chunk_ends in enumerate(chunks_ends):
 
         # select one line along dim
         line_x = new_x[dim].data[
@@ -953,18 +950,16 @@ def _compute_chunks(x, x_with_ghost, new_x):
         ]
 
         # the number of chunk of the output must be the same as the input (map_blocks)
-        new_x_ends = np.copy(ce[0])
-        for i, (iend, iend_with_ghost) in enumerate(list(zip(*ce))[:-1]):
+        new_x_ends = np.copy(chunk_ends)
+        for i, chunk_end in enumerate(chunk_ends[:-1]):
             # number of points in line_x before the end of the current chunck
-            # with and without overlap
-            n_ghost = (line_x <= x_with_ghost[dim][iend_with_ghost]).sum()
-            n_no_ghost = (line_x <= x[dim][iend]).sum()
+            n_end = (line_x <= x[dim][chunk_end]).sum()
+            # number of points in line_x before the start of the next chunck
+            n_start = (line_x <= x[dim][chunk_end+1]).sum()
 
-            # put half of the points inside the overlap on the left
-            # and the other half on the right
-            n_plus_half = np.ceil(0.5 * (n_no_ghost + n_ghost)).astype(int)
-
-            new_x_ends[i] = n_plus_half
+            # put half of the points between two consecutive chunk
+            # on the left and the other half on the right
+            new_x_ends[i] = np.ceil(0.5 * (n_end + n_start)).astype(int)
 
         # do not forget extra points at the end
         new_x_ends[-1] = len(line_x)
