@@ -847,7 +847,11 @@ def interp_func(var, x, new_x, method, kwargs):
 
             res = Variable(data=res, dims=final_dims.values())
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", "out-of-order", da.PerformanceWarning)
+                warnings.filterwarnings(
+                    "ignore",
+                    r"Slicing with an out-of-order index is generating \d+ times more chunks",
+                    da.PerformanceWarning,
+                )
                 for dim, idx in sorted_idx.items():
                     res = res.isel({final_dims[dim]: np.argsort(idx)})
 
