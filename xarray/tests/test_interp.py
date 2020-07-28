@@ -749,6 +749,7 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
         * np.exp(z),
         coords=[("x", x), ("y", y), ("z", z)],
     )
+    kwargs = {"fill_value": "extrapolate"}
 
     # choose the data dimensions
     for data_dims in permutations(da.dims, data_ndim):
@@ -801,8 +802,8 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
                         da.interp(method=method, **dest)
                     return
 
-                actual = da.interp(method=method, **dest)
-                expected = da.compute().interp(method=method, **dest)
+                actual = da.interp(method=method, **dest, kwargs=kwargs)
+                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
                 assert_allclose(actual, expected)
                 break
