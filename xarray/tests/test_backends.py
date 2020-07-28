@@ -1566,11 +1566,10 @@ class ZarrBase(CFEncodedBase):
 
     def test_with_chunkstore(self):
         expected = create_test_data()
-        with self.create_zarr_target() as store_target, \
-                self.create_zarr_target() as chunk_store:
-            save_kwargs = {'chunk_store': chunk_store}
+        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+            save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
-            open_kwargs = {'chunk_store': chunk_store}
+            open_kwargs = {"chunk_store": chunk_store}
             with self.open(store_target, **open_kwargs) as ds:
                 assert_equal(ds, expected)
 

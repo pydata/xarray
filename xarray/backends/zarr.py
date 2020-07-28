@@ -282,7 +282,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if chunk_store:
-            open_kwargs['chunk_store'] = chunk_store
+            open_kwargs["chunk_store"] = chunk_store
 
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
@@ -651,7 +651,7 @@ def open_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
-        chunk_store=chunk_store
+        chunk_store=chunk_store,
     )
     ds = maybe_decode_store(zarr_store)
 

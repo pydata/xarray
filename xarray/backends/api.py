@@ -1349,7 +1349,7 @@ def to_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidate_on_close=consolidated,
-        chunk_store=chunk_store
+        chunk_store=chunk_store,
     )
     zstore.append_dim = append_dim
     writer = ArrayWriter()
