@@ -2,17 +2,20 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 4.3.21-2
+    rev: 5.1.0
     hooks:
       - id: isort
-        files: .+\.py$
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
     rev: stable
     hooks:
       - id: black
+  - repo: https://github.com/keewis/blackdoc
+    rev: stable
+    hooks:
+      - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.7.9
+    rev: 3.8.3
     hooks:
       - id: flake8
   - repo: https://github.com/pre-commit/mirrors-mypy

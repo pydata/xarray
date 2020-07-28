@@ -862,8 +862,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
-        Otherwise, a shallow copy is made, so each variable in the new
-        array's dataset is also a variable in this array's dataset.
+        Otherwise, a shallow copy is made, and the returned data array's
+        values are a new view of this data array's values.
 
         Use `data` to create a new object with the same structure as
         original but entirely new data.
@@ -1961,7 +1961,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # pull variables out of datarray
         data_dict = {}
         for k in variables:
-            data_dict[k] = self.sel({variable_dim: k}).squeeze(drop=True)
+            data_dict[k] = self.sel({variable_dim: k}, drop=True).squeeze(drop=True)
 
         # unstacked dataset
         return Dataset(data_dict)
@@ -3818,6 +3818,209 @@ class DataArray(AbstractArray, DataWithCoords):
             fill_value=fill_value,
             keep_attrs=keep_attrs,
         )
+
+    def argmin(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
+        """Index or indices of the minimum of the DataArray over one or more dimensions.
+
+        If a sequence is passed to 'dim', then result returned as dict of DataArrays,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a DataArray with dtype int.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : DataArray or dict of DataArray
+
+        See also
+        --------
+        Variable.argmin, DataArray.idxmin
+
+        Examples
+        --------
+        >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
+        >>> array.min()
+        <xarray.DataArray ()>
+        array(-1)
+        >>> array.argmin()
+        <xarray.DataArray ()>
+        array(2)
+        >>> array.argmin(...)
+        {'x': <xarray.DataArray ()>
+        array(2)}
+        >>> array.isel(array.argmin(...))
+        array(-1)
+
+        >>> array = xr.DataArray([[[3, 2, 1], [3, 1, 2], [2, 1, 3]],
+        ...                       [[1, 3, 2], [2, -5, 1], [2, 3, 1]]],
+        ...                      dims=("x", "y", "z"))
+        >>> array.min(dim="x")
+        <xarray.DataArray (y: 3, z: 3)>
+        array([[ 1,  2,  1],
+               [ 2, -5,  1],
+               [ 2,  1,  1]])
+        Dimensions without coordinates: y, z
+        >>> array.argmin(dim="x")
+        <xarray.DataArray (y: 3, z: 3)>
+        array([[1, 0, 0],
+               [1, 1, 1],
+               [0, 0, 1]])
+        Dimensions without coordinates: y, z
+        >>> array.argmin(dim=["x"])
+        {'x': <xarray.DataArray (y: 3, z: 3)>
+        array([[1, 0, 0],
+               [1, 1, 1],
+               [0, 0, 1]])
+        Dimensions without coordinates: y, z}
+        >>> array.min(dim=("x", "z"))
+        <xarray.DataArray (y: 3)>
+        array([ 1, -5,  1])
+        Dimensions without coordinates: y
+        >>> array.argmin(dim=["x", "z"])
+        {'x': <xarray.DataArray (y: 3)>
+        array([0, 1, 0])
+        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
+        array([2, 1, 1])
+        Dimensions without coordinates: y}
+        >>> array.isel(array.argmin(dim=["x", "z"]))
+        <xarray.DataArray (y: 3)>
+        array([ 1, -5,  1])
+        Dimensions without coordinates: y
+        """
+        result = self.variable.argmin(dim, axis, keep_attrs, skipna)
+        if isinstance(result, dict):
+            return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
+        else:
+            return self._replace_maybe_drop_dims(result)
+
+    def argmax(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["DataArray", Dict[Hashable, "DataArray"]]:
+        """Index or indices of the maximum of the DataArray over one or more dimensions.
+
+        If a sequence is passed to 'dim', then result returned as dict of DataArrays,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a DataArray with dtype int.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : DataArray or dict of DataArray
+
+        See also
+        --------
+        Variable.argmax, DataArray.idxmax
+
+        Examples
+        --------
+        >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
+        >>> array.max()
+        <xarray.DataArray ()>
+        array(3)
+        >>> array.argmax()
+        <xarray.DataArray ()>
+        array(3)
+        >>> array.argmax(...)
+        {'x': <xarray.DataArray ()>
+        array(3)}
+        >>> array.isel(array.argmax(...))
+        <xarray.DataArray ()>
+        array(3)
+
+        >>> array = xr.DataArray([[[3, 2, 1], [3, 1, 2], [2, 1, 3]],
+        ...                       [[1, 3, 2], [2, 5, 1], [2, 3, 1]]],
+        ...                      dims=("x", "y", "z"))
+        >>> array.max(dim="x")
+        <xarray.DataArray (y: 3, z: 3)>
+        array([[3, 3, 2],
+               [3, 5, 2],
+               [2, 3, 3]])
+        Dimensions without coordinates: y, z
+        >>> array.argmax(dim="x")
+        <xarray.DataArray (y: 3, z: 3)>
+        array([[0, 1, 1],
+               [0, 1, 0],
+               [0, 1, 0]])
+        Dimensions without coordinates: y, z
+        >>> array.argmax(dim=["x"])
+        {'x': <xarray.DataArray (y: 3, z: 3)>
+        array([[0, 1, 1],
+               [0, 1, 0],
+               [0, 1, 0]])
+        Dimensions without coordinates: y, z}
+        >>> array.max(dim=("x", "z"))
+        <xarray.DataArray (y: 3)>
+        array([3, 5, 3])
+        Dimensions without coordinates: y
+        >>> array.argmax(dim=["x", "z"])
+        {'x': <xarray.DataArray (y: 3)>
+        array([0, 1, 0])
+        Dimensions without coordinates: y, 'z': <xarray.DataArray (y: 3)>
+        array([0, 1, 2])
+        Dimensions without coordinates: y}
+        >>> array.isel(array.argmax(dim=["x", "z"]))
+        <xarray.DataArray (y: 3)>
+        array([3, 5, 3])
+        Dimensions without coordinates: y
+        """
+        result = self.variable.argmax(dim, axis, keep_attrs, skipna)
+        if isinstance(result, dict):
+            return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
+        else:
+            return self._replace_maybe_drop_dims(result)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

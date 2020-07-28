@@ -622,9 +622,8 @@ def apply_variable_ufunc(
         if data.ndim != len(dims):
             raise ValueError(
                 "applied function returned data with unexpected "
-                "number of dimensions: {} vs {}, for dimensions {}".format(
-                    data.ndim, len(dims), dims
-                )
+                f"number of dimensions. Received {data.ndim} dimension(s) but "
+                f"expected {len(dims)} dimensions with names: {dims!r}"
             )
 
         var = Variable(dims, data, fastpath=True)
@@ -976,17 +975,18 @@ def apply_ufunc(
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
-    from .groupby import GroupBy
     from .dataarray import DataArray
+    from .groupby import GroupBy
     from .variable import Variable
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
     elif len(input_core_dims) != len(args):
         raise ValueError(
-            "input_core_dims must be None or a tuple with the length same to "
-            "the number of arguments. Given input_core_dims: {}, "
-            "number of args: {}.".format(input_core_dims, len(args))
+            f"input_core_dims must be None or a tuple with the length same to "
+            f"the number of arguments. "
+            f"Given {len(input_core_dims)} input_core_dims: {input_core_dims}, "
+            f" but number of args is {len(args)}."
         )
 
     if kwargs is None:
@@ -994,11 +994,17 @@ def apply_ufunc(
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
-    if exclude_dims and not exclude_dims <= signature.all_core_dims:
-        raise ValueError(
-            "each dimension in `exclude_dims` must also be a "
-            "core dimension in the function signature"
-        )
+    if exclude_dims:
+        if not isinstance(exclude_dims, set):
+            raise TypeError(
+                f"Expected exclude_dims to be a 'set'. Received '{type(exclude_dims).__name__}' instead."
+            )
+        if not exclude_dims <= signature.all_core_dims:
+            raise ValueError(
+                f"each dimension in `exclude_dims` must also be a "
+                f"core dimension in the function signature. "
+                f"Please make {(exclude_dims - signature.all_core_dims)} a core dimension"
+            )
 
     if kwargs:
         func = functools.partial(func, **kwargs)
@@ -1096,10 +1102,14 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Examples
     --------
-    >>> da_a = DataArray(np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_a = DataArray(
+    ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_a
     <xarray.DataArray (space: 3, time: 3)>
     array([[1. , 2. , 3. ],
@@ -1108,10 +1118,14 @@ def cov(da_a, da_b, dim=None, ddof=1):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_b = DataArray(
+    ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_b
     <xarray.DataArray (space: 3, time: 3)>
     array([[ 0.2,  0.4,  0.6],
@@ -1123,7 +1137,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     >>> xr.cov(da_a, da_b)
     <xarray.DataArray ()>
     array(-3.53055556)
-    >>> xr.cov(da_a, da_b, dim='time')
+    >>> xr.cov(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
     array([ 0.2, -0.5,  1.69333333])
     Coordinates:
@@ -1165,10 +1179,14 @@ def corr(da_a, da_b, dim=None):
 
     Examples
     --------
-    >>> da_a = DataArray(np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_a = DataArray(
+    ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_a
     <xarray.DataArray (space: 3, time: 3)>
     array([[1. , 2. , 3. ],
@@ -1177,10 +1195,14 @@ def corr(da_a, da_b, dim=None):
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
       * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03
-    >>> da_b = DataArray(np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
-    ...                  dims=("space", "time"),
-    ...                  coords=[('space', ['IA', 'IL', 'IN']),
-    ...                          ('time', pd.date_range("2000-01-01", freq="1D", periods=3))])
+    >>> da_b = DataArray(
+    ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),
+    ...     dims=("space", "time"),
+    ...     coords=[
+    ...         ("space", ["IA", "IL", "IN"]),
+    ...         ("time", pd.date_range("2000-01-01", freq="1D", periods=3)),
+    ...     ],
+    ... )
     >>> da_b
     <xarray.DataArray (space: 3, time: 3)>
     array([[ 0.2,  0.4,  0.6],
@@ -1192,7 +1214,7 @@ def corr(da_a, da_b, dim=None):
     >>> xr.corr(da_a, da_b)
     <xarray.DataArray ()>
     array(-0.57087777)
-    >>> xr.corr(da_a, da_b, dim='time')
+    >>> xr.corr(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
     array([ 1., -1.,  1.])
     Coordinates:
@@ -1563,7 +1585,7 @@ def _calc_idxminmax(
 
         chunks = dict(zip(array.dims, array.chunks))
         dask_coord = dask.array.from_array(array[dim].data, chunks=chunks[dim])
-        res = indx.copy(data=dask_coord[(indx.data,)])
+        res = indx.copy(data=dask_coord[indx.data.ravel()].reshape(indx.shape))
         # we need to attach back the dim name
         res.name = dim
     else:
