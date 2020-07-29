@@ -129,10 +129,18 @@ napoleon_type_aliases = {
     # matplotlib terms
     "color-like": ":py:func:`is_color_like`",
     # objects without namespace
+    "DataArray": "xarray.DataArray",
+    "Dataset": "xarray.Dataset",
     "ndarray": "~numpy.ndarray",
     "dtype": "~numpy.dtype",
     "ComplexWarning": "~numpy.ComplexWarning",
-    "Path": "~pathlib.Path",
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
 }
 
 numpydoc_class_members_toctree = True
