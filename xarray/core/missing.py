@@ -13,7 +13,7 @@ from .computation import apply_ufunc
 from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
 from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
-from .variable import IndexVariable, Variable, broadcast_variables
+from .variable import Variable, broadcast_variables
 
 
 def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
@@ -544,13 +544,6 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _single_chunk(var, axes):
-    for axis in axes:
-        if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
-            return False
-    return True
-
-
 def _localize(var, indexes_coords):
     """ Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
@@ -564,16 +557,6 @@ def _localize(var, indexes_coords):
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
-
-
-def _floatize_one_x(x):
-    """ Make x float.
-    This is particulary useful for datetime dtype.
-    x: np.ndarray
-    """
-    if _contains_datetime_like_objects(x):
-        return x._to_numeric(dtype=np.float64)
-    return x
 
 
 def _floatize_x(x, new_x):
@@ -721,146 +704,40 @@ def interp_func(var, x, new_x, method, kwargs):
     if isinstance(var, dask_array_type):
         import dask.array as da
 
-        # easyer, and allows advanced interpolation
-        if _single_chunk(var, range(var.ndim - len(x), var.ndim)):
-            chunks = var.chunks[: -len(x)] + new_x[0].shape
-            drop_axis = range(var.ndim - len(x), var.ndim)
-            new_axis = range(var.ndim - len(x), var.ndim - len(x) + new_x[0].ndim)
-            return da.map_blocks(
-                _interpnd,
-                var,
-                x,
-                new_x,
-                func,
-                kwargs,
-                dtype=var.dtype,
-                chunks=chunks,
-                new_axis=new_axis,
-                drop_axis=drop_axis,
-            )
-
-        if method in ["quadratic", "cubic"]:
-            raise ValueError(
-                "Only constant or linear interpolation are possible in a chunked direction"
-            )
-
-        for _x in new_x:
-            if sum([s > 1 for s in _x.shape]) > 1:
-                raise NotImplementedError(
-                    "Advanced interpolation is not implemented with chunked dimension"
-                )
-
-        # number of non interpolated dimensions
         nconst = var.ndim - len(x)
-        const_dims = [f"dim_{i}" for i in range(nconst)]
 
-        # list of interpolated dimensions source
-        interp_dims = [_x.name for _x in x]
+        out_ind = list(range(nconst)) + list(range(var.ndim, var.ndim + new_x[0].ndim))
+        new_axes = {
+            var.ndim + i: new_x[0].chunks[i]
+            if new_x[0].chunks is not None
+            else new_x[0].shape[i]
+            for i in range(new_x[0].ndim)
+        }
 
-        # mapping to the interpolated dimensions destination
-        # (if interpolating on a point, removes de dim)
-        final_dims = dict(
-            **{d: d for d in const_dims},
-            **{dim: _x.name for dim, _x in zip(interp_dims, new_x) if _x.size > 1},
-        )
+        # blockwise args format
+        x_arginds = [[_x, (nconst + index,)] for index, _x in enumerate(x)]
+        x_arginds = [item for pair in x_arginds for item in pair]
+        new_x_arginds = [
+            [_x, [var.ndim + index for index in range(_x.ndim)]] for _x in new_x
+        ]
+        new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        # rename new_x to correspond to source dimension
-        def rename_index(index, dim):
-            if index.size == 1:
-                # a scalar has no name
-                return index
-            return IndexVariable(
-                dims=[dim],
-                data=index,
-                attrs=index.attrs,
-                encoding=index.encoding,
-                fastpath=True,
-            )
-
-        new_x = [rename_index(_x, dim) for dim, _x in zip(interp_dims, new_x)]
-
-        new_x_float = [_floatize_one_x(_x) for _x in new_x]
-        unsorted = any(
-            (np.any(np.diff(_x.data) < 0) for _x in new_x_float if _x.size > 1)
-        )
-        if unsorted:
-            warnings.warn(
-                "Interpolating to unsorted destination will rechunk the result",
-                da.PerformanceWarning,
-            )
-
-            sorted_idx = {
-                dim: _x.data.argsort()
-                for dim, _x in zip(interp_dims, new_x_float)
-                if _x.size > 1
-            }
-
-            new_x = [
-                _x[sorted_idx[dim]] if dim in sorted_idx else _x
-                for dim, _x in zip(interp_dims, new_x)
-            ]
-        # add missing dimensions to new_x
-        new_x = tuple([_x.set_dims(interp_dims) for _x in new_x])
-
-        # chunks x
-        x = tuple(
-            da.from_array(_x, chunks=chunks)
-            for _x, chunks in zip(x, var.chunks[nconst:])
-        )
-
-        # duplicate the ghost cells of the array in the interpolated dimensions
-        var_with_ghost, x_with_ghost = _add_interp_ghost(var, x, nconst)
-
-        # compute final chunks
-        total_chunks = _compute_chunks(x, new_x)
-        final_chunks = var.chunks[: -len(x)] + tuple(total_chunks)
-
-        # chunks new_x
-        new_x = tuple(da.from_array(_x, chunks=total_chunks) for _x in new_x)
-
-        # reshape x_with_ghost
-        # TODO: remove it (see _dask_aware_interpnd)
-        x_with_ghost = da.meshgrid(*x_with_ghost, indexing="ij")
-
-        # compute on chunks
-        res = da.map_blocks(
+        return da.blockwise(
             _dask_aware_interpnd,
-            var_with_ghost,
-            *x_with_ghost,
-            *new_x,
+            out_ind,
+            var,
+            range(var.ndim),
+            *x_arginds,
+            *new_x_arginds,
+            n_x=var.ndim - nconst,
             interp_func=func,
             interp_kwargs=kwargs,
-            n_coords=len(x_with_ghost),
+            method=method,
+            concatenate=True,
+            new_axes=new_axes,
             dtype=var.dtype,
-            chunks=final_chunks,
+            meta=np.ndarray,
         )
-
-        # reshape res and remove empty chunks
-        # TODO: remove it by using drop_axis and new_axis in map_blocks
-        res = res.squeeze()
-        new_chunks = tuple(
-            [tuple([chunk for chunk in chunks if chunk > 0]) for chunks in res.chunks]
-        )
-        res = res.rechunk(new_chunks)
-
-        if unsorted:
-            # Reorder the output
-            # use Variable for isel
-
-            res = Variable(data=res, dims=final_dims.values())
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    r"Slicing with an out-of-order index is generating \d+ times more chunks",
-                    da.PerformanceWarning,
-                )
-                for dim, idx in sorted_idx.items():
-                    res = res.isel({final_dims[dim]: np.argsort(idx)})
-
-            # rechunk because out-of-order isel generates a lot of chunks
-            res = res.data.rechunk()
-
-        return res
 
     return _interpnd(var, x, new_x, func, kwargs)
 
@@ -892,83 +769,27 @@ def _interpnd(var, x, new_x, func, kwargs):
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, *coords, n_coords: int, interp_func, interp_kwargs):
-    """Wrapper for `_interpnd` allowing dask array to be used in `map_blocks`
+def _dask_aware_interpnd(var, *coords, n_x: int, interp_func, interp_kwargs, method):
+    """Wrapper for `_interpnd` through `blockwise`
 
-    The first `n_coords` arrays in `coords` are original coordinates, the rest are destination coordinate
-    Currently this need original coordinate to be full arrays (meshgrid)
-
-    TODO: find a way to use 1d coordinates
+    The first `n_x` arrays in `coords` are original coordinates,
+    the `n_x` others (the rest) are destination coordinates
     """
-    _old_x, _new_x = coords[:n_coords], coords[n_coords:]
+    # Convert all to Variable, in order to use _localize
+    nconst = len(var.shape) - n_x
+    x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
+    var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
+    new_x = [
+        Variable(
+            [f"dim_{outer_dim}_{inner_dim}" for inner_dim in range(len(_x.shape))], _x
+        )
+        for outer_dim, _x in enumerate(coords[n_x:])
+    ]
+    indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
 
-    # reshape x (TODO REMOVE)
-    old_x = tuple(
-        [
-            Variable(str(dim), np.moveaxis(tmp, dim, -1)[(0,) * (len(tmp.shape) - 1)])
-            for dim, tmp in enumerate(_old_x)
-        ]
-    )
+    # simple speed up for the local interpolation
+    if method in ["linear", "nearest"]:
+        var, indexes_coords = _localize(var, indexes_coords)
+    localized_x, localized_new_x = zip(*[indexes_coords[d] for d in indexes_coords])
 
-    new_x = tuple(
-        [
-            Variable(
-                [f"{outer_dim}{inner_dim}" for inner_dim in range(len(_x.shape))], _x
-            )
-            for outer_dim, _x in enumerate(_new_x)
-        ]
-    )
-
-    return _interpnd(var, old_x, new_x, interp_func, interp_kwargs)
-
-
-def _add_interp_ghost(var, x, nconst: int):
-    """ Duplicate the ghost cells of the array (values and coordinates)"""
-    import dask.array as da
-
-    bnd = {i: "none" for i in range(len(var.shape))}
-    depths = {i: 0 if i < nconst else 1 for i in range(len(var.shape))}
-
-    var_with_ghost = da.overlap.overlap(var, depth=depths, boundary=bnd)
-
-    x_with_ghost = tuple(
-        da.overlap.overlap(_x, depth={0: 1}, boundary={0: "none"}) for _x in x
-    )
-    return var_with_ghost, x_with_ghost
-
-
-def _compute_chunks(x, new_x):
-    """Compute equilibrated chunks of new_x
-
-    This routine assumes that x, x_with_ghost and new_x are sorted
-
-    TODO: This only works if new_x is a set of 1d coordinate
-          more general function is needed for advanced interpolation with chunked dimension
-    """
-    chunks_ends = [np.cumsum(sizes) - 1 for _x in x for sizes in _x.chunks]
-    total_chunks = []
-    for dim, chunk_ends in enumerate(chunks_ends):
-
-        # select one line along dim
-        line_x = new_x[dim].data[
-            (0,) * dim + (slice(None),) + (0,) * (len(new_x) - dim - 1)
-        ]
-
-        # the number of chunk of the output must be the same as the input (map_blocks)
-        new_x_ends = np.copy(chunk_ends)
-        for i, chunk_end in enumerate(chunk_ends[:-1]):
-            # number of points in line_x before the end of the current chunck
-            n_end = (line_x <= x[dim][chunk_end]).sum()
-            # number of points in line_x before the start of the next chunck
-            n_start = (line_x <= x[dim][chunk_end + 1]).sum()
-
-            # put half of the points between two consecutive chunk
-            # on the left and the other half on the right
-            new_x_ends[i] = np.ceil(0.5 * (n_end + n_start)).astype(int)
-
-        # do not forget extra points at the end
-        new_x_ends[-1] = len(line_x)
-
-        chunks = new_x_ends[0], *(new_x_ends[1:] - new_x_ends[:-1])
-        total_chunks.append(chunks)
-    return total_chunks
+    return _interpnd(var.data, localized_x, localized_new_x, interp_func, interp_kwargs)

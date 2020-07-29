@@ -3168,17 +3168,6 @@ class TestDataArray:
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
             actual = array.chunk(chunks).resample(time="1H")
-
-            if chunked_time and (kind in ["quadratic", "cubic"]):
-                # Check that an error is raised if an attempt is made to interpolate
-                # over a chunked dimension with high order method
-                with raises_regex(
-                    ValueError,
-                    "Only constant or linear interpolation are possible in a chunked direction",
-                ):
-                    actual.interpolate(kind)
-                continue
-
             actual = actual.interpolate(kind)
             actual = actual.compute()
             f = interp1d(

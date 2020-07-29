@@ -72,17 +72,6 @@ def test_interpolate_1d(method, dim, case):
 
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
-
-    if method == "cubic" and dim == "y" and case == 1:
-        # Check that an error is raised if an attempt is made to interpolate
-        # over a chunked dimension with high order method
-        with raises_regex(
-            ValueError,
-            "Only constant or linear interpolation are possible in a chunked direction",
-        ):
-            da.interp(method=method, **{dim: xdest})
-        return
-
     actual = da.interp(method=method, **{dim: xdest})
 
     # scipy interpolation for the reference
@@ -812,16 +801,6 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
                         da.interp(method=method, **dest)
                     return
 
-                if method in ["quadratic", "cubic"]:
-                    # Check that an error is raised if an attempt is made to interpolate
-                    # over a chunked dimension with high order method
-                    with raises_regex(
-                        ValueError,
-                        "Only constant or linear interpolation are possible in a chunked direction",
-                    ):
-                        da.interp(method=method, **dest)
-                    return
-
                 actual = da.interp(method=method, **dest, kwargs=kwargs)
                 expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
@@ -840,4 +819,47 @@ def test_interpolate_chunk_rename():
     actual = da.interp(x=xdest, method="linear")
     expected = da.compute().interp(x=xdest, method="linear")
 
+    assert_allclose(actual, expected)
+
+
+@requires_scipy
+@requires_dask
+def test_interpolate_chunk_advanced():
+    """Interpolate nd array with an nd indexer sharing coordinates."""
+    # Create original array
+    x = np.linspace(-1, 1, 5)
+    y = np.linspace(-1, 1, 7)
+    z = np.linspace(-1, 1, 11)
+    t = np.linspace(0, 1, 13)
+    q = np.linspace(0, 1, 17)
+    da = xr.DataArray(
+        data=np.sin(x[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis])
+        * np.cos(y[:, np.newaxis, np.newaxis, np.newaxis])
+        * np.exp(z[:, np.newaxis, np.newaxis])
+        * t[:, np.newaxis]
+        + q,
+        dims=("x", "y", "z", "t", "q"),
+        coords={"x": x, "y": y, "z": z, "t": t, "q": q, "label": "toto"},
+    )
+
+    theta = np.linspace(0, 2 * np.pi, 19)
+    w = np.linspace(-0.25, 0.25, 23)
+
+    r = xr.DataArray(
+        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
+    )
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    z = xr.DataArray(
+        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)],
+    )
+
+    kwargs = {"fill_value": None}
+    # Create indexer into `a` with dimensions (y, x)
+    expected = da.interp(x=x, y=y, z=z, t=0.5, kwargs=kwargs, method="linear")
+    da = da.chunk(2)
+    x = x.chunk(2)
+    # y = y.chunk(2)
+    z = z.chunk(2)
+    actual = da.interp(x=x, y=y, z=z, t=0.5, kwargs=kwargs, method="linear")
     assert_allclose(actual, expected)
