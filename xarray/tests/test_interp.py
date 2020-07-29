@@ -73,6 +73,16 @@ def test_interpolate_1d(method, dim, case):
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
 
+    if method == "cubic" and dim == "y" and case == 1:
+        # Check that an error is raised if an attempt is made to interpolate
+        # over a chunked dimension with high order method
+        with raises_regex(
+            ValueError,
+            "Only constant or linear interpolation are possible in a chunked direction",
+        ):
+            da.interp(method=method, **{dim: xdest})
+        return
+
     actual = da.interp(method=method, **{dim: xdest})
 
     # scipy interpolation for the reference
@@ -798,6 +808,16 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
                     with raises_regex(
                         ValueError,
                         f"{method} is not a valid interpolator for interpolating over multiple dimensions.",
+                    ):
+                        da.interp(method=method, **dest)
+                    return
+
+                if method in ["quadratic", "cubic"]:
+                    # Check that an error is raised if an attempt is made to interpolate
+                    # over a chunked dimension with high order method
+                    with raises_regex(
+                        ValueError,
+                        "Only constant or linear interpolation are possible in a chunked direction",
                     ):
                         da.interp(method=method, **dest)
                     return
