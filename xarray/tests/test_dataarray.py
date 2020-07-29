@@ -3167,8 +3167,7 @@ class TestDataArray:
         # to 1 hour up-sampling
         new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]:
-            actual = array.chunk(chunks).resample(time="1H")
-            actual = actual.interpolate(kind)
+            actual = array.chunk(chunks).resample(time="1H").interpolate(kind)
             actual = actual.compute()
             f = interp1d(
                 np.arange(len(times)),
