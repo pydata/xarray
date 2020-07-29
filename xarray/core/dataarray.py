@@ -282,7 +282,7 @@ class DataArray(AbstractArray, DataWithCoords):
             object, attempts are made to use this array's metadata to fill in
             other unspecified arguments. A view of the array's data is used
             instead of a copy if possible.
-        coords : sequence or dict of array_like objects, optional
+        coords : sequence or dict of array_like, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             The following notations are accepted:
 
@@ -1231,7 +1231,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        new_da: xr.DataArray
+        new_da : DataArray
+            The caller broadcasted against ``other``.
 
         Examples
         --------
@@ -3878,9 +3879,10 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> array.isel(array.argmin(...))
         array(-1)
 
-        >>> array = xr.DataArray([[[3, 2, 1], [3, 1, 2], [2, 1, 3]],
-        ...                       [[1, 3, 2], [2, -5, 1], [2, 3, 1]]],
-        ...                      dims=("x", "y", "z"))
+        >>> array = xr.DataArray(
+        ...     [[[3, 2, 1], [3, 1, 2], [2, 1, 3]], [[1, 3, 2], [2, -5, 1], [2, 3, 1]]],
+        ...     dims=("x", "y", "z"),
+        ... )
         >>> array.min(dim="x")
         <xarray.DataArray (y: 3, z: 3)>
         array([[ 1,  2,  1],
@@ -3980,9 +3982,10 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray ()>
         array(3)
 
-        >>> array = xr.DataArray([[[3, 2, 1], [3, 1, 2], [2, 1, 3]],
-        ...                       [[1, 3, 2], [2, 5, 1], [2, 3, 1]]],
-        ...                      dims=("x", "y", "z"))
+        >>> array = xr.DataArray(
+        ...     [[[3, 2, 1], [3, 1, 2], [2, 1, 3]], [[1, 3, 2], [2, 5, 1], [2, 3, 1]]],
+        ...     dims=("x", "y", "z"),
+        ... )
         >>> array.max(dim="x")
         <xarray.DataArray (y: 3, z: 3)>
         array([[3, 3, 2],

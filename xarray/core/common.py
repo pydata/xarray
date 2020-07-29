@@ -408,7 +408,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             the first element the dimension name and the second element the
             values for this new coordinate.
 
-        **coords_kwargs : keyword, value pairs, optional
+        **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
 
@@ -484,8 +484,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        args : positional arguments passed into ``attrs.update``.
-        kwargs : keyword arguments passed into ``attrs.update``.
+        args
+            positional arguments passed into ``attrs.update``.
+        kwargs
+            keyword arguments passed into ``attrs.update``.
 
         Returns
         -------
@@ -798,11 +800,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: dict, optional
             Mapping from the dimension name to create the rolling iterator
             along (e.g. `time`) to its moving window size.
-        min_periods : int, default None
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -924,11 +926,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 along (e.g., `time`).
             window : int
                 Size of the moving window.
-        boundary : 'exact' | 'trim' | 'pad'
+        boundary : {"exact", "trim", "pad"}, default: "exact"
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
-        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
+        side : {'left', 'right'} or mapping of str to {"left", "right"}
         coord_func : function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
         keep_attrs : bool, optional
