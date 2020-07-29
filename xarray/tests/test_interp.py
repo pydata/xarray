@@ -8,7 +8,6 @@ import xarray as xr
 from xarray.tests import (
     assert_allclose,
     assert_equal,
-    raises_regex,
     requires_cftime,
     requires_dask,
     requires_scipy,
@@ -379,8 +378,6 @@ def test_errors(use_dask):
     # invalid method
     with pytest.raises(ValueError):
         da.interp(x=[2, 0], method="boo")
-    with pytest.raises(ValueError):
-        da.interp(x=[2, 0], y=2, method="cubic")
     with pytest.raises(ValueError):
         da.interp(y=[2, 0], method="boo")
 
@@ -790,16 +787,6 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
                             xdest[:, 1] = xdest[::-1, 1]
                             xdest = xdest.flatten()
                         dest[dim] = xdest
-
-                if interp_ndim > 1 and method not in ["linear", "nearest"]:
-                    # Check that an error is raised if an attempt is made to interpolate
-                    # over a chunked dimension with high order method
-                    with raises_regex(
-                        ValueError,
-                        f"{method} is not a valid interpolator for interpolating over multiple dimensions.",
-                    ):
-                        da.interp(method=method, **dest)
-                    return
 
                 actual = da.interp(method=method, **dest, kwargs=kwargs)
                 expected = da.compute().interp(method=method, **dest, kwargs=kwargs)

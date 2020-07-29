@@ -608,56 +608,42 @@ def interp(var, indexes_coords, method, **kwargs):
     if not indexes_coords:
         return var.copy()
 
-    # simple speed up for the local interpolation
-    if method in ["linear", "nearest"]:
-        var, indexes_coords = _localize(var, indexes_coords)
-
     # default behavior
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
-    # check if the interpolation can be done in orthogonal manner
-    if (
-        len(indexes_coords) > 1
-        and method in ["linear", "nearest"]
-        and all(dest[1].ndim <= 1 for dest in indexes_coords.values())
-        and len(
-            set(
-                [
-                    dest[1].dims[0] if dest[1].ndim == 1 else d
-                    for d, dest in indexes_coords.items()
-                ]
-            )
+    result = var
+    # decompose the interpolation into a succession of independant interpolation
+    for indexes_coords in decompose_interp(indexes_coords):
+        var = result
+
+        # simple speed up for the local interpolation
+        if method in ["linear", "nearest"]:
+            var, indexes_coords = _localize(var, indexes_coords)
+
+        # target dimensions
+        dims = list(indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        destination = broadcast_variables(*new_x)
+
+        # transpose to make the interpolated axis to the last position
+        broadcast_dims = [d for d in var.dims if d not in dims]
+        original_dims = broadcast_dims + dims
+        new_dims = broadcast_dims + list(destination[0].dims)
+        interped = interp_func(
+            var.transpose(*original_dims).data, x, destination, method, kwargs
         )
-        == len(indexes_coords)
-    ):
-        # interpolate sequentially
-        for dim, dest in indexes_coords.items():
-            var = interp(var, {dim: dest}, method, **kwargs)
-        return var
 
-    # target dimensions
-    dims = list(indexes_coords)
-    x, new_x = zip(*[indexes_coords[d] for d in dims])
-    destination = broadcast_variables(*new_x)
+        result = Variable(new_dims, interped, attrs=var.attrs)
 
-    # transpose to make the interpolated axis to the last position
-    broadcast_dims = [d for d in var.dims if d not in dims]
-    original_dims = broadcast_dims + dims
-    new_dims = broadcast_dims + list(destination[0].dims)
-    interped = interp_func(
-        var.transpose(*original_dims).data, x, destination, method, kwargs
-    )
-
-    result = Variable(new_dims, interped, attrs=var.attrs)
-
-    # dimension of the output array
-    out_dims = OrderedSet()
-    for d in var.dims:
-        if d in dims:
-            out_dims.update(indexes_coords[d][1].dims)
-        else:
-            out_dims.add(d)
-    return result.transpose(*tuple(out_dims))
+        # dimension of the output array
+        out_dims = OrderedSet()
+        for d in var.dims:
+            if d in dims:
+                out_dims.update(indexes_coords[d][1].dims)
+            else:
+                out_dims.add(d)
+        result = result.transpose(*tuple(out_dims))
+    return result
 
 
 def interp_func(var, x, new_x, method, kwargs):
@@ -793,3 +779,35 @@ def _dask_aware_interpnd(var, *coords, n_x: int, interp_func, interp_kwargs, met
     localized_x, localized_new_x = zip(*[indexes_coords[d] for d in indexes_coords])
 
     return _interpnd(var.data, localized_x, localized_new_x, interp_func, interp_kwargs)
+
+
+def decompose_interp(indexes_coords):
+    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+
+    dest_dims = [
+        dest[1].dims if dest[1].ndim > 0 else [dim]
+        for dim, dest in indexes_coords.items()
+    ]
+    partial_dest_dims = []
+    partial_indexes_coords = {}
+    for i, index_coords in enumerate(indexes_coords.items()):
+        partial_indexes_coords.update([index_coords])
+
+        if i == len(dest_dims) - 1:
+            break
+
+        partial_dest_dims += [dest_dims[i]]
+        other_dims = dest_dims[i + 1 :]
+
+        s_partial_dest_dims = {dim for dims in partial_dest_dims for dim in dims}
+        s_other_dims = {dim for dims in other_dims for dim in dims}
+
+        if not s_partial_dest_dims.intersection(s_other_dims):
+            # this interpolation is orthogonal to the rest
+
+            yield partial_indexes_coords
+
+            partial_dest_dims = []
+            partial_indexes_coords = {}
+
+    yield partial_indexes_coords
