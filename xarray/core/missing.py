@@ -708,6 +708,9 @@ def interp_func(var, x, new_x, method, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
+        # if usefull, re-use localize for each chunk of new_x
+        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
@@ -715,14 +718,13 @@ def interp_func(var, x, new_x, method, kwargs):
             range(var.ndim),
             *x_arginds,
             *new_x_arginds,
-            n_x=var.ndim - nconst,
             interp_func=func,
             interp_kwargs=kwargs,
-            method=method,
+            localize=localize,
             concatenate=True,
-            new_axes=new_axes,
-            dtype=var.dtype,
             meta=np.ndarray,
+            dtype=var.dtype,
+            new_axes=new_axes,
         )
 
     return _interpnd(var, x, new_x, func, kwargs)
@@ -755,14 +757,16 @@ def _interpnd(var, x, new_x, func, kwargs):
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
-def _dask_aware_interpnd(var, *coords, n_x: int, interp_func, interp_kwargs, method):
+def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
     """Wrapper for `_interpnd` through `blockwise`
 
     The first `n_x` arrays in `coords` are original coordinates,
     the `n_x` others (the rest) are destination coordinates
     """
-    # Convert all to Variable, in order to use _localize
+    n_x = len(coords) // 2
     nconst = len(var.shape) - n_x
+
+    # Convert all to Variable, in order to use _localize
     x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
     var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
     new_x = [
@@ -774,7 +778,7 @@ def _dask_aware_interpnd(var, *coords, n_x: int, interp_func, interp_kwargs, met
     indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
 
     # simple speed up for the local interpolation
-    if method in ["linear", "nearest"]:
+    if localize:
         var, indexes_coords = _localize(var, indexes_coords)
     localized_x, localized_new_x = zip(*[indexes_coords[d] for d in indexes_coords])
 
