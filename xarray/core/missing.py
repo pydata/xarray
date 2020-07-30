@@ -693,12 +693,6 @@ def interp_func(var, x, new_x, method, kwargs):
         nconst = var.ndim - len(x)
 
         out_ind = list(range(nconst)) + list(range(var.ndim, var.ndim + new_x[0].ndim))
-        new_axes = {
-            var.ndim + i: new_x[0].chunks[i]
-            if new_x[0].chunks is not None
-            else new_x[0].shape[i]
-            for i in range(new_x[0].ndim)
-        }
 
         # blockwise args format
         x_arginds = [[_x, (nconst + index,)] for index, _x in enumerate(x)]
@@ -708,16 +702,28 @@ def interp_func(var, x, new_x, method, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
+        args = var, range(var.ndim), *x_arginds, *new_x_arginds,
+
+        _, rechunked = da.unify_chunks(*args)
+
+        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+
+        new_x = rechunked[1 + (len(rechunked)-1) // 2:]
+
+        new_axes = {
+            var.ndim + i: new_x[0].chunks[i]
+            if new_x[0].chunks is not None
+            else new_x[0].shape[i]
+            for i in range(new_x[0].ndim)
+        }
+
         # if usefull, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
-            var,
-            range(var.ndim),
-            *x_arginds,
-            *new_x_arginds,
+            *args,
             interp_func=func,
             interp_kwargs=kwargs,
             localize=localize,
