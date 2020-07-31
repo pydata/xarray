@@ -1396,7 +1396,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        names : hashable or iterable of hashables
+        names : hashable or iterable of hashable
             Name(s) of variables in this dataset to convert into coordinates.
 
         Returns
@@ -1431,7 +1431,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        names : hashable or iterable of hashables, optional
+        names : hashable or iterable of hashable, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, optional
@@ -1494,12 +1494,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             function returns the resulting netCDF file as bytes; in this case,
             we need to use scipy, which does not support netCDF version 4 (the
             default format becomes NETCDF3_64BIT).
-        mode : {'w', 'a'}, optional
+        mode : {"w", "a"}, default: "w"
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', \
-                  'NETCDF3_CLASSIC'}, optional
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+                  "NETCDF3_CLASSIC"}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1522,7 +1522,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+        engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
             preference for 'netcdf4' if writing to a file on disk.
@@ -1543,10 +1543,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
-        compute: boolean
+        compute: bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
-        invalid_netcdf: boolean
+        invalid_netcdf: bool, default: False
             Only valid along with engine='h5netcdf'. If True, allow writing
             hdf5 files which are invalid netcdf as described in
             https://github.com/shoyer/h5netcdf. Default: False.
@@ -1589,7 +1589,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-', 'a', None}
+        mode : {'w', 'w-', 'a', None}, optional
             Persistence mode: 'w' means create (overwrite if exists);
             'w-' means create (fail if exists);
             'a' means override existing variables (create if does not exist).
@@ -1672,7 +1672,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        buf : writable buffer, defaults to sys.stdout
+        buf : file-like, default: sys.stdout
+            writable buffer
 
         See Also
         --------
@@ -1920,7 +1921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
             - "exception": raise an exception
@@ -2062,7 +2063,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+        method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for inexact matches:
 
             * None (default): only exact matches
@@ -2215,7 +2216,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             A dict with keys matching dimensions and integer values `n`
             or a single integer `n` applied over all dimensions.
             One of indexers or indexers_kwargs must be provided.
-        ``**indexers_kwargs`` : {dim: n, ...}, optional
+        **indexers_kwargs : {dim: n, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -2295,7 +2296,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             other object need not be the same as the indexes on this
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
-        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+        method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found in this
             dataset:
 
@@ -2349,13 +2350,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        indexers : dict. optional
+        indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate
             values will be filled in with NaN, and any mis-matched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
-        method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
+        method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values in ``indexers`` not found in
             this dataset:
 
@@ -2584,16 +2585,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordates, their dimensions are
             used for the broadcasting.
-        method: string, optional.
+        method : str, optional.
             {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array. 'linear' is used by default.
-        assume_sorted: boolean, optional
+        assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        kwargs: dictionary, optional
+        kwargs: dict, optional
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
@@ -2712,21 +2713,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset.
-        method: string, optional.
+        method : str, optional.
             {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array. 'linear' is used by default.
-        assume_sorted: boolean, optional
+        assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        kwargs: dictionary, optional
+        kwargs: dict, optional
             Additional keyword passed to scipy's interpolator.
 
         Returns
         -------
-        interpolated: xr.Dataset
+        interpolated : Dataset
             Another dataset by interpolating this dataset's data along the
             coordinates of the other object.
 
@@ -2813,7 +2814,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or dimension names and
             whose values are the desired names.
-        **names, optional
+        **names : optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
 
@@ -2855,7 +2856,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dictionary whose keys are current dimension names and
             whose values are the desired names. The desired names must
             not be the name of an existing dimension or Variable in the Dataset.
-        **dims, optional
+        **dims : optional
             Keyword form of ``dims_dict``.
             One of dims_dict or dims must be provided.
 
@@ -2899,7 +2900,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         name_dict : dict-like, optional
             Dictionary whose keys are current variable or coordinate names and
             whose values are the desired names.
-        **names, optional
+        **names : optional
             Keyword form of ``name_dict``.
             One of name_dict or names must be provided.
 
@@ -3049,13 +3050,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             and the values are either integers (giving the length of the new
             dimensions) or array-like (giving the coordinates of the new
             dimensions).
-        axis : integer, sequence of integers, or None
+        axis : int, sequence of int, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
-        **dim_kwargs : int or sequence/ndarray
+        **dim_kwargs : int or sequence or ndarray
             The keywords are arbitrary dimensions being inserted and the values
             are either the lengths of the new dims (if int is given), or their
             coordinates. Note, this is an alternative to passing a dict to the
@@ -3178,7 +3179,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
-        **indexes_kwargs: optional
+        **indexes_kwargs : optional
             The keyword arguments form of ``indexes``.
             One of indexes or indexes_kwargs must be provided.
 
@@ -3275,7 +3276,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        **dim_order_kwargs: optional
+        **dim_order_kwargs : optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
 
@@ -3343,12 +3344,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dimensions : Mapping of the form new_name=(dim1, dim2, ...)
-            Names of new dimensions, and the existing dimensions that they
-            replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
+        dimensions : mapping of hashable to sequence of hashable
+            Mapping of the form `new_name=(dim1, dim2, ...)`. Names of new
+            dimensions, and the existing dimensions that they replace. An
+            ellipsis (`...`) will be replaced by all unlisted dimensions.
             Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
             all dimensions.
-        **dimensions_kwargs:
+        **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
 
@@ -3382,9 +3384,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        new_dim : Hashable
+        new_dim : hashable
             Name of the new stacked coordinate
-        sample_dims : Sequence[Hashable]
+        sample_dims : sequence of hashable
             Dimensions that **will not** be stacked. Each array in the dataset
             must share these dimensions. For machine learning applications,
             these define the dimensions over which samples are drawn.
@@ -3538,11 +3540,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : Hashable or iterable of Hashable, optional
+        dim : hashable or iterable of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
-        fill_value: value to be filled. By default, np.nan
-        sparse: use sparse-array if True
+        fill_value : scalar, default: nan
+            value to be filled
+        sparse : bool, default: False
+            use sparse-array if True
 
         Returns
         -------
@@ -3588,7 +3592,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        other : Dataset or castable to Dataset
+        other : Dataset or mapping
             Variables with which to update this dataset. One of:
 
             - Dataset
@@ -3631,13 +3635,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        other : Dataset or castable to Dataset
+        other : Dataset or mapping
             Dataset or variables to merge with this dataset.
-        overwrite_vars : Hashable or iterable of Hashable, optional
+        overwrite_vars : hashable or iterable of hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {'broadcast_equals', 'equals', 'identical', \
-                  'no_conflicts'}, optional
+        compat : {"broadcast_equals", "equals", "identical", \
+                  "no_conflicts"}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -3650,7 +3654,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               must be equal. The returned dataset then contains the combination
               of all non-null values.
 
-        join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+        join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
@@ -3658,7 +3662,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
 
         Returns
@@ -3702,9 +3706,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        names : hashable or iterable of hashables
+        names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors: {'raise', 'ignore'}, optional
+        errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
@@ -3783,9 +3787,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        labels : Mapping[Hashable, Any]
+        labels : mapping of hashable to Any
             Index labels to drop
-        errors: {'raise', 'ignore'}, optional
+        errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
@@ -3848,7 +3852,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         drop_dims : hashable or iterable of hashable
             Dimension or dimensions to drop.
-        errors: {'raise', 'ignore'}, optional
+        errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if any of the
             dimensions passed are not in the dataset. If 'ignore', any given
             labels that are in the dataset are dropped and no error is raised.
@@ -3858,7 +3862,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj : Dataset
             The dataset without the given dimensions (or any variables
             containing those dimensions)
-        errors: {'raise', 'ignore'}, optional
+        errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if
             any of the dimensions passed are not
             in the dataset. If 'ignore', any given dimensions that are in the
@@ -3890,7 +3894,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        *dims : Hashable, optional
+        *dims : hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
 
@@ -3935,13 +3939,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dim : Hashable
+        dim : hashable
             Dimension along which to drop missing values. Dropping along
             multiple dimensions simultaneously is not yet supported.
-        how : {'any', 'all'}, optional
+        how : {"any", "all"}, default: "any"
             * any : if any NA values are present, drop that label
             * all : if all values are NA, drop that label
-        thresh : int, default None
+        thresh : int, default: None
             If supplied, require this many non-NA values.
         subset : iterable of hashable, optional
             Which variables to check for missing values. By default, all
@@ -4097,18 +4101,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
 
-        use_coordinate : bool, str, default True
+        use_coordinate : bool, str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
             eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
-        limit : int, default None
+        limit : int, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default None.
+        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -4168,7 +4172,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : Hashable
             Specifies the dimension along which to propagate values when
             filling.
-        limit : int, default None
+        limit : int, default: None
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
@@ -4193,7 +4197,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : str
             Specifies the dimension along which to propagate values when
             filling.
-        limit : int, default None
+        limit : int, default: None
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
@@ -4252,7 +4256,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        keepdims : bool, default False
+        keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one. Coordinates that use these dimensions
             are removed.
@@ -4406,12 +4410,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        variables : mapping, value pairs
+        variables : mapping of hashable to Any
             Mapping from variables names to the new values. If the new values
             are callable, they are computed on the Dataset and assigned to new
             data variables. If the values are not callable, (e.g. a DataArray,
             scalar, or array), they are simply assigned.
-        **variables_kwargs:
+        **variables_kwargs
             The keyword arguments form of ``variables``.
             One of variables or variables_kwargs must be provided.
 
@@ -4621,9 +4625,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        dataframe : pandas.DataFrame
+        dataframe : DataFrame
             DataFrame from which to copy data and indices.
-        sparse : bool
+        sparse : bool, default: False
             If true, create a sparse arrays instead of dense numpy arrays. This
             can potentially save a large amount of memory if the DataFrame has
             a MultiIndex. Requires the sparse package (sparse.pydata.org).
@@ -4808,9 +4812,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        d : dict, with a minimum structure of {'var_0': {'dims': [..], \
-                                                         'data': [..]}, \
-                                               ...}
+        d : dict-like
+            Mapping with a minimum structure of
+                ``{'var_0': {'dims': [..], 'data': [..]}, \
+                            ...}``
 
         Returns
         -------
@@ -5054,13 +5059,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        shifts : Mapping with the form of {dim: offset}
+        shifts : mapping of hashable to int
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
-        **shifts_kwargs:
+        **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -5203,7 +5208,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        variables: str, DataArray, or list of either
+        variables: str, DataArray, or list of str or DataArray
             1D DataArray objects or name(s) of 1D variable(s) in
             coords/data_vars whose values are used to sort the dataset.
         ascending: boolean, optional
@@ -5254,11 +5259,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        q : float in range of [0,1] or array-like of floats
+        q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
@@ -5437,12 +5442,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coord: str
+        coord : str
             The coordinate to be used to compute the gradient.
-        edge_order: 1 or 2. Default 1
+        edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', \
-            'us', 'ns', 'ps', 'fs', 'as'}
+        datetime_unit : None or {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', \
+            'us', 'ns', 'ps', 'fs', 'as'}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
@@ -5495,12 +5500,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coord: str, or a sequence of str
+        coord: str, or sequence of str
             Coordinate(s) used for the integration.
-        datetime_unit
-            Can be specify the unit if datetime coordinate is used. One of
-            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-            'as'}
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                         'ps', 'fs', 'as'}
+            Can be specify the unit if datetime coordinate is used.
 
         Returns
         -------
@@ -5616,7 +5620,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        **kwargs : key=value
+        **kwargs
             key : str
                 Attribute name.
             value : callable or obj
@@ -5772,13 +5776,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         obj: DataArray, Dataset
             Passed to the function as its first argument, one block at a time.
-        args: Sequence
+        args: sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with obj, otherwise an error is raised.
-        kwargs: Mapping
+        kwargs: mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             subset to blocks. Passing dask collections in kwargs is not allowed.
-        template: (optional) DataArray, Dataset
+        template : DataArray or Dataset, optional
             xarray object representing the final result after compute is called. If not provided,
             the function will be first run on mocked-up data, that looks like ``obj`` but
             has sizes 0, to determine properties of the returned object such as dtype,
@@ -5881,13 +5885,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             invalid values, False otherwise.
         rcond : float, optional
             Relative condition number to the fit.
-        w : Union[Hashable, Any], optional
+        w : hashable or Any, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
         full : bool, optional
             Whether to return the residuals, matrix rank and singular values in addition
             to the coefficients.
-        cov : Union[bool, str], optional
+        cov : bool or str, optional
             Whether to return to the covariance matrix in addition to the coefficients.
             The matrix is not scaled if `cov='unscaled'`.
 
@@ -6059,10 +6063,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        pad_width : Mapping with the form of {dim: (pad_before, pad_after)}
-            Number of values padded along each dimension.
+        pad_width : mapping of hashable to tuple of int
+            Mapping with the form of {dim: (pad_before, pad_after)}
+            describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str
+        mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
             'constant' (default)
@@ -6095,7 +6100,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-        stat_length : int, tuple or mapping of the form {dim: tuple}
+        stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
             {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
@@ -6105,7 +6110,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+        constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -6115,7 +6120,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
             Default is 0.
-        end_values : scalar, tuple or mapping of the form {dim: tuple}
+        end_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -6130,7 +6135,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             default with an unaltered reflection around the edge value.  For
             the 'odd' style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-        **pad_width_kwargs:
+        **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
 
@@ -6218,18 +6223,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : str, optional
             Dimension over which to apply `idxmin`.  This is optional for 1D
             variables, but required for variables with 2 or more dimensions.
-        skipna : bool or None, default None
+        skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
-        fill_value : Any, default NaN
+        fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default False
+        keep_attrs : bool, default: False
             If True, the attributes (``attrs``) will be copied from the
             original object to the new one.  If False (default), the new object
             will be returned without attributes.
@@ -6316,18 +6321,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : str, optional
             Dimension over which to apply `idxmax`.  This is optional for 1D
             variables, but required for variables with 2 or more dimensions.
-        skipna : bool or None, default None
+        skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
             (``int``) or ``skipna=True`` has not been implemented
             (``datetime64`` or ``timedelta64``).
-        fill_value : Any, default NaN
+        fill_value : Any, default: NaN
             Value to be filled in case all of the values along a dimension are
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default False
+        keep_attrs : bool, default: False
             If True, the attributes (``attrs``) will be copied from the
             original object to the new one.  If False (default), the new object
             will be returned without attributes.
