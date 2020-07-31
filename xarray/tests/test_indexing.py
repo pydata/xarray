@@ -7,7 +7,13 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 
-from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
+from . import (
+    IndexerMaker,
+    ReturnItem,
+    assert_array_equal,
+    assert_identical,
+    raises_regex,
+)
 
 B = IndexerMaker(indexing.BasicIndexer)
 
