@@ -1488,7 +1488,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        path : str, Path or file-like object, optional
+        path : str, Path or file-like, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -2375,7 +2375,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             the input. In either case, a new xarray object is always returned.
         fill_value : scalar, optional
             Value to use for newly missing values
-        sparse: use sparse-array. By default, False
+        sparse : bool, default: False
+            use sparse-array.
         **indexers_kwargs : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2585,7 +2586,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordates, their dimensions are
             used for the broadcasting.
-        method : str, optional.
+        method : str, optional
             {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array. 'linear' is used by default.
@@ -2604,7 +2605,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Returns
         -------
-        interpolated: xr.Dataset
+        interpolated : Dataset
             New dataset on the new coordinates.
 
         Notes
@@ -2713,7 +2714,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset.
-        method : str, optional.
+        method : str, optional
             {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array. 'linear' is used by default.
@@ -5211,12 +5212,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: str, DataArray, or list of str or DataArray
             1D DataArray objects or name(s) of 1D variable(s) in
             coords/data_vars whose values are used to sort the dataset.
-        ascending: boolean, optional
+        ascending: bool, optional
             Whether to sort by ascending or descending order.
 
         Returns
         -------
-        sorted: Dataset
+        sorted : Dataset
             A new dataset where all the specified dims are sorted by dim
             labels.
         """

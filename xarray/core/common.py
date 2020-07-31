@@ -515,14 +515,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        func : function
+        func : callable
             function to apply to this xarray object (Dataset/DataArray).
             ``args``, and ``kwargs`` are passed into ``func``.
             Alternatively a ``(callable, data_keyword)`` tuple where
             ``data_keyword`` is a string indicating the keyword of
             ``callable`` that expects the xarray object.
-        args : positional arguments passed into ``func``.
-        kwargs : a dictionary of keyword arguments passed into ``func``.
+        args
+            positional arguments passed into ``func``.
+        kwargs
+            a dictionary of keyword arguments passed into ``func``.
 
         Returns
         -------
@@ -637,7 +639,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
-        squeeze : boolean, optional
+        squeeze : bool, optional
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
@@ -713,17 +715,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         group : str, DataArray or IndexVariable
             Array whose binned values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
-        bins : int or array of scalars
+        bins : int or array-like
             If bins is an int, it defines the number of equal-width bins in the
             range of x. However, in this case, the range of x is extended by .1%
             on each side to include the min or max values of x. If bins is a
             sequence it defines the bin edges allowing for non-uniform bin
             width. No extension of the range of x is done in this case.
-        right : boolean, optional
+        right : boolean, default: True
             Indicates whether the bins include the rightmost edge or not. If
             right == True (the default), then the bins [1,2,3,4] indicate
             (1,2], (2,3], (3,4].
-        labels : array or boolean, default None
+        labels : array-like or boolean, default: None
             Used as labels for the resulting bins. Must be of the same length as
             the resulting bins. If False, string bin labels are assigned by
             `pandas.cut`.
@@ -731,7 +733,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             The precision at which to store and display the bins labels.
         include_lowest : bool
             Whether the first interval should be left-inclusive or not.
-        squeeze : boolean, optional
+        squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
@@ -878,8 +880,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        window : A single mapping from a dimension name to window value,
-                 optional
+        window : {dim: window_size}, optional
+            A single mapping from a dimension name to window value.
 
             dim : str
                 Name of the dimension to create the rolling exponential window
@@ -887,8 +889,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             window : int
                 Size of the moving window. The type of this is specified in
                 `window_type`
-        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
-                      default 'span'
+        window_type : {'span', 'com', 'halflife', 'alpha'}, default: 'span'
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
             https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
@@ -931,7 +932,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : {'left', 'right'} or mapping of str to {"left", "right"}
-        coord_func : function (name) that is applied to the coordinates,
+        coord_func : str or mapping of hashable to str, default: "mean"
+            function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -1011,9 +1013,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
-        closed : 'left' or 'right', optional
+        closed : {'left', 'right'}, optional
             Side of each interval to treat as closed.
-        label : 'left' or 'right', optional
+        label : {'left', 'right'}, optional
             Side of each interval to use for labeling.
         base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
@@ -1147,12 +1149,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        cond : DataArray or Dataset with boolean dtype
-            Locations at which to preserve this object's values.
+        cond : DataArray or Dataset
+            Locations at which to preserve this object's values. dtype must be `bool`.
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations filled with NA.
-        drop : boolean, optional
+        drop : bool, optional
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result. Mutually exclusive with
             ``other``.

@@ -1269,12 +1269,12 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays: DataArray (or Variable) objects
+    arrays : DataArray or Variable
         Arrays to compute.
-    dims: ..., str or tuple of strings, optional
+    dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
-    **kwargs: dict
+    **kwargs : dict
         Additional keyword arguments passed to numpy.einsum or
         dask.array.einsum
 

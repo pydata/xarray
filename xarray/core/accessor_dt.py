@@ -190,8 +190,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. 'D' for daily resolution
 
         Returns
         -------
@@ -207,8 +207,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. 'D' for daily resolution
 
         Returns
         -------
@@ -223,8 +223,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. 'D' for daily resolution
 
         Returns
         -------

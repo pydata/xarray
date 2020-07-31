@@ -1431,7 +1431,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        interpolated: xr.DataArray
+        interpolated : DataArray
             New dataarray on the new coordinates.
 
         Notes
@@ -1497,7 +1497,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        interpolated: xr.DataArray
+        interpolated : DataArray
             Another dataarray by interpolating this dataarray's data along the
             coordinates of the other object.
 
@@ -1635,7 +1635,7 @@ class DataArray(AbstractArray, DataWithCoords):
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
             the new dimensions).
-        axis : integer, list (or tuple) of integers, or None
+        axis : integer, list of int or or tuple of int, or None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
@@ -1983,7 +1983,7 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
-        transpose_coords : boolean, default: True
+        transpose_coords : bool, default: True
             If True, also transpose the coordinates of this DataArray.
 
         Returns
@@ -3241,7 +3241,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : hashable, or a sequence of hashable
+        dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                          'ps', 'fs', 'as'}, optional

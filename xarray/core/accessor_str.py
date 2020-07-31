@@ -338,15 +338,15 @@ class StringAccessor:
 
         This function is used to count the number of times a particular regex
         pattern is repeated in each of the string elements of the
-        :class:`~xarray.DatArray`.
+        :class:`~xarray.DataArray`.
 
         Parameters
         ----------
         pat : str
             Valid regular expression.
-        flags : int, default 0, meaning no flags
-            Flags for the `re` module. For a complete list, `see here
-            <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+        flags : int, default: 0
+            Flags for the `re` module. Use 0 for no flags. For a complete list,
+            `see here <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
 
         Returns
         -------
@@ -404,9 +404,9 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with character defined in `fillchar`.
-        side : {'left', 'right', 'both'}, default 'left'
+        side : {'left', 'right', 'both'}, default: 'left'
             Side from which to fill resulting string.
-        fillchar : str, default ' '
+        fillchar : str, default: ' '
             Additional character for filling, default is whitespace.
 
         Returns
@@ -517,11 +517,12 @@ class StringAccessor:
         ----------
         pat : str
             Character sequence or regular expression.
-        case : bool, default True
+        case : bool, default: True
             If True, case sensitive.
-        flags : int, default 0 (no flags)
+        flags : int, default: 0
             Flags to pass through to the re module, e.g. re.IGNORECASE.
-        regex : bool, default True
+            ``0`` means no flags.
+        regex : bool, default: True
             If True, assumes the pat is a regular expression.
             If False, treats the pat as a literal string.
 
@@ -558,12 +559,12 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : string
+        pat : str
             Character sequence or regular expression
-        case : boolean, default True
+        case : bool, default: True
             If True, case sensitive
-        flags : int, default 0 (no flags)
-            re module flags, e.g. re.IGNORECASE
+        flags : int, default: 0
+            re module flags, e.g. re.IGNORECASE. ``0`` means no flags
 
         Returns
         -------
@@ -586,11 +587,11 @@ class StringAccessor:
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
-        side : {'left', 'right', 'both'}, default 'left'
+        side : {'left', 'right', 'both'}, default: 'left'
             Side from which to strip.
 
         Returns
@@ -620,7 +621,7 @@ class StringAccessor:
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
@@ -640,7 +641,7 @@ class StringAccessor:
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
@@ -742,7 +743,7 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default 'left'
+        side : {'left', 'right'}, default: 'left'
             Starting side for search.
 
         Returns
@@ -801,7 +802,7 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default 'left'
+        side : {'left', 'right'}, default: 'left'
             Starting side for search.
 
         Returns
@@ -852,22 +853,22 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : string or compiled regex
+        pat : str or re.Pattern
             String can be a character sequence or regular expression.
-        repl : string or callable
+        repl : str or callable
             Replacement string or a callable. The callable is passed the regex
             match object and must return a replacement string to be used.
             See :func:`re.sub`.
-        n : int, default -1 (all)
-            Number of replacements to make from start
-        case : boolean, default None
+        n : int, default: -1
+            Number of replacements to make from start. Use ``-1`` to replace all.
+        case : bool, default: None
             - If True, case sensitive (the default if `pat` is a string)
             - Set to False for case insensitive
             - Cannot be set if `pat` is a compiled regex
-        flags : int, default 0 (no flags)
-            - re module flags, e.g. re.IGNORECASE
+        flags : int, default: 0
+            - re module flags, e.g. re.IGNORECASE. Use ``0`` for no flags.
             - Cannot be set if `pat` is a compiled regex
-        regex : boolean, default True
+        regex : bool, default: True
             - If True, assumes the passed-in pattern is a regular expression.
             - If False, treats the pattern as a literal string
             - Cannot be set to False if `pat` is a compiled regex or `repl` is
