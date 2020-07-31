@@ -11,7 +11,6 @@ from . import (
     IndexerMaker,
     ReturnItem,
     assert_array_equal,
-    assert_identical,
     raises_regex,
 )
 
