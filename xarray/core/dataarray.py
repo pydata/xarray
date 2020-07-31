@@ -2496,7 +2496,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        d : dict, with a minimum structure of {'dims': [..], 'data': [..]}
+        d : dict, with a minimum structure of {'dims': [...], 'data': [...]}
 
         Returns
         -------
@@ -2926,8 +2926,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims: '...', hashable or sequence of hashables, optional
-            Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
+        dims : ..., hashable or sequence of hashable, optional
+            Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
         Returns
