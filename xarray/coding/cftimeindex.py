@@ -695,7 +695,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -712,7 +712,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -729,7 +729,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
