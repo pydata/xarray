@@ -8,6 +8,7 @@ import xarray as xr
 from xarray.tests import (
     assert_allclose,
     assert_equal,
+    assert_identical,
     requires_cftime,
     requires_dask,
     requires_scipy,
@@ -724,7 +725,7 @@ def test_decompose(method):
 @pytest.mark.parametrize(
     "method", ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 )
-@pytest.mark.parametrize("sorted", [True, False])
+@pytest.mark.parametrize("chunked", [True, False])
 @pytest.mark.parametrize(
     "data_ndim,interp_ndim,nscalar",
     [
@@ -734,7 +735,12 @@ def test_decompose(method):
         for nscalar in range(0, interp_ndim + 1)
     ],
 )
-def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
+def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
+    """Interpolate nd array with multiple independant indexers
+
+    It should do a series of 1d interpolation
+    """
+
     # 3d non chunked data
     x = np.linspace(0, 1, 5)
     y = np.linspace(2, 4, 7)
@@ -751,12 +757,12 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
     for data_dims in permutations(da.dims, data_ndim):
 
         # select only data_ndim dim
-        da = da.isel(
+        da = da.isel(  # take the middle line
             {dim: len(da.coords[dim]) // 2 for dim in da.dims if dim not in data_dims}
         )
 
         # chunk data
-        da = da.chunk(chunks={dim: len(da.coords[dim]) // 3 for dim in da.dims})
+        da = da.chunk(chunks={dim: i + 1 for i, dim in enumerate(da.dims)})
 
         # choose the interpolation dimensions
         for interp_dims in permutations(da.dims, interp_ndim):
@@ -764,54 +770,33 @@ def test_interpolate_chunk(method, sorted, data_ndim, interp_ndim, nscalar):
             for scalar_dims in combinations(interp_dims, nscalar):
                 dest = {}
                 for dim in interp_dims:
-                    # choose a point between chunks
-                    first_chunks = da.chunks[da.get_axis_num(dim)][0]
-                    middle_point = 0.5 * (
-                        da.coords[dim][first_chunks - 1] + da.coords[dim][first_chunks]
-                    )
                     if dim in scalar_dims:
-                        # choose a point between chunks
-                        dest[dim] = middle_point
+                        # take the middle point
+                        dest[dim] = 0.5 * (da.coords[dim][0] + da.coords[dim][-1])
                     else:
-                        # pick some points, including outside the domain and bewteen chunks
+                        # pick some points, including outside the domain
                         before = 2 * da.coords[dim][0] - da.coords[dim][1]
                         after = 2 * da.coords[dim][-1] - da.coords[dim][-2]
-                        inside = da.coords[dim][first_chunks // 2]
 
-                        xdest = np.linspace(
-                            inside, middle_point, 2 * (first_chunks // 2),
-                        )
-                        xdest = np.concatenate([[before], xdest, [after]])
-                        if not sorted:
-                            xdest = xdest.reshape((-1, 2))
-                            xdest[:, 1] = xdest[::-1, 1]
-                            xdest = xdest.flatten()
-                        dest[dim] = xdest
-
+                        dest[dim] = np.linspace(before, after, len(da.coords[dim]) * 13)
+                        if chunked:
+                            dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
+                            dest[dim] = dest[dim].chunk(2)
                 actual = da.interp(method=method, **dest, kwargs=kwargs)
                 expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
 
-                assert_allclose(actual, expected)
+                assert_identical(actual, expected)
+
+                # all the combinations are usualy not necessary
                 break
             break
+        break
 
 
 @requires_scipy
 @requires_dask
-def test_interpolate_chunk_rename():
-    da = get_example_data(0).chunk({"x": 5})
-
-    # grid -> 1d-sample
-    xdest = xr.DataArray(np.linspace(0.1, 1.0, 11), dims="renamed")
-    actual = da.interp(x=xdest, method="linear")
-    expected = da.compute().interp(x=xdest, method="linear")
-
-    assert_allclose(actual, expected)
-
-
-@requires_scipy
-@requires_dask
-def test_interpolate_chunk_advanced():
+@pytest.mark.parametrize("method", ["linear", "nearest"])
+def test_interpolate_chunk_advanced(method):
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
     x = np.linspace(-1, 1, 5)
@@ -826,15 +811,16 @@ def test_interpolate_chunk_advanced():
         * t[:, np.newaxis]
         + q,
         dims=("x", "y", "z", "t", "q"),
-        coords={"x": x, "y": y, "z": z, "t": t, "q": q, "label": "toto"},
+        coords={"x": x, "y": y, "z": z, "t": t, "q": q, "label": "dummy_attr"},
     )
 
-    theta = np.linspace(0, 2 * np.pi, 19)
-    w = np.linspace(-0.25, 0.25, 23)
-
+    # Create indexer into `da` with shared coordinate ("full-twist" Möbius strip)
+    theta = np.linspace(0, 2 * np.pi, 5)
+    w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
         data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
     )
+
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     z = xr.DataArray(
@@ -842,11 +828,10 @@ def test_interpolate_chunk_advanced():
     )
 
     kwargs = {"fill_value": None}
-    # Create indexer into `a` with dimensions (y, x)
-    expected = da.interp(x=x, y=y, z=z, t=0.5, kwargs=kwargs, method="linear")
+    expected = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
+
     da = da.chunk(2)
-    x = x.chunk(3)
-    # y = y.chunk(2)
-    z = z.chunk(5)
-    actual = da.interp(x=x, y=y, z=z, t=0.5, kwargs=kwargs, method="linear")
-    assert_allclose(actual, expected)
+    x = x.chunk(1)
+    z = z.chunk(3)
+    actual = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
+    assert_identical(actual, expected)
