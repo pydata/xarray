@@ -702,13 +702,18 @@ def interp_func(var, x, new_x, method, kwargs):
         ]
         new_x_arginds = [item for pair in new_x_arginds for item in pair]
 
-        args = var, range(var.ndim), *x_arginds, *new_x_arginds,
+        args = (
+            var,
+            range(var.ndim),
+            *x_arginds,
+            *new_x_arginds,
+        )
 
         _, rechunked = da.unify_chunks(*args)
 
         args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
 
-        new_x = rechunked[1 + (len(rechunked)-1) // 2:]
+        new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
         new_axes = {
             var.ndim + i: new_x[0].chunks[i]
@@ -728,7 +733,6 @@ def interp_func(var, x, new_x, method, kwargs):
             interp_kwargs=kwargs,
             localize=localize,
             concatenate=True,
-            meta=np.ndarray,
             dtype=var.dtype,
             new_axes=new_axes,
         )
@@ -766,29 +770,33 @@ def _interpnd(var, x, new_x, func, kwargs):
 def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
     """Wrapper for `_interpnd` through `blockwise`
 
-    The first `n_x` arrays in `coords` are original coordinates,
-    the `n_x` others (the rest) are destination coordinates
+    The first half arrays in `coords` are original coordinates,
+    the other half are destination coordinates
     """
     n_x = len(coords) // 2
     nconst = len(var.shape) - n_x
 
-    # Convert all to Variable, in order to use _localize
+    # _interpnd expect coords to be Variables
     x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
-    var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
     new_x = [
-        Variable(
-            [f"dim_{outer_dim}_{inner_dim}" for inner_dim in range(len(_x.shape))], _x
-        )
-        for outer_dim, _x in enumerate(coords[n_x:])
+        Variable([f"dim_{len(var.shape) + dim}" for dim in range(len(_x.shape))], _x)
+        for _x in coords[n_x:]
     ]
-    indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
 
-    # simple speed up for the local interpolation
     if localize:
-        var, indexes_coords = _localize(var, indexes_coords)
-    localized_x, localized_new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+        # _localize expect var to be a Variable
+        var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
 
-    return _interpnd(var.data, localized_x, localized_new_x, interp_func, interp_kwargs)
+        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+
+        # put var back as a ndarray
+        var = var.data
+
+    return _interpnd(var, x, new_x, interp_func, interp_kwargs)
 
 
 def decompose_interp(indexes_coords):
