@@ -22,7 +22,7 @@ OPTIONS = {
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
     DISPLAY_STYLE: "html",
-    COLLAPSE_HTML: True,
+    COLLAPSE_HTML: False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
