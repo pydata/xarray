@@ -29,9 +29,9 @@ New Features
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
   `Aaron Spring <https://github.com/aaronspring>`_.
-- Relaxed the :ref:`mindeps_policy` to support all versions of setuptools
-  released in the last 42 months and all versions of other packages released
-  in the last 12 months, both up from 6 months (:issue:`4295`)
+- Relaxed the :ref:`mindeps_policy` to support all versions of setuptools released in
+  the last 42 months (but no older than 38.4) and all versions of other packages
+  released in the last 12 months, both up from 6 months (:issue:`4295`)
   `Guido Imperiale <https://github.com/crusaderky>`_.
 
 

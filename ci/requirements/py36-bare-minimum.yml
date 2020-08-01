@@ -10,4 +10,4 @@ dependencies:
   - pytest-env
   - numpy=1.15
   - pandas=0.25
-  - setuptools=36.5
+  - setuptools=38.4

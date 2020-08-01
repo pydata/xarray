@@ -16,5 +16,5 @@ dependencies:
   - pytest-cov
   - pytest-env
   - scipy=1.3
-  - setuptools=36.5
+  - setuptools=38.4
   - sparse=0.8
