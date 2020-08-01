@@ -106,10 +106,15 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value():
 
 
 def test_repr_of_dataarray(dataarray):
-    formatted = fh.array_repr(dataarray)
-    assert "dim_0" in formatted
-    # has an expanded data section
-    assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
+    # has an expanded data section for COLLAPSE_HTML = False
+    with xr.set_options(collapse_html=False):
+        formatted = fh.array_repr(dataarray)
+        assert "dim_0" in formatted
+        assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
+    with xr.set_options(collapse_html=True):
+        formatted = fh.array_repr(dataarray)
+        assert "dim_0" in formatted
+        assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
     # coords and attrs don't have an items so they'll be be disabled and collapsed
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2

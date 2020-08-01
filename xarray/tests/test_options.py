@@ -77,6 +77,16 @@ def test_display_style():
     assert OPTIONS["display_style"] == original
 
 
+def test_collapse_html():
+    original = False
+    assert OPTIONS["collapse_html"] == original
+    with pytest.raises(ValueError):
+        xarray.set_options(collapse_html="invalid")
+    with xarray.set_options(collapse_html=True):
+        assert OPTIONS["collapse_html"] == True
+    assert OPTIONS["collapse_html"] == original
+
+
 def create_test_dataset_attrs(seed=0):
     ds = create_test_data(seed)
     ds.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
