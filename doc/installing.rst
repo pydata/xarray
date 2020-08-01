@@ -93,7 +93,7 @@ dependencies:
 
 - **Python:** 42 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- setuptools: 42 months
+- **setuptools:** 42 months
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **sparse, pint** and other libraries that rely on
