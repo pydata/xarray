@@ -36,7 +36,7 @@ POLICY_OVERRIDE = {
     # (it's missing a timestamp which prevents this tool from working).
     # TODO remove this special case and the matching note in installing.rst
     #      after July 2021.
-    "setuptools": (38, 4)
+    "setuptools": (38, 4),
 }
 has_errors = False
 
