@@ -6,8 +6,8 @@ dependencies:
   # require drastically newer packages than everything else
   - python=3.6
   - coveralls
-  - dask=2.9
-  - distributed=2.9
+  - dask=2.3
+  - distributed=2.3
   - numpy=1.17
   - pandas=0.25
   - pint=0.13
@@ -15,6 +15,6 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - scipy=1.2
-  - setuptools=41.2
+  - scipy=1.3
+  - setuptools=36.5
   - sparse=0.8

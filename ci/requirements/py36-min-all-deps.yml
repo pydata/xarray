@@ -15,8 +15,8 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=2.9
-  - distributed=2.9
+  - dask=2.3
+  - distributed=2.3
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
@@ -43,7 +43,7 @@ dependencies:
   - rasterio=1.0
   - scipy=1.3
   - seaborn=0.9
-  - setuptools=41.2
+  - setuptools=36.5
   # - sparse  # See py36-min-nep18.yml
   - toolz=0.10
   - zarr=2.3
