@@ -83,7 +83,7 @@ def test_collapse_html():
     with pytest.raises(ValueError):
         xarray.set_options(collapse_html="invalid")
     with xarray.set_options(collapse_html=True):
-        assert OPTIONS["collapse_html"] == True
+        assert OPTIONS["collapse_html"] is True
     assert OPTIONS["collapse_html"] == original
 
 
