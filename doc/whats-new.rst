@@ -26,6 +26,8 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- new boolean option `collapse_html` to control if the HTML display for a DataArray
+  is collapsed when first shown. Default: False
 
 Bug fixes
 ~~~~~~~~~
