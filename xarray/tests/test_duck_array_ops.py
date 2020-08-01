@@ -33,6 +33,7 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_dask,
+    has_scipy,
     raises_regex,
     requires_cftime,
     requires_dask,
@@ -767,8 +768,8 @@ def test_timedelta_to_numeric(td):
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("skipna", [True, False])
 def test_least_squares(use_dask, skipna):
-    if use_dask and not has_dask:
-        pytest.skip("requires dask")
+    if use_dask and (not has_dask or not has_scipy):
+        pytest.skip("requires dask and scipy")
     lhs = np.array([[1, 2], [1, 2], [3, 2]])
     rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
 
