@@ -45,6 +45,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Only load resource files when running inside a Jupyter Notebook
+  (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
 
 
 .. _whats-new.0.16.0:
