@@ -307,7 +307,7 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+    filename_or_obj : str, Path, file-like or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
@@ -352,7 +352,7 @@ def open_dataset(
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
         chunk for all arrays.
-    lock : False or duck threading.Lock, optional
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
@@ -364,11 +364,11 @@ def open_dataset(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    drop_variables: string or iterable, optional
+    drop_variables: str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs: dictionary, optional
+    backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
@@ -578,7 +578,7 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+    filename_or_obj : str, Path, file-like or DataStore
         Strings and Paths are interpreted as a path to a netCDF file or an
         OpenDAP URL and opened with python-netCDF4, unless the filename ends
         with .gz, in which case the file is gunzipped and opened with
@@ -618,7 +618,7 @@ def open_dataarray(
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays.
-    lock : False or duck threading.Lock, optional
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
@@ -630,11 +630,11 @@ def open_dataarray(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    drop_variables: string or iterable, optional
+    drop_variables: str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs: dictionary, optional
+    backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
@@ -799,12 +799,12 @@ def open_mfdataset(
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
-    lock : False or duck threading.Lock, optional
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
         active dask scheduler.
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+    data_vars : {'minimal', 'different', 'all'} or list of str, optional
         These data variables will be concatenated together:
           * 'minimal': Only data variables in which the dimension already
             appears are included.
@@ -816,7 +816,7 @@ def open_mfdataset(
           * 'all': All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
-    coords : {'minimal', 'different', 'all' or list of str}, optional
+    coords : {'minimal', 'different', 'all'} or list of str, optional
         These coordinate variables will be concatenated together:
          * 'minimal': Only coordinates in which the dimension already appears
            are included.
@@ -1142,7 +1142,7 @@ def save_mfdataset(
 
     Parameters
     ----------
-    datasets : list of xarray.Dataset
+    datasets : list of Dataset
         List of datasets to save.
     paths : list of str or list of Path
         List of paths to which to save each corresponding dataset.
@@ -1180,7 +1180,7 @@ def save_mfdataset(
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
         See `Dataset.to_netcdf` for additional information.
-    compute: bool
+    compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
 

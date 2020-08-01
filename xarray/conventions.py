@@ -230,12 +230,12 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
     Parameters
     ----------
-    var : xarray.Variable
+    var : Variable
         A variable holding un-encoded data.
 
     Returns
     -------
-    out : xarray.Variable
+    out : Variable
         A variable which has been encoded as described above.
     """
     ensure_not_multiindex(var, name=name)
@@ -278,14 +278,14 @@ def decode_cf_variable(
 
     Parameters
     ----------
-    name: str
+    name : str
         Name of the variable. Used for better error messages.
     var : Variable
         A variable holding potentially CF encoded information.
     concat_characters : bool
         Should character arrays be concatenated to strings, for
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
-    mask_and_scale: bool
+    mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
@@ -297,7 +297,7 @@ def decode_cf_variable(
         Whether to stack characters into bytes along the last dimension of this
         array. Passed as an argument because we need to look at the full
         dataset to figure out if this is appropriate.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
         specified).  If None (default), attempt to decode times to
@@ -534,7 +534,7 @@ def decode_cf(
     concat_characters : bool, optional
         Should character arrays be concatenated to strings, for
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
-    mask_and_scale: bool, optional
+    mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
     decode_times : bool, optional
@@ -543,7 +543,7 @@ def decode_cf(
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-    drop_variables: string or iterable, optional
+    drop_variables: str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.

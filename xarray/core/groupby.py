@@ -43,7 +43,7 @@ def unique_value_groups(ar, sort=True):
     ----------
     ar : array-like
         Input array. This will be flattened if it is not already 1-D.
-    sort : boolean, optional
+    sort : bool, optional
         Whether or not to sort unique values.
 
     Returns
@@ -128,7 +128,7 @@ def _inverse_permutation_indices(positions):
 
     Parameters
     ----------
-    positions : list of np.ndarray or slice objects.
+    positions : list of ndarray or slice
         If slice objects, all are assumed to be slices.
 
     Returns
@@ -283,16 +283,16 @@ class GroupBy(SupportsArithmetic):
             Object to group.
         group : DataArray
             Array with the group values.
-        squeeze : boolean, optional
+        squeeze : bool, optional
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
-        grouper : pd.Grouper, optional
+        grouper : pandas.Grouper, optional
             Used for grouping values along the `group` array.
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
-        restore_coord_dims : bool, default True
+        restore_coord_dims : bool, default: True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         cut_kwargs : dict, optional
@@ -532,8 +532,10 @@ class GroupBy(SupportsArithmetic):
 
         Parameters
         ----------
-        value : valid type for the grouped object's fillna method
-            Used to fill all matching missing values by group.
+        value
+            Used to fill all matching missing values by group. Needs
+            to be of a valid type for the wrapped object's fillna
+            method.
 
         Returns
         -------
@@ -555,13 +557,13 @@ class GroupBy(SupportsArithmetic):
 
         Parameters
         ----------
-        q : float in range of [0,1] (or sequence of floats)
+        q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
         dim : ..., str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
@@ -659,8 +661,8 @@ class GroupBy(SupportsArithmetic):
 
         Parameters
         ----------
-        cond : DataArray or Dataset with boolean dtype
-            Locations at which to preserve this objects values.
+        cond : DataArray or Dataset
+            Locations at which to preserve this objects values. dtypes have to be `bool`
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, inserts missing values.
@@ -768,7 +770,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
@@ -782,9 +784,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        ``*args`` : tuple, optional
+        *args : tuple, optional
             Positional arguments passed to `func`.
-        ``**kwargs``
+        **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
         Returns
@@ -846,7 +848,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
@@ -906,7 +908,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Callable to apply to each sub-dataset.
         args : tuple, optional
             Positional arguments to pass to `func`.
@@ -957,7 +959,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.

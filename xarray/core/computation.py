@@ -176,7 +176,7 @@ def build_output_coords(
         are OK, e.g., scalars, Variable, DataArray, Dataset.
     signature : _UfuncSignature
         Core dimensions signature for the operation.
-    exclude_dims : optional set
+    exclude_dims : set, optional
         Dimensions excluded from the operation. Coordinates along these
         dimensions are dropped.
 
@@ -790,9 +790,9 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
+    *args : Dataset, DataArray, GroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
-    input_core_dims : Sequence[Sequence], optional
+    input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
         on each input argument that should not be broadcast. By default, we
         assume there are no core dimensions on any input arguments.
@@ -804,7 +804,7 @@ def apply_ufunc(
         Core dimensions are automatically moved to the last axes of input
         variables before applying ``func``, which facilitates using NumPy style
         generalized ufuncs [2]_.
-    output_core_dims : List[tuple], optional
+    output_core_dims : list of tuple, optional
         List of the same length as the number of output arguments from
         ``func``, giving the list of core dimensions on each output that were
         not broadcast on the inputs. By default, we assume that ``func``
@@ -825,7 +825,7 @@ def apply_ufunc(
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
         Using this option requires NumPy version 1.12 or newer.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
         data variables:
@@ -836,7 +836,7 @@ def apply_ufunc(
         - 'right': use indexes from the last object with each dimension
         - 'exact': raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    dataset_join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining variables of Dataset objects with mismatched
         data variables.
 
@@ -849,11 +849,11 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: boolean, Optional
+    keep_attrs: bool, Optional
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: 'forbidden', 'allowed' or 'parallelized', optional
+    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
@@ -862,7 +862,7 @@ def apply_ufunc(
         - 'parallelized': automatically parallelize ``func`` if any of the
           inputs are a dask array. If used, the ``output_dtypes`` argument must
           also be provided. Multiple output arguments are not yet supported.
-    output_dtypes : list of dtypes, optional
+    output_dtypes : list of dtype, optional
         Optional list of output dtypes. Only used if dask='parallelized'.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
@@ -1075,9 +1075,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray object
+    da_a: DataArray
         Array to compute.
-    da_b: DataArray object
+    da_b: DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
@@ -1155,9 +1155,9 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray object
+    da_a: DataArray
         Array to compute.
-    da_b: DataArray object
+    da_b: DataArray
         Array to compute.
     dim: str, optional
         The dimension along which the correlation will be computed
@@ -1280,7 +1280,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Returns
     -------
-    dot: DataArray
+    DataArray
 
     Examples
     --------
@@ -1513,7 +1513,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
         The 1D coordinate along which to evaluate the polynomial.
     coeffs : DataArray
         Coefficients of the polynomials.
-    degree_dim : str, default "degree"
+    degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
     See also

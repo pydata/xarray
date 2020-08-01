@@ -133,8 +133,9 @@ napoleon_type_aliases = {
     # matplotlib terms
     "color-like": ":py:func:`is_color_like`",
     # objects without namespace
-    "DataArray": "xarray.DataArray",
-    "Dataset": "xarray.Dataset",
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
     "dtype": "~numpy.dtype",
@@ -142,6 +143,10 @@ napoleon_type_aliases = {
     "Index": "~pandas.Index",
     "MultiIndex": "~pandas.MultiIndex",
     "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
     "Categorical": "~pandas.Categorical",
     "Path": "~~pathlib.Path",
     # objects with abbreviated namespace (from pandas)

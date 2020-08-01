@@ -54,17 +54,19 @@ class Rolling:
         ----------
         obj : Dataset or DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
+        windows : mapping of hashable to int
+            A mapping from a dimension name to window size
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
             window : int
                 Size of the moving window.
-        min_periods : int, default None
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -162,7 +164,9 @@ class DataArrayRolling(Rolling):
         ----------
         obj : DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
+        windows : mapping of hashable to int
+            A mapping from a dimension name to window size
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
@@ -217,11 +221,11 @@ class DataArrayRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str
+        window_dim : str
             New name of the window dimension.
-        stride: integer, optional
+        stride : int, optional
             Size of stride for the rolling window.
-        fill_value: optional. Default dtypes.NA
+        fill_value : default: dtypes.NA
             Filling value to match the dimension size.
 
         Returns
@@ -265,7 +269,7 @@ class DataArrayRolling(Rolling):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
@@ -402,17 +406,19 @@ class DatasetRolling(Rolling):
         ----------
         obj : Dataset
             Object to window.
-        windows : A mapping from a dimension name to window size
+        windows : mapping of hashable to int
+            A mapping from a dimension name to window size
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
             window : int
                 Size of the moving window.
-        min_periods : int, default None
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -460,7 +466,7 @@ class DatasetRolling(Rolling):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
@@ -498,11 +504,11 @@ class DatasetRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str
+        window_dim : str
             New name of the window dimension.
-        stride: integer, optional
+        stride: int, optional
             size of stride for the rolling window.
-        fill_value: optional. Default dtypes.NA
+        fill_value: default: dtypes.NA
             Filling value to match the dimension size.
 
         Returns
@@ -556,7 +562,9 @@ class Coarsen:
         ----------
         obj : Dataset or DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
+        windows : mapping of hashable to int
+            A mapping from a dimension name to window size
+
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
