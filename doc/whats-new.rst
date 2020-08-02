@@ -45,6 +45,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
+  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
+  By `Guido Imperiale <https://github.com/crusaderky>`_
 
 
 .. _whats-new.0.16.0:
