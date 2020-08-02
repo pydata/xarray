@@ -809,21 +809,55 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_coordinates(self):
         original = Dataset(
-            dict(variable=(("latitude", "longitude"), [[0, 1], [2, 3]])),
+            dict(
+                variable=(
+                    ("ln_p", "latitude", "longitude"),
+                    np.arange(8).reshape(2, 2, 2),
+                )
+            ),
             dict(
                 latitude=("latitude", [0, 1], {"units": "degrees_north"}),
                 longitude=("longitude", [0, 1], {"units": "degrees_east"}),
                 latlon=((), -1, {"grid_mapping_name": "latitude_longitude"}),
                 latitude_bnds=(("latitude", "bnds2"), [[0, 1], [1, 2]]),
                 longitude_bnds=(("longitude", "bnds2"), [[0, 1], [1, 2]]),
+                areas=(
+                    ("latitude", "longitude"),
+                    [[1, 1], [1, 1]],
+                    {"units": "degree^2"},
+                ),
+                std_devs=(
+                    ("ln_p", "latitude", "longitude"),
+                    np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
+                    {"standard_name": "standard_error"},
+                ),
+                det_lim=((), 0.1, {"standard_name": "detection_minimum"},),
+                ln_p=(
+                    "ln_p",
+                    [1.0, 0.5],
+                    {
+                        "standard_name": "atmosphere_natural_log_pressure_coordinate",
+                        "computed_standard_name": "air_pressure",
+                    },
+                ),
+                P0=((), 1013.25, {"units": "hPa"}),
             ),
         )
-        original["variable"].encoding["grid_mapping"] = "latlon"
+        original["variable"].encoding.update(
+            {
+                "cell_measures": "area: areas",
+                "grid_mapping": "latlon",
+                "ancillary_variables": "std_devs det_lim",
+            },
+        )
         original.coords["latitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="latitude_bnds")
         )
         original.coords["longitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="longitude_bnds")
+        )
+        original.coords["ln_p"].encoding.update(
+            {"formula_terms": "p0: P0 lev: ln_p",}
         )
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
