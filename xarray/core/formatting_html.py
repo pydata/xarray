@@ -7,7 +7,6 @@ import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
 
-
 STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
 
