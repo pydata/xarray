@@ -13,11 +13,12 @@ from .backends.rasterio_ import open_rasterio
 from .backends.zarr import open_zarr
 from .coding.cftime_offsets import cftime_range
 from .coding.cftimeindex import CFTimeIndex
+from .coding.frequencies import infer_freq
 from .conventions import SerializationWarning, decode_cf
 from .core.alignment import align, broadcast
-from .core.combine import auto_combine, combine_by_coords, combine_nested
+from .core.combine import combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from .core.computation import apply_ufunc, dot, where
+from .core.computation import apply_ufunc, corr, cov, dot, polyval, where
 from .core.concat import concat
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
@@ -46,7 +47,6 @@ __all__ = (
     "align",
     "apply_ufunc",
     "as_variable",
-    "auto_combine",
     "broadcast",
     "cftime_range",
     "combine_by_coords",
@@ -54,7 +54,10 @@ __all__ = (
     "concat",
     "decode_cf",
     "dot",
+    "cov",
+    "corr",
     "full_like",
+    "infer_freq",
     "load_dataarray",
     "load_dataset",
     "map_blocks",
@@ -65,6 +68,7 @@ __all__ = (
     "open_mfdataset",
     "open_rasterio",
     "open_zarr",
+    "polyval",
     "register_dataarray_accessor",
     "register_dataset_accessor",
     "save_mfdataset",

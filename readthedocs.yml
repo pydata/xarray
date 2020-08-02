@@ -6,8 +6,7 @@ build:
 conda:
     environment: ci/requirements/doc.yml
 
-python:
-    version: 3.8
-    install: []
+sphinx:
+  fail_on_warning: true
 
 formats: []

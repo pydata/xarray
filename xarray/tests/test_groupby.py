@@ -107,6 +107,39 @@ def test_groupby_input_mutation():
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+@pytest.mark.parametrize(
+    "obj",
+    [
+        xr.DataArray([1, 2, 3, 4, 5, 6], [("x", [1, 1, 1, 2, 2, 2])]),
+        xr.Dataset({"foo": ("x", [1, 2, 3, 4, 5, 6])}, {"x": [1, 1, 1, 2, 2, 2]}),
+    ],
+)
+def test_groupby_map_shrink_groups(obj):
+    expected = obj.isel(x=[0, 1, 3, 4])
+    actual = obj.groupby("x").map(lambda f: f.isel(x=[0, 1]))
+    assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [
+        xr.DataArray([1, 2, 3], [("x", [1, 2, 2])]),
+        xr.Dataset({"foo": ("x", [1, 2, 3])}, {"x": [1, 2, 2]}),
+    ],
+)
+def test_groupby_map_change_group_size(obj):
+    def func(group):
+        if group.sizes["x"] == 1:
+            result = group.isel(x=[0, 0])
+        else:
+            result = group.isel(x=[0])
+        return result
+
+    expected = obj.isel(x=[0, 0, 1])
+    actual = obj.groupby("x").map(func)
+    assert_identical(expected, actual)
+
+
 def test_da_groupby_map_func_args():
     def func(arg1, arg2, arg3=0):
         return arg1 + arg2 + arg3
@@ -414,7 +447,8 @@ def test_groupby_drops_nans():
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
-    expected = ds.mean("time").where(ds.id.notnull())
+    with pytest.warns(RuntimeWarning):  # mean of empty slice
+        expected = ds.mean("time").where(ds.id.notnull())
     assert_identical(actual, expected)
 
     # NaN in non-dimensional coordinate
@@ -483,6 +517,11 @@ def test_groupby_reduce_dimension_error(array):
     assert_allclose(array.mean(["x", "z"]), grouped.reduce(np.mean, ["x", "z"]))
 
 
+def test_groupby_multiple_string_args(array):
+    with pytest.raises(TypeError):
+        array.groupby("x", "y")
+
+
 def test_groupby_bins_timeseries():
     ds = xr.Dataset()
     ds["time"] = xr.DataArray(
@@ -497,6 +536,18 @@ def test_groupby_bins_timeseries():
         coords={"time_bins": pd.cut(time_bins, time_bins).categories},
     ).to_dataset(name="val")
     assert_identical(actual, expected)
+
+
+def test_groupby_none_group_name():
+    # GH158
+    # xarray should not fail if a DataArray's name attribute is None
+
+    data = np.arange(10) + 10
+    da = xr.DataArray(data)  # da.name = None
+    key = xr.DataArray(np.floor_divide(data, 2))
+
+    mean = da.groupby(key).mean()
+    assert "group" in mean.dims
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

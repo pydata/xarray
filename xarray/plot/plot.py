@@ -14,6 +14,7 @@ import pandas as pd
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -29,19 +30,17 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
-    )
+
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError("x " + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError("y " + error_msg)
-
     if x is not None and y is not None:
-        raise ValueError("You cannot specify both x and y kwargs" "for line plots.")
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        _assert_valid_xy(darray, x, "x")
+
+    if y is not None:
+        _assert_valid_xy(darray, y, "y")
 
     if ndims == 1:
         huename = None
@@ -63,7 +62,7 @@ def _infer_line_data(darray, x, y, hue):
 
     else:
         if x is None and y is None and hue is None:
-            raise ValueError("For 2D inputs, please" "specify either hue, x or y.")
+            raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
@@ -93,6 +92,7 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     otherdim = darray.dims[otherindex]
                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
                 else:
                     raise ValueError(
                         "For 2D inputs, hue must be a dimension"
@@ -155,8 +155,7 @@ def plot(
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots.
     **kwargs : optional
         Additional keyword arguments to matplotlib
 
@@ -177,10 +176,10 @@ def plot(
 
     if ndims in [1, 2]:
         if row or col:
+            kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
             kwargs["col"] = col
             kwargs["col_wrap"] = col_wrap
-            kwargs["subplot_kws"] = subplot_kws
         if ndims == 1:
             plotfunc = line
             kwargs["hue"] = hue
@@ -190,6 +189,7 @@ def plot(
                 kwargs["hue"] = hue
             else:
                 plotfunc = pcolormesh
+                kwargs["subplot_kws"] = subplot_kws
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -251,7 +251,7 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Dimensions or coordinates for x, y axis.
+        Dimension, coordinate or MultiIndex level for x, y axis.
         Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
@@ -329,7 +329,7 @@ def line(
     return primitive
 
 
-def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
+def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray index against values
 
@@ -359,16 +359,16 @@ def step(darray, *args, where="pre", linestyle=None, ls=None, **kwargs):
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
 
-    if ls is not None:
-        if linestyle is None:
-            linestyle = ls
+    if ds is not None:
+        if drawstyle is None:
+            drawstyle = ds
         else:
-            raise TypeError("ls and linestyle are mutually exclusive")
-    if linestyle is None:
-        linestyle = ""
-    linestyle = "steps-" + where + linestyle
+            raise TypeError("ds and drawstyle are mutually exclusive")
+    if drawstyle is None:
+        drawstyle = ""
+    drawstyle = "steps-" + where + drawstyle
 
-    return line(darray, *args, linestyle=linestyle, **kwargs)
+    return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
 def hist(
@@ -444,6 +444,11 @@ class _PlotMethods:
 
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
+
+    # we can't use functools.wraps here since that also modifies the name / qualname
+    __doc__ = __call__.__doc__ = plot.__doc__
+    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__annotations__ = plot.__annotations__
 
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
@@ -548,8 +553,8 @@ def _plot2d(plotfunc):
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for 2D and FacetGrid plots.
     cbar_ax : matplotlib Axes, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
@@ -689,10 +694,13 @@ def _plot2d(plotfunc):
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
-        _ensure_plottable(xplt, yplt)
+        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            plotfunc, zval.data, **locals()
+            plotfunc,
+            zval.data,
+            **locals(),
+            _is_facetgrid=kwargs.pop("_is_facetgrid", False),
         )
 
         if "contour" in plotfunc.__name__:
@@ -716,7 +724,10 @@ def _plot2d(plotfunc):
                 "plt.imshow's `aspect` kwarg is not available " "in xarray"
             )
 
-        ax = get_axis(figsize, size, aspect, ax)
+        if subplot_kws is None:
+            subplot_kws = dict()
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
         primitive = plotfunc(
             xplt,
             yplt,

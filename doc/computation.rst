@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _comput:
 
 ###########
@@ -16,17 +18,19 @@ Arithmetic operations with a single DataArray automatically vectorize (like
 numpy) over all array values:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.random.RandomState(0).randn(2, 3),
-                       [('x', ['a', 'b']), ('y', [10, 20, 30])])
+    arr = xr.DataArray(
+        np.random.RandomState(0).randn(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+    )
     arr - 3
     abs(arr)
 
@@ -43,7 +47,7 @@ Use :py:func:`~xarray.where` to conditionally switch between values:
 
 .. ipython:: python
 
-    xr.where(arr > 0, 'positive', 'negative')
+    xr.where(arr > 0, "positive", "negative")
 
 Use `@` to perform matrix multiplication:
 
@@ -71,14 +75,14 @@ methods for working with missing data from pandas:
 
 .. ipython:: python
 
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'])
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=["x"])
     x.isnull()
     x.notnull()
     x.count()
-    x.dropna(dim='x')
+    x.dropna(dim="x")
     x.fillna(-1)
-    x.ffill('x')
-    x.bfill('x')
+    x.ffill("x")
+    x.bfill("x")
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
@@ -88,9 +92,12 @@ for filling missing values via 1D interpolation.
 
 .. ipython:: python
 
-    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'],
-                     coords={'xx': xr.Variable('x', [0, 1, 1.1, 1.9, 3])})
-    x.interpolate_na(dim='x', method='linear', use_coordinate='xx')
+    x = xr.DataArray(
+        [0, 1, np.nan, np.nan, 2],
+        dims=["x"],
+        coords={"xx": xr.Variable("x", [0, 1, 1.1, 1.9, 3])},
+    )
+    x.interpolate_na(dim="x", method="linear", use_coordinate="xx")
 
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
@@ -108,8 +115,8 @@ applied along particular dimension(s):
 
 .. ipython:: python
 
-    arr.sum(dim='x')
-    arr.std(['x', 'y'])
+    arr.sum(dim="x")
+    arr.std(["x", "y"])
     arr.min()
 
 
@@ -119,7 +126,7 @@ for wrapping code designed to work with numpy arrays), you can use the
 
 .. ipython:: python
 
-    arr.get_axis_num('y')
+    arr.get_axis_num("y")
 
 These operations automatically skip missing values, like in pandas:
 
@@ -140,8 +147,7 @@ method supports rolling window aggregation:
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5),
-                       dims=('x', 'y'))
+    arr = xr.DataArray(np.arange(0, 7.5, 0.5).reshape(3, 5), dims=("x", "y"))
     arr
 
 :py:meth:`~xarray.DataArray.rolling` is applied along one dimension using the
@@ -192,8 +198,9 @@ We can also manually iterate through ``Rolling`` objects:
 
 .. code:: python
 
-   for label, arr_window in r:
-      # arr_window is a view of x
+    for label, arr_window in r:
+        # arr_window is a view of x
+        ...
 
 .. _comput.rolling_exp:
 
@@ -220,9 +227,9 @@ windowed rolling, convolution, short-time FFT etc.
 .. ipython:: python
 
     # rolling with 2-point stride
-    rolling_da = r.construct('window_dim', stride=2)
+    rolling_da = r.construct("window_dim", stride=2)
     rolling_da
-    rolling_da.mean('window_dim', skipna=False)
+    rolling_da.mean("window_dim", skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
@@ -230,8 +237,8 @@ You can also use ``construct`` to compute a weighted rolling sum:
 
 .. ipython:: python
 
-   weight = xr.DataArray([0.25, 0.5, 0.25], dims=['window'])
-   arr.rolling(y=3).construct('window').dot(weight)
+    weight = xr.DataArray([0.25, 0.5, 0.25], dims=["window"])
+    arr.rolling(y=3).construct("window").dot(weight)
 
 .. note::
   numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
@@ -241,29 +248,114 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+.. _comput.weighted:
+
+Weighted array reductions
+=========================
+
+:py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
+and :py:meth:`Dataset.weighted` array reduction methods. They currently
+support weighted ``sum`` and weighted ``mean``.
+
+.. ipython:: python
+
+    coords = dict(month=("month", [1, 2, 3]))
+
+    prec = xr.DataArray([1.1, 1.0, 0.9], dims=("month",), coords=coords)
+    weights = xr.DataArray([31, 28, 31], dims=("month",), coords=coords)
+
+Create a weighted object:
+
+.. ipython:: python
+
+    weighted_prec = prec.weighted(weights)
+    weighted_prec
+
+Calculate the weighted sum:
+
+.. ipython:: python
+
+    weighted_prec.sum()
+
+Calculate the weighted mean:
+
+.. ipython:: python
+
+    weighted_prec.mean(dim="month")
+
+The weighted sum corresponds to:
+
+.. ipython:: python
+
+    weighted_sum = (prec * weights).sum()
+    weighted_sum
+
+and the weighted mean to:
+
+.. ipython:: python
+
+    weighted_mean = weighted_sum / weights.sum()
+    weighted_mean
+
+However, the functions also take missing values in the data into account:
+
+.. ipython:: python
+
+    data = xr.DataArray([np.NaN, 2, 4])
+    weights = xr.DataArray([8, 1, 1])
+
+    data.weighted(weights).mean()
+
+Using ``(data * weights).sum() / weights.sum()`` would (incorrectly) result
+in 0.6.
+
+
+If the weights add up to to 0, ``sum`` returns 0:
+
+.. ipython:: python
+
+    data = xr.DataArray([1.0, 1.0])
+    weights = xr.DataArray([-1.0, 1.0])
+
+    data.weighted(weights).sum()
+
+and ``mean`` returns ``NaN``:
+
+.. ipython:: python
+
+    data.weighted(weights).mean()
+
+
+.. note::
+  ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
+  Missing values can be replaced manually by ``weights.fillna(0)``.
+
 .. _comput.coarsen:
 
 Coarsen large arrays
 ====================
 
-``DataArray`` and ``Dataset`` objects include a
+:py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
 methods. This supports the block aggregation along multiple dimensions,
 
 .. ipython:: python
 
-  x = np.linspace(0, 10, 300)
-  t = pd.date_range('15/12/1999', periods=364)
-  da = xr.DataArray(np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
-                    dims=['time', 'x'], coords={'time': t, 'x': x})
-  da
+    x = np.linspace(0, 10, 300)
+    t = pd.date_range("15/12/1999", periods=364)
+    da = xr.DataArray(
+        np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
+        dims=["time", "x"],
+        coords={"time": t, "x": x},
+    )
+    da
 
 In order to take a block mean for every 7 days along ``time`` dimension and
 every 2 points along ``x`` dimension,
 
 .. ipython:: python
 
-  da.coarsen(time=7, x=2).mean()
+    da.coarsen(time=7, x=2).mean()
 
 :py:meth:`~xarray.DataArray.coarsen` raises an ``ValueError`` if the data
 length is not a multiple of the corresponding window size.
@@ -272,14 +364,14 @@ the excess entries or padding ``nan`` to insufficient entries,
 
 .. ipython:: python
 
-  da.coarsen(time=30, x=2, boundary='trim').mean()
+    da.coarsen(time=30, x=2, boundary="trim").mean()
 
 If you want to apply a specific function to coordinate, you can pass the
 function or method name to ``coord_func`` option,
 
 .. ipython:: python
 
-  da.coarsen(time=7, x=2, coord_func={'time': 'min'}).mean()
+    da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
 
 
 .. _compute.using_coordinates:
@@ -293,29 +385,56 @@ central finite differences using their coordinates,
 
 .. ipython:: python
 
-    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[[0.1, 0.11, 0.2, 0.3]])
+    a = xr.DataArray([0, 1, 2, 3], dims=["x"], coords=[[0.1, 0.11, 0.2, 0.3]])
     a
-    a.differentiate('x')
+    a.differentiate("x")
 
 This method can be used also for multidimensional arrays,
 
 .. ipython:: python
 
-    a = xr.DataArray(np.arange(8).reshape(4, 2), dims=['x', 'y'],
-                     coords={'x': [0.1, 0.11, 0.2, 0.3]})
-    a.differentiate('x')
+    a = xr.DataArray(
+        np.arange(8).reshape(4, 2), dims=["x", "y"], coords={"x": [0.1, 0.11, 0.2, 0.3]}
+    )
+    a.differentiate("x")
 
 :py:meth:`~xarray.DataArray.integrate` computes integration based on
 trapezoidal rule using their coordinates,
 
 .. ipython:: python
 
-    a.integrate('x')
+    a.integrate("x")
 
 .. note::
     These methods are limited to simple cartesian geometry. Differentiation
     and integration along multidimensional coordinate are not supported.
 
+
+.. _compute.polyfit:
+
+Fitting polynomials
+===================
+
+Xarray objects provide an interface for performing linear or polynomial regressions
+using the least-squares method. :py:meth:`~xarray.DataArray.polyfit` computes the
+best fitting coefficients along a given dimension and for a given order,
+
+.. ipython:: python
+
+    x = xr.DataArray(np.arange(10), dims=["x"], name="x")
+    a = xr.DataArray(3 + 4 * x, dims=["x"], coords={"x": x})
+    out = a.polyfit(dim="x", deg=1, full=True)
+    out
+
+The method outputs a dataset containing the coefficients (and more if `full=True`).
+The inverse operation is done with :py:meth:`~xarray.polyval`,
+
+.. ipython:: python
+
+    xr.polyval(coord=x, coeffs=out.polyfit_coefficients)
+
+.. note::
+    These methods replicate the behaviour of :py:func:`numpy.polyfit` and :py:func:`numpy.polyval`.
 
 .. _compute.broadcasting:
 
@@ -333,9 +452,9 @@ arrays with different sizes aligned along different dimensions:
 
 .. ipython:: python
 
-    a = xr.DataArray([1, 2], [('x', ['a', 'b'])])
+    a = xr.DataArray([1, 2], [("x", ["a", "b"])])
     a
-    b = xr.DataArray([-1, -2, -3], [('y', [10, 20, 30])])
+    b = xr.DataArray([-1, -2, -3], [("y", [10, 20, 30])])
     b
 
 With xarray, we can apply binary mathematical operations to these arrays, and
@@ -350,7 +469,7 @@ appeared:
 
 .. ipython:: python
 
-    c = xr.DataArray(np.arange(6).reshape(3, 2), [b['y'], a['x']])
+    c = xr.DataArray(np.arange(6).reshape(3, 2), [b["y"], a["x"]])
     c
     a + c
 
@@ -384,7 +503,7 @@ operations. The default result of a binary operation is by the *intersection*
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.arange(3), [('x', range(3))])
+    arr = xr.DataArray(np.arange(3), [("x", range(3))])
     arr + arr[:-1]
 
 If coordinate values for a dimension are missing on either argument, all
@@ -393,7 +512,7 @@ matching dimensions must have the same size:
 .. ipython::
     :verbatim:
 
-    In [1]: arr + xr.DataArray([1, 2], dims='x')
+    In [1]: arr + xr.DataArray([1, 2], dims="x")
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
 
 
@@ -452,16 +571,20 @@ variables:
 
 .. ipython:: python
 
-    ds = xr.Dataset({'x_and_y': (('x', 'y'), np.random.randn(3, 5)),
-                     'x_only': ('x', np.random.randn(3))},
-                     coords=arr.coords)
+    ds = xr.Dataset(
+        {
+            "x_and_y": (("x", "y"), np.random.randn(3, 5)),
+            "x_only": ("x", np.random.randn(3)),
+        },
+        coords=arr.coords,
+    )
     ds > 0
 
 Datasets support most of the same methods found on data arrays:
 
 .. ipython:: python
 
-    ds.mean(dim='x')
+    ds.mean(dim="x")
     abs(ds)
 
 Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
@@ -484,7 +607,7 @@ Arithmetic between two datasets matches data variables of the same name:
 
 .. ipython:: python
 
-    ds2 = xr.Dataset({'x_and_y': 0, 'x_only': 100})
+    ds2 = xr.Dataset({"x_and_y": 0, "x_only": 100})
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
@@ -528,7 +651,7 @@ any additional arguments:
 .. ipython:: python
 
     squared_error = lambda x, y: (x - y) ** 2
-    arr1 = xr.DataArray([0, 1, 2, 3], dims='x')
+    arr1 = xr.DataArray([0, 1, 2, 3], dims="x")
     xr.apply_ufunc(squared_error, arr1, 1)
 
 For using more complex operations that consider some array values collectively,
@@ -548,21 +671,21 @@ to set ``axis=-1``. As an example, here is how we would wrap
 .. code-block:: python
 
     def vector_norm(x, dim, ord=None):
-        return xr.apply_ufunc(np.linalg.norm, x,
-                              input_core_dims=[[dim]],
-                              kwargs={'ord': ord, 'axis': -1})
+        return xr.apply_ufunc(
+            np.linalg.norm, x, input_core_dims=[[dim]], kwargs={"ord": ord, "axis": -1}
+        )
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     def vector_norm(x, dim, ord=None):
-        return xr.apply_ufunc(np.linalg.norm, x,
-                              input_core_dims=[[dim]],
-                              kwargs={'ord': ord, 'axis': -1})
+        return xr.apply_ufunc(
+            np.linalg.norm, x, input_core_dims=[[dim]], kwargs={"ord": ord, "axis": -1}
+        )
 
 .. ipython:: python
 
-    vector_norm(arr1, dim='x')
+    vector_norm(arr1, dim="x")
 
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like

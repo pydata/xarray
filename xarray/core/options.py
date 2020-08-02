@@ -20,7 +20,7 @@ OPTIONS = {
     CMAP_SEQUENTIAL: "viridis",
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
-    DISPLAY_STYLE: "text",
+    DISPLAY_STYLE: "html",
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -108,7 +108,7 @@ class set_options:
 
     You can use ``set_options`` either as a context manager:
 
-    >>> ds = xr.Dataset({'x': np.arange(1000)})
+    >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
     <xarray.Dataset>
@@ -132,7 +132,15 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
+                if k == ARITHMETIC_JOIN:
+                    expected = f"Expected one of {_JOIN_OPTIONS!r}"
+                elif k == DISPLAY_STYLE:
+                    expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                else:
+                    expected = ""
+                raise ValueError(
+                    f"option {k!r} given an invalid value: {v!r}. " + expected
+                )
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

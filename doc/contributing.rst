@@ -51,8 +51,8 @@ Bug reports must:
    <http://github.github.com/github-flavored-markdown/>`_::
 
       ```python
-      >>> from xarray import Dataset
-      >>> df = Dataset(...)
+      >>> import xarray as xr
+      >>> df = xr.Dataset(...)
       ...
       ```
 
@@ -148,7 +148,7 @@ We'll now kick off a two-step process:
 1. Install the build dependencies
 2. Build and install xarray
 
-.. code-block:: none
+.. code-block:: sh
 
    # Create and activate the build environment
    # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
@@ -162,7 +162,10 @@ We'll now kick off a two-step process:
    # Build and install xarray
    pip install -e .
 
-At this point you should be able to import *xarray* from your locally built version::
+At this point you should be able to import *xarray* from your locally
+built version:
+
+.. code-block:: sh
 
    $ python  # start an interpreter
    >>> import xarray
@@ -256,18 +259,20 @@ Some other important things to know about the docs:
 - The tutorials make heavy use of the `ipython directive
   <http://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
   This directive lets you put code in the documentation which will be run
-  during the doc build. For example::
+  during the doc build. For example:
+
+  .. code:: rst
 
       .. ipython:: python
 
           x = 2
-          x**3
+          x ** 3
 
   will be rendered as::
 
       In [1]: x = 2
 
-      In [2]: x**3
+      In [2]: x ** 3
       Out[2]: 8
 
   Almost all code examples in the docs are run (and the output saved) during the
@@ -290,7 +295,7 @@ Requirements
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
-.. code-block:: none
+.. code-block:: sh
 
     # Create and activate the docs environment
     conda env create -f ci/requirements/doc.yml
@@ -347,7 +352,10 @@ Code Formatting
 
 xarray uses several tools to ensure a consistent code format throughout the project:
 
-- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized code formatting
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
+  code formatting
+- `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
+  standardized code formatting in documentation
 - `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
 - `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
   See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
@@ -356,12 +364,13 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 
 ``pip``::
 
-   pip install black flake8 isort mypy
+   pip install black flake8 isort mypy blackdoc
 
 and then run from the root of the Xarray repository::
 
-   isort -rc .
+   isort .
    black -t py36 .
+   blackdoc -t py36 .
    flake8
    mypy .
 
@@ -378,8 +387,8 @@ and then running::
 
    pre-commit install
 
-from the root of the xarray repository. You can skip the pre-commit checks with
-``git commit --no-verify``.
+from the root of the xarray repository. You can skip the pre-commit checks
+with ``git commit --no-verify``.
 
 
 Backwards Compatibility
@@ -467,7 +476,7 @@ typically find tests wrapped in a class.
 .. code-block:: python
 
     class TestReallyCoolFeature:
-        ....
+        ...
 
 Going forward, we are moving to a more *functional* style using the
 `pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
@@ -477,7 +486,7 @@ writing test classes, we will write test functions like this:
 .. code-block:: python
 
     def test_really_cool_feature():
-        ....
+        ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~
@@ -508,17 +517,23 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
     from xarray.testing import assert_equal
 
 
-    @pytest.mark.parametrize('dtype', ['int8', 'int16', 'int32', 'int64'])
+    @pytest.mark.parametrize("dtype", ["int8", "int16", "int32", "int64"])
     def test_dtypes(dtype):
         assert str(np.dtype(dtype)) == dtype
 
 
-    @pytest.mark.parametrize('dtype', ['float32',
-                             pytest.param('int16', marks=pytest.mark.skip),
-                             pytest.param('int32', marks=pytest.mark.xfail(
-                                reason='to show how it works'))])
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            "float32",
+            pytest.param("int16", marks=pytest.mark.skip),
+            pytest.param(
+                "int32", marks=pytest.mark.xfail(reason="to show how it works")
+            ),
+        ],
+    )
     def test_mark(dtype):
-        assert str(np.dtype(dtype)) == 'float32'
+        assert str(np.dtype(dtype)) == "float32"
 
 
     @pytest.fixture
@@ -526,7 +541,7 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
         return xr.DataArray([1, 2, 3])
 
 
-    @pytest.fixture(params=['int8', 'int16', 'int32', 'int64'])
+    @pytest.fixture(params=["int8", "int16", "int32", "int64"])
     def dtype(request):
         return request.param
 

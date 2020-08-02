@@ -175,7 +175,7 @@ def test_variable_property(prop):
             marks=xfail(reason="mixed sparse-dense operation"),
         ),
         param(
-            do("pad_with_fill_value", pad_widths={"x": (1, 1)}, fill_value=5),
+            do("pad", mode="constant", pad_widths={"x": (1, 1)}, fill_value=5),
             True,
             marks=xfail(reason="Missing implementation for np.pad"),
         ),
@@ -837,6 +837,7 @@ class TestSparseCoords:
         )
 
 
+@requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
     a = DataArray(s)

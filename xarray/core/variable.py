@@ -1,11 +1,22 @@
 import copy
 import functools
 import itertools
+import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, TypeVar, Union
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -22,26 +33,20 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
+from .pycompat import cupy_array_type, dask_array_type, integer_types
 from .utils import (
     OrderedSet,
     _default,
     decode_numpy_dict_values,
+    drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
 )
 
-try:
-    import dask.array as da
-except ImportError:
-    pass
-
-
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.ExplicitlyIndexed,
-    pd.Index,
-) + dask_array_type
+    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
@@ -251,7 +256,10 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = np.asarray(data)
+    if isinstance(data, cupy_array_type):
+        data = data.get()
+    else:
+        data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -742,7 +750,10 @@ class Variable(
 
             data = as_indexable(self._data)[actual_indexer]
             mask = indexing.create_mask(indexer, self.shape, data)
-            data = duck_array_ops.where(mask, fill_value, data)
+            # we need to invert the mask in order to pass data first. This helps
+            # pint to choose the correct unit
+            # TODO: revert after https://github.com/hgrecco/pint/issues/1019 is fixed
+            data = duck_array_ops.where(np.logical_not(mask), data, fill_value)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
@@ -840,7 +851,7 @@ class Variable(
 
         Shallow copy versus deep copy
 
-        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var = xr.Variable(data=[1, 2, 3], dims="x")
         >>> var.copy()
         <xarray.Variable (x: 3)>
         array([1, 2, 3])
@@ -1032,6 +1043,7 @@ class Variable(
     def isel(
         self: VariableType,
         indexers: Mapping[Hashable, Any] = None,
+        missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> VariableType:
         """Return a new array indexed along the specified dimension(s).
@@ -1041,6 +1053,12 @@ class Variable(
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
+        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "exception": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1052,9 +1070,7 @@ class Variable(
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
 
-        invalid = indexers.keys() - set(self.dims)
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
+        indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         key = tuple(indexers.get(dim, slice(None)) for dim in self.dims)
         return self[key]
@@ -1099,24 +1115,16 @@ class Variable(
         else:
             dtype = self.dtype
 
-        shape = list(self.shape)
-        shape[axis] = min(abs(count), shape[axis])
+        width = min(abs(count), self.shape[axis])
+        dim_pad = (width, 0) if count >= 0 else (0, width)
+        pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        if isinstance(trimmed_data, dask_array_type):
-            chunks = list(trimmed_data.chunks)
-            chunks[axis] = (shape[axis],)
-            full = functools.partial(da.full, chunks=chunks)
-        else:
-            full = np.full
-
-        filler = full(shape, fill_value, dtype=dtype)
-
-        if count > 0:
-            arrays = [filler, trimmed_data]
-        else:
-            arrays = [trimmed_data, filler]
-
-        data = duck_array_ops.concatenate(arrays, axis)
+        data = duck_array_ops.pad(
+            trimmed_data.astype(dtype),
+            pads,
+            mode="constant",
+            constant_values=fill_value,
+        )
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -1153,66 +1161,114 @@ class Variable(
             result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
-    def pad_with_fill_value(
-        self, pad_widths=None, fill_value=dtypes.NA, **pad_widths_kwargs
+    def _pad_options_dim_to_index(
+        self,
+        pad_option: Mapping[Hashable, Union[int, Tuple[int, int]]],
+        fill_with_shape=False,
+    ):
+        if fill_with_shape:
+            return [
+                (n, n) if d not in pad_option else pad_option[d]
+                for d, n in zip(self.dims, self.data.shape)
+            ]
+        return [(0, 0) if d not in pad_option else pad_option[d] for d in self.dims]
+
+    def pad(
+        self,
+        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        mode: str = "constant",
+        stat_length: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        constant_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        end_values: Union[
+            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+        ] = None,
+        reflect_type: str = None,
+        **pad_width_kwargs: Any,
     ):
         """
-        Return a new Variable with paddings.
+        Return a new Variable with padded data.
 
         Parameters
         ----------
-        pad_width: Mapping of the form {dim: (before, after)}
-            Number of values padded to the edges of each dimension.
-        **pad_widths_kwargs:
-            Keyword argument for pad_widths
-        """
-        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs, "pad")
+        pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
+            Number of values padded along each dimension.
+            {dim: pad} is a shortcut for pad_before = pad_after = pad
+        mode: (str)
+            See numpy / Dask docs
+        stat_length : int, tuple or mapping of the form {dim: tuple}
+            Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
+            values at edge of each axis used to calculate the statistic value.
+        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'constant'.  The values to set the padded values for each
+            axis.
+        end_values : scalar, tuple or mapping of the form {dim: tuple}
+            Used in 'linear_ramp'.  The values used for the ending value of the
+            linear_ramp and that will form the edge of the padded array.
+        reflect_type : {'even', 'odd'}, optional
+            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+            default with an unaltered reflection around the edge value.  For
+            the 'odd' style, the extended part of the array is created by
+            subtracting the reflected values from two times the edge value.
+        **pad_width_kwargs:
+            One of pad_width or pad_width_kwargs must be provided.
 
-        if fill_value is dtypes.NA:
-            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        Returns
+        -------
+        padded : Variable
+            Variable with the same dimensions and attributes but padded data.
+        """
+        pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
+
+        # change default behaviour of pad with mode constant
+        if mode == "constant" and (
+            constant_values is None or constant_values is dtypes.NA
+        ):
+            dtype, constant_values = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
 
-        if isinstance(self.data, dask_array_type):
-            array = self.data
-
-            # Dask does not yet support pad. We manually implement it.
-            # https://github.com/dask/dask/issues/1926
-            for d, pad in pad_widths.items():
-                axis = self.get_axis_num(d)
-                before_shape = list(array.shape)
-                before_shape[axis] = pad[0]
-                before_chunks = list(array.chunks)
-                before_chunks[axis] = (pad[0],)
-                after_shape = list(array.shape)
-                after_shape[axis] = pad[1]
-                after_chunks = list(array.chunks)
-                after_chunks[axis] = (pad[1],)
-
-                arrays = []
-                if pad[0] > 0:
-                    arrays.append(
-                        da.full(
-                            before_shape, fill_value, dtype=dtype, chunks=before_chunks
-                        )
-                    )
-                arrays.append(array)
-                if pad[1] > 0:
-                    arrays.append(
-                        da.full(
-                            after_shape, fill_value, dtype=dtype, chunks=after_chunks
-                        )
-                    )
-                if len(arrays) > 1:
-                    array = da.concatenate(arrays, axis=axis)
-        else:
-            pads = [(0, 0) if d not in pad_widths else pad_widths[d] for d in self.dims]
-            array = np.pad(
-                self.data.astype(dtype, copy=False),
-                pads,
-                mode="constant",
-                constant_values=fill_value,
+        # create pad_options_kwargs, numpy requires only relevant kwargs to be nonempty
+        if isinstance(stat_length, dict):
+            stat_length = self._pad_options_dim_to_index(
+                stat_length, fill_with_shape=True
             )
+        if isinstance(constant_values, dict):
+            constant_values = self._pad_options_dim_to_index(constant_values)
+        if isinstance(end_values, dict):
+            end_values = self._pad_options_dim_to_index(end_values)
+
+        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
+            stat_length = [(n, n) for n in self.data.shape]  # type: ignore
+
+        # change integer values to a tuple of two of those values and change pad_width to index
+        for k, v in pad_width.items():
+            if isinstance(v, numbers.Number):
+                pad_width[k] = (v, v)
+        pad_width_by_index = self._pad_options_dim_to_index(pad_width)
+
+        # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
+        pad_option_kwargs = {}
+        if stat_length is not None:
+            pad_option_kwargs["stat_length"] = stat_length
+        if constant_values is not None:
+            pad_option_kwargs["constant_values"] = constant_values
+        if end_values is not None:
+            pad_option_kwargs["end_values"] = end_values
+        if reflect_type is not None:
+            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
+
+        array = duck_array_ops.pad(
+            self.data.astype(dtype, copy=False),
+            pad_width_by_index,
+            mode=mode,
+            **pad_option_kwargs,
+        )
+
         return type(self)(self.dims, array)
 
     def _roll_one_dim(self, dim, count):
@@ -1681,7 +1737,9 @@ class Variable(
         """
         return self.broadcast_equals(other, equiv=equiv)
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1728,6 +1786,8 @@ class Variable(
 
         from .computation import apply_ufunc
 
+        _quantile_func = np.nanquantile if skipna else np.quantile
+
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
@@ -1742,7 +1802,7 @@ class Variable(
 
         def _wrapper(npa, **kwargs):
             # move quantile axis to end. required for apply_ufunc
-            return np.moveaxis(np.nanquantile(npa, **kwargs), 0, -1)
+            return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
         result = apply_ufunc(
@@ -1843,13 +1903,13 @@ class Variable(
 
         Examples
         --------
-        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
-        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
+        >>> v.rolling_window(x, "b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
-        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
         array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
                [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
@@ -1929,10 +1989,10 @@ class Variable(
                 if pad < 0:
                     pad += window
                 if side[d] == "left":
-                    pad_widths = {d: (0, pad)}
+                    pad_width = {d: (0, pad)}
                 else:
-                    pad_widths = {d: (pad, 0)}
-                variable = variable.pad_with_fill_value(pad_widths)
+                    pad_width = {d: (pad, 0)}
+                variable = variable.pad(pad_width, mode="constant")
             else:
                 raise TypeError(
                     "{} is invalid for boundary. Valid option is 'exact', "
@@ -1951,6 +2011,9 @@ class Variable(
                 axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
+
+        keep_attrs = _get_keep_attrs(default=False)
+        variable.attrs = variable._attrs if keep_attrs else {}
 
         return variable.data.reshape(shape), tuple(axes)
 
@@ -2018,6 +2081,166 @@ class Variable(
         )
         return type(self)(self.dims, numeric_array, self._attrs)
 
+    def _unravel_argminmax(
+        self,
+        argminmax: str,
+        dim: Union[Hashable, Sequence[Hashable], None],
+        axis: Union[int, None],
+        keep_attrs: Optional[bool],
+        skipna: Optional[bool],
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Apply argmin or argmax over one or more dimensions, returning the result as a
+        dict of DataArray that can be passed directly to isel.
+        """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Behaviour of argmin/argmax with neither dim nor axis argument will "
+                "change to return a dict of indices of each dimension. To get a "
+                "single, flat index, please use np.argmin(da.data) or "
+                "np.argmax(da.data) instead of da.argmin() or da.argmax().",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+
+        argminmax_func = getattr(duck_array_ops, argminmax)
+
+        if dim is ...:
+            # In future, should do this also when (dim is None and axis is None)
+            dim = self.dims
+        if (
+            dim is None
+            or axis is not None
+            or not isinstance(dim, Sequence)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            return self.reduce(
+                argminmax_func, dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
+            )
+
+        # Get a name for the new dimension that does not conflict with any existing
+        # dimension
+        newdimname = "_unravel_argminmax_dim_0"
+        count = 1
+        while newdimname in self.dims:
+            newdimname = "_unravel_argminmax_dim_{}".format(count)
+            count += 1
+
+        stacked = self.stack({newdimname: dim})
+
+        result_dims = stacked.dims[:-1]
+        reduce_shape = tuple(self.sizes[d] for d in dim)
+
+        result_flat_indices = stacked.reduce(argminmax_func, axis=-1, skipna=skipna)
+
+        result_unravelled_indices = duck_array_ops.unravel_index(
+            result_flat_indices.data, reduce_shape
+        )
+
+        result = {
+            d: Variable(dims=result_dims, data=i)
+            for d, i in zip(dim, result_unravelled_indices)
+        }
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            for v in result.values():
+                v.attrs = self.attrs
+
+        return result
+
+    def argmin(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Index or indices of the minimum of the Variable over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of Variables,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a Variable with dtype int.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Variable or dict of Variable
+
+        See also
+        --------
+        DataArray.argmin, DataArray.idxmin
+        """
+        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
+
+    def argmax(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Index or indices of the maximum of the Variable over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of Variables,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a Variable with dtype int.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Variable or dict of Variable
+
+        See also
+        --------
+        DataArray.argmax, DataArray.idxmax
+        """
+        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
+
 
 ops.inject_all_ops_and_reduce_methods(Variable)
 
@@ -2057,9 +2280,17 @@ class IndexVariable(Variable):
     # https://github.com/python/mypy/issues/1465
     @Variable.data.setter  # type: ignore
     def data(self, data):
-        Variable.data.fset(self, data)
-        if not isinstance(self._data, PandasIndexAdapter):
-            self._data = PandasIndexAdapter(self._data)
+        raise ValueError(
+            f"Cannot assign to the .data attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
+            f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
+        )
+
+    @Variable.values.setter  # type: ignore
+    def values(self, values):
+        raise ValueError(
+            f"Cannot assign to the .values attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
+            f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
+        )
 
     def chunk(self, chunks=None, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
@@ -2353,7 +2584,7 @@ def assert_unique_multiindex_level_names(variables):
 
     duplicate_names = [v for v in level_names.values() if len(v) > 1]
     if duplicate_names:
-        conflict_str = "\n".join([", ".join(v) for v in duplicate_names])
+        conflict_str = "\n".join(", ".join(v) for v in duplicate_names)
         raise ValueError("conflicting MultiIndex level name(s):\n%s" % conflict_str)
     # Check confliction between level names and dimensions GH:2299
     for k, v in variables.items():

@@ -6,11 +6,11 @@ dependencies:
   # require drastically newer packages than everything else
   - python=3.6
   - coveralls
-  - dask=2.4
-  - distributed=2.4
+  - dask=2.9
+  - distributed=2.9
   - numpy=1.17
   - pandas=0.25
-  - pint=0.9  # Actually not enough as it doesn't implement __array_function__yet!
+  - pint=0.13
   - pip
   - pytest
   - pytest-cov

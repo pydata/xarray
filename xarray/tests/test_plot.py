@@ -1,4 +1,5 @@
 import inspect
+from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
@@ -14,6 +15,7 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
+    get_axis,
     label_from_attrs,
 )
 
@@ -22,6 +24,7 @@ from . import (
     assert_equal,
     has_nc_time_axis,
     raises_regex,
+    requires_cartopy,
     requires_cftime,
     requires_matplotlib,
     requires_nc_time_axis,
@@ -34,6 +37,11 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
+
+try:
+    import cartopy as ctpy  # type: ignore
+except ImportError:
+    ctpy = None
 
 
 @pytest.mark.flaky
@@ -80,6 +88,13 @@ def easy_array(shape, start=0, stop=1):
     return a.reshape(shape)
 
 
+def get_colorbar_label(colorbar):
+    if colorbar.orientation == "vertical":
+        return colorbar.ax.get_ylabel()
+    else:
+        return colorbar.ax.get_xlabel()
+
+
 @requires_matplotlib
 class PlotTestCase:
     @pytest.fixture(autouse=True)
@@ -110,6 +125,12 @@ class TestPlot(PlotTestCase):
     def setup_array(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
+    def test_accessor(self):
+        from ..plot.plot import _PlotMethods
+
+        assert DataArray.plot is _PlotMethods
+        assert isinstance(self.darray.plot, _PlotMethods)
+
     def test_label_from_attrs(self):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
@@ -135,8 +156,14 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, "None"):
+        with raises_regex(ValueError, "x must be one of None, 'dim_0'"):
             self.darray[:, 0, 0].plot(x="dim_1")
+
+        with raises_regex(TypeError, "complex128"):
+            (self.darray[:, 0, 0] + 1j).plot()
+
+    def test_1d_bool(self):
+        xr.ones_like(self.darray[:, 0, 0], dtype=bool).plot()
 
     def test_1d_x_y_kw(self):
         z = np.arange(10)
@@ -148,14 +175,31 @@ class TestPlot(PlotTestCase):
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "Cannot specify both"):
             da.plot(x="z", y="z")
 
-        with raises_regex(ValueError, "None"):
-            da.plot(x="f", y="z")
+        error_msg = "must be one of None, 'z'"
+        with raises_regex(ValueError, f"x {error_msg}"):
+            da.plot(x="f")
 
-        with raises_regex(ValueError, "None"):
-            da.plot(x="z", y="f")
+        with raises_regex(ValueError, f"y {error_msg}"):
+            da.plot(y="f")
+
+    def test_multiindex_level_as_coord(self):
+        da = xr.DataArray(
+            np.arange(5),
+            dims="x",
+            coords=dict(a=("x", np.arange(5)), b=("x", np.arange(5, 10))),
+        )
+        da = da.set_index(x=["a", "b"])
+
+        for x in ["a", "b"]:
+            h = da.plot(x=x)[0]
+            assert_array_equal(h.get_xdata(), da[x].values)
+
+        for y in ["a", "b"]:
+            h = da.plot(y=y)[0]
+            assert_array_equal(h.get_ydata(), da[y].values)
 
     # Test for bug in GH issue #2725
     def test_infer_line_data(self):
@@ -204,7 +248,7 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x="dim_0", hue="dim_1")
         self.darray[:, :, 0].plot.line(y="dim_0", hue="dim_1")
 
-        with raises_regex(ValueError, "cannot"):
+        with raises_regex(ValueError, "Cannot"):
             self.darray[:, :, 0].plot.line(x="dim_1", y="dim_0", hue="dim_1")
 
     def test_2d_line_accepts_legend_kw(self):
@@ -250,6 +294,17 @@ class TestPlot(PlotTestCase):
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
 
+    def test_2d_coord_line_plot_coords_transpose_invariant(self):
+        # checks for bug reported in GH #3933
+        x = np.arange(10)
+        y = np.arange(20)
+        ds = xr.Dataset(coords={"x": x, "y": y})
+
+        for z in [ds.y + ds.x, ds.x + ds.y]:
+            ds = ds.assign_coords(z=z)
+            ds["v"] = ds.x + ds.y
+            ds["v"].plot.line(y="z", hue="x")
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
@@ -274,6 +329,71 @@ class TestPlot(PlotTestCase):
 
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
+
+    def test_contourf_cmap_set(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        cmap = mpl.cm.viridis
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        # Set vmin and vmax so that _build_discrete_colormap is called with
+        # extend='both'. extend is passed to
+        # mpl.colors.from_levels_and_colors(), which returns a result with
+        # sensible under and over values if extend='both', but not if
+        # extend='neither' (but if extend='neither' the under and over values
+        # would not be used because the data would all be within the plotted
+        # range)
+        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
+
+        # check the set_bad color
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color
+        assert pl.cmap(np.inf) == cmap(np.inf)
+
+    def test_contourf_cmap_set_with_bad_under_over(self):
+        a = DataArray(easy_array((4, 4)), dims=["z", "time"])
+
+        # Make a copy here because we want a local cmap that we will modify.
+        # Use deepcopy because matplotlib Colormap objects have tuple members
+        # and we want to ensure we do not change the original.
+        cmap = deepcopy(mpl.cm.viridis)
+
+        cmap.set_bad("w")
+        # check we actually changed the set_bad color
+        assert np.all(
+            cmap(np.ma.masked_invalid([np.nan]))[0]
+            != mpl.cm.viridis(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        cmap.set_under("r")
+        # check we actually changed the set_under color
+        assert cmap(-np.inf) != mpl.cm.viridis(-np.inf)
+
+        cmap.set_over("g")
+        # check we actually changed the set_over color
+        assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
+
+        # deepcopy to ensure cmap is not changed by contourf()
+        pl = a.plot.contourf(cmap=deepcopy(cmap))
+
+        # check the set_bad color has been kept
+        assert np.all(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
+            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        )
+
+        # check the set_under color has been kept
+        assert pl.cmap(-np.inf) == cmap(-np.inf)
+
+        # check the set_over color has been kept
+        assert pl.cmap(np.inf) == cmap(np.inf)
 
     def test3d(self):
         self.darray.plot()
@@ -525,6 +645,10 @@ class TestPlotStep(PlotTestCase):
     def test_step(self):
         self.darray[0, 0].plot.step()
 
+    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
+    def test_step_with_drawstyle(self, ds):
+        self.darray[0, 0].plot.step(drawstyle=ds)
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
@@ -757,25 +881,32 @@ class TestDetermineCmapParams:
         assert cmap_params["vmax"] == 0.6
         assert cmap_params["cmap"] == "viridis"
 
+        # regression test for GH3524
+        # infer diverging colormap from divergent levels
+        cmap_params = _determine_cmap_params(pos, levels=[-0.1, 0, 1])
+        # specifying levels makes cmap a Colormap object
+        assert cmap_params["cmap"].name == "RdBu_r"
+
     def test_norm_sets_vmin_vmax(self):
         vmin = self.data.min()
         vmax = self.data.max()
 
-        for norm, extend in zip(
+        for norm, extend, levels in zip(
             [
-                mpl.colors.LogNorm(),
-                mpl.colors.LogNorm(vmin + 1, vmax - 1),
-                mpl.colors.LogNorm(None, vmax - 1),
-                mpl.colors.LogNorm(vmin + 1, None),
+                mpl.colors.Normalize(),
+                mpl.colors.Normalize(),
+                mpl.colors.Normalize(vmin + 0.1, vmax - 0.1),
+                mpl.colors.Normalize(None, vmax - 0.1),
+                mpl.colors.Normalize(vmin + 0.1, None),
             ],
-            ["neither", "both", "max", "min"],
+            ["neither", "neither", "both", "max", "min"],
+            [7, None, None, None, None],
         ):
 
             test_min = vmin if norm.vmin is None else norm.vmin
             test_max = vmax if norm.vmax is None else norm.vmax
 
-            cmap_params = _determine_cmap_params(self.data, norm=norm)
-
+            cmap_params = _determine_cmap_params(self.data, norm=norm, levels=levels)
             assert cmap_params["vmin"] == test_min
             assert cmap_params["vmax"] == test_max
             assert cmap_params["extend"] == extend
@@ -919,6 +1050,13 @@ class Common2dMixin:
         with raises_regex(ValueError, r"DataArray must be 2d"):
             self.plotfunc(self.darray[0, :])
 
+    def test_bool(self):
+        xr.ones_like(self.darray, dtype=bool).plot()
+
+    def test_complex_raises_typeerror(self):
+        with raises_regex(TypeError, "complex128"):
+            (self.darray + 1j).plot()
+
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
         if self.plotfunc.__name__ == "imshow":
@@ -928,6 +1066,16 @@ class Common2dMixin:
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
+        with raises_regex(TypeError, r"[Pp]lot"):
+            self.plotfunc(a)
+
+    def test_multiindex_raises_typeerror(self):
+        a = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        a = a.set_index(y=("a", "b"))
         with raises_regex(TypeError, r"[Pp]lot"):
             self.plotfunc(a)
 
@@ -1039,15 +1187,16 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
-        with raises_regex(ValueError, "x and y must be coordinate variables"):
+
+        with raises_regex(ValueError, "x and y cannot be equal."):
+            self.plotmethod(x="y", y="y")
+
+        error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
-        with raises_regex(
-            ValueError, "x must be a dimension name if y is not supplied"
-        ):
+        with raises_regex(ValueError, f"x {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
-        with raises_regex(
-            ValueError, "y must be a dimension name if x is not supplied"
-        ):
+        with raises_regex(ValueError, f"y {error_msg}"):
             self.plotmethod(y="not_a_real_dim")
         self.darray.coords["z"] = 100
 
@@ -1081,6 +1230,27 @@ class Common2dMixin:
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         assert np.min(ax.get_xlim()) > 100.0
+
+    def test_multiindex_level_as_coord(self):
+        da = DataArray(
+            easy_array((3, 2)),
+            dims=("x", "y"),
+            coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
+        )
+        da = da.set_index(y=["a", "b"])
+
+        for x, y in (("a", "x"), ("b", "x"), ("x", "a"), ("x", "b")):
+            self.plotfunc(da, x=x, y=y)
+
+            ax = plt.gca()
+            assert x == ax.get_xlabel()
+            assert y == ax.get_ylabel()
+
+        with raises_regex(ValueError, "levels of the same MultiIndex"):
+            self.plotfunc(da, x="a", y="b")
+
+        with raises_regex(ValueError, "y must be one of None, 'a', 'b', 'x'"):
+            self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=["a", "b", "c"])
@@ -1251,7 +1421,7 @@ class Common2dMixin:
 
         # catch contour case
         if hasattr(g, "cbar"):
-            assert g.cbar._label == "test_label"
+            assert get_colorbar_label(g.cbar) == "test_label"
 
     def test_facetgrid_no_cbar_ax(self):
         a = easy_array((10, 15, 2, 3))
@@ -1683,6 +1853,14 @@ class TestFacetGrid(PlotTestCase):
             assert np.allclose(expected, clim)
 
     @pytest.mark.slow
+    def test_vmin_vmax_equal(self):
+        # regression test for GH3734
+        fg = self.g.map_dataarray(xplt.imshow, "x", "y", vmin=50, vmax=50)
+        for mappable in fg._mappables:
+            assert mappable.norm.vmin != mappable.norm.vmax
+
+    @pytest.mark.slow
+    @pytest.mark.filterwarnings("ignore")
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
         self.g.map_dataarray(xplt.imshow, "x", "y", norm=norm)
@@ -1940,6 +2118,12 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds.B.attrs["units"] = "Bunits"
         self.ds = ds
 
+    def test_accessor(self):
+        from ..plot.dataset_plot import _Dataset_PlotMethods
+
+        assert Dataset.plot is _Dataset_PlotMethods
+        assert isinstance(self.ds.plot, _Dataset_PlotMethods)
+
     @pytest.mark.parametrize(
         "add_guide, hue_style, legend, colorbar",
         [
@@ -2067,6 +2251,7 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
 @requires_cftime
 class TestCFDatetimePlot(PlotTestCase):
@@ -2211,3 +2396,48 @@ def test_plot_transposes_properly(plotfunc):
     # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
     # to ravel() on the LHS
     assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+
+
+@requires_matplotlib
+def test_facetgrid_single_contour():
+    # regression test for GH3569
+    x, y = np.meshgrid(np.arange(12), np.arange(12))
+    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
+    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    ds = xr.concat([z, z2], dim="time")
+    ds["time"] = [0, 1]
+
+    ds.plot.contour(col="time", levels=[4], colors=["k"])
+
+
+@requires_matplotlib
+def test_get_axis():
+    # test get_axis works with different args combinations
+    # and return the right type
+
+    # cannot provide both ax and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `ax`"):
+        get_axis(figsize=[4, 4], size=None, aspect=None, ax="something")
+
+    # cannot provide both ax and size
+    with pytest.raises(ValueError, match="both `size` and `ax`"):
+        get_axis(figsize=None, size=200, aspect=4 / 3, ax="something")
+
+    # cannot provide both size and figsize
+    with pytest.raises(ValueError, match="both `figsize` and `size`"):
+        get_axis(figsize=[4, 4], size=200, aspect=None, ax=None)
+
+    # cannot provide aspect and size
+    with pytest.raises(ValueError, match="`aspect` argument without `size`"):
+        get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
+
+    ax = get_axis()
+    assert isinstance(ax, mpl.axes.Axes)
+
+
+@requires_cartopy
+def test_get_axis_cartopy():
+
+    kwargs = {"projection": ctpy.crs.PlateCarree()}
+    ax = get_axis(**kwargs)
+    assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)

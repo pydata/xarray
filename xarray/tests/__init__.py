@@ -16,6 +16,10 @@ from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
+from xarray.testing import (  # noqa: F401
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
+)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -62,6 +66,7 @@ has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
+has_cftime_1_1_0, requires_cftime_1_1_0 = _importorskip("cftime", minversion="1.1.0.0")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
@@ -72,6 +77,7 @@ has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
+has_cartopy, requires_cartopy = _importorskip("cartopy")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

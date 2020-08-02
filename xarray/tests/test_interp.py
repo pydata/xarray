@@ -244,6 +244,36 @@ def test_interpolate_nd(case):
     assert_allclose(actual.transpose("y", "z"), expected)
 
 
+@requires_scipy
+def test_interpolate_nd_nd():
+    """Interpolate nd array with an nd indexer sharing coordinates."""
+    # Create original array
+    a = [0, 2]
+    x = [0, 1, 2]
+    da = xr.DataArray(
+        np.arange(6).reshape(2, 3), dims=("a", "x"), coords={"a": a, "x": x}
+    )
+
+    # Create indexer into `a` with dimensions (y, x)
+    y = [10]
+    c = {"x": x, "y": y}
+    ia = xr.DataArray([[1, 2, 2]], dims=("y", "x"), coords=c)
+    out = da.interp(a=ia)
+    expected = xr.DataArray([[1.5, 4, 5]], dims=("y", "x"), coords=c)
+    xr.testing.assert_allclose(out.drop_vars("a"), expected)
+
+    # If the *shared* indexing coordinates do not match, interp should fail.
+    with pytest.raises(ValueError):
+        c = {"x": [1], "y": y}
+        ia = xr.DataArray([[1]], dims=("y", "x"), coords=c)
+        da.interp(a=ia)
+
+    with pytest.raises(ValueError):
+        c = {"x": [5, 6, 7], "y": y}
+        ia = xr.DataArray([[1]], dims=("y", "x"), coords=c)
+        da.interp(a=ia)
+
+
 @pytest.mark.parametrize("method", ["linear"])
 @pytest.mark.parametrize("case", [0, 1])
 def test_interpolate_scalar(method, case):
@@ -669,3 +699,21 @@ def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
+
+
+@requires_scipy
+@pytest.mark.parametrize("method", ["nearest", "linear"])
+def test_decompose(method):
+    da = xr.DataArray(
+        np.arange(6).reshape(3, 2),
+        dims=["x", "y"],
+        coords={"x": [0, 1, 2], "y": [-0.1, -0.3]},
+    )
+    x_new = xr.DataArray([0.5, 1.5, 2.5], dims=["x1"])
+    y_new = xr.DataArray([-0.15, -0.25], dims=["y1"])
+    x_broadcast, y_broadcast = xr.broadcast(x_new, y_new)
+    assert x_broadcast.ndim == 2
+
+    actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
+    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
+    assert_allclose(actual, expected)

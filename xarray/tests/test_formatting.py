@@ -3,6 +3,7 @@ from textwrap import dedent
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray.core import formatting
@@ -114,7 +115,7 @@ class TestFormatting:
 
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 2)
-        expected = "0 ... 99"
+        expected = "..."
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100), 9)
@@ -133,11 +134,13 @@ class TestFormatting:
         expected = "0 1 2 ... 98 99"
         assert expected == actual
 
+        # NB: Probably not ideal; an alternative would be cutting after the
+        # first ellipsis
         actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = "0.0 ... 99.0"
+        expected = "0.0 ... ..."
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(100.0), 1)
+        actual = formatting.format_array_flat(np.arange(100.0), 12)
         expected = "0.0 ... 99.0"
         assert expected == actual
 
@@ -153,16 +156,25 @@ class TestFormatting:
         expected = ""
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(1), 0)
+        actual = formatting.format_array_flat(np.arange(1), 1)
         expected = "0"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(2), 0)
+        actual = formatting.format_array_flat(np.arange(2), 3)
         expected = "0 1"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = "0 ... 3"
+        actual = formatting.format_array_flat(np.arange(4), 7)
+        expected = "0 1 2 3"
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(5), 7)
+        expected = "0 ... 4"
+        assert expected == actual
+
+        long_str = [" ".join(["hello world" for _ in range(100)])]
+        actual = formatting.format_array_flat(np.asarray([long_str]), 21)
+        expected = "'hello world hello..."
         assert expected == actual
 
     def test_pretty_print(self):
@@ -275,6 +287,44 @@ class TestFormatting:
         except AssertionError:
             assert actual == expected.replace(", dtype=int64", "")
 
+    @pytest.mark.filterwarnings("error")
+    def test_diff_attrs_repr_with_array(self):
+        attrs_a = {"attr": np.array([0, 1])}
+
+        attrs_b = {"attr": 1}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: 1
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        attrs_b = {"attr": np.array([-3, 5])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [-3  5]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        # should not raise a warning
+        attrs_b = {"attr": np.array([0, 1, 2])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [0 1 2]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
     def test_diff_dataset_repr(self):
         ds_a = xr.Dataset(
             data_vars={
@@ -355,10 +405,19 @@ def test_short_numpy_repr():
         np.random.randn(20, 20),
         np.random.randn(5, 10, 15),
         np.random.randn(5, 10, 15, 3),
+        np.random.randn(100, 5, 1),
     ]
     # number of lines:
-    # for default numpy repr: 167, 140, 254, 248
-    # for short_numpy_repr: 1, 7, 24, 19
+    # for default numpy repr: 167, 140, 254, 248, 599
+    # for short_numpy_repr: 1, 7, 24, 19, 25
     for array in cases:
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
+
+
+def test_large_array_repr_length():
+
+    da = xr.DataArray(np.random.randn(100, 5, 1))
+
+    result = repr(da).splitlines()
+    assert len(result) < 50

@@ -29,7 +29,7 @@ def check_reduce_dims(reduce_dims, dimensions):
     if reduce_dims is not ...:
         if is_scalar(reduce_dims):
             reduce_dims = [reduce_dims]
-        if any([dim not in dimensions for dim in reduce_dims]):
+        if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
                 "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
                 % (reduce_dims, dimensions)
@@ -64,8 +64,8 @@ def unique_value_groups(ar, sort=True):
 
 
 def _dummy_copy(xarray_obj):
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     if isinstance(xarray_obj, Dataset):
         res = Dataset(
@@ -272,8 +272,8 @@ class GroupBy(SupportsArithmetic):
         squeeze=False,
         grouper=None,
         bins=None,
-        restore_coord_dims=None,
-        cut_kwargs={},
+        restore_coord_dims=True,
+        cut_kwargs=None,
     ):
         """Create a GroupBy object
 
@@ -292,13 +292,15 @@ class GroupBy(SupportsArithmetic):
         bins : array-like, optional
             If `bins` is specified, the groups will be discretized into the
             specified bins by `pandas.cut`.
-        restore_coord_dims : bool, optional
+        restore_coord_dims : bool, default True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
         cut_kwargs : dict, optional
             Extra keyword arguments to pass to `pandas.cut`
 
         """
+        if cut_kwargs is None:
+            cut_kwargs = {}
         from .dataarray import DataArray
 
         if grouper is not None and bins is not None:
@@ -308,7 +310,8 @@ class GroupBy(SupportsArithmetic):
             if not hashable(group):
                 raise TypeError(
                     "`group` must be an xarray.DataArray or the "
-                    "name of an xarray variable or dimension"
+                    "name of an xarray variable or dimension."
+                    f"Received {group!r} instead."
                 )
             group = obj[group]
             if len(group) == 0:
@@ -319,7 +322,7 @@ class GroupBy(SupportsArithmetic):
                 group = _DummyGroup(obj, group.name, group.coords)
 
         if getattr(group, "name", None) is None:
-            raise ValueError("`group` must have a name")
+            group.name = "group"
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
@@ -370,8 +373,10 @@ class GroupBy(SupportsArithmetic):
                 group = group.dropna(group_dim)
 
             # look through group to find the unique values
+            group_as_index = safe_cast_to_index(group)
+            sort = bins is None and (not isinstance(group_as_index, pd.MultiIndex))
             unique_values, group_indices = unique_value_groups(
-                safe_cast_to_index(group), sort=(bins is None)
+                group_as_index, sort=sort
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
@@ -384,21 +389,6 @@ class GroupBy(SupportsArithmetic):
                 raise ValueError(
                     "Failed to group data. Are you grouping by a variable that is all NaN?"
                 )
-
-        if (
-            isinstance(obj, DataArray)
-            and restore_coord_dims is None
-            and any(obj[c].ndim > 1 for c in obj.coords)
-        ):
-            warnings.warn(
-                "This DataArray contains multi-dimensional "
-                "coordinates. In the future, the dimension order "
-                "of these coordinates will be restored as well "
-                "unless you specify restore_coord_dims=False.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            restore_coord_dims = False
 
         # specification for the groupby operation
         self._obj = obj
@@ -558,7 +548,9 @@ class GroupBy(SupportsArithmetic):
         out = ops.fillna(self, value)
         return out
 
-    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+    def quantile(
+        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+    ):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
 
@@ -582,6 +574,8 @@ class GroupBy(SupportsArithmetic):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating.
 
         Returns
         -------
@@ -595,7 +589,7 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
 
         Examples
@@ -656,6 +650,7 @@ class GroupBy(SupportsArithmetic):
             dim=dim,
             interpolation=interpolation,
             keep_attrs=keep_attrs,
+            skipna=skipna,
         )
 
         return out
@@ -715,7 +710,7 @@ class GroupBy(SupportsArithmetic):
 def _maybe_reorder(xarray_obj, dim, positions):
     order = _inverse_permutation_indices(positions)
 
-    if order is None:
+    if order is None or len(order) != xarray_obj.sizes[dim]:
         return xarray_obj
     else:
         return xarray_obj[{dim: order}]
@@ -833,7 +828,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
             combined = self._restore_dim_order(combined)
-        if coord is not None:
+        # assign coord when the applied function does not return that coord
+        if coord is not None and dim not in applied_example.dims:
             if shortcut:
                 coord_var = as_variable(coord)
                 combined._coords[coord.name] = coord_var
@@ -949,7 +945,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         coord, dim, positions = self._infer_concat_args(applied_example)
         combined = concat(applied, dim)
         combined = _maybe_reorder(combined, dim, positions)
-        if coord is not None:
+        # assign coord when the applied function does not return that coord
+        if coord is not None and dim not in applied_example.dims:
             combined[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)

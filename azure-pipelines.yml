@@ -20,6 +20,8 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
+      py38-all-but-dask:
+        conda_env: py38-all-but-dask
       py38-upstream-dev:
         conda_env: py38
         upstream_dev: true
@@ -38,7 +40,7 @@ jobs:
       py38:
         conda_env: py38
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-10.15'
   steps:
   - template: ci/azure/unit-tests.yml
 
@@ -93,7 +95,7 @@ jobs:
   - template: ci/azure/install.yml
   - bash: |
       source activate xarray-tests
-      isort -rc --check .
+      isort --check .
     displayName: isort formatting checks
 
 - job: MinimumVersionsPolicy
@@ -106,21 +108,3 @@ jobs:
       python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
       python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
     displayName: minimum versions policy
-
-- job: Docs
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-  - template: ci/azure/install.yml
-    parameters:
-      env_file: ci/requirements/doc.yml
-  - bash: |
-      source activate xarray-tests
-      # Replicate the exact environment created by the readthedocs CI
-      conda install --yes --quiet -c pkgs/main mock pillow sphinx sphinx_rtd_theme
-    displayName: Replicate readthedocs CI environment
-  - bash: |
-      source activate xarray-tests
-      cd doc
-      sphinx-build -W --keep-going -j auto -b html -d _build/doctrees . _build/html
-    displayName: Build HTML docs
