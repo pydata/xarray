@@ -887,9 +887,7 @@ class CFEncodedBase(DatasetIOBase):
         original.coords["longitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="longitude_bnds")
         )
-        original.coords["ln_p"].encoding.update(
-            {"formula_terms": "p0: P0 lev: ln_p",}
-        )
+        original.coords["ln_p"].encoding.update({"formula_terms": "p0: P0 lev: ln_p"})
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
