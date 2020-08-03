@@ -3312,23 +3312,20 @@ class DataArray(AbstractArray, DataWithCoords):
 
             This function cannot add a new chunked dimension.
 
-        obj: DataArray, Dataset
-            Passed to the function as its first argument, one block at a time.
         args: Sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
-            xarray objects in args must be aligned with obj, otherwise an error is raised.
+            xarray objects in args must be aligned with this object, otherwise an error is raised.
         kwargs: Mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             subset to blocks. Passing dask collections in kwargs is not allowed.
         template: (optional) DataArray, Dataset
             xarray object representing the final result after compute is called. If not provided,
-            the function will be first run on mocked-up data, that looks like ``obj`` but
+            the function will be first run on mocked-up data, that looks like this object but
             has sizes 0, to determine properties of the returned object such as dtype,
             variable names, attributes, new dimensions and new indexes (if any).
             ``template`` must be provided if the function changes the size of existing dimensions.
             When provided, ``attrs`` on variables in `template` are copied over to the result. Any
             ``attrs`` set by ``func`` will be ignored.
-
 
         Returns
         -------
@@ -3341,7 +3338,7 @@ class DataArray(AbstractArray, DataWithCoords):
         subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
         recommended to use ``apply_ufunc``.
 
-        If none of the variables in ``obj`` is backed by dask arrays, calling this function is
+        If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
 
         See Also
