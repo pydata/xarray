@@ -1027,7 +1027,7 @@ class DataArray(AbstractArray, DataWithCoords):
         missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
