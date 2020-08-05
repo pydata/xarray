@@ -42,6 +42,37 @@ xarray objects via the (readonly) :py:attr:`Dataset.variables
 <xarray.Dataset.variables>` and
 :py:attr:`DataArray.variable <xarray.DataArray.variable>` attributes.
 
+Duck arrays
+-----------
+
+.. warning::
+
+    This is a experimental feature.
+
+xarray can wrap custom `duck array`_ objects as long as they define numpy's
+`shape`, `dtype` and `ndim` properties and the `__array__`, `__array_ufunc__`
+and `__array_function__` methods.
+
+In certain situations (e.g. when printing the variables of ``Dataset``), xarray
+will display the repr of a `duck array`_ in a single line, limiting it to a
+certain number of characters. If that would drop too much information, the
+`duck array`_ may define a ``_repr_inline_`` method:
+
+.. code:: python
+
+    class MyDuckArray:
+        ...
+
+        def _repr_inline_(self, max_width):
+            """ display the array in a single line with max_width characters """
+
+            ...
+
+        ...
+
+.. _duck arrays: https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+
+
 Extending xarray
 ----------------
 
