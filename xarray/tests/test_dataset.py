@@ -5607,6 +5607,14 @@ class TestDataset:
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
 
+    def test_astype_attrs(self):
+        data = create_test_data(seed=123)
+        data.attrs["foo"] = "bar"
+        databool = data.astype(bool)
+
+        assert list(data.attrs.items()) == list(databool.attrs.items())
+        assert list(data.var1.attrs.items()) == list(databool.var1.attrs.items())
+
 
 # Py.test tests
 

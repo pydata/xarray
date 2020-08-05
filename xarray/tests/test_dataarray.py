@@ -1874,6 +1874,13 @@ class TestDataArray:
         bar = Variable(["x", "y"], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
+    def test_astype_attrs(self):
+        mda1 = self.mda.copy()
+        mda1.attrs["foo"] = "bar"
+        mda2 = mda1.astype(bool)
+
+        assert list(mda1.attrs.items()) == list(mda2.attrs.items())
+
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
         x[x < 0] = np.nan

@@ -149,6 +149,10 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
+def astype(data, dtype, **kwargs):
+    return data.astype(dtype, **kwargs)
+
+
 def asarray(data, xp=np):
     return (
         data
