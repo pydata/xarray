@@ -393,8 +393,10 @@ def combine_nested(
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
@@ -571,8 +573,10 @@ def combine_by_coords(
         If objects are DataArrays, `data_vars` must be 'all'.
     coords : {'minimal', 'different', 'all' or list of str}, optional
         As per the 'data_vars' kwarg, but for coordinate variables.
-    fill_value : scalar, optional
-        Value to use for newly missing values. If None, raises a ValueError if
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         String indicating how to combine differing indexes
