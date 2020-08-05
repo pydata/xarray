@@ -360,7 +360,7 @@ class Variable(
             )
         self._data = data
 
-    def astype(self, dtype, casting="unsafe", copy=True):
+    def astype(self, dtype, casting="unsafe", copy=True, keep_attrs=True):
         """
         Copy of the Variable object, with data cast to a specified type.
 
@@ -382,14 +382,24 @@ class Variable(
              By default, astype always returns a newly allocated array. If this
              is set to False and the `dtype` requirement is satisfied, the input
              array is returned instead of a copy.
+        keep_attrs : bool, optional
+            By default, astype keeps attributes. Set to False to remove
+            attributes in the returned object.
 
         See also
         --------
         np.ndarray.astype
         dask.array.Array.astype
         """
-        self.data = duck_array_ops.astype(self.data, dtype, casting=casting, copy=copy)
-        return self
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            duck_array_ops.astype,
+            self,
+            kwargs=dict(dtype=dtype, casting=casting, copy=copy),
+            keep_attrs=keep_attrs,
+            dask="allowed",
+        )
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a

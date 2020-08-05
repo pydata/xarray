@@ -5610,10 +5610,13 @@ class TestDataset:
     def test_astype_attrs(self):
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
-        databool = data.astype(bool)
 
-        assert list(data.attrs.items()) == list(databool.attrs.items())
-        assert list(data.var1.attrs.items()) == list(databool.var1.attrs.items())
+        assert list(data.attrs.items()) == list(data.astype(float).attrs.items())
+        assert list(data.var1.attrs.items()) == list(
+            data.astype(float).var1.attrs.items()
+        )
+        assert [] == list(data.astype(float, keep_attrs=False).attrs.items())
+        assert [] == list(data.astype(float, keep_attrs=False).var1.attrs.items())
 
 
 # Py.test tests

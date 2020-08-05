@@ -1875,11 +1875,17 @@ class TestDataArray:
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
     def test_astype_attrs(self):
-        mda1 = self.mda.copy()
-        mda1.attrs["foo"] = "bar"
-        mda2 = mda1.astype(bool)
+        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+            v.attrs["foo"] = "bar"
+            assert list(v.attrs.items()) == list(v.astype(float).attrs.items())
+            assert [] == list(v.astype(float, keep_attrs=False).attrs.items())
 
-        assert list(mda1.attrs.items()) == list(mda2.attrs.items())
+    def test_astype_dtype(self):
+        original = DataArray([-1, 1, 2, 3, 1000])
+        converted = original.astype(float)
+        assert_array_equal(original, converted)
+        assert original.dtype == np.int64
+        assert converted.dtype == np.float64
 
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
