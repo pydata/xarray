@@ -5077,8 +5077,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values.
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
