@@ -1327,8 +1327,9 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         Value to fill the new object with before returning it. If
         other is a Dataset, may also be a dict-like mapping data
         variables to fill values.
-    dtype : dtype, optional
-        dtype of the new array. If omitted, it defaults to other.dtype.
+    dtype : dtype or dict-like of dtype, optional
+        dtype of the new array. If a dict-like, maps dtypes to
+        variables. If omitted, it defaults to other.dtype.
 
     Returns
     -------
@@ -1407,6 +1408,14 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     Data variables:
         a        (x) int64 1 1 1
         b        (x) int64 2 2 2
+    >>> xr.full_like(ds, fill_value={"a": 1, "b": 2}, dtype={"a": bool, "b": float})
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) bool True True True
+        b        (x) float64 2.0 2.0 2.0
 
     See also
     --------
@@ -1430,8 +1439,11 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         if not isinstance(fill_value, dict):
             fill_value = {k: fill_value for k in other.data_vars.keys()}
 
+        if not isinstance(dtype, dict):
+            dtype = {k: dtype for k in other.data_vars.keys()}
+
         data_vars = {
-            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype)
+            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype.get(k, None))
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)

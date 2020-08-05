@@ -5461,6 +5461,13 @@ class TestDataset:
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
 
+        # override multiple dtypes
+        actual = full_like(ds, fill_value={"d1": 1, "d2": 2.3}, dtype={"d1": bool})
+        expected = ds.assign(d1=("x", [True, True, True]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
+
     def test_combine_first(self):
         dsx0 = DataArray([0, 0], [("x", ["a", "b"])]).to_dataset(name="dsx0")
         dsx1 = DataArray([1, 1], [("x", ["b", "c"])]).to_dataset(name="dsx1")
