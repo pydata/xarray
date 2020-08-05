@@ -7,6 +7,7 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
+from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import raises_regex
 
@@ -391,6 +392,7 @@ class TestFormatting:
         assert actual == expected
 
 
+@pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
 def test_inline_variable_array_repr_custom_repr():
     class CustomArray:
         def __init__(self, value, attr):
