@@ -103,8 +103,10 @@ def align(
         used in preference to the aligned indexes.
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
 
     Returns
     -------
