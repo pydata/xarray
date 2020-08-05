@@ -25,6 +25,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Build :py:meth:`CFTimeIndex.__repr__` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
+  property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
+  :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
+  `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Bug fixes
@@ -34,9 +38,18 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
+  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
+  By `Guido Imperiale <https://github.com/crusaderky>`_
+- Only load resource files when running inside a Jupyter Notebook
+  (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
 
 
 .. _whats-new.0.16.0:
@@ -113,8 +126,8 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
-- 'missing_dims' argument to :py:meth:`Dataset.isel`,
-  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+- `missing_dims` argument to :py:meth:`Dataset.isel`,
+  :py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
   the exception when a dimension passed to ``isel`` is not present with a
   warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
@@ -128,7 +141,7 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
-- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`).
+- Enable using MultiIndex levels as coordinates in 1D and 2D plots (:issue:`3927`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
@@ -172,7 +185,6 @@ Enhancements
   limited to a reasonable length.
   (:pull:`3905`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-
 
 Bug fixes
 ~~~~~~~~~
