@@ -3676,8 +3676,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
-        fill_value: scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values.
 
         Returns
         -------
