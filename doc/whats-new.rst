@@ -33,7 +33,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
+  unchunked dimensions.
 
 Documentation
 ~~~~~~~~~~~~~
