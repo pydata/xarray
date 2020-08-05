@@ -3556,7 +3556,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : Hashable or iterable of Hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
-        fill_value: value to be filled. By default, np.nan
+        fill_value : scalar or dict-like, optional
+            value to be filled. If a dict-like, maps variable names to
+            fill values. If not provided or if the dict-like does not
+            contain all variables, the dtype's NA value will be used.
         sparse: use sparse-array if True
 
         Returns

@@ -1871,7 +1871,11 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
-        fill_value: value to be filled. By default, np.nan
+        fill_value : scalar or dict-like, optional
+            value to be filled. If a dict-like, maps variable names to
+            fill values. Use the data array's name to refer to its
+            name. If not provided or if the dict-like does not contain
+            all variables, the dtype's NA value will be used.
         sparse: use sparse-array if True
 
         Returns
