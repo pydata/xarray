@@ -70,7 +70,7 @@ certain number of characters. If that would drop too much information, the
 
         ...
 
-.. _duck arrays: https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+.. _duck array: https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
 
 
 Extending xarray
