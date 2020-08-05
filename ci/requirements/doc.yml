@@ -17,7 +17,9 @@ dependencies:
   - netcdf4>=1.5
   - numba
   - numpy>=1.17
-  - pandas>=1.0
+  # FIXME https://github.com/pydata/xarray/issues/4287
+  # - pandas>=1.0
+  - pandas=1.0
   - rasterio>=1.1
   - seaborn
   - setuptools
