@@ -1307,8 +1307,10 @@ class DataArray(AbstractArray, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values. Use this
+            data array's name to refer to the data array's values.
 
         Returns
         -------
@@ -1367,8 +1369,10 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values. Use this
+            data array's name to refer to the data array's values.
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
