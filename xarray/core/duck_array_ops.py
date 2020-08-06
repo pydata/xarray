@@ -150,7 +150,15 @@ masked_invalid = _dask_or_eager_func(
 
 
 def astype(data, **kwargs):
-    return data.astype(**kwargs)
+    try:
+        return data.astype(**kwargs)
+    except TypeError as e:
+        # FIXME: This should no longer be necessary in future versions of sparse
+        # Current versions of sparse (v0.10.0) don't support the "casting" kwarg
+        # This was fixed by https://github.com/pydata/sparse/pull/392
+        if "casting" in repr(e):
+            kwargs.pop("casting")
+        return data.astype(**kwargs)
 
 
 def asarray(data, xp=np):
