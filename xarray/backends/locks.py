@@ -76,6 +76,7 @@ def _get_scheduler(get=None, collection=None) -> Optional[str]:
         # Issue: 4164
         import dask
         from dask.base import get_scheduler  # noqa: F401
+
         actual_get = get_scheduler(get, collection)
     except ImportError:
         return None
