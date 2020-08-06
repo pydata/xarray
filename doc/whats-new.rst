@@ -33,6 +33,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
+  `Sam Morley <https://github.com/inakleinbottle>`_.
 
 
 Documentation
