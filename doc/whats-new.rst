@@ -30,7 +30,8 @@ New Features
   :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
   `Aaron Spring <https://github.com/aaronspring>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
-  of :py:class:`DataArray` and :py:class:`Dataset` objects. (:pull:`4248`).
+  of :py:class:`DataArray` and :py:class:`Dataset` objects and
+  document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 
