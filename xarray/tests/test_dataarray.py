@@ -1884,8 +1884,8 @@ class TestDataArray:
         original = DataArray([-1, 1, 2, 3, 1000])
         converted = original.astype(float)
         assert_array_equal(original, converted)
-        assert original.dtype == np.int64
-        assert converted.dtype == np.float64
+        assert np.issubdtype(original.dtype, np.integer)
+        assert np.issubdtype(converted.dtype, np.floating)
 
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
