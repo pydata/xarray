@@ -622,9 +622,8 @@ def apply_variable_ufunc(
         if data.ndim != len(dims):
             raise ValueError(
                 "applied function returned data with unexpected "
-                "number of dimensions: {} vs {}, for dimensions {}".format(
-                    data.ndim, len(dims), dims
-                )
+                f"number of dimensions. Received {data.ndim} dimension(s) but "
+                f"expected {len(dims)} dimensions with names: {dims!r}"
             )
 
         var = Variable(dims, data, fastpath=True)
@@ -984,9 +983,10 @@ def apply_ufunc(
         input_core_dims = ((),) * (len(args))
     elif len(input_core_dims) != len(args):
         raise ValueError(
-            "input_core_dims must be None or a tuple with the length same to "
-            "the number of arguments. Given input_core_dims: {}, "
-            "number of args: {}.".format(input_core_dims, len(args))
+            f"input_core_dims must be None or a tuple with the length same to "
+            f"the number of arguments. "
+            f"Given {len(input_core_dims)} input_core_dims: {input_core_dims}, "
+            f" but number of args is {len(args)}."
         )
 
     if kwargs is None:
@@ -994,11 +994,17 @@ def apply_ufunc(
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
-    if exclude_dims and not exclude_dims <= signature.all_core_dims:
-        raise ValueError(
-            "each dimension in `exclude_dims` must also be a "
-            "core dimension in the function signature"
-        )
+    if exclude_dims:
+        if not isinstance(exclude_dims, set):
+            raise TypeError(
+                f"Expected exclude_dims to be a 'set'. Received '{type(exclude_dims).__name__}' instead."
+            )
+        if not exclude_dims <= signature.all_core_dims:
+            raise ValueError(
+                f"each dimension in `exclude_dims` must also be a "
+                f"core dimension in the function signature. "
+                f"Please make {(exclude_dims - signature.all_core_dims)} a core dimension"
+            )
 
     if kwargs:
         func = functools.partial(func, **kwargs)
