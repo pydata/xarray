@@ -29,14 +29,20 @@ New Features
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
   `Aaron Spring <https://github.com/aaronspring>`_.
+- Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
+  of :py:class:`DataArray` and :py:class:`Dataset` objects and
+  document the new method in :doc:`internals`. (:pull:`4248`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Decode the CF attributes 'grid_mapping' and 'bounds' on file read
   (put the referenced variables into 'coords' instead of 'data_vars')
   and encode on write (write attributes corresponding to encoding
-  values). (:issue:`2844`)
+  values). (:pull:`2844`, :issue:`3689`)
 
 
 Bug fixes
 ~~~~~~~~~
+- Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
+  `Sam Morley <https://github.com/inakleinbottle>`_.
 
 
 Documentation
@@ -49,6 +55,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
+  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
+  By `Guido Imperiale <https://github.com/crusaderky>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
 
