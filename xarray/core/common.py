@@ -786,7 +786,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
-        center: bool = False,
+        center: Union[bool, Mapping[Hashable, bool]] = False,
         keep_attrs: bool = None,
         **window_kwargs: int,
     ):
