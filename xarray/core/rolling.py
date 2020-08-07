@@ -269,9 +269,12 @@ class DataArrayRolling(Rolling):
 
         from .dataarray import DataArray
 
-        window_dim = utils.either_dict_or_kwargs(
-            window_dim, window_dim_kwargs, "Dataset.rolling"
-        )
+        if window_dim is None:
+            if len(window_dim_kwargs) == 0:
+                raise ValueError(
+                    "Either window_dim or window_dim_kwargs need to be specified."
+                )
+            window_dim = {d: window_dim_kwargs[d] for d in self.dim}
 
         window_dim = self._mapping_to_list(
             window_dim, allow_default=False, allow_allsame=False
