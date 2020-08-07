@@ -6005,11 +6005,15 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
         assert src_var.dims == actual[key].dims
 
 
-@pytest.mark.parametrize("ds", (1,), indirect=True)
+@pytest.mark.parametrize("ds", (2,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
-@pytest.mark.parametrize("name", ("sum", "mean", "max", "std"))
-def test_ndrolling_reduce(ds, center, min_periods, name):
+@pytest.mark.parametrize("name", ("sum", "max"))
+@pytest.mark.parameteris("dask", (True, False))
+def test_ndrolling_reduce(ds, center, min_periods, name, das):
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
     rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
 
     actual = getattr(rolling_obj, name)()
@@ -6036,13 +6040,17 @@ def test_ndrolling_reduce(ds, center, min_periods, name):
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))
 @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
-def test_ndrolling_construct(center, fill_value):
+@pytest.mark.parametrize("dask", (True, False))
+def test_ndrolling_construct(center, fill_value, dask):
     da = DataArray(
         np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
         dims=["x", "y", "z"],
         coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
     )
     ds = xr.Dataset({"da": da})
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
     actual = ds.rolling(x=3, z=2, center=center).construct(
         x="x1", z="z1", fill_value=fill_value
     )
