@@ -100,10 +100,7 @@ class Rolling:
 
         attrs = [
             "{k}->{v}".format(k=k, v=getattr(self, k))
-            for k in list(self.dim)
-            + list(self.window)
-            + list(self.center)
-            + [self.min_periods]
+            for k in list(self.dim) + self.window + self.center + [self.min_periods]
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
@@ -272,12 +269,9 @@ class DataArrayRolling(Rolling):
 
         from .dataarray import DataArray
 
-        if window_dim is None:
-            if len(window_dim_kwargs) == 0:
-                raise ValueError(
-                    "Either window_dim or window_dim_kwargs need to be specified."
-                )
-            window_dim = {d: window_dim_kwargs[d] for d in self.dim}
+        window_dim = utils.either_dict_or_kwargs(
+            window_dim, window_dim_kwargs, "Dataset.rolling"
+        )
 
         window_dim = self._mapping_to_list(
             window_dim, allow_default=False, allow_allsame=False

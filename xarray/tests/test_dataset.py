@@ -6008,15 +6008,25 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
 @pytest.mark.parametrize("ds", (1,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
-@pytest.mark.parametrize("name", ("sum", "mean", "max"))
+@pytest.mark.parametrize("name", ("sum", "mean", "max", "std"))
 def test_ndrolling_reduce(ds, center, min_periods, name):
-    rolling_obj = ds.rolling(time=3, x=2, center=center, min_periods=min_periods)
+    rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
 
     actual = getattr(rolling_obj, name)()
     expected = getattr(
         getattr(
-            ds.rolling(time=3, center=center, min_periods=min_periods), name
-        )().rolling(x=2, center=center, min_periods=min_periods),
+            ds.rolling(time=4, center=center, min_periods=min_periods), name
+        )().rolling(x=3, center=center, min_periods=min_periods),
+        name,
+    )()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+    # Do it in the oposite order
+    expected = getattr(
+        getattr(
+            ds.rolling(x=3, center=center, min_periods=min_periods), name
+        )().rolling(time=4, center=center, min_periods=min_periods),
         name,
     )()
 
