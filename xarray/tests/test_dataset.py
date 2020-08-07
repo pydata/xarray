@@ -6010,7 +6010,7 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "max"))
 @pytest.mark.parameteris("dask", (True, False))
-def test_ndrolling_reduce(ds, center, min_periods, name, das):
+def test_ndrolling_reduce(ds, center, min_periods, name, dask):
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -6026,7 +6026,7 @@ def test_ndrolling_reduce(ds, center, min_periods, name, das):
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
 
-    # Do it in the oposite order
+    # Do it in the opposite order
     expected = getattr(
         getattr(
             ds.rolling(x=3, center=center, min_periods=min_periods), name
