@@ -156,8 +156,23 @@ def astype(data, **kwargs):
         # FIXME: This should no longer be necessary in future versions of sparse
         # Current versions of sparse (v0.10.0) don't support the "casting" kwarg
         # This was fixed by https://github.com/pydata/sparse/pull/392
-        if "casting" in repr(e):
+        try:
+            import sparse
+        except ImportError:
+            sparse = None
+        if (
+            "got an unexpected keyword argument 'casting'" in repr(e)
+            and sparse is not None
+            and isinstance(data, sparse._coo.core.COO)
+        ):
+            warnings.warn(
+                "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
+                RuntimeWarning,
+                stacklevel=4,
+            )
             kwargs.pop("casting")
+        else:
+            raise e
         return data.astype(**kwargs)
 
 
