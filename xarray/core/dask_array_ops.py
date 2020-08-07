@@ -86,7 +86,7 @@ def rolling_window(a, axis, window, center, fill_value):
 
     # create overlap arrays
     ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
-    
+
     def func(x, window, axis):
         x = np.asarray(x)
         index = [slice(None)] * x.ndim
