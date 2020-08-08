@@ -37,7 +37,7 @@ def test_allclose_regression():
     "obj1,obj2",
     (
         pytest.param(
-            xr.Variable("x", [1e-17, 2]), xr.Variable("x", [0, 3]), id="Variable",
+            xr.Variable("x", [1e-17, 2]), xr.Variable("x", [0, 3]), id="Variable"
         ),
         pytest.param(
             xr.DataArray([1e-17, 2], dims="x"),

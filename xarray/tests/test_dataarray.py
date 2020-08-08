@@ -6193,8 +6193,6 @@ def test_rolling_properties(da):
     assert rolling_obj.obj.get_axis_num("time") == 1
 
     # catching invalid args
-    with pytest.raises(ValueError, match="exactly one dim/window should"):
-        da.rolling(time=7, x=2)
     with pytest.raises(ValueError, match="window must be > 0"):
         da.rolling(time=-2)
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
@@ -6397,6 +6395,47 @@ def test_rolling_count_correct():
 
         result = da.to_dataset(name="var1").rolling(**kwarg).count()["var1"]
         assert_equal(result, expected)
+
+
+@pytest.mark.parametrize("da", (1,), indirect=True)
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("min_periods", (None, 1))
+@pytest.mark.parametrize("name", ("sum", "mean", "max"))
+def test_ndrolling_reduce(da, center, min_periods, name):
+    rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
+
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(
+        getattr(
+            da.rolling(time=3, center=center, min_periods=min_periods), name
+        )().rolling(x=2, center=center, min_periods=min_periods),
+        name,
+    )()
+
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+
+@pytest.mark.parametrize("center", (True, False, (True, False)))
+@pytest.mark.parametrize("fill_value", (np.nan, 0.0))
+def test_ndrolling_construct(center, fill_value):
+    da = DataArray(
+        np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
+        dims=["x", "y", "z"],
+        coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
+    )
+    actual = da.rolling(x=3, z=2, center=center).construct(
+        x="x1", z="z1", fill_value=fill_value
+    )
+    if not isinstance(center, tuple):
+        center = (center, center)
+    expected = (
+        da.rolling(x=3, center=center[0])
+        .construct(x="x1", fill_value=fill_value)
+        .rolling(z=2, center=center[1])
+        .construct(z="z1", fill_value=fill_value)
+    )
+    assert_allclose(actual, expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
