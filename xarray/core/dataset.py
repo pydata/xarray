@@ -5972,7 +5972,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords = {}
+            stacked_coords: Dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(

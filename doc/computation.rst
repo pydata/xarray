@@ -188,9 +188,16 @@ a value when aggregating:
     r = arr.rolling(y=3, center=True, min_periods=2)
     r.mean()
 
+From version 0.17, xarray supports multidimensional rolling,
+
+.. ipython:: python
+
+    r = arr.rolling(x=2, y=3, min_periods=2)
+    r.mean()
+
 .. tip::
 
-   Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects.
+   Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects with 1d-rolling.
 
 .. _bottleneck: https://github.com/pydata/bottleneck/
 
