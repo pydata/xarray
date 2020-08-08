@@ -3943,7 +3943,7 @@ class DataArray(AbstractArray, DataWithCoords):
             this is deprecated, in future will return a dict with indices for all
             dimensions; to return a dict with all dimensions now, pass '...'.
         axis : int, optional
-            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
             can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
