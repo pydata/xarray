@@ -99,8 +99,8 @@ class Rolling:
         """provide a nice str repr of our rolling object"""
 
         attrs = [
-            "{k}->{v}".format(k=k, v=getattr(self, k))
-            for k in list(self.dim) + self.window + self.center + [self.min_periods]
+            "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
+            for k, w, c in zip(self.dim, self.window, self.center)
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)

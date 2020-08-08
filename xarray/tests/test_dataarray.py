@@ -6178,6 +6178,8 @@ def test_rolling_iter(da):
                 actual.values[actual.values.nonzero()],
                 expected.values[expected.values.nonzero()],
             )
+    # no error
+    repr(rolling_obj)
 
 
 def test_rolling_doc(da):
