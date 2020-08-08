@@ -267,7 +267,7 @@ def line(
         if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -353,7 +353,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
