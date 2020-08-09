@@ -236,7 +236,7 @@ windowed rolling, convolution, short-time FFT etc.
     # rolling with 2-point stride
     rolling_da = r.construct(x="x_win", y="y_win", stride=2)
     rolling_da
-    rolling_da.mean("window_dim", skipna=False)
+    rolling_da.mean(["x_win", "y_win"], skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
