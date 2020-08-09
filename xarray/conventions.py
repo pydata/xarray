@@ -20,7 +20,6 @@ CF_RELATED_DATA = (
     "node_count",
     "part_node_count",
     "interior_ring",
-    "ancillary_variables",
     "cell_measures",
     "formula_terms",
 )
