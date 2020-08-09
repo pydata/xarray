@@ -156,7 +156,9 @@ class Rolling:
         elif len(self.dim) == 1:
             return [arg]
         else:
-            raise ValueError("Mapping argument is necessary.")
+            raise ValueError(
+                "Mapping argument is necessary for {}d-rolling.".format(len(self.dim))
+            )
 
 
 class DataArrayRolling(Rolling):
