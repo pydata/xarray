@@ -234,9 +234,9 @@ windowed rolling, convolution, short-time FFT etc.
 .. ipython:: python
 
     # rolling with 2-point stride
-    rolling_da = r.construct("window_dim", stride=2)
+    rolling_da = r.construct(x="x_win", y="y_win", stride=2)
     rolling_da
-    rolling_da.mean("window_dim", skipna=False)
+    rolling_da.mean(["x_win", "y_win"], skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
@@ -245,7 +245,7 @@ You can also use ``construct`` to compute a weighted rolling sum:
 .. ipython:: python
 
     weight = xr.DataArray([0.25, 0.5, 0.25], dims=["window"])
-    arr.rolling(y=3).construct("window").dot(weight)
+    arr.rolling(y=3).construct(y="window").dot(weight)
 
 .. note::
   numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
