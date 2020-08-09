@@ -23,7 +23,7 @@ dependencies:
   - rasterio>=1.1
   - seaborn
   - setuptools
-  - sphinx>=3.1
+  - sphinx=3.1
   - sphinx_rtd_theme>=0.4
   - zarr>=2.4
   - pip:
