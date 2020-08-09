@@ -171,6 +171,11 @@ To help users keep things straight, please `let us know
 for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
 
+To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
+easier, you can use `sphinx-ext-autosummary`_.
+
+.. _sphinx-ext-autosummary: https://sphinx-autosummary-accessors.readthedocs.io/
+
 .. _zarr_encoding:
 
 Zarr Encoding Specification
