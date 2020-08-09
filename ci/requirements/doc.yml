@@ -26,3 +26,5 @@ dependencies:
   - sphinx=3.1
   - sphinx_rtd_theme>=0.4
   - zarr>=2.4
+  - pip:
+      - sphinx-autosummary-accessors
