@@ -120,17 +120,23 @@ napoleon_type_aliases = {
     "file-like": ":term:`file-like <file-like object>`",
     # special terms
     "nested list": "nested :class:`list`",
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
     # stdlib type aliases
     "MutableMapping": "~collections.abc.MutableMapping",
     "sys.stdout": ":obj:`sys.stdout`",
     "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
     # numpy terms
     "array_like": ":term:`array_like`",
     "array-like": ":term:`array-like <array_like>`",
     # "scalar": ":term:`scalar`",
     "array": ":term:`array`",
     # matplotlib terms
-    "color-like": ":py:func:`is_color_like`",
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
     # objects without namespace
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",

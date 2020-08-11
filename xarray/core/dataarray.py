@@ -1628,14 +1628,14 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable, dict, or None
+        dim : hashable, sequence of hashable, dict, or None, optional
             Dimensions to include on the new variable.
             If provided as str or sequence of str, then dimensions are inserted
             with length 1. If provided as a dict, then the keys are the new
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
             the new dimensions).
-        axis : integer, list of int or or tuple of int, or None
+        axis : int, list of int or tuple of int, or None, default: None
             Axis position(s) where new axis is to be inserted (position(s) on
             the result array). If a list (or tuple) of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
@@ -2642,7 +2642,7 @@ class DataArray(AbstractArray, DataWithCoords):
         See Also
         --------
         DataArray.broadcast_equals
-        DataArray.equal
+        DataArray.equals
         """
         try:
             return self.name == other.name and self._all_compat(other, "identical")

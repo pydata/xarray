@@ -25,14 +25,13 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
   now accept more than 1 dimension.(:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Build :py:meth:`CFTimeIndex.__repr__` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
-  `Aaron Spring <https://github.com/aaronspring>`_.
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).

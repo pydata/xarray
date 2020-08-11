@@ -528,7 +528,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        object : the return type of ``func``.
+        object : Any
+            the return type of ``func``.
 
         Notes
         -----
@@ -649,7 +650,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        grouped : GroupBy
+        grouped
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
 
@@ -743,7 +744,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        grouped : GroupBy
+        grouped
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
             The name of the group has the added suffix `_bins` in order to
@@ -1161,7 +1162,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Same xarray type as caller, with dtype float64.
+        DataArray or Dataset
+            Same xarray type as caller, with dtype float64.
 
         Examples
         --------
@@ -1270,8 +1272,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        isin : same as object, bool
-            Has the same shape as this object.
+        isin : DataArray or Dataset
+            Has the same type and shape as this object, but with a bool dtype.
 
         Examples
         --------
@@ -1456,7 +1458,7 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Returns
     -------
-    out
+    out : DataArray, Dataset or Variable
         New object of zeros with the same shape and type as other.
 
     Examples

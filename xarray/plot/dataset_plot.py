@@ -191,7 +191,7 @@ def _dsplot(plotfunc):
         If passed, make column faceted plots on this dimension name
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib.axes.Axes, optional
+    ax : matplotlib axes object, optional
         If None, uses the current axis. Not applicable when using facets.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
@@ -205,14 +205,14 @@ def _dsplot(plotfunc):
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg
         must be None.
-    vmin, vmax : floats, optional
+    vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
         setting one of these values will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : str or matplotlib.colors.Colormap, optional
+    cmap : str or colormap, optional
         The mapping from data values to color space. Either a
         matplotlib colormap name or object. If not provided, this will
         be either ``viridis`` (if the function infers a sequential

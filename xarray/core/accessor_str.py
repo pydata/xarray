@@ -748,7 +748,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         sub = self._obj.dtype.type(sub)
 
@@ -783,7 +783,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         return self.find(sub, start=start, end=end, side="right")
 
@@ -807,7 +807,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         sub = self._obj.dtype.type(sub)
 
@@ -843,7 +843,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         return self.index(sub, start=start, end=end, side="right")
 
