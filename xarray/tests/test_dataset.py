@@ -3956,13 +3956,13 @@ class TestDataset:
 
         invalid_order = ["x"]
         with pytest.raises(
-            ValueError, match="does not match the set of dimensions on this"
+            ValueError, match="does not match the set of dimensions of this"
         ):
             ds.to_dataframe(dim_order=invalid_order)
 
         invalid_order = ["x", "z"]
         with pytest.raises(
-            ValueError, match="does not match the set of dimensions on this"
+            ValueError, match="does not match the set of dimensions of this"
         ):
             ds.to_dataframe(dim_order=invalid_order)
 
