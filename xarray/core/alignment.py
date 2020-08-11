@@ -108,8 +108,9 @@ def align(
 
     Returns
     -------
-    aligned : same as `*objects`
-        Tuple of objects with aligned coordinates.
+    aligned : DataArray or Dataset
+        Tuple of objects with the same type as `*objects` with aligned
+        coordinates.
 
     Raises
     ------
@@ -664,14 +665,14 @@ def broadcast(*args, exclude=None):
 
     Parameters
     ----------
-    *args : DataArray or Dataset objects
+    *args : DataArray or Dataset
         Arrays to broadcast against each other.
     exclude : sequence of str, optional
         Dimensions that must not be broadcasted
 
     Returns
     -------
-    broadcast : tuple of xarray objects
+    broadcast : tuple of DataArray or tuple of Dataset
         The same data as the input arrays, but with additional dimensions
         inserted so that all data arrays have the same dimensions and shape.
 

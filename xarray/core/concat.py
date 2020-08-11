@@ -23,7 +23,7 @@ def concat(
 
     Parameters
     ----------
-    objs : sequence of Dataset and DataArray objects
+    objs : sequence of Dataset and DataArray
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.

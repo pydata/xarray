@@ -362,7 +362,7 @@ def combine_nested(
 
     Parameters
     ----------
-    datasets : list or nested list of xarray.Dataset objects.
+    datasets : list or nested list of Dataset
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.

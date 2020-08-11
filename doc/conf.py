@@ -118,6 +118,8 @@ napoleon_type_aliases = {
     "dict-like": ":term:`dict-like <mapping>`",
     "mapping": ":term:`mapping`",
     "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    "nested list": "nested :class:`list`",
     # stdlib type aliases
     "MutableMapping": "~collections.abc.MutableMapping",
     "sys.stdout": ":obj:`sys.stdout`",

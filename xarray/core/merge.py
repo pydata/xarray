@@ -373,7 +373,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
 
     Parameters
     ----------
-    objects : list of Dataset or mappings
+    objects : list of Dataset or mapping
         The mappings may contain any sort of objects coercible to
         xarray.Variables as keys, including pandas objects.
 
@@ -412,7 +412,7 @@ def _get_priority_vars_and_indexes(
 
     Parameters
     ----------
-    objects : list of dict-like of variables
+    objects : list of dict-like of Variable
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.

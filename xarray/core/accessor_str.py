@@ -118,7 +118,7 @@ class StringAccessor:
 
         Returns
         -------
-        items : array of objects
+        items : array of object
         """
         obj = slice(-1, None) if i == -1 else slice(i, i + 1)
         return self._apply(lambda x: x[obj])
