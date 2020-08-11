@@ -492,7 +492,7 @@ class DataArray(AbstractArray, DataWithCoords):
         name : hashable, optional
             Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
-        promote_attrs : bool, default False
+        promote_attrs : bool, default: False
             Set to True to shallow copy attrs of DataArray to returned Dataset.
 
         Returns
@@ -2206,7 +2206,7 @@ class DataArray(AbstractArray, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        keep_attrs : bool, default True
+        keep_attrs : bool, default: True
             If True, the dataarray's attributes (`attrs`) will be copied from
             the original object to the new one.  If False, the new
             object will be returned without attributes.

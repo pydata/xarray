@@ -272,7 +272,7 @@ class CFTimeIndex(pd.Index):
     ----------
     data : array or CFTimeIndex
         Sequence of cftime.datetime objects to use in index
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
 
     See Also

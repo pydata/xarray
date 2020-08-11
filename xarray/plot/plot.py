@@ -720,9 +720,7 @@ def _plot2d(plotfunc):
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
-            raise ValueError(
-                "plt.imshow's `aspect` kwarg is not available " "in xarray"
-            )
+            raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -753,7 +751,7 @@ def _plot2d(plotfunc):
         elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError(
-                "cbar_ax and cbar_kwargs can't be used with " "add_colorbar=False."
+                "cbar_ax and cbar_kwargs can't be used with add_colorbar=False."
             )
 
         # origin kwarg overrides yincrease

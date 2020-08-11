@@ -184,11 +184,11 @@ class DataArrayRolling(Rolling):
                 along (e.g., `time`).
             window : int
                 Size of the moving window.
-        min_periods : int, default None
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : bool, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from

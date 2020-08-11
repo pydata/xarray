@@ -440,7 +440,7 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns
@@ -459,7 +459,7 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns
@@ -477,7 +477,7 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns

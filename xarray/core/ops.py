@@ -114,7 +114,7 @@ skipna : bool, optional
     implemented (object, datetime64 or timedelta64)."""
 
 _MINCOUNT_DOCSTRING = """
-min_count : int, default None
+min_count : int, default: None
     The required number of valid values to perform the operation.
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
