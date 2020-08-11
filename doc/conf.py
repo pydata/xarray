@@ -119,7 +119,6 @@ napoleon_type_aliases = {
     "mapping": ":term:`mapping`",
     "file-like": ":term:`file-like <file-like object>`",
     # special terms
-    "nested list": "nested :class:`list`",
     # "same type as caller": "*same type as caller*",  # does not work, yet
     # "same type as values": "*same type as values*",  # does not work, yet
     # stdlib type aliases
