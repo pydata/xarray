@@ -265,7 +265,7 @@ def line(
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_legend : boolean, optional
+    add_legend : bool, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
@@ -494,7 +494,7 @@ def _plot2d(plotfunc):
         If passed, make row faceted plots on this dimension name
     col : string, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
     xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
         Specifies scaling for the x- and y-axes respectively
@@ -506,9 +506,9 @@ def _plot2d(plotfunc):
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_colorbar : Boolean, optional
+    add_colorbar : bool, optional
         Adds colorbar to axis
-    add_labels : Boolean, optional
+    add_labels : bool, optional
         Use xarray metadata to label axes
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg

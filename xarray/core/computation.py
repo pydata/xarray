@@ -848,7 +848,7 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: bool, Optional
+    keep_attrs: bool, optional
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.

@@ -523,14 +523,14 @@ class Variable(
 
         Parameters
         -----------
-        key: int, slice, array, dict or tuple of integer, slices and arrays
+        key: int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
         -------
-        dims: tuple
+        dims : tuple
             Dimension of the resultant variable.
-        indexers: IndexingTuple subclass
+        indexers : IndexingTuple subclass
             Tuple of integer, array-like, or slices to use when indexing
             self._data. The type of this argument indicates the type of
             indexing to perform, either basic, outer or vectorized.

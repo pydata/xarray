@@ -721,11 +721,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             on each side to include the min or max values of x. If bins is a
             sequence it defines the bin edges allowing for non-uniform bin
             width. No extension of the range of x is done in this case.
-        right : boolean, default: True
+        right : bool, default: True
             Indicates whether the bins include the rightmost edge or not. If
             right == True (the default), then the bins [1,2,3,4] indicate
             (1,2], (2,3], (3,4].
-        labels : array-like or boolean, default: None
+        labels : array-like or bool, default: None
             Used as labels for the resulting bins. Must be of the same length as
             the resulting bins. If False, string bin labels are assigned by
             `pandas.cut`.
