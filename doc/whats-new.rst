@@ -176,9 +176,10 @@ New Features
 Enhancements
 ~~~~~~~~~~~~
 - Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
+  We performs independant interpolation sequentially rather than interpolating in
+  one large multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.interp` now support interpolations over chunked dimensions (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
   dataframe has a MultiIndex (:pull:`4184`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
