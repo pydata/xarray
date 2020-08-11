@@ -1589,12 +1589,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
-        mode : {'w', 'w-', 'a', None}, optional
-            Persistence mode: 'w' means create (overwrite if exists);
-            'w-' means create (fail if exists);
-            'a' means override existing variables (create if does not exist).
+        mode : {"w", "w-", "a", None}, optional
+            Persistence mode: "w" means create (overwrite if exists);
+            "w-" means create (fail if exists);
+            "a" means override existing variables (create if does not exist).
             If ``append_dim`` is set, ``mode`` can be omitted as it is
-            internally set to ``'a'``. Otherwise, ``mode`` will default to
+            internally set to ``"a"``. Otherwise, ``mode`` will default to
             `w-` if not set.
         synchronizer : object, optional
             Array synchronizer
@@ -1603,7 +1603,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+            ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
         compute: bool, optional
             If True compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
@@ -5503,13 +5503,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         coord: str, or sequence of str
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                         'ps', 'fs', 'as'}
+        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", \
+                         "ps", "fs", "as"}, optional
             Can be specify the unit if datetime coordinate is used.
 
         Returns
         -------
-        integrated: Dataset
+        integrated : Dataset
 
         See also
         --------
@@ -6129,10 +6129,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-        reflect_type : {'even', 'odd'}, optional
-            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+        reflect_type : {"even", "odd"}, optional
+            Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
-            the 'odd' style, the extended part of the array is created by
+            the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.

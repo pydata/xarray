@@ -29,8 +29,8 @@ class Resample:
 
         Parameters
         ----------
-        method : {'asfreq', 'pad', 'ffill', 'backfill', 'bfill', 'nearest', \
-                 'interpolate'}
+        method : {"asfreq", "pad", "ffill", "backfill", "bfill", "nearest", \
+                 "interpolate"}
             Method to use for up-sampling
 
         See Also

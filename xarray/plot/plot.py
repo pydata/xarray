@@ -337,16 +337,16 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
 
     Parameters
     ----------
-    where : {'pre', 'post', 'mid'}, optional, default 'pre'
+    where : {"pre", "post", "mid"}, default: "pre"
         Define where the steps should be placed:
 
-        - 'pre': The y value is continued constantly to the left from
+        - "pre": The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - 'post': The y value is continued constantly to the right from
+        - "post": The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - 'mid': Steps occur half-way between the *x* positions.
+        - "mid": Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
@@ -537,7 +537,7 @@ def _plot2d(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional

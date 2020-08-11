@@ -3243,8 +3243,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                         'ps', 'fs', 'as'}, optional
+        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", \
+                         "ps", "fs", "as"}, optional
             Can be used to specify the unit if datetime coordinate is used.
 
         Returns
@@ -3558,10 +3558,10 @@ class DataArray(AbstractArray, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-        reflect_type : {'even', 'odd'}, optional
-            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+        reflect_type : {"even", "odd"}, optional
+            Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
-            the 'odd' style, the extended part of the array is created by
+            the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.

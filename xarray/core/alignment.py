@@ -80,17 +80,17 @@ def align(
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-    join : {'outer', 'inner', 'left', 'right', 'exact', 'override'}, optional
+    join : {"outer", "inner", "left", "right", "exact", "override"}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     copy : bool, optional

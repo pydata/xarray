@@ -140,22 +140,22 @@ def fillna(data, other, join="left", dataset_join="left"):
 
     Parameters
     ----------
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {"outer", "inner", "left", "right"}, optional
         Method for joining the indexes of the passed objects along each
         dimension
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': raise `ValueError` instead of aligning when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {"outer", "inner", "left", "right"}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
-        - 'outer': take variables from both Dataset objects
-        - 'inner': take only overlapped variables
-        - 'left': take only variables from the first object
-        - 'right': take only variables from the last object
+        - "outer": take variables from both Dataset objects
+        - "inner": take only overlapped variables
+        - "left": take only variables from the first object
+        - "right": take only variables from the last object
     """
     from .computation import apply_ufunc
 

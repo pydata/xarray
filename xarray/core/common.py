@@ -890,7 +890,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             window : int
                 Size of the moving window. The type of this is specified in
                 `window_type`
-        window_type : {'span', 'com', 'halflife', 'alpha'}, default: 'span'
+        window_type : {"span", "com", "halflife", "alpha"}, default: "span"
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
             https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
@@ -932,7 +932,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
-        side : {'left', 'right'} or mapping of str to {"left", "right"}
+        side : {"left", "right"} or mapping of str to {"left", "right"}
         coord_func : str or mapping of hashable to str, default: "mean"
             function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
@@ -1014,13 +1014,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
-        closed : {'left', 'right'}, optional
+        closed : {"left", "right"}, optional
             Side of each interval to treat as closed.
-        label : {'left', 'right'}, optional
+        label : {"left", "right"}, optional
             Side of each interval to use for labeling.
         base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for '24H' frequency, base could
+            aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date

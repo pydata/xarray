@@ -404,9 +404,9 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with character defined in `fillchar`.
-        side : {'left', 'right', 'both'}, default: 'left'
+        side : {"left", "right", "both"}, default: "left"
             Side from which to fill resulting string.
-        fillchar : str, default: ' '
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace.
 
         Returns
@@ -591,7 +591,7 @@ class StringAccessor:
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
-        side : {'left', 'right', 'both'}, default: 'left'
+        side : {"left", "right", "both"}, default: "left"
             Side from which to strip.
 
         Returns
@@ -743,7 +743,7 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default: 'left'
+        side : {"left", "right"}, default: "left"
             Starting side for search.
 
         Returns
@@ -802,7 +802,7 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default: 'left'
+        side : {"left", "right"}, default: "left"
             Starting side for search.
 
         Returns

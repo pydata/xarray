@@ -231,7 +231,7 @@ def _dsplot(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
