@@ -25,4 +25,5 @@ dependencies:
   - setuptools
   - sphinx=3.2
   - sphinx_rtd_theme>=0.4
+  - sphinx-autosummary-accessors
   - zarr>=2.4
