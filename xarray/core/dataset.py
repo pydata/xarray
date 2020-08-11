@@ -4533,14 +4533,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         index = self.coords.to_index(ordered_dims)
         return pd.DataFrame(dict(zip(columns, data)), index=index)
 
-    def to_dataframe(self):
+    def to_dataframe(self, dim_order: List[Hashable] = None):
         """Convert this dataset into a pandas.DataFrame.
 
         Non-index variables in this dataset form the columns of the
         DataFrame. The DataFrame is be indexed by the Cartesian product of
         this dataset's indices.
+
+        Parameters
+        ----------
+        dim_order : list, optional
+            Hierarchical dimension order for the resulting dataframe. All
+            arrays are transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major
+            influence on which operations are efficient on the resulting dask
+            dataframe.
+
+            If provided, must include all dimensions on this dataset. By
+            default, dimensions are sorted alphabetically.
+
         """
-        return self._to_dataframe(self.dims)
+
+        if dim_order is None:
+            dim_order = list(self.dims)
+        elif set(dim_order) != set(self.dims):
+            raise ValueError(
+                "dim_order {} does not match the set of dimensions on this "
+                "Dataset: {}".format(dim_order, list(self.dims))
+            )
+
+        return self._to_dataframe(dim_order)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
