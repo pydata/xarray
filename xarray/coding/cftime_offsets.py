@@ -946,7 +946,7 @@ def cftime_range(
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with
     the other set to ``None``.  See the `pandas documentation
-    <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.date_range.html#pandas.date_range>`_
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
 

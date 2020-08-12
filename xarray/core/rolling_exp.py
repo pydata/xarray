@@ -71,7 +71,7 @@ class RollingExp:
     window_type : {"span", "com", "halflife", "alpha"}, default: "span"
         The format of the previously supplied window. Each is a simple
         numerical transformation of the others. Described in detail:
-        https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ewm.html
 
     Returns
     -------

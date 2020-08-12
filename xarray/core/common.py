@@ -887,7 +887,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         window_type : {"span", "com", "halflife", "alpha"}, default: "span"
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
-            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ewm.html
         **window_kwargs : optional
             The keyword arguments form of ``window``.
             One of window or window_kwargs must be provided.
