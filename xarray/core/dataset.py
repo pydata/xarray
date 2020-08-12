@@ -1923,7 +1923,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
@@ -5770,8 +5770,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             This function cannot add a new chunked dimension.
 
-        obj: DataArray, Dataset
-            Passed to the function as its first argument, one block at a time.
         args: Sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with obj, otherwise an error is raised.
@@ -5780,7 +5778,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             subset to blocks. Passing dask collections in kwargs is not allowed.
         template: (optional) DataArray, Dataset
             xarray object representing the final result after compute is called. If not provided,
-            the function will be first run on mocked-up data, that looks like ``obj`` but
+            the function will be first run on mocked-up data, that looks like this object but
             has sizes 0, to determine properties of the returned object such as dtype,
             variable names, attributes, new dimensions and new indexes (if any).
             ``template`` must be provided if the function changes the size of existing dimensions.
@@ -5799,7 +5797,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
         recommended to use ``apply_ufunc``.
 
-        If none of the variables in ``obj`` is backed by dask arrays, calling this function is
+        If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
 
         See Also
@@ -5819,20 +5817,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
-        ...     np.random.rand(len(time)), dims="time", coords=[time]
+        ...     np.random.rand(len(time)),
+        ...     dims=["time"],
+        ...     coords={"time": time, "month": month},
         ... ).chunk()
         >>> ds = xr.Dataset({"a": array})
         >>> ds.map_blocks(calculate_anomaly, template=ds).compute()
-        <xarray.DataArray (time: 24)>
-        array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
-                0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
-               -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
-                0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
-                0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
+        <xarray.Dataset>
+        Dimensions:  (time: 24)
         Coordinates:
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 1 2 3 4 5 6 7 8 9 10 11 12
+        Data variables:
+            a        (time) float64 0.1289 0.1132 -0.0856 ... 0.2287 0.1906 -0.05901
 
         Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
         to the function being applied in ``xr.map_blocks()``:
@@ -5840,14 +5840,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> ds.map_blocks(
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=ds,
         ... )
-        <xarray.DataArray (time: 24)>
-        array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
-               -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
-               -0.19967375,  0.18619794, -0.05100474, -0.42989909, -0.09153273,
-                0.24841842, -0.30708526, -0.31412523,  0.04197439,  0.0422506 ,
-                0.14482397,  0.35985481,  0.23487834,  0.12144652])
+        <xarray.Dataset>
+        Dimensions:  (time: 24)
         Coordinates:
-            * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
+        Data variables:
+            a        (time) float64 dask.array<chunksize=(24,), meta=np.ndarray>
         """
         from .parallel import map_blocks
 
@@ -5969,7 +5968,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords = {}
+            stacked_coords: Dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(
