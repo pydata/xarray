@@ -4795,23 +4795,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         Convert a dictionary into an xarray.Dataset.
 
-        Input dict can take several forms::
+        Input dict can take several forms
 
-        >>> d = {
-        ...     "t": {"dims": ("t"), "data": t},
-        ...     "a": {"dims": ("t"), "data": x},
-        ...     "b": {"dims": ("t"), "data": y},
-        ... }
+        .. code:: python
 
-        >>> d = {
-        ...     "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
-        ...     "attrs": {"title": "air temperature"},
-        ...     "dims": "t",
-        ...     "data_vars": {
-        ...         "a": {"dims": "t", "data": x,},
-        ...         "b": {"dims": "t", "data": y},
-        ...     },
-        ... }
+            d = {
+                "t": {"dims": ("t"), "data": t},
+                "a": {"dims": ("t"), "data": x},
+                "b": {"dims": ("t"), "data": y},
+            }
+
+            d = {
+                "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
+                "attrs": {"title": "air temperature"},
+                "dims": "t",
+                "data_vars": {
+                    "a": {"dims": "t", "data": x,},
+                    "b": {"dims": "t", "data": y},
+                },
+            }
 
         where "t" is the name of the dimesion, "a" and "b" are names of data
         variables and t, x, and y are lists, numpy.arrays or pandas objects.
