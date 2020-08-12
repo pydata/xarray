@@ -1415,8 +1415,8 @@ class DataArray(AbstractArray, DataWithCoords):
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
-            - {'linear', 'nearest'} for multidimensional array,
-            - {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for 1-dimensional array.
+            - {"linear", "nearest"} for multidimensional array,
+            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
         assume_sorted : bool, optional
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
@@ -1485,8 +1485,8 @@ class DataArray(AbstractArray, DataWithCoords):
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
-            - {'linear', 'nearest'} for multidimensional array,
-            - {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for 1-dimensional array.
+            - {"linear", "nearest"} for multidimensional array,
+            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -2490,22 +2490,23 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Input dict can take several forms::
 
-            d = {'dims': ('t'), 'data': x}
+        >>> d = {"dims": ("t"), "data": x}
 
-            d = {'coords': {'t': {'dims': 't', 'data': t,
-                                  'attrs': {'units':'s'}}},
-                 'attrs': {'title': 'air temperature'},
-                 'dims': 't',
-                 'data': x,
-                 'name': 'a'}
+        >>> d = {
+        ...     "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data": x,
+        ...     "name": "a",
+        ... }
 
-        where 't' is the name of the dimesion, 'a' is the name of the array,
+        where "t" is the name of the dimesion, "a" is the name of the array,
         and  x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
         ----------
         d : dict
-            Mapping with a minimum structure of {'dims': [...], 'data': [...]}
+            Mapping with a minimum structure of {"dims": [...], "data": [...]}
 
         Returns
         -------
@@ -3009,7 +3010,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-        sorted: DataArray
+        sorted : DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
 
@@ -3183,12 +3184,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: hashable
+        coord : hashable
             The coordinate to be used to compute the gradient.
-        edge_order: {1, 2}, default: 1
+        edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit: None or {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', \
-                                'us', 'ns', 'ps', 'fs', 'as'}
+        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+                                "us", "ns", "ps", "fs", "as"}
             Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
