@@ -55,13 +55,8 @@ class Rolling:
         obj : Dataset or DataArray
             Object to window.
         windows : mapping of hashable to int
-            A mapping from a dimension name to window size
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -177,13 +172,8 @@ class DataArrayRolling(Rolling):
         obj : DataArray
             Object to window.
         windows : mapping of hashable to int
-            A mapping from a dimension name to window size
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -453,13 +443,8 @@ class DatasetRolling(Rolling):
         obj : Dataset
             Object to window.
         windows : mapping of hashable to int
-            A mapping from a dimension name to window size
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -642,13 +627,8 @@ class Coarsen:
         obj : Dataset or DataArray
             Object to window.
         windows : mapping of hashable to int
-            A mapping from a dimension name to window size
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimed.

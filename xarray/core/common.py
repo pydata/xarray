@@ -881,15 +881,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        window : {dim: window_size}, optional
-            A single mapping from a dimension name to window value.
-
-            dim : str
-                Name of the dimension to create the rolling exponential window
-                along (e.g., `time`).
-            window : int
-                Size of the moving window. The type of this is specified in
-                `window_type`
+        window : mapping of hashable to int, optional
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         window_type : {"span", "com", "halflife", "alpha"}, default: "span"
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
@@ -920,14 +914,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        dim: dict, optional
+        dim : mapping of hashable to int, optional
             Mapping from the dimension name to the window size.
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
         boundary : {"exact", "trim", "pad"}, default: "exact"
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of the window size. If 'trim', the excess entries are

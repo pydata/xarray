@@ -66,14 +66,8 @@ class RollingExp:
     obj : Dataset or DataArray
         Object to window.
     windows : mapping of hashable to int
-        A single mapping from a single dimension name to window value
-
-        dim : str
-            Name of the dimension to create the rolling exponential window
-            along (e.g., `time`).
-        window : int
-            Size of the moving window. The type of this is specified in
-            `window_type`
+        A mapping from the name of the dimension to create the rolling
+        exponential window along (e.g. `time`) to the size of the moving window.
     window_type : {"span", "com", "halflife", "alpha"}, default: "span"
         The format of the previously supplied window. Each is a simple
         numerical transformation of the others. Described in detail:
