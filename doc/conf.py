@@ -20,6 +20,7 @@ import subprocess
 import sys
 from contextlib import suppress
 
+import jinja2.defaults
 import sphinx_autosummary_accessors
 
 # make sure the source version is preferred (#3567)
@@ -104,6 +105,20 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+
+def github_url(name):
+    url = "https://github.com/pydata/xarray/blob/{branch}/{path}"
+    branch = "master"
+    path = "/".join(name.split("."))
+
+    print(f"got: {name}, pointing to {url.format(branch=branch, path=path)}")
+
+    return url.format(branch=branch, path=path)
+
+
+jinja2.defaults.DEFAULT_FILTERS["github_url"] = github_url
+
 autodoc_typehints = "none"
 
 napoleon_use_param = True
