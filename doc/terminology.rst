@@ -96,3 +96,13 @@ complete examples, please consult the relevant documentation.*
         implemented as :py:class:`pandas.Index` objects. The index associated
         with dimension name ``x`` can be retrieved by ``arr.indexes[x]``. By
         construction, ``len(arr.dims) == len(arr.indexes)``
+
+    name
+        The names of dimensions, coordinates, DataArray objects and data
+        variables can be anything as long as they are :term:`hashable`. However,
+        it is preferred to use :py:class:`str` typed names.
+
+    scalar
+        By definition, a scalar is not :term:`array_like`. That means that,
+        e.g., :py:class:`int`, :py:class:`float`, and :py:class:`str` values are
+        "scalar" while :py:class:`list` or :py:class:`tuple` are not.
