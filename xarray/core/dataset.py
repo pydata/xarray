@@ -1529,12 +1529,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
-            'zlib': True}, ...}``
+            ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,
+            "zlib": True}, ...}``
 
             The `h5netcdf` engine supports both the NetCDF4-style compression
-            encoding parameters ``{'zlib': True, 'complevel': 9}`` and the h5py
-            ones ``{'compression': 'gzip', 'compression_opts': 9}``.
+            encoding parameters ``{"zlib": True, "complevel": 9}`` and the h5py
+            ones ``{"compression": "gzip", "compression_opts": 9}``.
             This allows using any compression plugin installed in the HDF5
             library, e.g. LZF.
 
@@ -1542,14 +1542,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
-            ``dataset.encoding['unlimited_dims']``.
+            ``dataset.encoding["unlimited_dims"]``.
         compute: bool, default: True
             If true compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
         invalid_netcdf: bool, default: False
-            Only valid along with engine='h5netcdf'. If True, allow writing
+            Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
-            https://github.com/shoyer/h5netcdf. Default: False.
+            https://github.com/shoyer/h5netcdf.
         """
         if encoding is None:
             encoding = {}
@@ -1744,7 +1744,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         chunks : int, 'auto' or mapping, optional
             Chunk sizes along each dimension, e.g., ``5`` or
-            ``{'x': 5, 'y': 5}``.
+            ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
             Prefix for the name of any new dask arrays.
         token : str, optional
@@ -2587,9 +2587,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If DataArrays are passed as new coordates, their dimensions are
             used for the broadcasting.
         method : str, optional
-            {'linear', 'nearest'} for multidimensional array,
-            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
-            for 1-dimensional array. 'linear' is used by default.
+            {"linear", "nearest"} for multidimensional array,
+            {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
+            for 1-dimensional array. "linear" is used by default.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -2715,8 +2715,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset.
         method : str, optional
-            {'linear', 'nearest'} for multidimensional array,
-            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
+            {"linear", "nearest"} for multidimensional array,
+            {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
             for 1-dimensional array. 'linear' is used by default.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
@@ -4113,7 +4113,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
+        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -4797,25 +4797,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Input dict can take several forms::
 
-            d = {'t': {'dims': ('t'), 'data': t},
-                 'a': {'dims': ('t'), 'data': x},
-                 'b': {'dims': ('t'), 'data': y}}
+        >>> d = {
+        ...     "t": {"dims": ("t"), "data": t},
+        ...     "a": {"dims": ("t"), "data": x},
+        ...     "b": {"dims": ("t"), "data": y},
+        ... }
 
-            d = {'coords': {'t': {'dims': 't', 'data': t,
-                                  'attrs': {'units':'s'}}},
-                 'attrs': {'title': 'air temperature'},
-                 'dims': 't',
-                 'data_vars': {'a': {'dims': 't', 'data': x, },
-                               'b': {'dims': 't', 'data': y}}}
+        >>> d = {
+        ...     "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data_vars": {
+        ...         "a": {"dims": "t", "data": x,},
+        ...         "b": {"dims": "t", "data": y},
+        ...     },
+        ... }
 
-        where 't' is the name of the dimesion, 'a' and 'b' are names of data
+        where "t" is the name of the dimesion, "a" and "b" are names of data
         variables and t, x, and y are lists, numpy.arrays or pandas objects.
 
         Parameters
         ----------
         d : dict-like
             Mapping with a minimum structure of
-                ``{'var_0': {'dims': [..], 'data': [..]}, \
+                ``{"var_0": {"dims": [..], "data": [..]}, \
                             ...}``
 
         Returns
@@ -5447,8 +5452,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
-        datetime_unit : None or {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', \
-            'us', 'ns', 'ps', 'fs', 'as'}, default: None
+        datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
+            "us", "ns", "ps", "fs", "as"}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
