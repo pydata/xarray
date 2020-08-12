@@ -106,8 +106,9 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 autosummary_generate = True
 autodoc_typehints = "none"
 
-napoleon_use_param = True
+napoleon_use_param = False
 napoleon_use_rtype = True
+napoleon_preprocess_types = True
 napoleon_type_aliases = {
     # general terms
     "sequence": ":term:`sequence`",
