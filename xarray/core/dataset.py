@@ -4795,7 +4795,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         Convert a dictionary into an xarray.Dataset.
 
-        Input dict can take several forms
+        Input dict can take several forms:
 
         .. code:: python
 
