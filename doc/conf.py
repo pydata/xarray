@@ -112,7 +112,6 @@ napoleon_preprocess_types = True
 napoleon_type_aliases = {
     # general terms
     "sequence": ":term:`sequence`",
-    "hashable": ":term:`hashable`",
     "iterable": ":term:`iterable`",
     "callable": ":py:func:`callable`",
     "dict_like": ":term:`dict-like <mapping>`",
@@ -130,8 +129,9 @@ napoleon_type_aliases = {
     # numpy terms
     "array_like": ":term:`array_like`",
     "array-like": ":term:`array-like <array_like>`",
-    # "scalar": ":term:`scalar`",
+    "scalar": ":term:`scalar`",
     "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
     # matplotlib terms
     "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
     "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
