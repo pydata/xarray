@@ -117,8 +117,6 @@ def github_url(name):
     return url.format(branch=branch, path=path)
 
 
-jinja2.defaults.DEFAULT_FILTERS["github_url"] = github_url
-
 autodoc_typehints = "none"
 
 napoleon_use_param = True
@@ -376,3 +374,7 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
 }
+
+
+def setup(app):
+    jinja2.defaults.DEFAULT_FILTERS["github_url"] = github_url
