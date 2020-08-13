@@ -103,6 +103,7 @@ complete examples, please consult the relevant documentation.*
         it is preferred to use :py:class:`str` typed names.
 
     scalar
-        By definition, a scalar is not :term:`array_like`. That means that,
-        e.g., :py:class:`int`, :py:class:`float`, and :py:class:`str` values are
-        "scalar" while :py:class:`list` or :py:class:`tuple` are not.
+        By definition, a scalar is not an :term:`array` and when converted to
+        one, it has 0 dimensions. That means that, e.g., :py:class:`int`,
+        :py:class:`float`, and :py:class:`str` objects are "scalar" while
+        :py:class:`list` or :py:class:`tuple` are not.
