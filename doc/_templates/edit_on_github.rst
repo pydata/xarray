@@ -1,3 +1,3 @@
 :github_url: {{ full_name | github_url }}
 
-{% extends base.rst %}
+{% extends "!autosummary/base.rst" %}
