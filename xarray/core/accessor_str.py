@@ -665,8 +665,8 @@ class StringAccessor:
         ----------
         width : int
             Maximum line-width
-        kwargs
-            keyword arguments passed into :class:`textwrap.TextWrapper.
+        **kwargs
+            keyword arguments passed into :class:`textwrap.TextWrapper`.
 
         Returns
         -------
