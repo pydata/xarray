@@ -32,6 +32,15 @@ New Features
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
   `Aaron Spring <https://github.com/aaronspring>`_.
+- Relaxed the :ref:`mindeps_policy` to support:
+
+  - all versions of setuptools released in the last 42 months (but no older than 38.4)
+  - all versions of dask and dask.distributed released in the last 12 months (but no
+    older than 2.9)
+  - all versions of other packages released in the last 12 months
+
+  All are  up from 6 months (:issue:`4295`)
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
@@ -176,9 +185,10 @@ New Features
 Enhancements
 ~~~~~~~~~~~~
 - Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
+  We performs independant interpolation sequentially rather than interpolating in
+  one large multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.interp` now support interpolations over chunked dimensions (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
   dataframe has a MultiIndex (:pull:`4184`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.

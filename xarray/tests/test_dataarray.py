@@ -3147,7 +3147,8 @@ class TestDataArray:
 
     @requires_dask
     @requires_scipy
-    def test_upsample_interpolate_dask(self):
+    @pytest.mark.parametrize("chunked_time", [True, False])
+    def test_upsample_interpolate_dask(self, chunked_time):
         from scipy.interpolate import interp1d
 
         xs = np.arange(6)
@@ -3158,6 +3159,8 @@ class TestDataArray:
         data = np.tile(z, (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
         chunks = {"x": 2, "y": 1}
+        if chunked_time:
+            chunks["time"] = 3
 
         expected_times = times.to_series().resample("1H").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
@@ -3184,13 +3187,6 @@ class TestDataArray:
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
-
-        # Check that an error is raised if an attempt is made to interpolate
-        # over a chunked dimension
-        with raises_regex(
-            NotImplementedError, "Chunking along the dimension to be interpolated"
-        ):
-            array.chunk({"time": 1}).resample(time="1H").interpolate("linear")
 
     def test_align(self):
         array = DataArray(
