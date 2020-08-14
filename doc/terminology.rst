@@ -51,7 +51,7 @@ complete examples, please consult the relevant documentation.*
         dimension axis as having a name, for example the "x dimension".  In
         xarray, a ``DataArray`` object's *dimensions* are its named dimension
         axes, and the name of the ``i``-th dimension is ``arr.dims[i]``. If an
-        array is created without dimensions, the default dimension names are
+        array is created without dimension names, the default dimension names are
         ``dim_0``, ``dim_1``, and so forth.
 
     Coordinate
