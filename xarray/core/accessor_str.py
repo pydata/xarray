@@ -39,6 +39,7 @@
 
 import codecs
 import re
+import textwrap
 
 import numpy as np
 
@@ -672,8 +673,6 @@ class StringAccessor:
         -------
         wrapped : same type as values
         """
-        import textwrap
-
         tw = textwrap.TextWrapper(width=width, **kwargs)
         f = lambda x: "\n".join(tw.wrap(x))
         return self._apply(f)
