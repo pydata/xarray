@@ -5951,7 +5951,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             sing = xr.DataArray(
                 sing,
                 dims=(degree_dim,),
-                coords={degree_dim: np.arange(order)[::-1]},
+                coords={degree_dim: np.arange(rank - 1, -1, -1)},
                 name=xname + "singular_values",
             )
             variables[sing.name] = sing
@@ -5960,11 +5960,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dim not in da.dims:
                 continue
 
-            if skipna is None:
-                if isinstance(da.data, dask_array_type):
-                    skipna_da = True
-                else:
-                    skipna_da = np.any(da.isnull())
+            if isinstance(da.data, dask_array_type) and (rank != order or full or skipna is None):
+                # Current algorithm with dask and skipna=False neither supports
+                # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
+                skipna_da = True
+            elif skipna is None:
+                skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
             stacked_coords = {}
@@ -5983,8 +5984,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 rhs *= w[:, np.newaxis]
 
             with warnings.catch_warnings():
-                if not full:
+                if full:  # Copy np.polyfit behavior
                     warnings.simplefilter("ignore", np.RankWarning)
+                else:  # Raise only once per variable
+                    warnings.simplefilter("once", np.RankWarning)
+
                 coeffs, residuals = duck_array_ops.least_squares(
                     lhs, rhs.data, rcond=rcond, skipna=skipna_da
                 )

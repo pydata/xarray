@@ -5594,6 +5594,16 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
+    def test_polyfit_warnings(self):
+        ds = create_test_data(seed=1)
+
+        with warnings.catch_warnings(record=True) as ws:
+            ds.var1.polyfit("dim2", 10, full=False)
+            assert len(ws) == 1
+            assert ws[0].category == np.RankWarning
+            ds.var1.polyfit("dim2", 10, full=True)
+            assert len(ws) == 1
+
     def test_pad(self):
         ds = create_test_data(seed=1)
         padded = ds.pad(dim2=(1, 1), constant_values=42)

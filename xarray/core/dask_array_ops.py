@@ -120,6 +120,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
             coeffs = coeffs.reshape(coeffs.shape[0])
             residuals = residuals.reshape(residuals.shape[0])
     else:
-        coeffs, residuals, rank, _ = da.linalg.lstsq(lhs_da, rhs)
-        nputils.warn_on_deficient_rank(rank, lhs.shape[1])
+        # Residuals here are (1, 1) but should be (K,) as rhs is (N, K)
+        # See issue dask/dask#6516
+        coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
     return coeffs, residuals

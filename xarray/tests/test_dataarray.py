@@ -4286,6 +4286,10 @@ class TestDataArray:
         ).T
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
 
+        # Full output and deficient rank
+        out = da.polyfit("x", 12, full=True)
+        assert out.polyfit_residuals.isnull().all()
+
         # With NaN
         da_raw[0, 1] = np.nan
         if use_dask:
