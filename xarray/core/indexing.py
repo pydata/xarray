@@ -4,7 +4,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -50,8 +50,8 @@ def _expand_slice(slice_, size):
 
 
 def _sanitize_slice_element(x):
-    from .variable import Variable
     from .dataarray import DataArray
+    from .variable import Variable
 
     if isinstance(x, (Variable, DataArray)):
         x = x.values
@@ -175,6 +175,16 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
         if label.ndim == 0:
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label.item(), level=0)
+            elif isinstance(index, pd.CategoricalIndex):
+                if method is not None:
+                    raise ValueError(
+                        "'method' is not a valid kwarg when indexing using a CategoricalIndex."
+                    )
+                if tolerance is not None:
+                    raise ValueError(
+                        "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
+                    )
+                indexer = index.get_loc(label.item())
             else:
                 indexer = index.get_loc(
                     label.item(), method=method, tolerance=tolerance
@@ -1304,6 +1314,24 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
+
+        if not isinstance(key, VectorizedIndexer):
+            # if possible, short-circuit when keys are effectively slice(None)
+            # This preserves dask name and passes lazy array equivalence checks
+            # (see duck_array_ops.lazy_array_equiv)
+            rewritten_indexer = False
+            new_indexer = []
+            for idim, k in enumerate(key.tuple):
+                if isinstance(k, Iterable) and duck_array_ops.array_equiv(
+                    k, np.arange(self.array.shape[idim])
+                ):
+                    new_indexer.append(slice(None))
+                    rewritten_indexer = True
+                else:
+                    new_indexer.append(k)
+            if rewritten_indexer:
+                key = type(key)(tuple(new_indexer))
+
         if isinstance(key, BasicIndexer):
             return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):

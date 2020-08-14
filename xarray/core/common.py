@@ -25,7 +25,7 @@ from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .rolling_exp import RollingExp
-from .utils import Frozen, either_dict_or_kwargs
+from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
@@ -399,10 +399,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Parameters
         ----------
         coords : dict, optional
-            A dict with keys which are variables names. If the values are
-            callable, they are computed on this object and assigned to new
-            coordinate variables. If the values are not callable,
-            (e.g. a ``DataArray``, scalar, or array), they are simply assigned.
+            A dict where the keys are the names of the coordinates
+            with the new values to assign. If the values are callable, they are
+            computed on this object and assigned to new coordinate variables.
+            If the values are not callable, (e.g. a ``DataArray``, scalar, or
+            array), they are simply assigned. A new coordinate can also be
+            defined and attached to an existing dimension using a tuple with
+            the first element the dimension name and the second element the
+            values for this new coordinate.
 
         **coords_kwargs : keyword, value pairs, optional
             The keyword arguments form of ``coords``.
@@ -418,9 +422,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Convert longitude coordinates from 0-359 to -180-179:
 
-        >>> da = xr.DataArray(np.random.rand(4),
-        ...                   coords=[np.array([358, 359, 0, 1])],
-        ...                   dims='lon')
+        >>> da = xr.DataArray(
+        ...     np.random.rand(4), coords=[np.array([358, 359, 0, 1])], dims="lon",
+        ... )
         >>> da
         <xarray.DataArray (lon: 4)>
         array([0.28298 , 0.667347, 0.657938, 0.177683])
@@ -434,16 +438,30 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         The function also accepts dictionary arguments:
 
-        >>> da.assign_coords({'lon': (((da.lon + 180) % 360) - 180)})
+        >>> da.assign_coords({"lon": (((da.lon + 180) % 360) - 180)})
         <xarray.DataArray (lon: 4)>
         array([0.28298 , 0.667347, 0.657938, 0.177683])
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
+        New coordinate can also be attached to an existing dimension:
+
+        >>> lon_2 = np.array([300, 289, 0, 1])
+        >>> da.assign_coords(lon_2=("lon", lon_2))
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 358 359 0 1
+            lon_2    (lon) int64 300 289 0 1
+
+        Note that the same result can also be obtained with a dict e.g.
+
+        >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
+
         Notes
         -----
-        Since ``coords_kwargs`` is a dictionary, the order of your arguments may
-        not be preserved, and so the order of the new variables is not well
+        Since ``coords_kwargs`` is a dictionary, the order of your arguments
+        may not be preserved, and so the order of the new variables is not well
         defined. Assigning multiple variables within the same ``assign_coords``
         is possible, but you cannot reference other variables created within
         the same ``assign_coords`` call.
@@ -518,19 +536,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         You can write
 
-        >>> (ds.pipe(h)
-        ...    .pipe(g, arg1=a)
-        ...    .pipe(f, arg2=b, arg3=c)
-        ... )
+        >>> (ds.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c))
 
         If you have a function that takes the data as (say) the second
         argument, pass a tuple indicating which keyword expects the
         data. For example, suppose ``f`` takes its data as ``arg2``:
 
-        >>> (ds.pipe(h)
-        ...    .pipe(g, arg1=a)
-        ...    .pipe((f, 'arg2'), arg1=a, arg3=c)
-        ...  )
+        >>> (ds.pipe(h).pipe(g, arg1=a).pipe((f, "arg2"), arg1=a, arg3=c))
 
         Examples
         --------
@@ -539,7 +551,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
-        ...         "temperature_c": (("lat", "lon"), 20 * np.random.rand(4).reshape(2, 2)),
+        ...         "temperature_c": (
+        ...             ("lat", "lon"),
+        ...             20 * np.random.rand(4).reshape(2, 2),
+        ...         ),
         ...         "precipitation": (("lat", "lon"), np.random.rand(4).reshape(2, 2)),
         ...     },
         ...     coords={"lat": [10, 20], "lon": [150, 160]},
@@ -584,10 +599,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
 
         >>> (
-        ... x
-        ... .pipe(adder, arg=2)
-        ... .pipe(div, arg=2)
-        ... .pipe(sub_mult, sub_arg=2, mult_arg=2)
+        ...     x.pipe(adder, arg=2)
+        ...     .pipe(div, arg=2)
+        ...     .pipe(sub_mult, sub_arg=2, mult_arg=2)
         ... )
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
@@ -639,16 +653,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Calculate daily anomalies for daily data:
 
-        >>> da = xr.DataArray(np.linspace(0, 1826, num=1827),
-        ...                   coords=[pd.date_range('1/1/2000', '31/12/2004',
-        ...                           freq='D')],
-        ...                   dims='time')
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 1826, num=1827),
+        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
+        ...     dims="time",
+        ... )
         >>> da
         <xarray.DataArray (time: 1827)>
         array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03, 1.826e+03])
         Coordinates:
           * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
-        >>> da.groupby('time.dayofyear') - da.groupby('time.dayofyear').mean('time')
+        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)>
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
         Coordinates:
@@ -660,6 +675,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
         """
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
         return self._groupby_cls(
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
@@ -737,11 +763,31 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             },
         )
 
+    def weighted(self, weights):
+        """
+        Weighted operations.
+
+        Parameters
+        ----------
+        weights : DataArray
+            An array of weights associated with the values in this Dataset.
+            Each value in the data contributes to the reduction operation
+            according to its associated weight.
+
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+        """
+
+        return self._weighted_cls(self, weights)
+
     def rolling(
         self,
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
-        center: bool = False,
+        center: Union[bool, Mapping[Hashable, bool]] = False,
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -756,8 +802,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : boolean, or a mapping, default False
             Set the labels at the center of the window.
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -771,10 +821,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
 
-        >>> da = xr.DataArray(np.linspace(0, 11, num=12),
-        ...                   coords=[pd.date_range('15/12/1999',
-        ...                           periods=12, freq=pd.DateOffset(months=1))],
-        ...                   dims='time')
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
         >>> da
         <xarray.DataArray (time: 12)>
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
@@ -788,7 +843,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Remove the NaNs using ``dropna()``:
 
-        >>> da.rolling(time=3, center=True).mean().dropna('time')
+        >>> da.rolling(time=3, center=True).mean().dropna("time")
         <xarray.DataArray (time: 10)>
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
@@ -799,8 +854,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
+        return self._rolling_cls(
+            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+        )
 
     def rolling_exp(
         self,
@@ -848,6 +908,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
+        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -868,8 +929,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) that is applied to the coordintes,
+        coord_func : function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
+        keep_attrs : bool, optional
+            If True, the object's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -880,10 +945,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Coarsen the long time series by averaging over every four days.
 
-        >>> da = xr.DataArray(np.linspace(0, 364, num=364),
-        ...                   dims='time',
-        ...                   coords={'time': pd.date_range(
-        ...                       '15/12/1999', periods=364)})
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 364, num=364),
+        ...     dims="time",
+        ...     coords={"time": pd.date_range("15/12/1999", periods=364)},
+        ... )
         >>> da
         <xarray.DataArray (time: 364)>
         array([  0.      ,   1.002755,   2.00551 , ..., 361.99449 , 362.997245,
@@ -891,7 +957,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
         >>>
-        >>> da.coarsen(time=3, boundary='trim').mean()
+        >>> da.coarsen(time=3, boundary="trim").mean()
         <xarray.DataArray (time: 121)>
         array([  1.002755,   4.011019,   7.019284,  ...,  358.986226,
                361.99449 ])
@@ -904,9 +970,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
-            self, dim, boundary=boundary, side=side, coord_func=coord_func
+            self,
+            dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
+            keep_attrs=keep_attrs,
         )
 
     def resample(
@@ -966,10 +1040,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Downsample monthly time-series data to seasonal data:
 
-        >>> da = xr.DataArray(np.linspace(0, 11, num=12),
-        ...                   coords=[pd.date_range('15/12/1999',
-        ...                           periods=12, freq=pd.DateOffset(months=1))],
-        ...                   dims='time')
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
         >>> da
         <xarray.DataArray (time: 12)>
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
@@ -983,7 +1062,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Upsample monthly time-series data to daily data:
 
-        >>> da.resample(time='1D').interpolate('linear')
+        >>> da.resample(time="1D").interpolate("linear")
         <xarray.DataArray (time: 337)>
         array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
         Coordinates:
@@ -991,7 +1070,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Limit scope of upsampling method
 
-        >>> da.resample(time='1D').nearest(tolerance='1D')
+        >>> da.resample(time="1D").nearest(tolerance="1D")
         <xarray.DataArray (time: 337)>
         array([ 0.,  0., nan, ..., nan, 11., 11.])
         Coordinates:
@@ -1009,9 +1088,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
-        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1084,7 +1163,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
 
         >>> import numpy as np
-        >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
+        >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> a
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+            [ 5,  6,  7,  8,  9],
+            [10, 11, 12, 13, 14],
+            [15, 16, 17, 18, 19],
+            [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
         array([[  0.,   1.,   2.,   3.,  nan],
@@ -1093,6 +1181,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1101,7 +1190,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [15, 16, -1, -1, -1],
                [20, -1, -1, -1, -1]])
         Dimensions without coordinates: x, y
+
         >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
+
+        >>> a.where(lambda x: x.x + x.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
         array([[  0.,   1.,   2.,   3.],
                [  5.,   6.,   7.,  nan],
@@ -1117,6 +1215,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .alignment import align
         from .dataarray import DataArray
         from .dataset import Dataset
+
+        if callable(cond):
+            cond = cond(self)
 
         if drop:
             if other is not dtypes.NA:
@@ -1171,7 +1272,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Examples
         --------
 
-        >>> array = xr.DataArray([1, 2, 3], dims='x')
+        >>> array = xr.DataArray([1, 2, 3], dims="x")
         >>> array.isin([1, 3])
         <xarray.DataArray (x: 3)>
         array([ True, False,  True])
@@ -1182,8 +1283,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         numpy.isin
         """
         from .computation import apply_ufunc
-        from .dataset import Dataset
         from .dataarray import DataArray
+        from .dataset import Dataset
         from .variable import Variable
 
         if isinstance(test_elements, Dataset):
@@ -1240,9 +1341,11 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
     >>> import numpy as np
     >>> import xarray as xr
-    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
-    ...                  dims=['lat', 'lon'],
-    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x = xr.DataArray(
+    ...     np.arange(6).reshape(2, 3),
+    ...     dims=["lat", "lon"],
+    ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
+    ... )
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
@@ -1294,6 +1397,9 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
+    if not is_scalar(fill_value):
+        raise ValueError(f"fill_value must be scalar. Received {fill_value} instead.")
+
     if isinstance(other, Dataset):
         data_vars = {
             k: _full_like_variable(v, fill_value, dtype)
@@ -1328,7 +1434,7 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
             other.shape, fill_value, dtype=dtype, chunks=other.data.chunks
         )
     else:
-        data = np.full_like(other, fill_value, dtype=dtype)
+        data = np.full_like(other.data, fill_value, dtype=dtype)
 
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
@@ -1354,9 +1460,11 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     >>> import numpy as np
     >>> import xarray as xr
-    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
-    ...                  dims=['lat', 'lon'],
-    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x = xr.DataArray(
+    ...     np.arange(6).reshape(2, 3),
+    ...     dims=["lat", "lon"],
+    ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
+    ... )
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
@@ -1373,7 +1481,7 @@ def zeros_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> xr.zeros_like(x, dtype=np.float)
+    >>> xr.zeros_like(x, dtype=float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
            [0., 0., 0.]])
@@ -1412,9 +1520,11 @@ def ones_like(other, dtype: DTypeLike = None):
 
     >>> import numpy as np
     >>> import xarray as xr
-    >>> x = xr.DataArray(np.arange(6).reshape(2, 3),
-    ...                  dims=['lat', 'lon'],
-    ...                  coords={'lat': [1, 2], 'lon': [0, 1, 2]})
+    >>> x = xr.DataArray(
+    ...     np.arange(6).reshape(2, 3),
+    ...     dims=["lat", "lon"],
+    ...     coords={"lat": [1, 2], "lon": [0, 1, 2]},
+    ... )
     >>> x
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 1, 2],
@@ -1423,7 +1533,7 @@ def ones_like(other, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
-    >>> >>> xr.ones_like(x)
+    >>> xr.ones_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
            [1, 1, 1]])

@@ -7,8 +7,11 @@ Required dependencies
 ---------------------
 
 - Python (3.6 or later)
-- `numpy <http://www.numpy.org/>`__ (1.14 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.24 or later)
+- setuptools (38.4 or later)
+- `numpy <http://www.numpy.org/>`__ (1.15 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
+
+.. _optional-dependencies:
 
 Optional dependencies
 ---------------------
@@ -23,7 +26,7 @@ For netCDF and IO
 - `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
-  geoscience specific file formats
+  geoscience specific file formats. Note that pynio is not available for Windows.
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
@@ -58,7 +61,7 @@ For plotting
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
 - `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for :ref:`plot-maps`
-- `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better
+- `seaborn <http://seaborn.pydata.org/>`__: for better
   color palettes
 - `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
   cftime.datetime objects
@@ -90,16 +93,16 @@ dependencies:
 
 - **Python:** 42 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
+- **setuptools:** 42 months (but no older than 38.4)
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **pandas:** 12 months
-- **scipy:** 12 months
+- **dask and dask.distributed:** 12 months (but no older than 2.9)
 - **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
   matured. This extends to dask when used in conjunction with any of these libraries.
   numpy >=1.17.
-- **all other libraries:** 6 months
+- **all other libraries:** 12 months
 
 The above should be interpreted as *the minor version (X.Y) initially published no more
 than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available
@@ -120,16 +123,15 @@ xarray itself is a pure Python package, but its dependencies are not. The
 easiest way to get everything installed is to use conda_. To install xarray
 with its recommended dependencies using the conda command line tool::
 
-    $ conda install xarray dask netCDF4 bottleneck
+    $ conda install -c conda-forge xarray dask netCDF4 bottleneck
 
 .. _conda: http://conda.io/
 
-We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel if you need difficult\-to\-build dependencies such as cartopy, pynio or PseudoNetCDF::
+If you require other :ref:`optional-dependencies` add them to the line above.
 
-    $ conda install -c conda-forge xarray cartopy pynio pseudonetcdf
-
-New releases may also appear in conda-forge before being updated in the default
-channel.
+We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel,
+as some of the dependencies are difficult to build. New releases may also appear in conda-forge before
+being updated in the default channel.
 
 If you don't use conda, be sure you have the required dependencies (numpy and
 pandas) installed first. Then, install xarray with pip::

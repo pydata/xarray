@@ -222,8 +222,9 @@ def test_decode_non_standard_calendar_inside_timestamp_range(calendar):
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_dates_outside_timestamp_range(calendar):
-    import cftime
     from datetime import datetime
+
+    import cftime
 
     units = "days since 0001-01-01"
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
@@ -358,8 +359,9 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(calend
 @requires_cftime
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 def test_decode_multidim_time_outside_timestamp_range(calendar):
-    import cftime
     from datetime import datetime
+
+    import cftime
 
     units = "days since 0001-01-01"
     times1 = [datetime(1, 4, day) for day in range(1, 6)]
@@ -432,6 +434,18 @@ def test_decode_360_day_calendar():
         assert_array_equal(actual, expected)
 
 
+@requires_cftime
+def test_decode_abbreviation():
+    """Test making sure we properly fall back to cftime on abbreviated units."""
+    import cftime
+
+    val = np.array([1586628000000.0])
+    units = "msecs since 1970-01-01T00:00:00Z"
+    actual = coding.times.decode_cf_datetime(val, units)
+    expected = coding.times.cftime_to_nptime(cftime.num2date(val, units))
+    assert_array_equal(actual, expected)
+
+
 @arm_xfail
 @requires_cftime
 @pytest.mark.parametrize(
@@ -451,7 +465,7 @@ def test_cf_datetime_nan(num_dates, units, expected_list):
         warnings.filterwarnings("ignore", "All-NaN")
         actual = coding.times.decode_cf_datetime(num_dates, units)
     # use pandas because numpy will deprecate timezone-aware conversions
-    expected = pd.to_datetime(expected_list)
+    expected = pd.to_datetime(expected_list).to_numpy(dtype="datetime64[ns]")
     assert_array_equal(expected, actual)
 
 

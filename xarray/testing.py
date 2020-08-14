@@ -1,14 +1,24 @@
 """Testing functions exposed to the user API"""
+import functools
 from typing import Hashable, Set, Union
 
 import numpy as np
 import pandas as pd
 
-from xarray.core import duck_array_ops, formatting
+from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import default_indexes
 from xarray.core.variable import IndexVariable, Variable
+
+__all__ = (
+    "assert_allclose",
+    "assert_chunks_equal",
+    "assert_duckarray_equal",
+    "assert_duckarray_allclose",
+    "assert_equal",
+    "assert_identical",
+)
 
 
 def _decode_string_data(data):
@@ -116,29 +126,89 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """
     __tracebackhide__ = True
     assert type(a) == type(b)
-    kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
-    if isinstance(a, Variable):
-        assert a.dims == b.dims
-        allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
-        assert allclose, f"{a.values}\n{b.values}"
-    elif isinstance(a, DataArray):
-        assert_allclose(a.variable, b.variable, **kwargs)
-        assert set(a.coords) == set(b.coords)
-        for v in a.coords.variables:
-            # can't recurse with this function as coord is sometimes a
-            # DataArray, so call into _data_allclose_or_equiv directly
-            allclose = _data_allclose_or_equiv(
-                a.coords[v].values, b.coords[v].values, **kwargs
-            )
-            assert allclose, "{}\n{}".format(a.coords[v].values, b.coords[v].values)
-    elif isinstance(a, Dataset):
-        assert set(a.data_vars) == set(b.data_vars)
-        assert set(a.coords) == set(b.coords)
-        for k in list(a.variables) + list(a.coords):
-            assert_allclose(a[k], b[k], **kwargs)
 
+    equiv = functools.partial(
+        _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
+    )
+    equiv.__name__ = "allclose"
+
+    def compat_variable(a, b):
+        a = getattr(a, "variable", a)
+        b = getattr(b, "variable", b)
+
+        return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
+
+    if isinstance(a, Variable):
+        allclose = compat_variable(a, b)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, DataArray):
+        allclose = utils.dict_equiv(
+            a.coords, b.coords, compat=compat_variable
+        ) and compat_variable(a.variable, b.variable)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, Dataset):
+        allclose = a._coord_names == b._coord_names and utils.dict_equiv(
+            a.variables, b.variables, compat=compat_variable
+        )
+        assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
+
+
+def _format_message(x, y, err_msg, verbose):
+    diff = x - y
+    abs_diff = max(abs(diff))
+    rel_diff = "not implemented"
+
+    n_diff = int(np.count_nonzero(diff))
+    n_total = diff.size
+
+    fraction = f"{n_diff} / {n_total}"
+    percentage = float(n_diff / n_total * 100)
+
+    parts = [
+        "Arrays are not equal",
+        err_msg,
+        f"Mismatched elements: {fraction} ({percentage:.0f}%)",
+        f"Max absolute difference: {abs_diff}",
+        f"Max relative difference: {rel_diff}",
+    ]
+    if verbose:
+        parts += [
+            f" x: {x!r}",
+            f" y: {y!r}",
+        ]
+
+    return "\n".join(parts)
+
+
+def assert_duckarray_allclose(
+    actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
+):
+    """ Like `np.testing.assert_allclose`, but for duckarrays. """
+    __tracebackhide__ = True
+
+    allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
+    assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
+
+
+def assert_duckarray_equal(x, y, err_msg="", verbose=True):
+    """ Like `np.testing.assert_array_equal`, but for duckarrays """
+    __tracebackhide__ = True
+
+    if not utils.is_array_like(x) and not utils.is_scalar(x):
+        x = np.asarray(x)
+
+    if not utils.is_array_like(y) and not utils.is_scalar(y):
+        y = np.asarray(y)
+
+    if (utils.is_array_like(x) and utils.is_scalar(y)) or (
+        utils.is_scalar(x) and utils.is_array_like(y)
+    ):
+        equiv = (x == y).all()
+    else:
+        equiv = duck_array_ops.array_equiv(x, y)
+    assert equiv, _format_message(x, y, err_msg=err_msg, verbose=verbose)
 
 
 def assert_chunks_equal(a, b):

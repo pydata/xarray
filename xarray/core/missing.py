@@ -1,3 +1,4 @@
+import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
@@ -9,7 +10,8 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import dask_array_type
+from .duck_array_ops import dask_array_type, datetime_to_numeric, timedelta_to_numeric
+from .options import _get_keep_attrs
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -206,53 +208,87 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim: Hashable, use_coordinate: Union[str, bool] = True):
-    """get index to use for x values in interpolation.
+def get_clean_interp_index(
+    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+):
+    """Return index to use for x values in interpolation or curve fitting.
 
-    If use_coordinate is True, the coordinate that shares the name of the
-    dimension along which interpolation is being performed will be used as the
-    x values.
+    Parameters
+    ----------
+    arr : DataArray
+      Array to interpolate or fit to a curve.
+    dim : str
+      Name of dimension along which to fit.
+    use_coordinate : str or bool
+      If use_coordinate is True, the coordinate that shares the name of the
+      dimension along which interpolation is being performed will be used as the
+      x values. If False, the x values are set as an equally spaced sequence.
+    strict : bool
+      Whether to raise errors if the index is either non-unique or non-monotonic (default).
 
-    If use_coordinate is False, the x values are set as an equally spaced
-    sequence.
+    Returns
+    -------
+    Variable
+      Numerical values for the x-coordinates.
+
+    Notes
+    -----
+    If indexing is along the time dimension, datetime coordinates are converted
+    to time deltas with respect to 1970-01-01.
     """
-    if use_coordinate:
-        if use_coordinate is True:
-            index = arr.get_index(dim)
-        else:
-            index = arr.coords[use_coordinate]
-            if index.ndim != 1:
-                raise ValueError(
-                    f"Coordinates used for interpolation must be 1D, "
-                    f"{use_coordinate} is {index.ndim}D."
-                )
-            index = index.to_index()
 
-        # TODO: index.name is None for multiindexes
-        # set name for nice error messages below
-        if isinstance(index, pd.MultiIndex):
-            index.name = dim
+    # Question: If use_coordinate is a string, what role does `dim` play?
+    from xarray.coding.cftimeindex import CFTimeIndex
 
+    if use_coordinate is False:
+        axis = arr.get_axis_num(dim)
+        return np.arange(arr.shape[axis], dtype=np.float64)
+
+    if use_coordinate is True:
+        index = arr.get_index(dim)
+
+    else:  # string
+        index = arr.coords[use_coordinate]
+        if index.ndim != 1:
+            raise ValueError(
+                f"Coordinates used for interpolation must be 1D, "
+                f"{use_coordinate} is {index.ndim}D."
+            )
+        index = index.to_index()
+
+    # TODO: index.name is None for multiindexes
+    # set name for nice error messages below
+    if isinstance(index, pd.MultiIndex):
+        index.name = dim
+
+    if strict:
         if not index.is_monotonic:
             raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:
             raise ValueError(f"Index {index.name!r} has duplicate values")
 
-        # raise if index cannot be cast to a float (e.g. MultiIndex)
-        try:
-            index = index.values.astype(np.float64)
-        except (TypeError, ValueError):
-            # pandas raises a TypeError
-            # xarray/numpy raise a ValueError
-            raise TypeError(
-                f"Index {index.name!r} must be castable to float64 to support "
-                f"interpolation, got {type(index).__name__}."
-            )
+    # Special case for non-standard calendar indexes
+    # Numerical datetime values are defined with respect to 1970-01-01T00:00:00 in units of nanoseconds
+    if isinstance(index, (CFTimeIndex, pd.DatetimeIndex)):
+        offset = type(index[0])(1970, 1, 1)
+        if isinstance(index, CFTimeIndex):
+            index = index.values
+        index = Variable(
+            data=datetime_to_numeric(index, offset=offset, datetime_unit="ns"),
+            dims=(dim,),
+        )
 
-    else:
-        axis = arr.get_axis_num(dim)
-        index = np.arange(arr.shape[axis], dtype=np.float64)
+    # raise if index cannot be cast to a float (e.g. MultiIndex)
+    try:
+        index = index.values.astype(np.float64)
+    except (TypeError, ValueError):
+        # pandas raises a TypeError
+        # xarray/numpy raise a ValueError
+        raise TypeError(
+            f"Index {index.name!r} must be castable to float64 to support "
+            f"interpolation or curve fitting, got {type(index).__name__}."
+        )
 
     return index
 
@@ -263,11 +299,14 @@ def interp_na(
     use_coordinate: Union[bool, str] = True,
     method: str = "linear",
     limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64] = None,
+    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+    keep_attrs: bool = None,
     **kwargs,
 ):
     """Interpolate values according to different methods.
     """
+    from xarray.coding.cftimeindex import CFTimeIndex
+
     if dim is None:
         raise NotImplementedError("dim is a required argument")
 
@@ -281,26 +320,11 @@ def interp_na(
 
         if (
             dim in self.indexes
-            and isinstance(self.indexes[dim], pd.DatetimeIndex)
+            and isinstance(self.indexes[dim], (pd.DatetimeIndex, CFTimeIndex))
             and use_coordinate
         ):
-            if not isinstance(max_gap, (np.timedelta64, pd.Timedelta, str)):
-                raise TypeError(
-                    f"Underlying index is DatetimeIndex. Expected max_gap of type str, pandas.Timedelta or numpy.timedelta64 but received {max_type}"
-                )
-
-            if isinstance(max_gap, str):
-                try:
-                    max_gap = pd.to_timedelta(max_gap)
-                except ValueError:
-                    raise ValueError(
-                        f"Could not convert {max_gap!r} to timedelta64 using pandas.to_timedelta"
-                    )
-
-            if isinstance(max_gap, pd.Timedelta):
-                max_gap = np.timedelta64(max_gap.value, "ns")
-
-            max_gap = np.timedelta64(max_gap, "ns").astype(np.float64)
+            # Convert to float
+            max_gap = timedelta_to_numeric(max_gap)
 
         if not use_coordinate:
             if not isinstance(max_gap, (Number, np.number)):
@@ -313,19 +337,22 @@ def interp_na(
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=True)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "overflow", RuntimeWarning)
         warnings.filterwarnings("ignore", "invalid value", RuntimeWarning)
         arr = apply_ufunc(
             interpolator,
-            index,
             self,
+            index,
             input_core_dims=[[dim], [dim]],
             output_core_dims=[[dim]],
             output_dtypes=[self.dtype],
             dask="parallelized",
             vectorize=True,
-            keep_attrs=True,
+            keep_attrs=keep_attrs,
         ).transpose(*self.dims)
 
     if limit is not None:
@@ -342,8 +369,9 @@ def interp_na(
     return arr
 
 
-def func_interpolate_na(interpolator, x, y, **kwargs):
+def func_interpolate_na(interpolator, y, x, **kwargs):
     """helper function to apply interpolation along 1 dimension"""
+    # reversed arguments are so that attrs are preserved from da, not index
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
     out = y.copy()
@@ -516,15 +544,6 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _assert_single_chunk(var, axes):
-    for axis in axes:
-        if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
-            raise NotImplementedError(
-                "Chunking along the dimension to be interpolated "
-                "({}) is not yet supported.".format(axis)
-            )
-
-
 def _localize(var, indexes_coords):
     """ Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
@@ -589,36 +608,42 @@ def interp(var, indexes_coords, method, **kwargs):
     if not indexes_coords:
         return var.copy()
 
-    # simple speed up for the local interpolation
-    if method in ["linear", "nearest"]:
-        var, indexes_coords = _localize(var, indexes_coords)
-
     # default behavior
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
-    # target dimensions
-    dims = list(indexes_coords)
-    x, new_x = zip(*[indexes_coords[d] for d in dims])
-    destination = broadcast_variables(*new_x)
+    result = var
+    # decompose the interpolation into a succession of independant interpolation
+    for indexes_coords in decompose_interp(indexes_coords):
+        var = result
 
-    # transpose to make the interpolated axis to the last position
-    broadcast_dims = [d for d in var.dims if d not in dims]
-    original_dims = broadcast_dims + dims
-    new_dims = broadcast_dims + list(destination[0].dims)
-    interped = interp_func(
-        var.transpose(*original_dims).data, x, destination, method, kwargs
-    )
+        # simple speed up for the local interpolation
+        if method in ["linear", "nearest"]:
+            var, indexes_coords = _localize(var, indexes_coords)
 
-    result = Variable(new_dims, interped, attrs=var.attrs)
+        # target dimensions
+        dims = list(indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        destination = broadcast_variables(*new_x)
 
-    # dimension of the output array
-    out_dims = OrderedSet()
-    for d in var.dims:
-        if d in dims:
-            out_dims.update(indexes_coords[d][1].dims)
-        else:
-            out_dims.add(d)
-    return result.transpose(*tuple(out_dims))
+        # transpose to make the interpolated axis to the last position
+        broadcast_dims = [d for d in var.dims if d not in dims]
+        original_dims = broadcast_dims + dims
+        new_dims = broadcast_dims + list(destination[0].dims)
+        interped = interp_func(
+            var.transpose(*original_dims).data, x, destination, method, kwargs
+        )
+
+        result = Variable(new_dims, interped, attrs=var.attrs)
+
+        # dimension of the output array
+        out_dims = OrderedSet()
+        for d in var.dims:
+            if d in dims:
+                out_dims.update(indexes_coords[d][1].dims)
+            else:
+                out_dims.add(d)
+        result = result.transpose(*tuple(out_dims))
+    return result
 
 
 def interp_func(var, x, new_x, method, kwargs):
@@ -636,7 +661,7 @@ def interp_func(var, x, new_x, method, kwargs):
         New coordinates. Should not contain NaN.
     method: string
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
-        1-dimensional itnterpolation.
+        1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
     **kwargs:
         Optional keyword arguments to be passed to scipy.interpolator
@@ -665,21 +690,51 @@ def interp_func(var, x, new_x, method, kwargs):
     if isinstance(var, dask_array_type):
         import dask.array as da
 
-        _assert_single_chunk(var, range(var.ndim - len(x), var.ndim))
-        chunks = var.chunks[: -len(x)] + new_x[0].shape
-        drop_axis = range(var.ndim - len(x), var.ndim)
-        new_axis = range(var.ndim - len(x), var.ndim - len(x) + new_x[0].ndim)
-        return da.map_blocks(
-            _interpnd,
+        nconst = var.ndim - len(x)
+
+        out_ind = list(range(nconst)) + list(range(var.ndim, var.ndim + new_x[0].ndim))
+
+        # blockwise args format
+        x_arginds = [[_x, (nconst + index,)] for index, _x in enumerate(x)]
+        x_arginds = [item for pair in x_arginds for item in pair]
+        new_x_arginds = [
+            [_x, [var.ndim + index for index in range(_x.ndim)]] for _x in new_x
+        ]
+        new_x_arginds = [item for pair in new_x_arginds for item in pair]
+
+        args = (
             var,
-            x,
-            new_x,
-            func,
-            kwargs,
+            range(var.ndim),
+            *x_arginds,
+            *new_x_arginds,
+        )
+
+        _, rechunked = da.unify_chunks(*args)
+
+        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+
+        new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
+
+        new_axes = {
+            var.ndim + i: new_x[0].chunks[i]
+            if new_x[0].chunks is not None
+            else new_x[0].shape[i]
+            for i in range(new_x[0].ndim)
+        }
+
+        # if usefull, re-use localize for each chunk of new_x
+        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+
+        return da.blockwise(
+            _dask_aware_interpnd,
+            out_ind,
+            *args,
+            interp_func=func,
+            interp_kwargs=kwargs,
+            localize=localize,
+            concatenate=True,
             dtype=var.dtype,
-            chunks=chunks,
-            new_axis=new_axis,
-            drop_axis=drop_axis,
+            new_axes=new_axes,
         )
 
     return _interpnd(var, x, new_x, func, kwargs)
@@ -710,3 +765,67 @@ def _interpnd(var, x, new_x, func, kwargs):
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
+
+
+def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+    """Wrapper for `_interpnd` through `blockwise`
+
+    The first half arrays in `coords` are original coordinates,
+    the other half are destination coordinates
+    """
+    n_x = len(coords) // 2
+    nconst = len(var.shape) - n_x
+
+    # _interpnd expect coords to be Variables
+    x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
+    new_x = [
+        Variable([f"dim_{len(var.shape) + dim}" for dim in range(len(_x.shape))], _x)
+        for _x in coords[n_x:]
+    ]
+
+    if localize:
+        # _localize expect var to be a Variable
+        var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
+
+        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+
+        # put var back as a ndarray
+        var = var.data
+
+    return _interpnd(var, x, new_x, interp_func, interp_kwargs)
+
+
+def decompose_interp(indexes_coords):
+    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+
+    dest_dims = [
+        dest[1].dims if dest[1].ndim > 0 else [dim]
+        for dim, dest in indexes_coords.items()
+    ]
+    partial_dest_dims = []
+    partial_indexes_coords = {}
+    for i, index_coords in enumerate(indexes_coords.items()):
+        partial_indexes_coords.update([index_coords])
+
+        if i == len(dest_dims) - 1:
+            break
+
+        partial_dest_dims += [dest_dims[i]]
+        other_dims = dest_dims[i + 1 :]
+
+        s_partial_dest_dims = {dim for dims in partial_dest_dims for dim in dims}
+        s_other_dims = {dim for dims in other_dims for dim in dims}
+
+        if not s_partial_dest_dims.intersection(s_other_dims):
+            # this interpolation is orthogonal to the rest
+
+            yield partial_indexes_coords
+
+            partial_dest_dims = []
+            partial_indexes_coords = {}
+
+    yield partial_indexes_coords

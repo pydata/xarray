@@ -1,8 +1,6 @@
 import logging
 import time
 import traceback
-import warnings
-from collections.abc import Mapping
 
 import numpy as np
 
@@ -34,7 +32,7 @@ def find_root_and_group(ds):
     """Find the root and group name of a netCDF4/h5netcdf dataset."""
     hierarchy = ()
     while ds.parent is not None:
-        hierarchy = (ds.name,) + hierarchy
+        hierarchy = (ds.name.split("/")[-1],) + hierarchy
         ds = ds.parent
     group = "/" + "/".join(hierarchy)
     return ds, group
@@ -74,17 +72,8 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-class AbstractDataStore(Mapping):
+class AbstractDataStore:
     __slots__ = ()
-
-    def __iter__(self):
-        return iter(self.variables)
-
-    def __getitem__(self, key):
-        return self.variables[key]
-
-    def __len__(self):
-        return len(self.variables)
 
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
@@ -124,38 +113,6 @@ class AbstractDataStore(Mapping):
         )
         attributes = FrozenDict(self.get_attrs())
         return variables, attributes
-
-    @property
-    def variables(self):  # pragma: no cover
-        warnings.warn(
-            "The ``variables`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        variables, _ = self.load()
-        return variables
-
-    @property
-    def attrs(self):  # pragma: no cover
-        warnings.warn(
-            "The ``attrs`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        _, attrs = self.load()
-        return attrs
-
-    @property
-    def dimensions(self):  # pragma: no cover
-        warnings.warn(
-            "The ``dimensions`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.get_dimensions()
 
     def close(self):
         pass
@@ -241,7 +198,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, d, l):  # pragma: no cover
+    def set_dimension(self, dim, length):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover

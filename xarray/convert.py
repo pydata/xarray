@@ -229,11 +229,11 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     """
     cell_methods = []
     for cell_method in cell_methods_obj:
-        names = "".join([f"{n}: " for n in cell_method.coord_names])
+        names = "".join(f"{n}: " for n in cell_method.coord_names)
         intervals = " ".join(
-            [f"interval: {interval}" for interval in cell_method.intervals]
+            f"interval: {interval}" for interval in cell_method.intervals
         )
-        comments = " ".join([f"comment: {comment}" for comment in cell_method.comments])
+        comments = " ".join(f"comment: {comment}" for comment in cell_method.comments)
         extra = " ".join([intervals, comments]).strip()
         if extra:
             extra = f" ({extra})"
@@ -254,6 +254,7 @@ def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
+
     from xarray.core.pycompat import dask_array_type
 
     name = _name(cube)

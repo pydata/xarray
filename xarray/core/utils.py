@@ -24,6 +24,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -184,7 +185,7 @@ def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
 
 
 def update_safety_check(
-    first_dict: MutableMapping[K, V],
+    first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> None:
@@ -244,6 +245,12 @@ def is_full_slice(value: Any) -> bool:
 
 def is_list_like(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple)
+
+
+def is_array_like(value: Any) -> bool:
+    return (
+        hasattr(value, "ndim") and hasattr(value, "shape") and hasattr(value, "dtype")
+    )
 
 
 def either_dict_or_kwargs(
@@ -343,7 +350,7 @@ def dict_equiv(
     return True
 
 
-def ordered_dict_intersection(
+def compat_dict_intersection(
     first_dict: Mapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
@@ -368,6 +375,35 @@ def ordered_dict_intersection(
     """
     new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
+    return new_dict
+
+
+def compat_dict_union(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
+    """Return the union of two dictionaries as a new dictionary.
+
+    An exception is raised if any keys are found in both dictionaries and the
+    values are not compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equivalence.
+
+    Returns
+    -------
+    union : dict
+        union of the contents.
+    """
+    new_dict = dict(first_dict)
+    update_safety_check(first_dict, second_dict, compat)
+    new_dict.update(second_dict)
     return new_dict
 
 
@@ -707,6 +743,72 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
     while new_dim in dims:
         new_dim = "_" + str(new_dim)
     return new_dim
+
+
+def drop_dims_from_indexers(
+    indexers: Mapping[Hashable, Any],
+    dims: Union[list, Mapping[Hashable, int]],
+    missing_dims: str,
+) -> Mapping[Hashable, Any]:
+    """ Depending on the setting of missing_dims, drop any dimensions from indexers that
+    are not present in dims.
+
+    Parameters
+    ----------
+    indexers : dict
+    dims : sequence
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return indexers
+
+    elif missing_dims == "warn":
+
+        # don't modify input
+        indexers = dict(indexers)
+
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            warnings.warn(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+        for key in invalid:
+            indexers.pop(key)
+
+        return indexers
+
+    elif missing_dims == "ignore":
+        return {key: val for key, val in indexers.items() if key in dims}
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+class UncachedAccessor:
+    """ Acts like a property, but on both classes and class instances
+
+    This class is necessary because some tools (e.g. pydoc and sphinx)
+    inspect classes for which property returns itself and not the
+    accessor.
+    """
+
+    def __init__(self, accessor):
+        self._accessor = accessor
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self._accessor
+
+        return self._accessor(obj)
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

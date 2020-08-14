@@ -3,7 +3,8 @@
 import contextlib
 import functools
 from datetime import datetime, timedelta
-from itertools import zip_longest
+from itertools import chain, zip_longest
+from typing import Hashable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
 
 
-def pretty_print(x, numchars):
+def pretty_print(x, numchars: int):
     """Given an object `x`, call `str(x)` and format the returned string so
     that it is numchars long, padding with trailing spaces or truncating with
     ellipses as necessary
@@ -139,7 +140,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
-    elif isinstance(x, (float, np.float)):
+    elif isinstance(x, (float, np.float_)):
         return f"{x:.4}"
     else:
         return str(x)
@@ -163,7 +164,7 @@ def format_items(x):
     return formatted
 
 
-def format_array_flat(array, max_width):
+def format_array_flat(array, max_width: int):
     """Return a formatted string for as many items in the flattened version of
     array that will fit within max_width characters.
     """
@@ -198,11 +199,20 @@ def format_array_flat(array, max_width):
     num_back = count - num_front
     # note that num_back is 0 <--> array.size is 0 or 1
     #                         <--> relevant_back_items is []
-    pprint_str = (
-        " ".join(relevant_front_items[:num_front])
-        + padding
-        + " ".join(relevant_back_items[-num_back:])
+    pprint_str = "".join(
+        [
+            " ".join(relevant_front_items[:num_front]),
+            padding,
+            " ".join(relevant_back_items[-num_back:]),
+        ]
     )
+
+    # As a final check, if it's still too long even with the limit in values,
+    # replace the end with an ellipsis
+    # NB: this will still returns a full 3-character ellipsis when max_width < 3
+    if len(pprint_str) > max_width:
+        pprint_str = pprint_str[: max(max_width - 3, 0)] + "..."
+
     return pprint_str
 
 
@@ -251,6 +261,8 @@ def inline_variable_array_repr(var, max_width):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -258,10 +270,16 @@ def inline_variable_array_repr(var, max_width):
         return "..."
 
 
-def summarize_variable(name, var, col_width, marker=" ", max_width=None):
+def summarize_variable(
+    name: Hashable, var, col_width: int, marker: str = " ", max_width: int = None
+):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
     if max_width is None:
-        max_width = OPTIONS["display_width"]
+        max_width_options = OPTIONS["display_width"]
+        if not isinstance(max_width_options, int):
+            raise TypeError(f"`max_width` value of `{max_width}` is not a valid int")
+        else:
+            max_width = max_width_options
     first_col = pretty_print(f"  {marker} {name} ", col_width)
     if var.dims:
         dims_str = "({}) ".format(", ".join(map(str, var.dims)))
@@ -282,12 +300,10 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
     return "\n".join(
-        [
-            summarize_variable(
-                lname, coord.get_level_variable(lname), col_width, marker=marker
-            )
-            for lname in coord.level_names
-        ]
+        summarize_variable(
+            lname, coord.get_level_variable(lname), col_width, marker=marker
+        )
+        for lname in coord.level_names
     )
 
 
@@ -295,7 +311,7 @@ def summarize_datavar(name, var, col_width):
     return summarize_variable(name, var.variable, col_width)
 
 
-def summarize_coord(name, var, col_width):
+def summarize_coord(name: Hashable, var, col_width: int):
     is_index = name in var.dims
     marker = "*" if is_index else " "
     if is_index:
@@ -408,6 +424,17 @@ def set_numpy_options(*args, **kwargs):
         np.set_printoptions(**original)
 
 
+def limit_lines(string: str, *, limit: int):
+    """
+    If the string is more lines than the limit,
+    this returns the middle lines replaced by an ellipsis
+    """
+    lines = string.splitlines()
+    if len(lines) > limit:
+        string = "\n".join(chain(lines[: limit // 2], ["..."], lines[-limit // 2 :]))
+    return string
+
+
 def short_numpy_repr(array):
     array = np.asarray(array)
 
@@ -433,7 +460,7 @@ def short_data_repr(array):
     elif hasattr(internal_data, "__array_function__") or isinstance(
         internal_data, dask_array_type
     ):
-        return repr(array.data)
+        return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
     else:
@@ -500,6 +527,13 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
+    def is_array_like(value):
+        return (
+            hasattr(value, "ndim")
+            and hasattr(value, "shape")
+            and hasattr(value, "dtype")
+        )
+
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
@@ -518,11 +552,18 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     for k in a_keys & b_keys:
         try:
             # compare xarray variable
-            compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            if not callable(compat):
+                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            else:
+                compatible = compat(a_mapping[k], b_mapping[k])
             is_variable = True
         except AttributeError:
             # compare attribute value
-            compatible = a_mapping[k] == b_mapping[k]
+            if is_array_like(a_mapping[k]) or is_array_like(b_mapping[k]):
+                compatible = array_equiv(a_mapping[k], b_mapping[k])
+            else:
+                compatible = a_mapping[k] == b_mapping[k]
+
             is_variable = False
 
         if not compatible:
@@ -535,7 +576,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
 
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        [summarize_attr(ak, av) for ak, av in m[k].attrs.items()]
+                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
                     )
                     attrs_summary.append(attr_s)
 
@@ -571,8 +612,13 @@ diff_attrs_repr = functools.partial(
 
 
 def _compat_to_str(compat):
+    if callable(compat):
+        compat = compat.__name__
+
     if compat == "equals":
         return "equal"
+    elif compat == "allclose":
+        return "close"
     else:
         return compat
 
@@ -586,8 +632,12 @@ def diff_array_repr(a, b, compat):
     ]
 
     summary.append(diff_dim_summary(a, b))
+    if callable(compat):
+        equiv = compat
+    else:
+        equiv = array_equiv
 
-    if not array_equiv(a.data, b.data):
+    if not equiv(a.data, b.data):
         temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr

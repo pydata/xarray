@@ -9,6 +9,33 @@ from .utils import is_scalar
 from .variable import Variable
 
 
+def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
+    """
+    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
+    """
+    if isinstance(index, pd.MultiIndex):
+        index = index.remove_unused_levels()
+        # if it contains CategoricalIndex, we need to remove unused categories
+        # manually. See https://github.com/pandas-dev/pandas/issues/30846
+        if any(isinstance(lev, pd.CategoricalIndex) for lev in index.levels):
+            levels = []
+            for i, level in enumerate(index.levels):
+                if isinstance(level, pd.CategoricalIndex):
+                    level = level[index.codes[i]].remove_unused_categories()
+                else:
+                    level = level[index.codes[i]]
+                levels.append(level)
+            # TODO: calling from_array() reorders MultiIndex levels. It would
+            # be best to avoid this, if possible, e.g., by using
+            # MultiIndex.remove_unused_levels() (which does not reorder) on the
+            # part of the MultiIndex that is not categorical, or by fixing this
+            # upstream in pandas.
+            index = pd.MultiIndex.from_arrays(levels, names=index.names)
+    elif isinstance(index, pd.CategoricalIndex):
+        index = index.remove_unused_categories()
+    return index
+
+
 class Indexes(collections.abc.Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
 

@@ -19,9 +19,10 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
+  - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - mypy=0.761  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
@@ -38,6 +39,7 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
+  - setuptools
   - sparse
   - toolz
   - zarr

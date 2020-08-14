@@ -51,8 +51,8 @@ Bug reports must:
    <http://github.github.com/github-flavored-markdown/>`_::
 
       ```python
-      >>> from xarray import Dataset
-      >>> df = Dataset(...)
+      >>> import xarray as xr
+      >>> df = xr.Dataset(...)
       ...
       ```
 
@@ -148,7 +148,7 @@ We'll now kick off a two-step process:
 1. Install the build dependencies
 2. Build and install xarray
 
-.. code-block:: none
+.. code-block:: sh
 
    # Create and activate the build environment
    # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
@@ -162,7 +162,10 @@ We'll now kick off a two-step process:
    # Build and install xarray
    pip install -e .
 
-At this point you should be able to import *xarray* from your locally built version::
+At this point you should be able to import *xarray* from your locally
+built version:
+
+.. code-block:: sh
 
    $ python  # start an interpreter
    >>> import xarray
@@ -231,9 +234,9 @@ About the *xarray* documentation
 --------------------------------
 
 The documentation is written in **reStructuredText**, which is almost like writing
-in plain English, and built using `Sphinx <http://sphinx.pocoo.org/>`__. The
+in plain English, and built using `Sphinx <http://sphinx-doc.org/>`__. The
 Sphinx Documentation has an excellent `introduction to reST
-<http://sphinx.pocoo.org/rest.html>`__. Review the Sphinx docs to perform more
+<http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__. Review the Sphinx docs to perform more
 complex changes to the documentation as well.
 
 Some other important things to know about the docs:
@@ -256,18 +259,20 @@ Some other important things to know about the docs:
 - The tutorials make heavy use of the `ipython directive
   <http://matplotlib.org/sampledoc/ipython_directive.html>`_ sphinx extension.
   This directive lets you put code in the documentation which will be run
-  during the doc build. For example::
+  during the doc build. For example:
+
+  .. code:: rst
 
       .. ipython:: python
 
           x = 2
-          x**3
+          x ** 3
 
   will be rendered as::
 
       In [1]: x = 2
 
-      In [2]: x**3
+      In [2]: x ** 3
       Out[2]: 8
 
   Almost all code examples in the docs are run (and the output saved) during the
@@ -290,7 +295,7 @@ Requirements
 Make sure to follow the instructions on :ref:`creating a development environment above <contributing.dev_env>`, but
 to build the docs you need to use the environment file ``ci/requirements/doc.yml``.
 
-.. code-block:: none
+.. code-block:: sh
 
     # Create and activate the docs environment
     conda env create -f ci/requirements/doc.yml
@@ -345,33 +350,35 @@ as possible to avoid mass breakages.
 Code Formatting
 ~~~~~~~~~~~~~~~
 
-Xarray uses `Black <https://black.readthedocs.io/en/stable/>`_ and
-`Flake8 <http://flake8.pycqa.org/en/latest/>`_ to ensure a consistent code
-format throughout the project. ``black`` and ``flake8`` can be installed with
+xarray uses several tools to ensure a consistent code format throughout the project:
+
+- `Black <https://black.readthedocs.io/en/stable/>`_ for standardized
+  code formatting
+- `blackdoc <https://blackdoc.readthedocs.io/en/stable/>`_ for
+  standardized code formatting in documentation
+- `Flake8 <http://flake8.pycqa.org/en/latest/>`_ for general code quality
+- `isort <https://github.com/timothycrosley/isort>`_ for standardized order in imports.
+  See also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
+- `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
+  <https://docs.python.org/3/library/typing.html>`_
+
 ``pip``::
 
-   pip install black flake8
+   pip install black flake8 isort mypy blackdoc
 
 and then run from the root of the Xarray repository::
 
-   black .
+   isort .
+   black -t py36 .
+   blackdoc -t py36 .
    flake8
+   mypy .
 
 to auto-format your code. Additionally, many editors have plugins that will
 apply ``black`` as you edit files.
 
-Other recommended but optional tools for checking code quality (not currently
-enforced in CI):
-
-- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
-  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
-  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
-- `isort <https://github.com/timothycrosley/isort>`_ will highlight
-  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
-  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
-
 Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
-to automatically run ``black`` and ``flake8`` when you make a git commit. This
+to automatically run all the above tools every time you make a git commit. This
 can be done by installing ``pre-commit``::
 
    pip install pre-commit
@@ -380,25 +387,9 @@ and then running::
 
    pre-commit install
 
-from the root of the Xarray repository. Now ``black`` and ``flake8`` will be run
-each time you commit changes. You can skip these checks with
-``git commit --no-verify``.
+from the root of the xarray repository. You can skip the pre-commit checks
+with ``git commit --no-verify``.
 
-.. note::
-
-  If you were working on a branch *prior* to the code being reformatted with black,
-  you will likely face some merge conflicts. These steps can eliminate many of those
-  conflicts. Because they have had limited testing, please reach out to the core devs
-  on your pull request if you face any issues, and we'll help with the merge:
-
-  - Merge the commit on master prior to the ``black`` commit into your branch
-    ``git merge f172c673``. If you have conflicts here, resolve and commit.
-  - Apply ``black .`` to your branch and commit ``git commit -am "black"``
-  - Apply a patch of other changes we made on that commit: ``curl https://gist.githubusercontent.com/max-sixty/3cceb8472ed4ea806353999ca43aed52/raw/03cbee4e386156bddb61acaa250c0bfc726f596d/xarray%2520black%2520diff | git apply -``
-  - Commit (``git commit -am "black2"``)
-  - Merge master at the ``black`` commit, resolving in favor of 'our' changes:
-    ``git merge d089df38 -X ours``. You shouldn't have any merge conflicts
-  - Merge current master ``git merge master``; resolve and commit any conflicts
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -485,7 +476,7 @@ typically find tests wrapped in a class.
 .. code-block:: python
 
     class TestReallyCoolFeature:
-        ....
+        ...
 
 Going forward, we are moving to a more *functional* style using the
 `pytest <http://doc.pytest.org/en/latest/>`__ framework, which offers a richer
@@ -495,7 +486,7 @@ writing test classes, we will write test functions like this:
 .. code-block:: python
 
     def test_really_cool_feature():
-        ....
+        ...
 
 Using ``pytest``
 ~~~~~~~~~~~~~~~~
@@ -526,17 +517,23 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
     from xarray.testing import assert_equal
 
 
-    @pytest.mark.parametrize('dtype', ['int8', 'int16', 'int32', 'int64'])
+    @pytest.mark.parametrize("dtype", ["int8", "int16", "int32", "int64"])
     def test_dtypes(dtype):
         assert str(np.dtype(dtype)) == dtype
 
 
-    @pytest.mark.parametrize('dtype', ['float32',
-                             pytest.param('int16', marks=pytest.mark.skip),
-                             pytest.param('int32', marks=pytest.mark.xfail(
-                                reason='to show how it works'))])
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            "float32",
+            pytest.param("int16", marks=pytest.mark.skip),
+            pytest.param(
+                "int32", marks=pytest.mark.xfail(reason="to show how it works")
+            ),
+        ],
+    )
     def test_mark(dtype):
-        assert str(np.dtype(dtype)) == 'float32'
+        assert str(np.dtype(dtype)) == "float32"
 
 
     @pytest.fixture
@@ -544,7 +541,7 @@ We would name this file ``test_cool_feature.py`` and put in an appropriate place
         return xr.DataArray([1, 2, 3])
 
 
-    @pytest.fixture(params=['int8', 'int16', 'int32', 'int64'])
+    @pytest.fixture(params=["int8", "int16", "int32", "int64"])
     def dtype(request):
         return request.param
 

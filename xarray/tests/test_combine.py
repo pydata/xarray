@@ -4,14 +4,7 @@ from itertools import product
 import numpy as np
 import pytest
 
-from xarray import (
-    DataArray,
-    Dataset,
-    auto_combine,
-    combine_by_coords,
-    combine_nested,
-    concat,
-)
+from xarray import DataArray, Dataset, combine_by_coords, combine_nested, concat
 from xarray.core import dtypes
 from xarray.core.combine import (
     _check_shape_tile_ids,
@@ -365,9 +358,10 @@ class TestNestedCombine:
         expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
         assert_identical(expected, actual)
 
-        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with pytest.raises(KeyError):
-            combine_nested(objs, concat_dim="x")
+        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1]})]
+        actual = combine_nested(objs, concat_dim="x")
+        expected = Dataset({"x": [0, 1], "y": [0]})
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "join, expected",
@@ -501,6 +495,49 @@ class TestNestedCombine:
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
         result = combine_nested(datasets, concat_dim=["dim1", "dim2"])
         assert_equal(result, expected)
+
+    def test_auto_combine_2d_combine_attrs_kwarg(self):
+        ds = create_test_data
+
+        partway1 = concat([ds(0), ds(3)], dim="dim1")
+        partway2 = concat([ds(1), ds(4)], dim="dim1")
+        partway3 = concat([ds(2), ds(5)], dim="dim1")
+        expected = concat([partway1, partway2, partway3], dim="dim2")
+
+        expected_dict = {}
+        expected_dict["drop"] = expected.copy(deep=True)
+        expected_dict["drop"].attrs = {}
+        expected_dict["no_conflicts"] = expected.copy(deep=True)
+        expected_dict["no_conflicts"].attrs = {
+            "a": 1,
+            "b": 2,
+            "c": 3,
+            "d": 4,
+            "e": 5,
+            "f": 6,
+        }
+        expected_dict["override"] = expected.copy(deep=True)
+        expected_dict["override"].attrs = {"a": 1}
+
+        datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
+
+        datasets[0][0].attrs = {"a": 1}
+        datasets[0][1].attrs = {"a": 1, "b": 2}
+        datasets[0][2].attrs = {"a": 1, "c": 3}
+        datasets[1][0].attrs = {"a": 1, "d": 4}
+        datasets[1][1].attrs = {"a": 1, "e": 5}
+        datasets[1][2].attrs = {"a": 1, "f": 6}
+
+        with raises_regex(ValueError, "combine_attrs='identical'"):
+            result = combine_nested(
+                datasets, concat_dim=["dim1", "dim2"], combine_attrs="identical"
+            )
+
+        for combine_attrs in expected_dict:
+            result = combine_nested(
+                datasets, concat_dim=["dim1", "dim2"], combine_attrs=combine_attrs
+            )
+            assert_identical(result, expected_dict[combine_attrs])
 
     def test_combine_nested_missing_data_new_dim(self):
         # Your data includes "time" and "station" dimensions, and each year's
@@ -641,6 +678,52 @@ class TestCombineAuto:
         with raises_regex(ValueError, "indexes along dimension"):
             combine_nested(objs, concat_dim="x", join="exact")
 
+    @pytest.mark.parametrize(
+        "combine_attrs, expected",
+        [
+            ("drop", Dataset({"x": [0, 1], "y": [0, 1]}, attrs={})),
+            (
+                "no_conflicts",
+                Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "b": 2}),
+            ),
+            ("override", Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1})),
+        ],
+    )
+    def test_combine_coords_combine_attrs(self, combine_attrs, expected):
+        objs = [
+            Dataset({"x": [0], "y": [0]}, attrs={"a": 1}),
+            Dataset({"x": [1], "y": [1]}, attrs={"a": 1, "b": 2}),
+        ]
+        actual = combine_nested(
+            objs, concat_dim="x", join="outer", combine_attrs=combine_attrs
+        )
+        assert_identical(expected, actual)
+
+        if combine_attrs == "no_conflicts":
+            objs[1].attrs["a"] = 2
+            with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+                actual = combine_nested(
+                    objs, concat_dim="x", join="outer", combine_attrs=combine_attrs
+                )
+
+    def test_combine_coords_combine_attrs_identical(self):
+        objs = [
+            Dataset({"x": [0], "y": [0]}, attrs={"a": 1}),
+            Dataset({"x": [1], "y": [1]}, attrs={"a": 1}),
+        ]
+        expected = Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1})
+        actual = combine_nested(
+            objs, concat_dim="x", join="outer", combine_attrs="identical"
+        )
+        assert_identical(expected, actual)
+
+        objs[1].attrs["b"] = 2
+
+        with raises_regex(ValueError, "combine_attrs='identical'"):
+            actual = combine_nested(
+                objs, concat_dim="x", join="outer", combine_attrs="identical"
+            )
+
     def test_infer_order_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
@@ -726,173 +809,6 @@ class TestCombineAuto:
         # test that this fails if fill_value is None
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
-
-
-@pytest.mark.filterwarnings(
-    "ignore:In xarray version 0.15 `auto_combine` " "will be deprecated"
-)
-@pytest.mark.filterwarnings("ignore:Also `open_mfdataset` will no longer")
-@pytest.mark.filterwarnings("ignore:The datasets supplied")
-class TestAutoCombineOldAPI:
-    """
-    Set of tests which check that old 1-dimensional auto_combine behaviour is
-    still satisfied. #2616
-    """
-
-    def test_auto_combine(self):
-        objs = [Dataset({"x": [0]}), Dataset({"x": [1]})]
-        actual = auto_combine(objs)
-        expected = Dataset({"x": [0, 1]})
-        assert_identical(expected, actual)
-
-        actual = auto_combine([actual])
-        assert_identical(expected, actual)
-
-        objs = [Dataset({"x": [0, 1]}), Dataset({"x": [2]})]
-        actual = auto_combine(objs)
-        expected = Dataset({"x": [0, 1, 2]})
-        assert_identical(expected, actual)
-
-        # ensure auto_combine handles non-sorted variables
-        objs = [
-            Dataset({"x": ("a", [0]), "y": ("a", [0])}),
-            Dataset({"y": ("a", [1]), "x": ("a", [1])}),
-        ]
-        actual = auto_combine(objs)
-        expected = Dataset({"x": ("a", [0, 1]), "y": ("a", [0, 1])})
-        assert_identical(expected, actual)
-
-        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"y": [1], "x": [1]})]
-        with raises_regex(ValueError, "too many .* dimensions"):
-            auto_combine(objs)
-
-        objs = [Dataset({"x": 0}), Dataset({"x": 1})]
-        with raises_regex(ValueError, "cannot infer dimension"):
-            auto_combine(objs)
-
-        objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with raises_regex(ValueError, "'y' is not present in all datasets"):
-            auto_combine(objs)
-
-    def test_auto_combine_previously_failed(self):
-        # In the above scenario, one file is missing, containing the data for
-        # one year's data for one variable.
-        datasets = [
-            Dataset({"a": ("x", [0]), "x": [0]}),
-            Dataset({"b": ("x", [0]), "x": [0]}),
-            Dataset({"a": ("x", [1]), "x": [1]}),
-        ]
-        expected = Dataset({"a": ("x", [0, 1]), "b": ("x", [0, np.nan])}, {"x": [0, 1]})
-        actual = auto_combine(datasets)
-        assert_identical(expected, actual)
-
-        # Your data includes "time" and "station" dimensions, and each year's
-        # data has a different set of stations.
-        datasets = [
-            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
-        ]
-        expected = Dataset(
-            {"a": (("t", "x"), [[np.nan, 2, 3], [1, 2, np.nan]])}, {"x": [0, 1, 2]}
-        )
-        actual = auto_combine(datasets, concat_dim="t")
-        assert_identical(expected, actual)
-
-    def test_auto_combine_with_new_variables(self):
-        datasets = [Dataset({"x": 0}, {"y": 0}), Dataset({"x": 1}, {"y": 1, "z": 1})]
-        actual = auto_combine(datasets, "y")
-        expected = Dataset({"x": ("y", [0, 1])}, {"y": [0, 1], "z": 1})
-        assert_identical(expected, actual)
-
-    def test_auto_combine_no_concat(self):
-        objs = [Dataset({"x": 0}), Dataset({"y": 1})]
-        actual = auto_combine(objs)
-        expected = Dataset({"x": 0, "y": 1})
-        assert_identical(expected, actual)
-
-        objs = [Dataset({"x": 0, "y": 1}), Dataset({"y": np.nan, "z": 2})]
-        actual = auto_combine(objs)
-        expected = Dataset({"x": 0, "y": 1, "z": 2})
-        assert_identical(expected, actual)
-
-        data = Dataset({"x": 0})
-        actual = auto_combine([data, data, data], concat_dim=None)
-        assert_identical(data, actual)
-
-        # Single object, with a concat_dim explicitly provided
-        # Test the issue reported in GH #1988
-        objs = [Dataset({"x": 0, "y": 1})]
-        dim = DataArray([100], name="baz", dims="baz")
-        actual = auto_combine(objs, concat_dim=dim)
-        expected = Dataset({"x": ("baz", [0]), "y": ("baz", [1])}, {"baz": [100]})
-        assert_identical(expected, actual)
-
-        # Just making sure that auto_combine is doing what is
-        # expected for non-scalar values, too.
-        objs = [Dataset({"x": ("z", [0, 1]), "y": ("z", [1, 2])})]
-        dim = DataArray([100], name="baz", dims="baz")
-        actual = auto_combine(objs, concat_dim=dim)
-        expected = Dataset(
-            {"x": (("baz", "z"), [[0, 1]]), "y": (("baz", "z"), [[1, 2]])},
-            {"baz": [100]},
-        )
-        assert_identical(expected, actual)
-
-    def test_auto_combine_order_by_appearance_not_coords(self):
-        objs = [
-            Dataset({"foo": ("x", [0])}, coords={"x": ("x", [1])}),
-            Dataset({"foo": ("x", [1])}, coords={"x": ("x", [0])}),
-        ]
-        actual = auto_combine(objs)
-        expected = Dataset({"foo": ("x", [0, 1])}, coords={"x": ("x", [1, 0])})
-        assert_identical(expected, actual)
-
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
-    def test_auto_combine_fill_value(self, fill_value):
-        datasets = [
-            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
-        ]
-        if fill_value == dtypes.NA:
-            # if we supply the default, we expect the missing value for a
-            # float array
-            fill_value = np.nan
-        expected = Dataset(
-            {"a": (("t", "x"), [[fill_value, 2, 3], [1, 2, fill_value]])},
-            {"x": [0, 1, 2]},
-        )
-        actual = auto_combine(datasets, concat_dim="t", fill_value=fill_value)
-        assert_identical(expected, actual)
-
-
-class TestAutoCombineDeprecation:
-    """
-    Set of tests to check that FutureWarnings are correctly raised until the
-    deprecation cycle is complete. #2616
-    """
-
-    def test_auto_combine_with_concat_dim(self):
-        objs = [Dataset({"x": [0]}), Dataset({"x": [1]})]
-        with pytest.warns(FutureWarning, match="`concat_dim`"):
-            auto_combine(objs, concat_dim="x")
-
-    def test_auto_combine_with_merge_and_concat(self):
-        objs = [Dataset({"x": [0]}), Dataset({"x": [1]}), Dataset({"z": ((), 99)})]
-        with pytest.warns(FutureWarning, match="require both concatenation"):
-            auto_combine(objs)
-
-    def test_auto_combine_with_coords(self):
-        objs = [
-            Dataset({"foo": ("x", [0])}, coords={"x": ("x", [0])}),
-            Dataset({"foo": ("x", [1])}, coords={"x": ("x", [1])}),
-        ]
-        with pytest.warns(FutureWarning, match="supplied have global"):
-            auto_combine(objs)
-
-    def test_auto_combine_without_coords(self):
-        objs = [Dataset({"foo": ("x", [0])}), Dataset({"foo": ("x", [1])})]
-        with pytest.warns(FutureWarning, match="supplied do not have global"):
-            auto_combine(objs)
 
 
 @requires_cftime

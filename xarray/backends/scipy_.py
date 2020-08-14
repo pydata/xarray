@@ -2,9 +2,9 @@ from io import BytesIO
 
 import numpy as np
 
-from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
@@ -57,8 +57,9 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
-    import scipy.io
     import gzip
+
+    import scipy.io
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):

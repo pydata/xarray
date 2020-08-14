@@ -20,12 +20,14 @@ import subprocess
 import sys
 from contextlib import suppress
 
+import sphinx_autosummary_accessors
+
 # make sure the source version is preferred (#3567)
 root = pathlib.Path(__file__).absolute().parent.parent
 os.environ["PYTHONPATH"] = str(root)
 sys.path.insert(0, str(root))
 
-import xarray
+import xarray  # isort:skip
 
 allowed_failures = set()
 
@@ -47,14 +49,14 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio
+    import rasterio  # noqa: F401
 except ImportError:
     allowed_failures.update(
         ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
     )
 
 try:
-    import cartopy
+    import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
@@ -79,10 +81,10 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "numpydoc",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
+    "sphinx_autosummary_accessors",
 ]
 
 extlinks = {
@@ -111,7 +113,7 @@ numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The suffix of source filenames.
 source_suffix = ".rst"
@@ -270,14 +272,14 @@ htmlhelp_basename = "xarraydoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
-}
+# latex_elements = {
+#     # The paper size ('letterpaper' or 'a4paper').
+#     # 'papersize': 'letterpaper',
+#     # The font size ('10pt', '11pt' or '12pt').
+#     # 'pointsize': '10pt',
+#     # Additional stuff for the LaTeX preamble.
+#     # 'preamble': '',
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
@@ -352,7 +354,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "iris": ("https://scitools.org.uk/iris/docs/latest", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org", None),
