@@ -89,7 +89,7 @@ class StringAccessor:
 
     def len(self):
         """
-        Compute the length of each element in the array.
+        Compute the length of each string in the array.
 
         Returns
         -------
@@ -105,7 +105,7 @@ class StringAccessor:
 
     def get(self, i, default=""):
         """
-        Extract element from indexable in each element in the array.
+        Extract character number `i` from each string in the array.
 
         Parameters
         ----------
@@ -130,7 +130,7 @@ class StringAccessor:
 
     def slice(self, start=None, stop=None, step=None):
         """
-        Slice substrings from each element in the array.
+        Slice substrings from each string in the array.
 
         Parameters
         ----------
@@ -364,7 +364,7 @@ class StringAccessor:
 
     def startswith(self, pat):
         """
-        Test if the start of each string element matches a pattern.
+        Test if the start of each string in the array matches a pattern.
 
         Parameters
         ----------
@@ -383,7 +383,7 @@ class StringAccessor:
 
     def endswith(self, pat):
         """
-        Test if the end of each string element matches a pattern.
+        Test if the end of each string in the array matches a pattern.
 
         Parameters
         ----------
@@ -437,8 +437,7 @@ class StringAccessor:
 
     def center(self, width, fillchar=" "):
         """
-        Filling left and right side of strings in the array with an
-        additional character.
+        Pad left and right side of each string in the array.
 
         Parameters
         ----------
@@ -456,8 +455,7 @@ class StringAccessor:
 
     def ljust(self, width, fillchar=" "):
         """
-        Filling right side of strings in the array with an additional
-        character.
+        Pad right side of each string in the array.
 
         Parameters
         ----------
@@ -475,7 +473,7 @@ class StringAccessor:
 
     def rjust(self, width, fillchar=" "):
         """
-        Filling left side of strings in the array with an additional character.
+        Pad left side of each string in the array.
 
         Parameters
         ----------
@@ -493,7 +491,7 @@ class StringAccessor:
 
     def zfill(self, width):
         """
-        Pad strings in the array by prepending '0' characters.
+        Pad each string in the array by prepending '0' characters.
 
         Strings in the array are padded with '0' characters on the
         left of the string to reach a total string length  `width`. Strings
@@ -513,7 +511,7 @@ class StringAccessor:
 
     def contains(self, pat, case=True, flags=0, regex=True):
         """
-        Test if pattern or regex is contained within a string of the array.
+        Test if pattern or regex is contained within each string of the array.
 
         Return boolean array based on whether a given pattern or regex is
         contained within a string of the array.
@@ -559,7 +557,7 @@ class StringAccessor:
 
     def match(self, pat, case=True, flags=0):
         """
-        Determine if each string matches a regular expression.
+        Determine if each string in the array matches a regular expression.
 
         Parameters
         ----------
@@ -618,7 +616,7 @@ class StringAccessor:
 
     def lstrip(self, to_strip=None):
         """
-        Remove leading and trailing characters.
+        Remove leading characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the left side.
@@ -638,7 +636,7 @@ class StringAccessor:
 
     def rstrip(self, to_strip=None):
         """
-        Remove leading and trailing characters.
+        Remove trailing characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the right side.
@@ -658,8 +656,7 @@ class StringAccessor:
 
     def wrap(self, width, **kwargs):
         """
-        Wrap long strings in the array to be formatted in paragraphs with
-        length less than a given width.
+        Wrap long strings in the array in paragraphs with length less than `width`.
 
         This method has the same keyword parameters and defaults as
         :class:`textwrap.TextWrapper`.
@@ -683,7 +680,7 @@ class StringAccessor:
 
     def translate(self, table):
         """
-        Map all characters in the string through the given mapping table.
+        Map characters of each string through the given mapping table.
 
         Parameters
         ----------
