@@ -3939,6 +3939,33 @@ class TestDataset:
         # check roundtrip
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
+        # Check multiindex reordering
+        new_order = ["x", "y"]
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        new_order = ["y", "x"]
+        exp_index = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
+        )
+        expected = pd.DataFrame(
+            w.transpose().reshape(-1), columns=["w"], index=exp_index
+        )
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        invalid_order = ["x"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
+        invalid_order = ["x", "z"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
         # check pathological cases
         df = pd.DataFrame([1])
         actual = Dataset.from_dataframe(df)
