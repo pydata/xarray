@@ -224,6 +224,7 @@ Current core developers
 -  Tom Nicholas
 -  Guido Imperiale
 -  Justus Magin
+-  Mathias Hauser
 
 NumFOCUS
 ~~~~~~~~

@@ -786,7 +786,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self,
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
-        center: bool = False,
+        center: Union[bool, Mapping[Hashable, bool]] = False,
         keep_attrs: bool = None,
         **window_kwargs: int,
     ):
@@ -802,7 +802,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : boolean, or a mapping, default False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -1088,9 +1088,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
-        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -1283,8 +1283,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         numpy.isin
         """
         from .computation import apply_ufunc
-        from .dataset import Dataset
         from .dataarray import DataArray
+        from .dataset import Dataset
         from .variable import Variable
 
         if isinstance(test_elements, Dataset):

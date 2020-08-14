@@ -2,7 +2,7 @@ Examples
 ========
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     examples/weather-data
     examples/monthly-means
@@ -15,7 +15,7 @@ Examples
 Using apply_ufunc
 ------------------
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     examples/apply_ufunc_vectorize_1d
 
