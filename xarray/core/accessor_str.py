@@ -39,7 +39,6 @@
 
 import codecs
 import re
-import textwrap
 
 import numpy as np
 
@@ -104,7 +103,7 @@ class StringAccessor:
         else:
             return self.get(key)
 
-    def get(self, i):
+    def get(self, i, default=""):
         """
         Extract element from indexable in each element in the array.
 
@@ -120,8 +119,14 @@ class StringAccessor:
         -------
         items : array of objects
         """
-        obj = slice(-1, None) if i == -1 else slice(i, i + 1)
-        return self._apply(lambda x: x[obj])
+        s = slice(-1, None) if i == -1 else slice(i, i + 1)
+
+        def f(x):
+            item = x[s]
+
+            return item if item else default
+
+        return self._apply(f)
 
     def slice(self, start=None, stop=None, step=None):
         """
@@ -663,32 +668,16 @@ class StringAccessor:
         ----------
         width : int
             Maximum line-width
-        expand_tabs : bool, optional
-            If true, tab characters will be expanded to spaces (default: True)
-        replace_whitespace : bool, optional
-            If true, each whitespace character (as defined by
-            string.whitespace) remaining after tab expansion will be replaced
-            by a single space (default: True)
-        drop_whitespace : bool, optional
-            If true, whitespace that, after wrapping, happens to end up at the
-            beginning or end of a line is dropped (default: True)
-        break_long_words : bool, optional
-            If true, then words longer than width will be broken in order to
-            ensure that no lines are longer than width. If it is false, long
-            words will not be broken, and some lines may be longer than width.
-            (default: True)
-        break_on_hyphens : bool, optional
-            If true, wrapping will occur preferably on whitespace and right
-            after hyphens in compound words, as it is customary in English. If
-            false, only whitespaces will be considered as potentially good
-            places for line breaks, but you need to set break_long_words to
-            false if you want truly insecable words. (default: True)
+        kwargs
+            keyword arguments passed into :class:`textwrap.TextWrapper.
 
         Returns
         -------
         wrapped : same type as values
         """
-        tw = textwrap.TextWrapper(width=width)
+        import textwrap
+
+        tw = textwrap.TextWrapper(width=width, **kwargs)
         f = lambda x: "\n".join(tw.wrap(x))
         return self._apply(f)
 
