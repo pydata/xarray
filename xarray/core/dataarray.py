@@ -1928,7 +1928,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def drop_vars(
         self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
     ) -> "DataArray":
-        """Drop variables from this DataArray. *Not* done inplace.
+        """Returns an array with dropped variables.
 
         Parameters
         ----------
