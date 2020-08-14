@@ -5909,6 +5909,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             [var]_polyfit_covariance
                 The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
 
+        Warns
+        -----
+        RankWarning
+            The rank of the coefficient matrix in the least-squares fit is deficient.
+            The warning is not raised with in-memory (not dask) data and `full=True`.
+
         See also
         --------
         numpy.polyfit
@@ -5959,7 +5965,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dim not in da.dims:
                 continue
 
-            if isinstance(da.data, dask_array_type) and (rank != order or full or skipna is None):
+            if isinstance(da.data, dask_array_type) and (
+                rank != order or full or skipna is None
+            ):
                 # Current algorithm with dask and skipna=False neither supports
                 # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
                 skipna_da = True

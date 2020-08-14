@@ -51,6 +51,7 @@ Bug fixes
 ~~~~~~~~~
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed a few bugs with :py:meth:`Dataset.polyfit` when encountering deficient matrix ranks (:issue:`4190`, :pull:`4193`) `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 
 Documentation
