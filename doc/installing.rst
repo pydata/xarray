@@ -7,7 +7,7 @@ Required dependencies
 ---------------------
 
 - Python (3.6 or later)
-- setuptools
+- setuptools (38.4 or later)
 - `numpy <http://www.numpy.org/>`__ (1.15 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
 
@@ -93,16 +93,16 @@ dependencies:
 
 - **Python:** 42 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
+- **setuptools:** 42 months (but no older than 38.4)
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **pandas:** 12 months
-- **scipy:** 12 months
+- **dask and dask.distributed:** 12 months (but no older than 2.9)
 - **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
   matured. This extends to dask when used in conjunction with any of these libraries.
   numpy >=1.17.
-- **all other libraries:** 6 months
+- **all other libraries:** 12 months
 
 The above should be interpreted as *the minor version (X.Y) initially published no more
 than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available

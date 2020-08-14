@@ -23,9 +23,21 @@ IGNORE_DEPS = {
     "pytest-env",
 }
 
-POLICY_MONTHS = {"python": 42, "numpy": 24, "pandas": 12, "scipy": 12}
-POLICY_MONTHS_DEFAULT = 6
-
+POLICY_MONTHS = {"python": 42, "numpy": 24, "setuptools": 42}
+POLICY_MONTHS_DEFAULT = 12
+POLICY_OVERRIDE = {
+    # dask < 2.9 has trouble with nan-reductions
+    # TODO remove this special case and the matching note in installing.rst
+    #      after January 2021.
+    "dask": (2, 9),
+    "distributed": (2, 9),
+    # setuptools-scm doesn't work with setuptools < 36.7 (Nov 2017).
+    # The conda metadata is malformed for setuptools < 38.4 (Jan 2018)
+    # (it's missing a timestamp which prevents this tool from working).
+    # TODO remove this special case and the matching note in installing.rst
+    #      after July 2021.
+    "setuptools": (38, 4),
+}
 has_errors = False
 
 
@@ -150,6 +162,11 @@ def process_pkg(
         policy_major = major
         policy_minor = minor
         policy_published_actual = published
+
+    try:
+        policy_major, policy_minor = POLICY_OVERRIDE[pkg]
+    except KeyError:
+        pass
 
     if (req_major, req_minor) < (policy_major, policy_minor):
         status = "<"
