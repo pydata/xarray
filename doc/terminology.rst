@@ -5,11 +5,8 @@ Terminology
 ===========
 
 *Xarray terminology differs slightly from CF, mathematical conventions, and
-pandas; and therefore using xarray, understanding the documentation, and
-parsing error messages is easier once key terminology is defined. This glossary
-was designed so that more fundamental concepts come first. Thus for new users,
-this page is best read top-to-bottom. Throughout the glossary,* ``arr`` *will
-refer to an xarray* :py:class:`DataArray` *in any small examples. For more
+pandas; so we've put together a glossary of its terms. Here,* ``arr`` *
+refers to an xarray* :py:class:`DataArray` *in the examples. For more
 complete examples, please consult the relevant documentation.*
 
 .. glossary::
