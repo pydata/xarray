@@ -1877,8 +1877,8 @@ class TestDataArray:
     def test_astype_attrs(self):
         for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
             v.attrs["foo"] = "bar"
-            assert list(v.attrs.items()) == list(v.astype(float).attrs.items())
-            assert [] == list(v.astype(float, keep_attrs=False).attrs.items())
+            assert v.attrs == v.astype(float).attrs
+            assert not v.astype(float, keep_attrs=False).attrs
 
     def test_astype_dtype(self):
         original = DataArray([-1, 1, 2, 3, 1000])

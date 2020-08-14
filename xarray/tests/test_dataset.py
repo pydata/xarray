@@ -5611,12 +5611,10 @@ class TestDataset:
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
 
-        assert list(data.attrs.items()) == list(data.astype(float).attrs.items())
-        assert list(data.var1.attrs.items()) == list(
-            data.astype(float).var1.attrs.items()
-        )
-        assert [] == list(data.astype(float, keep_attrs=False).attrs.items())
-        assert [] == list(data.astype(float, keep_attrs=False).var1.attrs.items())
+        assert data.attrs == data.astype(float).attrs
+        assert data.var1.attrs == data.astype(float).var1.attrs
+        assert not data.astype(float, keep_attrs=False).attrs
+        assert not data.astype(float, keep_attrs=False).var1.attrs
 
 
 # Py.test tests

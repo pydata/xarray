@@ -1332,6 +1332,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.
 
+        Returns
+        -------
+        out : same as object
+            New object with data cast to the specified type.
+
         See also
         --------
         np.ndarray.astype
