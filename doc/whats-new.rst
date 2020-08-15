@@ -32,16 +32,31 @@ New Features
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
   By `Aaron Spring <https://github.com/aaronspring>`_.
+- Relaxed the :ref:`mindeps_policy` to support:
+
+  - all versions of setuptools released in the last 42 months (but no older than 38.4)
+  - all versions of dask and dask.distributed released in the last 12 months (but no
+    older than 2.9)
+  - all versions of other packages released in the last 12 months
+
+  All are  up from 6 months (:issue:`4295`)
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
+  now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
+  dimensions order (:issue:`4331`, :pull:`4333`).
+  By `Thomas Zilio <https://github.com/thomas-z>`_.
 
 
 Bug fixes
 ~~~~~~~~~
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
+  and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Documentation
@@ -176,9 +191,10 @@ New Features
 Enhancements
 ~~~~~~~~~~~~
 - Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
+  We performs independant interpolation sequentially rather than interpolating in
+  one large multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.interp` now support interpolations over chunked dimensions (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
   dataframe has a MultiIndex (:pull:`4184`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.

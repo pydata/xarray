@@ -3147,7 +3147,8 @@ class TestDataArray:
 
     @requires_dask
     @requires_scipy
-    def test_upsample_interpolate_dask(self):
+    @pytest.mark.parametrize("chunked_time", [True, False])
+    def test_upsample_interpolate_dask(self, chunked_time):
         from scipy.interpolate import interp1d
 
         xs = np.arange(6)
@@ -3158,6 +3159,8 @@ class TestDataArray:
         data = np.tile(z, (6, 3, 1))
         array = DataArray(data, {"time": times, "x": xs, "y": ys}, ("x", "y", "time"))
         chunks = {"x": 2, "y": 1}
+        if chunked_time:
+            chunks["time"] = 3
 
         expected_times = times.to_series().resample("1H").asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
@@ -3184,13 +3187,6 @@ class TestDataArray:
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             assert_allclose(expected, actual, rtol=1e-16)
-
-        # Check that an error is raised if an attempt is made to interpolate
-        # over a chunked dimension
-        with raises_regex(
-            NotImplementedError, "Chunking along the dimension to be interpolated"
-        ):
-            array.chunk({"time": 1}).resample(time="1H").interpolate("linear")
 
     def test_align(self):
         array = DataArray(
@@ -3467,14 +3463,17 @@ class TestDataArray:
 
     def test_to_dataframe(self):
         # regression test for #260
-        arr = DataArray(
-            np.random.randn(3, 4), [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo"
-        )
+        arr_np = np.random.randn(3, 4)
+
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
         expected = arr.to_series()
         actual = arr.to_dataframe()["foo"]
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.name, actual.name)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        actual = arr.to_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
 
         # regression test for coords with different dimensions
         arr.coords["C"] = ("B", [-1, -2, -3])
@@ -3485,6 +3484,9 @@ class TestDataArray:
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.columns.values, actual.columns.values)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dataframe(dim_order=["B", "A", "C"])
 
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):
