@@ -5649,11 +5649,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def real(self):
-        return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
+        return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
     def imag(self):
-        return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
+        return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
