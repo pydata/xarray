@@ -100,7 +100,9 @@ def parse_iso8601_like(datetime_string):
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
-    raise ValueError("no ISO-8601-like match for string: %s" % datetime_string)
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
