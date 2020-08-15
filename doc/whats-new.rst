@@ -49,12 +49,18 @@ New Features
   string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
   partial datetime string indexing, as well as :py:meth:~xarray.cftime_range`
   (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
+  now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
+  dimensions order (:issue:`4331`, :pull:`4333`).
+  By `Thomas Zilio <https://github.com/thomas-z>`_.
 
 
 Bug fixes
 ~~~~~~~~~
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
+  and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 Documentation
