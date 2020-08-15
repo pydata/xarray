@@ -33,7 +33,7 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
+from .pycompat import cupy_array_type, dask_array_type, integer_types
 from .utils import (
     OrderedSet,
     _default,
@@ -45,9 +45,8 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.ExplicitlyIndexed,
-    pd.Index,
-) + dask_array_type
+    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
@@ -257,7 +256,10 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = np.asarray(data)
+    if isinstance(data, cupy_array_type):
+        data = data.get()
+    else:
+        data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -1054,7 +1056,7 @@ class Variable(
         missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
@@ -1881,11 +1883,14 @@ class Variable(
         Parameters
         ----------
         dim: str
-            Dimension over which to compute rolling_window
+            Dimension over which to compute rolling_window.
+            For nd-rolling, should be list of dimensions.
         window: int
             Window size of the rolling
+            For nd-rolling, should be list of integers.
         window_dim: str
             New name of the window dimension.
+            For nd-rolling, should be list of integers.
         center: boolean. default False.
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -1919,15 +1924,21 @@ class Variable(
             dtype = self.dtype
             array = self.data
 
-        new_dims = self.dims + (window_dim,)
+        if isinstance(dim, list):
+            assert len(dim) == len(window)
+            assert len(dim) == len(window_dim)
+            assert len(dim) == len(center)
+        else:
+            dim = [dim]
+            window = [window]
+            window_dim = [window_dim]
+            center = [center]
+        axis = [self.get_axis_num(d) for d in dim]
+        new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
             duck_array_ops.rolling_window(
-                array,
-                axis=self.get_axis_num(dim),
-                window=window,
-                center=center,
-                fill_value=fill_value,
+                array, axis=axis, window=window, center=center, fill_value=fill_value
             ),
         )
 

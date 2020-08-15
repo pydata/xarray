@@ -3939,6 +3939,33 @@ class TestDataset:
         # check roundtrip
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
+        # Check multiindex reordering
+        new_order = ["x", "y"]
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        new_order = ["y", "x"]
+        exp_index = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
+        )
+        expected = pd.DataFrame(
+            w.transpose().reshape(-1), columns=["w"], index=exp_index
+        )
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        invalid_order = ["x"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
+        invalid_order = ["x", "z"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
         # check pathological cases
         df = pd.DataFrame([1])
         actual = Dataset.from_dataframe(df)
@@ -5898,8 +5925,6 @@ def test_rolling_keep_attrs():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError, match="exactly one dim/window should"):
-        ds.rolling(time=7, x=2)
     with pytest.raises(ValueError, match="window must be > 0"):
         ds.rolling(time=-2)
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
@@ -6022,6 +6047,66 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     # Make sure the dimension order is restored
     for key, src_var in ds.data_vars.items():
         assert src_var.dims == actual[key].dims
+
+
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("min_periods", (None, 1))
+@pytest.mark.parametrize("name", ("sum", "max"))
+@pytest.mark.parametrize("dask", (True, False))
+def test_ndrolling_reduce(ds, center, min_periods, name, dask):
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
+    rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
+
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(
+        getattr(
+            ds.rolling(time=4, center=center, min_periods=min_periods), name
+        )().rolling(x=3, center=center, min_periods=min_periods),
+        name,
+    )()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+    # Do it in the opposite order
+    expected = getattr(
+        getattr(
+            ds.rolling(x=3, center=center, min_periods=min_periods), name
+        )().rolling(time=4, center=center, min_periods=min_periods),
+        name,
+    )()
+
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+
+@pytest.mark.parametrize("center", (True, False, (True, False)))
+@pytest.mark.parametrize("fill_value", (np.nan, 0.0))
+@pytest.mark.parametrize("dask", (True, False))
+def test_ndrolling_construct(center, fill_value, dask):
+    da = DataArray(
+        np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
+        dims=["x", "y", "z"],
+        coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
+    )
+    ds = xr.Dataset({"da": da})
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
+    actual = ds.rolling(x=3, z=2, center=center).construct(
+        x="x1", z="z1", fill_value=fill_value
+    )
+    if not isinstance(center, tuple):
+        center = (center, center)
+    expected = (
+        ds.rolling(x=3, center=center[0])
+        .construct(x="x1", fill_value=fill_value)
+        .rolling(z=2, center=center[1])
+        .construct(z="z1", fill_value=fill_value)
+    )
+    assert_allclose(actual, expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
