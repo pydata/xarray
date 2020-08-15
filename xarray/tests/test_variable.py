@@ -329,7 +329,8 @@ class VariableSubclassobjects:
         assert_array_equal(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(["x"], x, {"units": "meters"})
-        assert_identical(base_v, +v2)
+        with set_options(keep_attrs=False):
+            assert_identical(base_v, +v2)
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
