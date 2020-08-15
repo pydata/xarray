@@ -251,7 +251,9 @@ def apply_dataarray_vfunc(
 
     if keep_attrs and hasattr(first_obj, "attrs"):
         if isinstance(out, tuple):
-            out = tuple(da._copy_attrs_from(first_obj) for da in out)
+            for da in out:
+                # This is adding attrs in place
+                da._copy_attrs_from(first_obj)
         else:
             out._copy_attrs_from(first_obj)
 
@@ -404,7 +406,9 @@ def apply_dataset_vfunc(
 
     if keep_attrs and isinstance(first_obj, Dataset):
         if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+            for ds in out:
+                # This is adding attrs in place
+                ds._copy_attrs_from(first_obj)
         else:
             out._copy_attrs_from(first_obj)
     return out
