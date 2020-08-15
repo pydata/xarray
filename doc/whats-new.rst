@@ -47,7 +47,7 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Add support for parsing datetime strings formatted following the default
   string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
-  partial datetime string indexing, as well as :py:meth:~xarray.cftime_range`
+  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
   (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
   now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
