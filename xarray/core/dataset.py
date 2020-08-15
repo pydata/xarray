@@ -4899,18 +4899,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     @staticmethod
-    def _unary_op(f, keep_attrs=None):
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-
+    def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             variables = {}
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             for k, v in self._variables.items():
                 if k in self._coord_names:
                     variables[k] = v
                 else:
                     variables[k] = f(v, *args, **kwargs)
+                    if keep_attrs:
+                        variables[k].attrs = v._attrs
             attrs = self._attrs if keep_attrs else None
             return self._replace_with_new_dims(variables, attrs=attrs)
 
