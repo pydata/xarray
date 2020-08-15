@@ -2047,7 +2047,7 @@ class Variable(
             with np.errstate(all="ignore"):
                 result = self.__array_wrap__(f(self.data, *args, **kwargs))
                 if keep_attrs:
-                    result.attrs = self._attrs
+                    result.attrs = self.attrs
                 return result
 
         return func
