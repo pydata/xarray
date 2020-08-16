@@ -422,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable = _default
+        self, dataset: Dataset, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
