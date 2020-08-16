@@ -113,7 +113,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    (YYYY-MM-DDThh:mm:ss), as well as the default cftime string format
    (YYYY-MM-DD hh:mm:ss).  This is somewhat more restrictive than pandas;
    in other words, some datetime strings that would be valid for a
-   :py:class:`pandas.DatetimeIndex` would not be valid for an
+   :py:class:`pandas.DatetimeIndex` are not valid for an
    :py:class:`~xarray.CFTimeIndex`.
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
