@@ -2652,6 +2652,7 @@ class TestDataset:
             .rename({"coord_1_": "coord_1"})
         )
         assert "coord_1" not in newds.data_vars
+        assert_equal(newds, obj)
 
     def test_rename_multiindex(self):
         mindex = pd.MultiIndex.from_tuples(
