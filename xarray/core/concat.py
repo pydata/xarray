@@ -20,6 +20,10 @@ from .merge import _VALID_COMPAT, merge_attrs, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
 
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
 
 @overload
 def concat(
