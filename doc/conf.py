@@ -43,7 +43,7 @@ if "conda" in sys.executable:
     subprocess.run(["conda", "list"])
 else:
     print("pip environment:")
-    subprocess.run(["pip", "list"])
+    subprocess.run([sys.executable, "-m", "pip", "list"])
 
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
 
