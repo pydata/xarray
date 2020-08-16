@@ -539,6 +539,12 @@ def decode_cf_variables(
                     if all(k in variables for k in var_names):
                         new_vars[k].encoding[attr_name] = attr_val
                         coord_names.update(var_names)
+                        # Warn that some things will be coords rather
+                        # than data_vars.
+                        warnings.warn(
+                            "Variable(s) {0!s} moved from data_vars to coords\n"
+                            "based on {1:s} attribute".format(var_names, attr_name)
+                        )
                     else:
                         warnings.warn(
                             "Variable(s) referenced in {0:s} not in variables: {1!s}".format(
