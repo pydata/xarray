@@ -10,6 +10,28 @@ Weather and climate data
 
 ``xarray`` can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`related-projects`).
 
+Several CF variable attributes contain lists of other variables
+associated with the variable with the attribute.  A few of these are
+now parsed by XArray, with the attribute value popped to encoding on
+read and the variables in that value interpreted as non-dimension
+coordinates:
+
+- `coordinates`
+- `bounds`
+- `grid_mapping`
+- `climatology`
+- `geometry`
+- `node_coordinates`
+- `node_count`
+- `part_node_count`
+- `interior_ring`
+- `cell_measures`
+- `formula_terms`
+
+The CF attribute `ancillary_variables` was not included in the list
+due to the variables listed there being associated primarily with the
+variable with the attribute, rather than with the dimensions.
+
 .. _Climate and Forecast (CF) conventions: http://cfconventions.org
 
 .. _metpy_accessor:

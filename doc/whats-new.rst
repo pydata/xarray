@@ -33,10 +33,10 @@ New Features
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
-- Decode the CF attributes 'grid_mapping' and 'bounds' on file read
-  (put the referenced variables into 'coords' instead of 'data_vars')
-  and encode on write (write attributes corresponding to encoding
-  values). (:pull:`2844`, :issue:`3689`)
+- Decode more CF attributes on file read (put the referenced variables
+  into 'coords' instead of 'data_vars') and encode on write (write
+  attributes corresponding to encoding values). The list of variables
+  is in :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 
 
 Bug fixes
