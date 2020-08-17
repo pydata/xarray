@@ -91,22 +91,25 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
 
 _BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
 _EXTENDED_PATTERN = build_pattern()
-_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN]
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601(datetime_string):
+def parse_iso8601_like(datetime_string):
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
-    raise ValueError("no ISO-8601 match for string: %s" % datetime_string)
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
     import cftime
 
     default = date_type(1, 1, 1)
-    result = parse_iso8601(timestr)
+    result = parse_iso8601_like(timestr)
     replace = {}
 
     for attr in ["year", "month", "day", "hour", "minute", "second"]:

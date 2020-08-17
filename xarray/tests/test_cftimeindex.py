@@ -12,7 +12,7 @@ from xarray.coding.cftimeindex import (
     _parse_iso8601_with_reso,
     _parsed_string_to_bounds,
     assert_all_valid_date_type,
-    parse_iso8601,
+    parse_iso8601_like,
 )
 from xarray.tests import assert_array_equal, assert_identical
 
@@ -30,7 +30,7 @@ def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=No
     )
 
 
-ISO8601_STRING_TESTS = {
+ISO8601_LIKE_STRING_TESTS = {
     "year": ("1999", date_dict(year="1999")),
     "month": ("199901", date_dict(year="1999", month="01")),
     "month-dash": ("1999-01", date_dict(year="1999", month="01")),
@@ -41,12 +41,20 @@ ISO8601_STRING_TESTS = {
         "1999-01-01T12",
         date_dict(year="1999", month="01", day="01", hour="12"),
     ),
+    "hour-space-separator": (
+        "1999-01-01 12",
+        date_dict(year="1999", month="01", day="01", hour="12"),
+    ),
     "minute": (
         "19990101T1234",
         date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
     ),
     "minute-dash": (
         "1999-01-01T12:34",
+        date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
+    ),
+    "minute-space-separator": (
+        "1999-01-01 12:34",
         date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
     ),
     "second": (
@@ -61,21 +69,27 @@ ISO8601_STRING_TESTS = {
             year="1999", month="01", day="01", hour="12", minute="34", second="56"
         ),
     ),
+    "second-space-separator": (
+        "1999-01-01 12:34:56",
+        date_dict(
+            year="1999", month="01", day="01", hour="12", minute="34", second="56"
+        ),
+    ),
 }
 
 
 @pytest.mark.parametrize(
     ("string", "expected"),
-    list(ISO8601_STRING_TESTS.values()),
-    ids=list(ISO8601_STRING_TESTS.keys()),
+    list(ISO8601_LIKE_STRING_TESTS.values()),
+    ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-def test_parse_iso8601(string, expected):
-    result = parse_iso8601(string)
+def test_parse_iso8601_like(string, expected):
+    result = parse_iso8601_like(string)
     assert result == expected
 
     with pytest.raises(ValueError):
-        parse_iso8601(string + "3")
-        parse_iso8601(string + ".3")
+        parse_iso8601_like(string + "3")
+        parse_iso8601_like(string + ".3")
 
 
 _CFTIME_CALENDARS = [
