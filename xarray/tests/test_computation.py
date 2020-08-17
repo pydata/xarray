@@ -1068,9 +1068,7 @@ def test_vectorize_dask_new_output_dims():
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
-    with raises_regex(
-        ValueError, "dimension 'z1' in 'output_sizes' must correspond"
-    ):
+    with raises_regex(ValueError, "dimension 'z1' in 'output_sizes' must correspond"):
         apply_ufunc(
             func,
             data_array.chunk({"x": 1}),
