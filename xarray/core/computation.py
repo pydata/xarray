@@ -975,11 +975,18 @@ def apply_ufunc(
         kwargs = {}
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
-    if exclude_dims and not exclude_dims <= signature.all_core_dims:
-        raise ValueError(
-            "each dimension in `exclude_dims` must also be a "
-            "core dimension in the function signature"
-        )
+    if exclude_dims:
+        if not isinstance(exclude_dims, set):
+            raise TypeError(
+                f"Expected exclude_dims to be a 'set'. Received '{type(exclude_dims).__name__}' instead."
+            )
+        if not exclude_dims <= signature.all_core_dims:
+            raise ValueError(
+                f"each dimension in `exclude_dims` must also be a "
+                f"core dimension in the function signature. "
+                f"Please make {(exclude_dims - signature.all_core_dims)} a core dimension"
+            )
+
     # handle dask_gufunc_kwargs
     if (dask == "parallelized") or vectorize:
         if dask_gufunc_kwargs is None:
