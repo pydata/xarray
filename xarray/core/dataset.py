@@ -1923,7 +1923,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
@@ -4144,7 +4144,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         numpy.interp
         scipy.interpolate
         """
-        from .missing import interp_na, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, interp_na
 
         new = _apply_over_vars_with_dim(
             interp_na,
@@ -4178,7 +4178,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import ffill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, ffill
 
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
@@ -4203,7 +4203,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        from .missing import bfill, _apply_over_vars_with_dim
+        from .missing import _apply_over_vars_with_dim, bfill
 
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
@@ -4524,30 +4524,81 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
         )
 
-    def _to_dataframe(self, ordered_dims):
+    def _normalize_dim_order(
+        self, dim_order: List[Hashable] = None
+    ) -> Dict[Hashable, int]:
+        """
+        Check the validity of the provided dimensions if any and return the mapping
+        between dimension name and their size.
+
+        Parameters
+        ----------
+        dim_order
+            Dimension order to validate (default to the alphabetical order if None).
+
+        Returns
+        -------
+        result
+            Validated dimensions mapping.
+
+        """
+        if dim_order is None:
+            dim_order = list(self.dims)
+        elif set(dim_order) != set(self.dims):
+            raise ValueError(
+                "dim_order {} does not match the set of dimensions of this "
+                "Dataset: {}".format(dim_order, list(self.dims))
+            )
+
+        ordered_dims = {k: self.dims[k] for k in dim_order}
+
+        return ordered_dims
+
+    def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in columns
         ]
-        index = self.coords.to_index(ordered_dims)
+        index = self.coords.to_index([*ordered_dims])
         return pd.DataFrame(dict(zip(columns, data)), index=index)
 
-    def to_dataframe(self):
+    def to_dataframe(self, dim_order: List[Hashable] = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
 
         Non-index variables in this dataset form the columns of the
-        DataFrame. The DataFrame is be indexed by the Cartesian product of
+        DataFrame. The DataFrame is indexed by the Cartesian product of
         this dataset's indices.
+
+        Parameters
+        ----------
+        dim_order
+            Hierarchical dimension order for the resulting dataframe. All
+            arrays are transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major
+            influence on which operations are efficient on the resulting
+            dataframe.
+
+            If provided, must include all dimensions of this dataset. By
+            default, dimensions are sorted alphabetically.
+
+        Returns
+        -------
+        result
+            Dataset as a pandas DataFrame.
+
         """
-        return self._to_dataframe(self.dims)
+
+        ordered_dims = self._normalize_dim_order(dim_order=dim_order)
+
+        return self._to_dataframe(ordered_dims=ordered_dims)
 
     def _set_sparse_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
         from sparse import COO
 
-        idx = dataframe.index
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
             is_sorted = idx.is_lexsorted()
@@ -4557,11 +4608,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             is_sorted = True
             shape = (idx.size,)
 
-        for name, series in dataframe.items():
-            # Cast to a NumPy array first, in case the Series is a pandas
-            # Extension array (which doesn't have a valid NumPy dtype)
-            values = np.asarray(series)
-
+        for name, values in arrays:
             # In virtually all real use cases, the sparse array will now have
             # missing values and needs a fill_value. For consistency, don't
             # special case the rare exceptions (e.g., dtype=int without a
@@ -4580,18 +4627,36 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, dataframe: pd.DataFrame, dims: tuple
+        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
-        idx = dataframe.index
-        if isinstance(idx, pd.MultiIndex):
-            # expand the DataFrame to include the product of all levels
-            full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
-            dataframe = dataframe.reindex(full_idx)
-            shape = tuple(lev.size for lev in idx.levels)
-        else:
-            shape = (idx.size,)
-        for name, series in dataframe.items():
-            data = np.asarray(series).reshape(shape)
+        if not isinstance(idx, pd.MultiIndex):
+            for name, values in arrays:
+                self[name] = (dims, values)
+            return
+
+        shape = tuple(lev.size for lev in idx.levels)
+        indexer = tuple(idx.codes)
+
+        # We already verified that the MultiIndex has all unique values, so
+        # there are missing values if and only if the size of output arrays is
+        # larger that the index.
+        missing_values = np.prod(shape) > idx.shape[0]
+
+        for name, values in arrays:
+            # NumPy indexing is much faster than using DataFrame.reindex() to
+            # fill in missing values:
+            # https://stackoverflow.com/a/35049899/809705
+            if missing_values:
+                dtype, fill_value = dtypes.maybe_promote(values.dtype)
+                data = np.full(shape, fill_value, dtype)
+            else:
+                # If there are no missing values, keep the existing dtype
+                # instead of promoting to support NA, e.g., keep integer
+                # columns as integers.
+                # TODO: consider removing this special case, which doesn't
+                # exist for sparse=True.
+                data = np.zeros(shape, values.dtype)
+            data[indexer] = values
             self[name] = (dims, data)
 
     @classmethod
@@ -4631,7 +4696,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
-        idx, dataframe = remove_unused_levels_categories(dataframe.index, dataframe)
+        idx = remove_unused_levels_categories(dataframe.index)
+
+        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
+
+        # Cast to a NumPy array first, in case the Series is a pandas Extension
+        # array (which doesn't have a valid NumPy dtype)
+        # TODO: allow users to control how this casting happens, e.g., by
+        # forwarding arguments to pandas.Series.to_numpy?
+        arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
+
         obj = cls()
 
         if isinstance(idx, pd.MultiIndex):
@@ -4647,9 +4724,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             obj[index_name] = (dims, idx)
 
         if sparse:
-            obj._set_sparse_data_from_dataframe(dataframe, dims)
+            obj._set_sparse_data_from_dataframe(idx, arrays, dims)
         else:
-            obj._set_numpy_data_from_dataframe(dataframe, dims)
+            obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         return obj
 
     def to_dask_dataframe(self, dim_order=None, set_index=False):
@@ -4669,11 +4746,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             influence on which operations are efficient on the resulting dask
             dataframe.
 
-            If provided, must include all dimensions on this dataset. By
+            If provided, must include all dimensions of this dataset. By
             default, dimensions are sorted alphabetically.
         set_index : bool, optional
             If set_index=True, the dask DataFrame is indexed by this dataset's
-            coordinate. Since dask DataFrames to not support multi-indexes,
+            coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
 
         Returns
@@ -4684,15 +4761,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         import dask.array as da
         import dask.dataframe as dd
 
-        if dim_order is None:
-            dim_order = list(self.dims)
-        elif set(dim_order) != set(self.dims):
-            raise ValueError(
-                "dim_order {} does not match the set of dimensions on this "
-                "Dataset: {}".format(dim_order, list(self.dims))
-            )
-
-        ordered_dims = {k: self.dims[k] for k in dim_order}
+        ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
         columns.extend(k for k in self.coords if k not in self.dims)
@@ -4719,6 +4788,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         df = dd.concat(series_list, axis=1)
 
         if set_index:
+            dim_order = [*ordered_dims]
+
             if len(dim_order) == 1:
                 (dim,) = dim_order
                 df = df.set_index(dim)
@@ -5745,8 +5816,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             This function cannot add a new chunked dimension.
 
-        obj: DataArray, Dataset
-            Passed to the function as its first argument, one block at a time.
         args: Sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with obj, otherwise an error is raised.
@@ -5755,7 +5824,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             subset to blocks. Passing dask collections in kwargs is not allowed.
         template: (optional) DataArray, Dataset
             xarray object representing the final result after compute is called. If not provided,
-            the function will be first run on mocked-up data, that looks like ``obj`` but
+            the function will be first run on mocked-up data, that looks like this object but
             has sizes 0, to determine properties of the returned object such as dtype,
             variable names, attributes, new dimensions and new indexes (if any).
             ``template`` must be provided if the function changes the size of existing dimensions.
@@ -5774,7 +5843,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
         recommended to use ``apply_ufunc``.
 
-        If none of the variables in ``obj`` is backed by dask arrays, calling this function is
+        If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
 
         See Also
@@ -5794,20 +5863,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
+        >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
         >>> array = xr.DataArray(
-        ...     np.random.rand(len(time)), dims="time", coords=[time]
+        ...     np.random.rand(len(time)),
+        ...     dims=["time"],
+        ...     coords={"time": time, "month": month},
         ... ).chunk()
         >>> ds = xr.Dataset({"a": array})
         >>> ds.map_blocks(calculate_anomaly, template=ds).compute()
-        <xarray.DataArray (time: 24)>
-        array([ 0.12894847,  0.11323072, -0.0855964 , -0.09334032,  0.26848862,
-                0.12382735,  0.22460641,  0.07650108, -0.07673453, -0.22865714,
-               -0.19063865,  0.0590131 , -0.12894847, -0.11323072,  0.0855964 ,
-                0.09334032, -0.26848862, -0.12382735, -0.22460641, -0.07650108,
-                0.07673453,  0.22865714,  0.19063865, -0.0590131 ])
+        <xarray.Dataset>
+        Dimensions:  (time: 24)
         Coordinates:
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 1 2 3 4 5 6 7 8 9 10 11 12
+        Data variables:
+            a        (time) float64 0.1289 0.1132 -0.0856 ... 0.2287 0.1906 -0.05901
 
         Note that one must explicitly use ``args=[]`` and ``kwargs={}`` to pass arguments
         to the function being applied in ``xr.map_blocks()``:
@@ -5815,14 +5886,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> ds.map_blocks(
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=ds,
         ... )
-        <xarray.DataArray (time: 24)>
-        array([ 0.15361741, -0.25671244, -0.31600032,  0.008463  ,  0.1766172 ,
-               -0.11974531,  0.43791243,  0.14197797, -0.06191987, -0.15073425,
-               -0.19967375,  0.18619794, -0.05100474, -0.42989909, -0.09153273,
-                0.24841842, -0.30708526, -0.31412523,  0.04197439,  0.0422506 ,
-                0.14482397,  0.35985481,  0.23487834,  0.12144652])
+        <xarray.Dataset>
+        Dimensions:  (time: 24)
         Coordinates:
-            * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+          * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
+            month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
+        Data variables:
+            a        (time) float64 dask.array<chunksize=(24,), meta=np.ndarray>
         """
         from .parallel import map_blocks
 
@@ -5944,7 +6014,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords = {}
+            stacked_coords: Dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(

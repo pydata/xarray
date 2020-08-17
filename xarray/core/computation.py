@@ -677,9 +677,8 @@ def apply_variable_ufunc(
         if data.ndim != len(dims):
             raise ValueError(
                 "applied function returned data with unexpected "
-                "number of dimensions: {} vs {}, for dimensions {}".format(
-                    data.ndim, len(dims), dims
-                )
+                f"number of dimensions. Received {data.ndim} dimension(s) but "
+                f"expected {len(dims)} dimensions with names: {dims!r}"
             )
 
         var = Variable(dims, data, fastpath=True)
@@ -958,21 +957,23 @@ def apply_ufunc(
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
     .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
-    from .groupby import GroupBy
     from .dataarray import DataArray
+    from .groupby import GroupBy
     from .variable import Variable
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
     elif len(input_core_dims) != len(args):
         raise ValueError(
-            "input_core_dims must be None or a tuple with the length same to "
-            "the number of arguments. Given input_core_dims: {}, "
-            "number of args: {}.".format(input_core_dims, len(args))
+            f"input_core_dims must be None or a tuple with the length same to "
+            f"the number of arguments. "
+            f"Given {len(input_core_dims)} input_core_dims: {input_core_dims}, "
+            f" but number of args is {len(args)}."
         )
 
     if kwargs is None:
         kwargs = {}
+
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
     if exclude_dims:

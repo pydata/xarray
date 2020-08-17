@@ -360,7 +360,6 @@ Computation
    DataArray.rolling_exp
    DataArray.weighted
    DataArray.coarsen
-   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
@@ -369,7 +368,6 @@ Computation
    DataArray.differentiate
    DataArray.integrate
    DataArray.polyfit
-   DataArray.str
    DataArray.map_blocks
 
 
@@ -574,7 +572,9 @@ Universal functions
    With recent versions of numpy, dask and xarray, NumPy ufuncs are now
    supported directly on all xarray and dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
-   unless compatibility with versions of NumPy prior to v1.13 is required.
+   unless compatibility with versions of NumPy prior to v1.13 is
+   required. They will be removed once support for NumPy prior to
+   v1.17 is dropped.
 
 These functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
