@@ -628,6 +628,8 @@ def apply_variable_ufunc(
                     numpy_func,
                     signature.to_gufunc_string(),
                     *arrays,
+                    vectorize=vectorize,
+                    output_dtypes=output_dtypes,
                     **dask_gufunc_kwargs,
                 )
 
