@@ -50,7 +50,7 @@ New Features
 Bug fixes
 ~~~~~~~~~
 - Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
-  unchunked dimensions.
+  unchunked dimensions (:pull:`4312`) `Tobias Kölling <https://github.com/d70-t>`_.
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
 
