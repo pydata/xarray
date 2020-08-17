@@ -984,7 +984,7 @@ def apply_ufunc(
             )
 
     # handle dask_gufunc_kwargs
-    if (dask == "parallelized") or vectorize:
+    if dask == "parallelized":
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
         # todo: remove warnings after deprecation cycle
