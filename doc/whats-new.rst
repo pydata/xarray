@@ -25,6 +25,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
   now accept more than 1 dimension.(:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -71,6 +73,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
+  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_
@@ -128,8 +132,6 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
   sequences of 'dim' arguments, and if a sequence is passed return a dict
   (which can be passed to :py:meth:`isel` to get the value of the minimum) of
@@ -298,8 +300,6 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
-  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
 - Raise more informative error messages for chunk size conflicts when writing to zarr files.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Run the ``isort`` pre-commit hook only on python source files

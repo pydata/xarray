@@ -94,12 +94,9 @@ class _UFuncSignature:
 
     @property
     def dims_map(self):
-        return dict(
-            zip(
-                sorted(self.all_core_dims),
-                ["dim{}".format(d) for d in range(len(self.all_core_dims))],
-            )
-        )
+        return {
+            core_dim: f"dim{n}" for n, core_dim in enumerate(sorted(self.all_core_dims))
+        }
 
     @property
     def num_inputs(self):
@@ -604,13 +601,13 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
-            output_sizes = dask_gufunc_kwargs.pop("output_sizes", dict())
+            output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
             if output_sizes:
-                output_sizes_renamed = dict()
+                output_sizes_renamed = {}
                 for key, value in output_sizes.items():
                     if key not in signature.all_output_core_dims:
                         raise ValueError(
-                            f"dimension name '{key}' in 'output_sizes' must correspond to output_core_dims"
+                            f"dimension '{key}' in 'output_sizes' must correspond to output_core_dims"
                         )
                     output_sizes_renamed[signature.dims_map[key]] = value
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
@@ -618,7 +615,7 @@ def apply_variable_ufunc(
             for key in signature.all_output_core_dims:
                 if key not in signature.all_input_core_dims and key not in output_sizes:
                     raise ValueError(
-                        f"dimension name '{key}' in 'output_core_dims' needs corresponding (key,value) in 'output_sizes'"
+                        f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
                     )
 
             def func(*arrays):
@@ -639,7 +636,7 @@ def apply_variable_ufunc(
 
                 if LooseVersion(dask_version) < LooseVersion("2.17.0"):
                     if signature.num_outputs > 1:
-                        res = tuple(r for r in res)
+                        res = tuple(res)
 
                 return res
 
@@ -838,7 +835,7 @@ def apply_ufunc(
         dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``
         and ``meta``.
     output_dtypes : list of dtypes, optional
-        Optional list of output dtypes. Only used if dask='parallelized' or
+        Optional list of output dtypes. Only used if ``dask='parallelized'`` or
         vectorize=True.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used

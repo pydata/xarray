@@ -854,26 +854,22 @@ def test_vectorize_dask_dtype():
 
 
 @requires_dask
-def test_vectorize_dask_dtype_without_output_dtypes():
+@pytest.mark.parametrize(
+    "data_array",
+    [
+        xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y")),
+        xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y")),
+    ],
+)
+def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     # ensure output_dtypes is preserved with vectorize=True
     # GH4015
 
-    # integer
-    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = data_array.copy()
     actual = apply_ufunc(
         identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
     )
 
-    assert_identical(expected, actual)
-    assert expected.dtype == actual.dtype
-
-    # complex
-    data_array = xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y"))
-    expected = data_array.copy()
-    actual = apply_ufunc(
-        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
-    )
     assert_identical(expected, actual)
     assert expected.dtype == actual.dtype
 
@@ -1073,7 +1069,7 @@ def test_vectorize_dask_new_output_dims():
     assert_identical(expected, actual)
 
     with raises_regex(
-        ValueError, "dimension name 'z1' in 'output_sizes' must correspond"
+        ValueError, "dimension 'z1' in 'output_sizes' must correspond"
     ):
         apply_ufunc(
             func,
@@ -1086,7 +1082,7 @@ def test_vectorize_dask_new_output_dims():
         )
 
     with raises_regex(
-        ValueError, "dimension name 'z' in 'output_core_dims' needs corresponding"
+        ValueError, "dimension 'z' in 'output_core_dims' needs corresponding"
     ):
         apply_ufunc(
             func,
