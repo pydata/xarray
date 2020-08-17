@@ -4283,8 +4283,10 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
 
         # Full output and deficient rank
-        out = da.polyfit("x", 12, full=True)
-        assert out.polyfit_residuals.isnull().all()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', np.RankWarning)
+            out = da.polyfit("x", 12, full=True)
+            assert out.polyfit_residuals.isnull().all()
 
         # With NaN
         da_raw[0, 1] = np.nan
@@ -4301,6 +4303,11 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
         assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', np.RankWarning)
+            out = da.polyfit("x", 9, full=True)
+            assert out.polyfit_residuals.isnull().all()
 
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
