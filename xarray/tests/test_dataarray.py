@@ -4295,7 +4295,7 @@ class TestDataArray:
             assert out.polyfit_residuals.isnull().all()
 
         # With NaN
-        da_raw[0, 1] = np.nan
+        da_raw[0, 1:3] = np.nan
         if use_dask:
             da = da_raw.chunk({"d": 1})
         else:
@@ -4312,8 +4312,8 @@ class TestDataArray:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", np.RankWarning)
-            out = da.polyfit("x", 9, full=True)
-            assert out.polyfit_residuals.isnull().all()
+            out = da.polyfit("x", 8, full=True)
+            np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
 
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))

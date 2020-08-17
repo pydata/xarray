@@ -268,7 +268,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
     else:
         coeffs, residuals, rank, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
         if residuals.size == 0:
-            residuals = coeffs[0, :] * np.nan
+            residuals = coeffs[0] * np.nan
         warn_on_deficient_rank(rank, lhs.shape[1])
     return coeffs, residuals
 
