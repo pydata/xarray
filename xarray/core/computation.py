@@ -614,11 +614,10 @@ def apply_variable_ufunc(
                 dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
 
             for key in signature.all_output_core_dims:
-                if key not in signature.all_input_core_dims:
-                    if key not in output_sizes:
-                        raise ValueError(
-                            f"dimension name '{key}' in 'output_core_dims' needs corresponding (key,value) in 'output_sizes'"
-                        )
+                if key not in signature.all_input_core_dims and key not in output_sizes:
+                    raise ValueError(
+                        f"dimension name '{key}' in 'output_core_dims' needs corresponding (key,value) in 'output_sizes'"
+                    )
 
             def func(*arrays):
                 import dask.array as da
