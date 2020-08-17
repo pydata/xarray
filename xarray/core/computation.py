@@ -565,6 +565,8 @@ def apply_variable_ufunc(
     signature,
     exclude_dims=frozenset(),
     dask="forbidden",
+    output_dtypes=None,
+    vectorize=False,
     keep_attrs=False,
     dask_gufunc_kwargs=None,
 ):
@@ -647,13 +649,8 @@ def apply_variable_ufunc(
                 "apply_ufunc: {}".format(dask)
             )
     else:
-        if dask_gufunc_kwargs is not None:
-            # if dask_gufunc_kwargs exists, keywords 'vectorize' and 'output_dtypes'
-            # should be already prefilled.
-            if dask_gufunc_kwargs.get("vectorize", False):
-                func = _vectorize(
-                    func, signature, dask_gufunc_kwargs.get("output_dtypes", None)
-                )
+        if vectorize:
+            func = _vectorize(func, signature, output_dtypes=output_dtypes)
 
     result_data = func(*input_data)
 
@@ -991,9 +988,6 @@ def apply_ufunc(
     if (dask == "parallelized") or vectorize:
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
-        # needed for correctly distributing keywords to vectorize
-        dask_gufunc_kwargs.setdefault("output_dtypes", output_dtypes)
-        dask_gufunc_kwargs.setdefault("vectorize", vectorize)
         # todo: remove warnings after deprecation cycle
         if meta is not None:
             warnings.warn(
@@ -1019,6 +1013,8 @@ def apply_ufunc(
         exclude_dims=exclude_dims,
         keep_attrs=keep_attrs,
         dask=dask,
+        vectorize=vectorize,
+        output_dtypes=output_dtypes,
         dask_gufunc_kwargs=dask_gufunc_kwargs,
     )
 
@@ -1036,6 +1032,7 @@ def apply_ufunc(
             keep_attrs=keep_attrs,
             dask=dask,
             vectorize=vectorize,
+            output_dtypes=output_dtypes,
             dask_gufunc_kwargs=dask_gufunc_kwargs,
         )
         return apply_groupby_func(this_apply, *args)
