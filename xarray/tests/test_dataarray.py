@@ -4290,7 +4290,7 @@ class TestDataArray:
 
         # Full output and deficient rank
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', np.RankWarning)
+            warnings.simplefilter("ignore", np.RankWarning)
             out = da.polyfit("x", 12, full=True)
             assert out.polyfit_residuals.isnull().all()
 
@@ -4311,7 +4311,7 @@ class TestDataArray:
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', np.RankWarning)
+            warnings.simplefilter("ignore", np.RankWarning)
             out = da.polyfit("x", 9, full=True)
             assert out.polyfit_residuals.isnull().all()
 
