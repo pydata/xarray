@@ -15,19 +15,13 @@
 
 import datetime
 import os
-import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
 
-# make sure the source version is preferred (#3567)
-root = pathlib.Path(__file__).absolute().parent.parent
-os.environ["PYTHONPATH"] = str(root)
-sys.path.insert(0, str(root))
-
-import xarray  # isort:skip
+import xarray
 
 allowed_failures = set()
 
