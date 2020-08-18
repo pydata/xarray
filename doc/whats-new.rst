@@ -55,7 +55,7 @@ Bug fixes
 ~~~~~~~~~
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
-- Fixed a few bugs with :py:meth:`Dataset.polyfit` when encountering deficient matrix ranks (:issue:`4190`, :pull:`4193`) `Pascal Bourgault <https://github.com/aulemahal>`_.
+- Fixed a few bugs with :py:meth:`Dataset.polyfit` when encountering deficient matrix ranks (:issue:`4190`, :pull:`4193`). By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
