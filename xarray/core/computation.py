@@ -991,14 +991,18 @@ def apply_ufunc(
         if meta is not None:
             warnings.warn(
                 "``meta`` should be given in the ``dask_gufunc_kwargs`` parameter."
-                " It will be removed as direct parameter in a future version."
+                " It will be removed as direct parameter in a future version.",
+                DeprecationWarning,
+                stacklevel=2,
             )
             dask_gufunc_kwargs.setdefault("meta", meta)
         if output_sizes is not None:
             warnings.warn(
                 "``output_sizes`` should be given in the ``dask_gufunc_kwargs`` "
                 "parameter. It will be removed as direct parameter in a future "
-                "version."
+                "version.",
+                DeprecationWarning,
+                stacklevel=2,
             )
             dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
 
