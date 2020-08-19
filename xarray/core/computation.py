@@ -1259,9 +1259,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
         valid_count
     )
-    # cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
 
-    # breakpoint()
     if method == "cov":
         return cov
 
