@@ -6,6 +6,7 @@ accept or return xarray objects.
 import contextlib
 import inspect
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -151,29 +152,24 @@ masked_invalid = _dask_or_eager_func(
 
 def astype(data, **kwargs):
     try:
-        return data.astype(**kwargs)
-    except TypeError as e:
-        # FIXME: This should no longer be necessary in future versions of sparse
-        # Current versions of sparse (v0.10.0) don't support the "casting" kwarg
-        # This was fixed by https://github.com/pydata/sparse/pull/392
-        try:
-            import sparse
-        except ImportError:
-            sparse = None
-        if (
-            "got an unexpected keyword argument 'casting'" in repr(e)
-            and sparse is not None
-            and isinstance(data, sparse._coo.core.COO)
-        ):
-            warnings.warn(
-                "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
-                RuntimeWarning,
-                stacklevel=4,
-            )
-            kwargs.pop("casting")
-        else:
-            raise e
-        return data.astype(**kwargs)
+        import sparse
+    except ImportError:
+        sparse = None
+
+    if (
+        sparse is not None
+        and isinstance(data, sparse._coo.core.COO)
+        and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
+        and "casting" in kwargs
+    ):
+        warnings.warn(
+            "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
+            RuntimeWarning,
+            stacklevel=4,
+        )
+        kwargs.pop("casting")
+
+    return data.astype(**kwargs)
 
 
 def asarray(data, xp=np):
