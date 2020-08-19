@@ -795,19 +795,19 @@ def cftime_range(
         Left bound for generating dates.
     end : str or cftime.datetime, optional
         Right bound for generating dates.
-    periods : integer, optional
+    periods : int, optional
         Number of periods to generate.
-    freq : str, default "D", BaseCFTimeOffset, or None
+    freq : str or None, default: "D"
        Frequency strings can have multiples, e.g. "5H".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
         Name of the resulting index
-    closed : {None, "left", "right"}, optional
+    closed : {"left", "right"} or None, default: None
         Make the interval closed with respect to the given frequency to the
-        "left", "right", or both sides (None, the default).
-    calendar : str
-        Calendar type for the datetimes (default "standard").
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
 
     Returns
     -------
