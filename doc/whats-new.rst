@@ -85,6 +85,8 @@ Internal Changes
   By `Guido Imperiale <https://github.com/crusaderky>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
+- Enable type checking for :py:func:`concat` (:issue:`4238`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 .. _whats-new.0.16.0:
