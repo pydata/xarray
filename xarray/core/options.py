@@ -132,7 +132,15 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
+                if k == ARITHMETIC_JOIN:
+                    expected = f"Expected one of {_JOIN_OPTIONS!r}"
+                elif k == DISPLAY_STYLE:
+                    expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                else:
+                    expected = ""
+                raise ValueError(
+                    f"option {k!r} given an invalid value: {v!r}. " + expected
+                )
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

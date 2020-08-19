@@ -25,22 +25,66 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-- Build :py:meth:`CFTimeIndex.__repr__` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
+  now accept more than 1 dimension.(:pull:`4219`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
-  :py:meth:`CFTimeIndex.__repr__` (:issue:`2416`, :pull:`4092`)
-  `Aaron Spring <https://github.com/aaronspring>`_.
+  ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+- Relaxed the :ref:`mindeps_policy` to support:
+
+  - all versions of setuptools released in the last 42 months (but no older than 38.4)
+  - all versions of dask and dask.distributed released in the last 12 months (but no
+    older than 2.9)
+  - all versions of other packages released in the last 12 months
+
+  All are  up from 6 months (:issue:`4295`)
+  `Guido Imperiale <https://github.com/crusaderky>`_.
+- Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
+  of :py:class:`DataArray` and :py:class:`Dataset` objects and
+  document the new method in :doc:`internals`. (:pull:`4248`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add support for parsing datetime strings formatted following the default
+  string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
+  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
+  (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
+  now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
+  dimensions order (:issue:`4331`, :pull:`4333`).
+  By `Thomas Zilio <https://github.com/thomas-z>`_.
 
 
 Bug fixes
 ~~~~~~~~~
-
+- Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
+  unchunked dimensions (:pull:`4312`) By `Tobias Kölling <https://github.com/d70-t>`_.
+- Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
+  `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
+  and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
+  arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
+  By `Sander van Rijn <https://github.com/sjvrijn>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
+  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
+- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
+  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
+  By `Guido Imperiale <https://github.com/crusaderky>`_
+- Only load resource files when running inside a Jupyter Notebook
+  (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
 
 
 .. _whats-new.0.16.0:
@@ -81,7 +125,7 @@ Breaking changes
   <https://matplotlib.org/api/prev_api_changes/api_changes_3.1.0.html#passing-a-line2d-s-drawstyle-together-with-the-linestyle-is-deprecated>`_.
   (:pull:`3274`)
   By `Elliott Sales de Andrade <https://github.com/QuLogic>`_
-- The old :py:func:`auto_combine` function has now been removed in
+- The old ``auto_combine`` function has now been removed in
   favour of the :py:func:`combine_by_coords` and
   :py:func:`combine_nested` functions. This also means that
   the default behaviour of :py:func:`open_mfdataset` has changed to use
@@ -95,7 +139,7 @@ New Features
 ~~~~~~~~~~~~
 - :py:meth:`DataArray.argmin` and :py:meth:`DataArray.argmax` now support
   sequences of 'dim' arguments, and if a sequence is passed return a dict
-  (which can be passed to :py:meth:`isel` to get the value of the minimum) of
+  (which can be passed to :py:meth:`DataArray.isel` to get the value of the minimum) of
   the indices for each dimension of the minimum or maximum of a DataArray.
   (:pull:`3936`)
   By `John Omotani <https://github.com/johnomotani>`_, thanks to `Keisuke Fujii
@@ -117,8 +161,8 @@ New Features
   :py:func:`combine_by_coords` and :py:func:`combine_nested` using
   combine_attrs keyword argument. (:issue:`3865`, :pull:`3877`)
   By `John Omotani <https://github.com/johnomotani>`_
-- 'missing_dims' argument to :py:meth:`Dataset.isel`,
-  `:py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
+- `missing_dims` argument to :py:meth:`Dataset.isel`,
+  :py:meth:`DataArray.isel` and :py:meth:`Variable.isel` to allow replacing
   the exception when a dimension passed to ``isel`` is not present with a
   warning, or just ignore the dimension. (:issue:`3866`, :pull:`3923`)
   By `John Omotani <https://github.com/johnomotani>`_
@@ -132,7 +176,7 @@ New Features
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow plotting of boolean arrays. (:pull:`3766`)
   By `Marek Jacob <https://github.com/MeraX>`_
-- Enable using MultiIndex levels as cordinates in 1D and 2D plots (:issue:`3927`).
+- Enable using MultiIndex levels as coordinates in 1D and 2D plots (:issue:`3927`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - A ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`, analogous to
   the ``days_in_month`` accessor for a :py:class:`pandas.DatetimeIndex`, which
@@ -158,9 +202,10 @@ New Features
 Enhancements
 ~~~~~~~~~~~~
 - Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  For orthogonal linear- and nearest-neighbor interpolation, we do 1d-interpolation sequentially
-  rather than interpolating in multidimensional space. (:issue:`2223`)
+  We performs independant interpolation sequentially rather than interpolating in
+  one large multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:meth:`DataArray.interp` now support interpolations over chunked dimensions (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
 - Major performance improvement for :py:meth:`Dataset.from_dataframe` when the
   dataframe has a MultiIndex (:pull:`4184`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -1100,7 +1145,7 @@ New functions/methods
   ``combine_by_coords`` to combine datasets along multiple dimensions, by
   specifying the argument ``combine='nested'`` or ``combine='by_coords'``.
 
-  The older function :py:func:`~xarray.auto_combine` has been deprecated,
+  The older function ``auto_combine`` has been deprecated,
   because its functionality has been subsumed by the new functions.
   To avoid FutureWarnings switch to using ``combine_nested`` or
   ``combine_by_coords``, (or set the ``combine`` argument in
