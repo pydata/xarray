@@ -25,6 +25,8 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
   now accept more than 1 dimension.(:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -45,6 +47,14 @@ New Features
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Add support for parsing datetime strings formatted following the default
+  string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
+  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
+  (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
+  now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
+  dimensions order (:issue:`4331`, :pull:`4333`).
+  By `Thomas Zilio <https://github.com/thomas-z>`_.
 
 
 Bug fixes
@@ -53,6 +63,10 @@ Bug fixes
   unchunked dimensions (:pull:`4312`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
+  and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
+  arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -64,6 +78,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
+  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_

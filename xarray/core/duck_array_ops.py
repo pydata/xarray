@@ -4,6 +4,7 @@ Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
 import contextlib
+import datetime
 import inspect
 import warnings
 from functools import partial
@@ -470,8 +471,7 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
 
 
 def _to_pytimedelta(array, unit="us"):
-    index = pd.TimedeltaIndex(array.ravel(), unit=unit)
-    return index.to_pytimedelta().reshape(array.shape)
+    return array.astype(f"timedelta64[{unit}]").astype(datetime.timedelta)
 
 
 def np_timedelta64_to_float(array, datetime_unit):

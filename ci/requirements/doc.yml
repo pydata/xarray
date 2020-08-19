@@ -13,6 +13,7 @@ dependencies:
   - ipython
   - iris>=2.3
   - jupyter_client
+  - matplotlib-base=3.3.0
   - nbsphinx
   - netcdf4>=1.5
   - numba
@@ -27,3 +28,7 @@ dependencies:
   - sphinx_rtd_theme>=0.4
   - sphinx-autosummary-accessors
   - zarr>=2.4
+  - pip
+  - pip:
+      # relative to this file. Needs to be editable to be accepted.
+      - -e ../..
