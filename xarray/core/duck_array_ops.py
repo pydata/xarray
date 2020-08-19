@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, dask_array_type
+from .pycompat import cupy_array_type, dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
@@ -159,7 +159,7 @@ def astype(data, **kwargs):
 
     if (
         sparse is not None
-        and isinstance(data, sparse._coo.core.COO)
+        and isinstance(data, sparse_array_type)
         and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
         and "casting" in kwargs
     ):
