@@ -206,9 +206,9 @@ and switch in between them using the ``git checkout`` command.
 To update this branch, you need to retrieve the changes from the master branch::
 
     git fetch upstream
-    git rebase upstream/master
+    git merge upstream/master
 
-This will replay your commits on top of the latest *xarray* git master.  If this
+This will combine your commits with the latest *xarray* git master.  If this
 leads to merge conflicts, you must resolve these before submitting your pull
 request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes and they can be
