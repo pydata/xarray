@@ -244,16 +244,6 @@ in this manner.
 Combining along multiple dimensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
-
-  There are currently three combining functions with similar names:
-  :py:func:`~xarray.auto_combine`, :py:func:`~xarray.combine_by_coords`, and
-  :py:func:`~xarray.combine_nested`. This is because
-  ``auto_combine`` is in the process of being deprecated in favour of the other
-  two functions, which are more general. If your code currently relies on
-  ``auto_combine``, then you will be able to get similar functionality by using
-  ``combine_nested``.
-
 For combining many objects along multiple dimensions xarray provides
 :py:func:`~xarray.combine_nested` and :py:func:`~xarray.combine_by_coords`. These
 functions use a combination of ``concat`` and ``merge`` across different

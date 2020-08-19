@@ -116,7 +116,7 @@ def multiindex_from_product_levels(
     ----------
     levels : sequence of pd.Index
         Values for each MultiIndex level.
-    names : optional sequence of objects
+    names : sequence of str, optional
         Names for each level.
 
     Returns

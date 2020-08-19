@@ -45,13 +45,13 @@ def open_dataset(
         Name of the file containing the dataset. If no suffix is given, assumed
         to be netCDF ('.nc' is appended)
         e.g. 'air_temperature'
-    cache_dir : string, optional
+    cache_dir : str, optional
         The directory in which to search for and write cached data.
-    cache : boolean, optional
+    cache : bool, optional
         If True, then cache data locally for use on subsequent calls
-    github_url : string
+    github_url : str
         Github repository where the data is stored
-    branch : string
+    branch : str
         The git branch to download from
     kws : dict, optional
         Passed to xarray.open_dataset

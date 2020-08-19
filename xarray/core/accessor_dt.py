@@ -104,9 +104,10 @@ def _round_field(values, name, freq):
     ----------
     values : np.ndarray or dask.array-like
         Array-like container of datetime-like values
-    name : str (ceil, floor, round)
+    name : {"ceil", "floor", "round"}
         Name of rounding function
-    freq : a freq string indicating the rounding resolution
+    freq : str
+        a freq string indicating the rounding resolution
 
     Returns
     -------
@@ -190,8 +191,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------
@@ -207,8 +208,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------
@@ -223,8 +224,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------

@@ -795,19 +795,19 @@ def cftime_range(
         Left bound for generating dates.
     end : str or cftime.datetime, optional
         Right bound for generating dates.
-    periods : integer, optional
+    periods : int, optional
         Number of periods to generate.
-    freq : str, default 'D', BaseCFTimeOffset, or None
-       Frequency strings can have multiples, e.g. '5H'.
-    normalize : bool, default False
+    freq : str or None, default: "D"
+       Frequency strings can have multiples, e.g. "5H".
+    normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
-    closed : {None, 'left', 'right'}, optional
+    closed : {"left", "right"} or None, default: None
         Make the interval closed with respect to the given frequency to the
-        'left', 'right', or both sides (None, the default).
-    calendar : str
-        Calendar type for the datetimes (default 'standard').
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
 
     Returns
     -------
@@ -946,7 +946,7 @@ def cftime_range(
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with
     the other set to ``None``.  See the `pandas documentation
-    <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.date_range.html#pandas.date_range>`_
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
 

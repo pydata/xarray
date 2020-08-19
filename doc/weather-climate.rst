@@ -85,7 +85,7 @@ infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
 
 With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
 the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
-:py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
+``dt`` accessor for a :py:class:`~xarray.DataArray`
 using the same formatting as the standard `datetime.strftime`_ convention .
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
@@ -206,6 +206,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    and silent errors due to the difference in calendar types between the dates
    encoded in your data and the dates stored in memory.
 
-.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
+.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
-.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing
+.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing

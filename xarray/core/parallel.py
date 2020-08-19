@@ -176,7 +176,7 @@ def map_blocks(
 
     Parameters
     ----------
-    func: callable
+    func : callable
         User-provided function that accepts a DataArray or Dataset as its first
         parameter ``obj``. The function will receive a subset or 'block' of ``obj`` (see below),
         corresponding to one chunk along each chunked dimension. ``func`` will be
@@ -186,15 +186,15 @@ def map_blocks(
 
         This function cannot add a new chunked dimension.
 
-    obj: DataArray, Dataset
+    obj : DataArray, Dataset
         Passed to the function as its first argument, one block at a time.
-    args: Sequence
+    args : sequence
         Passed to func after unpacking and subsetting any xarray objects by blocks.
         xarray objects in args must be aligned with obj, otherwise an error is raised.
-    kwargs: Mapping
+    kwargs : mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
         subset to blocks. Passing dask collections in kwargs is not allowed.
-    template: (optional) DataArray, Dataset
+    template : DataArray or Dataset, optional
         xarray object representing the final result after compute is called. If not provided,
         the function will be first run on mocked-up data, that looks like ``obj`` but
         has sizes 0, to determine properties of the returned object such as dtype,
