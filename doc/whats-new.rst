@@ -21,7 +21,9 @@ v0.16.1 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- :py:meth:`DataArray.astype` and :py:meth:`Dataset.astype` now preserve attributes. Keep the
+  old behavior by passing `keep_attrs=False` (:issue:`2049`, :pull:`4314`).
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_ and `Gabriel Joel Mitchell <https://github.com/gajomi>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -87,6 +89,8 @@ Internal Changes
   By `Guido Imperiale <https://github.com/crusaderky>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
+- Enable type checking for :py:func:`concat` (:issue:`4238`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 .. _whats-new.0.16.0:
