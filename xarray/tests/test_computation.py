@@ -818,7 +818,7 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-def test_oorr_only_dataarray():
+def test_corr_only_dataarray():
     with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())
 
