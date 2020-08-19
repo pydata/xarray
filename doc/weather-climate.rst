@@ -207,5 +207,5 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    encoded in your data and the dates stored in memory.
 
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
-.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
+.. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
 .. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing
