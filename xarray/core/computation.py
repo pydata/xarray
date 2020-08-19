@@ -135,6 +135,8 @@ class _UFuncSignature:
 
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
+
+        Also creates unique names for input_core_dims contained in exclude_dims.
         """
         input_core_dims = [
             [self.dims_map[dim] for dim in core_dims]
