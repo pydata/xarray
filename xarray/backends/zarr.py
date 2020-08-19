@@ -142,6 +142,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
     # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
+            if len(dchunks) == 1:
+                continue
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     raise NotImplementedError(
