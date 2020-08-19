@@ -45,20 +45,11 @@ def test_signature_properties():
     assert sig.num_outputs == 1
     assert str(sig) == "(x),(x,y)->(z)"
     assert sig.to_gufunc_string() == "(dim0),(dim0,dim1)->(dim2)"
+    assert (
+        sig.to_gufunc_string(exclude_dims=set("x")) == "(dim0_0),(dim0_1,dim1)->(dim2)"
+    )
     # dimension names matter
     assert _UFuncSignature([["x"]]) != _UFuncSignature([["y"]])
-
-
-def test_signature_properties_exclude():
-    sig = _UFuncSignature([["x"], ["x", "y"]], [["z"]], set("x"))
-    assert sig.input_core_dims == (("x",), ("x", "y"))
-    assert sig.output_core_dims == (("z",),)
-    assert sig.all_input_core_dims == frozenset(["x", "y"])
-    assert sig.all_output_core_dims == frozenset(["z"])
-    assert sig.num_inputs == 2
-    assert sig.num_outputs == 1
-    assert str(sig) == "(x_0),(x_1,y)->(z)"
-    assert sig.to_gufunc_string() == "(dim0_0),(dim0_1,dim1)->(dim2)"
 
 
 def test_result_name():
