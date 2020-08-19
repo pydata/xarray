@@ -191,7 +191,7 @@ def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
 
     Parameters
     ----------
-    variable : xarray.Variable
+    variable : Variable
     raise_on_invalid : bool, optional
 
     Returns
@@ -235,12 +235,12 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 
     Parameters
     ----------
-    var : xarray.Variable
+    var : Variable
         A variable holding un-encoded data.
 
     Returns
     -------
-    out : xarray.Variable
+    out : Variable
         A variable which has been encoded as described above.
     """
 
@@ -558,7 +558,7 @@ def open_zarr(
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    drop_variables : string or iterable, optional
+    drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.

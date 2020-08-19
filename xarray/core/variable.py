@@ -523,14 +523,14 @@ class Variable(
 
         Parameters
         -----------
-        key: int, slice, array, dict or tuple of integer, slices and arrays
+        key: int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
         -------
-        dims: tuple
+        dims : tuple
             Dimension of the resultant variable.
-        indexers: IndexingTuple subclass
+        indexers : IndexingTuple subclass
             Tuple of integer, array-like, or slices to use when indexing
             self._data. The type of this argument indicates the type of
             indexing to perform, either basic, outer or vectorized.
@@ -1053,7 +1053,7 @@ class Variable(
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
-        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "raise": raise an exception
@@ -1146,7 +1146,7 @@ class Variable(
             left.
         fill_value: scalar, optional
             Value to use for newly missing values
-        **shifts_kwargs:
+        **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -1194,26 +1194,27 @@ class Variable(
 
         Parameters
         ----------
-        pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
-            Number of values padded along each dimension.
+        pad_width : mapping of hashable to tuple of int
+            Mapping with the form of {dim: (pad_before, pad_after)}
+            describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode: (str)
+        mode : str, default: "constant"
             See numpy / Dask docs
-        stat_length : int, tuple or mapping of the form {dim: tuple}
+        stat_length : int, tuple or mapping of hashable to tuple
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
-        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+        constant_values : scalar, tuple or mapping of hashable to tuple
             Used in 'constant'.  The values to set the padded values for each
             axis.
-        end_values : scalar, tuple or mapping of the form {dim: tuple}
+        end_values : scalar, tuple or mapping of hashable to tuple
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
-        reflect_type : {'even', 'odd'}, optional
-            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+        reflect_type : {"even", "odd"}, optional
+            Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
-            the 'odd' style, the extended part of the array is created by
+            the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-        **pad_width_kwargs:
+        **pad_width_kwargs
             One of pad_width or pad_width_kwargs must be provided.
 
         Returns
@@ -1298,11 +1299,11 @@ class Variable(
 
         Parameters
         ----------
-        shifts : mapping of the form {dim: offset}
+        shifts : mapping of hashable to int
             Integer offset to roll along each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
-        **shifts_kwargs:
+        **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -1440,10 +1441,11 @@ class Variable(
 
         Parameters
         ----------
-        dimensions : Mapping of form new_name=(dim1, dim2, ...)
-            Names of new dimensions, and the existing dimensions that they
-            replace.
-        **dimensions_kwargs:
+        dimensions : mapping of hashable to tuple of hashable
+            Mapping of form new_name=(dim1, dim2, ...) describing the
+            names of new dimensions, and the existing dimensions that
+            they replace.
+        **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
 
@@ -1500,10 +1502,11 @@ class Variable(
 
         Parameters
         ----------
-        dimensions : mapping of the form old_dim={dim1: size1, ...}
-            Names of existing dimensions, and the new dimensions and sizes
+        dimensions : mapping of hashable to mapping of hashable to int
+            Mapping of the form old_dim={dim1: size1, ...} describing the
+            names of existing dimensions, and the new dimensions and sizes
             that they map to.
-        **dimensions_kwargs:
+        **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
 
@@ -1542,7 +1545,7 @@ class Variable(
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
@@ -1557,7 +1560,7 @@ class Variable(
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        keepdims : bool, default False
+        keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one
         **kwargs : dict
@@ -1627,7 +1630,7 @@ class Variable(
 
         Parameters
         ----------
-        variables : iterable of Array
+        variables : iterable of Variable
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
@@ -1637,7 +1640,7 @@ class Variable(
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
-        positions : None or list of integer arrays, optional
+        positions : None or list of array-like, optional
             List of integer arrays which specifies the integer positions to
             which to assign each dataset along the concatenated dimension.
             If not supplied, objects are concatenated in the provided order.
@@ -1746,12 +1749,12 @@ class Variable(
 
         Parameters
         ----------
-        q : float in range of [0,1] (or sequence of floats)
+        q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
@@ -1882,19 +1885,19 @@ class Variable(
 
         Parameters
         ----------
-        dim: str
+        dim : str
             Dimension over which to compute rolling_window.
             For nd-rolling, should be list of dimensions.
-        window: int
+        window : int
             Window size of the rolling
             For nd-rolling, should be list of integers.
-        window_dim: str
+        window_dim : str
             New name of the window dimension.
             For nd-rolling, should be list of integers.
-        center: boolean. default False.
+        center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
-        fill_value:
+        fill_value
             value to be filled.
 
         Returns
@@ -2537,7 +2540,7 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
 
     Parameters
     ----------
-    variables : iterable of Array
+    variables : iterable of Variable
         Arrays to stack together. Each variable is expected to have
         matching dimensions and shape except for along the stacked
         dimension.
@@ -2547,7 +2550,7 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
         existing dimension name, in which case the location of the
         dimension is unchanged. Where to insert the new dimension is
         determined by the first variable.
-    positions : None or list of integer arrays, optional
+    positions : None or list of array-like, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
