@@ -65,7 +65,8 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-
+- Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -272,8 +273,6 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Fix :py:func:`open_rasterio` for ``WarpedVRT`` with specified ``src_crs``. (:pull:`4104`)
   By `Dave Cole <https://github.com/dtpc>`_.
-- Fix :py:func:`~xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
