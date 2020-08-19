@@ -3031,6 +3031,14 @@ class TestDataset:
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self):
+
+        # single dimension: regression test for GH4049
+        arr = xr.DataArray(np.arange(3), coords=[("x", [0, 1, 2])])
+        data = xr.Dataset({"a": arr, "b": arr})
+        stacked = data.to_stacked_array("y", sample_dims=["x"])
+        unstacked = stacked.to_unstacked_dataset("y")
+        assert_identical(unstacked, data)
+
         # make a two dimensional dataset
         a, b = create_test_stacked_array()
         D = xr.Dataset({"a": a, "b": b})
@@ -3931,6 +3939,33 @@ class TestDataset:
         # check roundtrip
         assert_identical(ds.assign_coords(x=[0, 1]), Dataset.from_dataframe(actual))
 
+        # Check multiindex reordering
+        new_order = ["x", "y"]
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        new_order = ["y", "x"]
+        exp_index = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b", "c", "c"], [0, 1, 0, 1, 0, 1]], names=["y", "x"]
+        )
+        expected = pd.DataFrame(
+            w.transpose().reshape(-1), columns=["w"], index=exp_index
+        )
+        actual = ds.to_dataframe(dim_order=new_order)
+        assert expected.equals(actual)
+
+        invalid_order = ["x"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
+        invalid_order = ["x", "z"]
+        with pytest.raises(
+            ValueError, match="does not match the set of dimensions of this"
+        ):
+            ds.to_dataframe(dim_order=invalid_order)
+
         # check pathological cases
         df = pd.DataFrame([1])
         actual = Dataset.from_dataframe(df)
@@ -4012,6 +4047,49 @@ class TestDataset:
         actual = ds.to_dataframe()
         assert len(actual) == 0
         assert expected.equals(actual)
+
+    def test_from_dataframe_multiindex(self):
+        index = pd.MultiIndex.from_product([["a", "b"], [1, 2, 3]], names=["x", "y"])
+        df = pd.DataFrame({"z": np.arange(6)}, index=index)
+
+        expected = Dataset(
+            {"z": (("x", "y"), [[0, 1, 2], [3, 4, 5]])},
+            coords={"x": ["a", "b"], "y": [1, 2, 3]},
+        )
+        actual = Dataset.from_dataframe(df)
+        assert_identical(actual, expected)
+
+        df2 = df.iloc[[3, 2, 1, 0, 4, 5], :]
+        actual = Dataset.from_dataframe(df2)
+        assert_identical(actual, expected)
+
+        df3 = df.iloc[:4, :]
+        expected3 = Dataset(
+            {"z": (("x", "y"), [[0, 1, 2], [3, np.nan, np.nan]])},
+            coords={"x": ["a", "b"], "y": [1, 2, 3]},
+        )
+        actual = Dataset.from_dataframe(df3)
+        assert_identical(actual, expected3)
+
+        df_nonunique = df.iloc[[0, 0], :]
+        with raises_regex(ValueError, "non-unique MultiIndex"):
+            Dataset.from_dataframe(df_nonunique)
+
+    def test_from_dataframe_unsorted_levels(self):
+        # regression test for GH-4186
+        index = pd.MultiIndex(
+            levels=[["b", "a"], ["foo"]], codes=[[0, 1], [0, 0]], names=["lev1", "lev2"]
+        )
+        df = pd.DataFrame({"c1": [0, 2], "c2": [1, 3]}, index=index)
+        expected = Dataset(
+            {
+                "c1": (("lev1", "lev2"), [[0], [2]]),
+                "c2": (("lev1", "lev2"), [[1], [3]]),
+            },
+            coords={"lev1": ["b", "a"], "lev2": ["foo"]},
+        )
+        actual = Dataset.from_dataframe(df)
+        assert_identical(actual, expected)
 
     def test_from_dataframe_non_unique_columns(self):
         # regression test for GH449
@@ -4597,6 +4675,9 @@ class TestDataset:
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_strings(self):
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
@@ -4668,6 +4749,9 @@ class TestDataset:
         for k, v in ds.data_vars.items():
             assert v.attrs == data[k].attrs
 
+    @pytest.mark.filterwarnings(
+        "ignore:Once the behaviour of DataArray:DeprecationWarning"
+    )
     def test_reduce_argmin(self):
         # regression test for #205
         ds = Dataset({"a": ("x", [0, 1])})
@@ -5824,8 +5908,6 @@ def test_rolling_keep_attrs():
 
 def test_rolling_properties(ds):
     # catching invalid args
-    with pytest.raises(ValueError, match="exactly one dim/window should"):
-        ds.rolling(time=7, x=2)
     with pytest.raises(ValueError, match="window must be > 0"):
         ds.rolling(time=-2)
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
@@ -5948,6 +6030,66 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     # Make sure the dimension order is restored
     for key, src_var in ds.data_vars.items():
         assert src_var.dims == actual[key].dims
+
+
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("min_periods", (None, 1))
+@pytest.mark.parametrize("name", ("sum", "max"))
+@pytest.mark.parametrize("dask", (True, False))
+def test_ndrolling_reduce(ds, center, min_periods, name, dask):
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
+    rolling_obj = ds.rolling(time=4, x=3, center=center, min_periods=min_periods)
+
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(
+        getattr(
+            ds.rolling(time=4, center=center, min_periods=min_periods), name
+        )().rolling(x=3, center=center, min_periods=min_periods),
+        name,
+    )()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+    # Do it in the opposite order
+    expected = getattr(
+        getattr(
+            ds.rolling(x=3, center=center, min_periods=min_periods), name
+        )().rolling(time=4, center=center, min_periods=min_periods),
+        name,
+    )()
+
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+
+@pytest.mark.parametrize("center", (True, False, (True, False)))
+@pytest.mark.parametrize("fill_value", (np.nan, 0.0))
+@pytest.mark.parametrize("dask", (True, False))
+def test_ndrolling_construct(center, fill_value, dask):
+    da = DataArray(
+        np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
+        dims=["x", "y", "z"],
+        coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
+    )
+    ds = xr.Dataset({"da": da})
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4})
+
+    actual = ds.rolling(x=3, z=2, center=center).construct(
+        x="x1", z="z1", fill_value=fill_value
+    )
+    if not isinstance(center, tuple):
+        center = (center, center)
+    expected = (
+        ds.rolling(x=3, center=center[0])
+        .construct(x="x1", fill_value=fill_value)
+        .rolling(z=2, center=center[1])
+        .construct(z="z1", fill_value=fill_value)
+    )
+    assert_allclose(actual, expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

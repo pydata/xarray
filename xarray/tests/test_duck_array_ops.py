@@ -33,6 +33,7 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_dask,
+    has_scipy,
     raises_regex,
     requires_cftime,
     requires_dask,
@@ -329,6 +330,40 @@ def test_cftime_datetime_mean():
 
     da_2d = DataArray(times.values.reshape(2, 2))
     result = da_2d.mean()
+    assert_equal(result, expected)
+
+
+@requires_cftime
+def test_cftime_datetime_mean_long_time_period():
+    import cftime
+
+    times = np.array(
+        [
+            [
+                cftime.DatetimeNoLeap(400, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(760, 12, 31, 0, 0, 0, 0),
+            ],
+        ]
+    )
+
+    da = DataArray(times, dims=["time", "d2"])
+    result = da.mean("d2")
+    expected = DataArray(
+        [
+            cftime.DatetimeNoLeap(460, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(580, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(700, 12, 31, 0, 0, 0, 0),
+        ],
+        dims=["time"],
+    )
     assert_equal(result, expected)
 
 
@@ -767,8 +802,8 @@ def test_timedelta_to_numeric(td):
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("skipna", [True, False])
 def test_least_squares(use_dask, skipna):
-    if use_dask and not has_dask:
-        pytest.skip("requires dask")
+    if use_dask and (not has_dask or not has_scipy):
+        pytest.skip("requires dask and scipy")
     lhs = np.array([[1, 2], [1, 2], [3, 2]])
     rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
 

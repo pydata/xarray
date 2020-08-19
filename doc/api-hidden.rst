@@ -41,8 +41,6 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
-   core.rolling.DatasetCoarsen.argmax
-   core.rolling.DatasetCoarsen.argmin
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
@@ -68,8 +66,6 @@
    core.groupby.DatasetGroupBy.where
    core.groupby.DatasetGroupBy.all
    core.groupby.DatasetGroupBy.any
-   core.groupby.DatasetGroupBy.argmax
-   core.groupby.DatasetGroupBy.argmin
    core.groupby.DatasetGroupBy.count
    core.groupby.DatasetGroupBy.max
    core.groupby.DatasetGroupBy.mean
@@ -85,8 +81,6 @@
    core.resample.DatasetResample.all
    core.resample.DatasetResample.any
    core.resample.DatasetResample.apply
-   core.resample.DatasetResample.argmax
-   core.resample.DatasetResample.argmin
    core.resample.DatasetResample.assign
    core.resample.DatasetResample.assign_coords
    core.resample.DatasetResample.bfill
@@ -110,8 +104,6 @@
    core.resample.DatasetResample.dims
    core.resample.DatasetResample.groups
 
-   core.rolling.DatasetRolling.argmax
-   core.rolling.DatasetRolling.argmin
    core.rolling.DatasetRolling.count
    core.rolling.DatasetRolling.max
    core.rolling.DatasetRolling.mean
@@ -185,8 +177,6 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
-   core.rolling.DataArrayCoarsen.argmax
-   core.rolling.DataArrayCoarsen.argmin
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean
@@ -211,8 +201,6 @@
    core.groupby.DataArrayGroupBy.where
    core.groupby.DataArrayGroupBy.all
    core.groupby.DataArrayGroupBy.any
-   core.groupby.DataArrayGroupBy.argmax
-   core.groupby.DataArrayGroupBy.argmin
    core.groupby.DataArrayGroupBy.count
    core.groupby.DataArrayGroupBy.max
    core.groupby.DataArrayGroupBy.mean
@@ -228,8 +216,6 @@
    core.resample.DataArrayResample.all
    core.resample.DataArrayResample.any
    core.resample.DataArrayResample.apply
-   core.resample.DataArrayResample.argmax
-   core.resample.DataArrayResample.argmin
    core.resample.DataArrayResample.assign_coords
    core.resample.DataArrayResample.bfill
    core.resample.DataArrayResample.count
@@ -252,8 +238,6 @@
    core.resample.DataArrayResample.dims
    core.resample.DataArrayResample.groups
 
-   core.rolling.DataArrayRolling.argmax
-   core.rolling.DataArrayRolling.argmin
    core.rolling.DataArrayRolling.count
    core.rolling.DataArrayRolling.max
    core.rolling.DataArrayRolling.mean
@@ -423,8 +407,6 @@
 
    IndexVariable.all
    IndexVariable.any
-   IndexVariable.argmax
-   IndexVariable.argmin
    IndexVariable.argsort
    IndexVariable.astype
    IndexVariable.broadcast_equals
@@ -564,8 +546,6 @@
    CFTimeIndex.all
    CFTimeIndex.any
    CFTimeIndex.append
-   CFTimeIndex.argmax
-   CFTimeIndex.argmin
    CFTimeIndex.argsort
    CFTimeIndex.asof
    CFTimeIndex.asof_locs
@@ -685,13 +665,10 @@
    backends.NetCDF4DataStore.encode
    backends.NetCDF4DataStore.encode_attribute
    backends.NetCDF4DataStore.encode_variable
-   backends.NetCDF4DataStore.get
    backends.NetCDF4DataStore.get_attrs
    backends.NetCDF4DataStore.get_dimensions
    backends.NetCDF4DataStore.get_encoding
    backends.NetCDF4DataStore.get_variables
-   backends.NetCDF4DataStore.items
-   backends.NetCDF4DataStore.keys
    backends.NetCDF4DataStore.load
    backends.NetCDF4DataStore.open
    backends.NetCDF4DataStore.open_store_variable
@@ -705,27 +682,20 @@
    backends.NetCDF4DataStore.store
    backends.NetCDF4DataStore.store_dataset
    backends.NetCDF4DataStore.sync
-   backends.NetCDF4DataStore.values
-   backends.NetCDF4DataStore.attrs
    backends.NetCDF4DataStore.autoclose
-   backends.NetCDF4DataStore.dimensions
    backends.NetCDF4DataStore.ds
    backends.NetCDF4DataStore.format
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
-   backends.NetCDF4DataStore.variables
 
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
    backends.H5NetCDFStore.encode_attribute
    backends.H5NetCDFStore.encode_variable
-   backends.H5NetCDFStore.get
    backends.H5NetCDFStore.get_attrs
    backends.H5NetCDFStore.get_dimensions
    backends.H5NetCDFStore.get_encoding
    backends.H5NetCDFStore.get_variables
-   backends.H5NetCDFStore.items
-   backends.H5NetCDFStore.keys
    backends.H5NetCDFStore.load
    backends.H5NetCDFStore.open_store_variable
    backends.H5NetCDFStore.prepare_variable
@@ -738,39 +708,25 @@
    backends.H5NetCDFStore.store
    backends.H5NetCDFStore.store_dataset
    backends.H5NetCDFStore.sync
-   backends.H5NetCDFStore.values
-   backends.H5NetCDFStore.attrs
-   backends.H5NetCDFStore.dimensions
    backends.H5NetCDFStore.ds
-   backends.H5NetCDFStore.variables
 
    backends.PydapDataStore.close
-   backends.PydapDataStore.get
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions
    backends.PydapDataStore.get_encoding
    backends.PydapDataStore.get_variables
-   backends.PydapDataStore.items
-   backends.PydapDataStore.keys
    backends.PydapDataStore.load
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
-   backends.PydapDataStore.values
-   backends.PydapDataStore.attrs
-   backends.PydapDataStore.dimensions
-   backends.PydapDataStore.variables
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
    backends.ScipyDataStore.encode_attribute
    backends.ScipyDataStore.encode_variable
-   backends.ScipyDataStore.get
    backends.ScipyDataStore.get_attrs
    backends.ScipyDataStore.get_dimensions
    backends.ScipyDataStore.get_encoding
    backends.ScipyDataStore.get_variables
-   backends.ScipyDataStore.items
-   backends.ScipyDataStore.keys
    backends.ScipyDataStore.load
    backends.ScipyDataStore.open_store_variable
    backends.ScipyDataStore.prepare_variable
@@ -783,11 +739,7 @@
    backends.ScipyDataStore.store
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
-   backends.ScipyDataStore.values
-   backends.ScipyDataStore.attrs
-   backends.ScipyDataStore.dimensions
    backends.ScipyDataStore.ds
-   backends.ScipyDataStore.variables
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context

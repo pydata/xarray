@@ -1588,7 +1588,8 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        with raises_regex(ValueError, "dimension 'x'"):
+        # this checks for ValueError in dask.array.apply_gufunc
+        with raises_regex(ValueError, "consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -1657,7 +1658,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.all(dim="x"), Variable([], False))
 
         v = Variable("t", pd.date_range("2000-01-01", periods=3))
-        assert v.argmax(skipna=True) == 2
+        assert v.argmax(skipna=True, dim="t") == 2
 
         assert_identical(v.max(), Variable([], pd.Timestamp("2000-01-03")))
 

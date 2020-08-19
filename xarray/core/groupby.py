@@ -64,8 +64,8 @@ def unique_value_groups(ar, sort=True):
 
 
 def _dummy_copy(xarray_obj):
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     if isinstance(xarray_obj, Dataset):
         res = Dataset(
@@ -310,7 +310,8 @@ class GroupBy(SupportsArithmetic):
             if not hashable(group):
                 raise TypeError(
                     "`group` must be an xarray.DataArray or the "
-                    "name of an xarray variable or dimension"
+                    "name of an xarray variable or dimension."
+                    f"Received {group!r} instead."
                 )
             group = obj[group]
             if len(group) == 0:

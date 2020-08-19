@@ -406,9 +406,12 @@ def _assert_valid_xy(darray, xy, name):
         raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
 
-def get_axis(figsize, size, aspect, ax):
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
+def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
         if ax is not None:
@@ -427,8 +430,11 @@ def get_axis(figsize, size, aspect, ax):
     elif aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
+    if kwargs and ax is not None:
+        raise ValueError("cannot use subplot_kws with existing ax")
+
     if ax is None:
-        ax = plt.gca()
+        ax = plt.gca(**kwargs)
 
     return ax
 

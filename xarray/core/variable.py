@@ -6,7 +6,17 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from distutils.version import LooseVersion
-from typing import Any, Dict, Hashable, Mapping, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -23,7 +33,7 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
+from .pycompat import cupy_array_type, dask_array_type, integer_types
 from .utils import (
     OrderedSet,
     _default,
@@ -35,9 +45,8 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.ExplicitlyIndexed,
-    pd.Index,
-) + dask_array_type
+    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
@@ -247,7 +256,10 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = np.asarray(data)
+    if isinstance(data, cupy_array_type):
+        data = data.get()
+    else:
+        data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -1044,7 +1056,7 @@ class Variable(
         missing_dims : {"raise", "warn", "ignore"}, default "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
@@ -1871,11 +1883,14 @@ class Variable(
         Parameters
         ----------
         dim: str
-            Dimension over which to compute rolling_window
+            Dimension over which to compute rolling_window.
+            For nd-rolling, should be list of dimensions.
         window: int
             Window size of the rolling
+            For nd-rolling, should be list of integers.
         window_dim: str
             New name of the window dimension.
+            For nd-rolling, should be list of integers.
         center: boolean. default False.
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -1909,15 +1924,21 @@ class Variable(
             dtype = self.dtype
             array = self.data
 
-        new_dims = self.dims + (window_dim,)
+        if isinstance(dim, list):
+            assert len(dim) == len(window)
+            assert len(dim) == len(window_dim)
+            assert len(dim) == len(center)
+        else:
+            dim = [dim]
+            window = [window]
+            window_dim = [window_dim]
+            center = [center]
+        axis = [self.get_axis_num(d) for d in dim]
+        new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
             duck_array_ops.rolling_window(
-                array,
-                axis=self.get_axis_num(dim),
-                window=window,
-                center=center,
-                fill_value=fill_value,
+                array, axis=axis, window=window, center=center, fill_value=fill_value
             ),
         )
 
@@ -2068,6 +2089,166 @@ class Variable(
             self.data, offset, datetime_unit, dtype
         )
         return type(self)(self.dims, numeric_array, self._attrs)
+
+    def _unravel_argminmax(
+        self,
+        argminmax: str,
+        dim: Union[Hashable, Sequence[Hashable], None],
+        axis: Union[int, None],
+        keep_attrs: Optional[bool],
+        skipna: Optional[bool],
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Apply argmin or argmax over one or more dimensions, returning the result as a
+        dict of DataArray that can be passed directly to isel.
+        """
+        if dim is None and axis is None:
+            warnings.warn(
+                "Behaviour of argmin/argmax with neither dim nor axis argument will "
+                "change to return a dict of indices of each dimension. To get a "
+                "single, flat index, please use np.argmin(da.data) or "
+                "np.argmax(da.data) instead of da.argmin() or da.argmax().",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+
+        argminmax_func = getattr(duck_array_ops, argminmax)
+
+        if dim is ...:
+            # In future, should do this also when (dim is None and axis is None)
+            dim = self.dims
+        if (
+            dim is None
+            or axis is not None
+            or not isinstance(dim, Sequence)
+            or isinstance(dim, str)
+        ):
+            # Return int index if single dimension is passed, and is not part of a
+            # sequence
+            return self.reduce(
+                argminmax_func, dim=dim, axis=axis, keep_attrs=keep_attrs, skipna=skipna
+            )
+
+        # Get a name for the new dimension that does not conflict with any existing
+        # dimension
+        newdimname = "_unravel_argminmax_dim_0"
+        count = 1
+        while newdimname in self.dims:
+            newdimname = "_unravel_argminmax_dim_{}".format(count)
+            count += 1
+
+        stacked = self.stack({newdimname: dim})
+
+        result_dims = stacked.dims[:-1]
+        reduce_shape = tuple(self.sizes[d] for d in dim)
+
+        result_flat_indices = stacked.reduce(argminmax_func, axis=-1, skipna=skipna)
+
+        result_unravelled_indices = duck_array_ops.unravel_index(
+            result_flat_indices.data, reduce_shape
+        )
+
+        result = {
+            d: Variable(dims=result_dims, data=i)
+            for d, i in zip(dim, result_unravelled_indices)
+        }
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            for v in result.values():
+                v.attrs = self.attrs
+
+        return result
+
+    def argmin(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Index or indices of the minimum of the Variable over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of Variables,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a Variable with dtype int.
+
+        If there are multiple minima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the minimum. By default, finds minimum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Variable or dict of Variable
+
+        See also
+        --------
+        DataArray.argmin, DataArray.idxmin
+        """
+        return self._unravel_argminmax("argmin", dim, axis, keep_attrs, skipna)
+
+    def argmax(
+        self,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
+        axis: int = None,
+        keep_attrs: bool = None,
+        skipna: bool = None,
+    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        """Index or indices of the maximum of the Variable over one or more dimensions.
+        If a sequence is passed to 'dim', then result returned as dict of Variables,
+        which can be passed directly to isel(). If a single str is passed to 'dim' then
+        returns a Variable with dtype int.
+
+        If there are multiple maxima, the indices of the first one found will be
+        returned.
+
+        Parameters
+        ----------
+        dim : hashable, sequence of hashable or ..., optional
+            The dimensions over which to find the maximum. By default, finds maximum over
+            all dimensions - for now returning an int for backward compatibility, but
+            this is deprecated, in future will return a dict with indices for all
+            dimensions; to return a dict with all dimensions now, pass '...'.
+        axis : int, optional
+            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
+            can be supplied.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+
+        Returns
+        -------
+        result : Variable or dict of Variable
+
+        See also
+        --------
+        DataArray.argmax, DataArray.idxmax
+        """
+        return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
 
 ops.inject_all_ops_and_reduce_methods(Variable)

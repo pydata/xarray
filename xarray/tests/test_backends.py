@@ -3207,7 +3207,7 @@ class TestDask(DatasetIOBase):
 @pytest.mark.filterwarnings("ignore:The binary mode of fromstring is deprecated")
 class TestPydap:
     def convert_to_pydap_dataset(self, original):
-        from pydap.model import GridType, BaseType, DatasetType
+        from pydap.model import BaseType, DatasetType, GridType
 
         ds = DatasetType("bears", **original.attrs)
         for key, var in original.data_vars.items():
@@ -3747,8 +3747,9 @@ class TestRasterio:
 
     def test_notransform(self):
         # regression test for https://github.com/pydata/xarray/issues/1686
-        import rasterio
         import warnings
+
+        import rasterio
 
         # Create a geotiff file
         with warnings.catch_warnings():
@@ -4097,8 +4098,8 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
         import rasterio
-        from rasterio.warp import calculate_default_transform
         from affine import Affine
+        from rasterio.warp import calculate_default_transform
 
         with create_tmp_geotiff() as (tmp_file, expected):
             with rasterio.open(tmp_file) as src:

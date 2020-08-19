@@ -1,6 +1,7 @@
 import functools
 import operator
 import pickle
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,8 @@ from xarray.core.computation import (
 )
 
 from . import has_dask, raises_regex, requires_dask
+
+dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
@@ -255,6 +258,21 @@ def test_apply_two_outputs():
     out0, out1 = twice(dataset.groupby("x"))
     assert_identical(out0, dataset)
     assert_identical(out1, dataset)
+
+
+@requires_dask
+def test_apply_dask_parallelized_two_outputs():
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+
+    def twice(obj):
+        def func(x):
+            return (x, x)
+
+        return apply_ufunc(func, obj, output_core_dims=[[], []], dask="parallelized")
+
+    out0, out1 = twice(data_array.chunk({"x": 1}))
+    assert_identical(data_array, out0)
+    assert_identical(data_array, out1)
 
 
 def test_apply_input_core_dimension():
@@ -683,7 +701,8 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    check(data_array, 0 * data_array.compute())
+    with raises_regex(ValueError, "with different chunksize present"):
+        check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
@@ -693,29 +712,11 @@ def test_apply_dask_parallelized_errors():
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=("x", "y"))
 
-    with pytest.raises(NotImplementedError):
-        apply_ufunc(
-            identity, data_array, output_core_dims=[["z"], ["z"]], dask="parallelized"
-        )
-    with raises_regex(ValueError, "dtypes"):
-        apply_ufunc(identity, data_array, dask="parallelized")
-    with raises_regex(TypeError, "list"):
-        apply_ufunc(identity, data_array, dask="parallelized", output_dtypes=float)
-    with raises_regex(ValueError, "must have the same length"):
-        apply_ufunc(
-            identity, data_array, dask="parallelized", output_dtypes=[float, float]
-        )
-    with raises_regex(ValueError, "output_sizes"):
-        apply_ufunc(
-            identity,
-            data_array,
-            output_core_dims=[["z"]],
-            output_dtypes=[float],
-            dask="parallelized",
-        )
+    # from apply_array_ufunc
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
+    # formerly from _apply_blockwise, now from dask.array.apply_gufunc
     with raises_regex(ValueError, "consists of multiple chunks"):
         apply_ufunc(
             identity,
@@ -817,6 +818,7 @@ def test_vectorize():
 
 @requires_dask
 def test_vectorize_dask():
+    # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
     actual = apply_ufunc(
@@ -830,45 +832,79 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-def pandas_median_add(x, y):
-    # function which can consume input of unequal length
-    return pd.Series(x).median() + pd.Series(y).median()
-
-
-def test_vectorize_exclude_dims():
-    # GH 3890
-    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
-    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
-    expected = xr.DataArray([3, 5], dims=["x"])
-    actual = apply_ufunc(
-        pandas_median_add,
-        data_array_a,
-        data_array_b,
-        input_core_dims=[["y"], ["y"]],
-        vectorize=True,
-        exclude_dims=set("y"),
-    )
-    assert_identical(expected, actual)
-
-
-@pytest.mark.xfail(reason="Should work after GH: 4060")
 @requires_dask
-def test_vectorize_exclude_dims_dask():
-    # GH 3890
-    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
-    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
-    expected = xr.DataArray([3, 5], dims=["x"])
+def test_vectorize_dask_dtype():
+    # ensure output_dtypes is preserved with vectorize=True
+    # GH4015
+
+    # integer
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
     actual = apply_ufunc(
-        pandas_median_add,
-        data_array_a.chunk({"x": 1}),
-        data_array_b.chunk({"x": 1}),
-        input_core_dims=[["y"], ["y"]],
-        exclude_dims=set("y"),
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
         vectorize=True,
         dask="parallelized",
-        output_dtypes=[float],
+        output_dtypes=[int],
     )
     assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+    # complex
+    data_array = xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y"))
+    expected = data_array.copy()
+    actual = apply_ufunc(
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[complex],
+    )
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+@requires_dask
+@pytest.mark.parametrize(
+    "data_array",
+    [
+        xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y")),
+        xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y")),
+    ],
+)
+def test_vectorize_dask_dtype_without_output_dtypes(data_array):
+    # ensure output_dtypes is preserved with vectorize=True
+    # GH4015
+
+    expected = data_array.copy()
+    actual = apply_ufunc(
+        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
+    )
+
+    assert_identical(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
+@requires_dask
+def test_vectorize_dask_dtype_meta():
+    # meta dtype takes precedence
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    expected = xr.DataArray([1, 2], dims=["x"])
+
+    actual = apply_ufunc(
+        pandas_median,
+        data_array.chunk({"x": 1}),
+        input_core_dims=[["y"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[int],
+        meta=np.ndarray((0, 0), dtype=np.float),
+    )
+
+    assert_identical(expected, actual)
+    assert np.float == actual.dtype
 
 
 with raises_regex(TypeError, "Only xr.DataArray is supported"):
@@ -1029,6 +1065,7 @@ def test_autocov(da_a, dim):
 @requires_dask
 def test_vectorize_dask_new_output_dims():
     # regression test for GH3574
+    # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     func = lambda x: x[np.newaxis, ...]
     expected = data_array.expand_dims("z")
@@ -1042,6 +1079,29 @@ def test_vectorize_dask_new_output_dims():
         output_sizes={"z": 1},
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
+
+    with raises_regex(ValueError, "dimension 'z1' in 'output_sizes' must correspond"):
+        apply_ufunc(
+            func,
+            data_array.chunk({"x": 1}),
+            output_core_dims=[["z"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[float],
+            output_sizes={"z1": 1},
+        )
+
+    with raises_regex(
+        ValueError, "dimension 'z' in 'output_core_dims' needs corresponding"
+    ):
+        apply_ufunc(
+            func,
+            data_array.chunk({"x": 1}),
+            output_core_dims=[["z"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[float],
+        )
 
 
 def test_output_wrong_number():
@@ -1155,7 +1215,6 @@ def test_dot(use_dask):
         da_a = da_a.chunk({"a": 3})
         da_b = da_b.chunk({"a": 3})
         da_c = da_c.chunk({"c": 3})
-
     actual = xr.dot(da_a, da_b, dims=["a", "b"])
     assert actual.dims == ("c",)
     assert (actual.data == np.einsum("ij,ijk->k", a, b)).all()
