@@ -42,7 +42,7 @@ NUM_BINARY_OPS = [
 NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ["astype", "argsort", "clip", "conj", "conjugate"]
+NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
 PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]

@@ -5634,6 +5634,15 @@ class TestDataset:
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
 
+    def test_astype_attrs(self):
+        data = create_test_data(seed=123)
+        data.attrs["foo"] = "bar"
+
+        assert data.attrs == data.astype(float).attrs
+        assert data.var1.attrs == data.astype(float).var1.attrs
+        assert not data.astype(float, keep_attrs=False).attrs
+        assert not data.astype(float, keep_attrs=False).var1.attrs
+
 
 # Py.test tests
 
