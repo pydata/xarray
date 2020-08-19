@@ -883,7 +883,6 @@ def test_apply_ufunc_check_meta_coherence():
     ac = a.chunk(2)
     sparse_meta = ac.data._meta
 
-    # if dask computed meta, it would be np.ndarray
     result = xr.apply_ufunc(lambda x: x, ac, dask="parallelized").data._meta
 
     assert_sparse_equal(result, sparse_meta)
