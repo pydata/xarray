@@ -824,8 +824,7 @@ Delete your merged branch (optional)
 ------------------------------------
 
 Once your feature branch is accepted into upstream, you'll probably want to get rid of
-the branch. First, merge upstream master into your branch so git knows it is safe to
-delete your branch::
+the branch. First, update your ``master`` branch to check that the merge was successful::
 
     git fetch upstream
     git checkout master
@@ -833,12 +832,14 @@ delete your branch::
 
 Then you can do::
 
-    git branch -d shiny-new-feature
+    git branch -D shiny-new-feature
 
-Make sure you use a lower-case ``-d``, or else git won't warn you if your feature
-branch has not actually been merged.
+You need to use a upper-case ``-D`` because the branch was squashed into a
+single commit before merging. Be careful with this because ``git`` won't warn
+you if you accidentally delete a unmerged branch.
 
-The branch will still exist on GitHub, so to delete it there do::
+If you didn't delete it using GitHub's interface, the branch will still exist on
+GitHub. To delete it there do::
 
     git push origin --delete shiny-new-feature
 
