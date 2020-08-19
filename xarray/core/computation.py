@@ -58,18 +58,14 @@ class _UFuncSignature:
     __slots__ = (
         "input_core_dims",
         "output_core_dims",
-        "exclude_dims",
         "_all_input_core_dims",
         "_all_output_core_dims",
         "_all_core_dims",
     )
 
-    def __init__(
-        self, input_core_dims, output_core_dims=((),), exclude_dims=frozenset()
-    ):
+    def __init__(self, input_core_dims, output_core_dims=((),)):
         self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
         self.output_core_dims = tuple(tuple(a) for a in output_core_dims)
-        self.exclude_dims = exclude_dims
         self._all_input_core_dims = None
         self._all_output_core_dims = None
         self._all_core_dims = None
@@ -115,7 +111,6 @@ class _UFuncSignature:
             return (
                 self.input_core_dims == other.input_core_dims
                 and self.output_core_dims == other.output_core_dims
-                and self.exclude_dims == other.exclude_dims
             )
         except AttributeError:
             return False
@@ -124,36 +119,18 @@ class _UFuncSignature:
         return not self == other
 
     def __repr__(self):
-        return "{}({!r}, {!r}, {!r})".format(
+        return "{}({!r}, {!r})".format(
             type(self).__name__,
             list(self.input_core_dims),
             list(self.output_core_dims),
-            self.exclude_dims,
         )
 
     def __str__(self):
-        input_core_dims = self.input_core_dims
-
-        # enumerate to make the exclude_dims unique
-        if self.exclude_dims:
-            counter = Counter()
-
-            def _enumerate(dim):
-                if dim in self.exclude_dims:
-                    n = counter[dim]
-                    counter.update([dim])
-                    dim = f"{dim}_{n}"
-                return dim
-
-            input_core_dims = [
-                [_enumerate(dim) for dim in arg] for arg in input_core_dims
-            ]
-
-        lhs = ",".join("({})".format(",".join(dims)) for dims in input_core_dims)
+        lhs = ",".join("({})".format(",".join(dims)) for dims in self.input_core_dims)
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
-    def to_gufunc_string(self):
+    def to_gufunc_string(self, exclude_dims=frozenset()):
         """Create an equivalent signature string for a NumPy gufunc.
 
         Unlike __str__, handles dimensions that don't map to Python
@@ -167,9 +144,26 @@ class _UFuncSignature:
             [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
-        exclude_dims = frozenset(["dim%d" % dims_map[dim] for dim in self.exclude_dims])
 
-        alt_signature = type(self)(input_core_dims, output_core_dims, exclude_dims)
+        # enumerate input_core_dims contained in exclude_dims to make them unique
+        if exclude_dims:
+
+            exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
+
+            counter = Counter()
+
+            def _enumerate(dim):
+                if dim in exclude_dims:
+                    n = counter[dim]
+                    counter.update([dim])
+                    dim = f"{dim}_{n}"
+                return dim
+
+            input_core_dims = [
+                [_enumerate(dim) for dim in arg] for arg in input_core_dims
+            ]
+
+        alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
 
 
@@ -572,10 +566,12 @@ def broadcast_compat_data(
     return data
 
 
-def _vectorize(func, signature, output_dtypes):
+def _vectorize(func, signature, output_dtypes, exclude_dims):
     if signature.all_core_dims:
         func = np.vectorize(
-            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+            func,
+            otypes=output_dtypes,
+            signature=signature.to_gufunc_string(exclude_dims),
         )
     else:
         func = np.vectorize(func, otypes=output_dtypes)
@@ -650,7 +646,7 @@ def apply_variable_ufunc(
 
                 res = da.apply_gufunc(
                     numpy_func,
-                    signature.to_gufunc_string(),
+                    signature.to_gufunc_string(exclude_dims),
                     *arrays,
                     vectorize=vectorize,
                     output_dtypes=output_dtypes,
@@ -676,7 +672,9 @@ def apply_variable_ufunc(
             )
     else:
         if vectorize:
-            func = _vectorize(func, signature, output_dtypes=output_dtypes)
+            func = _vectorize(
+                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+            )
 
     result_data = func(*input_data)
 
@@ -996,7 +994,7 @@ def apply_ufunc(
     if kwargs is None:
         kwargs = {}
 
-    signature = _UFuncSignature(input_core_dims, output_core_dims, exclude_dims)
+    signature = _UFuncSignature(input_core_dims, output_core_dims)
 
     if exclude_dims:
         if not isinstance(exclude_dims, set):
