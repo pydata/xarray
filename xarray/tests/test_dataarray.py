@@ -1874,6 +1874,19 @@ class TestDataArray:
         bar = Variable(["x", "y"], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
+    def test_astype_attrs(self):
+        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+            v.attrs["foo"] = "bar"
+            assert v.attrs == v.astype(float).attrs
+            assert not v.astype(float, keep_attrs=False).attrs
+
+    def test_astype_dtype(self):
+        original = DataArray([-1, 1, 2, 3, 1000])
+        converted = original.astype(float)
+        assert_array_equal(original, converted)
+        assert np.issubdtype(original.dtype, np.integer)
+        assert np.issubdtype(converted.dtype, np.floating)
+
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
         x[x < 0] = np.nan
