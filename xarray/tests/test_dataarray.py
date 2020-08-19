@@ -3476,14 +3476,17 @@ class TestDataArray:
 
     def test_to_dataframe(self):
         # regression test for #260
-        arr = DataArray(
-            np.random.randn(3, 4), [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo"
-        )
+        arr_np = np.random.randn(3, 4)
+
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
         expected = arr.to_series()
         actual = arr.to_dataframe()["foo"]
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.name, actual.name)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        actual = arr.to_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
 
         # regression test for coords with different dimensions
         arr.coords["C"] = ("B", [-1, -2, -3])
@@ -3494,6 +3497,9 @@ class TestDataArray:
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.columns.values, actual.columns.values)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dataframe(dim_order=["B", "A", "C"])
 
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):

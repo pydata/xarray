@@ -90,7 +90,7 @@ class StringAccessor:
 
     def len(self):
         """
-        Compute the length of each element in the array.
+        Compute the length of each string in the array.
 
         Returns
         -------
@@ -104,9 +104,9 @@ class StringAccessor:
         else:
             return self.get(key)
 
-    def get(self, i):
+    def get(self, i, default=""):
         """
-        Extract element from indexable in each element in the array.
+        Extract character number `i` from each string in the array.
 
         Parameters
         ----------
@@ -118,14 +118,20 @@ class StringAccessor:
 
         Returns
         -------
-        items : array of objects
+        items : array of object
         """
-        obj = slice(-1, None) if i == -1 else slice(i, i + 1)
-        return self._apply(lambda x: x[obj])
+        s = slice(-1, None) if i == -1 else slice(i, i + 1)
+
+        def f(x):
+            item = x[s]
+
+            return item if item else default
+
+        return self._apply(f)
 
     def slice(self, start=None, stop=None, step=None):
         """
-        Slice substrings from each element in the array.
+        Slice substrings from each string in the array.
 
         Parameters
         ----------
@@ -338,15 +344,15 @@ class StringAccessor:
 
         This function is used to count the number of times a particular regex
         pattern is repeated in each of the string elements of the
-        :class:`~xarray.DatArray`.
+        :class:`~xarray.DataArray`.
 
         Parameters
         ----------
         pat : str
             Valid regular expression.
-        flags : int, default 0, meaning no flags
-            Flags for the `re` module. For a complete list, `see here
-            <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+        flags : int, default: 0
+            Flags for the `re` module. Use 0 for no flags. For a complete list,
+            `see here <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
 
         Returns
         -------
@@ -359,7 +365,7 @@ class StringAccessor:
 
     def startswith(self, pat):
         """
-        Test if the start of each string element matches a pattern.
+        Test if the start of each string in the array matches a pattern.
 
         Parameters
         ----------
@@ -378,7 +384,7 @@ class StringAccessor:
 
     def endswith(self, pat):
         """
-        Test if the end of each string element matches a pattern.
+        Test if the end of each string in the array matches a pattern.
 
         Parameters
         ----------
@@ -404,9 +410,9 @@ class StringAccessor:
         width : int
             Minimum width of resulting string; additional characters will be
             filled with character defined in `fillchar`.
-        side : {'left', 'right', 'both'}, default 'left'
+        side : {"left", "right", "both"}, default: "left"
             Side from which to fill resulting string.
-        fillchar : str, default ' '
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace.
 
         Returns
@@ -432,15 +438,14 @@ class StringAccessor:
 
     def center(self, width, fillchar=" "):
         """
-        Filling left and right side of strings in the array with an
-        additional character.
+        Pad left and right side of each string in the array.
 
         Parameters
         ----------
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns
@@ -451,15 +456,14 @@ class StringAccessor:
 
     def ljust(self, width, fillchar=" "):
         """
-        Filling right side of strings in the array with an additional
-        character.
+        Pad right side of each string in the array.
 
         Parameters
         ----------
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns
@@ -470,14 +474,14 @@ class StringAccessor:
 
     def rjust(self, width, fillchar=" "):
         """
-        Filling left side of strings in the array with an additional character.
+        Pad left side of each string in the array.
 
         Parameters
         ----------
         width : int
             Minimum width of resulting string; additional characters will be
             filled with ``fillchar``
-        fillchar : str
+        fillchar : str, default: " "
             Additional character for filling, default is whitespace
 
         Returns
@@ -488,7 +492,7 @@ class StringAccessor:
 
     def zfill(self, width):
         """
-        Pad strings in the array by prepending '0' characters.
+        Pad each string in the array by prepending '0' characters.
 
         Strings in the array are padded with '0' characters on the
         left of the string to reach a total string length  `width`. Strings
@@ -508,7 +512,7 @@ class StringAccessor:
 
     def contains(self, pat, case=True, flags=0, regex=True):
         """
-        Test if pattern or regex is contained within a string of the array.
+        Test if pattern or regex is contained within each string of the array.
 
         Return boolean array based on whether a given pattern or regex is
         contained within a string of the array.
@@ -517,11 +521,12 @@ class StringAccessor:
         ----------
         pat : str
             Character sequence or regular expression.
-        case : bool, default True
+        case : bool, default: True
             If True, case sensitive.
-        flags : int, default 0 (no flags)
+        flags : int, default: 0
             Flags to pass through to the re module, e.g. re.IGNORECASE.
-        regex : bool, default True
+            ``0`` means no flags.
+        regex : bool, default: True
             If True, assumes the pat is a regular expression.
             If False, treats the pat as a literal string.
 
@@ -554,16 +559,16 @@ class StringAccessor:
 
     def match(self, pat, case=True, flags=0):
         """
-        Determine if each string matches a regular expression.
+        Determine if each string in the array matches a regular expression.
 
         Parameters
         ----------
-        pat : string
+        pat : str
             Character sequence or regular expression
-        case : boolean, default True
+        case : bool, default: True
             If True, case sensitive
-        flags : int, default 0 (no flags)
-            re module flags, e.g. re.IGNORECASE
+        flags : int, default: 0
+            re module flags, e.g. re.IGNORECASE. ``0`` means no flags
 
         Returns
         -------
@@ -586,11 +591,11 @@ class StringAccessor:
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
-        side : {'left', 'right', 'both'}, default 'left'
+        side : {"left", "right", "both"}, default: "left"
             Side from which to strip.
 
         Returns
@@ -613,14 +618,14 @@ class StringAccessor:
 
     def lstrip(self, to_strip=None):
         """
-        Remove leading and trailing characters.
+        Remove leading characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the left side.
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
@@ -633,14 +638,14 @@ class StringAccessor:
 
     def rstrip(self, to_strip=None):
         """
-        Remove leading and trailing characters.
+        Remove trailing characters.
 
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the right side.
 
         Parameters
         ----------
-        to_strip : str or None, default None
+        to_strip : str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
             If None then whitespaces are removed.
@@ -653,8 +658,7 @@ class StringAccessor:
 
     def wrap(self, width, **kwargs):
         """
-        Wrap long strings in the array to be formatted in paragraphs with
-        length less than a given width.
+        Wrap long strings in the array in paragraphs with length less than `width`.
 
         This method has the same keyword parameters and defaults as
         :class:`textwrap.TextWrapper`.
@@ -663,38 +667,20 @@ class StringAccessor:
         ----------
         width : int
             Maximum line-width
-        expand_tabs : bool, optional
-            If true, tab characters will be expanded to spaces (default: True)
-        replace_whitespace : bool, optional
-            If true, each whitespace character (as defined by
-            string.whitespace) remaining after tab expansion will be replaced
-            by a single space (default: True)
-        drop_whitespace : bool, optional
-            If true, whitespace that, after wrapping, happens to end up at the
-            beginning or end of a line is dropped (default: True)
-        break_long_words : bool, optional
-            If true, then words longer than width will be broken in order to
-            ensure that no lines are longer than width. If it is false, long
-            words will not be broken, and some lines may be longer than width.
-            (default: True)
-        break_on_hyphens : bool, optional
-            If true, wrapping will occur preferably on whitespace and right
-            after hyphens in compound words, as it is customary in English. If
-            false, only whitespaces will be considered as potentially good
-            places for line breaks, but you need to set break_long_words to
-            false if you want truly insecable words. (default: True)
+        **kwargs
+            keyword arguments passed into :class:`textwrap.TextWrapper`.
 
         Returns
         -------
         wrapped : same type as values
         """
-        tw = textwrap.TextWrapper(width=width)
+        tw = textwrap.TextWrapper(width=width, **kwargs)
         f = lambda x: "\n".join(tw.wrap(x))
         return self._apply(f)
 
     def translate(self, table):
         """
-        Map all characters in the string through the given mapping table.
+        Map characters of each string through the given mapping table.
 
         Parameters
         ----------
@@ -742,12 +728,12 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default 'left'
+        side : {"left", "right"}, default: "left"
             Starting side for search.
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         sub = self._obj.dtype.type(sub)
 
@@ -782,7 +768,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         return self.find(sub, start=start, end=end, side="right")
 
@@ -801,12 +787,12 @@ class StringAccessor:
             Left edge index
         end : int
             Right edge index
-        side : {'left', 'right'}, default 'left'
+        side : {"left", "right"}, default: "left"
             Starting side for search.
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         sub = self._obj.dtype.type(sub)
 
@@ -842,7 +828,7 @@ class StringAccessor:
 
         Returns
         -------
-        found : array of integer values
+        found : array of int
         """
         return self.index(sub, start=start, end=end, side="right")
 
@@ -852,22 +838,22 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : string or compiled regex
+        pat : str or re.Pattern
             String can be a character sequence or regular expression.
-        repl : string or callable
+        repl : str or callable
             Replacement string or a callable. The callable is passed the regex
             match object and must return a replacement string to be used.
             See :func:`re.sub`.
-        n : int, default -1 (all)
-            Number of replacements to make from start
-        case : boolean, default None
+        n : int, default: -1
+            Number of replacements to make from start. Use ``-1`` to replace all.
+        case : bool, default: None
             - If True, case sensitive (the default if `pat` is a string)
             - Set to False for case insensitive
             - Cannot be set if `pat` is a compiled regex
-        flags : int, default 0 (no flags)
-            - re module flags, e.g. re.IGNORECASE
+        flags : int, default: 0
+            - re module flags, e.g. re.IGNORECASE. Use ``0`` for no flags.
             - Cannot be set if `pat` is a compiled regex
-        regex : boolean, default True
+        regex : bool, default: True
             - If True, assumes the passed-in pattern is a regular expression.
             - If False, treats the pattern as a literal string
             - Cannot be set to False if `pat` is a compiled regex or `repl` is
