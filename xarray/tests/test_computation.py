@@ -862,8 +862,10 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values)
-            ts2 = ts2.where(valid_values)
+            # While dropping isn't ideal here, numpy will return nan
+            # if any segment contains a NaN.
+            ts1 = ts1.where(valid_values, drop=True)
+            ts2 = ts2.where(valid_values, drop=True)
 
             return np.cov(
                 ts1.sel(a=a, x=x).data.flatten(),
@@ -885,8 +887,8 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values)
-            ts2 = ts2.where(valid_values)
+            ts1 = ts1.where(valid_values, drop=True)
+            ts2 = ts2.where(valid_values, drop=True)
 
             return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=ddof)[0, 1]
 
@@ -908,8 +910,8 @@ def test_corr(da_a, da_b, dim):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values)
-            ts2 = ts2.where(valid_values)
+            ts1 = ts1.where(valid_values, drop=True)
+            ts2 = ts2.where(valid_values, drop=True)
 
             return np.corrcoef(
                 ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
@@ -929,8 +931,8 @@ def test_corr(da_a, da_b, dim):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values)
-            ts2 = ts2.where(valid_values)
+            ts1 = ts1.where(valid_values, drop=True)
+            ts2 = ts2.where(valid_values, drop=True)
 
             return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
 
@@ -967,8 +969,9 @@ def test_autocov(da_a, dim):
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
     valid_values = da_a.notnull()
-    da_a = da_a.where(valid_values)
-    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
+    # Because we're using ddof=1, this requires > 1 value in each sample
+    da_a = da_a.where(valid_values.sum(dim=dim) > 1)
+    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=True, min_count=1)
     actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
     assert_allclose(actual, expected)
 
