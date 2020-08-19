@@ -45,6 +45,10 @@ New Features
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Add support for parsing datetime strings formatted following the default
+  string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
+  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
+  (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
   now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
   dimensions order (:issue:`4331`, :pull:`4333`).
@@ -57,6 +61,8 @@ Bug fixes
   `Sam Morley <https://github.com/inakleinbottle>`_.
 - Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
+  arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Documentation

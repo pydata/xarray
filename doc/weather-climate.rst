@@ -97,13 +97,24 @@ using the same formatting as the standard `datetime.strftime`_ convention .
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
-- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
-  datetime strings:
+- `Partial datetime string indexing`_:
 
 .. ipython:: python
 
     da.sel(time="0001")
     da.sel(time=slice("0001-05", "0002-02"))
+
+.. note::
+
+
+   For specifying full or partial datetime strings in cftime
+   indexing, xarray supports two versions of the `ISO 8601 standard`_, the
+   basic pattern (YYYYMMDDhhmmss) or the extended pattern
+   (YYYY-MM-DDThh:mm:ss), as well as the default cftime string format
+   (YYYY-MM-DD hh:mm:ss).  This is somewhat more restrictive than pandas;
+   in other words, some datetime strings that would be valid for a
+   :py:class:`pandas.DatetimeIndex` are not valid for an
+   :py:class:`~xarray.CFTimeIndex`.
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",

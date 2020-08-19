@@ -334,6 +334,40 @@ def test_cftime_datetime_mean():
 
 
 @requires_cftime
+def test_cftime_datetime_mean_long_time_period():
+    import cftime
+
+    times = np.array(
+        [
+            [
+                cftime.DatetimeNoLeap(400, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(760, 12, 31, 0, 0, 0, 0),
+            ],
+        ]
+    )
+
+    da = DataArray(times, dims=["time", "d2"])
+    result = da.mean("d2")
+    expected = DataArray(
+        [
+            cftime.DatetimeNoLeap(460, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(580, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(700, 12, 31, 0, 0, 0, 0),
+        ],
+        dims=["time"],
+    )
+    assert_equal(result, expected)
+
+
+@requires_cftime
 @requires_dask
 def test_cftime_datetime_mean_dask_error():
     times = cftime_range("2000", periods=4)
