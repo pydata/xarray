@@ -1042,7 +1042,7 @@ def test_covcorr_consistency(da_a, da_b, dim):
 @pytest.mark.parametrize(
     "da_a", arrays_w_tuples()[0],
 )
-@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
 def test_autocov(da_a, dim):
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
