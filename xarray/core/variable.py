@@ -1999,7 +1999,7 @@ class Variable(
         if not windows:
             return self.copy()
 
-        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        reshaped, axes = self._coarsen_reshape(windows, boundary, side, **kwargs)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
@@ -2007,7 +2007,7 @@ class Variable(
                 raise NameError(f"{name} is not a valid method.")
         return self._replace(data=func(reshaped, axis=axes, **kwargs))
 
-    def _coarsen_reshape(self, windows, boundary, side):
+    def _coarsen_reshape(self, windows, boundary, side, **kwargs):
         """
         Construct a reshaped-array for coarsen
         """
