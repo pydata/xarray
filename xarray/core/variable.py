@@ -2005,7 +2005,7 @@ class Variable(
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self._replace(data=func(reshaped, axis=axes, **kwargs))
+        return self.copy(data=func(reshaped, axis=axes, **kwargs))
 
     def _coarsen_reshape(self, windows, boundary, side, **kwargs):
         """
