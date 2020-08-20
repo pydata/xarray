@@ -942,12 +942,12 @@ def test_cov(da_a, da_b, dim, ddof):
 
             # While dropping isn't ideal here, numpy will return nan
             # if any segment contains a NaN.
-            ts1 = ts1.where(valid_values, drop=True)
-            ts2 = ts2.where(valid_values, drop=True)
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-            return np.cov(
-                ts1.sel(a=a, x=x).data.flatten(),
-                ts2.sel(a=a, x=x).data.flatten(),
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
                 ddof=ddof,
             )[0, 1]
 
@@ -965,10 +965,14 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values, drop=True)
-            ts2 = ts2.where(valid_values, drop=True)
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-            return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=ddof)[0, 1]
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+                ddof=ddof,
+            )[0, 1]
 
         expected = np_cov(da_a, da_b)
         actual = xr.cov(da_a, da_b, dim=dim, ddof=ddof)
@@ -988,11 +992,12 @@ def test_corr(da_a, da_b, dim):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values, drop=True)
-            ts2 = ts2.where(valid_values, drop=True)
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(
-                ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
             )[0, 1]
 
         expected = np.zeros((3, 4))
@@ -1009,10 +1014,13 @@ def test_corr(da_a, da_b, dim):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
-            ts1 = ts1.where(valid_values, drop=True)
-            ts2 = ts2.where(valid_values, drop=True)
+            ts1 = ts1.where(valid_values)
+            ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+            )[0, 1]
 
         expected = np_corr(da_a, da_b)
         actual = xr.corr(da_a, da_b, dim)
