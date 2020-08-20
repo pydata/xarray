@@ -41,9 +41,11 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
+    """" Returns either first object of type 'kind' or None if not found. """
     for arg in args:
         if isinstance(arg, kind):
             return arg
+    raise NotImplementedError("This should be unreachable.")
 
 
 class _UFuncSignature:
@@ -231,7 +233,7 @@ def apply_dataarray_vfunc(
 
     first_obj = _first_of_type(args, DataArray)
 
-    if keep_attrs and hasattr(first_obj, "name"):
+    if keep_attrs:
         name = first_obj.name
     else:
         name = result_name(args)
@@ -249,7 +251,7 @@ def apply_dataarray_vfunc(
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs and hasattr(first_obj, "attrs"):
+    if keep_attrs:
         if isinstance(out, tuple):
             for da in out:
                 # This is adding attrs in place
@@ -404,7 +406,7 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs and isinstance(first_obj, Dataset):
+    if keep_attrs:
         if isinstance(out, tuple):
             for ds in out:
                 # This is adding attrs in place
@@ -658,7 +660,7 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs and isinstance(first_obj, Variable):
+        if keep_attrs:
             var.attrs.update(first_obj.attrs)
         output.append(var)
 
