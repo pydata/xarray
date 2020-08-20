@@ -2015,6 +2015,17 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds1.isel(t=0)) as ds2:
                 assert_equal(ds2, original.isel(t=0))
 
+    @requires_dask
+    def test_chunk_encoding_with_partial_dask_chunks(self):
+        original = xr.Dataset(
+            {"x": xr.DataArray(np.random.random(size=(6, 8)), dims=("a", "b"))}
+        ).chunk({"a": 3})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"x": {"chunks": [3, 2]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):

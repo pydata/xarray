@@ -307,7 +307,7 @@ def open_dataset(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+    filename_or_obj : str, Path, file-like or DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
         or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
@@ -343,16 +343,16 @@ def open_dataset(
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib', \
-        'pseudonetcdf'}, optional
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4'.
+        "netcdf4".
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
         chunk for all arrays.
-    lock : False or duck threading.Lock, optional
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
@@ -364,17 +364,17 @@ def open_dataset(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    drop_variables: string or iterable, optional
+    drop_variables: str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs: dictionary, optional
+    backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
-        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
         ``np.datetime64[ns]`` objects; if this is not possible, decode times to
         ``cftime.datetime`` objects. If True, always decode times to
@@ -384,7 +384,7 @@ def open_dataset(
         raise an error.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
-        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
 
@@ -578,7 +578,7 @@ def open_dataarray(
 
     Parameters
     ----------
-    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+    filename_or_obj : str, Path, file-like or DataStore
         Strings and Paths are interpreted as a path to a netCDF file or an
         OpenDAP URL and opened with python-netCDF4, unless the filename ends
         with .gz, in which case the file is gunzipped and opened with
@@ -610,15 +610,15 @@ def open_dataarray(
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4'.
+        "netcdf4".
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays.
-    lock : False or duck threading.Lock, optional
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
@@ -630,17 +630,17 @@ def open_dataarray(
         argument to use dask, in which case it defaults to False. Does not
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
-    drop_variables: string or iterable, optional
+    drop_variables: str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs: dictionary, optional
+    backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
         allow user control of dataset processing.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
-        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
         ``np.datetime64[ns]`` objects; if this is not possible, decode times to
         ``cftime.datetime`` objects. If True, always decode times to
@@ -650,7 +650,7 @@ def open_dataarray(
         raise an error.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
-        {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
 
@@ -772,77 +772,77 @@ def open_mfdataset(
         particular dimension. Default is None, which for a 1D list of filepaths is
         equivalent to opening the files separately and then merging them with
         ``xarray.merge``.
-    combine : {'by_coords', 'nested'}, optional
+    combine : {"by_coords", "nested"}, optional
         Whether ``xarray.combine_by_coords`` or ``xarray.combine_nested`` is used to
         combine all the data. Default is to use ``xarray.combine_by_coords``.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", \
+              "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
 
-         * 'broadcast_equals': all values must be equal when variables are
+         * "broadcast_equals": all values must be equal when variables are
            broadcast against each other to ensure common dimensions.
-         * 'equals': all values and dimensions must be the same.
-         * 'identical': all values, dimensions and attributes must be the
+         * "equals": all values and dimensions must be the same.
+         * "identical": all values, dimensions and attributes must be the
            same.
-         * 'no_conflicts': only values which are not null in both datasets
+         * "no_conflicts": only values which are not null in both datasets
            must be equal. The returned dataset then contains the combination
            of all non-null values.
-         * 'override': skip comparing and pick variable from first dataset
+         * "override": skip comparing and pick variable from first dataset
 
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
-        ``ds.encoding['source']``.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'}, \
+        ``ds.encoding["source"]``.
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4'.
-    lock : False or duck threading.Lock, optional
+        "netcdf4".
+    lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
         locks are chosen to safely read and write files with the currently
         active dask scheduler.
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+    data_vars : {"minimal", "different", "all"} or list of str, optional
         These data variables will be concatenated together:
-          * 'minimal': Only data variables in which the dimension already
+          * "minimal": Only data variables in which the dimension already
             appears are included.
-          * 'different': Data variables which are not equal (ignoring
+          * "different": Data variables which are not equal (ignoring
             attributes) across all datasets are also concatenated (as well as
             all for which dimension already appears). Beware: this option may
             load the data payload of data variables into memory if they are not
             already loaded.
-          * 'all': All data variables will be concatenated.
+          * "all": All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
-            addition to the 'minimal' data variables.
-    coords : {'minimal', 'different', 'all' or list of str}, optional
+            addition to the "minimal" data variables.
+    coords : {"minimal", "different", "all"} or list of str, optional
         These coordinate variables will be concatenated together:
-         * 'minimal': Only coordinates in which the dimension already appears
+         * "minimal": Only coordinates in which the dimension already appears
            are included.
-         * 'different': Coordinates which are not equal (ignoring attributes)
+         * "different": Coordinates which are not equal (ignoring attributes)
            across all datasets are also concatenated (as well as all for which
            dimension already appears). Beware: this option may load the data
            payload of coordinate variables into memory if they are not already
            loaded.
-         * 'all': All coordinate variables will be concatenated, except
+         * "all": All coordinate variables will be concatenated, except
            those corresponding to other dimensions.
          * list of str: The listed coordinate variables will be concatenated,
-           in addition the 'minimal' coordinates.
+           in addition the "minimal" coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    join : {'outer', 'inner', 'left', 'right', 'exact, 'override'}, optional
+    join : {"outer", "inner", "left", "right", "exact, "override"}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     attrs_file : str or pathlib.Path, optional
@@ -1142,15 +1142,15 @@ def save_mfdataset(
 
     Parameters
     ----------
-    datasets : list of xarray.Dataset
+    datasets : list of Dataset
         List of datasets to save.
-    paths : list of str or list of Paths
+    paths : list of str or list of Path
         List of paths to which to save each corresponding dataset.
-    mode : {'w', 'a'}, optional
-        Write ('w') or append ('a') mode. If mode='w', any existing file at
+    mode : {"w", "a"}, optional
+        Write ("w") or append ("a") mode. If mode="w", any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
-              'NETCDF3_CLASSIC'}, optional
+    format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+              "NETCDF3_CLASSIC"}, optional
 
         File format for the resulting netCDF file:
 
@@ -1173,14 +1173,14 @@ def save_mfdataset(
         NETCDF3_64BIT format (scipy does not support netCDF4).
     groups : list of str, optional
         Paths to the netCDF4 group in each corresponding file to which to save
-        datasets (only works for format='NETCDF4'). The groups will be created
+        datasets (only works for format="NETCDF4"). The groups will be created
         if necessary.
-    engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+    engine : {"netcdf4", "scipy", "h5netcdf"}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
-        preference for 'netcdf4' if writing to a file on disk.
+        preference for "netcdf4" if writing to a file on disk.
         See `Dataset.to_netcdf` for additional information.
-    compute: boolean
+    compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
 
