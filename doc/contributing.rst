@@ -206,9 +206,9 @@ and switch in between them using the ``git checkout`` command.
 To update this branch, you need to retrieve the changes from the master branch::
 
     git fetch upstream
-    git rebase upstream/master
+    git merge upstream/master
 
-This will replay your commits on top of the latest *xarray* git master.  If this
+This will combine your commits with the latest *xarray* git master.  If this
 leads to merge conflicts, you must resolve these before submitting your pull
 request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes and they can be
@@ -824,8 +824,7 @@ Delete your merged branch (optional)
 ------------------------------------
 
 Once your feature branch is accepted into upstream, you'll probably want to get rid of
-the branch. First, merge upstream master into your branch so git knows it is safe to
-delete your branch::
+the branch. First, update your ``master`` branch to check that the merge was successful::
 
     git fetch upstream
     git checkout master
@@ -833,12 +832,14 @@ delete your branch::
 
 Then you can do::
 
-    git branch -d shiny-new-feature
+    git branch -D shiny-new-feature
 
-Make sure you use a lower-case ``-d``, or else git won't warn you if your feature
-branch has not actually been merged.
+You need to use a upper-case ``-D`` because the branch was squashed into a
+single commit before merging. Be careful with this because ``git`` won't warn
+you if you accidentally delete a unmerged branch.
 
-The branch will still exist on GitHub, so to delete it there do::
+If you didn't delete it using GitHub's interface, the branch will still exist on
+GitHub. To delete it there do::
 
     git push origin --delete shiny-new-feature
 
