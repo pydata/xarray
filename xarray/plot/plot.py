@@ -463,6 +463,15 @@ class _PlotMethods:
         return step(self._da, *args, **kwargs)
 
 
+def override_signature(f):
+    def wrapper(func):
+        func.__wrapped__ = f
+
+        return func
+
+    return wrapper
+
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic
@@ -572,6 +581,10 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    def signature(darray, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
         darray,
