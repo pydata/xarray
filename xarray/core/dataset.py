@@ -5957,12 +5957,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 The coefficients of the best fit for each variable in this dataset.
             [var]_polyfit_residuals
                 The residuals of the least-square computation for each variable (only included if `full=True`)
+                When the matrix rank is deficient, np.nan is returned.
             [dim]_matrix_rank
                 The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
+                The rank is computed ignoring the NaN values that might be skipped.
             [dim]_singular_values
                 The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [var]_polyfit_covariance
                 The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        Warns
+        -----
+        RankWarning
+            The rank of the coefficient matrix in the least-squares fit is deficient.
+            The warning is not raised with in-memory (not dask) data and `full=True`.
 
         See also
         --------
@@ -5997,10 +6005,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         degree_dim = utils.get_temp_dimname(self.dims, "degree")
 
         rank = np.linalg.matrix_rank(lhs)
-        if rank != order and not full:
-            warnings.warn(
-                "Polyfit may be poorly conditioned", np.RankWarning, stacklevel=4
-            )
 
         if full:
             rank = xr.DataArray(rank, name=xname + "matrix_rank")
@@ -6009,7 +6013,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             sing = xr.DataArray(
                 sing,
                 dims=(degree_dim,),
-                coords={degree_dim: np.arange(order)[::-1]},
+                coords={degree_dim: np.arange(rank - 1, -1, -1)},
                 name=xname + "singular_values",
             )
             variables[sing.name] = sing
@@ -6018,11 +6022,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dim not in da.dims:
                 continue
 
-            if skipna is None:
-                if isinstance(da.data, dask_array_type):
-                    skipna_da = True
-                else:
-                    skipna_da = np.any(da.isnull())
+            if isinstance(da.data, dask_array_type) and (
+                rank != order or full or skipna is None
+            ):
+                # Current algorithm with dask and skipna=False neither supports
+                # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
+                skipna_da = True
+            elif skipna is None:
+                skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
             stacked_coords: Dict[Hashable, DataArray] = {}
@@ -6040,9 +6047,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if w is not None:
                 rhs *= w[:, np.newaxis]
 
-            coeffs, residuals = duck_array_ops.least_squares(
-                lhs, rhs.data, rcond=rcond, skipna=skipna_da
-            )
+            with warnings.catch_warnings():
+                if full:  # Copy np.polyfit behavior
+                    warnings.simplefilter("ignore", np.RankWarning)
+                else:  # Raise only once per variable
+                    warnings.simplefilter("once", np.RankWarning)
+
+                coeffs, residuals = duck_array_ops.least_squares(
+                    lhs, rhs.data, rcond=rcond, skipna=skipna_da
+                )
 
             if isinstance(name, str):
                 name = "{}_".format(name)

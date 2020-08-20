@@ -3478,7 +3478,8 @@ class DataArray(AbstractArray, DataWithCoords):
             polyfit_coefficients
                 The coefficients of the best fit.
             polyfit_residuals
-                The residuals of the least-square computation (only included if `full=True`)
+                The residuals of the least-square computation (only included if `full=True`).
+                When the matrix rank is deficient, np.nan is returned.
             [dim]_matrix_rank
                 The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [dim]_singular_value
