@@ -1592,6 +1592,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Store or path to directory in file system.
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in file system only for Zarr array chunks.
+            Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
