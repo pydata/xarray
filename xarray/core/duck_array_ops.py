@@ -7,6 +7,7 @@ import contextlib
 import datetime
 import inspect
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -14,7 +15,7 @@ import pandas as pd
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, dask_array_type
+from .pycompat import cupy_array_type, dask_array_type, sparse_array_type
 
 try:
     import dask.array as dask_array
@@ -148,6 +149,28 @@ def trapz(y, x, axis):
 masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
 )
+
+
+def astype(data, **kwargs):
+    try:
+        import sparse
+    except ImportError:
+        sparse = None
+
+    if (
+        sparse is not None
+        and isinstance(data, sparse_array_type)
+        and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
+        and "casting" in kwargs
+    ):
+        warnings.warn(
+            "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
+            RuntimeWarning,
+            stacklevel=4,
+        )
+        kwargs.pop("casting")
+
+    return data.astype(**kwargs)
 
 
 def asarray(data, xp=np):

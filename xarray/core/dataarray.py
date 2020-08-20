@@ -422,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable = _default
+        self, dataset: Dataset, name: Union[Hashable, None, Default] = _default
     ) -> "DataArray":
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
@@ -3478,7 +3478,8 @@ class DataArray(AbstractArray, DataWithCoords):
             polyfit_coefficients
                 The coefficients of the best fit.
             polyfit_residuals
-                The residuals of the least-square computation (only included if `full=True`)
+                The residuals of the least-square computation (only included if `full=True`).
+                When the matrix rank is deficient, np.nan is returned.
             [dim]_matrix_rank
                 The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
             [dim]_singular_value

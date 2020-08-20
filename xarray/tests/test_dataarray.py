@@ -1874,6 +1874,19 @@ class TestDataArray:
         bar = Variable(["x", "y"], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
 
+    def test_astype_attrs(self):
+        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+            v.attrs["foo"] = "bar"
+            assert v.attrs == v.astype(float).attrs
+            assert not v.astype(float, keep_attrs=False).attrs
+
+    def test_astype_dtype(self):
+        original = DataArray([-1, 1, 2, 3, 1000])
+        converted = original.astype(float)
+        assert_array_equal(original, converted)
+        assert np.issubdtype(original.dtype, np.integer)
+        assert np.issubdtype(converted.dtype, np.floating)
+
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
         x[x < 0] = np.nan
@@ -4288,8 +4301,14 @@ class TestDataArray:
         ).T
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
 
+        # Full output and deficient rank
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.RankWarning)
+            out = da.polyfit("x", 12, full=True)
+            assert out.polyfit_residuals.isnull().all()
+
         # With NaN
-        da_raw[0, 1] = np.nan
+        da_raw[0, 1:3] = np.nan
         if use_dask:
             da = da_raw.chunk({"d": 1})
         else:
@@ -4303,6 +4322,11 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
         assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.RankWarning)
+            out = da.polyfit("x", 8, full=True)
+            np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
 
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))

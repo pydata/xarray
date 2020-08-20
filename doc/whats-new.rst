@@ -21,15 +21,20 @@ v0.16.1 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- :py:meth:`DataArray.astype` and :py:meth:`Dataset.astype` now preserve attributes. Keep the
+  old behavior by passing `keep_attrs=False` (:issue:`2049`, :pull:`4314`).
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_ and `Gabriel Joel Mitchell <https://github.com/gajomi>`_.
 
 New Features
 ~~~~~~~~~~~~
 - Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
-  now accept more than 1 dimension.(:pull:`4219`)
+  now accept more than 1 dimension. (:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
+  multiple dimension to reduce over. (:pull:`4356`) 
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
@@ -63,6 +68,7 @@ Bug fixes
   unchunked dimensions (:pull:`4312`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
   `Sam Morley <https://github.com/inakleinbottle>`_.
+- Fixed a few bugs with :py:meth:`Dataset.polyfit` when encountering deficient matrix ranks (:issue:`4190`, :pull:`4193`). By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
@@ -75,6 +81,8 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
 - removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
+- update the contributing guide to use merges instead of rebasing and state
+  that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -85,6 +93,8 @@ Internal Changes
   By `Guido Imperiale <https://github.com/crusaderky>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
+- Enable type checking for :py:func:`concat` (:issue:`4238`)
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 .. _whats-new.0.16.0:
