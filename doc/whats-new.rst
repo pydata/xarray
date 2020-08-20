@@ -28,8 +28,11 @@ New Features
 - Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
-  now accept more than 1 dimension.(:pull:`4219`)
+  now accept more than 1 dimension. (:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
+  multiple dimension to reduce over. (:pull:`4356`) 
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
