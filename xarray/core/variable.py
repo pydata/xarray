@@ -2005,7 +2005,7 @@ class Variable(
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self.copy(data=func(reshaped, axis=axes, **kwargs))
+        return self._replace(data=func(reshaped, axis=axes, **kwargs))
 
     def _coarsen_reshape(self, windows, boundary, side, **kwargs):
         """
@@ -2025,7 +2025,7 @@ class Variable(
             if window <= 0:
                 raise ValueError(f"window must be > 0. Given {window}")
 
-        variable = self
+        variable = self.copy()
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
