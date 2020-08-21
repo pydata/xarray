@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import is_array_like
+from .utils import is_duck_array
 
 integer_types = (int, np.integer)
 
@@ -12,7 +12,7 @@ try:
     dask_array_type = (dask.array.Array,)
 
     def is_duck_dask_array(x):
-        return is_array_like(x) and is_dask_collection(x)
+        return is_duck_array(x) and is_dask_collection(x)
 
 
 except ImportError:  # pragma: no cover

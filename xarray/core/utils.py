@@ -247,9 +247,13 @@ def is_list_like(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple)
 
 
-def is_array_like(value: Any) -> bool:
+def is_duck_array(value: Any) -> bool:
     return (
-        hasattr(value, "ndim") and hasattr(value, "shape") and hasattr(value, "dtype")
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and hasattr(value, "__array_function__")
+        and hasattr(value, "__array_ufunc__")
     )
 
 

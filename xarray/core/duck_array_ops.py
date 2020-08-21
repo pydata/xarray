@@ -21,6 +21,7 @@ from .pycompat import (
     sparse_array_type,
     is_duck_dask_array,
 )
+from .utils import is_duck_array
 
 try:
     import dask.array as dask_array
@@ -180,11 +181,7 @@ def astype(data, **kwargs):
 
 
 def asarray(data, xp=np):
-    return (
-        data
-        if (is_duck_dask_array(data) or hasattr(data, "__array_function__"))
-        else xp.asarray(data)
-    )
+    return data if is_duck_array(data) else xp.asarray(data)
 
 
 def as_shared_dtype(scalars_or_arrays):

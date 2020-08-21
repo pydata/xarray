@@ -47,6 +47,7 @@ from .utils import (
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
+    is_duck_array,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -348,7 +349,7 @@ class Variable(
 
     @property
     def data(self):
-        if hasattr(self._data, "__array_function__") or is_duck_dask_array(self._data):
+        if is_duck_array(self._data):
             return self._data
         else:
             return self.values
@@ -936,7 +937,7 @@ class Variable(
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if hasattr(data, "__array_function__") or is_duck_dask_array(data):
+                if is_duck_array(data):
                     data = data.copy()
                 elif not isinstance(data, PandasIndexAdapter):
                     # pandas.Index is immutable
