@@ -413,7 +413,8 @@ class FacetGrid:
         """Draw a colorbar
         """
         kwargs = kwargs.copy()
-        if self._cmap_extend is not None:
+        # dont pass extend as kwarg if it is in the mappable
+        if self._cmap_extend is not None and not hasattr(self._mappables[-1], "extend"):
             kwargs.setdefault("extend", self._cmap_extend)
         if "label" not in kwargs:
             kwargs.setdefault("label", label_from_attrs(self.data))
