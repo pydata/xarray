@@ -18,8 +18,8 @@ from .nputils import nanfirst, nanlast
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
-    sparse_array_type,
     is_duck_dask_array,
+    sparse_array_type,
 )
 from .utils import is_duck_array
 
