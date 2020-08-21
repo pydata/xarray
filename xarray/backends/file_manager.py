@@ -175,7 +175,8 @@ class CachingFileManager(FileManager):
 
         Returns
         -------
-        An open file object, as returned by ``opener(*args, **kwargs)``.
+        file-like
+            An open file object, as returned by ``opener(*args, **kwargs)``.
         """
         file, _ = self._acquire_with_cache_info(needs_lock)
         return file
