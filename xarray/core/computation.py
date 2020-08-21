@@ -4,7 +4,9 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 import functools
 import itertools
 import operator
+import warnings
 from collections import Counter
+from distutils.version import LooseVersion
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -91,6 +93,12 @@ class _UFuncSignature:
         return self._all_core_dims
 
     @property
+    def dims_map(self):
+        return {
+            core_dim: f"dim{n}" for n, core_dim in enumerate(sorted(self.all_core_dims))
+        }
+
+    @property
     def num_inputs(self):
         return len(self.input_core_dims)
 
@@ -126,14 +134,12 @@ class _UFuncSignature:
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
         """
-        all_dims = self.all_core_dims
-        dims_map = dict(zip(sorted(all_dims), range(len(all_dims))))
         input_core_dims = [
-            ["dim%d" % dims_map[dim] for dim in core_dims]
+            [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.input_core_dims
         ]
         output_core_dims = [
-            ["dim%d" % dims_map[dim] for dim in core_dims]
+            [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
         alt_signature = type(self)(input_core_dims, output_core_dims)
@@ -176,7 +182,7 @@ def build_output_coords(
         are OK, e.g., scalars, Variable, DataArray, Dataset.
     signature : _UfuncSignature
         Core dimensions signature for the operation.
-    exclude_dims : optional set
+    exclude_dims : set, optional
         Dimensions excluded from the operation. Coordinates along these
         dimensions are dropped.
 
@@ -424,7 +430,7 @@ def apply_groupby_func(func, *args):
     if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
         raise ValueError(
             "apply_ufunc can only perform operations over "
-            "multiple GroupBy objets at once if they are all "
+            "multiple GroupBy objects at once if they are all "
             "grouped the same way"
         )
 
@@ -539,6 +545,17 @@ def broadcast_compat_data(
     return data
 
 
+def _vectorize(func, signature, output_dtypes):
+    if signature.all_core_dims:
+        func = np.vectorize(
+            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+        )
+    else:
+        func = np.vectorize(func, otypes=output_dtypes)
+
+    return func
+
+
 def apply_variable_ufunc(
     func,
     *args,
@@ -546,9 +563,9 @@ def apply_variable_ufunc(
     exclude_dims=frozenset(),
     dask="forbidden",
     output_dtypes=None,
-    output_sizes=None,
+    vectorize=False,
     keep_attrs=False,
-    meta=None,
+    dask_gufunc_kwargs=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects.
     """
@@ -579,20 +596,49 @@ def apply_variable_ufunc(
                 "``.load()`` or ``.compute()``"
             )
         elif dask == "parallelized":
-            input_dims = [broadcast_dims + dims for dims in signature.input_core_dims]
             numpy_func = func
 
+            if dask_gufunc_kwargs is None:
+                dask_gufunc_kwargs = {}
+
+            output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
+            if output_sizes:
+                output_sizes_renamed = {}
+                for key, value in output_sizes.items():
+                    if key not in signature.all_output_core_dims:
+                        raise ValueError(
+                            f"dimension '{key}' in 'output_sizes' must correspond to output_core_dims"
+                        )
+                    output_sizes_renamed[signature.dims_map[key]] = value
+                dask_gufunc_kwargs["output_sizes"] = output_sizes_renamed
+
+            for key in signature.all_output_core_dims:
+                if key not in signature.all_input_core_dims and key not in output_sizes:
+                    raise ValueError(
+                        f"dimension '{key}' in 'output_core_dims' needs corresponding (dim, size) in 'output_sizes'"
+                    )
+
             def func(*arrays):
-                return _apply_blockwise(
+                import dask.array as da
+
+                res = da.apply_gufunc(
                     numpy_func,
-                    arrays,
-                    input_dims,
-                    output_dims,
-                    signature,
-                    output_dtypes,
-                    output_sizes,
-                    meta,
+                    signature.to_gufunc_string(),
+                    *arrays,
+                    vectorize=vectorize,
+                    output_dtypes=output_dtypes,
+                    **dask_gufunc_kwargs,
                 )
+
+                # todo: covers for https://github.com/dask/dask/pull/6207
+                #  remove when minimal dask version >= 2.17.0
+                from dask import __version__ as dask_version
+
+                if LooseVersion(dask_version) < LooseVersion("2.17.0"):
+                    if signature.num_outputs > 1:
+                        res = tuple(res)
+
+                return res
 
         elif dask == "allowed":
             pass
@@ -601,6 +647,10 @@ def apply_variable_ufunc(
                 "unknown setting for dask array handling in "
                 "apply_ufunc: {}".format(dask)
             )
+    else:
+        if vectorize:
+            func = _vectorize(func, signature, output_dtypes=output_dtypes)
+
     result_data = func(*input_data)
 
     if signature.num_outputs == 1:
@@ -648,90 +698,6 @@ def apply_variable_ufunc(
         return tuple(output)
 
 
-def _apply_blockwise(
-    func,
-    args,
-    input_dims,
-    output_dims,
-    signature,
-    output_dtypes,
-    output_sizes=None,
-    meta=None,
-):
-    import dask.array
-
-    if signature.num_outputs > 1:
-        raise NotImplementedError(
-            "multiple outputs from apply_ufunc not yet "
-            "supported with dask='parallelized'"
-        )
-
-    if output_dtypes is None:
-        raise ValueError(
-            "output dtypes (output_dtypes) must be supplied to "
-            "apply_func when using dask='parallelized'"
-        )
-    if not isinstance(output_dtypes, list):
-        raise TypeError(
-            "output_dtypes must be a list of objects coercible to "
-            "numpy dtypes, got {}".format(output_dtypes)
-        )
-    if len(output_dtypes) != signature.num_outputs:
-        raise ValueError(
-            "apply_ufunc arguments output_dtypes and "
-            "output_core_dims must have the same length: {} vs {}".format(
-                len(output_dtypes), signature.num_outputs
-            )
-        )
-    (dtype,) = output_dtypes
-
-    if output_sizes is None:
-        output_sizes = {}
-
-    new_dims = signature.all_output_core_dims - signature.all_input_core_dims
-    if any(dim not in output_sizes for dim in new_dims):
-        raise ValueError(
-            "when using dask='parallelized' with apply_ufunc, "
-            "output core dimensions not found on inputs must "
-            "have explicitly set sizes with ``output_sizes``: {}".format(new_dims)
-        )
-
-    for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
-        if is_duck_dask_array(data):
-            # core dimensions cannot span multiple chunks
-            for axis, dim in enumerate(core_dims, start=-len(core_dims)):
-                if len(data.chunks[axis]) != 1:
-                    raise ValueError(
-                        "dimension {!r} on {}th function argument to "
-                        "apply_ufunc with dask='parallelized' consists of "
-                        "multiple chunks, but is also a core dimension. To "
-                        "fix, rechunk into a single dask array chunk along "
-                        "this dimension, i.e., ``.chunk({})``, but beware "
-                        "that this may significantly increase memory usage.".format(
-                            dim, n, {dim: -1}
-                        )
-                    )
-
-    (out_ind,) = output_dims
-
-    blockwise_args = []
-    for arg, dims in zip(args, input_dims):
-        # skip leading dimensions that are implicitly added by broadcasting
-        ndim = getattr(arg, "ndim", 0)
-        trimmed_dims = dims[-ndim:] if ndim else ()
-        blockwise_args.extend([arg, trimmed_dims])
-
-    return dask.array.blockwise(
-        func,
-        out_ind,
-        *blockwise_args,
-        dtype=dtype,
-        concatenate=True,
-        new_axes=output_sizes,
-        meta=meta,
-    )
-
-
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
     if any(is_duck_dask_array(arg) for arg in args):
@@ -771,6 +737,7 @@ def apply_ufunc(
     output_dtypes: Sequence = None,
     output_sizes: Mapping[Any, int] = None,
     meta: Any = None,
+    dask_gufunc_kwargs: Dict[str, Any] = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -789,9 +756,9 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
+    *args : Dataset, DataArray, GroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
-    input_core_dims : Sequence[Sequence], optional
+    input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
         on each input argument that should not be broadcast. By default, we
         assume there are no core dimensions on any input arguments.
@@ -803,7 +770,7 @@ def apply_ufunc(
         Core dimensions are automatically moved to the last axes of input
         variables before applying ``func``, which facilitates using NumPy style
         generalized ufuncs [2]_.
-    output_core_dims : List[tuple], optional
+    output_core_dims : list of tuple, optional
         List of the same length as the number of output arguments from
         ``func``, giving the list of core dimensions on each output that were
         not broadcast on the inputs. By default, we assume that ``func``
@@ -824,7 +791,7 @@ def apply_ufunc(
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
         Using this option requires NumPy version 1.12 or newer.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
         data variables:
@@ -835,7 +802,7 @@ def apply_ufunc(
         - 'right': use indexes from the last object with each dimension
         - 'exact': raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    dataset_join : {"outer", "inner", "left", "right", "exact"}, default: "exact"
         Method for joining variables of Dataset objects with mismatched
         data variables.
 
@@ -848,28 +815,38 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: boolean, Optional
+    keep_attrs: bool, optional
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: 'forbidden', 'allowed' or 'parallelized', optional
+    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
         - 'forbidden' (default): raise an error if a dask array is encountered.
-        - 'allowed': pass dask arrays directly on to ``func``.
+        - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if
+          ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array. If used, the ``output_dtypes`` argument must
-          also be provided. Multiple output arguments are not yet supported.
-    output_dtypes : list of dtypes, optional
-        Optional list of output dtypes. Only used if dask='parallelized'.
+          inputs are a dask array by using `dask.array.apply_gufunc`. Multiple output
+          arguments are supported. Only use this option if ``func`` does not natively
+          support dask arrays (e.g. converts them to numpy arrays).
+    dask_gufunc_kwargs : dict, optional
+        Optional keyword arguments passed to ``dask.array.apply_gufunc`` if
+        dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``
+        and ``meta``.
+    output_dtypes : list of dtype, optional
+        Optional list of output dtypes. Only used if ``dask='parallelized'`` or
+        vectorize=True.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
-        on outputs.
+        on outputs. ``output_sizes`` should be given in the ``dask_gufunc_kwargs``
+        parameter. It will be removed as direct parameter in a future version.
     meta : optional
         Size-0 object representing the type of array wrapped by dask array. Passed on to
-        ``dask.array.blockwise``.
+        ``dask.array.apply_gufunc``. ``meta`` should be given in the
+        ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
+        a future version.
 
     Returns
     -------
@@ -1006,21 +983,31 @@ def apply_ufunc(
                 f"Please make {(exclude_dims - signature.all_core_dims)} a core dimension"
             )
 
+    # handle dask_gufunc_kwargs
+    if dask == "parallelized":
+        if dask_gufunc_kwargs is None:
+            dask_gufunc_kwargs = {}
+        # todo: remove warnings after deprecation cycle
+        if meta is not None:
+            warnings.warn(
+                "``meta`` should be given in the ``dask_gufunc_kwargs`` parameter."
+                " It will be removed as direct parameter in a future version.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            dask_gufunc_kwargs.setdefault("meta", meta)
+        if output_sizes is not None:
+            warnings.warn(
+                "``output_sizes`` should be given in the ``dask_gufunc_kwargs`` "
+                "parameter. It will be removed as direct parameter in a future "
+                "version.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            dask_gufunc_kwargs.setdefault("output_sizes", output_sizes)
+
     if kwargs:
         func = functools.partial(func, **kwargs)
-
-    if vectorize:
-        if meta is None:
-            # set meta=np.ndarray by default for numpy vectorized functions
-            # work around dask bug computing meta with vectorized functions: GH5642
-            meta = np.ndarray
-
-        if signature.all_core_dims:
-            func = np.vectorize(
-                func, otypes=output_dtypes, signature=signature.to_gufunc_string()
-            )
-        else:
-            func = np.vectorize(func, otypes=output_dtypes)
 
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
@@ -1029,11 +1016,12 @@ def apply_ufunc(
         exclude_dims=exclude_dims,
         keep_attrs=keep_attrs,
         dask=dask,
+        vectorize=vectorize,
         output_dtypes=output_dtypes,
-        output_sizes=output_sizes,
-        meta=meta,
+        dask_gufunc_kwargs=dask_gufunc_kwargs,
     )
 
+    # feed groupby-apply_ufunc through apply_groupby_func
     if any(isinstance(a, GroupBy) for a in args):
         this_apply = functools.partial(
             apply_ufunc,
@@ -1046,9 +1034,12 @@ def apply_ufunc(
             dataset_fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
             dask=dask,
-            meta=meta,
+            vectorize=vectorize,
+            output_dtypes=output_dtypes,
+            dask_gufunc_kwargs=dask_gufunc_kwargs,
         )
         return apply_groupby_func(this_apply, *args)
+    # feed datasets apply_variable_ufunc through apply_dataset_vfunc
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_vfunc(
             variables_vfunc,
@@ -1060,6 +1051,7 @@ def apply_ufunc(
             fill_value=dataset_fill_value,
             keep_attrs=keep_attrs,
         )
+    # feed DataArray apply_variable_ufunc through apply_dataarray_vfunc
     elif any(isinstance(a, DataArray) for a in args):
         return apply_dataarray_vfunc(
             variables_vfunc,
@@ -1069,9 +1061,11 @@ def apply_ufunc(
             exclude_dims=exclude_dims,
             keep_attrs=keep_attrs,
         )
+    # feed Variables directly through apply_variable_ufunc
     elif any(isinstance(a, Variable) for a in args):
         return variables_vfunc(*args)
     else:
+        # feed anything else through apply_array_ufunc
         return apply_array_ufunc(func, *args, dask=dask)
 
 
@@ -1081,9 +1075,9 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray object
+    da_a: DataArray
         Array to compute.
-    da_b: DataArray object
+    da_b: DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
@@ -1161,9 +1155,9 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray object
+    da_a: DataArray
         Array to compute.
-    da_b: DataArray object
+    da_b: DataArray
         Array to compute.
     dim: str, optional
         The dimension along which the correlation will be computed
@@ -1275,18 +1269,18 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays: DataArray (or Variable) objects
+    arrays : DataArray or Variable
         Arrays to compute.
-    dims: '...', str or tuple of strings, optional
+    dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
         If not specified, then all the common dimensions are summed over.
-    **kwargs: dict
+    **kwargs : dict
         Additional keyword arguments passed to numpy.einsum or
         dask.array.einsum
 
     Returns
     -------
-    dot: DataArray
+    DataArray
 
     Examples
     --------
@@ -1420,22 +1414,24 @@ def where(cond, x, y):
 
     Performs xarray-like broadcasting across input arguments.
 
+    All dimension coordinates on `x` and `y`  must be aligned with each
+    other and with `cond`.
+
+
     Parameters
     ----------
-    cond : scalar, array, Variable, DataArray or Dataset with boolean dtype
+    cond : scalar, array, Variable, DataArray or Dataset
         When True, return values from `x`, otherwise returns values from `y`.
     x : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is True
     y : scalar, array, Variable, DataArray or Dataset
         values to choose from where `cond` is False
 
-    All dimension coordinates on these objects must be aligned with each
-    other and with `cond`.
-
     Returns
     -------
-    In priority order: Dataset, DataArray, Variable or array, whichever
-    type appears as an input argument.
+    Dataset, DataArray, Variable or array
+        In priority order: Dataset, DataArray, Variable or array, whichever
+        type appears as an input argument.
 
     Examples
     --------
@@ -1517,7 +1513,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
         The 1D coordinate along which to evaluate the polynomial.
     coeffs : DataArray
         Coefficients of the polynomials.
-    degree_dim : str, default "degree"
+    degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
     See also

@@ -545,15 +545,6 @@ def _get_valid_fill_mask(arr, dim, limit):
     ) <= limit
 
 
-def _assert_single_chunk(var, axes):
-    for axis in axes:
-        if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
-            raise NotImplementedError(
-                "Chunking along the dimension to be interpolated "
-                "({}) is not yet supported.".format(axis)
-            )
-
-
 def _localize(var, indexes_coords):
     """ Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
@@ -618,49 +609,42 @@ def interp(var, indexes_coords, method, **kwargs):
     if not indexes_coords:
         return var.copy()
 
-    # simple speed up for the local interpolation
-    if method in ["linear", "nearest"]:
-        var, indexes_coords = _localize(var, indexes_coords)
-
     # default behavior
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
-    # check if the interpolation can be done in orthogonal manner
-    if (
-        len(indexes_coords) > 1
-        and method in ["linear", "nearest"]
-        and all(dest[1].ndim == 1 for dest in indexes_coords.values())
-        and len(set([d[1].dims[0] for d in indexes_coords.values()]))
-        == len(indexes_coords)
-    ):
-        # interpolate sequentially
-        for dim, dest in indexes_coords.items():
-            var = interp(var, {dim: dest}, method, **kwargs)
-        return var
+    result = var
+    # decompose the interpolation into a succession of independant interpolation
+    for indexes_coords in decompose_interp(indexes_coords):
+        var = result
 
-    # target dimensions
-    dims = list(indexes_coords)
-    x, new_x = zip(*[indexes_coords[d] for d in dims])
-    destination = broadcast_variables(*new_x)
+        # simple speed up for the local interpolation
+        if method in ["linear", "nearest"]:
+            var, indexes_coords = _localize(var, indexes_coords)
 
-    # transpose to make the interpolated axis to the last position
-    broadcast_dims = [d for d in var.dims if d not in dims]
-    original_dims = broadcast_dims + dims
-    new_dims = broadcast_dims + list(destination[0].dims)
-    interped = interp_func(
-        var.transpose(*original_dims).data, x, destination, method, kwargs
-    )
+        # target dimensions
+        dims = list(indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in dims])
+        destination = broadcast_variables(*new_x)
 
-    result = Variable(new_dims, interped, attrs=var.attrs)
+        # transpose to make the interpolated axis to the last position
+        broadcast_dims = [d for d in var.dims if d not in dims]
+        original_dims = broadcast_dims + dims
+        new_dims = broadcast_dims + list(destination[0].dims)
+        interped = interp_func(
+            var.transpose(*original_dims).data, x, destination, method, kwargs
+        )
 
-    # dimension of the output array
-    out_dims = OrderedSet()
-    for d in var.dims:
-        if d in dims:
-            out_dims.update(indexes_coords[d][1].dims)
-        else:
-            out_dims.add(d)
-    return result.transpose(*tuple(out_dims))
+        result = Variable(new_dims, interped, attrs=var.attrs)
+
+        # dimension of the output array
+        out_dims = OrderedSet()
+        for d in var.dims:
+            if d in dims:
+                out_dims.update(indexes_coords[d][1].dims)
+            else:
+                out_dims.add(d)
+        result = result.transpose(*tuple(out_dims))
+    return result
 
 
 def interp_func(var, x, new_x, method, kwargs):
@@ -707,21 +691,51 @@ def interp_func(var, x, new_x, method, kwargs):
     if is_duck_dask_array(var):
         import dask.array as da
 
-        _assert_single_chunk(var, range(var.ndim - len(x), var.ndim))
-        chunks = var.chunks[: -len(x)] + new_x[0].shape
-        drop_axis = range(var.ndim - len(x), var.ndim)
-        new_axis = range(var.ndim - len(x), var.ndim - len(x) + new_x[0].ndim)
-        return da.map_blocks(
-            _interpnd,
+        nconst = var.ndim - len(x)
+
+        out_ind = list(range(nconst)) + list(range(var.ndim, var.ndim + new_x[0].ndim))
+
+        # blockwise args format
+        x_arginds = [[_x, (nconst + index,)] for index, _x in enumerate(x)]
+        x_arginds = [item for pair in x_arginds for item in pair]
+        new_x_arginds = [
+            [_x, [var.ndim + index for index in range(_x.ndim)]] for _x in new_x
+        ]
+        new_x_arginds = [item for pair in new_x_arginds for item in pair]
+
+        args = (
             var,
-            x,
-            new_x,
-            func,
-            kwargs,
+            range(var.ndim),
+            *x_arginds,
+            *new_x_arginds,
+        )
+
+        _, rechunked = da.unify_chunks(*args)
+
+        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+
+        new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
+
+        new_axes = {
+            var.ndim + i: new_x[0].chunks[i]
+            if new_x[0].chunks is not None
+            else new_x[0].shape[i]
+            for i in range(new_x[0].ndim)
+        }
+
+        # if usefull, re-use localize for each chunk of new_x
+        localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
+
+        return da.blockwise(
+            _dask_aware_interpnd,
+            out_ind,
+            *args,
+            interp_func=func,
+            interp_kwargs=kwargs,
+            localize=localize,
+            concatenate=True,
             dtype=var.dtype,
-            chunks=chunks,
-            new_axis=new_axis,
-            drop_axis=drop_axis,
+            new_axes=new_axes,
         )
 
     return _interpnd(var, x, new_x, func, kwargs)
@@ -752,3 +766,67 @@ def _interpnd(var, x, new_x, func, kwargs):
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
+
+
+def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True):
+    """Wrapper for `_interpnd` through `blockwise`
+
+    The first half arrays in `coords` are original coordinates,
+    the other half are destination coordinates
+    """
+    n_x = len(coords) // 2
+    nconst = len(var.shape) - n_x
+
+    # _interpnd expect coords to be Variables
+    x = [Variable([f"dim_{nconst + dim}"], _x) for dim, _x in enumerate(coords[:n_x])]
+    new_x = [
+        Variable([f"dim_{len(var.shape) + dim}" for dim in range(len(_x.shape))], _x)
+        for _x in coords[n_x:]
+    ]
+
+    if localize:
+        # _localize expect var to be a Variable
+        var = Variable([f"dim_{dim}" for dim in range(len(var.shape))], var)
+
+        indexes_coords = {_x.dims[0]: (_x, _new_x) for _x, _new_x in zip(x, new_x)}
+
+        # simple speed up for the local interpolation
+        var, indexes_coords = _localize(var, indexes_coords)
+        x, new_x = zip(*[indexes_coords[d] for d in indexes_coords])
+
+        # put var back as a ndarray
+        var = var.data
+
+    return _interpnd(var, x, new_x, interp_func, interp_kwargs)
+
+
+def decompose_interp(indexes_coords):
+    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+
+    dest_dims = [
+        dest[1].dims if dest[1].ndim > 0 else [dim]
+        for dim, dest in indexes_coords.items()
+    ]
+    partial_dest_dims = []
+    partial_indexes_coords = {}
+    for i, index_coords in enumerate(indexes_coords.items()):
+        partial_indexes_coords.update([index_coords])
+
+        if i == len(dest_dims) - 1:
+            break
+
+        partial_dest_dims += [dest_dims[i]]
+        other_dims = dest_dims[i + 1 :]
+
+        s_partial_dest_dims = {dim for dims in partial_dest_dims for dim in dims}
+        s_other_dims = {dim for dims in other_dims for dim in dims}
+
+        if not s_partial_dest_dims.intersection(s_other_dims):
+            # this interpolation is orthogonal to the rest
+
+            yield partial_indexes_coords
+
+            partial_dest_dims = []
+            partial_indexes_coords = {}
+
+    yield partial_indexes_coords

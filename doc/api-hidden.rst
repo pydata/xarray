@@ -52,6 +52,7 @@
    core.rolling.DatasetCoarsen.var
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
+   core.rolling.DatasetCoarsen.keep_attrs
    core.rolling.DatasetCoarsen.obj
    core.rolling.DatasetCoarsen.side
    core.rolling.DatasetCoarsen.trim_excess
@@ -104,6 +105,8 @@
    core.resample.DatasetResample.dims
    core.resample.DatasetResample.groups
 
+   core.rolling.DatasetRolling.argmax
+   core.rolling.DatasetRolling.argmin
    core.rolling.DatasetRolling.count
    core.rolling.DatasetRolling.max
    core.rolling.DatasetRolling.mean
@@ -115,10 +118,14 @@
    core.rolling.DatasetRolling.var
    core.rolling.DatasetRolling.center
    core.rolling.DatasetRolling.dim
+   core.rolling.DatasetRolling.keep_attrs
    core.rolling.DatasetRolling.min_periods
    core.rolling.DatasetRolling.obj
    core.rolling.DatasetRolling.rollings
    core.rolling.DatasetRolling.window
+
+   core.weighted.DatasetWeighted.obj
+   core.weighted.DatasetWeighted.weights
 
    core.rolling_exp.RollingExp.mean
 
@@ -188,6 +195,7 @@
    core.rolling.DataArrayCoarsen.var
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
+   core.rolling.DataArrayCoarsen.keep_attrs
    core.rolling.DataArrayCoarsen.obj
    core.rolling.DataArrayCoarsen.side
    core.rolling.DataArrayCoarsen.trim_excess
@@ -238,6 +246,8 @@
    core.resample.DataArrayResample.dims
    core.resample.DataArrayResample.groups
 
+   core.rolling.DataArrayRolling.argmax
+   core.rolling.DataArrayRolling.argmin
    core.rolling.DataArrayRolling.count
    core.rolling.DataArrayRolling.max
    core.rolling.DataArrayRolling.mean
@@ -249,10 +259,14 @@
    core.rolling.DataArrayRolling.var
    core.rolling.DataArrayRolling.center
    core.rolling.DataArrayRolling.dim
+   core.rolling.DataArrayRolling.keep_attrs
    core.rolling.DataArrayRolling.min_periods
    core.rolling.DataArrayRolling.obj
    core.rolling.DataArrayRolling.window
    core.rolling.DataArrayRolling.window_labels
+
+   core.weighted.DataArrayWeighted.obj
+   core.weighted.DataArrayWeighted.weights
 
    DataArray.argsort
    DataArray.clip
@@ -277,6 +291,13 @@
    core.accessor_dt.DatetimeAccessor.days_in_month
    core.accessor_dt.DatetimeAccessor.daysinmonth
    core.accessor_dt.DatetimeAccessor.hour
+   core.accessor_dt.DatetimeAccessor.is_leap_year
+   core.accessor_dt.DatetimeAccessor.is_month_end
+   core.accessor_dt.DatetimeAccessor.is_month_start
+   core.accessor_dt.DatetimeAccessor.is_quarter_end
+   core.accessor_dt.DatetimeAccessor.is_quarter_start
+   core.accessor_dt.DatetimeAccessor.is_year_end
+   core.accessor_dt.DatetimeAccessor.is_year_start
    core.accessor_dt.DatetimeAccessor.microsecond
    core.accessor_dt.DatetimeAccessor.minute
    core.accessor_dt.DatetimeAccessor.month
@@ -290,6 +311,14 @@
    core.accessor_dt.DatetimeAccessor.weekday_name
    core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
+
+   core.accessor_dt.TimedeltaAccessor.ceil
+   core.accessor_dt.TimedeltaAccessor.floor
+   core.accessor_dt.TimedeltaAccessor.round
+   core.accessor_dt.TimedeltaAccessor.days
+   core.accessor_dt.TimedeltaAccessor.microseconds
+   core.accessor_dt.TimedeltaAccessor.nanoseconds
+   core.accessor_dt.TimedeltaAccessor.seconds
 
    core.accessor_str.StringAccessor.capitalize
    core.accessor_str.StringAccessor.center
@@ -365,6 +394,7 @@
    Variable.min
    Variable.no_conflicts
    Variable.notnull
+   Variable.pad
    Variable.prod
    Variable.quantile
    Variable.rank
@@ -407,6 +437,8 @@
 
    IndexVariable.all
    IndexVariable.any
+   IndexVariable.argmax
+   IndexVariable.argmin
    IndexVariable.argsort
    IndexVariable.astype
    IndexVariable.broadcast_equals
@@ -436,6 +468,7 @@
    IndexVariable.min
    IndexVariable.no_conflicts
    IndexVariable.notnull
+   IndexVariable.pad
    IndexVariable.prod
    IndexVariable.quantile
    IndexVariable.rank
@@ -538,6 +571,16 @@
    ufuncs.tanh
    ufuncs.trunc
 
+   plot.plot
+   plot.line
+   plot.step
+   plot.hist
+   plot.contour
+   plot.contourf
+   plot.imshow
+   plot.pcolormesh
+   plot.scatter
+
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles
    plot.FacetGrid.set_ticks
@@ -547,11 +590,16 @@
    CFTimeIndex.any
    CFTimeIndex.append
    CFTimeIndex.argsort
+   CFTimeIndex.argmax
+   CFTimeIndex.argmin
    CFTimeIndex.asof
    CFTimeIndex.asof_locs
    CFTimeIndex.astype
+   CFTimeIndex.calendar
+   CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
+   CFTimeIndex.days_in_month
    CFTimeIndex.delete
    CFTimeIndex.difference
    CFTimeIndex.drop
@@ -562,6 +610,7 @@
    CFTimeIndex.equals
    CFTimeIndex.factorize
    CFTimeIndex.fillna
+   CFTimeIndex.floor
    CFTimeIndex.format
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
@@ -602,6 +651,7 @@
    CFTimeIndex.reindex
    CFTimeIndex.rename
    CFTimeIndex.repeat
+   CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
    CFTimeIndex.set_value
@@ -665,13 +715,10 @@
    backends.NetCDF4DataStore.encode
    backends.NetCDF4DataStore.encode_attribute
    backends.NetCDF4DataStore.encode_variable
-   backends.NetCDF4DataStore.get
    backends.NetCDF4DataStore.get_attrs
    backends.NetCDF4DataStore.get_dimensions
    backends.NetCDF4DataStore.get_encoding
    backends.NetCDF4DataStore.get_variables
-   backends.NetCDF4DataStore.items
-   backends.NetCDF4DataStore.keys
    backends.NetCDF4DataStore.load
    backends.NetCDF4DataStore.open
    backends.NetCDF4DataStore.open_store_variable
@@ -685,28 +732,26 @@
    backends.NetCDF4DataStore.store
    backends.NetCDF4DataStore.store_dataset
    backends.NetCDF4DataStore.sync
-   backends.NetCDF4DataStore.values
-   backends.NetCDF4DataStore.attrs
    backends.NetCDF4DataStore.autoclose
-   backends.NetCDF4DataStore.dimensions
    backends.NetCDF4DataStore.ds
    backends.NetCDF4DataStore.format
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
-   backends.NetCDF4DataStore.variables
 
+   backends.H5NetCDFStore.autoclose
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
    backends.H5NetCDFStore.encode_attribute
    backends.H5NetCDFStore.encode_variable
-   backends.H5NetCDFStore.get
+   backends.H5NetCDFStore.format
    backends.H5NetCDFStore.get_attrs
    backends.H5NetCDFStore.get_dimensions
    backends.H5NetCDFStore.get_encoding
    backends.H5NetCDFStore.get_variables
-   backends.H5NetCDFStore.items
-   backends.H5NetCDFStore.keys
+   backends.H5NetCDFStore.is_remote
    backends.H5NetCDFStore.load
+   backends.H5NetCDFStore.lock
+   backends.H5NetCDFStore.open
    backends.H5NetCDFStore.open_store_variable
    backends.H5NetCDFStore.prepare_variable
    backends.H5NetCDFStore.set_attribute
@@ -718,39 +763,25 @@
    backends.H5NetCDFStore.store
    backends.H5NetCDFStore.store_dataset
    backends.H5NetCDFStore.sync
-   backends.H5NetCDFStore.values
-   backends.H5NetCDFStore.attrs
-   backends.H5NetCDFStore.dimensions
    backends.H5NetCDFStore.ds
-   backends.H5NetCDFStore.variables
 
    backends.PydapDataStore.close
-   backends.PydapDataStore.get
    backends.PydapDataStore.get_attrs
    backends.PydapDataStore.get_dimensions
    backends.PydapDataStore.get_encoding
    backends.PydapDataStore.get_variables
-   backends.PydapDataStore.items
-   backends.PydapDataStore.keys
    backends.PydapDataStore.load
    backends.PydapDataStore.open
    backends.PydapDataStore.open_store_variable
-   backends.PydapDataStore.values
-   backends.PydapDataStore.attrs
-   backends.PydapDataStore.dimensions
-   backends.PydapDataStore.variables
 
    backends.ScipyDataStore.close
    backends.ScipyDataStore.encode
    backends.ScipyDataStore.encode_attribute
    backends.ScipyDataStore.encode_variable
-   backends.ScipyDataStore.get
    backends.ScipyDataStore.get_attrs
    backends.ScipyDataStore.get_dimensions
    backends.ScipyDataStore.get_encoding
    backends.ScipyDataStore.get_variables
-   backends.ScipyDataStore.items
-   backends.ScipyDataStore.keys
    backends.ScipyDataStore.load
    backends.ScipyDataStore.open_store_variable
    backends.ScipyDataStore.prepare_variable
@@ -763,11 +794,7 @@
    backends.ScipyDataStore.store
    backends.ScipyDataStore.store_dataset
    backends.ScipyDataStore.sync
-   backends.ScipyDataStore.values
-   backends.ScipyDataStore.attrs
-   backends.ScipyDataStore.dimensions
    backends.ScipyDataStore.ds
-   backends.ScipyDataStore.variables
 
    backends.FileManager.acquire
    backends.FileManager.acquire_context
