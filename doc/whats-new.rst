@@ -96,7 +96,7 @@ Internal Changes
 - Enable type checking for :py:func:`concat` (:issue:`4238`)
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Updated plot functions for matplotlib version 3.3 and silenced warnings in the
-  plot tests.  By `Mathias Hauser <https://github.com/mathause>`_.
+  plot tests (:pull:`4365`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.0:
 

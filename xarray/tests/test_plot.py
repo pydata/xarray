@@ -59,14 +59,18 @@ def figure_context(*args, **kwargs):
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
-       Note: may give false positives if tests are run in parallel
+       Notes:  Scope is kept to module (only invoke this function once per test
+       module) else tests cannot be run in parallel (locally). Disadvantage: only
+       catches one open figure per run. May still give a false positive if tests
+       are run in parallel.
     """
     yield None
 
-    fignums = plt.get_fignums()
-    if fignums:
-        raise RuntimeError("test did not close all figures")
-        plt.close("all")
+    open_figs = len(plt.get_fignums())
+    if open_figs:
+        raise RuntimeError(
+            f"tests did not close all figures ({open_figs} figures open)"
+        )
 
 
 @pytest.mark.flaky
