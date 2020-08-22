@@ -6480,6 +6480,20 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
+def test_no_warning_for_all_nan():
+
+    # with warnings.catch_warnings():
+    #     warnings.filterwarnings("error", message=r".*slice.*", category=RuntimeWarning)
+    #     _ = xr.DataArray([np.NaN, np.NaN]).mean()
+
+    with pytest.warns(None) as record:
+        _ = xr.DataArray([np.NaN, np.NaN]).mean()
+    assert len(record) == 0
+
+    # if record:
+    #     raise AssertionError(record[0].message)
+
+
 def test_name_in_masking():
     name = "RingoStarr"
     da = xr.DataArray(range(10), coords=[("x", range(10))], name=name)
