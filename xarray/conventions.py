@@ -543,7 +543,8 @@ def decode_cf_variables(
                         # than data_vars.
                         warnings.warn(
                             "Variable(s) {0!s} moved from data_vars to coords\n"
-                            "based on {1:s} attribute".format(var_names, attr_name)
+                            "based on {1:s} attribute".format(var_names, attr_name),
+                            stacklevel=5,
                         )
                     else:
                         warnings.warn(
@@ -554,7 +555,8 @@ def decode_cf_variables(
                                     for proj_name in var_names
                                     if proj_name not in variables
                                 ],
-                            )
+                            ),
+                            stacklevel=5,
                         )
                     del var_attrs[attr_name]
 

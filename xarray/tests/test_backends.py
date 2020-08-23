@@ -896,8 +896,9 @@ class CFEncodedBase(DatasetIOBase):
                 assert "latlon" not in ds["variable"].attrs["coordinates"]
                 assert "coordinates" not in ds.attrs
 
-        with self.roundtrip(original) as actual:
-            assert_identical(actual, original)
+        with pytest.warns(UserWarning, match=" moved from data_vars to coords\nbased on "):
+            with self.roundtrip(original) as actual:
+                assert_identical(actual, original)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
