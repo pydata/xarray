@@ -845,7 +845,7 @@ class CFEncodedBase(DatasetIOBase):
                 variable=(
                     ("ln_p", "latitude", "longitude"),
                     np.arange(8, dtype="f4").reshape(2, 2, 2),
-                    {"ancillary_variables": "std_devs det_lim"}
+                    {"ancillary_variables": "std_devs det_lim"},
                 ),
                 std_devs=(
                     ("ln_p", "latitude", "longitude"),
@@ -877,10 +877,7 @@ class CFEncodedBase(DatasetIOBase):
             ),
         )
         original["variable"].encoding.update(
-            {
-                "cell_measures": "area: areas",
-                "grid_mapping": "latlon",
-            },
+            {"cell_measures": "area: areas", "grid_mapping": "latlon",},
         )
         original.coords["latitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="latitude_bnds")
@@ -903,7 +900,9 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataset_roundtrip(self):
         original = self._create_cf_dataset()
-        with pytest.warns(UserWarning, match=" moved from data_vars to coords\nbased on "):
+        with pytest.warns(
+            UserWarning, match=" moved from data_vars to coords\nbased on "
+        ):
             with self.roundtrip(original) as actual:
                 assert_identical(actual, original)
 
@@ -918,10 +917,11 @@ class CFEncodedBase(DatasetIOBase):
         # needs the to_dataset. The other backends should be fine
         # without it.
         with pytest.warns(
-            UserWarning, match=(
+            UserWarning,
+            match=(
                 r"Variable\(s\) referenced in bounds not in variables: "
                 r"\['l(at|ong)itude_bnds'\]"
-            )
+            ),
         ):
             with self.roundtrip(original["variable"].to_dataset()) as actual:
                 assert_identical(actual, original["variable"].to_dataset())
