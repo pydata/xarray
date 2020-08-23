@@ -135,14 +135,22 @@ class NumpyVIndexAdapter:
 def rolling_window(a, axis, window, center, fill_value):
     """ rolling window with padding. """
     pads = [(0, 0) for s in a.shape]
-    if center:
-        start = int(window / 2)  # 10 -> 5,  9 -> 4
-        end = window - 1 - start
-        pads[axis] = (start, end)
-    else:
-        pads[axis] = (window - 1, 0)
+    if not hasattr(axis, "__len__"):
+        axis = [axis]
+        window = [window]
+        center = [center]
+
+    for ax, win, cent in zip(axis, window, center):
+        if cent:
+            start = int(win / 2)  # 10 -> 5,  9 -> 4
+            end = win - 1 - start
+            pads[ax] = (start, end)
+        else:
+            pads[ax] = (win - 1, 0)
     a = np.pad(a, pads, mode="constant", constant_values=fill_value)
-    return _rolling_window(a, window, axis)
+    for ax, win in zip(axis, window):
+        a = _rolling_window(a, win, ax)
+    return a
 
 
 def _rolling_window(a, window, axis=-1):
@@ -224,8 +232,15 @@ def _nanpolyfit_1d(arr, x, rcond=None):
     out = np.full((x.shape[1] + 1,), np.nan)
     mask = np.isnan(arr)
     if not np.all(mask):
-        out[:-1], out[-1], _, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+        out[:-1], resid, rank, _ = np.linalg.lstsq(x[~mask, :], arr[~mask], rcond=rcond)
+        out[-1] = resid if resid.size > 0 else np.nan
+        warn_on_deficient_rank(rank, x.shape[1])
     return out
+
+
+def warn_on_deficient_rank(rank, order):
+    if rank != order:
+        warnings.warn("Polyfit may be poorly conditioned", np.RankWarning, stacklevel=2)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -240,16 +255,21 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
                 _nanpolyfit_1d, 0, rhs[:, nan_cols], lhs
             )
         if np.any(~nan_cols):
-            out[:-1, ~nan_cols], out[-1, ~nan_cols], _, _ = np.linalg.lstsq(
+            out[:-1, ~nan_cols], resids, rank, _ = np.linalg.lstsq(
                 lhs, rhs[:, ~nan_cols], rcond=rcond
             )
+            out[-1, ~nan_cols] = resids if resids.size > 0 else np.nan
+            warn_on_deficient_rank(rank, lhs.shape[1])
         coeffs = out[:-1, :]
         residuals = out[-1, :]
         if added_dim:
             coeffs = coeffs.reshape(coeffs.shape[0])
             residuals = residuals.reshape(residuals.shape[0])
     else:
-        coeffs, residuals, _, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+        coeffs, residuals, rank, _ = np.linalg.lstsq(lhs, rhs, rcond=rcond)
+        if residuals.size == 0:
+            residuals = coeffs[0] * np.nan
+        warn_on_deficient_rank(rank, lhs.shape[1])
     return coeffs, residuals
 
 

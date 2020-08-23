@@ -90,12 +90,12 @@ def unique_variable(
     ----------
     name : hashable
         Name for this variable.
-    variables : list of xarray.Variable
+    variables : list of Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Type of equality check to use.
-    equals: None or bool,
+    equals : None or bool, optional
         corresponding to result of compat test
 
     Returns
@@ -170,7 +170,9 @@ def merge_collected(
 
     Parameters
     ----------
-
+    grouped : mapping
+    prioritized : mapping
+    compat : str
         Type of equality check to use when checking for conflicts.
 
     Returns
@@ -335,7 +337,7 @@ def determine_coords(
 
     Parameters
     ----------
-    list_of_mappings : list of dict or Dataset objects
+    list_of_mappings : list of dict or list of Dataset
         Of the same form as the arguments to expand_variable_dicts.
 
     Returns
@@ -371,7 +373,7 @@ def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["Dataset
 
     Parameters
     ----------
-    objects : list of Dataset or mappings
+    objects : list of Dataset or mapping
         The mappings may contain any sort of objects coercible to
         xarray.Variables as keys, including pandas objects.
 
@@ -410,11 +412,11 @@ def _get_priority_vars_and_indexes(
 
     Parameters
     ----------
-    objects : list of dictionaries of variables
+    objects : list of dict-like of Variable
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts"}, optional
         Compatibility checks to use when merging variables.
 
     Returns
@@ -550,15 +552,15 @@ def merge_core(
 
     Parameters
     ----------
-    objects : list of mappings
+    objects : list of mapping
         All values must be convertable to labeled arrays.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Compatibility checks to use when merging variables.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {"outer", "inner", "left", "right"}, optional
         How to combine objects with different indexes.
-    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'}, optional
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, optional
         How to combine attributes of objects
-    priority_arg : integer, optional
+    priority_arg : int, optional
         Optional argument in `objects` that takes precedence over the others.
     explicit_coords : set, optional
         An explicit list of variables from `objects` that are coordinates.
@@ -636,45 +638,45 @@ def merge(
 
     Parameters
     ----------
-    objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
+    objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
-        - 'broadcast_equals': all values must be equal when variables are
+        - "broadcast_equals": all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
           same.
-        - 'no_conflicts': only values which are not null in both datasets
+        - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-        - 'override': skip comparing and pick variable from first dataset
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+        - "override": skip comparing and pick variable from first dataset
+    join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes in objects.
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     fill_value : scalar, optional
         Value to use for newly missing values
-    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
-                    default 'drop'
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
+                    default: "drop"
         String indicating how to combine attrs of the objects being merged:
 
-        - 'drop': empty attrs on returned Dataset.
-        - 'identical': all attrs must be the same on every object.
-        - 'no_conflicts': attrs from all objects are combined, any that have
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
-        - 'override': skip comparing and copy attrs from the first dataset to
+        - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
     Returns
