@@ -843,8 +843,15 @@ class CFEncodedBase(DatasetIOBase):
             dict(
                 variable=(
                     ("ln_p", "latitude", "longitude"),
-                    np.arange(8).reshape(2, 2, 2),
-                )
+                    np.arange(8, dtype="f4").reshape(2, 2, 2),
+                    {"ancillary_variables": "std_devs det_lim"}
+                ),
+                std_devs=(
+                    ("ln_p", "latitude", "longitude"),
+                    np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
+                    {"standard_name": "standard_error"},
+                ),
+                det_lim=((), 0.1, {"standard_name": "detection_minimum"},),
             ),
             dict(
                 latitude=("latitude", [0, 1], {"units": "degrees_north"}),
@@ -857,17 +864,11 @@ class CFEncodedBase(DatasetIOBase):
                     [[1, 1], [1, 1]],
                     {"units": "degree^2"},
                 ),
-                std_devs=(
-                    ("ln_p", "latitude", "longitude"),
-                    np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
-                    {"standard_name": "standard_error"},
-                ),
-                det_lim=((), 0.1, {"standard_name": "detection_minimum"},),
                 ln_p=(
                     "ln_p",
                     [1.0, 0.5],
                     {
-                        "standard_name": "atmosphere_natural_log_pressure_coordinate",
+                        "standard_name": "atmosphere_ln_pressure_coordinate",
                         "computed_standard_name": "air_pressure",
                     },
                 ),
@@ -878,7 +879,6 @@ class CFEncodedBase(DatasetIOBase):
             {
                 "cell_measures": "area: areas",
                 "grid_mapping": "latlon",
-                "ancillary_variables": "std_devs det_lim",
             },
         )
         original.coords["latitude"].encoding.update(
