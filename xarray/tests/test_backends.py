@@ -838,7 +838,8 @@ class CFEncodedBase(DatasetIOBase):
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
 
-    def test_grid_mapping_and_bounds_are_coordinates(self):
+    @staticmethod
+    def _create_cf_dataset():
         original = Dataset(
             dict(
                 variable=(
@@ -888,6 +889,10 @@ class CFEncodedBase(DatasetIOBase):
             dict(grid_mapping="latlon", bounds="longitude_bnds")
         )
         original.coords["ln_p"].encoding.update({"formula_terms": "p0: P0 lev: ln_p"})
+        return original
+
+    def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self):
+        original = self._create_cf_dataset()
         with create_tmp_file() as tmp_file:
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
@@ -896,6 +901,8 @@ class CFEncodedBase(DatasetIOBase):
                 assert "latlon" not in ds["variable"].attrs["coordinates"]
                 assert "coordinates" not in ds.attrs
 
+    def test_grid_mapping_and_bounds_are_coordinates_after_dataset_roundtrip(self):
+        original = self._create_cf_dataset()
         with pytest.warns(UserWarning, match=" moved from data_vars to coords\nbased on "):
             with self.roundtrip(original) as actual:
                 assert_identical(actual, original)
