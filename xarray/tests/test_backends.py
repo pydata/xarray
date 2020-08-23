@@ -55,6 +55,7 @@ from . import (
     requires_cftime,
     requires_dask,
     requires_h5netcdf,
+    requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
     requires_pydap,
@@ -925,6 +926,17 @@ class CFEncodedBase(DatasetIOBase):
         ):
             with self.roundtrip(original["variable"].to_dataset()) as actual:
                 assert_identical(actual, original["variable"].to_dataset())
+
+    @requires_iris
+    def test_grid_mapping_and_bounds_are_coordinates_after_iris_roundtrip(self):
+        original = self._create_cf_dataset()
+        iris_cube = original["variable"].to_iris()
+        actual = DataArray.from_iris(iris_cube)
+        # Bounds will be missing (xfail)
+        del original.coords["latitude_bnds"], original.coords["longitude_bnds"]
+        # Ancillary vars will be missing
+        # Those are data_vars, and will be dropped when grabbing the variable
+        assert_identical(actual, original["variable"])
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
