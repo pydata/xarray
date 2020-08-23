@@ -907,6 +907,25 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(original) as actual:
                 assert_identical(actual, original)
 
+    def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(self):
+        original = self._create_cf_dataset()
+        # The DataArray roundtrip should have the same warnings as the
+        # Dataset, but we already tested for those, so just go for the
+        # new warnings.  It would appear that there is no way to tell
+        # pytest "This warning and also this warning should both be
+        # present".
+        # xarray/tests/test_conventions.py::TestCFEncodedDataStore
+        # needs the to_dataset. The other backends should be fine
+        # without it.
+        with pytest.warns(
+            UserWarning, match=(
+                r"Variable\(s\) referenced in bounds not in variables: "
+                r"\['l(at|ong)itude_bnds'\]"
+            )
+        ):
+            with self.roundtrip(original["variable"].to_dataset()) as actual:
+                assert_identical(actual, original["variable"].to_dataset())
+
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
             return obj == "lat lon" or obj == "lon lat"
