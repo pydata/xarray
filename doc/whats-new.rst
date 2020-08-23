@@ -64,10 +64,6 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Fix `KeyError` when doing linear interpolation to an nd `DataArray`
-  that contains NaNs (:pull:`4233`).
-  By `Jens Svensmark <https://github.com/jenssss>`_
-
 - Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
   unchunked dimensions (:pull:`4312`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
@@ -77,6 +73,10 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix `KeyError` when doing linear interpolation to an nd `DataArray`
+  that contains NaNs (:pull:`4233`). Requires `numpy` version `1.18` or newer.
+  By `Jens Svensmark <https://github.com/jenssss>`_
+
 
 Documentation
 ~~~~~~~~~~~~~
