@@ -878,7 +878,7 @@ class CFEncodedBase(DatasetIOBase):
             ),
         )
         original["variable"].encoding.update(
-            {"cell_measures": "area: areas", "grid_mapping": "latlon",},
+            {"cell_measures": "area: areas", "grid_mapping": "latlon"},
         )
         original.coords["latitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="latitude_bnds")
