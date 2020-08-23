@@ -395,7 +395,7 @@ def _assert_valid_xy(darray, xy, name):
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
 
     valid_xy = (
         set(darray.dims) | set(darray.coords) | set(darray._level_coords)
