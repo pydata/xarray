@@ -588,7 +588,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
     if diff_items:
-        summary += ["Differing {}:".format(title.lower())] + diff_items
+        summary += [f"Differing {title.lower()}:"] + diff_items
 
     summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
     summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")

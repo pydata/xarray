@@ -83,7 +83,7 @@ def open_dataset(
         urlretrieve(url, md5file)
 
         localmd5 = file_md5_checksum(localfile)
-        with open(md5file, "r") as f:
+        with open(md5file) as f:
             remotemd5 = f.read()
         if localmd5 != remotemd5:
             _os.remove(localfile)

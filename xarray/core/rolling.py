@@ -146,7 +146,7 @@ class Rolling:
             else:
                 for d in self.dim:
                     if d not in arg:
-                        raise KeyError("argument has no key {}.".format(d))
+                        raise KeyError(f"argument has no key {d}.")
                 return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
@@ -329,7 +329,7 @@ class DataArrayRolling(Rolling):
 
         """
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         windows = self.construct(rolling_dim)
@@ -343,7 +343,7 @@ class DataArrayRolling(Rolling):
         """ Number of non-nan entries in each rolling window. """
 
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         # We use False as the fill_value instead of np.nan, since boolean
