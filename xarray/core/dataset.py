@@ -4524,23 +4524,75 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
         )
 
-    def _to_dataframe(self, ordered_dims):
+    def _normalize_dim_order(
+        self, dim_order: List[Hashable] = None
+    ) -> Dict[Hashable, int]:
+        """
+        Check the validity of the provided dimensions if any and return the mapping
+        between dimension name and their size.
+
+        Parameters
+        ----------
+        dim_order
+            Dimension order to validate (default to the alphabetical order if None).
+
+        Returns
+        -------
+        result
+            Validated dimensions mapping.
+
+        """
+        if dim_order is None:
+            dim_order = list(self.dims)
+        elif set(dim_order) != set(self.dims):
+            raise ValueError(
+                "dim_order {} does not match the set of dimensions of this "
+                "Dataset: {}".format(dim_order, list(self.dims))
+            )
+
+        ordered_dims = {k: self.dims[k] for k in dim_order}
+
+        return ordered_dims
+
+    def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
             self._variables[k].set_dims(ordered_dims).values.reshape(-1)
             for k in columns
         ]
-        index = self.coords.to_index(ordered_dims)
+        index = self.coords.to_index([*ordered_dims])
         return pd.DataFrame(dict(zip(columns, data)), index=index)
 
-    def to_dataframe(self):
+    def to_dataframe(self, dim_order: List[Hashable] = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
 
         Non-index variables in this dataset form the columns of the
-        DataFrame. The DataFrame is be indexed by the Cartesian product of
+        DataFrame. The DataFrame is indexed by the Cartesian product of
         this dataset's indices.
+
+        Parameters
+        ----------
+        dim_order
+            Hierarchical dimension order for the resulting dataframe. All
+            arrays are transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major
+            influence on which operations are efficient on the resulting
+            dataframe.
+
+            If provided, must include all dimensions of this dataset. By
+            default, dimensions are sorted alphabetically.
+
+        Returns
+        -------
+        result
+            Dataset as a pandas DataFrame.
+
         """
-        return self._to_dataframe(self.dims)
+
+        ordered_dims = self._normalize_dim_order(dim_order=dim_order)
+
+        return self._to_dataframe(ordered_dims=ordered_dims)
 
     def _set_sparse_data_from_dataframe(
         self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
@@ -4694,11 +4746,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             influence on which operations are efficient on the resulting dask
             dataframe.
 
-            If provided, must include all dimensions on this dataset. By
+            If provided, must include all dimensions of this dataset. By
             default, dimensions are sorted alphabetically.
         set_index : bool, optional
             If set_index=True, the dask DataFrame is indexed by this dataset's
-            coordinate. Since dask DataFrames to not support multi-indexes,
+            coordinate. Since dask DataFrames do not support multi-indexes,
             set_index only works if the dataset only contains one dimension.
 
         Returns
@@ -4709,15 +4761,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         import dask.array as da
         import dask.dataframe as dd
 
-        if dim_order is None:
-            dim_order = list(self.dims)
-        elif set(dim_order) != set(self.dims):
-            raise ValueError(
-                "dim_order {} does not match the set of dimensions on this "
-                "Dataset: {}".format(dim_order, list(self.dims))
-            )
-
-        ordered_dims = {k: self.dims[k] for k in dim_order}
+        ordered_dims = self._normalize_dim_order(dim_order=dim_order)
 
         columns = list(ordered_dims)
         columns.extend(k for k in self.coords if k not in self.dims)
@@ -4744,6 +4788,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         df = dd.concat(series_list, axis=1)
 
         if set_index:
+            dim_order = [*ordered_dims]
+
             if len(dim_order) == 1:
                 (dim,) = dim_order
                 df = df.set_index(dim)
@@ -5968,7 +6014,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     skipna_da = np.any(da.isnull())
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords = {}
+            stacked_coords: Dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(
