@@ -666,8 +666,10 @@ def merge(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
                     default: "drop"
         String indicating how to combine attrs of the objects being merged:
