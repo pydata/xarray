@@ -6,7 +6,6 @@ import pytest
 
 import xarray as xr
 from xarray.tests import (
-    LooseVersion,
     assert_allclose,
     assert_equal,
     assert_identical,
@@ -278,10 +277,6 @@ def test_interpolate_nd_nd():
         da.interp(a=ia)
 
 
-@pytest.mark.skipif(
-    LooseVersion(np.__version__) < "1.18",
-    reason="only in numpy>=1.18 does np.nanmin/max support np.datatime-dtype",
-)
 @requires_scipy
 def test_interpolate_nd_with_nan():
     """Interpolate an array with an nd indexer and `NaN` values."""

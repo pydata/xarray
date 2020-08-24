@@ -74,7 +74,8 @@ Bug fixes
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
-  that contains NaNs (:pull:`4233`). Requires `numpy` version `1.18` or newer.
+  that contains NaNs (:pull:`4233`). Requires `numpy` version `1.18`
+  or newer to work with datetime indices.
   By `Jens Svensmark <https://github.com/jenssss>`_
 
 
