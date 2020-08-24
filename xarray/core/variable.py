@@ -1073,9 +1073,9 @@ class Variable(
         if sparse_format is _default:
             sparse_format = "coo"
         try:
-            as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+            as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
         except AttributeError:
-            raise ValueError("{} is not a valid sparse format".format(sparse_format))
+            raise ValueError(f"{sparse_format} is not a valid sparse format")
 
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
@@ -2184,7 +2184,7 @@ class Variable(
         newdimname = "_unravel_argminmax_dim_0"
         count = 1
         while newdimname in self.dims:
-            newdimname = "_unravel_argminmax_dim_{}".format(count)
+            newdimname = f"_unravel_argminmax_dim_{count}"
             count += 1
 
         stacked = self.stack({newdimname: dim})

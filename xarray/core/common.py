@@ -1364,10 +1364,13 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     ----------
     other : DataArray, Dataset or Variable
         The reference object in input
-    fill_value : scalar
-        Value to fill the new object with before returning it.
-    dtype : dtype, optional
-        dtype of the new array. If omitted, it defaults to other.dtype.
+    fill_value : scalar or dict-like
+        Value to fill the new object with before returning it. If
+        other is a Dataset, may also be a dict-like mapping data
+        variables to fill values.
+    dtype : dtype or dict-like of dtype, optional
+        dtype of the new array. If a dict-like, maps dtypes to
+        variables. If omitted, it defaults to other.dtype.
 
     Returns
     -------
@@ -1427,6 +1430,34 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
+    >>> ds = xr.Dataset(
+    ...     {"a": ("x", [3, 5, 2]), "b": ("x", [9, 1, 0])}, coords={"x": [2, 4, 6]}
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) int64 3 5 2
+        b        (x) int64 9 1 0
+    >>> xr.full_like(ds, fill_value={"a": 1, "b": 2})
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) int64 1 1 1
+        b        (x) int64 2 2 2
+    >>> xr.full_like(ds, fill_value={"a": 1, "b": 2}, dtype={"a": bool, "b": float})
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) bool True True True
+        b        (x) float64 2.0 2.0 2.0
+
     See also
     --------
 
@@ -1438,12 +1469,22 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
-    if not is_scalar(fill_value):
-        raise ValueError(f"fill_value must be scalar. Received {fill_value} instead.")
+    if not is_scalar(fill_value) and not (
+        isinstance(other, Dataset) and isinstance(fill_value, dict)
+    ):
+        raise ValueError(
+            f"fill_value must be scalar or, for datasets, a dict-like. Received {fill_value} instead."
+        )
 
     if isinstance(other, Dataset):
+        if not isinstance(fill_value, dict):
+            fill_value = {k: fill_value for k in other.data_vars.keys()}
+
+        if not isinstance(dtype, dict):
+            dtype = {k: dtype for k in other.data_vars.keys()}
+
         data_vars = {
-            k: _full_like_variable(v, fill_value, dtype)
+            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype.get(k, None))
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
@@ -1465,6 +1506,9 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
     """Inner function of full_like, where other must be a variable
     """
     from .variable import Variable
+
+    if fill_value is dtypes.NA:
+        fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
 
     if is_duck_dask_array(other.data):
         import dask.array
