@@ -35,6 +35,8 @@ New Features
 - ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
   multiple dimension to reduce over. (:pull:`4356`) 
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values. (:pull:`4351`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
