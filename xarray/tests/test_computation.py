@@ -940,8 +940,9 @@ def test_vectorize_exclude_dims_dask():
     assert_identical(expected, actual)
 
 
-with raises_regex(TypeError, "Only xr.DataArray is supported"):
-    xr.corr(xr.Dataset(), xr.Dataset())
+def test_corr_only_dataarray():
+    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+        xr.corr(xr.Dataset(), xr.Dataset())
 
 
 def arrays_w_tuples():
@@ -984,12 +985,14 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
+            # While dropping isn't ideal here, numpy will return nan
+            # if any segment contains a NaN.
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.cov(
-                ts1.sel(a=a, x=x).data.flatten(),
-                ts2.sel(a=a, x=x).data.flatten(),
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
                 ddof=ddof,
             )[0, 1]
 
@@ -1010,7 +1013,11 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=ddof)[0, 1]
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+                ddof=ddof,
+            )[0, 1]
 
         expected = np_cov(da_a, da_b)
         actual = xr.cov(da_a, da_b, dim=dim, ddof=ddof)
@@ -1033,8 +1040,9 @@ def test_corr(da_a, da_b, dim):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(
-                ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
             )[0, 1]
 
         expected = np.zeros((3, 4))
@@ -1054,7 +1062,10 @@ def test_corr(da_a, da_b, dim):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+            )[0, 1]
 
         expected = np_corr(da_a, da_b)
         actual = xr.corr(da_a, da_b, dim)
@@ -1084,13 +1095,14 @@ def test_covcorr_consistency(da_a, da_b, dim):
 @pytest.mark.parametrize(
     "da_a", arrays_w_tuples()[0],
 )
-@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
 def test_autocov(da_a, dim):
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
     valid_values = da_a.notnull()
-    da_a = da_a.where(valid_values)
-    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
+    # Because we're using ddof=1, this requires > 1 value in each sample
+    da_a = da_a.where(valid_values.sum(dim=dim) > 1)
+    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=True, min_count=1)
     actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
     assert_allclose(actual, expected)
 
