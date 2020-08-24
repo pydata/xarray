@@ -408,7 +408,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             the first element the dimension name and the second element the
             values for this new coordinate.
 
-        **coords_kwargs : keyword, value pairs, optional
+        **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
 
@@ -484,8 +484,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        args : positional arguments passed into ``attrs.update``.
-        kwargs : keyword arguments passed into ``attrs.update``.
+        args
+            positional arguments passed into ``attrs.update``.
+        kwargs
+            keyword arguments passed into ``attrs.update``.
 
         Returns
         -------
@@ -513,18 +515,21 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        func : function
+        func : callable
             function to apply to this xarray object (Dataset/DataArray).
             ``args``, and ``kwargs`` are passed into ``func``.
             Alternatively a ``(callable, data_keyword)`` tuple where
             ``data_keyword`` is a string indicating the keyword of
             ``callable`` that expects the xarray object.
-        args : positional arguments passed into ``func``.
-        kwargs : a dictionary of keyword arguments passed into ``func``.
+        args
+            positional arguments passed into ``func``.
+        kwargs
+            a dictionary of keyword arguments passed into ``func``.
 
         Returns
         -------
-        object : the return type of ``func``.
+        object : Any
+            the return type of ``func``.
 
         Notes
         -----
@@ -635,7 +640,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
-        squeeze : boolean, optional
+        squeeze : bool, optional
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
@@ -645,7 +650,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        grouped : GroupBy
+        grouped
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
 
@@ -711,17 +716,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         group : str, DataArray or IndexVariable
             Array whose binned values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
-        bins : int or array of scalars
+        bins : int or array-like
             If bins is an int, it defines the number of equal-width bins in the
             range of x. However, in this case, the range of x is extended by .1%
             on each side to include the min or max values of x. If bins is a
             sequence it defines the bin edges allowing for non-uniform bin
             width. No extension of the range of x is done in this case.
-        right : boolean, optional
+        right : bool, default: True
             Indicates whether the bins include the rightmost edge or not. If
             right == True (the default), then the bins [1,2,3,4] indicate
             (1,2], (2,3], (3,4].
-        labels : array or boolean, default None
+        labels : array-like or bool, default: None
             Used as labels for the resulting bins. Must be of the same length as
             the resulting bins. If False, string bin labels are assigned by
             `pandas.cut`.
@@ -729,7 +734,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             The precision at which to store and display the bins labels.
         include_lowest : bool
             Whether the first interval should be left-inclusive or not.
-        squeeze : boolean, optional
+        squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
@@ -739,7 +744,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        grouped : GroupBy
+        grouped
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
             The name of the group has the added suffix `_bins` in order to
@@ -798,11 +803,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim: dict, optional
             Mapping from the dimension name to create the rolling iterator
             along (e.g. `time`) to its moving window size.
-        min_periods : int, default None
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, or a mapping, default False
+        center : bool or mapping, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -876,20 +881,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        window : A single mapping from a dimension name to window value,
-                 optional
-
-            dim : str
-                Name of the dimension to create the rolling exponential window
-                along (e.g., `time`).
-            window : int
-                Size of the moving window. The type of this is specified in
-                `window_type`
-        window_type : str, one of ['span', 'com', 'halflife', 'alpha'],
-                      default 'span'
+        window : mapping of hashable to int, optional
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
+        window_type : {"span", "com", "halflife", "alpha"}, default: "span"
             The format of the previously supplied window. Each is a simple
             numerical transformation of the others. Described in detail:
-            https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ewm.html
         **window_kwargs : optional
             The keyword arguments form of ``window``.
             One of window or window_kwargs must be provided.
@@ -916,20 +914,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        dim: dict, optional
+        dim : mapping of hashable to int, optional
             Mapping from the dimension name to the window size.
-
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
-        boundary : 'exact' | 'trim' | 'pad'
+        boundary : {"exact", "trim", "pad"}, default: "exact"
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
-        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) that is applied to the coordinates,
+        side : {"left", "right"} or mapping of str to {"left", "right"}
+        coord_func : str or mapping of hashable to str, default: "mean"
+            function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -1009,13 +1002,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dimension must be datetime-like.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
-        closed : 'left' or 'right', optional
+        closed : {"left", "right"}, optional
             Side of each interval to treat as closed.
-        label : 'left or 'right', optional
+        label : {"left", "right"}, optional
             Side of each interval to use for labeling.
         base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for '24H' frequency, base could
+            aggregated intervals. For example, for "24H" frequency, base could
             range from 0 through 23.
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
@@ -1145,19 +1138,20 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        cond : DataArray or Dataset with boolean dtype
-            Locations at which to preserve this object's values.
+        cond : DataArray or Dataset
+            Locations at which to preserve this object's values. dtype must be `bool`.
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations filled with NA.
-        drop : boolean, optional
+        drop : bool, optional
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result. Mutually exclusive with
             ``other``.
 
         Returns
         -------
-        Same xarray type as caller, with dtype float64.
+        DataArray or Dataset
+            Same xarray type as caller, with dtype float64.
 
         Examples
         --------
@@ -1266,8 +1260,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        isin : same as object, bool
-            Has the same shape as this object.
+        isin : DataArray or Dataset
+            Has the same type and shape as this object, but with a bool dtype.
 
         Examples
         --------
@@ -1305,6 +1299,53 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dask="allowed",
         )
 
+    def astype(self, dtype, casting="unsafe", copy=True, keep_attrs=True):
+        """
+        Copy of the xarray object, with data cast to a specified type.
+        Leaves coordinate dtype unchanged.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+            Controls what kind of data casting may occur. Defaults to 'unsafe'
+            for backwards compatibility.
+
+            * 'no' means the data types should not be cast at all.
+            * 'equiv' means only byte-order changes are allowed.
+            * 'safe' means only casts which can preserve values are allowed.
+            * 'same_kind' means only safe casts or casts within a kind,
+                like float64 to float32, are allowed.
+            * 'unsafe' means any data conversions may be done.
+        copy : bool, optional
+            By default, astype always returns a newly allocated array. If this
+            is set to False and the `dtype` requirement is satisfied, the input
+            array is returned instead of a copy.
+        keep_attrs : bool, optional
+            By default, astype keeps attributes. Set to False to remove
+            attributes in the returned object.
+
+        Returns
+        -------
+        out : same as object
+            New object with data cast to the specified type.
+
+        See also
+        --------
+        np.ndarray.astype
+        dask.array.Array.astype
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            duck_array_ops.astype,
+            self,
+            kwargs=dict(dtype=dtype, casting=casting, copy=copy),
+            keep_attrs=keep_attrs,
+            dask="allowed",
+        )
+
     def __enter__(self: T) -> T:
         return self
 
@@ -1321,7 +1362,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
     Parameters
     ----------
-    other : DataArray, Dataset, or Variable
+    other : DataArray, Dataset or Variable
         The reference object in input
     fill_value : scalar
         Value to fill the new object with before returning it.
@@ -1445,14 +1486,14 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Parameters
     ----------
-    other : DataArray, Dataset, or Variable
+    other : DataArray, Dataset or Variable
         The reference object. The output will have the same dimensions and coordinates as this object.
     dtype : dtype, optional
         dtype of the new array. If omitted, it defaults to other.dtype.
 
     Returns
     -------
-    out : same as object
+    out : DataArray, Dataset or Variable
         New object of zeros with the same shape and type as other.
 
     Examples

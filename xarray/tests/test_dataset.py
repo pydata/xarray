@@ -5621,6 +5621,16 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
+    def test_polyfit_warnings(self):
+        ds = create_test_data(seed=1)
+
+        with warnings.catch_warnings(record=True) as ws:
+            ds.var1.polyfit("dim2", 10, full=False)
+            assert len(ws) == 1
+            assert ws[0].category == np.RankWarning
+            ds.var1.polyfit("dim2", 10, full=True)
+            assert len(ws) == 1
+
     def test_pad(self):
         ds = create_test_data(seed=1)
         padded = ds.pad(dim2=(1, 1), constant_values=42)
@@ -5633,6 +5643,15 @@ class TestDataset:
 
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
+
+    def test_astype_attrs(self):
+        data = create_test_data(seed=123)
+        data.attrs["foo"] = "bar"
+
+        assert data.attrs == data.astype(float).attrs
+        assert data.var1.attrs == data.astype(float).var1.attrs
+        assert not data.astype(float, keep_attrs=False).attrs
+        assert not data.astype(float, keep_attrs=False).var1.attrs
 
 
 # Py.test tests
