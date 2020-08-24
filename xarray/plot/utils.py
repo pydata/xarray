@@ -292,6 +292,7 @@ def _determine_cmap_params(
         norm = newnorm if norm is None else norm
 
     # vmin & vmax needs to be None if norm is passed
+    # TODO: always return a norm with vmin and vmax
     if norm is not None:
         vmin = None
         vmax = None

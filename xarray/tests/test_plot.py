@@ -1,6 +1,6 @@
 import contextlib
 import inspect
-from copy import copy, deepcopy
+from copy import copy
 from datetime import datetime
 
 import numpy as np
@@ -364,7 +364,7 @@ class TestPlot(PlotTestCase):
 
         cmap = mpl.cm.viridis
 
-        # deepcopy to ensure cmap is not changed by contourf()
+        # use copy to ensure cmap is not changed by contourf()
         # Set vmin and vmax so that _build_discrete_colormap is called with
         # extend='both'. extend is passed to
         # mpl.colors.from_levels_and_colors(), which returns a result with
@@ -372,7 +372,7 @@ class TestPlot(PlotTestCase):
         # extend='neither' (but if extend='neither' the under and over values
         # would not be used because the data would all be within the plotted
         # range)
-        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
+        pl = a.plot.contourf(cmap=copy(cmap), vmin=0.1, vmax=0.9)
 
         # check the set_bad color
         assert np.all(
@@ -389,9 +389,7 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # Make a copy here because we want a local cmap that we will modify.
-        # Use deepcopy because matplotlib Colormap objects have tuple members
-        # and we want to ensure we do not change the original.
+        # make a copy here because we want a local cmap that we will modify.
         cmap = copy(mpl.cm.viridis)
 
         cmap.set_bad("w")
@@ -409,8 +407,8 @@ class TestPlot(PlotTestCase):
         # check we actually changed the set_over color
         assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
 
-        # deepcopy to ensure cmap is not changed by contourf()
-        pl = a.plot.contourf(cmap=deepcopy(cmap))
+        # copy to ensure cmap is not changed by contourf()
+        pl = a.plot.contourf(cmap=copy(cmap))
 
         # check the set_bad color has been kept
         assert np.all(
@@ -2433,7 +2431,7 @@ def test_plot_transposes_properly(plotfunc):
         # get_array doesn't work for contour, contourf. It returns the colormap intervals.
         # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
         # to ravel() on the LHS
-        assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+        np.testing.assert_equal(hdl.get_array().ravel(), da.to_masked_array().ravel())
 
 
 @requires_matplotlib
