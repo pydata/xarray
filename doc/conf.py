@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -35,7 +34,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
     import matplotlib

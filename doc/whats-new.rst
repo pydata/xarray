@@ -73,11 +73,12 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
   that contains NaNs (:pull:`4233`). Requires `numpy` version `1.18`
   or newer to work with datetime indices.
   By `Jens Svensmark <https://github.com/jenssss>`_
-
 
 Documentation
 ~~~~~~~~~~~~~

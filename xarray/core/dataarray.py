@@ -440,7 +440,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
         variables.update({k: v for k, v in self._coords.items() if k != dim})
         indexes = propagate_indexes(self._indexes, exclude=dim)
-        coord_names = set(self._coords) - set([dim])
+        coord_names = set(self._coords) - {dim}
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
         )
