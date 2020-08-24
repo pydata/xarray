@@ -375,9 +375,9 @@ class TestPlot(PlotTestCase):
         pl = a.plot.contourf(cmap=copy(cmap), vmin=0.1, vmax=0.9)
 
         # check the set_bad color
-        assert np.all(
-            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
-            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        assert_array_equal(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0],
+            cmap(np.ma.masked_invalid([np.nan]))[0],
         )
 
         # check the set_under color
@@ -411,9 +411,9 @@ class TestPlot(PlotTestCase):
         pl = a.plot.contourf(cmap=copy(cmap))
 
         # check the set_bad color has been kept
-        assert np.all(
-            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
-            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        assert_array_equal(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0],
+            cmap(np.ma.masked_invalid([np.nan]))[0],
         )
 
         # check the set_under color has been kept
@@ -2395,14 +2395,14 @@ class TestAxesKwargs:
         plt.clf()
         da.plot(xticks=np.arange(5))
         expected = np.arange(5).tolist()
-        assert np.all(plt.gca().get_xticks() == expected)
+        assert_array_equal(plt.gca().get_xticks(), expected)
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_yticks_kwarg(self, da):
         plt.clf()
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
-        assert np.all(plt.gca().get_yticks() == expected)
+        assert_array_equal(plt.gca().get_yticks(), expected)
 
 
 @requires_matplotlib
@@ -2431,7 +2431,7 @@ def test_plot_transposes_properly(plotfunc):
         # get_array doesn't work for contour, contourf. It returns the colormap intervals.
         # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
         # to ravel() on the LHS
-        np.testing.assert_equal(hdl.get_array().ravel(), da.to_masked_array().ravel())
+        assert_array_equal(hdl.get_array().ravel(), da.to_masked_array().ravel())
 
 
 @requires_matplotlib
