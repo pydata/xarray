@@ -114,7 +114,7 @@ def _validate_pad_output_shape(input_shape, pad_width, output_shape):
     elif (
         len(pad_width) == len(input_shape)
         and all(map(lambda x: len(x) == 2, pad_width))
-        and all((isint(i) for p in pad_width for i in p))
+        and all(isint(i) for p in pad_width for i in p)
     ):
         pad_width = np.sum(pad_width, axis=1)
     else:

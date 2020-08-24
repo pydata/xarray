@@ -120,7 +120,9 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
+            type(self).__name__,
+            list(self.input_core_dims),
+            list(self.output_core_dims),
         )
 
     def __str__(self):
@@ -128,11 +130,13 @@ class _UFuncSignature:
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
-    def to_gufunc_string(self):
+    def to_gufunc_string(self, exclude_dims=frozenset()):
         """Create an equivalent signature string for a NumPy gufunc.
 
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
+
+        Also creates unique names for input_core_dims contained in exclude_dims.
         """
         input_core_dims = [
             [self.dims_map[dim] for dim in core_dims]
@@ -142,6 +146,25 @@ class _UFuncSignature:
             [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
+
+        # enumerate input_core_dims contained in exclude_dims to make them unique
+        if exclude_dims:
+
+            exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
+
+            counter = Counter()
+
+            def _enumerate(dim):
+                if dim in exclude_dims:
+                    n = counter[dim]
+                    counter.update([dim])
+                    dim = f"{dim}_{n}"
+                return dim
+
+            input_core_dims = [
+                [_enumerate(dim) for dim in arg] for arg in input_core_dims
+            ]
+
         alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
 
@@ -545,10 +568,12 @@ def broadcast_compat_data(
     return data
 
 
-def _vectorize(func, signature, output_dtypes):
+def _vectorize(func, signature, output_dtypes, exclude_dims):
     if signature.all_core_dims:
         func = np.vectorize(
-            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+            func,
+            otypes=output_dtypes,
+            signature=signature.to_gufunc_string(exclude_dims),
         )
     else:
         func = np.vectorize(func, otypes=output_dtypes)
@@ -623,7 +648,7 @@ def apply_variable_ufunc(
 
                 res = da.apply_gufunc(
                     numpy_func,
-                    signature.to_gufunc_string(),
+                    signature.to_gufunc_string(exclude_dims),
                     *arrays,
                     vectorize=vectorize,
                     output_dtypes=output_dtypes,
@@ -649,7 +674,9 @@ def apply_variable_ufunc(
             )
     else:
         if vectorize:
-            func = _vectorize(func, signature, output_dtypes=output_dtypes)
+            func = _vectorize(
+                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+            )
 
     result_data = func(*input_data)
 
