@@ -897,7 +897,7 @@ def test_vectorize_dask_dtype_meta():
     assert_identical(expected, actual)
     assert np.float == actual.dtype
 
-        
+
 def pandas_median_add(x, y):
     # function which can consume input of unequal length
     return pd.Series(x).median() + pd.Series(y).median()
@@ -939,12 +939,12 @@ def test_vectorize_exclude_dims_dask():
     )
     assert_identical(expected, actual)
 
-    
+
 def test_corr_only_dataarray():
     with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())
 
-        
+
 def arrays_w_tuples():
     da = xr.DataArray(
         np.random.random((3, 21, 4)),
