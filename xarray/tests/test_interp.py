@@ -296,6 +296,12 @@ def test_interpolate_nd_with_nan():
     )
     xr.testing.assert_allclose(out.drop_vars("a"), expected)
 
+    db = 2 * da
+    ds = xr.Dataset({"da": da, "db": db})
+    out = ds.interp(a=ia)
+    expected_ds = xr.Dataset({"da": expected, "db": 2 * expected})
+    xr.testing.assert_allclose(out.drop_vars("a"), expected_ds)
+
 
 @pytest.mark.parametrize("method", ["linear"])
 @pytest.mark.parametrize("case", [0, 1])
@@ -573,6 +579,7 @@ def test_interp_like():
             [0.5, 1.5],
         ),
         (["2000-01-01T12:00", "2000-01-02T12:00"], [0.5, 1.5]),
+        (["2000-01-01T12:00", "2000-01-02T12:00", "NaT"], [0.5, 1.5, np.nan]),
         (["2000-01-01T12:00"], 0.5),
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],

@@ -1409,9 +1409,9 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         coords : dict, optional
             Mapping from dimension names to the new coordinates.
-            new coordinate can be an scalar, array-like or DataArray.
-            If DataArrays are passed as new coordates, their dimensions are
-            used for the broadcasting.
+            New coordinate can be an scalar, array-like or DataArray.
+            If DataArrays are passed as new coordinates, their dimensions are
+            used for the broadcasting. Missing values are skipped.
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
@@ -1481,7 +1481,7 @@ class DataArray(AbstractArray, DataWithCoords):
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
-            which to index the variables in this dataset.
+            which to index the variables in this dataset. Missing values are skipped.
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
