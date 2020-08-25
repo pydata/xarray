@@ -1822,6 +1822,25 @@ class TestDataset:
         actual = data.reindex(dim2=data["dim2"][:5:-1])
         assert_identical(actual, expected)
 
+        # multiple fill values
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(data=[[-20, -20, -20, -20]] * len(ds.dim1)),
+        )
+        actual = data.reindex(
+            dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10, "var2": -20}
+        )
+        assert_identical(actual, expected)
+        # use the default value
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(
+                data=[[np.nan, np.nan, np.nan, np.nan]] * len(ds.dim1)
+            ),
+        )
+        actual = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10})
+        assert_identical(actual, expected)
+
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
@@ -1878,32 +1897,54 @@ class TestDataset:
         actual = ds.reindex_like(alt, method="pad")
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         actual = ds.reindex(y=y, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_like_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         alt = Dataset({"y": y})
         actual = ds.reindex_like(alt, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value):
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
         y = Dataset({"bar": DataArray([1, 2], dims=["x"], coords={"x": [1, 3]})})
@@ -1911,13 +1952,26 @@ class TestDataset:
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_foo = fill_value_bar = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_foo = fill_value["foo"]
+            fill_value_bar = fill_value["bar"]
+        else:
+            fill_value_foo = fill_value_bar = fill_value
 
         expected_x2 = Dataset(
-            {"foo": DataArray([1, 2, fill_value], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "foo": DataArray(
+                    [1, 2, fill_value_foo], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         expected_y2 = Dataset(
-            {"bar": DataArray([1, fill_value, 2], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "bar": DataArray(
+                    [1, fill_value_bar, 2], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
@@ -2936,7 +2990,7 @@ class TestDataset:
 
     def test_unstack_fill_value(self):
         ds = xr.Dataset(
-            {"var": (("x",), np.arange(6))},
+            {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
             coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
         )
         # make ds incomplete
@@ -2949,7 +3003,11 @@ class TestDataset:
 
         actual = ds["var"].unstack("index", fill_value=-1)
         expected = ds["var"].unstack("index").fillna(-1).astype(int)
-        assert actual.equals(expected)
+        assert_equal(actual, expected)
+
+        actual = ds.unstack("index", fill_value={"var": -1, "other_var": 1})
+        expected = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
+        assert_equal(actual, expected)
 
     @requires_sparse
     def test_unstack_sparse(self):
@@ -5202,7 +5260,7 @@ class TestDataset:
         with raises_regex(ValueError, "'label' argument has to"):
             ds.diff("dim2", label="raise_me")
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value):
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
         attrs = {"meta": "data"}
@@ -5212,6 +5270,8 @@ class TestDataset:
             # if we supply the default, we expect the missing value for a
             # float array
             fill_value = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value = fill_value.get("foo", np.nan)
         expected = Dataset({"foo": ("x", [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
@@ -5405,21 +5465,35 @@ class TestDataset:
         )
         actual = full_like(ds, 2)
 
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [2, 2, 2]
-        expect["d2"].values = [2.0, 2.0, 2.0]
-        assert expect["d1"].dtype == int
-        assert expect["d2"].dtype == float
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [2, 2, 2]
+        expected["d2"].values = [2.0, 2.0, 2.0]
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [True, True, True]
-        expect["d2"].values = [True, True, True]
-        assert expect["d1"].dtype == bool
-        assert expect["d2"].dtype == bool
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [True, True, True]
+        expected["d2"].values = [True, True, True]
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == bool
+        assert_identical(expected, actual)
+
+        # with multiple fill values
+        actual = full_like(ds, {"d1": 1, "d2": 2.3})
+        expected = ds.assign(d1=("x", [1, 1, 1]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
+
+        # override multiple dtypes
+        actual = full_like(ds, fill_value={"d1": 1, "d2": 2.3}, dtype={"d1": bool})
+        expected = ds.assign(d1=("x", [True, True, True]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
     def test_combine_first(self):
         dsx0 = DataArray([0, 0], [("x", ["a", "b"])]).to_dataset(name="dsx0")
