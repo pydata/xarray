@@ -1589,7 +1589,6 @@ class ZarrBase(CFEncodedBase):
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
                 # chunk size should be the same as original
-
                 assert v.chunks == original[k].chunks
 
     @requires_dask
