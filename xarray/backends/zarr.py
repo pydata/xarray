@@ -278,10 +278,14 @@ class ZarrStore(AbstractWritableDataStore):
         group=None,
         consolidated=False,
         consolidate_on_close=False,
+        chunk_store=None,
     ):
         import zarr
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        if chunk_store:
+            open_kwargs["chunk_store"] = chunk_store
+
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
@@ -505,6 +509,7 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
+    chunk_store=None,
     decode_timedelta=None,
     use_cftime=None,
     **kwargs,
@@ -566,6 +571,8 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    chunk_store : MutableMapping, optional
+        A separate Zarr store only for chunk data.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
@@ -658,6 +665,7 @@ def open_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
+        chunk_store=chunk_store,
     )
     ds = maybe_decode_store(zarr_store)
 

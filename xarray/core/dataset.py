@@ -1571,6 +1571,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def to_zarr(
         self,
         store: Union[MutableMapping, str, Path] = None,
+        chunk_store: Union[MutableMapping, str, Path] = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
@@ -1589,6 +1590,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
+        chunk_store : MutableMapping, str or Path, optional
+            Store or path to directory in file system only for Zarr array chunks.
+            Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
@@ -1649,6 +1653,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return to_zarr(
             self,
             store=store,
+            chunk_store=chunk_store,
             mode=mode,
             synchronizer=synchronizer,
             group=group,
