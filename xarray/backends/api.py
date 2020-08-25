@@ -1307,6 +1307,7 @@ def _validate_append_dim_and_encoding(
 def to_zarr(
     dataset,
     store=None,
+    chunk_store=None,
     mode=None,
     synchronizer=None,
     group=None,
@@ -1322,6 +1323,8 @@ def to_zarr(
     """
     if isinstance(store, Path):
         store = str(store)
+    if isinstance(chunk_store, Path):
+        chunk_store = str(store)
     if encoding is None:
         encoding = {}
 
@@ -1346,6 +1349,7 @@ def to_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidate_on_close=consolidated,
+        chunk_store=chunk_store,
     )
     zstore.append_dim = append_dim
     writer = ArrayWriter()

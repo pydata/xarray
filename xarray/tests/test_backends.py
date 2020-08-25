@@ -1564,6 +1564,15 @@ class ZarrBase(CFEncodedBase):
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    def test_with_chunkstore(self):
+        expected = create_test_data()
+        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+            save_kwargs = {"chunk_store": chunk_store}
+            self.save(expected, store_target, **save_kwargs)
+            open_kwargs = {"chunk_store": chunk_store}
+            with self.open(store_target, **open_kwargs) as ds:
+                assert_equal(ds, expected)
+
     @requires_dask
     def test_auto_chunk(self):
         original = create_test_data().chunk()
