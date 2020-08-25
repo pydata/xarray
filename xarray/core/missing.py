@@ -554,13 +554,10 @@ def _localize(var, indexes_coords):
         if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
             np.__version__
         ) < LooseVersion("1.18"):
-            if new_x.isnull().any():
-                raise ValueError(
-                    "numpy 1.18 or newer required to use interp with datetime/ timedelta array containing missing values"
-                )
-            else:
-                minval = np.min(new_x.values)
-                maxval = np.max(new_x.values)
+            # np.nanmin/max changed behaviour for datetime types in numpy 1.18,
+            # see https://github.com/pydata/xarray/pull/3924/files
+            minval = np.min(new_x.values)
+            maxval = np.max(new_x.values)
         else:
             minval = np.nanmin(new_x.values)
             maxval = np.nanmax(new_x.values)
