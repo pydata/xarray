@@ -581,6 +581,12 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
     def signature(darray, x, y, **kwargs):
         pass
 
