@@ -642,7 +642,7 @@ def open_zarr(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             decode_timedelta=decode_timedelta,
-            use_cftime=use_cftime
+            use_cftime=use_cftime,
         )
 
         # TODO: this is where we would apply caching
