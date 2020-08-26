@@ -12,7 +12,8 @@ from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
-from .pycompat import dask_array_type, is_duck_dask_array, sparse_array_type
+from .pycompat import dask_array_type, sparse_array_type
+from .utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -457,9 +458,7 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__") or is_duck_dask_array(
-        internal_data
-    ):
+    elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
@@ -527,13 +526,6 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
-    def is_duck_array(value):
-        return (
-            hasattr(value, "ndim")
-            and hasattr(value, "shape")
-            and hasattr(value, "dtype")
-        )
-
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
