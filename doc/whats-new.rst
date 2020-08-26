@@ -35,6 +35,8 @@ New Features
 - ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
   multiple dimension to reduce over. (:pull:`4356`) 
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values. (:pull:`4351`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
   property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
   ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
@@ -76,6 +78,8 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -98,7 +102,8 @@ Internal Changes
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
 - Enable type checking for :py:func:`concat` (:issue:`4238`)
   By `Mathias Hauser <https://github.com/mathause>`_.
-
+- Updated plot functions for matplotlib version 3.3 and silenced warnings in the
+  plot tests (:pull:`4365`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.0:
 

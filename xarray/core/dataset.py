@@ -1571,6 +1571,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def to_zarr(
         self,
         store: Union[MutableMapping, str, Path] = None,
+        chunk_store: Union[MutableMapping, str, Path] = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
@@ -1589,6 +1590,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
+        chunk_store : MutableMapping, str or Path, optional
+            Store or path to directory in file system only for Zarr array chunks.
+            Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
@@ -1649,6 +1653,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return to_zarr(
             self,
             store=store,
+            chunk_store=chunk_store,
             mode=mode,
             synchronizer=synchronizer,
             group=group,
@@ -2313,8 +2318,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like maps
+            variable names to fill values.
 
         Returns
         -------
@@ -2373,8 +2379,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like,
+            maps variable names (including coordinates) to fill values.
         sparse : bool, default: False
             use sparse-array.
         **indexers_kwargs : {dim: indexer, ...}, optional
@@ -2440,6 +2447,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             temperature  (station) float64 18.84 0.0 19.22 0.0
             pressure     (station) float64 324.1 0.0 122.8 0.0
+
+        We can also use different fill values for each variable.
+
+        >>> x.reindex(
+        ...     {"station": new_index}, fill_value={"temperature": 0, "pressure": 100}
+        ... )
+        <xarray.Dataset>
+        Dimensions:      (station: 4)
+        Coordinates:
+        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+        Data variables:
+            temperature  (station) float64 18.84 0.0 19.22 0.0
+            pressure     (station) float64 324.1 100.0 122.8 100.0
 
         Because the index is not monotonically increasing or decreasing, we cannot use arguments
         to the keyword method to fill the `NaN` values.
@@ -3544,8 +3564,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dim : hashable or iterable of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
-        fill_value : scalar, default: nan
-            value to be filled
+        fill_value : scalar or dict-like, default: nan
+            value to be filled. If a dict-like, maps variable names to
+            fill values. If not provided or if the dict-like does not
+            contain all variables, the dtype's NA value will be used.
         sparse : bool, default: False
             use sparse-array if True
 
@@ -3663,8 +3685,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values.
 
         Returns
         -------
@@ -5117,8 +5140,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values.
         **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
@@ -5153,8 +5177,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
         for name, var in self.variables.items():
             if name in self.data_vars:
+                fill_value_ = (
+                    fill_value.get(name, dtypes.NA)
+                    if isinstance(fill_value, dict)
+                    else fill_value
+                )
+
                 var_shifts = {k: v for k, v in shifts.items() if k in var.dims}
-                variables[name] = var.shift(fill_value=fill_value, shifts=var_shifts)
+                variables[name] = var.shift(fill_value=fill_value_, shifts=var_shifts)
             else:
                 variables[name] = var
 

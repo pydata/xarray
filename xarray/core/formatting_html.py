@@ -255,12 +255,12 @@ def array_repr(arr):
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
 
     obj_type = "xarray.{}".format(type(arr).__name__)
-    arr_name = "'{}'".format(arr.name) if getattr(arr, "name", None) else ""
+    arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
     coord_names = list(arr.coords) if hasattr(arr, "coords") else []
 
     header_components = [
-        "<div class='xr-obj-type'>{}</div>".format(obj_type),
-        "<div class='xr-array-name'>{}</div>".format(arr_name),
+        f"<div class='xr-obj-type'>{obj_type}</div>",
+        f"<div class='xr-array-name'>{arr_name}</div>",
         format_dims(dims, coord_names),
     ]
 
