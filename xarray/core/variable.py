@@ -932,14 +932,13 @@ class Variable(
                 # don't share caching between copies
                 data = indexing.MemoryCachedArray(data.array)
 
-            if deep:
-                if hasattr(data, "__array_function__") or isinstance(
-                    data, dask_array_type
-                ):
-                    data = data.copy()
-                elif not isinstance(data, PandasIndexAdapter):
-                    # pandas.Index is immutable
-                    data = np.array(data)
+            if deep and (
+                hasattr(data, "__array_function__")
+                or isinstance(data, dask_array_type)
+                or (not IS_NEP18_ACTIVE and isinstance(data, np.ndarray))
+            ):
+                data = copy.deepcopy(data)
+
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:

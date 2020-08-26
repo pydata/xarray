@@ -6833,3 +6833,9 @@ def test_delete_coords():
     assert a1.dims == ("y", "x")
     assert set(a0.coords.keys()) == {"x", "y"}
     assert set(a1.coords.keys()) == {"x"}
+
+
+def test_deepcopy_obj_array():
+    x0 = DataArray(np.array([object()]))
+    x1 = deepcopy(x0)
+    assert x0.values[0] is not x1.values[0]
