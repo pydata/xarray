@@ -5896,6 +5896,15 @@ def test_coarsen_keep_attrs():
     assert dat.attrs == _attrs
 
 
+def test_coarsen_maintains_orig_object():
+    ds = xr.tutorial.load_dataset("air_temperature")
+    ds2 = xr.tutorial.load_dataset("air_temperature")
+
+    xr.testing.assert_identical(ds, ds2) # passes
+    ds.coarsen(lat=5).mean()
+    xr.testing.assert_identical(ds, ds2)
+
+
 def test_rolling_keep_attrs():
     _attrs = {"units": "test", "long_name": "testing"}
 
