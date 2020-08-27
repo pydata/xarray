@@ -277,6 +277,32 @@ def test_interpolate_nd_nd():
         da.interp(a=ia)
 
 
+@requires_scipy
+def test_interpolate_nd_with_nan():
+    """Interpolate an array with an nd indexer and `NaN` values."""
+
+    # Create indexer into `a` with dimensions (y, x)
+    x = [0, 1, 2]
+    y = [10, 20]
+    c = {"x": x, "y": y}
+    a = np.arange(6, dtype=float).reshape(2, 3)
+    a[0, 1] = np.nan
+    ia = xr.DataArray(a, dims=("y", "x"), coords=c)
+
+    da = xr.DataArray([1, 2, 2], dims=("a"), coords={"a": [0, 2, 4]})
+    out = da.interp(a=ia)
+    expected = xr.DataArray(
+        [[1.0, np.nan, 2.0], [2.0, 2.0, np.nan]], dims=("y", "x"), coords=c
+    )
+    xr.testing.assert_allclose(out.drop_vars("a"), expected)
+
+    db = 2 * da
+    ds = xr.Dataset({"da": da, "db": db})
+    out = ds.interp(a=ia)
+    expected_ds = xr.Dataset({"da": expected, "db": 2 * expected})
+    xr.testing.assert_allclose(out.drop_vars("a"), expected_ds)
+
+
 @pytest.mark.parametrize("method", ["linear"])
 @pytest.mark.parametrize("case", [0, 1])
 def test_interpolate_scalar(method, case):
@@ -553,6 +579,7 @@ def test_interp_like():
             [0.5, 1.5],
         ),
         (["2000-01-01T12:00", "2000-01-02T12:00"], [0.5, 1.5]),
+        (["2000-01-01T12:00", "2000-01-02T12:00", "NaT"], [0.5, 1.5, np.nan]),
         (["2000-01-01T12:00"], 0.5),
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
@@ -818,13 +845,15 @@ def test_interpolate_chunk_advanced(method):
     theta = np.linspace(0, 2 * np.pi, 5)
     w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
-        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
+        data=1 + w[:, np.newaxis] * np.cos(theta),
+        coords=[("w", w), ("theta", theta)],
     )
 
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     z = xr.DataArray(
-        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)],
+        data=w[:, np.newaxis] * np.sin(theta),
+        coords=[("w", w), ("theta", theta)],
     )
 
     kwargs = {"fill_value": None}

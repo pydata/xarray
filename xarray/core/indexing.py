@@ -469,8 +469,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
 
 class ExplicitlyIndexed:
-    """Mixin to mark support for Indexer subclasses in indexing.
-    """
+    """Mixin to mark support for Indexer subclasses in indexing."""
 
     __slots__ = ()
 
@@ -507,8 +506,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make basic and outer indexing lazy.
-    """
+    """Wrap an array to make basic and outer indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -584,8 +582,7 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make vectorized indexing lazy.
-    """
+    """Wrap an array to make vectorized indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -772,7 +769,7 @@ def _outer_to_numpy_indexer(key, shape):
 
 
 def _combine_indexers(old_key, shape, new_key):
-    """ Combine two indexers.
+    """Combine two indexers.
 
     Parameters
     ----------
@@ -857,7 +854,7 @@ def decompose_indexer(
 
 
 def _decompose_slice(key, size):
-    """ convert a slice to successive two slices. The first slice always has
+    """convert a slice to successive two slices. The first slice always has
     a positive step.
     """
     start, stop, step = key.indices(size)
@@ -1313,7 +1310,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array",)
 
     def __init__(self, array):
-        """ This adapter is created in Variable.__getitem__ in
+        """This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
         """
         self.array = array
@@ -1368,8 +1365,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing.
-    """
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
 

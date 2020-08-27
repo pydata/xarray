@@ -6454,3 +6454,9 @@ def test_weakref():
     ds = Dataset()
     r = ref(ds)
     assert r() is ds
+
+
+def test_deepcopy_obj_array():
+    x0 = Dataset(dict(foo=DataArray(np.array([object()]))))
+    x1 = deepcopy(x0)
+    assert x0["foo"].values[0] is not x1["foo"].values[0]

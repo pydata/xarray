@@ -111,8 +111,7 @@ class ImplementsDatasetReduce:
 
 
 class AbstractArray(ImplementsArrayReduce):
-    """Shared base class for DataArray and Variable.
-    """
+    """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
 
@@ -188,8 +187,7 @@ class AbstractArray(ImplementsArrayReduce):
 
 
 class AttrAccessMixin:
-    """Mixin class that allows getting keys with attribute access
-    """
+    """Mixin class that allows getting keys with attribute access"""
 
     __slots__ = ()
 
@@ -212,14 +210,12 @@ class AttrAccessMixin:
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access
-        """
+        """List of places to look-up items for attribute-style access"""
         return []
 
     @property
     def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-autocompletion
-        """
+        """List of places to look-up items for key-autocompletion"""
         return []
 
     def __getattr__(self, name: str) -> Any:
@@ -239,8 +235,7 @@ class AttrAccessMixin:
     # runtime before every single assignment. All of this is just temporary until the
     # FutureWarning can be changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
-        """Deprecated third party subclass (see ``__init_subclass__`` above)
-        """
+        """Deprecated third party subclass (see ``__init_subclass__`` above)"""
         object.__setattr__(self, name, value)
         if name in self.__dict__:
             # Custom, non-slotted attr, or improperly assigned variable?
@@ -304,8 +299,7 @@ def get_squeeze_dims(
     dim: Union[Hashable, Iterable[Hashable], None] = None,
     axis: Union[int, Iterable[int], None] = None,
 ) -> List[Hashable]:
-    """Get a list of dimensions to squeeze out.
-    """
+    """Get a list of dimensions to squeeze out."""
     if dim is not None and axis is not None:
         raise ValueError("cannot use both parameters `axis` and `dim`")
     if dim is None and axis is None:
@@ -374,8 +368,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def get_index(self, key: Hashable) -> pd.Index:
-        """Get an index for a dimension, with fall-back to a default RangeIndex
-        """
+        """Get an index for a dimension, with fall-back to a default RangeIndex"""
         if key not in self.dims:
             raise KeyError(key)
 
@@ -423,7 +416,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Convert longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(
-        ...     np.random.rand(4), coords=[np.array([358, 359, 0, 1])], dims="lon",
+        ...     np.random.rand(4),
+        ...     coords=[np.array([358, 359, 0, 1])],
+        ...     dims="lon",
         ... )
         >>> da
         <xarray.DataArray (lon: 4)>
@@ -830,7 +825,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...             "15/12/1999",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
         ...         )
         ...     ],
         ...     dims="time",
@@ -1037,7 +1034,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...             "15/12/1999",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
         ...         )
         ...     ],
         ...     dims="time",
@@ -1242,8 +1241,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return ops.where_method(self, cond, other)
 
     def close(self: Any) -> None:
-        """Close any files linked to this object
-        """
+        """Close any files linked to this object"""
         if self._file_obj is not None:
             self._file_obj.close()
         self._file_obj = None
@@ -1503,8 +1501,7 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
 
 def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
-    """Inner function of full_like, where other must be a variable
-    """
+    """Inner function of full_like, where other must be a variable"""
     from .variable import Variable
 
     if fill_value is dtypes.NA:
@@ -1637,20 +1634,17 @@ def ones_like(other, dtype: DTypeLike = None):
 
 
 def is_np_datetime_like(dtype: DTypeLike) -> bool:
-    """Check if a dtype is a subclass of the numpy datetime types
-    """
+    """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def is_np_timedelta_like(dtype: DTypeLike) -> bool:
-    """Check whether dtype is of the timedelta64 dtype.
-    """
+    """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
 
 def _contains_cftime_datetimes(array) -> bool:
-    """Check if an array contains cftime.datetime objects
-    """
+    """Check if an array contains cftime.datetime objects"""
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
@@ -1668,8 +1662,7 @@ def _contains_cftime_datetimes(array) -> bool:
 
 
 def contains_cftime_datetimes(var) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects
-    """
+    """Check if an xarray.Variable contains cftime.datetime objects"""
     return _contains_cftime_datetimes(var.data)
 
 

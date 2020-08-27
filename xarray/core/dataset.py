@@ -577,8 +577,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
-        """Dictionary of global attributes on this dataset
-        """
+        """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -589,8 +588,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def encoding(self) -> Dict:
-        """Dictionary of global encoding attributes on this dataset
-        """
+        """Dictionary of global encoding attributes on this dataset"""
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
@@ -812,8 +810,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return new.load(**kwargs)
 
     def _persist_inplace(self, **kwargs) -> "Dataset":
-        """Persist all Dask arrays in memory
-        """
+        """Persist all Dask arrays in memory"""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
             k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
@@ -830,7 +827,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self
 
     def persist(self, **kwargs) -> "Dataset":
-        """ Trigger computation, keeping data as dask arrays
+        """Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
         arrays, similar to ``.compute()`` or ``.load()``.  However this
@@ -1014,7 +1011,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
         >>> ds = xr.Dataset(
-        ...     {"foo": da, "bar": ("x", [-1, 2])}, coords={"x": ["one", "two"]},
+        ...     {"foo": da, "bar": ("x", [-1, 2])},
+        ...     coords={"x": ["one", "two"]},
         ... )
         >>> ds.copy()
         <xarray.Dataset>
@@ -1154,8 +1152,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
     def _construct_dataarray(self, name: Hashable) -> "DataArray":
-        """Construct a DataArray by indexing this dataset
-        """
+        """Construct a DataArray by indexing this dataset"""
         from .dataarray import DataArray
 
         try:
@@ -1189,14 +1186,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access
-        """
+        """List of places to look-up items for attribute-style access"""
         return self._item_sources + [self.attrs]
 
     @property
     def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion
-        """
+        """List of places to look-up items for key-completion"""
         return [
             self.data_vars,
             self.coords,
@@ -1284,8 +1279,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self.update({key: value})
 
     def __delitem__(self, key: Hashable) -> None:
-        """Remove a variable from this dataset.
-        """
+        """Remove a variable from this dataset."""
         del self._variables[key]
         self._coord_names.discard(key)
         if key in self.indexes:
@@ -1298,8 +1292,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     __hash__ = None  # type: ignore
 
     def _all_compat(self, other: "Dataset", compat_str: str) -> bool:
-        """Helper function for equals and identical
-        """
+        """Helper function for equals and identical"""
 
         # some stores (e.g., scipy) do not seem to preserve order, so don't
         # require matching order for equality
@@ -1366,8 +1359,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing
-        """
+        """Mapping of pandas.Index objects used for label based indexing"""
         if self._indexes is None:
             self._indexes = default_indexes(self._variables, self._dims)
         return Indexes(self._indexes)
@@ -1381,8 +1373,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def data_vars(self) -> DataVariables:
-        """Dictionary of DataArray objects corresponding to data variables
-        """
+        """Dictionary of DataArray objects corresponding to data variables"""
         return DataVariables(self)
 
     def set_coords(
@@ -1460,8 +1451,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     def dump_to_store(self, store: "AbstractDataStore", **kwargs) -> None:
-        """Store dataset contents to a backends.*DataStore object.
-        """
+        """Store dataset contents to a backends.*DataStore object."""
         from ..backends.api import dump_to_store
 
         # TODO: rename and/or cleanup this method to make it more consistent
@@ -1796,7 +1786,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _validate_indexers(
         self, indexers: Mapping[Hashable, Any], missing_dims: str = "raise"
     ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
-        """ Here we make sure
+        """Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
         + string indexers are cast to the appropriate date type if the
@@ -1838,8 +1828,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _validate_interp_indexers(
         self, indexers: Mapping[Hashable, Any]
     ) -> Iterator[Tuple[Hashable, Variable]]:
-        """Variant of _validate_indexers to be used for interpolation
-        """
+        """Variant of _validate_indexers to be used for interpolation"""
         for k, v in self._validate_indexers(indexers):
             if isinstance(v, Variable):
                 if v.ndim == 1:
@@ -2593,15 +2582,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         kwargs: Mapping[str, Any] = None,
         **coords_kwargs: Any,
     ) -> "Dataset":
-        """ Multidimensional interpolation of Dataset.
+        """Multidimensional interpolation of Dataset.
 
         Parameters
         ----------
         coords : dict, optional
             Mapping from dimension names to the new coordinates.
             New coordinate can be a scalar, array-like or DataArray.
-            If DataArrays are passed as new coordates, their dimensions are
-            used for the broadcasting.
+            If DataArrays are passed as new coordinates, their dimensions are
+            used for the broadcasting. Missing values are skipped.
         method : str, optional
             {"linear", "nearest"} for multidimensional array,
             {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
@@ -2729,7 +2718,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
-            which to index the variables in this dataset.
+            which to index the variables in this dataset. Missing values are skipped.
         method : str, optional
             {"linear", "nearest"} for multidimensional array,
             {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
@@ -4875,7 +4864,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "attrs": {"title": "air temperature"},
                 "dims": "t",
                 "data_vars": {
-                    "a": {"dims": "t", "data": x,},
+                    "a": {"dims": "t", "data": x},
                     "b": {"dims": "t", "data": y},
                 },
             }
@@ -5784,7 +5773,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self[selection]
 
     def unify_chunks(self) -> "Dataset":
-        """ Unify chunk size along all chunked dimensions of this Dataset.
+        """Unify chunk size along all chunked dimensions of this Dataset.
 
         Returns
         -------
@@ -5921,7 +5910,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         to the function being applied in ``xr.map_blocks()``:
 
         >>> ds.map_blocks(
-        ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=ds,
+        ...     calculate_anomaly,
+        ...     kwargs={"groupby_type": "time.year"},
+        ...     template=ds,
         ... )
         <xarray.Dataset>
         Dimensions:  (time: 24)
@@ -6524,7 +6515,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         DataArray.argmin
 
-       """
+        """
         if dim is None and axis is None:
             warnings.warn(
                 "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
@@ -6587,7 +6578,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         DataArray.argmax
 
-       """
+        """
         if dim is None and axis is None:
             warnings.warn(
                 "Once the behaviour of DataArray.argmax() and Variable.argmax() with "

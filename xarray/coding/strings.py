@@ -145,8 +145,7 @@ def bytes_to_char(arr):
 
 
 def _numpy_bytes_to_char(arr):
-    """Like netCDF4.stringtochar, but faster and more flexible.
-    """
+    """Like netCDF4.stringtochar, but faster and more flexible."""
     # ensure the array is contiguous
     arr = np.array(arr, copy=False, order="C", dtype=np.string_)
     return arr.reshape(arr.shape + (1,)).view("S1")
@@ -189,8 +188,7 @@ def char_to_bytes(arr):
 
 
 def _numpy_char_to_bytes(arr):
-    """Like netCDF4.chartostring, but faster and more flexible.
-    """
+    """Like netCDF4.chartostring, but faster and more flexible."""
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order="C")
     dtype = "S" + str(arr.shape[-1])

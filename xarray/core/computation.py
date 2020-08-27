@@ -592,8 +592,7 @@ def apply_variable_ufunc(
     keep_attrs=False,
     dask_gufunc_kwargs=None,
 ):
-    """Apply a ndarray level function over Variable and/or ndarray objects.
-    """
+    """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
