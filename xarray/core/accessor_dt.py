@@ -10,8 +10,7 @@ from .pycompat import dask_array_type
 
 
 def _season_from_months(months):
-    """Compute season (DJF, MAM, JJA, SON) from month ordinal
-    """
+    """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
     # TODO: Move "season" accessor upstream into pandas
     seasons = np.array(["DJF", "MAM", "JJA", "SON"])
     months = np.asarray(months)

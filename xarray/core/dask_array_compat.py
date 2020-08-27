@@ -21,7 +21,7 @@ else:
     import numbers
 
     def meta_from_array(x, ndim=None, dtype=None):
-        """ Normalize an array to appropriate meta object
+        """Normalize an array to appropriate meta object
 
         Parameters
         ----------
@@ -101,7 +101,7 @@ else:
 
 
 def _validate_pad_output_shape(input_shape, pad_width, output_shape):
-    """ Validates the output shape of dask.array.pad, raising a RuntimeError if they do not match.
+    """Validates the output shape of dask.array.pad, raising a RuntimeError if they do not match.
     In the current versions of dask (2.2/2.4), dask.array.pad with mode='reflect' sometimes returns
     an invalid shape.
     """

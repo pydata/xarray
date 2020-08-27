@@ -214,8 +214,7 @@ class DatasetCoordinates(Coordinates):
         return cast("DataArray", self._data[key])
 
     def to_dataset(self) -> "Dataset":
-        """Convert these coordinates into a new Dataset
-        """
+        """Convert these coordinates into a new Dataset"""
         return self._data._copy_listed(self._names)
 
     def _update_coords(

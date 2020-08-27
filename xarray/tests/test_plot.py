@@ -59,10 +59,10 @@ def figure_context(*args, **kwargs):
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
-       Notes:  Scope is kept to module (only invoke this function once per test
-       module) else tests cannot be run in parallel (locally). Disadvantage: only
-       catches one open figure per run. May still give a false positive if tests
-       are run in parallel.
+    Notes:  Scope is kept to module (only invoke this function once per test
+    module) else tests cannot be run in parallel (locally). Disadvantage: only
+    catches one open figure per run. May still give a false positive if tests
+    are run in parallel.
     """
     yield None
 

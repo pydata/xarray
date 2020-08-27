@@ -35,15 +35,13 @@ class VariableCoder:
     def encode(
         self, variable: Variable, name: Hashable = None
     ) -> Variable:  # pragma: no cover
-        """Convert an encoded variable to a decoded variable
-        """
+        """Convert an encoded variable to a decoded variable"""
         raise NotImplementedError()
 
     def decode(
         self, variable: Variable, name: Hashable = None
     ) -> Variable:  # pragma: no cover
-        """Convert an decoded variable to a encoded variable
-        """
+        """Convert an decoded variable to a encoded variable"""
         raise NotImplementedError()
 
 

@@ -35,8 +35,7 @@ class PncArrayWrapper(BackendArray):
 
 
 class PseudoNetCDFDataStore(AbstractDataStore):
-    """Store for accessing datasets via PseudoNetCDF
-    """
+    """Store for accessing datasets via PseudoNetCDF"""
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):

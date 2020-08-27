@@ -45,8 +45,7 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
 
 
 class BaseInterpolator:
-    """Generic interpolator class for normalizing interpolation methods
-    """
+    """Generic interpolator class for normalizing interpolation methods"""
 
     cons_kwargs: Dict[str, Any]
     call_kwargs: Dict[str, Any]
@@ -196,8 +195,7 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
-    """Wrapper for datasets
-    """
+    """Wrapper for datasets"""
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
     for name, var in self.data_vars.items():
@@ -304,8 +302,7 @@ def interp_na(
     keep_attrs: bool = None,
     **kwargs,
 ):
-    """Interpolate values according to different methods.
-    """
+    """Interpolate values according to different methods."""
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if dim is None:
@@ -546,7 +543,7 @@ def _get_valid_fill_mask(arr, dim, limit):
 
 
 def _localize(var, indexes_coords):
-    """ Speed up for linear and nearest neighbor method.
+    """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
     indexes = {}
@@ -571,7 +568,7 @@ def _localize(var, indexes_coords):
 
 
 def _floatize_x(x, new_x):
-    """ Make x and new_x float.
+    """Make x and new_x float.
     This is particulary useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
@@ -591,7 +588,7 @@ def _floatize_x(x, new_x):
 
 
 def interp(var, indexes_coords, method, **kwargs):
-    """ Make an interpolation of Variable
+    """Make an interpolation of Variable
 
     Parameters
     ----------

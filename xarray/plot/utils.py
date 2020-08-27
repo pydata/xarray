@@ -446,8 +446,8 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def label_from_attrs(da, extra=""):
-    """ Makes informative labels if variable metadata (attrs) follows
-        CF conventions. """
+    """Makes informative labels if variable metadata (attrs) follows
+    CF conventions."""
 
     if da.attrs.get("long_name"):
         name = da.attrs["long_name"]

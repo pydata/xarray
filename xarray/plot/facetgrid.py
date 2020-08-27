@@ -410,8 +410,7 @@ class FacetGrid:
         self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar
-        """
+        """Draw a colorbar"""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)

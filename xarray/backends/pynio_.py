@@ -41,8 +41,7 @@ class NioArrayWrapper(BackendArray):
 
 
 class NioDataStore(AbstractDataStore):
-    """Store for accessing datasets via PyNIO
-    """
+    """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
         import Nio

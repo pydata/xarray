@@ -130,8 +130,7 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
 def propagate_indexes(
     indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
 ) -> Optional[Dict[Hashable, pd.Index]]:
-    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
-    """
+    """Creates new indexes dict from existing dict optionally excluding some dimensions."""
     if exclude is None:
         exclude = ()
 
