@@ -58,43 +58,6 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-if LooseVersion(dask_version) >= LooseVersion("2.8.1"):
-    median = da.median
-else:
-    # Copied from dask v2.8.1
-    # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
-    def median(a, axis=None, keepdims=False):
-        """
-        This works by automatically chunking the reduced axes to a single chunk
-        and then calling ``numpy.median`` function across the remaining dimensions
-        """
-
-        if axis is None:
-            raise NotImplementedError(
-                "The da.median function only works along an axis.  "
-                "The full algorithm is difficult to do in parallel"
-            )
-
-        if not isinstance(axis, Iterable):
-            axis = (axis,)
-
-        axis = [ax + a.ndim if ax < 0 else ax for ax in axis]
-
-        a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
-
-        result = a.map_blocks(
-            np.median,
-            axis=axis,
-            keepdims=keepdims,
-            drop_axis=axis if not keepdims else None,
-            chunks=[1 if ax in axis else c for ax, c in enumerate(a.chunks)]
-            if keepdims
-            else None,
-        )
-
-        return result
-
-
 if LooseVersion(dask_version) > LooseVersion("2.9.0"):
     nanmedian = da.nanmedian
 else:
