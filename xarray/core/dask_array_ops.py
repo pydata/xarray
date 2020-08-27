@@ -4,8 +4,7 @@ from . import dtypes, nputils
 
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
-    """Wrapper to apply bottleneck moving window funcs on dask arrays
-    """
+    """Wrapper to apply bottleneck moving window funcs on dask arrays"""
     import dask.array as da
 
     dtype, fill_value = dtypes.maybe_promote(a.dtype)
@@ -28,8 +27,7 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 
 def rolling_window(a, axis, window, center, fill_value):
-    """Dask's equivalence to np.utils.rolling_window
-    """
+    """Dask's equivalence to np.utils.rolling_window"""
     import dask.array as da
 
     if not hasattr(axis, "__len__"):

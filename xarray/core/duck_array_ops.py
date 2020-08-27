@@ -200,10 +200,10 @@ def as_shared_dtype(scalars_or_arrays):
 
 def lazy_array_equiv(arr1, arr2):
     """Like array_equal, but doesn't actually compare values.
-       Returns True when arr1, arr2 identical or their dask names are equal.
-       Returns False when shapes are not equal.
-       Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
-       or their dask names are not equal
+    Returns True when arr1, arr2 identical or their dask names are equal.
+    Returns False when shapes are not equal.
+    Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
+    or their dask names are not equal
     """
     if arr1 is arr2:
         return True
@@ -225,8 +225,7 @@ def lazy_array_equiv(arr1, arr2):
 
 
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
-    """Like np.allclose, but also allows values to be NaN in both arrays
-    """
+    """Like np.allclose, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
 
@@ -238,8 +237,7 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
 
 def array_equiv(arr1, arr2):
-    """Like np.array_equal, but also allows values to be NaN in both arrays
-    """
+    """Like np.array_equal, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2)
@@ -269,8 +267,7 @@ def array_notnull_equiv(arr1, arr2):
 
 
 def count(data, axis=None):
-    """Count the number of non-NA in this array along the given axis or axes
-    """
+    """Count the number of non-NA in this array along the given axis or axes"""
     return np.sum(np.logical_not(isnull(data)), axis=axis)
 
 
@@ -523,8 +520,7 @@ def pd_timedelta_to_float(value, datetime_unit):
 
 
 def py_timedelta_to_float(array, datetime_unit):
-    """Convert a timedelta object to a float, possibly at a loss of resolution.
-    """
+    """Convert a timedelta object to a float, possibly at a loss of resolution."""
     array = np.asarray(array)
     array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
@@ -596,8 +592,7 @@ _fail_on_dask_array_input_skipna = partial(
 
 
 def first(values, axis, skipna=None):
-    """Return the first non-NA elements in this array along the given axis
-    """
+    """Return the first non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
         _fail_on_dask_array_input_skipna(values)
@@ -606,8 +601,7 @@ def first(values, axis, skipna=None):
 
 
 def last(values, axis, skipna=None):
-    """Return the last non-NA elements in this array along the given axis
-    """
+    """Return the last non-NA elements in this array along the given axis"""
     if (skipna or skipna is None) and values.dtype.kind not in "iSU":
         # only bother for dtypes that can hold NaN
         _fail_on_dask_array_input_skipna(values)
@@ -627,8 +621,7 @@ def rolling_window(array, axis, window, center, fill_value):
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
-    """Return the coefficients and residuals of a least-squares fit.
-    """
+    """Return the coefficients and residuals of a least-squares fit."""
     if isinstance(rhs, dask_array_type):
         return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
     else:

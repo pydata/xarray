@@ -224,7 +224,7 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
 
 
 def _get_range_edges(first, last, offset, closed="left", base=0):
-    """ Get the correct starting and ending datetimes for the resampled
+    """Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
 
     Parameters
@@ -272,7 +272,7 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
 
 
 def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
-    """ First and last offsets should be calculated from the start day to fix
+    """First and last offsets should be calculated from the start day to fix
     an error cause by resampling across multiple days when a one day period is
     not a multiple of the frequency.
     See https://github.com/pandas-dev/pandas/issues/8683

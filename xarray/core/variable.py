@@ -45,7 +45,12 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+    (
+        indexing.ExplicitlyIndexed,
+        pd.Index,
+    )
+    + dask_array_type
+    + cupy_array_type
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
@@ -64,8 +69,7 @@ Usage::
 
 
 class MissingDimensionsError(ValueError):
-    """Error class used when we can't safely guess a dimension name.
-    """
+    """Error class used when we can't safely guess a dimension name."""
 
     # inherits from ValueError for backward compatibility
     # TODO: move this to an xarray.exceptions module?
@@ -539,8 +543,7 @@ class Variable(
 
     @property
     def dims(self):
-        """Tuple of dimension names with which this variable is associated.
-        """
+        """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
@@ -766,8 +769,7 @@ class Variable(
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
-        """Used by IndexVariable to return IndexVariable objects when possible.
-        """
+        """Used by IndexVariable to return IndexVariable objects when possible."""
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
@@ -843,8 +845,7 @@ class Variable(
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
-        """Dictionary of local attributes on this variable.
-        """
+        """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -855,8 +856,7 @@ class Variable(
 
     @property
     def encoding(self):
-        """Dictionary of encodings on this variable.
-        """
+        """Dictionary of encodings on this variable."""
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
@@ -1768,8 +1768,7 @@ class Variable(
         return self.equals(other, equiv=equiv)
 
     def identical(self, other, equiv=duck_array_ops.array_equiv):
-        """Like equals, but also checks attributes.
-        """
+        """Like equals, but also checks attributes."""
         try:
             return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
                 other, equiv=equiv
@@ -2131,7 +2130,7 @@ class Variable(
         return func
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
-        """ A (private) method to convert datetime array to numeric dtype
+        """A (private) method to convert datetime array to numeric dtype
         See duck_array_ops.datetime_to_numeric
         """
         numeric_array = duck_array_ops.datetime_to_numeric(

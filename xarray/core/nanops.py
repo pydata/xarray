@@ -43,7 +43,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 
 def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
-    """ In house nanargmin, nanargmax for object arrays. Always return integer
+    """In house nanargmin, nanargmax for object arrays. Always return integer
     type
     """
     valid_count = count(value, axis=axis)
