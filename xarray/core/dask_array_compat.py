@@ -118,8 +118,9 @@ else:
 
         a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
 
-        result = a.map_blocks(
+        result = da.map_blocks(
             np.nanmedian,
+            a,
             axis=axis,
             keepdims=keepdims,
             drop_axis=axis if not keepdims else None,
