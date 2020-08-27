@@ -2072,7 +2072,8 @@ class Variable(
         keep_attrs = kwargs.get("keep_attrs", None)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        variable.attrs = variable.attrs if keep_attrs else {}
+        if not keep_attrs:
+            variable.attrs = {}
 
         return variable.data.reshape(shape), tuple(axes)
 
