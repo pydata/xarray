@@ -5897,6 +5897,7 @@ def test_coarsen_keep_attrs():
 
 
 def test_coarsen_maintains_orig_object():
+    xr.set_options(keep_attrs = True)
     ds = xr.tutorial.load_dataset("air_temperature")
     ds2 = xr.tutorial.load_dataset("air_temperature")
 
