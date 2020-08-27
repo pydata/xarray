@@ -50,7 +50,7 @@ class RasterioArrayWrapper(BackendArray):
         return self._shape
 
     def _get_indexer(self, key):
-        """ Get indexer for rasterio array.
+        """Get indexer for rasterio array.
 
         Parameter
         ---------

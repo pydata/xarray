@@ -36,9 +36,9 @@ ON_WINDOWS = sys.platform == "win32"
 
 
 class CountingScheduler:
-    """ Simple dask scheduler counting the number of computes.
+    """Simple dask scheduler counting the number of computes.
 
-    Reference: https://stackoverflow.com/questions/53289286/ """
+    Reference: https://stackoverflow.com/questions/53289286/"""
 
     def __init__(self, max_computes=0):
         self.total_computes = 0

@@ -90,8 +90,7 @@ def _is_contiguous(positions):
 
 
 def _advanced_indexer_subspaces(key):
-    """Indices of the advanced indexes subspaces for mixed indexing and vindex.
-    """
+    """Indices of the advanced indexes subspaces for mixed indexing and vindex."""
     if not isinstance(key, tuple):
         key = (key,)
     advanced_index_positions = [

@@ -473,10 +473,13 @@ def test_unified_dim_sizes():
         "x": 1,
         "y": 2,
     }
-    assert unified_dim_sizes(
-        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-        exclude_dims={"z"},
-    ) == {"x": 1, "y": 2}
+    assert (
+        unified_dim_sizes(
+            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+            exclude_dims={"z"},
+        )
+        == {"x": 1, "y": 2}
+    )
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -870,7 +873,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
 
     expected = data_array.copy()
     actual = apply_ufunc(
-        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
     )
 
     assert_identical(expected, actual)
@@ -1073,7 +1079,8 @@ def test_corr(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a, da_b", arrays_w_tuples()[1],
+    "da_a, da_b",
+    arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
@@ -1093,7 +1100,8 @@ def test_covcorr_consistency(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a", arrays_w_tuples()[0],
+    "da_a",
+    arrays_w_tuples()[0],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
 def test_autocov(da_a, dim):
