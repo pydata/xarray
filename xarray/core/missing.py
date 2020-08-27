@@ -1,5 +1,6 @@
 import datetime as dt
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 from numbers import Number
 from typing import Any, Callable, Dict, Hashable, Sequence, Union
@@ -550,9 +551,19 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
+        if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
+            np.__version__
+        ) < LooseVersion("1.18"):
+            # np.nanmin/max changed behaviour for datetime types in numpy 1.18,
+            # see https://github.com/pydata/xarray/pull/3924/files
+            minval = np.min(new_x.values)
+            maxval = np.max(new_x.values)
+        else:
+            minval = np.nanmin(new_x.values)
+            maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(np.min(new_x.values), method="nearest")
-        imax = index.get_loc(np.max(new_x.values), method="nearest")
+        imin = index.get_loc(minval, method="nearest")
+        imax = index.get_loc(maxval, method="nearest")
 
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
