@@ -2025,7 +2025,7 @@ class Variable(
             if window <= 0:
                 raise ValueError(f"window must be > 0. Given {window}")
 
-        variable = self.copy()
+        variable = self
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
