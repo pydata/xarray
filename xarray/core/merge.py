@@ -56,9 +56,7 @@ _VALID_COMPAT = Frozen(
 )
 
 
-def broadcast_dimension_size(
-    variables: List[Variable],
-) -> Dict[Hashable, int]:
+def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
