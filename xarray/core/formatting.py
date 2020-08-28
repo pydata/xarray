@@ -13,7 +13,7 @@ from pandas.errors import OutOfBoundsDatetime
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
-from .utils import is_duck_array
+from .utils import is_duck_array, is_duck_array_or_ndarray
 
 
 def pretty_print(x, numchars: int):
@@ -551,7 +551,9 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
+            if is_duck_array_or_ndarray(a_mapping[k]) or is_duck_array_or_ndarray(
+                b_mapping[k]
+            ):
                 compatible = array_equiv(a_mapping[k], b_mapping[k])
             else:
                 compatible = a_mapping[k] == b_mapping[k]
