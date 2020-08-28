@@ -31,8 +31,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from .npcompat import IS_NEP18_ACTIVE
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -250,18 +248,14 @@ def is_list_like(value: Any) -> bool:
 
 
 def is_duck_array(value: Any) -> bool:
+    if isinstance(value, np.ndarray):
+        return True
     return (
         hasattr(value, "ndim")
         and hasattr(value, "shape")
         and hasattr(value, "dtype")
         and hasattr(value, "__array_function__")
         and hasattr(value, "__array_ufunc__")
-    )
-
-
-def is_duck_array_or_ndarray(value: Any) -> bool:
-    return is_duck_array(value) or (
-        not IS_NEP18_ACTIVE and isinstance(value, np.ndarray)
     )
 
 

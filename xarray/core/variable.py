@@ -48,7 +48,6 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
-    is_duck_array_or_ndarray,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -937,7 +936,7 @@ class Variable(
                 # don't share caching between copies
                 data = indexing.MemoryCachedArray(data.array)
 
-            if deep and is_duck_array_or_ndarray(data):
+            if deep and is_duck_array(data):
                 data = copy.deepcopy(data)
 
         else:
