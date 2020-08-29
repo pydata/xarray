@@ -6191,6 +6191,33 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+def test_raise_no_warning_assert_close(ds):
+
+    with pytest.warns(None) as record:
+        assert_allclose(ds, ds)
+
+    assert len(record) == 0
+
+
+@pytest.mark.xfail()
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("name", ("mean", "max"))
+def test_raise_no_warning_dask_rolling_assert_close(ds, name):
+    ds = ds.chunk({"x": 4})
+
+    with pytest.warns(None) as record:
+
+        rolling_obj = ds.rolling(time=4, x=3,)
+
+        actual = getattr(rolling_obj, name)()
+        expected = getattr(getattr(ds.rolling(time=4,), name)().rolling(x=3,), name,)()
+        assert_allclose(actual, expected)
+
+    if record:
+        raise AssertionError(record[0].message)
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_differentiate(dask, edge_order):

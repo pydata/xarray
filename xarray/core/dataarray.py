@@ -1,5 +1,6 @@
 import datetime
 import functools
+import warnings
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
@@ -1583,9 +1584,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> arr = xr.DataArray(
-        ...     data=[0, 1],
-        ...     dims="x",
-        ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ...     data=[0, 1], dims="x", coords={"x": ["a", "b"], "y": ("x", [0, 1])},
         ... )
         >>> arr
         <xarray.DataArray (x: 2)>
@@ -2709,8 +2708,13 @@ class DataArray(AbstractArray, DataWithCoords):
     def _unary_op(f: Callable[..., Any]) -> Callable[..., "DataArray"]:
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            with np.errstate(all="ignore"):
-                return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
+                warnings.filterwarnings(
+                    "ignore", r"Mean of emmty slice", category=RuntimeWarning
+                )
+                with np.errstate(all="ignore"):
+                    return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
 
         return func
 
@@ -3424,9 +3428,7 @@ class DataArray(AbstractArray, DataWithCoords):
         to the function being applied in ``xr.map_blocks()``:
 
         >>> array.map_blocks(
-        ...     calculate_anomaly,
-        ...     kwargs={"groupby_type": "time.year"},
-        ...     template=array,
+        ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array,
         ... )  # doctest: +ELLIPSIS
         <xarray.DataArray (time: 24)>
         dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>

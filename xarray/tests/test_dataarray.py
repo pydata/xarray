@@ -6191,7 +6191,6 @@ def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Mean of empty slice")
         rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da["time"])
@@ -6200,10 +6199,8 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da["time"].isel(time=i)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            actual = rolling_obj_mean.isel(time=i)
-            expected = window_da.mean("time")
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean("time")
 
         # TODO add assert_allclose_with_nan, which compares nan position
         # as well as the closeness of the values.
@@ -6490,17 +6487,16 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 
 def test_no_warning_for_all_nan():
-
-    # with warnings.catch_warnings():
-    #     warnings.filterwarnings("error", message=r".*slice.*", category=RuntimeWarning)
-    #     _ = xr.DataArray([np.NaN, np.NaN]).mean()
-
     with pytest.warns(None) as record:
         _ = xr.DataArray([np.NaN, np.NaN]).mean()
     assert len(record) == 0
 
-    # if record:
-    #     raise AssertionError(record[0].message)
+
+# @pytest.mark.xfail()
+# def test_no_warning_for_rolling_nan_dask():
+#     with pytest.warns(None) as record:
+#         _ = xr.DataArray([np.NaN, np.NaN], dims="a").rolling(a=1).mean()
+#     assert len(record) == 0
 
 
 def test_name_in_masking():

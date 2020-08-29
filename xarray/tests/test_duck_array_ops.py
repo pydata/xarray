@@ -121,10 +121,7 @@ class TestOps:
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
     def test_all_nan_arrays(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "All-NaN slice")
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            assert np.isnan(mean([np.nan, np.nan]))
+        assert np.isnan(mean([np.nan, np.nan]))
 
 
 def test_cumsum_1d():
