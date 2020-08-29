@@ -304,16 +304,14 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
 
 
 def to_0d_object_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object.
-    """
+    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
     return result
 
 
 def to_0d_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray.
-    """
+    """Given a value, wrap it in a 0-D numpy.ndarray."""
     if np.isscalar(value) or (isinstance(value, np.ndarray) and value.ndim == 0):
         return np.array(value)
     else:
@@ -566,8 +564,7 @@ class NDArrayMixin(NdimSizeLenMixin):
 
 
 class ReprObject:
-    """Object that prints as the given value, for use with sentinel values.
-    """
+    """Object that prints as the given value, for use with sentinel values."""
 
     __slots__ = ("_value",)
 
@@ -628,8 +625,7 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
 
 
 def hashable(v: Any) -> bool:
-    """Determine whether `v` can be hashed.
-    """
+    """Determine whether `v` can be hashed."""
     try:
         hash(v)
     except TypeError:
@@ -665,8 +661,7 @@ def ensure_us_time_resolution(val):
 
 
 class HiddenKeyDict(MutableMapping[K, V]):
-    """Acts like a normal dictionary, but hides certain keys.
-    """
+    """Acts like a normal dictionary, but hides certain keys."""
 
     __slots__ = ("_data", "_hidden_keys")
 
@@ -728,7 +723,7 @@ def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """ Get an new dimension name based on new_dim, that is not used in dims.
+    """Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -750,7 +745,7 @@ def drop_dims_from_indexers(
     dims: Union[list, Mapping[Hashable, int]],
     missing_dims: str,
 ) -> Mapping[Hashable, Any]:
-    """ Depending on the setting of missing_dims, drop any dimensions from indexers that
+    """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
 
     Parameters
@@ -794,7 +789,7 @@ def drop_dims_from_indexers(
 
 
 class UncachedAccessor:
-    """ Acts like a property, but on both classes and class instances
+    """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
     inspect classes for which property returns itself and not the

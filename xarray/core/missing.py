@@ -1,5 +1,6 @@
 import datetime as dt
 import warnings
+from distutils.version import LooseVersion
 from functools import partial
 from numbers import Number
 from typing import Any, Callable, Dict, Hashable, Sequence, Union
@@ -44,8 +45,7 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
 
 
 class BaseInterpolator:
-    """Generic interpolator class for normalizing interpolation methods
-    """
+    """Generic interpolator class for normalizing interpolation methods"""
 
     cons_kwargs: Dict[str, Any]
     call_kwargs: Dict[str, Any]
@@ -195,8 +195,7 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
-    """Wrapper for datasets
-    """
+    """Wrapper for datasets"""
     ds = type(self)(coords=self.coords, attrs=self.attrs)
 
     for name, var in self.data_vars.items():
@@ -303,8 +302,7 @@ def interp_na(
     keep_attrs: bool = None,
     **kwargs,
 ):
-    """Interpolate values according to different methods.
-    """
+    """Interpolate values according to different methods."""
     from xarray.coding.cftimeindex import CFTimeIndex
 
     if dim is None:
@@ -545,14 +543,24 @@ def _get_valid_fill_mask(arr, dim, limit):
 
 
 def _localize(var, indexes_coords):
-    """ Speed up for linear and nearest neighbor method.
+    """Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
+        if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
+            np.__version__
+        ) < LooseVersion("1.18"):
+            # np.nanmin/max changed behaviour for datetime types in numpy 1.18,
+            # see https://github.com/pydata/xarray/pull/3924/files
+            minval = np.min(new_x.values)
+            maxval = np.max(new_x.values)
+        else:
+            minval = np.nanmin(new_x.values)
+            maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(np.min(new_x.values), method="nearest")
-        imax = index.get_loc(np.max(new_x.values), method="nearest")
+        imin = index.get_loc(minval, method="nearest")
+        imax = index.get_loc(maxval, method="nearest")
 
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
@@ -560,7 +568,7 @@ def _localize(var, indexes_coords):
 
 
 def _floatize_x(x, new_x):
-    """ Make x and new_x float.
+    """Make x and new_x float.
     This is particulary useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
@@ -580,7 +588,7 @@ def _floatize_x(x, new_x):
 
 
 def interp(var, indexes_coords, method, **kwargs):
-    """ Make an interpolation of Variable
+    """Make an interpolation of Variable
 
     Parameters
     ----------
