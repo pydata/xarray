@@ -276,16 +276,22 @@ class TestMergeMethod:
         assert expected.identical(ds1.merge(ds2, join="inner"))
         assert expected.identical(ds2.merge(ds1, join="inner"))
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_merge_fill_value(self, fill_value):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_a = fill_value_b = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_a = fill_value["a"]
+            fill_value_b = fill_value["b"]
+        else:
+            fill_value_a = fill_value_b = fill_value
+
         expected = xr.Dataset(
-            {"a": ("x", [1, 2, fill_value]), "b": ("x", [fill_value, 3, 4])},
+            {"a": ("x", [1, 2, fill_value_a]), "b": ("x", [fill_value_b, 3, 4])},
             {"x": [0, 1, 2]},
         )
         assert expected.identical(ds1.merge(ds2, fill_value=fill_value))

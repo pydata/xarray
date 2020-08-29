@@ -1308,8 +1308,10 @@ class DataArray(AbstractArray, DataWithCoords):
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values. Use this
+            data array's name to refer to the data array's values.
 
         Returns
         -------
@@ -1368,8 +1370,10 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-        fill_value : scalar, optional
-            Value to use for newly missing values
+        fill_value : scalar or dict-like, optional
+            Value to use for newly missing values. If a dict-like, maps
+            variable names (including coordinates) to fill values. Use this
+            data array's name to refer to the data array's values.
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1386,6 +1390,13 @@ class DataArray(AbstractArray, DataWithCoords):
         align
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        if isinstance(fill_value, dict):
+            fill_value = fill_value.copy()
+            sentinel = object()
+            value = fill_value.pop(self.name, sentinel)
+            if value is not sentinel:
+                fill_value[_THIS_ARRAY] = value
+
         ds = self._to_temp_dataset().reindex(
             indexers=indexers,
             method=method,
@@ -1867,8 +1878,11 @@ class DataArray(AbstractArray, DataWithCoords):
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
-        fill_value : scalar, default: nan
-            value to be filled.
+        fill_value : scalar or dict-like, default: nan
+            value to be filled. If a dict-like, maps variable names to
+            fill values. Use the data array's name to refer to its
+            name. If not provided or if the dict-like does not contain
+            all variables, the dtype's NA value will be used.
         sparse : bool, default: False
             use sparse-array if True
 
