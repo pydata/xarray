@@ -6492,13 +6492,6 @@ def test_no_warning_for_all_nan():
     assert len(record) == 0
 
 
-# @pytest.mark.xfail()
-# def test_no_warning_for_rolling_nan_dask():
-#     with pytest.warns(None) as record:
-#         _ = xr.DataArray([np.NaN, np.NaN], dims="a").rolling(a=1).mean()
-#     assert len(record) == 0
-
-
 def test_name_in_masking():
     name = "RingoStarr"
     da = xr.DataArray(range(10), coords=[("x", range(10))], name=name)

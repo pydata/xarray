@@ -6208,10 +6208,18 @@ def test_raise_no_warning_dask_rolling_assert_close(ds, name):
 
     with pytest.warns(None) as record:
 
-        rolling_obj = ds.rolling(time=4, x=3,)
+        rolling_obj = ds.rolling(
+            time=4,
+            x=3,
+        )
 
         actual = getattr(rolling_obj, name)()
-        expected = getattr(getattr(ds.rolling(time=4,), name)().rolling(x=3,), name,)()
+        expected = getattr(
+            getattr(ds.rolling(time=4,), name)().rolling(
+                x=3,
+            ),
+            name,
+        )()
         assert_allclose(actual, expected)
 
     if record:
