@@ -847,13 +847,15 @@ def test_interpolate_chunk_advanced(method):
     theta = np.linspace(0, 2 * np.pi, 5)
     w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
-        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
+        data=1 + w[:, np.newaxis] * np.cos(theta),
+        coords=[("w", w), ("theta", theta)],
     )
 
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     z = xr.DataArray(
-        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)],
+        data=w[:, np.newaxis] * np.sin(theta),
+        coords=[("w", w), ("theta", theta)],
     )
 
     kwargs = {"fill_value": None}
