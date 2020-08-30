@@ -6027,6 +6027,8 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
         expected = getattr(bn, func_name)(
             ds[key].values, window=7, axis=0, min_count=min_periods
         )
+    else:
+        raise ValueError
     assert_array_equal(actual[key].values, expected)
 
     # Test center
