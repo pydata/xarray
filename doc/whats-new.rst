@@ -104,7 +104,7 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Updated plot functions for matplotlib version 3.3 and silenced warnings in the
   plot tests (:pull:`4365`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Versions in ``pre-commit.yaml'' are now pinned, to reduce the chances of
+- Versions in ``pre-commit.yaml`` are now pinned, to reduce the chances of
   conflicting versions.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
