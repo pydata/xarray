@@ -1859,7 +1859,7 @@ class Variable(
             exclude_dims=set(dim),
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
-            output_sizes={"quantile": len(q)},
+            dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
             kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
