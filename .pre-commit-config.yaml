@@ -7,11 +7,11 @@ repos:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
-    rev: stable
+    rev: 20.8b1
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: stable
+    rev: v0.1.1
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
