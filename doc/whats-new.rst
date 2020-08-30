@@ -94,7 +94,7 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
-  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`)
+  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`)
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_
