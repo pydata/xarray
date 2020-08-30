@@ -742,8 +742,10 @@ def test_decompose(method):
     x_broadcast, y_broadcast = xr.broadcast(x_new, y_new)
     assert x_broadcast.ndim == 2
 
-    actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
-    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
+    actual = da.interp(x=x_new, y=y_new, method=method).drop_vars(("x", "y"))
+    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop_vars(
+        ("x", "y")
+    )
     assert_allclose(actual, expected)
 
 
