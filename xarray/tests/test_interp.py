@@ -742,8 +742,10 @@ def test_decompose(method):
     x_broadcast, y_broadcast = xr.broadcast(x_new, y_new)
     assert x_broadcast.ndim == 2
 
-    actual = da.interp(x=x_new, y=y_new, method=method).drop(("x", "y"))
-    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop(("x", "y"))
+    actual = da.interp(x=x_new, y=y_new, method=method).drop_vars(("x", "y"))
+    expected = da.interp(x=x_broadcast, y=y_broadcast, method=method).drop_vars(
+        ("x", "y")
+    )
     assert_allclose(actual, expected)
 
 
@@ -845,15 +847,13 @@ def test_interpolate_chunk_advanced(method):
     theta = np.linspace(0, 2 * np.pi, 5)
     w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
-        data=1 + w[:, np.newaxis] * np.cos(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
     )
 
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     z = xr.DataArray(
-        data=w[:, np.newaxis] * np.sin(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)],
     )
 
     kwargs = {"fill_value": None}
