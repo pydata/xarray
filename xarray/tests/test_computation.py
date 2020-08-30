@@ -782,7 +782,7 @@ def test_apply_dask_new_output_dimension():
             output_core_dims=[["sign"]],
             dask="parallelized",
             output_dtypes=[obj.dtype],
-            output_sizes={"sign": 2},
+            dask_gufunc_kwargs=dict(output_sizes={"sign": 2}),
         )
 
     expected = stack_negative(data_array.compute())
@@ -891,7 +891,7 @@ def test_vectorize_dask_dtype_meta():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[int],
-        meta=np.ndarray((0, 0), dtype=np.float),
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=np.float)),
     )
 
     assert_identical(expected, actual)
@@ -1121,7 +1121,7 @@ def test_vectorize_dask_new_output_dims():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={"z": 1},
+        dask_gufunc_kwargs=dict(output_sizes={"z": 1}),
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
@@ -1133,7 +1133,7 @@ def test_vectorize_dask_new_output_dims():
             vectorize=True,
             dask="parallelized",
             output_dtypes=[float],
-            output_sizes={"z1": 1},
+            dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
     with raises_regex(
