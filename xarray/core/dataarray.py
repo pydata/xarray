@@ -2711,7 +2711,7 @@ class DataArray(AbstractArray, DataWithCoords):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
                 warnings.filterwarnings(
-                    "ignore", r"Mean of emmty slice", category=RuntimeWarning
+                    "ignore", r"Mean of empty slice", category=RuntimeWarning
                 )
                 with np.errstate(all="ignore"):
                     return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
