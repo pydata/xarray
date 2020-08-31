@@ -84,11 +84,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+- Update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
-- removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
+- Removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
-- update the contributing guide to use merges instead of rebasing and state
+- Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
@@ -104,6 +104,11 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Updated plot functions for matplotlib version 3.3 and silenced warnings in the
   plot tests (:pull:`4365`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Versions in ``pre-commit.yaml`` are now pinned, to reduce the chances of
+  conflicting versions. (:pull:`4388`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+
 
 .. _whats-new.0.16.0:
 
