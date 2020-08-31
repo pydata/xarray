@@ -666,19 +666,10 @@ def apply_variable_ufunc(
                             FutureWarning,
                             stacklevel=2,
                         )
-                    elif "consists of multiple chunks" in str(exc):
-                        warnings.warn(
-                            f"Core dimension consists of multiple chunks. To fix, rechunk "
-                            f"into a single chunk along this dimension or set "
-                            f"``allow_rechunk=True`` in the ``dask_gufunc_kwargs`` parameter. "
-                            f"Not setting will raise dask ValueError ``{str(exc)}`` in a future version.",
-                            FutureWarning,
-                            stacklevel=2,
-                        )
+                        dask_gufunc_kwargs["allow_rechunk"] = True
+                        res = gufunc(**dask_gufunc_kwargs)
                     else:
                         raise
-                    dask_gufunc_kwargs["allow_rechunk"] = True
-                    res = gufunc(**dask_gufunc_kwargs)
 
                 # todo: covers for https://github.com/dask/dask/pull/6207
                 #  remove when minimal dask version >= 2.17.0

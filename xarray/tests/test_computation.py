@@ -695,8 +695,6 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    with raises_regex(ValueError, "with different chunksize present"):
-        check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
