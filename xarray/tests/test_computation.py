@@ -695,6 +695,10 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
+    with pytest.warns(FutureWarning) as wrn:
+        check(data_array, 0 * data_array.compute())
+    assert len(wrn) == 1
+    assert "with different chunksize present" in wrn[0].message.args[0]
 
 
 @requires_dask
