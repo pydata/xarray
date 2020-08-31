@@ -6186,12 +6186,12 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
+@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
-    with warnings.catch_warnings():
-        rolling_obj_mean = rolling_obj.mean()
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da["time"])
     assert_identical(rolling_obj.window_labels, da["time"])
@@ -6486,10 +6486,9 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
+@pytest.mark.filterwarnings("error")
 def test_no_warning_for_all_nan():
-    with pytest.warns(None) as record:
-        _ = xr.DataArray([np.NaN, np.NaN]).mean()
-    assert len(record) == 0
+    _ = xr.DataArray([np.NaN, np.NaN]).mean()
 
 
 def test_name_in_masking():

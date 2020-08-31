@@ -120,6 +120,7 @@ class TestOps:
         result = concatenate([[1], ["b"]])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
+    @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
 

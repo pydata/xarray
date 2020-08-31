@@ -119,6 +119,7 @@ def test_weighted_sum_nan(weights, expected, skipna):
     assert_equal(expected, result)
 
 
+@pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan], [np.nan, np.nan]))
 @pytest.mark.parametrize("skipna", (True, False))
 @pytest.mark.parametrize("factor", [1, 2, 3.14])

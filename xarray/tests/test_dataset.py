@@ -6193,13 +6193,10 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
+@pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize("ds", (2,), indirect=True)
 def test_raise_no_warning_assert_close(ds):
-
-    with pytest.warns(None) as record:
-        assert_allclose(ds, ds)
-
-    assert len(record) == 0
+    assert_allclose(ds, ds)
 
 
 @pytest.mark.xfail(reason="See https://github.com/pydata/xarray/pull/4369 or docstring")
