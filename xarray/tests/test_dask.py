@@ -24,7 +24,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raises_regex,
-    requires_pint,
+    requires_pint_0_15,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -293,14 +293,10 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    @requires_pint
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
     def test_tokenize_duck_dask_array(self):
         import pint
 
-        pytest.mark.skipif(
-            pint.__version__ < "0.15",
-            reason="Dask tokenize is not implemented for Pint < 0.15",
-        )
         unit_registry = pint.UnitRegistry()
 
         q = unit_registry.Quantity(self.data, "meter")
@@ -736,14 +732,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    @requires_pint
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
     def test_tokenize_duck_dask_array(self):
         import pint
 
-        pytest.mark.skipif(
-            pint.__version__ < "0.15",
-            reason="Dask tokenize is not implemented for Pint < 0.15",
-        )
         unit_registry = pint.UnitRegistry()
 
         q = unit_registry.Quantity(self.data, unit_registry.meter)

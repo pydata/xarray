@@ -78,7 +78,8 @@ has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
-has_pint, requires_pint = _importorskip("pint")
+# Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
+has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
