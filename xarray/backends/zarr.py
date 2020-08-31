@@ -493,6 +493,10 @@ class ZarrStore(AbstractWritableDataStore):
             import zarr
 
             zarr.consolidate_metadata(self.ds.store)
+        # ZipStore has a close method, but DirectoryStore does not
+        # https://github.com/zarr-developers/zarr-python/issues/594
+        if hasattr(self.ds.store, "close"):
+            self.ds.store.close()
 
 
 def open_zarr(

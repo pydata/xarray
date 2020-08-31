@@ -2025,6 +2025,16 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    def test_zip_store_close(self, tmp_path):
+        # Use a zip extension to ensure that a zip store gets used.
+        zip_filename = str(tmp_path / "store.zip")
+
+        ds = xr.DataArray((np.arange(12)), dims="x", name="var1").to_dataset()
+
+        ds_store = ds.to_zarr(zip_filename, mode="w")
+        # If the ZipStore is closed correctly, the file pointer will be None
+        assert ds_store.ds.store.zf.fp is None
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
