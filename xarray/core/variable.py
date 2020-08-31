@@ -936,7 +936,7 @@ class Variable(
                 # don't share caching between copies
                 data = indexing.MemoryCachedArray(data.array)
 
-            if deep and is_duck_array(data):
+            if deep:
                 data = copy.deepcopy(data)
 
         else:
