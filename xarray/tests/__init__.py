@@ -78,6 +78,7 @@ has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
+has_pint, requires_pint = _importorskip("pint")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
