@@ -433,7 +433,7 @@ class Variable(
         """
         if is_duck_dask_array(self._data):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not hasattr(self._data, "__array_function__"):
+        elif not is_duck_array(self._data):
             self._data = np.asarray(self._data)
         return self
 
