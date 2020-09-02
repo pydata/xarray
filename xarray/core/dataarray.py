@@ -518,8 +518,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def name(self) -> Optional[Hashable]:
-        """The name of this array.
-        """
+        """The name of this array."""
         return self._name
 
     @name.setter
@@ -556,8 +555,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def data(self) -> Any:
-        """The array's data as a dask or numpy array
-        """
+        """The array's data as a dask or numpy array"""
         return self.variable.data
 
     @data.setter
@@ -664,14 +662,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access
-        """
+        """List of places to look-up items for attribute-style access"""
         return self._item_sources + [self.attrs]
 
     @property
     def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion
-        """
+        """List of places to look-up items for key-completion"""
         return [
             self.coords,
             {d: self.coords[d] for d in self.dims},
@@ -683,8 +679,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def loc(self) -> _LocIndexer:
-        """Attribute for location based indexing like pandas.
-        """
+        """Attribute for location based indexing like pandas."""
         return _LocIndexer(self)
 
     @property
@@ -709,16 +704,14 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing
-        """
+        """Mapping of pandas.Index objects used for label based indexing"""
         if self._indexes is None:
             self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
 
     @property
     def coords(self) -> DataArrayCoordinates:
-        """Dictionary-like container of coordinate arrays.
-        """
+        """Dictionary-like container of coordinate arrays."""
         return DataArrayCoordinates(self)
 
     def reset_coords(
@@ -840,7 +833,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return new.load(**kwargs)
 
     def persist(self, **kwargs) -> "DataArray":
-        """ Trigger computation in constituent dask arrays
+        """Trigger computation in constituent dask arrays
 
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
@@ -1414,15 +1407,15 @@ class DataArray(AbstractArray, DataWithCoords):
         kwargs: Mapping[str, Any] = None,
         **coords_kwargs: Any,
     ) -> "DataArray":
-        """ Multidimensional interpolation of variables.
+        """Multidimensional interpolation of variables.
 
         Parameters
         ----------
         coords : dict, optional
             Mapping from dimension names to the new coordinates.
-            new coordinate can be an scalar, array-like or DataArray.
-            If DataArrays are passed as new coordates, their dimensions are
-            used for the broadcasting.
+            New coordinate can be an scalar, array-like or DataArray.
+            If DataArrays are passed as new coordinates, their dimensions are
+            used for the broadcasting. Missing values are skipped.
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
@@ -1492,7 +1485,7 @@ class DataArray(AbstractArray, DataWithCoords):
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
-            which to index the variables in this dataset.
+            which to index the variables in this dataset. Missing values are skipped.
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
@@ -1590,7 +1583,9 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
 
         >>> arr = xr.DataArray(
-        ...     data=[0, 1], dims="x", coords={"x": ["a", "b"], "y": ("x", [0, 1])},
+        ...     data=[0, 1],
+        ...     dims="x",
+        ...     coords={"x": ["a", "b"], "y": ("x", [0, 1])},
         ... )
         >>> arr
         <xarray.DataArray (x: 2)>
@@ -2605,38 +2600,33 @@ class DataArray(AbstractArray, DataWithCoords):
         return result
 
     def to_cdms2(self) -> "cdms2_Variable":
-        """Convert this array into a cdms2.Variable
-        """
+        """Convert this array into a cdms2.Variable"""
         from ..convert import to_cdms2
 
         return to_cdms2(self)
 
     @classmethod
     def from_cdms2(cls, variable: "cdms2_Variable") -> "DataArray":
-        """Convert a cdms2.Variable into an xarray.DataArray
-        """
+        """Convert a cdms2.Variable into an xarray.DataArray"""
         from ..convert import from_cdms2
 
         return from_cdms2(variable)
 
     def to_iris(self) -> "iris_Cube":
-        """Convert this array into a iris.cube.Cube
-        """
+        """Convert this array into a iris.cube.Cube"""
         from ..convert import to_iris
 
         return to_iris(self)
 
     @classmethod
     def from_iris(cls, cube: "iris_Cube") -> "DataArray":
-        """Convert a iris.cube.Cube into an xarray.DataArray
-        """
+        """Convert a iris.cube.Cube into an xarray.DataArray"""
         from ..convert import from_iris
 
         return from_iris(cube)
 
     def _all_compat(self, other: "DataArray", compat_str: str) -> bool:
-        """Helper function for equals, broadcast_equals, and identical
-        """
+        """Helper function for equals, broadcast_equals, and identical"""
 
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
@@ -3327,7 +3317,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self) -> "DataArray":
-        """ Unify chunk size along all chunked dimensions of this DataArray.
+        """Unify chunk size along all chunked dimensions of this DataArray.
 
         Returns
         -------
@@ -3434,7 +3424,9 @@ class DataArray(AbstractArray, DataWithCoords):
         to the function being applied in ``xr.map_blocks()``:
 
         >>> array.map_blocks(
-        ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array,
+        ...     calculate_anomaly,
+        ...     kwargs={"groupby_type": "time.year"},
+        ...     template=array,
         ... )  # doctest: +ELLIPSIS
         <xarray.DataArray (time: 24)>
         dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>

@@ -257,8 +257,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 
 
 class ZarrStore(AbstractWritableDataStore):
-    """Store for reading and writing data via zarr
-    """
+    """Store for reading and writing data via zarr"""
 
     __slots__ = (
         "append_dim",
@@ -278,10 +277,14 @@ class ZarrStore(AbstractWritableDataStore):
         group=None,
         consolidated=False,
         consolidate_on_close=False,
+        chunk_store=None,
     ):
         import zarr
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        if chunk_store:
+            open_kwargs["chunk_store"] = chunk_store
+
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
@@ -505,7 +508,9 @@ def open_zarr(
     drop_variables=None,
     consolidated=False,
     overwrite_encoded_chunks=False,
+    chunk_store=None,
     decode_timedelta=None,
+    use_cftime=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -565,11 +570,23 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+    chunk_store : MutableMapping, optional
+        A separate Zarr store only for chunk data.
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
+    use_cftime: bool, optional
+        Only relevant if encoded dates come from a standard calendar
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
+        specified).  If None (default), attempt to decode times to
+        ``np.datetime64[ns]`` objects; if this is not possible, decode times to
+        ``cftime.datetime`` objects. If True, always decode times to
+        ``cftime.datetime`` objects, regardless of whether or not they can be
+        represented using ``np.datetime64[ns]`` objects.  If False, always
+        decode times to ``np.datetime64[ns]`` objects; if this is not possible
+        raise an error.
 
     Returns
     -------
@@ -631,6 +648,7 @@ def open_zarr(
             decode_coords=decode_coords,
             drop_variables=drop_variables,
             decode_timedelta=decode_timedelta,
+            use_cftime=use_cftime,
         )
 
         # TODO: this is where we would apply caching
@@ -646,6 +664,7 @@ def open_zarr(
         synchronizer=synchronizer,
         group=group,
         consolidated=consolidated,
+        chunk_store=chunk_store,
     )
     ds = maybe_decode_store(zarr_store)
 

@@ -322,7 +322,7 @@ def _assert_dataset_invariants(ds: Dataset):
     assert isinstance(ds._attrs, (type(None), dict))
 
 
-def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable],):
+def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable]):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful

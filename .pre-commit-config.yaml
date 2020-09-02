@@ -2,16 +2,16 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.1.0
+    rev: 5.4.2
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/python/black
-    rev: stable
+    rev: 20.8b1
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: stable
+    rev: v0.1.2
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
