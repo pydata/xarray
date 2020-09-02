@@ -18,8 +18,8 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     # Create overlap array.
     ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
     # apply rolling func
-    out = ag.map_blocks(
-        moving_func, window, min_count=min_count, axis=axis, dtype=a.dtype
+    out = da.map_blocks(
+        moving_func, ag, window, min_count=min_count, axis=axis, dtype=a.dtype
     )
     # trim array
     result = da.overlap.trim_internal(out, depth)
@@ -95,8 +95,14 @@ def rolling_window(a, axis, window, center, fill_value):
 
     chunks = list(a.chunks) + window
     new_axis = [a.ndim + i for i in range(len(axis))]
-    out = ag.map_blocks(
-        func, dtype=a.dtype, new_axis=new_axis, chunks=chunks, window=window, axis=axis
+    out = da.map_blocks(
+        func,
+        ag,
+        dtype=a.dtype,
+        new_axis=new_axis,
+        chunks=chunks,
+        window=window,
+        axis=axis,
     )
 
     # crop boundary.
