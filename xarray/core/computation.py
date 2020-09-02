@@ -1013,7 +1013,8 @@ def apply_ufunc(
     if dask == "parallelized":
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
-        dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
+        else:
+            dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
         # todo: remove warnings after deprecation cycle
         if meta is not None:
             warnings.warn(
