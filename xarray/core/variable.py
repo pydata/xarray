@@ -1635,10 +1635,14 @@ class Variable(
 
         input_data = self.data if allow_lazy else self.values
 
-        if axis is not None:
-            data = func(input_data, axis=axis, **kwargs)
-        else:
-            data = func(input_data, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
+            )
+            if axis is not None:
+                data = func(input_data, axis=axis, **kwargs)
+            else:
+                data = func(input_data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims

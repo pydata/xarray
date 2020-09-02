@@ -6186,13 +6186,12 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
+@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Mean of empty slice")
-        rolling_obj_mean = rolling_obj.mean()
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da["time"])
     assert_identical(rolling_obj.window_labels, da["time"])
@@ -6200,10 +6199,8 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da["time"].isel(time=i)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            actual = rolling_obj_mean.isel(time=i)
-            expected = window_da.mean("time")
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean("time")
 
         # TODO add assert_allclose_with_nan, which compares nan position
         # as well as the closeness of the values.
@@ -6487,6 +6484,11 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+@pytest.mark.filterwarnings("error")
+def test_no_warning_for_all_nan():
+    _ = xr.DataArray([np.NaN, np.NaN]).mean()
 
 
 def test_name_in_masking():

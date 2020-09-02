@@ -6027,6 +6027,8 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
         expected = getattr(bn, func_name)(
             ds[key].values, window=7, axis=0, min_count=min_periods
         )
+    else:
+        raise ValueError
     assert_array_equal(actual[key].values, expected)
 
     # Test center
@@ -6189,6 +6191,32 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
     assert len(record) == 0
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+def test_raise_no_warning_assert_close(ds):
+    assert_allclose(ds, ds)
+
+
+@pytest.mark.xfail(reason="See https://github.com/pydata/xarray/pull/4369 or docstring")
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("name", ("mean", "max"))
+def test_raise_no_warning_dask_rolling_assert_close(ds, name):
+    """
+    This is a puzzle — I can't easily find the source of the warning. It
+    requires `assert_allclose` to be run, for the `ds` param to be 2, and is
+    different for `mean` and `max`. `sum` raises no warning.
+    """
+
+    ds = ds.chunk({"x": 4})
+
+    rolling_obj = ds.rolling(time=4, x=3)
+
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("dask", [True, False])

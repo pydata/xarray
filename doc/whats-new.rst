@@ -105,6 +105,8 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
+- Silenced most ``numpy`` warnings such as ``Mean of empty slice``. (:pull:`4369`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Enable type checking for :py:func:`concat` (:issue:`4238`)
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Updated plot functions for matplotlib version 3.3 and silenced warnings in the
