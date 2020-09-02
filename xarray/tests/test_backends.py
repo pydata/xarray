@@ -4601,3 +4601,40 @@ def test_extract_zarr_variable_encoding():
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
+
+
+@requires_netCDF4
+def test_cftime_nanosecond(tmp_path):
+    import netCDF4
+
+    time_data = xr.DataArray(
+        np.asarray(
+            ["2020-09-01T00:00:00.000000", "2020-09-01T00:00:00.586001"],
+            dtype=np.datetime64,
+        ),
+        name="time",
+    )
+    filename = str(tmp_path / "time.nc")
+
+    time_data.to_netcdf(filename)
+    with netCDF4.Dataset(filename, mode="r") as loaded:
+        # Prior to 0.10.9, the time encoding for objects with nano second
+        # deltas was in seconds, but use floating point to attempt to maintain
+        # the difference
+        assert loaded["time"].units.startswith("seconds")
+        assert loaded["time"].dtype == np.float64
+
+    time_data.encoding = {
+        "units": "nanoseconds since 2020-09-01",
+        "calendar": "proleptic_gregorian",
+    }
+    time_data.to_netcdf(filename)
+    with netCDF4.Dataset(filename, mode="r") as loaded:
+        # Prior to 0.10.9, the time encoding for objects with nano second
+        # deltas was in seconds, but use floating point to attempt to maintain
+        # the difference
+        assert loaded["time"].units.startswith("nanoseconds")
+        assert loaded["time"].dtype == np.int64
+
+    time_data_loaded = xr.load_dataarray(filename)
+    assert_equal(time_data, time_data_loaded)

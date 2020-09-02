@@ -26,6 +26,7 @@ from .variables import (
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 
 _NS_PER_TIME_DELTA = {
+    "ns": int(1e0),
     "us": int(1e3),
     "ms": int(1e6),
     "s": int(1e9),
@@ -35,7 +36,15 @@ _NS_PER_TIME_DELTA = {
 }
 
 TIME_UNITS = frozenset(
-    ["days", "hours", "minutes", "seconds", "milliseconds", "microseconds"]
+    [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
 )
 
 
@@ -44,6 +53,7 @@ def _netcdf_to_numpy_timeunit(units):
     if not units.endswith("s"):
         units = "%ss" % units
     return {
+        "nanoseconds": "ns",
         "microseconds": "us",
         "milliseconds": "ms",
         "seconds": "s",
