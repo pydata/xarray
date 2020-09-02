@@ -6,7 +6,7 @@ import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.utils import FrozenDict, NdimSizeLenMixin
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -134,7 +134,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if isinstance(source, dask_array_type):
+        if is_duck_dask_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)

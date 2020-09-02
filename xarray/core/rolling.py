@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 try:
     import bottleneck
@@ -376,7 +376,7 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center[0]:
-            if isinstance(padded.data, dask_array_type):
+            if is_duck_dask_array(padded.data):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1
                 shift = -(self.window[0] + 1) // 2
@@ -389,7 +389,7 @@ class DataArrayRolling(Rolling):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if isinstance(padded.data, dask_array_type):
+        if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
             values = dask_rolling_wrapper(
                 func, padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -418,7 +418,7 @@ class DataArrayRolling(Rolling):
 
         if (
             bottleneck_move_func is not None
-            and not isinstance(self.obj.data, dask_array_type)
+            and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):
             # TODO: renable bottleneck with dask after the issues

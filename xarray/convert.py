@@ -10,6 +10,7 @@ from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
+from .core.pycompat import dask_array_type
 
 cdms2_ignored_attrs = {"name", "tileIndex"}
 iris_forbidden_keys = {
@@ -245,8 +246,6 @@ def _name(iris_obj, default="unknown"):
 def from_iris(cube):
     """Convert a Iris cube into an DataArray"""
     import iris.exceptions
-
-    from xarray.core.pycompat import dask_array_type
 
     name = _name(cube)
     if name == "unknown":

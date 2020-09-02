@@ -4,7 +4,7 @@ from typing import Iterable
 
 import numpy as np
 
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 try:
     import dask.array as da
@@ -39,7 +39,7 @@ else:
         """
         # If using x._meta, x must be a Dask Array, some libraries (e.g. zarr)
         # implement a _meta attribute that are incompatible with Dask Array._meta
-        if hasattr(x, "_meta") and isinstance(x, dask_array_type):
+        if hasattr(x, "_meta") and is_duck_dask_array(x):
             x = x._meta
 
         if dtype is None and x is None:
