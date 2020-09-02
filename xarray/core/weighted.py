@@ -118,7 +118,7 @@ class Weighted:
     ) -> "DataArray":
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
-            for internal use only
+        for internal use only
         """
 
         # need to infer dims as we use `dot`

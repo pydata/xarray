@@ -257,8 +257,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
 
 
 class ZarrStore(AbstractWritableDataStore):
-    """Store for reading and writing data via zarr
-    """
+    """Store for reading and writing data via zarr"""
 
     __slots__ = (
         "append_dim",
