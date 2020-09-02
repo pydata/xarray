@@ -23,7 +23,7 @@ from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
@@ -1507,7 +1507,7 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
     if fill_value is dtypes.NA:
         fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
 
-    if isinstance(other.data, dask_array_type):
+    if is_duck_dask_array(other.data):
         import dask.array
 
         if dtype is None:
@@ -1652,7 +1652,7 @@ def _contains_cftime_datetimes(array) -> bool:
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
             sample = array.ravel()[0]
-            if isinstance(sample, dask_array_type):
+            if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()

@@ -1,7 +1,7 @@
 import numpy as np
 
 from .pdcompat import count_not_none
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -13,8 +13,8 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
 
 def move_exp_nanmean(array, *, axis, alpha):
-    if isinstance(array, dask_array_type):
-        raise TypeError("rolling_exp is not currently support for dask arrays")
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
 
     if axis == ():

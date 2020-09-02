@@ -6,7 +6,7 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 
 def _season_from_months(months):
@@ -69,7 +69,7 @@ def _get_date_field(values, name, dtype):
     else:
         access_method = _access_through_cftimeindex
 
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         return map_blocks(access_method, values, name, dtype=dtype)
@@ -114,7 +114,7 @@ def _round_field(values, name, freq):
         Array-like of datetime fields accessed for each element in values
 
     """
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
@@ -151,7 +151,7 @@ def _strftime(values, date_format):
         access_method = _strftime_through_series
     else:
         access_method = _strftime_through_cftimeindex
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         return map_blocks(access_method, values, date_format)

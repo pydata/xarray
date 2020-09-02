@@ -80,7 +80,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
@@ -645,9 +645,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data
-            for k, v in self.variables.items()
-            if isinstance(v._data, dask_array_type)
+            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask.array as da
@@ -815,9 +813,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Persist all Dask arrays in memory"""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
-            k: v._data
-            for k, v in self.variables.items()
-            if isinstance(v._data, dask_array_type)
+            k: v._data for k, v in self.variables.items() if is_duck_dask_array(v._data)
         }
         if lazy_data:
             import dask
@@ -6043,7 +6039,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if dim not in da.dims:
                 continue
 
-            if isinstance(da.data, dask_array_type) and (
+            if is_duck_dask_array(da.data) and (
                 rank != order or full or skipna is None
             ):
                 # Current algorithm with dask and skipna=False neither supports
