@@ -2025,6 +2025,16 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_cftime
+    def test_open_zarr_use_cftime(self):
+        ds = create_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, consolidated=True)
+            ds_a = xr.open_zarr(store_target, consolidated=True)
+            assert_identical(ds, ds_a)
+            ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
+            assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):

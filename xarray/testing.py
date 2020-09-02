@@ -196,14 +196,14 @@ def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
 
-    if not utils.is_array_like(x) and not utils.is_scalar(x):
+    if not utils.is_duck_array(x) and not utils.is_scalar(x):
         x = np.asarray(x)
 
-    if not utils.is_array_like(y) and not utils.is_scalar(y):
+    if not utils.is_duck_array(y) and not utils.is_scalar(y):
         y = np.asarray(y)
 
-    if (utils.is_array_like(x) and utils.is_scalar(y)) or (
-        utils.is_scalar(x) and utils.is_array_like(y)
+    if (utils.is_duck_array(x) and utils.is_scalar(y)) or (
+        utils.is_scalar(x) and utils.is_duck_array(y)
     ):
         equiv = (x == y).all()
     else:
@@ -322,9 +322,7 @@ def _assert_dataset_invariants(ds: Dataset):
     assert isinstance(ds._attrs, (type(None), dict))
 
 
-def _assert_internal_invariants(
-    xarray_obj: Union[DataArray, Dataset, Variable],
-):
+def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable]):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful
