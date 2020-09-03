@@ -5882,6 +5882,8 @@ def test_coarsen_keep_attrs():
         attrs=_attrs,
     )
 
+    ds2 = ds.copy(deep=True)
+
     # Test dropped attrs
     dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == {}
@@ -5895,15 +5897,8 @@ def test_coarsen_keep_attrs():
         dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == _attrs
 
-
-def test_coarsen_maintains_orig_object():
-    with xr.set_options(keep_attrs=True):
-        ds = xr.tutorial.load_dataset("air_temperature")
-        ds2 = xr.tutorial.load_dataset("air_temperature")
-
-        xr.testing.assert_identical(ds, ds2)
-        ds.coarsen(lat=5).mean()
-        xr.testing.assert_identical(ds, ds2)
+    # Test kept attrs in original object
+    xr.testing.assert_identical(ds, ds2)
 
 
 def test_rolling_keep_attrs():
