@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 try:
     import bottleneck
@@ -146,7 +146,7 @@ class Rolling:
             else:
                 for d in self.dim:
                     if d not in arg:
-                        raise KeyError("argument has no key {}.".format(d))
+                        raise KeyError(f"argument has no key {d}.")
                 return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
@@ -329,7 +329,7 @@ class DataArrayRolling(Rolling):
 
         """
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         windows = self.construct(rolling_dim)
@@ -343,7 +343,7 @@ class DataArrayRolling(Rolling):
         """ Number of non-nan entries in each rolling window. """
 
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         # We use False as the fill_value instead of np.nan, since boolean
@@ -376,7 +376,7 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center[0]:
-            if isinstance(padded.data, dask_array_type):
+            if is_duck_dask_array(padded.data):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1
                 shift = -(self.window[0] + 1) // 2
@@ -389,7 +389,7 @@ class DataArrayRolling(Rolling):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if isinstance(padded.data, dask_array_type):
+        if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
             values = dask_rolling_wrapper(
                 func, padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -418,7 +418,7 @@ class DataArrayRolling(Rolling):
 
         if (
             bottleneck_move_func is not None
-            and not isinstance(self.obj.data, dask_array_type)
+            and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):
             # TODO: renable bottleneck with dask after the issues

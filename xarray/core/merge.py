@@ -56,7 +56,7 @@ _VALID_COMPAT = Frozen(
 )
 
 
-def broadcast_dimension_size(variables: List[Variable],) -> Dict[Hashable, int]:
+def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
@@ -71,8 +71,7 @@ def broadcast_dimension_size(variables: List[Variable],) -> Dict[Hashable, int]:
 
 
 class MergeError(ValueError):
-    """Error class for merge failures due to incompatible arguments.
-    """
+    """Error class for merge failures due to incompatible arguments."""
 
     # inherits from ValueError for backward compatibility
     # TODO: move this to an xarray.exceptions module?
@@ -494,8 +493,7 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
 
 
 def merge_attrs(variable_attrs, combine_attrs):
-    """Combine attributes from different variables according to combine_attrs
-    """
+    """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
         # no attributes to merge
         return None
@@ -666,8 +664,10 @@ def merge(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
                     default: "drop"
         String indicating how to combine attrs of the objects being merged:
@@ -873,8 +873,7 @@ def dataset_merge_method(
     join: str,
     fill_value: Any,
 ) -> _MergeResult:
-    """Guts of the Dataset.merge method.
-    """
+    """Guts of the Dataset.merge method."""
     # we are locked into supporting overwrite_vars for the Dataset.merge
     # method due for backwards compatibility
     # TODO: consider deprecating it?

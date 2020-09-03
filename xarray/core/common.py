@@ -23,7 +23,7 @@ from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
@@ -111,8 +111,7 @@ class ImplementsDatasetReduce:
 
 
 class AbstractArray(ImplementsArrayReduce):
-    """Shared base class for DataArray and Variable.
-    """
+    """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
 
@@ -188,8 +187,7 @@ class AbstractArray(ImplementsArrayReduce):
 
 
 class AttrAccessMixin:
-    """Mixin class that allows getting keys with attribute access
-    """
+    """Mixin class that allows getting keys with attribute access"""
 
     __slots__ = ()
 
@@ -212,14 +210,12 @@ class AttrAccessMixin:
 
     @property
     def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access
-        """
+        """List of places to look-up items for attribute-style access"""
         return []
 
     @property
     def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-autocompletion
-        """
+        """List of places to look-up items for key-autocompletion"""
         return []
 
     def __getattr__(self, name: str) -> Any:
@@ -239,8 +235,7 @@ class AttrAccessMixin:
     # runtime before every single assignment. All of this is just temporary until the
     # FutureWarning can be changed into a hard crash.
     def _setattr_dict(self, name: str, value: Any) -> None:
-        """Deprecated third party subclass (see ``__init_subclass__`` above)
-        """
+        """Deprecated third party subclass (see ``__init_subclass__`` above)"""
         object.__setattr__(self, name, value)
         if name in self.__dict__:
             # Custom, non-slotted attr, or improperly assigned variable?
@@ -304,8 +299,7 @@ def get_squeeze_dims(
     dim: Union[Hashable, Iterable[Hashable], None] = None,
     axis: Union[int, Iterable[int], None] = None,
 ) -> List[Hashable]:
-    """Get a list of dimensions to squeeze out.
-    """
+    """Get a list of dimensions to squeeze out."""
     if dim is not None and axis is not None:
         raise ValueError("cannot use both parameters `axis` and `dim`")
     if dim is None and axis is None:
@@ -374,8 +368,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def get_index(self, key: Hashable) -> pd.Index:
-        """Get an index for a dimension, with fall-back to a default RangeIndex
-        """
+        """Get an index for a dimension, with fall-back to a default RangeIndex"""
         if key not in self.dims:
             raise KeyError(key)
 
@@ -423,7 +416,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Convert longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(
-        ...     np.random.rand(4), coords=[np.array([358, 359, 0, 1])], dims="lon",
+        ...     np.random.rand(4),
+        ...     coords=[np.array([358, 359, 0, 1])],
+        ...     dims="lon",
         ... )
         >>> da
         <xarray.DataArray (lon: 4)>
@@ -830,7 +825,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...             "15/12/1999",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
         ...         )
         ...     ],
         ...     dims="time",
@@ -1037,7 +1034,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999", periods=12, freq=pd.DateOffset(months=1),
+        ...             "15/12/1999",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
         ...         )
         ...     ],
         ...     dims="time",
@@ -1242,8 +1241,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return ops.where_method(self, cond, other)
 
     def close(self: Any) -> None:
-        """Close any files linked to this object
-        """
+        """Close any files linked to this object"""
         if self._file_obj is not None:
             self._file_obj.close()
         self._file_obj = None
@@ -1364,10 +1362,13 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     ----------
     other : DataArray, Dataset or Variable
         The reference object in input
-    fill_value : scalar
-        Value to fill the new object with before returning it.
-    dtype : dtype, optional
-        dtype of the new array. If omitted, it defaults to other.dtype.
+    fill_value : scalar or dict-like
+        Value to fill the new object with before returning it. If
+        other is a Dataset, may also be a dict-like mapping data
+        variables to fill values.
+    dtype : dtype or dict-like of dtype, optional
+        dtype of the new array. If a dict-like, maps dtypes to
+        variables. If omitted, it defaults to other.dtype.
 
     Returns
     -------
@@ -1427,6 +1428,34 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     * lat      (lat) int64 1 2
     * lon      (lon) int64 0 1 2
 
+    >>> ds = xr.Dataset(
+    ...     {"a": ("x", [3, 5, 2]), "b": ("x", [9, 1, 0])}, coords={"x": [2, 4, 6]}
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) int64 3 5 2
+        b        (x) int64 9 1 0
+    >>> xr.full_like(ds, fill_value={"a": 1, "b": 2})
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) int64 1 1 1
+        b        (x) int64 2 2 2
+    >>> xr.full_like(ds, fill_value={"a": 1, "b": 2}, dtype={"a": bool, "b": float})
+    <xarray.Dataset>
+    Dimensions:  (x: 3)
+    Coordinates:
+      * x        (x) int64 2 4 6
+    Data variables:
+        a        (x) bool True True True
+        b        (x) float64 2.0 2.0 2.0
+
     See also
     --------
 
@@ -1438,12 +1467,22 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     from .dataset import Dataset
     from .variable import Variable
 
-    if not is_scalar(fill_value):
-        raise ValueError(f"fill_value must be scalar. Received {fill_value} instead.")
+    if not is_scalar(fill_value) and not (
+        isinstance(other, Dataset) and isinstance(fill_value, dict)
+    ):
+        raise ValueError(
+            f"fill_value must be scalar or, for datasets, a dict-like. Received {fill_value} instead."
+        )
 
     if isinstance(other, Dataset):
+        if not isinstance(fill_value, dict):
+            fill_value = {k: fill_value for k in other.data_vars.keys()}
+
+        if not isinstance(dtype, dict):
+            dtype = {k: dtype for k in other.data_vars.keys()}
+
         data_vars = {
-            k: _full_like_variable(v, fill_value, dtype)
+            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype.get(k, None))
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
@@ -1462,11 +1501,13 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
 
 def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
-    """Inner function of full_like, where other must be a variable
-    """
+    """Inner function of full_like, where other must be a variable"""
     from .variable import Variable
 
-    if isinstance(other.data, dask_array_type):
+    if fill_value is dtypes.NA:
+        fill_value = dtypes.get_fill_value(dtype if dtype is not None else other.dtype)
+
+    if is_duck_dask_array(other.data):
         import dask.array
 
         if dtype is None:
@@ -1593,20 +1634,17 @@ def ones_like(other, dtype: DTypeLike = None):
 
 
 def is_np_datetime_like(dtype: DTypeLike) -> bool:
-    """Check if a dtype is a subclass of the numpy datetime types
-    """
+    """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 
 def is_np_timedelta_like(dtype: DTypeLike) -> bool:
-    """Check whether dtype is of the timedelta64 dtype.
-    """
+    """Check whether dtype is of the timedelta64 dtype."""
     return np.issubdtype(dtype, np.timedelta64)
 
 
 def _contains_cftime_datetimes(array) -> bool:
-    """Check if an array contains cftime.datetime objects
-    """
+    """Check if an array contains cftime.datetime objects"""
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
@@ -1614,7 +1652,7 @@ def _contains_cftime_datetimes(array) -> bool:
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
             sample = array.ravel()[0]
-            if isinstance(sample, dask_array_type):
+            if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
@@ -1624,8 +1662,7 @@ def _contains_cftime_datetimes(array) -> bool:
 
 
 def contains_cftime_datetimes(var) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects
-    """
+    """Check if an xarray.Variable contains cftime.datetime objects"""
     return _contains_cftime_datetimes(var.data)
 
 

@@ -1,5 +1,6 @@
+import contextlib
 import inspect
-from copy import deepcopy
+from copy import copy
 from datetime import datetime
 
 import numpy as np
@@ -42,6 +43,34 @@ try:
     import cartopy as ctpy  # type: ignore
 except ImportError:
     ctpy = None
+
+
+@contextlib.contextmanager
+def figure_context(*args, **kwargs):
+    """context manager which autocloses a figure (even if the test failed)"""
+
+    try:
+        yield None
+    finally:
+        plt.close("all")
+
+
+@pytest.fixture(scope="module", autouse=True)
+def test_all_figures_closed():
+    """meta-test to ensure all figures are closed at the end of a test
+
+    Notes:  Scope is kept to module (only invoke this function once per test
+    module) else tests cannot be run in parallel (locally). Disadvantage: only
+    catches one open figure per run. May still give a false positive if tests
+    are run in parallel.
+    """
+    yield None
+
+    open_figs = len(plt.get_fignums())
+    if open_figs:
+        raise RuntimeError(
+            f"tests did not close all figures ({open_figs} figures open)"
+        )
 
 
 @pytest.mark.flaky
@@ -335,7 +364,7 @@ class TestPlot(PlotTestCase):
 
         cmap = mpl.cm.viridis
 
-        # deepcopy to ensure cmap is not changed by contourf()
+        # use copy to ensure cmap is not changed by contourf()
         # Set vmin and vmax so that _build_discrete_colormap is called with
         # extend='both'. extend is passed to
         # mpl.colors.from_levels_and_colors(), which returns a result with
@@ -343,12 +372,12 @@ class TestPlot(PlotTestCase):
         # extend='neither' (but if extend='neither' the under and over values
         # would not be used because the data would all be within the plotted
         # range)
-        pl = a.plot.contourf(cmap=deepcopy(cmap), vmin=0.1, vmax=0.9)
+        pl = a.plot.contourf(cmap=copy(cmap), vmin=0.1, vmax=0.9)
 
         # check the set_bad color
-        assert np.all(
-            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
-            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        assert_array_equal(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0],
+            cmap(np.ma.masked_invalid([np.nan]))[0],
         )
 
         # check the set_under color
@@ -360,10 +389,8 @@ class TestPlot(PlotTestCase):
     def test_contourf_cmap_set_with_bad_under_over(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
-        # Make a copy here because we want a local cmap that we will modify.
-        # Use deepcopy because matplotlib Colormap objects have tuple members
-        # and we want to ensure we do not change the original.
-        cmap = deepcopy(mpl.cm.viridis)
+        # make a copy here because we want a local cmap that we will modify.
+        cmap = copy(mpl.cm.viridis)
 
         cmap.set_bad("w")
         # check we actually changed the set_bad color
@@ -380,13 +407,13 @@ class TestPlot(PlotTestCase):
         # check we actually changed the set_over color
         assert cmap(np.inf) != mpl.cm.viridis(-np.inf)
 
-        # deepcopy to ensure cmap is not changed by contourf()
-        pl = a.plot.contourf(cmap=deepcopy(cmap))
+        # copy to ensure cmap is not changed by contourf()
+        pl = a.plot.contourf(cmap=copy(cmap))
 
         # check the set_bad color has been kept
-        assert np.all(
-            pl.cmap(np.ma.masked_invalid([np.nan]))[0]
-            == cmap(np.ma.masked_invalid([np.nan]))[0]
+        assert_array_equal(
+            pl.cmap(np.ma.masked_invalid([np.nan]))[0],
+            cmap(np.ma.masked_invalid([np.nan]))[0],
         )
 
         # check the set_under color has been kept
@@ -765,18 +792,22 @@ class TestDetermineCmapParams:
         # default is to cover full data range but with no guarantee on Nlevels
         for level in np.arange(2, 10, dtype=int):
             cmap_params = _determine_cmap_params(data, levels=level)
-            assert cmap_params["vmin"] == cmap_params["levels"][0]
-            assert cmap_params["vmax"] == cmap_params["levels"][-1]
+            assert cmap_params["vmin"] is None
+            assert cmap_params["vmax"] is None
+            assert cmap_params["norm"].vmin == cmap_params["levels"][0]
+            assert cmap_params["norm"].vmax == cmap_params["levels"][-1]
             assert cmap_params["extend"] == "neither"
 
         # with min max we are more strict
         cmap_params = _determine_cmap_params(
             data, levels=5, vmin=0, vmax=5, cmap="Blues"
         )
-        assert cmap_params["vmin"] == 0
-        assert cmap_params["vmax"] == 5
-        assert cmap_params["vmin"] == cmap_params["levels"][0]
-        assert cmap_params["vmax"] == cmap_params["levels"][-1]
+        assert cmap_params["vmin"] is None
+        assert cmap_params["vmax"] is None
+        assert cmap_params["norm"].vmin == 0
+        assert cmap_params["norm"].vmax == 5
+        assert cmap_params["norm"].vmin == cmap_params["levels"][0]
+        assert cmap_params["norm"].vmax == cmap_params["levels"][-1]
         assert cmap_params["cmap"].name == "Blues"
         assert cmap_params["extend"] == "neither"
         assert cmap_params["cmap"].N == 4
@@ -800,8 +831,10 @@ class TestDetermineCmapParams:
         orig_levels = [0, 1, 2, 3, 4, 5]
         # vmin and vmax should be ignored if levels are explicitly provided
         cmap_params = _determine_cmap_params(data, levels=orig_levels, vmin=0, vmax=3)
-        assert cmap_params["vmin"] == 0
-        assert cmap_params["vmax"] == 5
+        assert cmap_params["vmin"] is None
+        assert cmap_params["vmax"] is None
+        assert cmap_params["norm"].vmin == 0
+        assert cmap_params["norm"].vmax == 5
         assert cmap_params["cmap"].N == 5
         assert cmap_params["norm"].N == 6
 
@@ -907,8 +940,10 @@ class TestDetermineCmapParams:
             test_max = vmax if norm.vmax is None else norm.vmax
 
             cmap_params = _determine_cmap_params(self.data, norm=norm, levels=levels)
-            assert cmap_params["vmin"] == test_min
-            assert cmap_params["vmax"] == test_max
+            assert cmap_params["vmin"] is None
+            assert cmap_params["vmax"] is None
+            assert cmap_params["norm"].vmin == test_min
+            assert cmap_params["norm"].vmax == test_max
             assert cmap_params["extend"] == extend
             assert cmap_params["norm"] == norm
 
@@ -2360,14 +2395,14 @@ class TestAxesKwargs:
         plt.clf()
         da.plot(xticks=np.arange(5))
         expected = np.arange(5).tolist()
-        assert np.all(plt.gca().get_xticks() == expected)
+        assert_array_equal(plt.gca().get_xticks(), expected)
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_yticks_kwarg(self, da):
         plt.clf()
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
-        assert np.all(plt.gca().get_yticks() == expected)
+        assert_array_equal(plt.gca().get_yticks(), expected)
 
 
 @requires_matplotlib
@@ -2391,11 +2426,12 @@ def test_plot_transposed_nondim_coord(plotfunc):
 def test_plot_transposes_properly(plotfunc):
     # test that we aren't mistakenly transposing when the 2 dimensions have equal sizes.
     da = xr.DataArray([np.sin(2 * np.pi / 10 * np.arange(10))] * 10, dims=("y", "x"))
-    hdl = getattr(da.plot, plotfunc)(x="x", y="y")
-    # get_array doesn't work for contour, contourf. It returns the colormap intervals.
-    # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
-    # to ravel() on the LHS
-    assert np.all(hdl.get_array().ravel() == da.to_masked_array().ravel())
+    with figure_context():
+        hdl = getattr(da.plot, plotfunc)(x="x", y="y")
+        # get_array doesn't work for contour, contourf. It returns the colormap intervals.
+        # pcolormesh returns 1D array but imshow returns a 2D array so it is necessary
+        # to ravel() on the LHS
+        assert_array_equal(hdl.get_array().ravel(), da.to_masked_array().ravel())
 
 
 @requires_matplotlib
@@ -2407,7 +2443,8 @@ def test_facetgrid_single_contour():
     ds = xr.concat([z, z2], dim="time")
     ds["time"] = [0, 1]
 
-    ds.plot.contour(col="time", levels=[4], colors=["k"])
+    with figure_context():
+        ds.plot.contour(col="time", levels=[4], colors=["k"])
 
 
 @requires_matplotlib
@@ -2431,13 +2468,15 @@ def test_get_axis():
     with pytest.raises(ValueError, match="`aspect` argument without `size`"):
         get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
 
-    ax = get_axis()
-    assert isinstance(ax, mpl.axes.Axes)
+    with figure_context():
+        ax = get_axis()
+        assert isinstance(ax, mpl.axes.Axes)
 
 
 @requires_cartopy
 def test_get_axis_cartopy():
 
     kwargs = {"projection": ctpy.crs.PlateCarree()}
-    ax = get_axis(**kwargs)
-    assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+    with figure_context():
+        ax = get_axis(**kwargs)
+        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)

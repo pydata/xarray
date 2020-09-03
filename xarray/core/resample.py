@@ -253,8 +253,7 @@ ops.inject_binary_ops(DataArrayResample)
 
 
 class DatasetResample(DatasetGroupBy, Resample):
-    """DatasetGroupBy object specialized to resampling a specified dimension
-    """
+    """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
 

@@ -1,9 +1,8 @@
 try:
     import dask
     import dask.array
+    from dask.array.utils import meta_from_array
     from dask.highlevelgraph import HighLevelGraph
-
-    from .dask_array_compat import meta_from_array
 
 except ImportError:
     pass
@@ -124,8 +123,7 @@ def make_meta(obj):
 def infer_template(
     func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
 ) -> T_DSorDA:
-    """Infer return object by running the function on meta objects.
-    """
+    """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
     try:
@@ -264,7 +262,7 @@ def map_blocks(
     Coordinates:
       * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
-     """
+    """
 
     def _wrapper(
         func: Callable,

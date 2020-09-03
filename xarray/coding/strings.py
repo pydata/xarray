@@ -4,7 +4,7 @@ from functools import partial
 import numpy as np
 
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     VariableCoder,
@@ -130,7 +130,7 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         return da.map_blocks(
@@ -145,8 +145,7 @@ def bytes_to_char(arr):
 
 
 def _numpy_bytes_to_char(arr):
-    """Like netCDF4.stringtochar, but faster and more flexible.
-    """
+    """Like netCDF4.stringtochar, but faster and more flexible."""
     # ensure the array is contiguous
     arr = np.array(arr, copy=False, order="C", dtype=np.string_)
     return arr.reshape(arr.shape + (1,)).view("S1")
@@ -167,7 +166,7 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.string_)
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         if len(arr.chunks[-1]) > 1:
@@ -189,8 +188,7 @@ def char_to_bytes(arr):
 
 
 def _numpy_char_to_bytes(arr):
-    """Like netCDF4.chartostring, but faster and more flexible.
-    """
+    """Like netCDF4.chartostring, but faster and more flexible."""
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order="C")
     dtype = "S" + str(arr.shape[-1])
