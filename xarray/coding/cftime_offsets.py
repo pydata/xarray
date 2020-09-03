@@ -221,8 +221,7 @@ def _adjust_n_years(other, n, month, reference_day):
 
 
 def _shift_month(date, months, day_option="start"):
-    """Shift the date to a month start or end a given number of months away.
-    """
+    """Shift the date to a month start or end a given number of months away."""
     import cftime
 
     delta_year = (date.month + months) // 12
@@ -354,8 +353,7 @@ _MONTH_ABBREVIATIONS = {
 
 
 class QuarterOffset(BaseCFTimeOffset):
-    """Quarter representation copied off of pandas/tseries/offsets.py
-    """
+    """Quarter representation copied off of pandas/tseries/offsets.py"""
 
     _freq: ClassVar[str]
     _default_month: ClassVar[int]

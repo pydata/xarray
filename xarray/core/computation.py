@@ -29,7 +29,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -120,7 +120,9 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
+            type(self).__name__,
+            list(self.input_core_dims),
+            list(self.output_core_dims),
         )
 
     def __str__(self):
@@ -128,11 +130,13 @@ class _UFuncSignature:
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
-    def to_gufunc_string(self):
+    def to_gufunc_string(self, exclude_dims=frozenset()):
         """Create an equivalent signature string for a NumPy gufunc.
 
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
+
+        Also creates unique names for input_core_dims contained in exclude_dims.
         """
         input_core_dims = [
             [self.dims_map[dim] for dim in core_dims]
@@ -142,6 +146,25 @@ class _UFuncSignature:
             [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
+
+        # enumerate input_core_dims contained in exclude_dims to make them unique
+        if exclude_dims:
+
+            exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
+
+            counter = Counter()
+
+            def _enumerate(dim):
+                if dim in exclude_dims:
+                    n = counter[dim]
+                    counter.update([dim])
+                    dim = f"{dim}_{n}"
+                return dim
+
+            input_core_dims = [
+                [_enumerate(dim) for dim in arg] for arg in input_core_dims
+            ]
+
         alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
 
@@ -545,10 +568,12 @@ def broadcast_compat_data(
     return data
 
 
-def _vectorize(func, signature, output_dtypes):
+def _vectorize(func, signature, output_dtypes, exclude_dims):
     if signature.all_core_dims:
         func = np.vectorize(
-            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+            func,
+            otypes=output_dtypes,
+            signature=signature.to_gufunc_string(exclude_dims),
         )
     else:
         func = np.vectorize(func, otypes=output_dtypes)
@@ -567,8 +592,7 @@ def apply_variable_ufunc(
     keep_attrs=False,
     dask_gufunc_kwargs=None,
 ):
-    """Apply a ndarray level function over Variable and/or ndarray objects.
-    """
+    """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -586,7 +610,7 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(isinstance(array, dask_array_type) for array in input_data):
+    if any(is_duck_dask_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -623,7 +647,7 @@ def apply_variable_ufunc(
 
                 res = da.apply_gufunc(
                     numpy_func,
-                    signature.to_gufunc_string(),
+                    signature.to_gufunc_string(exclude_dims),
                     *arrays,
                     vectorize=vectorize,
                     output_dtypes=output_dtypes,
@@ -649,7 +673,9 @@ def apply_variable_ufunc(
             )
     else:
         if vectorize:
-            func = _vectorize(func, signature, output_dtypes=output_dtypes)
+            func = _vectorize(
+                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+            )
 
     result_data = func(*input_data)
 
@@ -700,7 +726,7 @@ def apply_variable_ufunc(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(isinstance(arg, dask_array_type) for arg in args):
+    if any(is_duck_dask_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -1250,7 +1276,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     # N.B. `skipna=False` is required or there is a bug when computing
     # auto-covariance. E.g. Try xr.cov(da,da) for
     # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
+        valid_count
+    )
 
     if method == "cov":
         return cov
@@ -1576,7 +1604,7 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle dask arrays.
-    if isinstance(array.data, dask_array_type):
+    if is_duck_dask_array(array.data):
         import dask.array
 
         chunks = dict(zip(array.dims, array.chunks))

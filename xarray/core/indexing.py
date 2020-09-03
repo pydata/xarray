@@ -11,7 +11,12 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import dask_array_type, integer_types, sparse_array_type
+from .pycompat import (
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+    sparse_array_type,
+)
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
@@ -464,8 +469,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
 
 class ExplicitlyIndexed:
-    """Mixin to mark support for Indexer subclasses in indexing.
-    """
+    """Mixin to mark support for Indexer subclasses in indexing."""
 
     __slots__ = ()
 
@@ -502,8 +506,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make basic and outer indexing lazy.
-    """
+    """Wrap an array to make basic and outer indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -579,8 +582,7 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make vectorized indexing lazy.
-    """
+    """Wrap an array to make vectorized indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -767,7 +769,7 @@ def _outer_to_numpy_indexer(key, shape):
 
 
 def _combine_indexers(old_key, shape, new_key):
-    """ Combine two indexers.
+    """Combine two indexers.
 
     Parameters
     ----------
@@ -852,7 +854,7 @@ def decompose_indexer(
 
 
 def _decompose_slice(key, size):
-    """ convert a slice to successive two slices. The first slice always has
+    """convert a slice to successive two slices. The first slice always has
     a positive step.
     """
     start, stop, step = key.indices(size)
@@ -1111,7 +1113,7 @@ def _masked_result_drop_slice(key, data=None):
     new_keys = []
     for k in key:
         if isinstance(k, np.ndarray):
-            if isinstance(data, dask_array_type):
+            if is_duck_dask_array(data):
                 new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
             elif isinstance(data, sparse_array_type):
                 import sparse
@@ -1308,7 +1310,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array",)
 
     def __init__(self, array):
-        """ This adapter is created in Variable.__getitem__ in
+        """This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
         """
         self.array = array
@@ -1363,8 +1365,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing.
-    """
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
 
