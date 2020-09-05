@@ -56,6 +56,14 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 
     if (add_guide or add_guide is None) and funcname == "quiver":
         add_quiverkey = True
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver"
+                )
     else:
         add_quiverkey = False
 
@@ -431,28 +439,27 @@ def _dsplot(plotfunc):
 
 @_dsplot
 def quiver(ds, x, y, ax, u, v, **kwargs):
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for quiver plots.")
 
     x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
 
-    kwargs.pop("cmap_params")
-    kwargs.pop("hue")
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    if hue:
+        args.append(ds[hue].values)
+
+    # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+    cmap_params = kwargs.pop("cmap_params")
+    if not cmap_params["norm"]:
+        cmap_params["norm"] = mpl.colors.Normalize(
+            cmap_params.pop("vmin"), cmap_params.pop("vmax")
+        )
+
     kwargs.pop("hue_style")
-    hdl = ax.quiver(x.values, y.values, u.values, v.values, **kwargs)
-
-    # if plotfunc.__name__ == "quiver":
-    #         trans = ax._set_transform()
-    #         span, _y = trans.inverted().transform_point(
-    #             (ax.bbox.width, ax.bbox.height))
-    #         # matplotlib autoscaling algorithm
-    #         scale = kwargs.pop("scale")
-    #         if scale is None:
-    #             npts = ds.dims[x] * ds.dims[y]
-    #             # crude auto-scaling
-    #             # scale is typical arrow length as a multiple of the arrow width
-    #             scale = 1.8 * ds.mean() * np.max(10, np.sqrt(npts)) / span
-
+    hdl = ax.quiver(*args, **kwargs, **cmap_params)
     return hdl
 
 
