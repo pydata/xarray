@@ -386,36 +386,38 @@ class FacetGrid:
 
             self._finalized = True
 
-    def add_legend(self, **kwargs):
-        figlegend = self.fig.legend(
-            handles=self._mappables[-1],
-            labels=list(self._hue_var.values),
-            title=self._hue_label,
-            loc="center right",
-            **kwargs,
-        )
-
-        self.figlegend = figlegend
+    def _adjust_fig_for_guide(self, guide):
         # Draw the plot to set the bounding boxes correctly
-        self.fig.draw(self.fig.canvas.get_renderer())
+        renderer = self.fig.canvas.get_renderer()
+        self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
         figure_width = self.fig.get_figwidth()
-        self.fig.set_figwidth(figure_width + legend_width)
+        self.fig.set_figwidth(figure_width + guide_width)
 
         # Draw the plot again to get the new transformations
-        self.fig.draw(self.fig.canvas.get_renderer())
+        self.fig.draw(renderer)
 
         # Now calculate how much space we need on the right side
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
-        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
+        space_needed = guide_width / (figure_width + guide_width) + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
 
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
+
+    def add_legend(self, **kwargs):
+        self.figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self._hue_var.values),
+            title=self._hue_label,
+            loc="center right",
+            **kwargs,
+        )
+        self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs):
         """Draw a colorbar"""
