@@ -2194,7 +2194,13 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(self, add_guide, hue_style, legend, colorbar):
 
         meta_data = _infer_meta_data(
-            self.ds, x="A", y="B", hue="hue", hue_style=hue_style, add_guide=add_guide
+            self.ds,
+            x="A",
+            y="B",
+            hue="hue",
+            hue_style=hue_style,
+            add_guide=add_guide,
+            funcname="scatter",
         )
         assert meta_data["add_legend"] is legend
         assert meta_data["add_colorbar"] is colorbar
