@@ -380,7 +380,11 @@ def _dsplot(plotfunc):
                 coordinates="figure",
             )
 
-        ax.set_title(ds[u]._title_for_slice())
+        if plotfunc.__name__ == "quiver":
+            title = ds[u]._title_for_slice()
+        else:
+            title = ds[x]._title_for_slice()
+        ax.set_title(title)
 
         return primitive
 
