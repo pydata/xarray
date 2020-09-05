@@ -1,5 +1,6 @@
 import functools
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 
@@ -17,7 +18,7 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
+def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
     error_msg = " must be one of ({:s})".format(", ".join(dvars))
 
@@ -48,10 +49,15 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True:
+        if add_guide is True and funcname != "quiver":
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
+
+    if (add_guide or add_guide is None) and funcname == "quiver":
+        add_quiverkey = True
+    else:
+        add_quiverkey = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
@@ -66,6 +72,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     return {
         "add_colorbar": add_colorbar,
         "add_legend": add_legend,
+        "add_quiverkey": add_quiverkey,
         "hue_label": hue_label,
         "hue_style": hue_style,
         "xlabel": label_from_attrs(ds[x]),
@@ -286,7 +293,9 @@ def _dsplot(plotfunc):
         if _is_facetgrid:  # facetgrid call
             meta_data = kwargs.pop("meta_data")
         else:
-            meta_data = _infer_meta_data(ds, x, y, hue, hue_style, add_guide)
+            meta_data = _infer_meta_data(
+                ds, x, y, hue, hue_style, add_guide, funcname=plotfunc.__name__
+            )
 
         hue_style = meta_data["hue_style"]
 
@@ -349,6 +358,23 @@ def _dsplot(plotfunc):
             if "label" not in cbar_kwargs:
                 cbar_kwargs["label"] = meta_data.get("hue_label", None)
             _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+
+        if meta_data["add_quiverkey"]:
+            ticker = mpl.ticker.MaxNLocator(3)
+            median = np.median(np.hypot(ds[u].values, ds[v].values))
+            magnitude = ticker.tick_values(0, median)[-2]
+            units = ds[u].attrs.get("units", "")
+            ax.quiverkey(
+                primitive,
+                X=0.85,
+                Y=0.9,
+                U=magnitude,
+                label=f"{magnitude}\n{units}",
+                labelpos="E",
+                coordinates="figure",
+            )
+
+        ax.set_title(ds[u]._title_for_slice())
 
         return primitive
 

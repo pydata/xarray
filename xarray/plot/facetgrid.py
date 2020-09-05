@@ -2,6 +2,7 @@ import functools
 import itertools
 import warnings
 
+import matplotlib as mpl
 import numpy as np
 
 from ..core.formatting import format_item
@@ -334,7 +335,9 @@ class FacetGrid:
                 self.data[kwargs["markersize"]], kwargs.pop("size_norm", None)
             )
 
-        meta_data = _infer_meta_data(self.data, x, y, hue, hue_style, add_guide)
+        meta_data = _infer_meta_data(
+            self.data, x, y, hue, hue_style, add_guide, funcname=func.__name__
+        )
         kwargs["meta_data"] = meta_data
 
         if hue and meta_data["hue_style"] == "continuous":
@@ -364,6 +367,9 @@ class FacetGrid:
                 self.add_legend()
             elif meta_data["add_colorbar"]:
                 self.add_colorbar(label=self._hue_label, **cbar_kwargs)
+
+        if meta_data["add_quiverkey"]:
+            self.add_quiverkey(kwargs["u"], kwargs["v"])
 
         return self
 
@@ -424,6 +430,25 @@ class FacetGrid:
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axes.flat), **kwargs
         )
+        return self
+
+    def add_quiverkey(self, u, v, **kwargs):
+        kwargs = kwargs.copy()
+
+        ticker = mpl.ticker.MaxNLocator(3)
+        median = np.median(np.hypot(self.data[u].values, self.data[v].values))
+        magnitude = ticker.tick_values(0, median)[-2]
+        units = self.data[u].attrs.get("units", "")
+        self.axes.flat[-1].quiverkey(
+            self._mappables[-1],
+            X=0.95,
+            Y=0.9,
+            U=magnitude,
+            label=f"{magnitude}\n{units}",
+            labelpos="E",
+            coordinates="figure",
+        )
+
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
