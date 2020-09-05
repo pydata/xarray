@@ -840,3 +840,12 @@ def _process_cmap_cbar_kwargs(
         }
 
     return cmap_params, cbar_kwargs
+
+
+def _get_nice_quiver_magnitude(u, v):
+    import matplotlib as mpl
+
+    ticker = mpl.ticker.MaxNLocator(3)
+    median = np.median(np.hypot(u.values, v.values))
+    magnitude = ticker.tick_values(0, median)[-2]
+    return magnitude

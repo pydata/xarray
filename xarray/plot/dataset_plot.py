@@ -1,6 +1,5 @@
 import functools
 
-import matplotlib as mpl
 import numpy as np
 import pandas as pd
 
@@ -8,6 +7,7 @@ from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _get_nice_quiver_magnitude,
     _is_numeric,
     _process_cmap_cbar_kwargs,
     get_axis,
@@ -360,9 +360,7 @@ def _dsplot(plotfunc):
             _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
 
         if meta_data["add_quiverkey"]:
-            ticker = mpl.ticker.MaxNLocator(3)
-            median = np.median(np.hypot(ds[u].values, ds[v].values))
-            magnitude = ticker.tick_values(0, median)[-2]
+            magnitude = _get_nice_quiver_magnitude(ds[u], ds[v])
             units = ds[u].attrs.get("units", "")
             ax.quiverkey(
                 primitive,

@@ -2,11 +2,11 @@ import functools
 import itertools
 import warnings
 
-import matplotlib as mpl
 import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _get_nice_quiver_magnitude,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
@@ -328,7 +328,6 @@ class FacetGrid:
         from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
-        kwargs["_is_facetgrid"] = True
 
         if kwargs.get("markersize", None):
             kwargs["size_mapping"] = _parse_size(
@@ -346,6 +345,8 @@ class FacetGrid:
             )
             kwargs["meta_data"]["cmap_params"] = cmap_params
             kwargs["meta_data"]["cbar_kwargs"] = cbar_kwargs
+
+        kwargs["_is_facetgrid"] = True
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -437,21 +438,20 @@ class FacetGrid:
     def add_quiverkey(self, u, v, **kwargs):
         kwargs = kwargs.copy()
 
-        ticker = mpl.ticker.MaxNLocator(3)
-        median = np.median(np.hypot(self.data[u].values, self.data[v].values))
-        magnitude = ticker.tick_values(0, median)[-2]
+        magnitude = _get_nice_quiver_magnitude(self.data[u], self.data[v])
         units = self.data[u].attrs.get("units", "")
         self.quiverkey = self.axes.flat[-1].quiverkey(
             self._mappables[-1],
-            X=0.95,
-            Y=0.5,
+            X=0.85,
+            Y=1.03,
             U=magnitude,
             label=f"{magnitude}\n{units}",
             labelpos="E",
-            coordinates="figure",
+            coordinates="axes",
         )
 
-        self._adjust_fig_for_guide(self.quiverkey)
+        # TODO: does not work because self.quiverkey.get_window_extent(renderer) = 0
+        # self._adjust_fig_for_guide(self.quiverkey)
 
         return self
 
