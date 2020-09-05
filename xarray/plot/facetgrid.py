@@ -441,15 +441,17 @@ class FacetGrid:
         median = np.median(np.hypot(self.data[u].values, self.data[v].values))
         magnitude = ticker.tick_values(0, median)[-2]
         units = self.data[u].attrs.get("units", "")
-        self.axes.flat[-1].quiverkey(
+        self.quiverkey = self.axes.flat[-1].quiverkey(
             self._mappables[-1],
             X=0.95,
-            Y=0.9,
+            Y=0.5,
             U=magnitude,
             label=f"{magnitude}\n{units}",
             labelpos="E",
             coordinates="figure",
         )
+
+        self._adjust_fig_for_guide(self.quiverkey)
 
         return self
 
