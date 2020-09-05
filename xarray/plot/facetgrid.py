@@ -348,6 +348,21 @@ class FacetGrid:
 
         kwargs["_is_facetgrid"] = True
 
+        if func.__name__ == "quiver" and "scale" not in kwargs:
+            if "scale_units" in kwargs and kwargs["scale_units"] is not None:
+                raise NotImplementedError("Can't pass only scale_units.")
+            # autoscaling
+            ax = self.axes[0, 0]
+            magnitude = _get_nice_quiver_magnitude(
+                self.data[kwargs["u"]], self.data[kwargs["v"]]
+            )
+            # matplotlib autoscaling algorithm
+            span = ax.get_transform().inverted().transform_bbox(ax.bbox).width
+            npts = self.data.sizes[x] * self.data.sizes[y]
+            # scale is typical arrow length as a multiple of the arrow width
+            scale = 1.8 * magnitude * max(10, np.sqrt(npts)) / span
+            kwargs["scale"] = 1 / scale  # TODO: why?
+
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
