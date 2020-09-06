@@ -635,14 +635,13 @@ def apply_variable_ufunc(
                         for axis, dim in enumerate(core_dims, start=-len(core_dims)):
                             if len(data.chunks[axis]) != 1:
                                 raise ValueError(
-                                    "dimension {!r} on {}th function argument to "
+                                    f"dimension {dim} on {n}th function argument to "
                                     "apply_ufunc with dask='parallelized' consists of "
                                     "multiple chunks, but is also a core dimension. To "
-                                    "fix, rechunk into a single dask array chunk along "
-                                    "this dimension, i.e., ``.chunk({})``, but beware "
-                                    "that this may significantly increase memory usage.".format(
-                                        dim, n, {dim: -1}
-                                    )
+                                    "fix, either rechunk into a single dask array chunk along "
+                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
+                                    "but beware that this may significantly increase memory usage."
                                 )
                 dask_gufunc_kwargs["allow_rechunk"] = True
 
