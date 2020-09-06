@@ -625,6 +625,25 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
+            allow_rechunk = dask_gufunc_kwargs.pop("allow_rechunk", None)
+            if allow_rechunk is None:
+                for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
+                    if isinstance(data, dask_array_type):
+                        # core dimensions cannot span multiple chunks
+                        for axis, dim in enumerate(core_dims, start=-len(core_dims)):
+                            if len(data.chunks[axis]) != 1:
+                                raise ValueError(
+                                    "dimension {!r} on {}th function argument to "
+                                    "apply_ufunc with dask='parallelized' consists of "
+                                    "multiple chunks, but is also a core dimension. To "
+                                    "fix, rechunk into a single dask array chunk along "
+                                    "this dimension, i.e., ``.chunk({})``, but beware "
+                                    "that this may significantly increase memory usage.".format(
+                                        dim, n, {dim: -1}
+                                    )
+                                )
+                dask_gufunc_kwargs["allow_rechunk"] = True
+
             output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
             if output_sizes:
                 output_sizes_renamed = {}
@@ -645,31 +664,14 @@ def apply_variable_ufunc(
             def func(*arrays):
                 import dask.array as da
 
-                gufunc = functools.partial(
-                    da.apply_gufunc,
+                res = da.apply_gufunc(
                     numpy_func,
                     signature.to_gufunc_string(exclude_dims),
                     *arrays,
                     vectorize=vectorize,
                     output_dtypes=output_dtypes,
+                    **dask_gufunc_kwargs,
                 )
-
-                try:
-                    res = gufunc(**dask_gufunc_kwargs)
-                except ValueError as exc:
-                    if "with different chunksize present" in str(exc):
-                        warnings.warn(
-                            f"Non-core dimension with different chunksize present. To fix, set "
-                            f"``allow_rechunk=True`` in the ``dask_gufunc_kwargs`` parameter. "
-                            f"Not setting will raise dask ValueError ``{str(exc)}`` in a "
-                            f"future version.",
-                            FutureWarning,
-                            stacklevel=2,
-                        )
-                        dask_gufunc_kwargs["allow_rechunk"] = True
-                        res = gufunc(**dask_gufunc_kwargs)
-                    else:
-                        raise
 
                 # todo: covers for https://github.com/dask/dask/pull/6207
                 #  remove when minimal dask version >= 2.17.0
