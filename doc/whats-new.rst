@@ -77,6 +77,7 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- fix the signature of the plot methods. (:pull:`4359`) By `Justus Magin <https://github.com/keewis>`_.
 - Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
