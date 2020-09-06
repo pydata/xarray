@@ -627,7 +627,9 @@ def apply_variable_ufunc(
 
             allow_rechunk = dask_gufunc_kwargs.pop("allow_rechunk", None)
             if allow_rechunk is None:
-                for n, (data, core_dims) in enumerate(zip(args, signature.input_core_dims)):
+                for n, (data, core_dims) in enumerate(
+                    zip(input_data, signature.input_core_dims)
+                ):
                     if isinstance(data, dask_array_type):
                         # core dimensions cannot span multiple chunks
                         for axis, dim in enumerate(core_dims, start=-len(core_dims)):
