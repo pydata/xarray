@@ -625,7 +625,7 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
-            allow_rechunk = dask_gufunc_kwargs.pop("allow_rechunk", None)
+            allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
             if allow_rechunk is None:
                 for n, (data, core_dims) in enumerate(
                     zip(input_data, signature.input_core_dims)
