@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 
 
@@ -54,7 +54,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array, func, dtype):
-        assert not isinstance(array, dask_array_type)
+        assert not is_duck_dask_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
         self._dtype = dtype
@@ -91,8 +91,10 @@ def lazy_elemwise_func(array, func, dtype):
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if isinstance(array, dask_array_type):
-        return array.map_blocks(func, dtype=dtype)
+    if is_duck_dask_array(array):
+        import dask.array as da
+
+        return da.map_blocks(func, array, dtype=dtype)
     else:
         return _ElementwiseFunctionArray(array, func, dtype)
 

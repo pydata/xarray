@@ -24,6 +24,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raises_regex,
+    requires_pint_0_15,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -291,6 +292,22 @@ class TestVariable(DaskTestCase):
 
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
+
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    def test_tokenize_duck_dask_array(self):
+        import pint
+
+        unit_registry = pint.UnitRegistry()
+
+        q = unit_registry.Quantity(self.data, "meter")
+        variable = xr.Variable(("x", "y"), q)
+
+        token = dask.base.tokenize(variable)
+        post_op = variable + 5 * unit_registry.meter
+
+        assert dask.base.tokenize(variable) != dask.base.tokenize(post_op)
+        # Immutability check
+        assert dask.base.tokenize(variable) == token
 
 
 class TestDataArrayAndDataset(DaskTestCase):
@@ -714,6 +731,24 @@ class TestDataArrayAndDataset(DaskTestCase):
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
+
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    def test_tokenize_duck_dask_array(self):
+        import pint
+
+        unit_registry = pint.UnitRegistry()
+
+        q = unit_registry.Quantity(self.data, unit_registry.meter)
+        data_array = xr.DataArray(
+            data=q, coords={"x": range(4)}, dims=("x", "y"), name="foo"
+        )
+
+        token = dask.base.tokenize(data_array)
+        post_op = data_array + 5 * unit_registry.meter
+
+        assert dask.base.tokenize(data_array) != dask.base.tokenize(post_op)
+        # Immutability check
+        assert dask.base.tokenize(data_array) == token
 
 
 class TestToDaskDataFrame:

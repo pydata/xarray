@@ -62,6 +62,8 @@ New Features
   now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
   dimensions order (:issue:`4331`, :pull:`4333`).
   By `Thomas Zilio <https://github.com/thomas-z>`_.
+- Expose ``use_cftime`` option in :py:func:`~xarray.open_zarr` (:issue:`2886`, :pull:`3229`)
+  By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
 Bug fixes
@@ -84,11 +86,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
+- Update the docstring of :py:meth:`DataArray.copy` to remove incorrect mention of 'dataset' (:issue:`3606`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
-- removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
+- Removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
-- update the contributing guide to use merges instead of rebasing and state
+- Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
@@ -98,12 +100,22 @@ Internal Changes
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Align ``mypy`` versions to ``0.782`` across ``requirements`` and
+  ``.pre-commit-config.yml`` files. (:pull:`4390`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Only load resource files when running inside a Jupyter Notebook
   (:issue:`4294`) By `Guido Imperiale <https://github.com/crusaderky>`_
+- Silenced most ``numpy`` warnings such as ``Mean of empty slice``. (:pull:`4369`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 - Enable type checking for :py:func:`concat` (:issue:`4238`)
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Updated plot functions for matplotlib version 3.3 and silenced warnings in the
   plot tests (:pull:`4365`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Versions in ``pre-commit.yaml`` are now pinned, to reduce the chances of
+  conflicting versions. (:pull:`4388`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
+
 
 .. _whats-new.0.16.0:
 
