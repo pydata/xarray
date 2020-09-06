@@ -33,3 +33,5 @@ def add_standard_imports(doctest_namespace):
     doctest_namespace["np"] = np
     doctest_namespace["pd"] = pd
     doctest_namespace["xr"] = xr
+
+    np.random.seed(0)
