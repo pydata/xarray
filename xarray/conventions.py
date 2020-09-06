@@ -24,10 +24,10 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> x.dtype
     dtype('>i2')
 
-    >>> NativeEndianArray(x).dtype
+    >>> NativeEndiannessArray(x).dtype
     dtype('int16')
 
-    >>> NativeEndianArray(x)[:].dtype
+    >>> NativeEndiannessArray(x)[:].dtype
     dtype('int16')
     """
 

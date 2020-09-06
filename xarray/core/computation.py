@@ -894,7 +894,7 @@ def apply_ufunc(
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
     <xarray.DataArray (x: 3)>
-    array([1.414214, 2.828427, 4.242641])
+    array([1.41421356, 2.82842712, 4.24264069])
     Coordinates:
       * x        (x) float64 0.1 0.2 0.3
 
@@ -1124,6 +1124,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1161,7 +1162,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     array(-3.53055556)
     >>> xr.cov(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
-    array([ 0.2, -0.5,  1.69333333])
+    array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
@@ -1201,6 +1202,7 @@ def corr(da_a, da_b, dim=None):
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1332,8 +1334,10 @@ def dot(*arrays, dims=None, **kwargs):
     <xarray.DataArray (a: 3, b: 2, c: 2)>
     array([[[ 0,  1],
             [ 2,  3]],
+    <BLANKLINE>
            [[ 4,  5],
             [ 6,  7]],
+    <BLANKLINE>
            [[ 8,  9],
             [10, 11]]])
     Dimensions without coordinates: a, b, c
@@ -1477,13 +1481,13 @@ def where(cond, x, y):
     <xarray.DataArray 'sst' (lat: 10)>
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)>
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -1497,8 +1501,8 @@ def where(cond, x, y):
            [0.3, 0.4, 0.5],
            [0.6, 0.7, 0.8]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
     <xarray.DataArray (lat: 3, lon: 3)>
@@ -1506,8 +1510,8 @@ def where(cond, x, y):
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> cond = xr.DataArray([True, False], dims=["x"])
     >>> x = xr.DataArray([1, 2], dims=["y"])

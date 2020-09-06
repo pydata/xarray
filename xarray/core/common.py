@@ -422,12 +422,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ... )
         >>> da
         <xarray.DataArray (lon: 4)>
-        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 358 359 0 1
         >>> da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
         <xarray.DataArray (lon: 4)>
-        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
@@ -435,7 +435,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> da.assign_coords({"lon": (((da.lon + 180) % 360) - 180)})
         <xarray.DataArray (lon: 4)>
-        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 -2 -1 0 1
 
@@ -444,7 +444,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         >>> lon_2 = np.array([300, 289, 0, 1])
         >>> da.assign_coords(lon_2=("lon", lon_2))
         <xarray.DataArray (lon: 4)>
-        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
           * lon      (lon) int64 358 359 0 1
             lon_2    (lon) int64 300 289 0 1
@@ -532,17 +532,23 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Use ``.pipe`` when chaining together functions that expect
         xarray or pandas objects, e.g., instead of writing
 
-        >>> f(g(h(ds), arg1=a), arg2=b, arg3=c)
+        .. code:: python
+
+            f(g(h(ds), arg1=a), arg2=b, arg3=c)
 
         You can write
 
-        >>> (ds.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c))
+        .. code:: python
+
+            (ds.pipe(h).pipe(g, arg1=a).pipe(f, arg2=b, arg3=c))
 
         If you have a function that takes the data as (say) the second
         argument, pass a tuple indicating which keyword expects the
         data. For example, suppose ``f`` takes its data as ``arg2``:
 
-        >>> (ds.pipe(h).pipe(g, arg1=a).pipe((f, "arg2"), arg1=a, arg3=c))
+        .. code:: python
+
+            (ds.pipe(h).pipe(g, arg1=a).pipe((f, "arg2"), arg1=a, arg3=c))
 
         Examples
         --------
@@ -563,11 +569,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lat            (lat) int64 10 20
-        * lon            (lon) int64 150 160
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
-            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
 
         >>> def adder(data, arg):
         ...     return data + arg
@@ -582,21 +588,21 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lon            (lon) int64 150 160
-        * lat            (lat) int64 10 20
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
-            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+            temperature_c  (lat, lon) float64 12.98 16.3 14.06 12.9
+            precipitation  (lat, lon) float64 2.424 2.646 2.438 2.892
 
         >>> x.pipe(adder, arg=2)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lon            (lon) int64 150 160
-        * lat            (lat) int64 10 20
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 16.53 13.85 21.27 18.37
-            precipitation  (lat, lon) float64 2.731 2.719 2.848 2.467
+            temperature_c  (lat, lon) float64 12.98 16.3 14.06 12.9
+            precipitation  (lat, lon) float64 2.424 2.646 2.438 2.892
 
         >>> (
         ...     x.pipe(adder, arg=2)
@@ -606,11 +612,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lon            (lon) int64 150 160
-        * lat            (lat) int64 10 20
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 14.53 11.85 19.27 16.37
-            precipitation  (lat, lon) float64 0.7315 0.7189 0.8481 0.4671
+            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
 
         See Also
         --------
@@ -660,15 +666,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ... )
         >>> da
         <xarray.DataArray (time: 1827)>
-        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03, 1.826e+03])
+        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
+               1.826e+03])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
         >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
         <xarray.DataArray (time: 1827)>
         array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
         Coordinates:
-          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
-            dayofyear  (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 ...
+          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
+            dayofyear  (time) int64 1 2 3 4 5 6 7 8 ... 359 360 361 362 363 364 365 366
 
         See Also
         --------
@@ -834,14 +841,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ... )
         >>> da
         <xarray.DataArray (time: 12)>
-        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.rolling(time=3, center=True).mean()
         <xarray.DataArray (time: 12)>
         array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
 
         Remove the NaNs using ``dropna()``:
 
@@ -849,7 +856,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         <xarray.DataArray (time: 10)>
         array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 ... 2000-10-15
 
         See Also
         --------
@@ -942,15 +949,83 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ... )
         >>> da
         <xarray.DataArray (time: 364)>
-        array([  0.      ,   1.002755,   2.00551 , ..., 361.99449 , 362.997245,
-               364.      ])
+        array([  0.        ,   1.00275482,   2.00550964,   3.00826446,
+                 4.01101928,   5.0137741 ,   6.01652893,   7.01928375,
+                 8.02203857,   9.02479339,  10.02754821,  11.03030303,
+                12.03305785,  13.03581267,  14.03856749,  15.04132231,
+                16.04407713,  17.04683196,  18.04958678,  19.0523416 ,
+                20.05509642,  21.05785124,  22.06060606,  23.06336088,
+                24.0661157 ,  25.06887052,  26.07162534,  27.07438017,
+                28.07713499,  29.07988981,  30.08264463,  31.08539945,
+                32.08815427,  33.09090909,  34.09366391,  35.09641873,
+                36.09917355,  37.10192837,  38.1046832 ,  39.10743802,
+                40.11019284,  41.11294766,  42.11570248,  43.1184573 ,
+                44.12121212,  45.12396694,  46.12672176,  47.12947658,
+                48.1322314 ,  49.13498623,  50.13774105,  51.14049587,
+                52.14325069,  53.14600551,  54.14876033,  55.15151515,
+                56.15426997,  57.15702479,  58.15977961,  59.16253444,
+                60.16528926,  61.16804408,  62.1707989 ,  63.17355372,
+                64.17630854,  65.17906336,  66.18181818,  67.184573  ,
+                68.18732782,  69.19008264,  70.19283747,  71.19559229,
+                72.19834711,  73.20110193,  74.20385675,  75.20661157,
+                76.20936639,  77.21212121,  78.21487603,  79.21763085,
+        ...
+               284.78236915, 285.78512397, 286.78787879, 287.79063361,
+               288.79338843, 289.79614325, 290.79889807, 291.80165289,
+               292.80440771, 293.80716253, 294.80991736, 295.81267218,
+               296.815427  , 297.81818182, 298.82093664, 299.82369146,
+               300.82644628, 301.8292011 , 302.83195592, 303.83471074,
+               304.83746556, 305.84022039, 306.84297521, 307.84573003,
+               308.84848485, 309.85123967, 310.85399449, 311.85674931,
+               312.85950413, 313.86225895, 314.86501377, 315.8677686 ,
+               316.87052342, 317.87327824, 318.87603306, 319.87878788,
+               320.8815427 , 321.88429752, 322.88705234, 323.88980716,
+               324.89256198, 325.8953168 , 326.89807163, 327.90082645,
+               328.90358127, 329.90633609, 330.90909091, 331.91184573,
+               332.91460055, 333.91735537, 334.92011019, 335.92286501,
+               336.92561983, 337.92837466, 338.93112948, 339.9338843 ,
+               340.93663912, 341.93939394, 342.94214876, 343.94490358,
+               344.9476584 , 345.95041322, 346.95316804, 347.95592287,
+               348.95867769, 349.96143251, 350.96418733, 351.96694215,
+               352.96969697, 353.97245179, 354.97520661, 355.97796143,
+               356.98071625, 357.98347107, 358.9862259 , 359.98898072,
+               360.99173554, 361.99449036, 362.99724518, 364.        ])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
         >>>
         >>> da.coarsen(time=3, boundary="trim").mean()
         <xarray.DataArray (time: 121)>
-        array([  1.002755,   4.011019,   7.019284,  ...,  358.986226,
-               361.99449 ])
+        array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
+                13.03581267,  16.04407713,  19.0523416 ,  22.06060606,
+                25.06887052,  28.07713499,  31.08539945,  34.09366391,
+                37.10192837,  40.11019284,  43.1184573 ,  46.12672176,
+                49.13498623,  52.14325069,  55.15151515,  58.15977961,
+                61.16804408,  64.17630854,  67.184573  ,  70.19283747,
+                73.20110193,  76.20936639,  79.21763085,  82.22589532,
+                85.23415978,  88.24242424,  91.25068871,  94.25895317,
+                97.26721763, 100.27548209, 103.28374656, 106.29201102,
+               109.30027548, 112.30853994, 115.31680441, 118.32506887,
+               121.33333333, 124.3415978 , 127.34986226, 130.35812672,
+               133.36639118, 136.37465565, 139.38292011, 142.39118457,
+               145.39944904, 148.4077135 , 151.41597796, 154.42424242,
+               157.43250689, 160.44077135, 163.44903581, 166.45730028,
+               169.46556474, 172.4738292 , 175.48209366, 178.49035813,
+               181.49862259, 184.50688705, 187.51515152, 190.52341598,
+               193.53168044, 196.5399449 , 199.54820937, 202.55647383,
+               205.56473829, 208.57300275, 211.58126722, 214.58953168,
+               217.59779614, 220.60606061, 223.61432507, 226.62258953,
+               229.63085399, 232.63911846, 235.64738292, 238.65564738,
+               241.66391185, 244.67217631, 247.68044077, 250.68870523,
+               253.6969697 , 256.70523416, 259.71349862, 262.72176309,
+               265.73002755, 268.73829201, 271.74655647, 274.75482094,
+               277.7630854 , 280.77134986, 283.77961433, 286.78787879,
+               289.79614325, 292.80440771, 295.81267218, 298.82093664,
+               301.8292011 , 304.83746556, 307.84573003, 310.85399449,
+               313.86225895, 316.87052342, 319.87878788, 322.88705234,
+               325.8953168 , 328.90358127, 331.91184573, 334.92011019,
+               337.92837466, 340.93663912, 343.94490358, 346.95316804,
+               349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
+               361.99449036])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
         >>>
@@ -1043,9 +1118,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ... )
         >>> da
         <xarray.DataArray (time: 12)>
-        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
         >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)>
         array([ 1.,  4.,  7., 10.])
@@ -1056,9 +1131,49 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> da.resample(time="1D").interpolate("linear")
         <xarray.DataArray (time: 337)>
-        array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
+        array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
+                0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
+                0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
+                0.48387097,  0.51612903,  0.5483871 ,  0.58064516,  0.61290323,
+                0.64516129,  0.67741935,  0.70967742,  0.74193548,  0.77419355,
+                0.80645161,  0.83870968,  0.87096774,  0.90322581,  0.93548387,
+                0.96774194,  1.        ,  1.03225806,  1.06451613,  1.09677419,
+                1.12903226,  1.16129032,  1.19354839,  1.22580645,  1.25806452,
+                1.29032258,  1.32258065,  1.35483871,  1.38709677,  1.41935484,
+                1.4516129 ,  1.48387097,  1.51612903,  1.5483871 ,  1.58064516,
+                1.61290323,  1.64516129,  1.67741935,  1.70967742,  1.74193548,
+                1.77419355,  1.80645161,  1.83870968,  1.87096774,  1.90322581,
+                1.93548387,  1.96774194,  2.        ,  2.03448276,  2.06896552,
+                2.10344828,  2.13793103,  2.17241379,  2.20689655,  2.24137931,
+                2.27586207,  2.31034483,  2.34482759,  2.37931034,  2.4137931 ,
+                2.44827586,  2.48275862,  2.51724138,  2.55172414,  2.5862069 ,
+                2.62068966,  2.65517241,  2.68965517,  2.72413793,  2.75862069,
+                2.79310345,  2.82758621,  2.86206897,  2.89655172,  2.93103448,
+                2.96551724,  3.        ,  3.03225806,  3.06451613,  3.09677419,
+                3.12903226,  3.16129032,  3.19354839,  3.22580645,  3.25806452,
+        ...
+                7.87096774,  7.90322581,  7.93548387,  7.96774194,  8.        ,
+                8.03225806,  8.06451613,  8.09677419,  8.12903226,  8.16129032,
+                8.19354839,  8.22580645,  8.25806452,  8.29032258,  8.32258065,
+                8.35483871,  8.38709677,  8.41935484,  8.4516129 ,  8.48387097,
+                8.51612903,  8.5483871 ,  8.58064516,  8.61290323,  8.64516129,
+                8.67741935,  8.70967742,  8.74193548,  8.77419355,  8.80645161,
+                8.83870968,  8.87096774,  8.90322581,  8.93548387,  8.96774194,
+                9.        ,  9.03333333,  9.06666667,  9.1       ,  9.13333333,
+                9.16666667,  9.2       ,  9.23333333,  9.26666667,  9.3       ,
+                9.33333333,  9.36666667,  9.4       ,  9.43333333,  9.46666667,
+                9.5       ,  9.53333333,  9.56666667,  9.6       ,  9.63333333,
+                9.66666667,  9.7       ,  9.73333333,  9.76666667,  9.8       ,
+                9.83333333,  9.86666667,  9.9       ,  9.93333333,  9.96666667,
+               10.        , 10.03225806, 10.06451613, 10.09677419, 10.12903226,
+               10.16129032, 10.19354839, 10.22580645, 10.25806452, 10.29032258,
+               10.32258065, 10.35483871, 10.38709677, 10.41935484, 10.4516129 ,
+               10.48387097, 10.51612903, 10.5483871 , 10.58064516, 10.61290323,
+               10.64516129, 10.67741935, 10.70967742, 10.74193548, 10.77419355,
+               10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
+               10.96774194, 11.        ])
         Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
 
         Limit scope of upsampling method
 
@@ -1160,19 +1275,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         >>> a
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
-            [ 5,  6,  7,  8,  9],
-            [10, 11, 12, 13, 14],
-            [15, 16, 17, 18, 19],
-            [20, 21, 22, 23, 24]])
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[  0.,   1.,   2.,   3.,  nan],
-               [  5.,   6.,   7.,  nan,  nan],
-               [ 10.,  11.,  nan,  nan,  nan],
-               [ 15.,  nan,  nan,  nan,  nan],
-               [ nan,  nan,  nan,  nan,  nan]])
+        array([[ 0.,  1.,  2.,  3., nan],
+               [ 5.,  6.,  7., nan, nan],
+               [10., 11., nan, nan, nan],
+               [15., nan, nan, nan, nan],
+               [nan, nan, nan, nan, nan]])
         Dimensions without coordinates: x, y
 
         >>> a.where(a.x + a.y < 5, -1)
@@ -1186,18 +1301,18 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> a.where(a.x + a.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
-        array([[  0.,   1.,   2.,   3.],
-               [  5.,   6.,   7.,  nan],
-               [ 10.,  11.,  nan,  nan],
-               [ 15.,  nan,  nan,  nan]])
+        array([[ 0.,  1.,  2.,  3.],
+               [ 5.,  6.,  7., nan],
+               [10., 11., nan, nan],
+               [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
         >>> a.where(lambda x: x.x + x.y < 4, drop=True)
         <xarray.DataArray (x: 4, y: 4)>
-        array([[  0.,   1.,   2.,   3.],
-               [  5.,   6.,   7.,  nan],
-               [ 10.,  11.,  nan,  nan],
-               [ 15.,  nan,  nan,  nan]])
+        array([[ 0.,  1.,  2.,  3.],
+               [ 5.,  6.,  7., nan],
+               [10., 11., nan, nan],
+               [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
         See also
@@ -1393,40 +1508,40 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.full_like(x, 1)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.full_like(x, 0.5)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.full_like(x, 0.5, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0.5, 0.5, 0.5],
            [0.5, 0.5, 0.5]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.full_like(x, np.nan, dtype=np.double)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[nan, nan, nan],
            [nan, nan, nan]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> ds = xr.Dataset(
     ...     {"a": ("x", [3, 5, 2]), "b": ("x", [9, 1, 0])}, coords={"x": [2, 4, 6]}
@@ -1552,24 +1667,24 @@ def zeros_like(other, dtype: DTypeLike = None):
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.zeros_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0, 0, 0],
            [0, 0, 0]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.zeros_like(x, dtype=float)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[0., 0., 0.],
            [0., 0., 0.]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     See also
     --------
@@ -1612,16 +1727,16 @@ def ones_like(other, dtype: DTypeLike = None):
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     >>> xr.ones_like(x)
     <xarray.DataArray (lat: 2, lon: 3)>
     array([[1, 1, 1],
            [1, 1, 1]])
     Coordinates:
-    * lat      (lat) int64 1 2
-    * lon      (lon) int64 0 1 2
+      * lat      (lat) int64 1 2
+      * lon      (lon) int64 0 1 2
 
     See also
     --------
