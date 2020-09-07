@@ -42,15 +42,48 @@ xarray objects via the (readonly) :py:attr:`Dataset.variables
 <xarray.Dataset.variables>` and
 :py:attr:`DataArray.variable <xarray.DataArray.variable>` attributes.
 
+Duck arrays
+-----------
+
+.. warning::
+
+    This is a experimental feature.
+
+xarray can wrap custom `duck array`_ objects as long as they define numpy's
+``shape``, ``dtype`` and ``ndim`` properties and the ``__array__``,
+``__array_ufunc__`` and ``__array_function__`` methods.
+
+In certain situations (e.g. when printing the collapsed preview of
+variables of a ``Dataset``), xarray will display the repr of a `duck array`_
+in a single line, truncating it to a certain number of characters. If that
+would drop too much information, the `duck array`_ may define a
+``_repr_inline_`` method that takes ``max_width`` (number of characters) as an
+argument:
+
+.. code:: python
+
+    class MyDuckArray:
+        ...
+
+        def _repr_inline_(self, max_width):
+            """ format to a single line with at most max_width characters """
+            ...
+
+        ...
+
+.. _duck array: https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+
+
 Extending xarray
 ----------------
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 xarray is designed as a general purpose library, and hence tries to avoid
@@ -87,11 +120,12 @@ defined that returns an instance of your class:
 
 .. code-block:: python
 
-  class Dataset:
-      ...
-      @property
-      def geo(self)
-          return GeoAccessor(self)
+    class Dataset:
+        ...
+
+        @property
+        def geo(self):
+            return GeoAccessor(self)
 
 However, using the register accessor decorators is preferable to simply adding
 your own ad-hoc property (i.e., ``Dataset.geo = property(...)``), for several
@@ -106,17 +140,23 @@ reasons:
    functionality that clearly identifies it as separate from built-in xarray
    methods.
 
+.. note::
+
+   Accessors are created once per DataArray and Dataset instance. New
+   instances, like those created from arithmetic operations or when accessing
+   a DataArray from a Dataset (ex. ``ds[var_name]``), will have new
+   accessors created.
+
 Back in an interactive IPython session, we can use these properties:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
-   exec(open("examples/_code/accessor_example.py").read())
+    exec(open("examples/_code/accessor_example.py").read())
 
 .. ipython:: python
 
-    ds = xr.Dataset({'longitude': np.linspace(0, 10),
-                     'latitude': np.linspace(0, 20)})
+    ds = xr.Dataset({"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)})
     ds.geo.center
     ds.geo.plot()
 
@@ -130,3 +170,59 @@ To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
 for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
+
+To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
+easier, you can use `sphinx-ext-autosummary`_.
+
+.. _sphinx-ext-autosummary: https://sphinx-autosummary-accessors.readthedocs.io/
+
+.. _zarr_encoding:
+
+Zarr Encoding Specification
+---------------------------
+
+In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
+format, Xarray developers made some *ad hoc* choices about how to store
+NetCDF data in Zarr.
+Future versions of the Zarr spec will likely include a more formal convention
+for the storage of the NetCDF data model in Zarr; see
+`Zarr spec repo <https://github.com/zarr-developers/zarr-specs>`_ for ongoing
+discussion.
+
+First, Xarray can only read and write Zarr groups. There is currently no support
+for reading / writting individual Zarr arrays. Zarr groups are mapped to
+Xarray ``Dataset`` objects.
+
+Second, from Xarray's point of view, the key difference between
+NetCDF and Zarr is that all NetCDF arrays have *dimension names* while Zarr
+arrays do not. Therefore, in order to store NetCDF data in Zarr, Xarray must
+somehow encode and decode the name of each array's dimensions.
+
+To accomplish this, Xarray developers decided to define a special Zarr array
+attribute: ``_ARRAY_DIMENSIONS``. The value of this attribute is a list of
+dimension names (strings), for example ``["time", "lon", "lat"]``. When writing
+data to Zarr, Xarray sets this attribute on all variables based on the variable
+dimensions. When reading a Zarr group, Xarray looks for this attribute on all
+arrays, raising an error if it can't be found. The attribute is used to define
+the variable dimension names and then removed from the attributes dictionary
+returned to the user.
+
+Because of these choices, Xarray cannot read arbitrary array data, but only
+Zarr data with valid ``_ARRAY_DIMENSIONS`` attributes on each array.
+
+After decoding the ``_ARRAY_DIMENSIONS`` attribute and assigning the variable
+dimensions, Xarray proceeds to [optionally] decode each variable using its
+standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
+
+As a concrete example, here we write a tutorial dataset to Zarr and then
+re-open it directly with Zarr:
+
+.. ipython:: python
+
+    ds = xr.tutorial.load_dataset("rasm")
+    ds.to_zarr("rasm.zarr", mode="w")
+    import zarr
+
+    zgroup = zarr.open("rasm.zarr")
+    print(zgroup.tree())
+    dict(zgroup["Tair"].attrs)

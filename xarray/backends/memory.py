@@ -1,5 +1,4 @@
 import copy
-from collections import OrderedDict
 
 import numpy as np
 
@@ -16,8 +15,8 @@ class InMemoryDataStore(AbstractWritableDataStore):
     """
 
     def __init__(self, variables=None, attributes=None):
-        self._variables = OrderedDict() if variables is None else variables
-        self._attributes = OrderedDict() if attributes is None else attributes
+        self._variables = {} if variables is None else variables
+        self._attributes = {} if attributes is None else attributes
 
     def get_attrs(self):
         return self._attributes
@@ -26,7 +25,7 @@ class InMemoryDataStore(AbstractWritableDataStore):
         return self._variables
 
     def get_dimensions(self):
-        dims = OrderedDict()
+        dims = {}
         for v in self._variables.values():
             for d, s in v.dims.items():
                 dims[d] = s
@@ -41,6 +40,6 @@ class InMemoryDataStore(AbstractWritableDataStore):
         # copy to imitate writing to disk.
         self._attributes[k] = copy.deepcopy(v)
 
-    def set_dimension(self, d, l, unlimited_dims=None):
+    def set_dimension(self, dim, length, unlimited_dims=None):
         # in this model, dimensions are accounted for in the variables
         pass

@@ -1,8 +1,12 @@
+version: 2
+
 build:
     image: latest
+
 conda:
-    file: doc/environment.yml
-python:
-    version: 3.6
-    setup_py_install: true
+    environment: ci/requirements/doc.yml
+
+sphinx:
+  fail_on_warning: true
+
 formats: []

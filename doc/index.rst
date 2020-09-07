@@ -11,7 +11,7 @@ intuitive, more concise, and less error-prone developer experience.
 The package includes a large and growing library of domain-agnostic functions
 for advanced analytics and visualization with these data structures.
 
-Xarray was inspired by and borrows heavily from pandas_, the popular data
+Xarray is inspired by and borrows heavily from pandas_, the popular data
 analysis package focused on labelled tabular data.
 It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
@@ -46,6 +46,7 @@ Documentation
 
 **User Guide**
 
+* :doc:`terminology`
 * :doc:`data-structures`
 * :doc:`indexing`
 * :doc:`interpolation`
@@ -65,6 +66,7 @@ Documentation
    :hidden:
    :caption: User Guide
 
+   terminology
    data-structures
    indexing
    interpolation
@@ -82,6 +84,7 @@ Documentation
 **Help & reference**
 
 * :doc:`whats-new`
+* :doc:`howdoi`
 * :doc:`api`
 * :doc:`internals`
 * :doc:`roadmap`
@@ -94,6 +97,7 @@ Documentation
    :caption: Help & reference
 
    whats-new
+   howdoi
    api
    internals
    roadmap
@@ -103,6 +107,7 @@ Documentation
 See also
 --------
 
+- `Xarray's Tutorial`_ presented at the 2020 SciPy Conference (`video recording`_).
 - Stephan Hoyer and Joe Hamman's `Journal of Open Research Software paper`_ describing the xarray project.
 - The `UW eScience Institute's Geohackweek`_ tutorial on xarray for geospatial data scientists.
 - Stephan Hoyer's `SciPy2015 talk`_ introducing xarray to a general audience.
@@ -110,6 +115,8 @@ See also
   xarray to users familiar with netCDF.
 - `Nicolas Fauchereau's tutorial`_ on xarray for netCDF users.
 
+.. _Xarray's Tutorial: https://xarray-contrib.github.io/xarray-tutorial/
+.. _video recording: https://youtu.be/mecN-Ph_-78
 .. _Journal of Open Research Software paper: http://doi.org/10.5334/jors.148
 .. _UW eScience Institute's Geohackweek : https://geohackweek.github.io/nDarrays/
 .. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk

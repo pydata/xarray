@@ -41,18 +41,16 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-import typing
 from datetime import timedelta
+from distutils.version import LooseVersion
 from functools import partial
+from typing import ClassVar, Optional
 
 import numpy as np
 
-from ..core.pycompat import TYPE_CHECKING
+from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
-
-if TYPE_CHECKING:
-    from typing import ClassVar, Optional
 
 
 def get_date_type(calendar):
@@ -60,32 +58,32 @@ def get_date_type(calendar):
     try:
         import cftime
     except ImportError:
-        raise ImportError(
-            'cftime is required for dates with non-standard calendars')
+        raise ImportError("cftime is required for dates with non-standard calendars")
     else:
         calendars = {
-            'noleap': cftime.DatetimeNoLeap,
-            '360_day': cftime.Datetime360Day,
-            '365_day': cftime.DatetimeNoLeap,
-            '366_day': cftime.DatetimeAllLeap,
-            'gregorian': cftime.DatetimeGregorian,
-            'proleptic_gregorian': cftime.DatetimeProlepticGregorian,
-            'julian': cftime.DatetimeJulian,
-            'all_leap': cftime.DatetimeAllLeap,
-            'standard': cftime.DatetimeGregorian
+            "noleap": cftime.DatetimeNoLeap,
+            "360_day": cftime.Datetime360Day,
+            "365_day": cftime.DatetimeNoLeap,
+            "366_day": cftime.DatetimeAllLeap,
+            "gregorian": cftime.DatetimeGregorian,
+            "proleptic_gregorian": cftime.DatetimeProlepticGregorian,
+            "julian": cftime.DatetimeJulian,
+            "all_leap": cftime.DatetimeAllLeap,
+            "standard": cftime.DatetimeGregorian,
         }
         return calendars[calendar]
 
 
 class BaseCFTimeOffset:
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
+    _freq: ClassVar[Optional[str]] = None
+    _day_option: ClassVar[Optional[str]] = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
             raise TypeError(
                 "The provided multiple 'n' must be an integer. "
-                "Instead a value of type {!r} was provided.".format(type(n)))
+                "Instead a value of type {!r} was provided.".format(type(n))
+            )
         self.n = n
 
     def rule_code(self):
@@ -104,8 +102,7 @@ class BaseCFTimeOffset:
         import cftime
 
         if isinstance(other, cftime.datetime):
-            raise TypeError('Cannot subtract a cftime.datetime '
-                            'from a time offset.')
+            raise TypeError("Cannot subtract a cftime.datetime " "from a time offset.")
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
@@ -125,8 +122,7 @@ class BaseCFTimeOffset:
 
     def __rsub__(self, other):
         if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
-            raise TypeError('Cannot subtract cftime offsets of differing '
-                            'types')
+            raise TypeError("Cannot subtract cftime offsets of differing " "types")
         return -self + other
 
     def __apply__(self):
@@ -151,7 +147,7 @@ class BaseCFTimeOffset:
             return date - type(self)()
 
     def __str__(self):
-        return '<{}: n={}>'.format(type(self).__name__, self.n)
+        return "<{}: n={}>".format(type(self).__name__, self.n)
 
     def __repr__(self):
         return str(self)
@@ -179,15 +175,15 @@ def _get_day_of_month(other, day_option):
 
     """
 
-    if day_option == 'start':
+    if day_option == "start":
         return 1
-    elif day_option == 'end':
+    elif day_option == "end":
         days_in_month = _days_in_month(other)
         return days_in_month
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
-        raise NotImplementedError
+        raise NotImplementedError()
     else:
         raise ValueError(day_option)
 
@@ -216,19 +212,18 @@ def _adjust_n_years(other, n, month, reference_day):
     """Adjust the number of times an annual offset is applied based on
     another date, and the reference day provided"""
     if n > 0:
-        if other.month < month or (other.month == month and
-                                   other.day < reference_day):
+        if other.month < month or (other.month == month and other.day < reference_day):
             n -= 1
     else:
-        if other.month > month or (other.month == month and
-                                   other.day > reference_day):
+        if other.month > month or (other.month == month and other.day > reference_day):
             n += 1
     return n
 
 
-def _shift_month(date, months, day_option='start'):
-    """Shift the date to a month start or end a given number of months away.
-    """
+def _shift_month(date, months, day_option="start"):
+    """Shift the date to a month start or end a given number of months away."""
+    import cftime
+
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
 
@@ -237,18 +232,21 @@ def _shift_month(date, months, day_option='start'):
         delta_year = delta_year - 1
     year = date.year + delta_year
 
-    if day_option == 'start':
+    if day_option == "start":
         day = 1
-    elif day_option == 'end':
+    elif day_option == "end":
         reference = type(date)(year, month, 1)
         day = _days_in_month(reference)
     else:
         raise ValueError(day_option)
-    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-    # the returned date object in versions of cftime between 1.0.2 and
-    # 1.0.3.4.  It can be removed for versions of cftime greater than
-    # 1.0.3.4.
-    return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+        # the returned date object in versions of cftime between 1.0.2 and
+        # 1.0.3.4.  It can be removed for versions of cftime greater than
+        # 1.0.3.4.
+        return date.replace(year=year, month=month, day=day, dayofwk=-1)
+    else:
+        return date.replace(year=year, month=month, day=day)
 
 
 def roll_qtrday(other, n, month, day_option, modby=3):
@@ -278,15 +276,15 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
     if n > 0:
         if months_since < 0 or (
-                months_since == 0 and
-                other.day < _get_day_of_month(other, day_option)):
+            months_since == 0 and other.day < _get_day_of_month(other, day_option)
+        ):
             # pretend to roll back if on same month but
             # before compare_day
             n -= 1
     else:
         if months_since > 0 or (
-                months_since == 0 and
-                other.day > _get_day_of_month(other, day_option)):
+            months_since == 0 and other.day > _get_day_of_month(other, day_option)
+        ):
             # make sure to roll forward, so negate
             n += 1
     return n
@@ -298,22 +296,26 @@ def _validate_month(month, default_month):
     else:
         result_month = month
     if not isinstance(result_month, int):
-        raise TypeError("'self.month' must be an integer value between 1 "
-                        "and 12.  Instead, it was set to a value of "
-                        "{!r}".format(result_month))
+        raise TypeError(
+            "'self.month' must be an integer value between 1 "
+            "and 12.  Instead, it was set to a value of "
+            "{!r}".format(result_month)
+        )
     elif not (1 <= result_month <= 12):
-        raise ValueError("'self.month' must be an integer value between 1 "
-                         "and 12.  Instead, it was set to a value of "
-                         "{!r}".format(result_month))
+        raise ValueError(
+            "'self.month' must be an integer value between 1 "
+            "and 12.  Instead, it was set to a value of "
+            "{!r}".format(result_month)
+        )
     return result_month
 
 
 class MonthBegin(BaseCFTimeOffset):
-    _freq = 'MS'
+    _freq = "MS"
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, 1)
-        return _shift_month(other, n, 'start')
+        return _shift_month(other, n, "start")
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -322,11 +324,11 @@ class MonthBegin(BaseCFTimeOffset):
 
 
 class MonthEnd(BaseCFTimeOffset):
-    _freq = 'M'
+    _freq = "M"
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, _days_in_month(other))
-        return _shift_month(other, n, 'end')
+        return _shift_month(other, n, "end")
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -335,26 +337,26 @@ class MonthEnd(BaseCFTimeOffset):
 
 
 _MONTH_ABBREVIATIONS = {
-    1: 'JAN',
-    2: 'FEB',
-    3: 'MAR',
-    4: 'APR',
-    5: 'MAY',
-    6: 'JUN',
-    7: 'JUL',
-    8: 'AUG',
-    9: 'SEP',
-    10: 'OCT',
-    11: 'NOV',
-    12: 'DEC'
+    1: "JAN",
+    2: "FEB",
+    3: "MAR",
+    4: "APR",
+    5: "MAY",
+    6: "JUN",
+    7: "JUL",
+    8: "AUG",
+    9: "SEP",
+    10: "OCT",
+    11: "NOV",
+    12: "DEC",
 }
 
 
 class QuarterOffset(BaseCFTimeOffset):
-    """Quarter representation copied off of pandas/tseries/offsets.py
-    """
-    _freq = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    """Quarter representation copied off of pandas/tseries/offsets.py"""
+
+    _freq: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -367,8 +369,9 @@ class QuarterOffset(BaseCFTimeOffset):
         # self.  `months_since` is the number of months to shift other.month
         # to get to this on-offset month.
         months_since = other.month % 3 - self.month % 3
-        qtrs = roll_qtrday(other, self.n, self.month,
-                           day_option=self._day_option, modby=3)
+        qtrs = roll_qtrday(
+            other, self.n, self.month, day_option=self._day_option, modby=3
+        )
         months = qtrs * 3 - months_since
         return _shift_month(other, months, self._day_option)
 
@@ -382,7 +385,7 @@ class QuarterOffset(BaseCFTimeOffset):
         import cftime
 
         if isinstance(other, cftime.datetime):
-            raise TypeError('Cannot subtract cftime.datetime from offset.')
+            raise TypeError("Cannot subtract cftime.datetime from offset.")
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
@@ -392,11 +395,10 @@ class QuarterOffset(BaseCFTimeOffset):
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
-        return '{}-{}'.format(self._freq, _MONTH_ABBREVIATIONS[self.month])
+        return "{}-{}".format(self._freq, _MONTH_ABBREVIATIONS[self.month])
 
     def __str__(self):
-        return '<{}: n={}, month={}>'.format(
-            type(self).__name__, self.n, self.month)
+        return "<{}: n={}, month={}>".format(type(self).__name__, self.n, self.month)
 
 
 class QuarterBegin(QuarterOffset):
@@ -406,8 +408,8 @@ class QuarterBegin(QuarterOffset):
     # from the constructor, however, the default month is March.
     # We follow that behavior here.
     _default_month = 3
-    _freq = 'QS'
-    _day_option = 'start'
+    _freq = "QS"
+    _day_option = "start"
 
     def rollforward(self, date):
         """Roll date forward to nearest start of quarter"""
@@ -431,8 +433,8 @@ class QuarterEnd(QuarterOffset):
     # from the constructor, however, the default month is March.
     # We follow that behavior here.
     _default_month = 3
-    _freq = 'Q'
-    _day_option = 'end'
+    _freq = "Q"
+    _day_option = "end"
 
     def rollforward(self, date):
         """Roll date forward to nearest end of quarter"""
@@ -450,9 +452,9 @@ class QuarterEnd(QuarterOffset):
 
 
 class YearOffset(BaseCFTimeOffset):
-    _freq = None  # type: ClassVar[str]
-    _day_option = None  # type: ClassVar[str]
-    _default_month = None  # type: ClassVar[int]
+    _freq: ClassVar[str]
+    _day_option: ClassVar[str]
+    _default_month: ClassVar[int]
 
     def __init__(self, n=1, month=None):
         BaseCFTimeOffset.__init__(self, n)
@@ -468,7 +470,7 @@ class YearOffset(BaseCFTimeOffset):
         import cftime
 
         if isinstance(other, cftime.datetime):
-            raise TypeError('Cannot subtract cftime.datetime from offset.')
+            raise TypeError("Cannot subtract cftime.datetime from offset.")
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
@@ -478,16 +480,15 @@ class YearOffset(BaseCFTimeOffset):
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
-        return '{}-{}'.format(self._freq, _MONTH_ABBREVIATIONS[self.month])
+        return "{}-{}".format(self._freq, _MONTH_ABBREVIATIONS[self.month])
 
     def __str__(self):
-        return '<{}: n={}, month={}>'.format(
-            type(self).__name__, self.n, self.month)
+        return "<{}: n={}, month={}>".format(type(self).__name__, self.n, self.month)
 
 
 class YearBegin(YearOffset):
-    _freq = 'AS'
-    _day_option = 'start'
+    _freq = "AS"
+    _day_option = "start"
     _default_month = 1
 
     def onOffset(self, date):
@@ -511,8 +512,8 @@ class YearBegin(YearOffset):
 
 
 class YearEnd(YearOffset):
-    _freq = 'A'
-    _day_option = 'end'
+    _freq = "A"
+    _day_option = "end"
     _default_month = 12
 
     def onOffset(self, date):
@@ -536,7 +537,7 @@ class YearEnd(YearOffset):
 
 
 class Day(BaseCFTimeOffset):
-    _freq = 'D'
+    _freq = "D"
 
     def as_timedelta(self):
         return timedelta(days=self.n)
@@ -546,7 +547,7 @@ class Day(BaseCFTimeOffset):
 
 
 class Hour(BaseCFTimeOffset):
-    _freq = 'H'
+    _freq = "H"
 
     def as_timedelta(self):
         return timedelta(hours=self.n)
@@ -556,7 +557,7 @@ class Hour(BaseCFTimeOffset):
 
 
 class Minute(BaseCFTimeOffset):
-    _freq = 'T'
+    _freq = "T"
 
     def as_timedelta(self):
         return timedelta(minutes=self.n)
@@ -566,7 +567,7 @@ class Minute(BaseCFTimeOffset):
 
 
 class Second(BaseCFTimeOffset):
-    _freq = 'S'
+    _freq = "S"
 
     def as_timedelta(self):
         return timedelta(seconds=self.n)
@@ -576,73 +577,72 @@ class Second(BaseCFTimeOffset):
 
 
 _FREQUENCIES = {
-    'A': YearEnd,
-    'AS': YearBegin,
-    'Y': YearEnd,
-    'YS': YearBegin,
-    'Q': partial(QuarterEnd, month=12),
-    'QS': partial(QuarterBegin, month=1),
-    'M': MonthEnd,
-    'MS': MonthBegin,
-    'D': Day,
-    'H': Hour,
-    'T': Minute,
-    'min': Minute,
-    'S': Second,
-    'AS-JAN': partial(YearBegin, month=1),
-    'AS-FEB': partial(YearBegin, month=2),
-    'AS-MAR': partial(YearBegin, month=3),
-    'AS-APR': partial(YearBegin, month=4),
-    'AS-MAY': partial(YearBegin, month=5),
-    'AS-JUN': partial(YearBegin, month=6),
-    'AS-JUL': partial(YearBegin, month=7),
-    'AS-AUG': partial(YearBegin, month=8),
-    'AS-SEP': partial(YearBegin, month=9),
-    'AS-OCT': partial(YearBegin, month=10),
-    'AS-NOV': partial(YearBegin, month=11),
-    'AS-DEC': partial(YearBegin, month=12),
-    'A-JAN': partial(YearEnd, month=1),
-    'A-FEB': partial(YearEnd, month=2),
-    'A-MAR': partial(YearEnd, month=3),
-    'A-APR': partial(YearEnd, month=4),
-    'A-MAY': partial(YearEnd, month=5),
-    'A-JUN': partial(YearEnd, month=6),
-    'A-JUL': partial(YearEnd, month=7),
-    'A-AUG': partial(YearEnd, month=8),
-    'A-SEP': partial(YearEnd, month=9),
-    'A-OCT': partial(YearEnd, month=10),
-    'A-NOV': partial(YearEnd, month=11),
-    'A-DEC': partial(YearEnd, month=12),
-    'QS-JAN': partial(QuarterBegin, month=1),
-    'QS-FEB': partial(QuarterBegin, month=2),
-    'QS-MAR': partial(QuarterBegin, month=3),
-    'QS-APR': partial(QuarterBegin, month=4),
-    'QS-MAY': partial(QuarterBegin, month=5),
-    'QS-JUN': partial(QuarterBegin, month=6),
-    'QS-JUL': partial(QuarterBegin, month=7),
-    'QS-AUG': partial(QuarterBegin, month=8),
-    'QS-SEP': partial(QuarterBegin, month=9),
-    'QS-OCT': partial(QuarterBegin, month=10),
-    'QS-NOV': partial(QuarterBegin, month=11),
-    'QS-DEC': partial(QuarterBegin, month=12),
-    'Q-JAN': partial(QuarterEnd, month=1),
-    'Q-FEB': partial(QuarterEnd, month=2),
-    'Q-MAR': partial(QuarterEnd, month=3),
-    'Q-APR': partial(QuarterEnd, month=4),
-    'Q-MAY': partial(QuarterEnd, month=5),
-    'Q-JUN': partial(QuarterEnd, month=6),
-    'Q-JUL': partial(QuarterEnd, month=7),
-    'Q-AUG': partial(QuarterEnd, month=8),
-    'Q-SEP': partial(QuarterEnd, month=9),
-    'Q-OCT': partial(QuarterEnd, month=10),
-    'Q-NOV': partial(QuarterEnd, month=11),
-    'Q-DEC': partial(QuarterEnd, month=12)
+    "A": YearEnd,
+    "AS": YearBegin,
+    "Y": YearEnd,
+    "YS": YearBegin,
+    "Q": partial(QuarterEnd, month=12),
+    "QS": partial(QuarterBegin, month=1),
+    "M": MonthEnd,
+    "MS": MonthBegin,
+    "D": Day,
+    "H": Hour,
+    "T": Minute,
+    "min": Minute,
+    "S": Second,
+    "AS-JAN": partial(YearBegin, month=1),
+    "AS-FEB": partial(YearBegin, month=2),
+    "AS-MAR": partial(YearBegin, month=3),
+    "AS-APR": partial(YearBegin, month=4),
+    "AS-MAY": partial(YearBegin, month=5),
+    "AS-JUN": partial(YearBegin, month=6),
+    "AS-JUL": partial(YearBegin, month=7),
+    "AS-AUG": partial(YearBegin, month=8),
+    "AS-SEP": partial(YearBegin, month=9),
+    "AS-OCT": partial(YearBegin, month=10),
+    "AS-NOV": partial(YearBegin, month=11),
+    "AS-DEC": partial(YearBegin, month=12),
+    "A-JAN": partial(YearEnd, month=1),
+    "A-FEB": partial(YearEnd, month=2),
+    "A-MAR": partial(YearEnd, month=3),
+    "A-APR": partial(YearEnd, month=4),
+    "A-MAY": partial(YearEnd, month=5),
+    "A-JUN": partial(YearEnd, month=6),
+    "A-JUL": partial(YearEnd, month=7),
+    "A-AUG": partial(YearEnd, month=8),
+    "A-SEP": partial(YearEnd, month=9),
+    "A-OCT": partial(YearEnd, month=10),
+    "A-NOV": partial(YearEnd, month=11),
+    "A-DEC": partial(YearEnd, month=12),
+    "QS-JAN": partial(QuarterBegin, month=1),
+    "QS-FEB": partial(QuarterBegin, month=2),
+    "QS-MAR": partial(QuarterBegin, month=3),
+    "QS-APR": partial(QuarterBegin, month=4),
+    "QS-MAY": partial(QuarterBegin, month=5),
+    "QS-JUN": partial(QuarterBegin, month=6),
+    "QS-JUL": partial(QuarterBegin, month=7),
+    "QS-AUG": partial(QuarterBegin, month=8),
+    "QS-SEP": partial(QuarterBegin, month=9),
+    "QS-OCT": partial(QuarterBegin, month=10),
+    "QS-NOV": partial(QuarterBegin, month=11),
+    "QS-DEC": partial(QuarterBegin, month=12),
+    "Q-JAN": partial(QuarterEnd, month=1),
+    "Q-FEB": partial(QuarterEnd, month=2),
+    "Q-MAR": partial(QuarterEnd, month=3),
+    "Q-APR": partial(QuarterEnd, month=4),
+    "Q-MAY": partial(QuarterEnd, month=5),
+    "Q-JUN": partial(QuarterEnd, month=6),
+    "Q-JUL": partial(QuarterEnd, month=7),
+    "Q-AUG": partial(QuarterEnd, month=8),
+    "Q-SEP": partial(QuarterEnd, month=9),
+    "Q-OCT": partial(QuarterEnd, month=10),
+    "Q-NOV": partial(QuarterEnd, month=11),
+    "Q-DEC": partial(QuarterEnd, month=12),
 }
 
 
-_FREQUENCY_CONDITION = '|'.join(_FREQUENCIES.keys())
-_PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
-    _FREQUENCY_CONDITION)
+_FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
+_PATTERN = fr"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have
@@ -659,10 +659,10 @@ def to_offset(freq):
         try:
             freq_data = re.match(_PATTERN, freq).groupdict()
         except AttributeError:
-            raise ValueError('Invalid frequency string provided')
+            raise ValueError("Invalid frequency string provided")
 
-    freq = freq_data['freq']
-    multiples = freq_data['multiple']
+    freq = freq_data["freq"]
+    multiples = freq_data["multiple"]
     if multiples is None:
         multiples = 1
     else:
@@ -677,17 +677,19 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
     if isinstance(date_str_or_date, str):
         if calendar is None:
             raise ValueError(
-                'If converting a string to a cftime.datetime object, '
-                'a calendar type must be provided')
-        date, _ = _parse_iso8601_with_reso(get_date_type(calendar),
-                                           date_str_or_date)
+                "If converting a string to a cftime.datetime object, "
+                "a calendar type must be provided"
+            )
+        date, _ = _parse_iso8601_with_reso(get_date_type(calendar), date_str_or_date)
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
     else:
-        raise TypeError("date_str_or_date must be a string or a "
-                        'subclass of cftime.datetime. Instead got '
-                        '{!r}.'.format(date_str_or_date))
+        raise TypeError(
+            "date_str_or_date must be a string or a "
+            "subclass of cftime.datetime. Instead got "
+            "{!r}.".format(date_str_or_date)
+        )
 
 
 def normalize_date(date):
@@ -709,11 +711,12 @@ def _generate_linear_range(start, end, periods):
     import cftime
 
     total_seconds = (end - start).total_seconds()
-    values = np.linspace(0., total_seconds, periods, endpoint=True)
-    units = 'seconds since {}'.format(format_cftime_datetime(start))
+    values = np.linspace(0.0, total_seconds, periods, endpoint=True)
+    units = "seconds since {}".format(format_cftime_datetime(start))
     calendar = start.calendar
-    return cftime.num2date(values, units=units, calendar=calendar,
-                           only_use_cftime_datetimes=True)
+    return cftime.num2date(
+        values, units=units, calendar=calendar, only_use_cftime_datetimes=True
+    )
 
 
 def _generate_range(start, end, periods, offset):
@@ -760,8 +763,7 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date <= current:
-                raise ValueError('Offset {offset} did not increment date'
-                                 .format(offset=offset))
+                raise ValueError(f"Offset {offset} did not increment date")
             current = next_date
     else:
         while current >= end:
@@ -769,19 +771,20 @@ def _generate_range(start, end, periods, offset):
 
             next_date = current + offset
             if next_date >= current:
-                raise ValueError('Offset {offset} did not decrement date'
-                                 .format(offset=offset))
+                raise ValueError(f"Offset {offset} did not decrement date")
             current = next_date
 
 
-def _count_not_none(*args):
-    """Compute the number of non-None arguments."""
-    return sum([arg is not None for arg in args])
-
-
-def cftime_range(start=None, end=None, periods=None, freq='D',
-                 normalize=False, name=None, closed=None,
-                 calendar='standard'):
+def cftime_range(
+    start=None,
+    end=None,
+    periods=None,
+    freq="D",
+    normalize=False,
+    name=None,
+    closed=None,
+    calendar="standard",
+):
     """Return a fixed frequency CFTimeIndex.
 
     Parameters
@@ -790,19 +793,19 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
         Left bound for generating dates.
     end : str or cftime.datetime, optional
         Right bound for generating dates.
-    periods : integer, optional
+    periods : int, optional
         Number of periods to generate.
-    freq : str, default 'D', BaseCFTimeOffset, or None
-       Frequency strings can have multiples, e.g. '5H'.
-    normalize : bool, default False
+    freq : str or None, default: "D"
+       Frequency strings can have multiples, e.g. "5H".
+    normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
-    closed : {None, 'left', 'right'}, optional
+    closed : {"left", "right"} or None, default: None
         Make the interval closed with respect to the given frequency to the
-        'left', 'right', or both sides (None, the default).
-    calendar : str
-        Calendar type for the datetimes (default 'standard').
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
 
     Returns
     -------
@@ -933,7 +936,7 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
-    >>> xr.cftime_range(start='2000', periods=6, freq='2MS', calendar='noleap')
+    >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object')
@@ -941,19 +944,20 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with
     the other set to ``None``.  See the `pandas documentation
-    <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.date_range.html#pandas.date_range>`_
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
 
     See Also
     --------
     pandas.date_range
-    """  # noqa: E501
+    """
     # Adapted from pandas.core.indexes.datetimes._generate_range.
-    if _count_not_none(start, end, periods, freq) != 3:
+    if count_not_none(start, end, periods, freq) != 3:
         raise ValueError(
             "Of the arguments 'start', 'end', 'periods', and 'freq', three "
-            "must be specified at a time.")
+            "must be specified at a time."
+        )
 
     if start is not None:
         start = to_cftime_datetime(start, calendar)
@@ -974,18 +978,16 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     if closed is None:
         left_closed = True
         right_closed = True
-    elif closed == 'left':
+    elif closed == "left":
         left_closed = True
-    elif closed == 'right':
+    elif closed == "right":
         right_closed = True
     else:
         raise ValueError("Closed must be either 'left', 'right' or None")
 
-    if (not left_closed and len(dates) and
-            start is not None and dates[0] == start):
+    if not left_closed and len(dates) and start is not None and dates[0] == start:
         dates = dates[1:]
-    if (not right_closed and len(dates) and
-            end is not None and dates[-1] == end):
+    if not right_closed and len(dates) and end is not None and dates[-1] == end:
         dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)

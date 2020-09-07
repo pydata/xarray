@@ -1,18 +1,19 @@
 xarray: N-D labeled arrays and datasets
 =======================================
 
-.. image:: https://travis-ci.org/pydata/xarray.svg?branch=master
-   :target: https://travis-ci.org/pydata/xarray
-.. image:: https://ci.appveyor.com/api/projects/status/github/pydata/xarray?svg=true&passingText=passing&failingText=failing&pendingText=pending
-   :target: https://ci.appveyor.com/project/shoyer/xray
-.. image:: https://coveralls.io/repos/pydata/xarray/badge.svg
-   :target: https://coveralls.io/r/pydata/xarray
+.. image:: https://dev.azure.com/xarray/xarray/_apis/build/status/pydata.xarray?branchName=master
+   :target: https://dev.azure.com/xarray/xarray/_build/latest?definitionId=1&branchName=master
+.. image:: https://codecov.io/gh/pydata/xarray/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
    :target: https://xarray.pydata.org/
 .. image:: https://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
   :target: https://pandas.pydata.org/speed/xarray/
 .. image:: https://img.shields.io/pypi/v/xarray.svg
    :target: https://pypi.python.org/pypi/xarray/
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/python/black
+
 
 **xarray** (formerly **xray**) is an open source project and Python package
 that makes working with labelled multi-dimensional arrays simple,
@@ -136,5 +137,8 @@ under a "3-clause BSD" license:
 
 xarray also bundles portions of CPython, which is available under the "Python
 Software Foundation License" in xarray/core/pycompat.py.
+
+xarray uses icons from the icomoon package (free version), which is
+available under the "CC BY 4.0" license.
 
 The full text of these licenses are included in the licenses directory.

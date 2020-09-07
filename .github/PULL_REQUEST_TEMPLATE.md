@@ -2,4 +2,6 @@
 
  - [ ] Closes #xxxx
  - [ ] Tests added
- - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API
+ - [ ] Passes `isort . && black . && mypy . && flake8`
+ - [ ] User visible changes (including notable bug fixes) are documented in `whats-new.rst`
+ - [ ] New functions/methods are listed in `api.rst`

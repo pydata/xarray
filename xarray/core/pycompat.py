@@ -1,49 +1,37 @@
-import sys
-from collections import abc
-
 import numpy as np
 
-integer_types = (int, np.integer, )
+from .utils import is_duck_array
+
+integer_types = (int, np.integer)
+
+try:
+    import dask.array
+    from dask.base import is_dask_collection
+
+    # solely for isinstance checks
+    dask_array_type = (dask.array.Array,)
+
+    def is_duck_dask_array(x):
+        return is_duck_array(x) and is_dask_collection(x)
+
+
+except ImportError:  # pragma: no cover
+    dask_array_type = ()
+    is_duck_dask_array = lambda _: False
+    is_dask_collection = lambda _: False
 
 try:
     # solely for isinstance checks
-    import dask.array
-    dask_array_type = (dask.array.Array,)
+    import sparse
+
+    sparse_array_type = (sparse.SparseArray,)
 except ImportError:  # pragma: no cover
-    dask_array_type = ()
+    sparse_array_type = ()
 
+try:
+    # solely for isinstance checks
+    import cupy
 
-if sys.version < '3.5.3':
-    TYPE_CHECKING = False
-
-    class _ABCDummyBrackets(type(abc.Mapping)):  # abc.ABCMeta
-        def __getitem__(cls, name):
-            return cls
-
-    class Mapping(abc.Mapping, metaclass=_ABCDummyBrackets):
-        pass
-
-    class MutableMapping(abc.MutableMapping, metaclass=_ABCDummyBrackets):
-        pass
-
-    class MutableSet(abc.MutableSet, metaclass=_ABCDummyBrackets):
-        pass
-
-else:
-    from typing import TYPE_CHECKING  # noqa: F401
-
-    # from typing import Mapping, MutableMapping, MutableSet
-
-    # The above confuses mypy 0.700;
-    # see: https://github.com/python/mypy/issues/6652
-    # As a workaround, use:
-    #
-    # from typing import Mapping, MutableMapping, MutableSet
-    # try:
-    #     from .pycompat import Mapping, MutableMapping, MutableSet
-    # except ImportError:
-    #      pass
-    #
-    # This is only necessary in modules that define subclasses of the
-    # abstract collections; when only type inference is needed, one can just
-    # use typing also in Python 3.5.0~3.5.2 (although mypy will misbehave).
+    cupy_array_type = (cupy.ndarray,)
+except ImportError:  # pragma: no cover
+    cupy_array_type = ()
