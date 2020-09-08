@@ -6193,7 +6193,7 @@ def test_coarsen_keep_attrs():
         np.linspace(0, 364, num=364),
         dims="time",
         coords={"time": pd.date_range("15/12/1999", periods=364)},
-        attrs = _attrs,
+        attrs=_attrs,
     )
 
     da2 = da.copy(deep=True)
@@ -6203,7 +6203,7 @@ def test_coarsen_keep_attrs():
     assert dat.attrs == {}
 
     # Test kept attrs using dataset keyword
-    dat = da.coarsen(time=3, boundary="trim",keep_attrs=True).mean()
+    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
     assert dat.attrs == _attrs
 
     # Test kept attrs using global option
