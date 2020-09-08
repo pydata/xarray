@@ -2011,7 +2011,8 @@ class Variable(
         keep_attrs = kwargs.get("keep_attrs", None)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        if keep_attrs == True:
+            _attrs = None
+        if keep_attrs:
             _attrs = self.attrs
         if not keep_attrs:
             _attrs = None
