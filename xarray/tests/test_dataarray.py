@@ -6207,7 +6207,7 @@ def test_coarsen_keep_attrs():
     assert dat.attrs == _attrs
 
     # Test kept attrs using global option
-    with set_options(keep_attrs=True):
+    with xr.set_options(keep_attrs=True):
         dat = da.coarsen(time=3, boundary="trim").mean()
     assert dat.attrs == _attrs
 
