@@ -2001,21 +2001,22 @@ class Variable(
         if not windows:
             return self.copy()
 
+        if "keep_attrs" in kwargs:
+            keep_attrs = kwargs["keep_attrs"]
+        else:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        if keep_attrs:
+            _attrs = self.attrs
+        else:
+            _attrs = None
+
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-
-        keep_attrs = kwargs.get("keep_attrs", None)
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-            _attrs = None
-        if keep_attrs:
-            _attrs = self.attrs
-        if not keep_attrs:
-            _attrs = None
 
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
