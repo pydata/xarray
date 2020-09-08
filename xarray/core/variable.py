@@ -1993,7 +1993,7 @@ class Variable(
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
+    def coarsen(self, windows, func, boundary="exact", side="left", keep_attrs=False, **kwargs):
         """
         Apply reduction function.
         """
