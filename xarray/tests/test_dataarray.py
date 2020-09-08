@@ -6189,25 +6189,26 @@ def test_isin(da):
 def test_coarsen_keep_attrs():
     _attrs = {"units": "test", "long_name": "testing"}
 
-    values = np.linspace(10, 15, 100)
-    dims = np.linspace(1, 10, 100)
-
-    da = DataArray(values, dims=("dim"), attrs = _attrs)
-    da["dim"] = dims
+    da = xr.DataArray(
+        np.linspace(0, 364, num=364),
+        dims="time",
+        coords={"time": pd.date_range("15/12/1999", periods=364)},
+        attrs = _attrs,
+    )
 
     da2 = da.copy(deep=True)
 
     # Test dropped attrs
-    dat = da.coarsen(coord=5).mean()
+    dat = da.coarsen(time=3, boundary="trim").mean()
     assert dat.attrs == {}
 
     # Test kept attrs using dataset keyword
-    dat = da.coarsen(coord=5, keep_attrs=True).mean()
+    dat = da.coarsen(time=3, boundary="trim",keep_attrs=True).mean()
     assert dat.attrs == _attrs
 
     # Test kept attrs using global option
     with set_options(keep_attrs=True):
-        dat = da.coarsen(coord=5).mean()
+        dat = da.coarsen(time=3, boundary="trim").mean()
     assert dat.attrs == _attrs
 
     # Test kept attrs in original object
