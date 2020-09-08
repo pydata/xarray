@@ -6186,6 +6186,34 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
+def test_coarsen_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    values = np.linspace(10, 15, 100)
+    dims = np.linspace(1, 10, 100)
+
+    da = DataArray(values, dims=("dim"), attrs = _attrs)
+    da["dim"] = dims
+
+    da2 = da.copy(deep=True)
+
+    # Test dropped attrs
+    dat = da.coarsen(coord=5).mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = da.coarsen(coord=5, keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with set_options(keep_attrs=True):
+        dat = da.coarsen(coord=5).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs in original object
+    xr.testing.assert_identical(da, da2)
+
+
 @pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
