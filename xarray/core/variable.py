@@ -2001,13 +2001,22 @@ class Variable(
         if not windows:
             return self.copy()
 
-        reshaped, axes = self._coarsen_reshape(windows, boundary, side, **kwargs)
+        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self._replace(data=func(reshaped, axis=axes, **kwargs))
+
+        keep_attrs = kwargs.get("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs == True:
+            _attrs = self.attrs
+        if not keep_attrs:
+            _attrs = None
+
+        return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def _coarsen_reshape(self, windows, boundary, side, **kwargs):
         """
@@ -2071,12 +2080,6 @@ class Variable(
                 axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
-
-        keep_attrs = kwargs.get("keep_attrs", None)
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-        if not keep_attrs:
-            variable._attrs = None
 
         return variable.data.reshape(shape), tuple(axes)
 
