@@ -2001,11 +2001,6 @@ class Variable(
         if not windows:
             return self.copy()
 
-        if "keep_attrs" in kwargs:
-            keep_attrs = kwargs["keep_attrs"]
-        else:
-            keep_attrs = _get_keep_attrs(default=False)
-
         if keep_attrs:
             _attrs = self.attrs
         else:
