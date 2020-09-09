@@ -1949,7 +1949,11 @@ class TestVariable(VariableSubclassobjects):
         # Test kept attrs
         with set_options(keep_attrs=True):
             new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left", keep_attrs=True
+                windows={"coord": 1},
+                func=test_func,
+                boundary="exact",
+                side="left",
+                keep_attrs=True,
             )
         assert new.attrs == _attrs
 
