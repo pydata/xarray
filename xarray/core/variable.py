@@ -2020,7 +2020,7 @@ class Variable(
 
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
-    def _coarsen_reshape(self, windows, boundary, side, **kwargs):
+    def _coarsen_reshape(self, windows, boundary, side):
         """
         Construct a reshaped-array for coarsen
         """
