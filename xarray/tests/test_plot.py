@@ -2267,7 +2267,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "a", "b", "b"]
         lines = ds2.plot.scatter(x="A", y="B", hue="hue")
-        assert [t.get_text() for t in lines[0].axes.legend_.texts] == ["a", "b"]
+        assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
