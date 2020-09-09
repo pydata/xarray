@@ -625,6 +625,26 @@ def apply_variable_ufunc(
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
 
+            allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
+            if allow_rechunk is None:
+                for n, (data, core_dims) in enumerate(
+                    zip(input_data, signature.input_core_dims)
+                ):
+                    if is_duck_dask_array(data):
+                        # core dimensions cannot span multiple chunks
+                        for axis, dim in enumerate(core_dims, start=-len(core_dims)):
+                            if len(data.chunks[axis]) != 1:
+                                raise ValueError(
+                                    f"dimension {dim} on {n}th function argument to "
+                                    "apply_ufunc with dask='parallelized' consists of "
+                                    "multiple chunks, but is also a core dimension. To "
+                                    "fix, either rechunk into a single dask array chunk along "
+                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
+                                    "but beware that this may significantly increase memory usage."
+                                )
+                dask_gufunc_kwargs["allow_rechunk"] = True
+
             output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
             if output_sizes:
                 output_sizes_renamed = {}
