@@ -1953,7 +1953,6 @@ class TestVariable(VariableSubclassobjects):
                 func=test_func,
                 boundary="exact",
                 side="left",
-                keep_attrs=True,
             )
         assert new.attrs == _attrs
 
