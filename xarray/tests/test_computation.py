@@ -695,8 +695,7 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    with raises_regex(ValueError, "with different chunksize present"):
-        check(data_array, 0 * data_array.compute())
+    check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
@@ -710,7 +709,7 @@ def test_apply_dask_parallelized_errors():
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
-    # formerly from _apply_blockwise, now from dask.array.apply_gufunc
+    # formerly from _apply_blockwise, now from apply_variable_ufunc
     with raises_regex(ValueError, "consists of multiple chunks"):
         apply_ufunc(
             identity,
