@@ -1994,7 +1994,7 @@ class Variable(
         )
 
     def coarsen(
-        self, windows, func, boundary="exact", side="left", keep_attrs=False, **kwargs
+        self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
     ):
         """
         Apply reduction function.
@@ -2002,6 +2002,9 @@ class Variable(
         windows = {k: v for k, v in windows.items() if k in self.dims}
         if not windows:
             return self.copy()
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
 
         if keep_attrs:
             _attrs = self.attrs
