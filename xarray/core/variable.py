@@ -1993,7 +1993,9 @@ class Variable(
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
+    def coarsen(
+        self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
+    ):
         """
         Apply reduction function.
         """
@@ -2001,13 +2003,22 @@ class Variable(
         if not windows:
             return self.copy()
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        if keep_attrs:
+            _attrs = self.attrs
+        else:
+            _attrs = None
+
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self._replace(data=func(reshaped, axis=axes, **kwargs))
+
+        return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
         """
@@ -2071,9 +2082,6 @@ class Variable(
                 axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
-
-        keep_attrs = _get_keep_attrs(default=False)
-        variable.attrs = variable._attrs if keep_attrs else {}
 
         return variable.data.reshape(shape), tuple(axes)
 

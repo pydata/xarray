@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
-  - repo: https://github.com/python/black
+  - repo: https://github.com/psf/black
     rev: 20.8b1
     hooks:
       - id: black
