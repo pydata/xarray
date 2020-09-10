@@ -339,11 +339,7 @@ def _dsplot(plotfunc):
             ax.set_ylabel(meta_data.get("ylabel"))
 
         if meta_data["add_legend"]:
-            ax.legend(
-                handles=primitive,
-                labels=list(meta_data["hue"].values),
-                title=meta_data.get("hue_label", None),
-            )
+            ax.legend(handles=primitive, title=meta_data.get("hue_label", None))
         if meta_data["add_colorbar"]:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if "label" not in cbar_kwargs:
