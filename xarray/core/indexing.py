@@ -899,10 +899,14 @@ def _decompose_vectorized_indexer(
     Even if the backend array only supports outer indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
-    >>> backend_indexer = OuterIndexer([0, 1, 3], [2, 3])
-    >>> array = array[backend_indexer]  # load subslice of the array
-    >>> np_indexer = VectorizedIndexer([0, 2, 1], [0, 1, 0])
-    >>> array[np_indexer]  # vectorized indexing for on-memory np.ndarray.
+    >>> array = np.arange(36).reshape(6, 6)
+    >>> backend_indexer = OuterIndexer((np.array([0, 1, 3]), np.array([2, 3])))
+    >>> # load subslice of the array
+    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    >>> np_indexer = VectorizedIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
+    >>> # vectorized indexing for on-memory np.ndarray.
+    ... NumpyIndexingAdapter(array)[np_indexer]
+    array([ 2, 21,  8])
     """
     assert isinstance(indexer, VectorizedIndexer)
 
@@ -977,10 +981,16 @@ def _decompose_outer_indexer(
     Even if the backend array only supports basic indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
-    >>> backend_indexer = BasicIndexer(slice(0, 3), slice(2, 3))
-    >>> array = array[backend_indexer]  # load subslice of the array
-    >>> np_indexer = OuterIndexer([0, 2, 1], [0, 1, 0])
-    >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
+    >>> array = np.arange(36).reshape(6, 6)
+    >>> backend_indexer = BasicIndexer((slice(0, 3), slice(2, 4)))
+    >>> # load subslice of the array
+    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    >>> np_indexer = OuterIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
+    >>> # outer indexing for on-memory np.ndarray.
+    ... NumpyIndexingAdapter(array)[np_indexer]
+    array([[ 2,  3,  2],
+           [14, 15, 14],
+           [ 8,  9,  8]])
     """
     if indexing_support == IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
