@@ -1189,7 +1189,6 @@ def save_mfdataset(
 
     Save a dataset into one netCDF per year of data:
 
-    >>> import os
     >>> ds = xr.Dataset(
     ...     {"a": ("time", np.linspace(0, 1, 48))},
     ...     coords={"time": pd.date_range("2010-01-01", freq="M", periods=48)},
@@ -1204,8 +1203,6 @@ def save_mfdataset(
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = ["%s.nc" % y for y in years]
     >>> xr.save_mfdataset(datasets, paths)
-    >>> for path in paths:
-    ...     os.remove(path)
     """
     if mode == "w" and len(set(paths)) < len(paths):
         raise ValueError(
