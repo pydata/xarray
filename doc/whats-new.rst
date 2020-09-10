@@ -84,6 +84,8 @@ Bug fixes
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
   that contains NaNs (:pull:`4233`).
   By `Jens Svensmark <https://github.com/jenssss>`_
+- Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
+  By `Peter Hausamann <https://github.com/phausamann>`_.
 
 Documentation
 ~~~~~~~~~~~~~
