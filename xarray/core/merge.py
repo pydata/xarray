@@ -711,32 +711,32 @@ def merge(
     array([[1., 2.],
            [3., 5.]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> y
     <xarray.DataArray 'var2' (lat: 2, lon: 2)>
     array([[5., 6.],
            [7., 8.]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 150.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 150.0
 
     >>> z
     <xarray.DataArray 'var3' (time: 2, lon: 2)>
     array([[0., 3.],
            [4., 9.]])
     Coordinates:
-    * time     (time) float64 30.0 60.0
-    * lon      (lon) float64 100.0 150.0
+      * time     (time) float64 30.0 60.0
+      * lon      (lon) float64 100.0 150.0
 
     >>> xr.merge([x, y, z])
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0 150.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
@@ -746,9 +746,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0 150.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
@@ -758,9 +758,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0 150.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
@@ -770,9 +770,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0 150.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 -999.0 3.0 ... -999.0 -999.0 -999.0
         var2     (lat, lon) float64 5.0 -999.0 6.0 -999.0 ... -999.0 7.0 -999.0 8.0
@@ -782,9 +782,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 2, lon: 2, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 3.0 5.0
         var2     (lat, lon) float64 5.0 6.0 7.0 8.0
@@ -794,9 +794,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0
         var2     (lat, lon) float64 5.0
@@ -806,9 +806,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 1, lon: 1, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0
         var2     (lat, lon) float64 5.0
@@ -818,9 +818,9 @@ def merge(
     <xarray.Dataset>
     Dimensions:  (lat: 3, lon: 3, time: 2)
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0 150.0
-    * time     (time) float64 30.0 60.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
         var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
         var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0

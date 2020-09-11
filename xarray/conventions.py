@@ -24,10 +24,11 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> x.dtype
     dtype('>i2')
 
-    >>> NativeEndianArray(x).dtype
+    >>> NativeEndiannessArray(x).dtype
     dtype('int16')
 
-    >>> NativeEndianArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> NativeEndiannessArray(x)[indexer].dtype
     dtype('int16')
     """
 
@@ -53,12 +54,13 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
 
     >>> x.dtype
-    dtype('>i2')
+    dtype('int8')
 
     >>> BoolTypeArray(x).dtype
     dtype('bool')
 
-    >>> BoolTypeArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> BoolTypeArray(x)[indexer].dtype
     dtype('bool')
     """
 

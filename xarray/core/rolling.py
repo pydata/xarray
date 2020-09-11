@@ -250,15 +250,29 @@ class DataArrayRolling(Rolling):
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
         Dimensions without coordinates: a, b, window_dim
 
         >>> rolling = da.rolling(b=3, center=True)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
-               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        array([[[nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.],
+                [ 2.,  3., nan]],
+        <BLANKLINE>
+               [[nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.],
+                [ 6.,  7., nan]]])
         Dimensions without coordinates: a, b, window_dim
 
         """
@@ -311,8 +325,15 @@ class DataArrayRolling(Rolling):
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
         Dimensions without coordinates: a, b, window_dim
 
         >>> rolling.reduce(np.sum)
@@ -326,7 +347,7 @@ class DataArrayRolling(Rolling):
         <xarray.DataArray (a: 2, b: 4)>
         array([[ 0.,  1.,  3.,  6.],
                [ 4.,  9., 15., 18.]])
-
+        Dimensions without coordinates: a, b
         """
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")

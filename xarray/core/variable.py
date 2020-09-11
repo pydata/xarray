@@ -920,7 +920,7 @@ class Variable(
 
         >>> var.copy(data=[0.1, 0.2, 0.3])
         <xarray.Variable (x: 3)>
-        array([ 0.1,  0.2,  0.3])
+        array([0.1, 0.2, 0.3])
         >>> var
         <xarray.Variable (x: 3)>
         array([7, 2, 3])
@@ -1958,15 +1958,29 @@ class Variable(
         Examples
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
-        >>> v.rolling_window(x, "b", 3, "window_dim")
+        >>> v.rolling_window("b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
 
-        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
+        >>> v.rolling_window("b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
-               [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
+        array([[[nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.],
+                [ 2.,  3., nan]],
+        <BLANKLINE>
+               [[nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.],
+                [ 6.,  7., nan]]])
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
