@@ -1123,6 +1123,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set()
         indexes: Dict[Hashable, pd.Index] = {}
 
+        names = [name for name in self.variables.keys() if name in names]
         for name in names:
             try:
                 variables[name] = self._variables[name]
@@ -1142,7 +1143,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = {k: self.dims[k] for k in needed_dims}
 
-        for k in self._coord_names:
+        for k in self._variables:
+            if k not in self._coord_names:
+                continue
+
             if set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
