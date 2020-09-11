@@ -215,7 +215,15 @@ class DatasetCoordinates(Coordinates):
 
     def to_dataset(self) -> "Dataset":
         """Convert these coordinates into a new Dataset"""
-        return self._data._copy_listed(self._names)
+
+        def key(name):
+            try:
+                return list(self._data._variables.keys()).index(name)
+            except ValueError:
+                return len(self._data._variables)
+
+        names = sorted(self._names, key=key)
+        return self._data._copy_listed(names)
 
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
