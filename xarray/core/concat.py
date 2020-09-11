@@ -349,6 +349,7 @@ def _parse_datasets(
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
+        # preserves ordering of dimensions
         for dim in ds.dims:
             if dim in dims:
                 continue

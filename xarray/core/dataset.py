@@ -1148,6 +1148,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = {k: self.dims[k] for k in needed_dims}
 
+        # preserves ordering of coordinates
         for k in self._variables:
             if k not in self._coord_names:
                 continue
