@@ -5742,15 +5742,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
-          * x               (x) int64 0 1
-          * y               (y) int64 0 1
-          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 2014-09-05
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        Dimensions without coordinates: x, y
         Data variables:
-            temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
-            precipitation   (x, y, time) float64 5.702 0.9422 2.075 1.178 3.284 ...
+            temperature     (x, y, time) float64 29.11 18.2 22.83 ... 18.28 16.15 26.63
+            precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
 
         """
         selection = []
