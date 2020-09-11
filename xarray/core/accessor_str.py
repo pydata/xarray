@@ -68,7 +68,7 @@ class StringAccessor:
     for applicable DataArrays.
 
         >>> da = xr.DataArray(["some", "text", "in", "an", "array"])
-        >>> ds.str.len()
+        >>> da.str.len()
         <xarray.DataArray (dim_0: 5)>
         array([4, 4, 2, 2, 5])
         Dimensions without coordinates: dim_0

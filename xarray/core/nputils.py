@@ -173,14 +173,19 @@ def _rolling_window(a, window, axis=-1):
     Examples
     --------
     >>> x = np.arange(10).reshape((2, 5))
-    >>> np.rolling_window(x, 3, axis=-1)
-    array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
-           [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
+    >>> _rolling_window(x, 3, axis=-1)
+    array([[[0, 1, 2],
+            [1, 2, 3],
+            [2, 3, 4]],
+    <BLANKLINE>
+           [[5, 6, 7],
+            [6, 7, 8],
+            [7, 8, 9]]])
 
     Calculate rolling mean of last dimension:
-    >>> np.mean(np.rolling_window(x, 3, axis=-1), -1)
-    array([[ 1.,  2.,  3.],
-           [ 6.,  7.,  8.]])
+    >>> np.mean(_rolling_window(x, 3, axis=-1), -1)
+    array([[1., 2., 3.],
+           [6., 7., 8.]])
 
     This function is taken from https://github.com/numpy/numpy/pull/31
     but slightly modified to accept axis option.

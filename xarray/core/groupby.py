@@ -599,7 +599,7 @@ class GroupBy(SupportsArithmetic):
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
-        ...     dims=("y", "y"),
+        ...     dims=("x", "y"),
         ... )
         >>> ds = xr.Dataset({"a": da})
         >>> da.groupby("x").quantile(0)
@@ -624,13 +624,14 @@ class GroupBy(SupportsArithmetic):
                 [4.2 , 6.3 , 8.4 ],
                 [0.7 , 5.05, 9.4 ],
                 [1.5 , 4.2 , 6.9 ]],
+        <BLANKLINE>
                [[6.5 , 6.5 , 6.5 ],
                 [7.3 , 7.3 , 7.3 ],
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
-          * y         (y) int64 1 1 2 2
           * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) int64 1 1 2 2
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>

@@ -1018,10 +1018,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
-        * x        (x) <U3 'one' 'two'
+          * x        (x) <U3 'one' 'two'
         Dimensions without coordinates: dim_0, dim_1
         Data variables:
-            foo      (dim_0, dim_1) float64 -0.8079 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 -1 2
 
         >>> ds_0 = ds.copy(deep=False)
@@ -1030,20 +1030,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
-        * x        (x) <U3 'one' 'two'
+          * x        (x) <U3 'one' 'two'
         Dimensions without coordinates: dim_0, dim_1
         Data variables:
-            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            foo      (dim_0, dim_1) float64 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 -1 2
 
         >>> ds
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
-        * x        (x) <U3 'one' 'two'
+          * x        (x) <U3 'one' 'two'
         Dimensions without coordinates: dim_0, dim_1
         Data variables:
-            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            foo      (dim_0, dim_1) float64 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 -1 2
 
         Changing the data using the ``data`` argument maintains the
@@ -1054,7 +1054,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
-        * x        (x) <U3 'one' 'two'
+          * x        (x) <U3 'one' 'two'
         Dimensions without coordinates: dim_0, dim_1
         Data variables:
             foo      (dim_0, dim_1) int64 0 1 2 3 4 5
@@ -1064,10 +1064,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Coordinates:
-        * x        (x) <U3 'one' 'two'
+          * x        (x) <U3 'one' 'two'
         Dimensions without coordinates: dim_0, dim_1
         Data variables:
-            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            foo      (dim_0, dim_1) float64 7.0 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 -1 2
 
         See Also
@@ -2402,10 +2402,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-        * station      (station) <U7 'boston' 'nyc' 'seattle' 'denver'
+          * station      (station) <U7 'boston' 'nyc' 'seattle' 'denver'
         Data variables:
-            temperature  (station) float64 18.84 14.59 19.22 17.16
-            pressure     (station) float64 324.1 194.3 122.8 244.3
+            temperature  (station) float64 10.98 14.3 12.06 10.9
+            pressure     (station) float64 211.8 322.9 218.8 445.9
         >>> x.indexes
         station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
 
@@ -2417,10 +2417,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
-            temperature  (station) float64 18.84 nan 19.22 nan
-            pressure     (station) float64 324.1 nan 122.8 nan
+            temperature  (station) float64 10.98 nan 12.06 nan
+            pressure     (station) float64 211.8 nan 218.8 nan
 
         We can fill in the missing values by passing a value to the keyword `fill_value`.
 
@@ -2428,10 +2428,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
-            temperature  (station) float64 18.84 0.0 19.22 0.0
-            pressure     (station) float64 324.1 0.0 122.8 0.0
+            temperature  (station) float64 10.98 0.0 12.06 0.0
+            pressure     (station) float64 211.8 0.0 218.8 0.0
 
         We can also use different fill values for each variable.
 
@@ -2441,10 +2441,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-        * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
-            temperature  (station) float64 18.84 0.0 19.22 0.0
-            pressure     (station) float64 324.1 100.0 122.8 100.0
+            temperature  (station) float64 10.98 0.0 12.06 0.0
+            pressure     (station) float64 211.8 100.0 218.8 100.0
 
         Because the index is not monotonically increasing or decreasing, we cannot use arguments
         to the keyword method to fill the `NaN` values.
@@ -2472,10 +2472,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (time: 6)
         Coordinates:
-        * time         (time) datetime64[ns] 2019-01-01 2019-01-02 ... 2019-01-06
+          * time         (time) datetime64[ns] 2019-01-01 2019-01-02 ... 2019-01-06
         Data variables:
             temperature  (time) float64 15.57 12.77 nan 0.3081 16.59 15.12
-            pressure     (time) float64 103.4 122.7 452.0 444.0 399.2 486.0
+            pressure     (time) float64 481.8 191.7 395.9 264.4 284.0 462.8
 
         Suppose we decide to expand the dataset to cover a wider date range.
 
@@ -2484,10 +2484,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (time: 10)
         Coordinates:
-        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+          * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
         Data variables:
             temperature  (time) float64 nan nan nan 15.57 ... 0.3081 16.59 15.12 nan
-            pressure     (time) float64 nan nan nan 103.4 ... 444.0 399.2 486.0 nan
+            pressure     (time) float64 nan nan nan 481.8 ... 264.4 284.0 462.8 nan
 
         The index entries that did not have a value in the original data frame (for example, `2018-12-29`)
         are by default filled with NaN. If desired, we can fill in the missing values using one of several options.
@@ -2500,10 +2500,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (time: 10)
         Coordinates:
-        * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
+          * time         (time) datetime64[ns] 2018-12-29 2018-12-30 ... 2019-01-07
         Data variables:
             temperature  (time) float64 15.57 15.57 15.57 15.57 ... 16.59 15.12 nan
-            pressure     (time) float64 103.4 103.4 103.4 103.4 ... 399.2 486.0 nan
+            pressure     (time) float64 481.8 481.8 481.8 481.8 ... 284.0 462.8 nan
 
         Please note that the `NaN` value present in the original dataset (at index value `2019-01-03`)
         will not be filled by any of the value propagation schemes.
@@ -2512,18 +2512,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (time: 1)
         Coordinates:
-        * time         (time) datetime64[ns] 2019-01-03
+          * time         (time) datetime64[ns] 2019-01-03
         Data variables:
             temperature  (time) float64 nan
-            pressure     (time) float64 452.0
+            pressure     (time) float64 395.9
         >>> x3.where(x3.temperature.isnull(), drop=True)
         <xarray.Dataset>
         Dimensions:      (time: 2)
         Coordinates:
-        * time         (time) datetime64[ns] 2019-01-03 2019-01-07
+          * time         (time) datetime64[ns] 2019-01-03 2019-01-07
         Data variables:
             temperature  (time) float64 nan nan
-            pressure     (time) float64 452.0 nan
+            pressure     (time) float64 395.9 nan
 
         This is because filling while reindexing does not look at dataset values, but only compares
         the original and desired indexes. If you do want to fill in the `NaN` values present in the
@@ -3431,20 +3431,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 3)
         Coordinates:
-        * y        (y) <U1 'u' 'v' 'w'
+          * y        (y) <U1 'u' 'v' 'w'
         Dimensions without coordinates: x
         Data variables:
             a        (x, y) int64 0 1 2 3 4 5
             b        (x) int64 6 7
 
         >>> data.to_stacked_array("z", sample_dims=["x"])
-        <xarray.DataArray (x: 2, z: 4)>
+        <xarray.DataArray 'a' (x: 2, z: 4)>
         array([[0, 1, 2, 6],
-            [3, 4, 5, 7]])
+               [3, 4, 5, 7]])
         Coordinates:
-        * z         (z) MultiIndex
-        - variable  (z) object 'a' 'a' 'a' 'b'
-        - y         (z) object 'u' 'v' 'w' nan
+          * z         (z) MultiIndex
+          - variable  (z) object 'a' 'a' 'a' 'b'
+          - y         (z) object 'u' 'v' 'w' nan
         Dimensions without coordinates: x
 
         """
@@ -3822,7 +3822,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'b'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 -0.3454 0.1734
+            A        (x, y) float64 0.4002 1.868
         >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
@@ -3830,7 +3830,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'a' 'c'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 -0.3944 -1.418 1.423 -1.041
+            A        (x, y) float64 1.764 0.9787 2.241 -0.9773
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -4036,7 +4036,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (x: 4)
         Coordinates:
-        * x        (x) int64 0 1 2 3
+          * x        (x) int64 0 1 2 3
         Data variables:
             A        (x) float64 nan 2.0 nan 0.0
             B        (x) float64 3.0 4.0 nan 1.0
@@ -4049,7 +4049,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (x: 4)
         Coordinates:
-        * x        (x) int64 0 1 2 3
+          * x        (x) int64 0 1 2 3
         Data variables:
             A        (x) float64 0.0 2.0 0.0 0.0
             B        (x) float64 3.0 4.0 0.0 1.0
@@ -4063,7 +4063,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (x: 4)
         Coordinates:
-        * x        (x) int64 0 1 2 3
+          * x        (x) int64 0 1 2 3
         Data variables:
             A        (x) float64 0.0 2.0 0.0 0.0
             B        (x) float64 3.0 4.0 1.0 1.0
@@ -4371,14 +4371,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
-            foo      (dim_0, dim_1) float64 -0.3751 -1.951 -1.945 0.2948 0.711 -0.3948
+            foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
             bar      (x) int64 -1 2
         >>> ds.map(np.fabs)
         <xarray.Dataset>
         Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
-            foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
+            foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 1.0 2.0
         """
         variables = {
@@ -4462,11 +4462,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lat            (lat) int64 10 20
-        * lon            (lon) int64 150 160
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
-            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
+            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
 
         Where the value is a callable, evaluated on dataset:
 
@@ -4474,12 +4474,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lat            (lat) int64 10 20
-        * lon            (lon) int64 150 160
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
-            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
-            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
+            temperature_f  (lat, lon) float64 51.76 57.75 53.7 51.62
 
         Alternatively, the same behavior can be achieved by directly referencing an existing dataarray:
 
@@ -4487,12 +4487,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
         Coordinates:
-        * lat            (lat) int64 10 20
-        * lon            (lon) int64 150 160
+          * lat            (lat) int64 10 20
+          * lon            (lon) int64 150 160
         Data variables:
-            temperature_c  (lat, lon) float64 18.04 12.51 17.64 9.313
-            precipitation  (lat, lon) float64 0.4751 0.6827 0.3697 0.03524
-            temperature_f  (lat, lon) float64 64.47 54.51 63.75 48.76
+            temperature_c  (lat, lon) float64 10.98 14.3 12.06 10.9
+            precipitation  (lat, lon) float64 0.4237 0.6459 0.4376 0.8918
+            temperature_f  (lat, lon) float64 51.76 57.75 53.7 51.62
 
         """
         variables = either_dict_or_kwargs(variables, variables_kwargs, "assign")
@@ -5056,17 +5056,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> ds.diff("x")
         <xarray.Dataset>
         Dimensions:  (x: 3)
-        Coordinates:
-          * x        (x) int64 1 2 3
+        Dimensions without coordinates: x
         Data variables:
             foo      (x) int64 0 1 0
         >>> ds.diff("x", 2)
         <xarray.Dataset>
         Dimensions:  (x: 2)
-        Coordinates:
-        * x        (x) int64 2 3
+        Dimensions without coordinates: x
         Data variables:
-        foo      (x) int64 1 -1
+            foo      (x) int64 1 -1
 
         See Also
         --------
@@ -5149,8 +5147,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> ds.shift(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
-        Coordinates:
-          * x        (x) int64 0 1 2 3 4
+        Dimensions without coordinates: x
         Data variables:
             foo      (x) object nan nan 'a' 'b' 'c'
         """
@@ -5214,10 +5211,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         >>> ds.roll(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
-        Coordinates:
-          * x        (x) int64 3 4 0 1 2
+        Dimensions without coordinates: x
         Data variables:
-            foo      (x) object 'd' 'e' 'a' 'b' 'c'
+            foo      (x) <U1 'd' 'e' 'a' 'b' 'c'
         """
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
         invalid = [k for k in shifts if k not in self.dims]
@@ -5733,29 +5729,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-          * x               (x) int64 0 1
-          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
-          * y               (y) int64 0 1
             reference_time  datetime64[ns] 2014-09-05
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        Dimensions without coordinates: x, y
         Data variables:
-            precipitation   (x, y, time) float64 4.178 2.307 6.041 6.046 0.06648 ...
+            precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
         >>> # Get all variables that have a standard_name attribute.
         >>> standard_name = lambda v: v is not None
         >>> ds.filter_by_attrs(standard_name=standard_name)
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
-            lat             (x, y) float64 42.25 42.21 42.63 42.59
-          * x               (x) int64 0 1
-          * y               (y) int64 0 1
-          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
             reference_time  datetime64[ns] 2014-09-05
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        Dimensions without coordinates: x, y
         Data variables:
-            temperature     (x, y, time) float64 25.86 20.82 6.954 23.13 10.25 11.68 ...
-            precipitation   (x, y, time) float64 5.702 0.9422 2.075 1.178 3.284 ...
+            temperature     (x, y, time) float64 29.11 18.2 22.83 ... 18.28 16.15 26.63
+            precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
 
         """
         selection = []
@@ -6370,7 +6364,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) int64 -1 0 1
         Data variables:
             int      <U1 'e'
-            float    (y) <U1 'e' 'a' 'c'
+            float    (y) object 'e' 'a' 'c'
         """
         return self.map(
             methodcaller(
