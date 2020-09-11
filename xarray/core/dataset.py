@@ -1123,8 +1123,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set()
         indexes: Dict[Hashable, pd.Index] = {}
 
-        names = [name for name in self.variables.keys() if name in names]
-        for name in names:
+        def key(name):
+            try:
+                return list(self._variables.keys()).index(name)
+            except ValueError:
+                return len(self._variables)
+
+        for name in sorted(names, key=key):
             try:
                 variables[name] = self._variables[name]
             except KeyError:
