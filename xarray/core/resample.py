@@ -29,8 +29,8 @@ class Resample:
 
         Parameters
         ----------
-        method : str {'asfreq', 'pad', 'ffill', 'backfill', 'bfill', 'nearest',
-                 'interpolate'}
+        method : {"asfreq", "pad", "ffill", "backfill", "bfill", "nearest", \
+                 "interpolate"}
             Method to use for up-sampling
 
         See Also
@@ -130,8 +130,8 @@ class Resample:
 
         Parameters
         ----------
-        kind : str {'linear', 'nearest', 'zero', 'slinear',
-               'quadratic', 'cubic'}
+        kind : {"linear", "nearest", "zero", "slinear", \
+               "quadratic", "cubic"}, default: "linear"
             Interpolation scheme to use
 
         See Also
@@ -193,7 +193,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Callable to apply to each array.
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
@@ -253,8 +253,7 @@ ops.inject_binary_ops(DataArrayResample)
 
 
 class DatasetResample(DatasetGroupBy, Resample):
-    """DatasetGroupBy object specialized to resampling a specified dimension
-    """
+    """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
 
@@ -287,7 +286,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Callable to apply to each sub-dataset.
         args : tuple, optional
             Positional arguments passed on to `func`.
@@ -327,7 +326,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.

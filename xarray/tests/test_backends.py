@@ -1564,6 +1564,15 @@ class ZarrBase(CFEncodedBase):
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    def test_with_chunkstore(self):
+        expected = create_test_data()
+        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+            save_kwargs = {"chunk_store": chunk_store}
+            self.save(expected, store_target, **save_kwargs)
+            open_kwargs = {"chunk_store": chunk_store}
+            with self.open(store_target, **open_kwargs) as ds:
+                assert_equal(ds, expected)
+
     @requires_dask
     def test_auto_chunk(self):
         original = create_test_data().chunk()
@@ -2004,6 +2013,27 @@ class ZarrBase(CFEncodedBase):
             assert_equal(ds1, original)
             with self.roundtrip(ds1.isel(t=0)) as ds2:
                 assert_equal(ds2, original.isel(t=0))
+
+    @requires_dask
+    def test_chunk_encoding_with_partial_dask_chunks(self):
+        original = xr.Dataset(
+            {"x": xr.DataArray(np.random.random(size=(6, 8)), dims=("a", "b"))}
+        ).chunk({"a": 3})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"x": {"chunks": [3, 2]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
+    @requires_cftime
+    def test_open_zarr_use_cftime(self):
+        ds = create_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, consolidated=True)
+            ds_a = xr.open_zarr(store_target, consolidated=True)
+            assert_identical(ds, ds_a)
+            ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
+            assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
 
 @requires_zarr

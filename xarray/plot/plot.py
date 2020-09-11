@@ -141,17 +141,17 @@ def plot(
     Parameters
     ----------
     darray : DataArray
-    row : string, optional
+    row : str, optional
         If passed, make row faceted plots on this dimension name
-    col : string, optional
+    col : str, optional
         If passed, make column faceted plots on this dimension name
-    hue : string, optional
+    hue : str, optional
         If passed, make faceted line plots with hue on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes, optional
+    ax : matplotlib.axes.Axes, optional
         If None, uses the current axis. Not applicable when using facets.
-    rtol : number, optional
+    rtol : float, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
@@ -265,9 +265,9 @@ def line(
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_legend : boolean, optional
+    add_legend : bool, optional
         Add legend with y axis coordinates (2D inputs only).
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -337,23 +337,23 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
 
     Parameters
     ----------
-    where : {'pre', 'post', 'mid'}, optional, default 'pre'
+    where : {"pre", "post", "mid"}, default: "pre"
         Define where the steps should be placed:
 
-        - 'pre': The y value is continued constantly to the left from
+        - "pre": The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - 'post': The y value is continued constantly to the right from
+        - "post": The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - 'mid': Steps occur half-way between the *x* positions.
+        - "mid": Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
@@ -407,7 +407,7 @@ def hist(
     size : scalar, optional
         If provided, create a new figure for the plot with the given size.
         Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib axes object, optional
+    ax : matplotlib.axes.Axes, optional
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
@@ -463,6 +463,15 @@ class _PlotMethods:
         return step(self._da, *args, **kwargs)
 
 
+def override_signature(f):
+    def wrapper(func):
+        func.__wrapped__ = f
+
+        return func
+
+    return wrapper
+
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic
@@ -494,7 +503,7 @@ def _plot2d(plotfunc):
         If passed, make row faceted plots on this dimension name
     col : string, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
     xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
         Specifies scaling for the x- and y-axes respectively
@@ -506,9 +515,9 @@ def _plot2d(plotfunc):
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_colorbar : Boolean, optional
+    add_colorbar : bool, optional
         Adds colorbar to axis
-    add_labels : Boolean, optional
+    add_labels : bool, optional
         Use xarray metadata to label axes
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg
@@ -537,7 +546,7 @@ def _plot2d(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
@@ -572,6 +581,16 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
         darray,
@@ -720,9 +739,7 @@ def _plot2d(plotfunc):
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
-            raise ValueError(
-                "plt.imshow's `aspect` kwarg is not available " "in xarray"
-            )
+            raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
 
         if subplot_kws is None:
             subplot_kws = dict()
@@ -753,7 +770,7 @@ def _plot2d(plotfunc):
         elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError(
-                "cbar_ax and cbar_kwargs can't be used with " "add_colorbar=False."
+                "cbar_ax and cbar_kwargs can't be used with add_colorbar=False."
             )
 
         # origin kwarg overrides yincrease

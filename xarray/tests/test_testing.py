@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import xarray as xr
+from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import has_dask
 
@@ -98,7 +99,14 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
 @pytest.mark.parametrize(
     "duckarray",
     (
-        pytest.param(np.array, id="numpy"),
+        pytest.param(
+            np.array,
+            id="numpy",
+            marks=pytest.mark.skipif(
+                not IS_NEP18_ACTIVE,
+                reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled",
+            ),
+        ),
         pytest.param(
             dask_from_array,
             id="dask",

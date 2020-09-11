@@ -1589,7 +1589,8 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        with raises_regex(ValueError, "dimension 'x'"):
+        # this checks for ValueError in dask.array.apply_gufunc
+        with raises_regex(ValueError, "consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -1949,7 +1950,10 @@ class TestVariable(VariableSubclassobjects):
         # Test kept attrs
         with set_options(keep_attrs=True):
             new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+                windows={"coord": 1},
+                func=test_func,
+                boundary="exact",
+                side="left",
             )
         assert new.attrs == _attrs
 
