@@ -216,13 +216,7 @@ class DatasetCoordinates(Coordinates):
     def to_dataset(self) -> "Dataset":
         """Convert these coordinates into a new Dataset"""
 
-        def key(name):
-            try:
-                return list(self._data._variables.keys()).index(name)
-            except ValueError:
-                return len(self._data._variables)
-
-        names = sorted(self._names, key=key)
+        names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 
     def _update_coords(
