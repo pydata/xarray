@@ -58,6 +58,7 @@ Other domains
 ~~~~~~~~~~~~~
 - `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
+- `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
