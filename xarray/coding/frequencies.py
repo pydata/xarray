@@ -1,7 +1,7 @@
-"""FrequencyInferer analog for cftime.datetime objects"""
+"""FrequencyInferer analog for cftime datetime objects"""
 # The infer_freq method and the _CFTimeFrequencyInferer
 # subclass defined here were copied and adapted for
-# use with cftime.datetime objects based on the source code in
+# use with cftime datetime objects based on the source code in
 # pandas.tseries.Frequencies._FrequencyInferer
 
 # For reference, here is a copy of the pandas copyright notice:

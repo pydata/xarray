@@ -75,7 +75,7 @@ Bug fixes
 - Fixed a few bugs with :py:meth:`Dataset.polyfit` when encountering deficient matrix ranks (:issue:`4190`, :pull:`4193`). By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Fixed inconsistencies between docstring and functionality for :py:meth:`DataArray.str.get`
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
+- Fixed overflow issue causing incorrect results in computing means of ``cftime`` datetime
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). by `Julia Kent <https://github.com/jukent>`_.
 - fix the signature of the plot methods. (:pull:`4359`) By `Justus Magin <https://github.com/keewis>`_.
@@ -118,7 +118,9 @@ Internal Changes
 - Versions in ``pre-commit.yaml`` are now pinned, to reduce the chances of
   conflicting versions. (:pull:`4388`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
-
+- Add compatibility for the latest version of ``cftime``, where the name of the base
+  datetime class was changed to ``cftime.datetime_base`` from ``cftime.datetime``.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 .. _whats-new.0.16.0:
@@ -385,7 +387,7 @@ New Features
   disable, use ``xarray.set_options(display_style="text")``.
   By `Julia Signell <https://github.com/jsignell>`_.
 - Added support for :py:class:`pandas.DatetimeIndex`-style rounding of
-  ``cftime.datetime`` objects directly via a :py:class:`CFTimeIndex` or via the
+  ``cftime`` datetime objects directly via a :py:class:`CFTimeIndex` or via the
   :py:class:`~core.accessor_dt.DatetimeAccessor`.
   By `Spencer Clark <https://github.com/spencerkclark>`_
 - Support new h5netcdf backend keyword `phony_dims` (available from h5netcdf
@@ -1361,12 +1363,12 @@ cftime related enhancements
   By `Jwen Fai Low <https://github.com/jwenfai>`_ and
   `Spencer Clark <https://github.com/spencerkclark>`_.
 
-- Taking the mean of arrays of :py:class:`cftime.datetime` objects, and
+- Taking the mean of arrays of ``cftime`` datetime objects, and
   by extension, use of :py:meth:`~xarray.DataArray.coarsen` with
-  :py:class:`cftime.datetime` coordinates is now possible. By `Spencer Clark
+  ``cftime`` datetime coordinates is now possible. By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 
-- Internal plotting now supports ``cftime.datetime`` objects as time series.
+- Internal plotting now supports ``cftime`` datetime objects as time series.
   (:issue:`2164`)
   By `Julius Busecke <https://github.com/jbusecke>`_ and
   `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -1375,7 +1377,7 @@ cftime related enhancements
   By `Jwen Fai Low <https://github.com/jwenfai>`_
 
 - :py:meth:`~xarray.open_dataset` now accepts a ``use_cftime`` argument, which
-  can be used to require that ``cftime.datetime`` objects are always used, or
+  can be used to require that ``cftime`` datetime objects are always used, or
   never used when decoding dates encoded with a standard calendar.  This can be
   used to ensure consistent date types are returned when using
   :py:meth:`~xarray.open_mfdataset` (:issue:`1263`) and/or to silence
@@ -1432,7 +1434,7 @@ Bug fixes
 - Line plots with the ``x`` argument set to a non-dimensional coord now plot
   the correct data for 1D DataArrays.
   (:issue:`2725`). By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Subtracting a scalar ``cftime.datetime`` object from a
+- Subtracting a scalar ``cftime`` datetime object from a
   :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
   instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
@@ -1628,7 +1630,7 @@ Breaking changes
 
 - Support for non-standard calendars used in climate science:
 
-  - Xarray will now always use :py:class:`cftime.datetime` objects, rather
+  - Xarray will now always use ``cftime`` datetime objects, rather
     than by default trying to coerce them into ``np.datetime64[ns]`` objects.
     A :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
     coordinates in these cases.
@@ -1655,7 +1657,7 @@ Enhancements
 - Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
   CFTimeIndex by a specified frequency. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Added support for using ``cftime.datetime`` coordinates with
+- Added support for using ``cftime`` datetime coordinates with
   :py:meth:`~xarray.DataArray.differentiate`,
   :py:meth:`~xarray.Dataset.differentiate`,
   :py:meth:`~xarray.DataArray.interp`, and
@@ -2051,7 +2053,7 @@ Enhancements
   (:issue:`789`, :issue:`1084`, :issue:`1252`)
   By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
   `Stephan Hoyer <https://github.com/shoyer>`_.
-- Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
+- Allow for serialization of ``cftime`` datetime objects (:issue:`789`,
   :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
   library.
   By `Spencer Clark <https://github.com/spencerkclark>`_.

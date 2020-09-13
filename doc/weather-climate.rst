@@ -37,7 +37,7 @@ using a standard calendar, but outside the `Timestamp-valid range`_
 
 .. note::
 
-   As of xarray version 0.11, by default, :py:class:`cftime.datetime` objects
+   As of xarray version 0.11, by default, ``cftime`` datetime objects
    will be used to represent times (either in indexes, as a
    :py:class:`~xarray.CFTimeIndex`, or in data arrays with dtype object) if
    any of the following are true:
@@ -144,7 +144,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
     da.groupby("time.month").sum()
 
-- Interpolation using :py:class:`cftime.datetime` objects:
+- Interpolation using ``cftime`` datetime objects:
 
 .. ipython:: python
 

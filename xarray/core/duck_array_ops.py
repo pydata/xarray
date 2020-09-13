@@ -401,7 +401,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     ----------
     da : array-like
       Input data
-    offset: None, datetime or cftime.datetime
+    offset: None, datetime or cftime datetime
       Datetime offset. If None, this is set by default to the array's minimum
       value to reduce round off errors.
     datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
@@ -527,7 +527,7 @@ def py_timedelta_to_float(array, datetime_unit):
 
 
 def mean(array, axis=None, skipna=None, **kwargs):
-    """inhouse mean that can handle np.datetime64 or cftime.datetime
+    """inhouse mean that can handle np.datetime64 or cftime datetime
     dtypes"""
     from .common import _contains_cftime_datetimes
 
@@ -547,7 +547,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         if is_duck_dask_array(array):
             raise NotImplementedError(
                 "Computing the mean of an array containing "
-                "cftime.datetime objects is not yet implemented on "
+                "cftime datetime objects is not yet implemented on "
                 "dask arrays."
             )
         offset = min(array)

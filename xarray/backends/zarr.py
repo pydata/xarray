@@ -582,8 +582,8 @@ def open_zarr(
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
         ``np.datetime64[ns]`` objects; if this is not possible, decode times to
-        ``cftime.datetime`` objects. If True, always decode times to
-        ``cftime.datetime`` objects, regardless of whether or not they can be
+        ``cftime`` datetime objects. If True, always decode times to
+        ``cftime`` datetime objects, regardless of whether or not they can be
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.

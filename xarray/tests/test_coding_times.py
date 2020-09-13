@@ -397,7 +397,8 @@ def test_decode_non_standard_calendar_single_element(calendar):
 
     units = "days since 0001-01-01"
 
-    dt = cftime.datetime(2001, 2, 29)
+    date_type = _all_cftime_date_types()[calendar]
+    dt = date_type(2001, 2, 29)
 
     num_time = cftime.date2num(dt, units, calendar)
     actual = coding.times.decode_cf_datetime(num_time, units, calendar=calendar)

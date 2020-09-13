@@ -169,7 +169,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                     warnings.warn(
                         "Unable to decode time axis into full "
                         "numpy.datetime64 objects, continuing using "
-                        "cftime.datetime objects instead, reason: dates out "
+                        "cftime datetime objects instead, reason: dates out "
                         "of range",
                         SerializationWarning,
                         stacklevel=3,
@@ -258,7 +258,7 @@ def infer_datetime_units(dates):
 
 
 def format_cftime_datetime(date):
-    """Converts a cftime.datetime object to a string with the format:
+    """Converts a cftime datetime object to a string with the format:
     YYYY-MM-DD HH:MM:SS.UUUUUU
     """
     return "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}".format(
@@ -284,7 +284,7 @@ def infer_timedelta_units(deltas):
 
 
 def cftime_to_nptime(times):
-    """Given an array of cftime.datetime objects, return an array of
+    """Given an array of cftime datetime objects, return an array of
     numpy.datetime64 objects of the same size"""
     times = np.asarray(times)
     new = np.empty(times.shape, dtype="M8[ns]")

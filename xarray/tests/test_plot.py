@@ -2300,7 +2300,7 @@ class TestCFDatetimePlot(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         """
-        Create a DataArray with a time-axis that contains cftime.datetime
+        Create a DataArray with a time-axis that contains cftime datetime
         objects.
         """
         # case for 1d array
@@ -2327,7 +2327,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
         """
-        Create a DataArray with a time-axis that contains cftime.datetime
+        Create a DataArray with a time-axis that contains cftime datetime
         objects.
         """
         month = np.arange(1, 13, 1)

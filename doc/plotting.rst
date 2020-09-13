@@ -26,7 +26,7 @@ makes for an easy transition between the two.
 Matplotlib must be installed before xarray can plot.
 
 To use xarray's plotting capabilities with time coordinates containing
-``cftime.datetime`` objects
+``cftime`` datetime objects
 `nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.2.0 or later
 needs to be installed.
 

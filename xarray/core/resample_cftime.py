@@ -229,10 +229,10 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
 
     Parameters
     ----------
-    first : cftime.datetime
+    first : cftime datetime
         Uncorrected starting datetime object for resampled CFTimeIndex range.
         Usually the min of the original CFTimeIndex.
-    last : cftime.datetime
+    last : cftime datetime
         Uncorrected ending datetime object for resampled CFTimeIndex range.
         Usually the max of the original CFTimeIndex.
     offset : xarray.coding.cftime_offsets.BaseCFTimeOffset
@@ -248,9 +248,9 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
 
     Returns
     -------
-    first : cftime.datetime
+    first : cftime datetime
         Corrected starting datetime object for resampled CFTimeIndex range.
-    last : cftime.datetime
+    last : cftime datetime
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
     if isinstance(offset, CFTIME_TICKS):
@@ -279,9 +279,9 @@ def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
 
     Parameters
     ----------
-    first : cftime.datetime
+    first : cftime datetime
         A datetime object representing the start of a CFTimeIndex range.
-    last : cftime.datetime
+    last : cftime datetime
         A datetime object representing the end of a CFTimeIndex range.
     offset : xarray.coding.cftime_offsets.BaseCFTimeOffset
         The offset object representing target conversion a.k.a. resampling
@@ -296,10 +296,10 @@ def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
 
     Returns
     -------
-    fresult : cftime.datetime
+    fresult : cftime datetime
         A datetime object representing the start of a date range that has been
         adjusted to fix resampling errors.
-    lresult : cftime.datetime
+    lresult : cftime datetime
         A datetime object representing the end of a date range that has been
         adjusted to fix resampling errors.
     """
@@ -352,15 +352,15 @@ def exact_cftime_datetime_difference(a, b):
 
     By construction, we know that b_0 - a_0 must be a round number
     of seconds.  Therefore we can take the result of b_0 - a_0 using
-    ordinary cftime.datetime arithmetic and round to the nearest
+    ordinary cftime datetime arithmetic and round to the nearest
     second.  b_m - a_m is the remainder, in microseconds, and we
     can simply add this to the rounded timedelta.
 
     Parameters
     ----------
-    a : cftime.datetime
+    a : cftime datetime
         Input datetime
-    b : cftime.datetime
+    b : cftime datetime
         Input datetime
 
     Returns

@@ -1663,9 +1663,9 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 
 def _contains_cftime_datetimes(array) -> bool:
-    """Check if an array contains cftime.datetime objects"""
+    """Check if an array contains cftime datetime objects"""
     try:
-        from cftime import datetime as cftime_datetime
+        cftime_datetime_base = _import_cftime_datetime_base()
     except ImportError:
         return False
     else:
@@ -1675,18 +1675,26 @@ def _contains_cftime_datetimes(array) -> bool:
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
-            return isinstance(sample, cftime_datetime)
+            return isinstance(sample, cftime_datetime_base)
         else:
             return False
 
 
 def contains_cftime_datetimes(var) -> bool:
-    """Check if an xarray.Variable contains cftime.datetime objects"""
+    """Check if an xarray.Variable contains cftime datetime objects"""
     return _contains_cftime_datetimes(var.data)
 
 
 def _contains_datetime_like_objects(var) -> bool:
     """Check if a variable contains datetime like objects (either
-    np.datetime64, np.timedelta64, or cftime.datetime)
+    np.datetime64, np.timedelta64, or cftime datetime)
     """
     return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)
+
+
+def _import_cftime_datetime_base():
+    try:
+        from cftime import datetime_base as datetime
+    except ImportError:
+        from cftime import datetime
+    return datetime

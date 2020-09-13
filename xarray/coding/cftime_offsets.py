@@ -1,4 +1,4 @@
-"""Time offset classes for use with cftime.datetime objects"""
+"""Time offset classes for use with cftime datetime objects"""
 # The offset classes and mechanisms for generating time ranges defined in
 # this module were copied/adapted from those defined in pandas.  See in
 # particular the objects and methods defined in pandas.tseries.offsets
@@ -48,6 +48,7 @@ from typing import ClassVar, Optional
 
 import numpy as np
 
+from ..core.common import _import_cftime_datetime_base
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
@@ -99,10 +100,10 @@ class BaseCFTimeOffset:
         return self.__apply__(other)
 
     def __sub__(self, other):
-        import cftime
+        cftime_datetime_base = _import_cftime_datetime_base()
 
-        if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract a cftime.datetime " "from a time offset.")
+        if isinstance(other, cftime_datetime_base):
+            raise TypeError("Cannot subtract a cftime datetime " "from a time offset.")
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
@@ -164,7 +165,7 @@ def _get_day_of_month(other, day_option):
 
     Parameters
     ----------
-    other : cftime.datetime
+    other : cftime datetime
     day_option : 'start', 'end'
         'start': returns 1
         'end': returns last day of the month
@@ -255,7 +256,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
     Parameters
     ----------
-    other : cftime.datetime
+    other : cftime datetime
     n : number of periods to increment, before adjusting for rolling
     month : int reference month giving the first month of the year
     day_option : 'start', 'end'
@@ -382,10 +383,10 @@ class QuarterOffset(BaseCFTimeOffset):
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
     def __sub__(self, other):
-        import cftime
+        cftime_datetime_base = _import_cftime_datetime_base()
 
-        if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract cftime.datetime from offset.")
+        if isinstance(other, cftime_datetime_base):
+            raise TypeError("Cannot subtract cftime datetime from offset.")
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
@@ -467,10 +468,10 @@ class YearOffset(BaseCFTimeOffset):
         return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
-        import cftime
+        cftime_datetime_base = _import_cftime_datetime_base()
 
-        if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract cftime.datetime from offset.")
+        if isinstance(other, cftime_datetime_base):
+            raise TypeError("Cannot subtract cftime datetime from offset.")
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
@@ -672,22 +673,22 @@ def to_offset(freq):
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
-    import cftime
+    cftime_datetime_base = _import_cftime_datetime_base()
 
     if isinstance(date_str_or_date, str):
         if calendar is None:
             raise ValueError(
-                "If converting a string to a cftime.datetime object, "
+                "If converting a string to a cftime datetime object, "
                 "a calendar type must be provided"
             )
         date, _ = _parse_iso8601_with_reso(get_date_type(calendar), date_str_or_date)
         return date
-    elif isinstance(date_str_or_date, cftime.datetime):
+    elif isinstance(date_str_or_date, cftime_datetime_base):
         return date_str_or_date
     else:
         raise TypeError(
             "date_str_or_date must be a string or a "
-            "subclass of cftime.datetime. Instead got "
+            "subclass of cftime.datetime_base. Instead got "
             "{!r}.".format(date_str_or_date)
         )
 
@@ -706,7 +707,7 @@ def _maybe_normalize_date(date, normalize):
 
 
 def _generate_linear_range(start, end, periods):
-    """Generate an equally-spaced sequence of cftime.datetime objects between
+    """Generate an equally-spaced sequence of cftime datetime objects between
     and including two dates (whose length equals the number of periods)."""
     import cftime
 
@@ -720,21 +721,21 @@ def _generate_linear_range(start, end, periods):
 
 
 def _generate_range(start, end, periods, offset):
-    """Generate a regular range of cftime.datetime objects with a
+    """Generate a regular range of cftime datetime objects with a
     given time offset.
 
     Adapted from pandas.tseries.offsets.generate_range.
 
     Parameters
     ----------
-    start : cftime.datetime, or None
+    start : cftime datetime, or None
         Start of range
-    end : cftime.datetime, or None
+    end : cftime datetime, or None
         End of range
     periods : int, or None
         Number of elements in the sequence
     offset : BaseCFTimeOffset
-        An offset class designed for working with cftime.datetime objects
+        An offset class designed for working with cftime datetime objects
 
     Returns
     -------
@@ -789,9 +790,9 @@ def cftime_range(
 
     Parameters
     ----------
-    start : str or cftime.datetime, optional
+    start : str or cftime datetime, optional
         Left bound for generating dates.
-    end : str or cftime.datetime, optional
+    end : str or cftime datetime, optional
         Right bound for generating dates.
     periods : int, optional
         Number of periods to generate.
@@ -815,7 +816,7 @@ def cftime_range(
     -----
 
     This function is an analog of ``pandas.date_range`` for use in generating
-    sequences of ``cftime.datetime`` objects.  It supports most of the
+    sequences of ``cftime`` datetime objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
     ``closed`` on either side, or whether or not to ``normalize`` the start and
     end bounds); however, there are some notable exceptions:
@@ -933,7 +934,7 @@ def cftime_range(
     Examples
     --------
 
-    This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
+    This function returns a ``CFTimeIndex``, populated with ``cftime`` datetime
     objects associated with the specified calendar type, e.g.
 
     >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")

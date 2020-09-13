@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from ..core.common import _import_cftime_datetime_base
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
 
@@ -583,9 +584,8 @@ def _ensure_plottable(*args):
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
     other_types = [datetime]
     try:
-        import cftime
-
-        cftime_datetime = [cftime.datetime]
+        cftime_datetime_base = _import_cftime_datetime_base()
+        cftime_datetime = [cftime_datetime_base]
     except ImportError:
         cftime_datetime = []
     other_types = other_types + cftime_datetime
@@ -597,7 +597,7 @@ def _ensure_plottable(*args):
             raise TypeError(
                 "Plotting requires coordinates to be numeric, boolean, "
                 "or dates of type numpy.datetime64, "
-                "datetime.datetime, cftime.datetime or "
+                "datetime.datetime, cftime datetime or "
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
@@ -605,9 +605,9 @@ def _ensure_plottable(*args):
             and not nc_time_axis_available
         ):
             raise ImportError(
-                "Plotting of arrays of cftime.datetime "
+                "Plotting of arrays of cftime datetime "
                 "objects or arrays indexed by "
-                "cftime.datetime objects requires the "
+                "cftime datetime objects requires the "
                 "optional `nc-time-axis` (v1.2.0 or later) "
                 "package."
             )

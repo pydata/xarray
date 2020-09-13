@@ -1,6 +1,6 @@
-"""DatetimeIndex analog for cftime.datetime objects"""
+"""DatetimeIndex analog for cftime datetime objects"""
 # The pandas.Index subclass defined here was copied and adapted for
-# use with cftime.datetime objects based on the source code defining
+# use with cftime datetime objects based on the source code defining
 # pandas.DatetimeIndex.
 
 # For reference, here is a copy of the pandas copyright notice:
@@ -49,7 +49,7 @@ import pandas as pd
 
 from xarray.core.utils import is_scalar
 
-from ..core.common import _contains_cftime_datetimes
+from ..core.common import _contains_cftime_datetimes, _import_cftime_datetime_base
 from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
@@ -131,7 +131,7 @@ def _parse_iso8601_with_reso(date_type, timestr):
 def _parsed_string_to_bounds(date_type, resolution, parsed):
     """Generalization of
     pandas.tseries.index.DatetimeIndex._parsed_string_to_bounds
-    for use with non-standard calendars and cftime.datetime
+    for use with non-standard calendars and cftime datetime
     objects.
     """
     if resolution == "year":
@@ -207,14 +207,14 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    import cftime
+    cftime_datetime_base = _import_cftime_datetime_base()
 
     if len(data) > 0:
         sample = data[0]
         date_type = type(sample)
-        if not isinstance(sample, cftime.datetime):
+        if not isinstance(sample, cftime_datetime_base):
             raise TypeError(
-                "CFTimeIndex requires cftime.datetime "
+                "CFTimeIndex requires cftime datetime "
                 "objects. Got object of {}.".format(date_type)
             )
         if not all(isinstance(value, date_type) for value in data):
@@ -269,12 +269,12 @@ def format_attrs(index, separator=", "):
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
-    All elements of a CFTimeIndex must be cftime.datetime objects.
+    All elements of a CFTimeIndex must be cftime datetime objects.
 
     Parameters
     ----------
     data : array or CFTimeIndex
-        Sequence of cftime.datetime objects to use in index
+        Sequence of cftime datetime objects to use in index
     name : str, default: None
         Name of the resulting index
 
@@ -763,7 +763,7 @@ def _parse_array_of_cftime_strings(strings, date_type):
     ----------
     strings : array of strings
         Strings to convert to dates
-    date_type : cftime.datetime type
+    date_type : cftime datetime type
         Calendar type to use for dates
 
     Returns
@@ -788,7 +788,7 @@ def _cftimeindex_from_i8(values, date_type, name):
     ----------
     values : np.array
         Integers representing microseconds since 1970-01-01.
-    date_type : cftime.datetime
+    date_type : cftime datetime
         Type of date for the index.
     name : str
         Name of the index.

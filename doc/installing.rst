@@ -64,7 +64,7 @@ For plotting
 - `seaborn <http://seaborn.pydata.org/>`__: for better
   color palettes
 - `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
-  cftime.datetime objects
+  ``cftime`` datetime objects
 
 Alternative data containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
