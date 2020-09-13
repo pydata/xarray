@@ -1,14 +1,12 @@
 import logging
 import time
 import traceback
-import warnings
-from collections.abc import Mapping
 
 import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.utils import FrozenDict, NdimSizeLenMixin
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -74,17 +72,8 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-class AbstractDataStore(Mapping):
+class AbstractDataStore:
     __slots__ = ()
-
-    def __iter__(self):
-        return iter(self.variables)
-
-    def __getitem__(self, key):
-        return self.variables[key]
-
-    def __len__(self):
-        return len(self.variables)
 
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
@@ -125,38 +114,6 @@ class AbstractDataStore(Mapping):
         attributes = FrozenDict(self.get_attrs())
         return variables, attributes
 
-    @property
-    def variables(self):  # pragma: no cover
-        warnings.warn(
-            "The ``variables`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        variables, _ = self.load()
-        return variables
-
-    @property
-    def attrs(self):  # pragma: no cover
-        warnings.warn(
-            "The ``attrs`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        _, attrs = self.load()
-        return attrs
-
-    @property
-    def dimensions(self):  # pragma: no cover
-        warnings.warn(
-            "The ``dimensions`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.get_dimensions()
-
     def close(self):
         pass
 
@@ -177,7 +134,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if isinstance(source, dask_array_type):
+        if is_duck_dask_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)

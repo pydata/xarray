@@ -13,6 +13,7 @@ from pandas.errors import OutOfBoundsDatetime
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
+from .utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -261,6 +262,8 @@ def inline_variable_array_repr(var, max_width):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -455,9 +458,7 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__") or isinstance(
-        internal_data, dask_array_type
-    ):
+    elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
@@ -525,13 +526,6 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
-    def is_array_like(value):
-        return (
-            hasattr(value, "ndim")
-            and hasattr(value, "shape")
-            and hasattr(value, "dtype")
-        )
-
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
@@ -557,7 +551,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_array_like(a_mapping[k]) or is_array_like(b_mapping[k]):
+            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
                 compatible = array_equiv(a_mapping[k], b_mapping[k])
             else:
                 compatible = a_mapping[k] == b_mapping[k]
@@ -586,7 +580,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
     if diff_items:
-        summary += ["Differing {}:".format(title.lower())] + diff_items
+        summary += [f"Differing {title.lower()}:"] + diff_items
 
     summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
     summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")

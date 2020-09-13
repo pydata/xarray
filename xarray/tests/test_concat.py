@@ -250,7 +250,9 @@ class TestConcatDataset:
             assert_equal(actual, expected[join])
 
         # regression test for #3681
-        actual = concat([ds1.drop("x"), ds2.drop("x")], join="override", dim="y")
+        actual = concat(
+            [ds1.drop_vars("x"), ds2.drop_vars("x")], join="override", dim="y"
+        )
         expected = Dataset(
             {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
         )
@@ -349,18 +351,26 @@ class TestConcatDataset:
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value):
         datasets = [
-            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
+            Dataset({"a": ("x", [2, 3]), "b": ("x", [-2, 1]), "x": [1, 2]}),
+            Dataset({"a": ("x", [1, 2]), "b": ("x", [3, -1]), "x": [0, 1]}),
         ]
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_a = fill_value_b = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_a = fill_value["a"]
+            fill_value_b = fill_value["b"]
+        else:
+            fill_value_a = fill_value_b = fill_value
         expected = Dataset(
-            {"a": (("t", "x"), [[fill_value, 2, 3], [1, 2, fill_value]])},
+            {
+                "a": (("t", "x"), [[fill_value_a, 2, 3], [1, 2, fill_value_a]]),
+                "b": (("t", "x"), [[fill_value_b, -2, 1], [3, -1, fill_value_b]]),
+            },
             {"x": [0, 1, 2]},
         )
         actual = concat(datasets, dim="t", fill_value=fill_value)

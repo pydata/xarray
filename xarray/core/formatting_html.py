@@ -1,18 +1,22 @@
 import uuid
 from collections import OrderedDict
-from functools import partial
+from functools import lru_cache, partial
 from html import escape
 
 import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
 
-CSS_FILE_PATH = "/".join(("static", "css", "style.css"))
-CSS_STYLE = pkg_resources.resource_string("xarray", CSS_FILE_PATH).decode("utf8")
+STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
 
-ICONS_SVG_PATH = "/".join(("static", "html", "icons-svg-inline.html"))
-ICONS_SVG = pkg_resources.resource_string("xarray", ICONS_SVG_PATH).decode("utf8")
+@lru_cache(None)
+def _load_static_files():
+    """Lazily load the resource files into memory the first time they are needed"""
+    return [
+        pkg_resources.resource_string("xarray", fname).decode("utf8")
+        for fname in STATIC_FILES
+    ]
 
 
 def short_data_repr_html(array):
@@ -233,9 +237,10 @@ def _obj_repr(obj, header_components, sections):
     header = f"<div class='xr-header'>{''.join(h for h in header_components)}</div>"
     sections = "".join(f"<li class='xr-section-item'>{s}</li>" for s in sections)
 
+    icons_svg, css_style = _load_static_files()
     return (
         "<div>"
-        f"{ICONS_SVG}<style>{CSS_STYLE}</style>"
+        f"{icons_svg}<style>{css_style}</style>"
         f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
         "<div class='xr-wrap' hidden>"
         f"{header}"
@@ -249,12 +254,12 @@ def array_repr(arr):
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
 
     obj_type = "xarray.{}".format(type(arr).__name__)
-    arr_name = "'{}'".format(arr.name) if getattr(arr, "name", None) else ""
+    arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
     coord_names = list(arr.coords) if hasattr(arr, "coords") else []
 
     header_components = [
-        "<div class='xr-obj-type'>{}</div>".format(obj_type),
-        "<div class='xr-array-name'>{}</div>".format(arr_name),
+        f"<div class='xr-obj-type'>{obj_type}</div>",
+        f"<div class='xr-array-name'>{arr_name}</div>",
         format_dims(dims, coord_names),
     ]
 
