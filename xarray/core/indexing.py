@@ -173,7 +173,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             else _asarray_tuplesafe(label)
         )
         if label.ndim == 0:
-            label_value = label[()]
+            label_value = label[()] if label.dtype.kind in "mM" else label.item()
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label_value, level=0)
             elif isinstance(index, pd.CategoricalIndex):
