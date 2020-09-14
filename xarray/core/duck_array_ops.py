@@ -325,6 +325,9 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
+            # Method 1
+            if name in ["sum", "prod"]:
+                kwargs.pop("min_count", None)
             func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
@@ -350,9 +353,9 @@ argmax = _create_nan_agg_method("argmax", coerce_strings=True)
 argmin = _create_nan_agg_method("argmin", coerce_strings=True)
 max = _create_nan_agg_method("max", coerce_strings=True)
 min = _create_nan_agg_method("min", coerce_strings=True)
-sum = _create_nan_agg_method("sum")
-sum.numeric_only = True
-sum.available_min_count = True
+_sum = _create_nan_agg_method("sum")
+# sum.numeric_only = True
+# sum.available_min_count = True
 std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
@@ -361,7 +364,7 @@ median = _create_nan_agg_method("median", dask_module=dask_array_compat)
 median.numeric_only = True
 prod = _create_nan_agg_method("prod")
 prod.numeric_only = True
-sum.available_min_count = True
+prod.available_min_count = True
 cumprod_1d = _create_nan_agg_method("cumprod")
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum")
@@ -559,6 +562,20 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
 
 mean.numeric_only = True  # type: ignore
+
+
+# Method 2
+def sum(array, axis=None, skipna=None, **kwargs):
+
+    # get rid of min_count if not applicable
+    if (skipna is None and array.dtype.kind not in "cfO") or not skipna:
+        kwargs.pop("min_count", None)
+
+    return _sum(array, axis=axis, skipna=skipna, **kwargs)
+
+
+sum.numeric_only = True  # type: ignore
+sum.available_min_count = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

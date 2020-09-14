@@ -86,6 +86,10 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
+- The `min_count` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
+  is now ignored when not applicable, i.e. when `skipna=False` or when `skipna=None`
+  and the dtype does not have a missing value (:issue:`4352`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
