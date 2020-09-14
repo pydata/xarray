@@ -567,17 +567,17 @@ def test_concat_preserve_coordinate_order():
     data = np.zeros((2, 10, 5), dtype=bool)
 
     ds1 = Dataset(
-        {"data": (["time", "y", "x"], [data[0]])},
-        coords={"time": (["time"], [time[0]]), "y": (["y"], y), "x": (["x"], x)},
+        {"data": (["time", "y", "x"], data[0])},
+        coords={"time": time[0], "y": y, "x": x},
     )
     ds2 = Dataset(
-        {"data": (["time", "y", "x"], [data[1]])},
-        coords={"time": (["time"], [time[1]]), "y": (["y"], y), "x": (["x"], x)},
+        {"data": (["time", "y", "x"], data[1])},
+        coords={"time": time[1], "y": y, "x": x},
     )
 
     expected = Dataset(
         {"data": (["time", "y", "x"], data)},
-        coords={"time": (["time"], time), "y": (["y"], y), "x": (["x"], x)},
+        coords={"time": time, "y": y, "x": x},
     )
 
     actual = concat([ds1, ds2], dim="time")
