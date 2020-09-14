@@ -567,11 +567,11 @@ def test_concat_preserve_coordinate_order():
     data = np.zeros((2, 10, 5), dtype=bool)
 
     ds1 = Dataset(
-        {"data": (["time", "y", "x"], data[0])},
+        {"data": (["time", "y", "x"], [data[0]])},
         coords={"time": time[0], "y": y, "x": x},
     )
     ds2 = Dataset(
-        {"data": (["time", "y", "x"], data[1])},
+        {"data": (["time", "y", "x"], [data[1]])},
         coords={"time": time[1], "y": y, "x": x},
     )
 
