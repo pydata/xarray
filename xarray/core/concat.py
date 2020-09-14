@@ -459,7 +459,7 @@ def _dataset_concat(
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
-        else:
+        elif k in result_vars:
             # preserves original variable order
             result_vars[k] = result_vars.pop(k)
 
