@@ -563,16 +563,16 @@ def test_concat_merge_single_non_dim_coord():
 def test_concat_preserve_coordinate_order():
     x = np.arange(0, 5)
     y = np.arange(0, 10)
-    time = [0, 1]
-    data = np.zeros((2, 10, 5), dtype=bool)
+    time = np.arange(0, 4)
+    data = np.zeros((4, 10, 5), dtype=bool)
 
     ds1 = Dataset(
-        {"data": (["time", "y", "x"], [data[0]])},
-        coords={"time": time[0], "y": y, "x": x},
+        {"data": (["time", "y", "x"], data[0:2])},
+        coords={"time": time[0:2], "y": y, "x": x},
     )
     ds2 = Dataset(
-        {"data": (["time", "y", "x"], [data[1]])},
-        coords={"time": time[1], "y": y, "x": x},
+        {"data": (["time", "y", "x"], data[2:4])},
+        coords={"time": time[2:4], "y": y, "x": x},
     )
 
     expected = Dataset(
