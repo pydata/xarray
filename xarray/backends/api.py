@@ -445,7 +445,6 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
-
     extra_kwargs = {}
 
     def maybe_decode_store(store, lock=False):
