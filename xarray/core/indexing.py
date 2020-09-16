@@ -664,6 +664,12 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         self._ensure_copied()
         self.array[key] = value
 
+    def __deepcopy__(self, memo):
+        # CopyOnWriteArray is used to wrap backend array objects, which might
+        # point to files on disk, so we can't rely on the default deepcopy
+        # implementation. 
+        return type(self)(self.array)
+
 
 class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array",)
