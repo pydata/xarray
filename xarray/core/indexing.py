@@ -667,7 +667,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def __deepcopy__(self, memo):
         # CopyOnWriteArray is used to wrap backend array objects, which might
         # point to files on disk, so we can't rely on the default deepcopy
-        # implementation. 
+        # implementation.
         return type(self)(self.array)
 
 
