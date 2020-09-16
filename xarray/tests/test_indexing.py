@@ -86,6 +86,15 @@ class TestIndexers:
         with pytest.raises(IndexError):
             indexing.convert_label_indexer(mindex, (slice(None), 1, "no_level"))
 
+    def test_convert_label_indexer_datetime(self):
+        index = pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"])
+        actual = indexing.convert_label_indexer(index, "2001-01-01")
+        expected = (1, None)
+        assert actual == expected
+
+        actual = indexing.convert_label_indexer(index, index.to_numpy()[1])
+        assert actual == expected
+
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(["2001", "2000", "2002"])
         with pytest.raises(KeyError):

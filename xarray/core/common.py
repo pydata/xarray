@@ -1126,14 +1126,22 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim_name = dim
         dim_coord = self[dim]
 
-        if isinstance(self.indexes[dim_name], CFTimeIndex):
-            from .resample_cftime import CFTimeGrouper
-
-            grouper = CFTimeGrouper(freq, closed, label, base, loffset)
-        else:
-            grouper = pd.Grouper(
-                freq=freq, closed=closed, label=label, base=base, loffset=loffset
+        # TODO: remove once pandas=1.1 is the minimum required version
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                r"'(base|loffset)' in .resample\(\) and in Grouper\(\) is deprecated.",
+                category=FutureWarning,
             )
+
+            if isinstance(self.indexes[dim_name], CFTimeIndex):
+                from .resample_cftime import CFTimeGrouper
+
+                grouper = CFTimeGrouper(freq, closed, label, base, loffset)
+            else:
+                grouper = pd.Grouper(
+                    freq=freq, closed=closed, label=label, base=base, loffset=loffset
+                )
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )

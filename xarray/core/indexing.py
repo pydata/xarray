@@ -178,8 +178,10 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             else _asarray_tuplesafe(label)
         )
         if label.ndim == 0:
+            # see https://github.com/pydata/xarray/pull/4292 for details
+            label_value = label[()] if label.dtype.kind in "mM" else label.item()
             if isinstance(index, pd.MultiIndex):
-                indexer, new_index = index.get_loc_level(label.item(), level=0)
+                indexer, new_index = index.get_loc_level(label_value, level=0)
             elif isinstance(index, pd.CategoricalIndex):
                 if method is not None:
                     raise ValueError(
@@ -189,11 +191,9 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                     raise ValueError(
                         "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
                     )
-                indexer = index.get_loc(label.item())
+                indexer = index.get_loc(label_value)
             else:
-                indexer = index.get_loc(
-                    label.item(), method=method, tolerance=tolerance
-                )
+                indexer = index.get_loc(label_value, method=method, tolerance=tolerance)
         elif label.dtype.kind == "b":
             indexer = label
         else:
