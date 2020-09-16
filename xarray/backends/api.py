@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     except ImportError:
         Delayed = None
 
-
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
@@ -286,22 +285,22 @@ def load_dataarray(filename_or_obj, **kwargs):
 
 
 def open_dataset(
-    filename_or_obj,
-    group=None,
-    decode_cf=True,
-    mask_and_scale=None,
-    decode_times=True,
-    autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
-    engine=None,
-    chunks=None,
-    lock=None,
-    cache=None,
-    drop_variables=None,
-    backend_kwargs=None,
-    use_cftime=None,
-    decode_timedelta=None,
+        filename_or_obj,
+        group=None,
+        decode_cf=True,
+        mask_and_scale=None,
+        decode_times=True,
+        autoclose=None,
+        concat_characters=True,
+        decode_coords=True,
+        engine=None,
+        chunks=None,
+        lock=None,
+        cache=None,
+        drop_variables=None,
+        backend_kwargs=None,
+        use_cftime=None,
+        decode_timedelta=None,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -447,6 +446,8 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
+    extra_kwargs = {}
+
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
             store,
@@ -504,27 +505,23 @@ def open_dataset(
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        if engine == "netcdf4":
-            store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "scipy":
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == "pydap":
-            store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
-        elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "pynio":
-            store = backends.NioDataStore(filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == "pseudonetcdf":
-            store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, lock=lock, **backend_kwargs
-            )
-        elif engine == "cfgrib":
-            store = backends.CfGribDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs
+
+        select_backend = {
+            "netcdf4": backends.NetCDF4DataStore.open,
+            "scipy": backends.ScipyDataStore,
+            "pydap": backends.PydapDataStore.open,
+            "h5netcdf": backends.H5NetCDFStore.open,
+            "pynio": backends.NioDataStore,
+            "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
+            "cfgrib": backends.CfGribDataStore
+        }
+        if engine in ['netcdf4', 'h5netcdf']:
+            extra_kwargs['group'] = group
+            extra_kwargs['lock'] = lock
+        elif engine in ['pynio', 'pseudonetcdf', 'cfgrib']:
+            extra_kwargs['lock'] = lock
+        store = select_backend.get(engine)(
+                filename_or_obj, **backend_kwargs, **extra_kwargs
             )
 
     else:
@@ -553,22 +550,22 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj,
-    group=None,
-    decode_cf=True,
-    mask_and_scale=None,
-    decode_times=True,
-    autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
-    engine=None,
-    chunks=None,
-    lock=None,
-    cache=None,
-    drop_variables=None,
-    backend_kwargs=None,
-    use_cftime=None,
-    decode_timedelta=None,
+        filename_or_obj,
+        group=None,
+        decode_cf=True,
+        mask_and_scale=None,
+        decode_times=True,
+        autoclose=None,
+        concat_characters=True,
+        decode_coords=True,
+        engine=None,
+        chunks=None,
+        lock=None,
+        cache=None,
+        drop_variables=None,
+        backend_kwargs=None,
+        use_cftime=None,
+        decode_timedelta=None,
 ):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
@@ -722,21 +719,21 @@ class _MultiFileCloser:
 
 
 def open_mfdataset(
-    paths,
-    chunks=None,
-    concat_dim=None,
-    compat="no_conflicts",
-    preprocess=None,
-    engine=None,
-    lock=None,
-    data_vars="all",
-    coords="different",
-    combine="by_coords",
-    autoclose=None,
-    parallel=False,
-    join="outer",
-    attrs_file=None,
-    **kwargs,
+        paths,
+        chunks=None,
+        concat_dim=None,
+        compat="no_conflicts",
+        preprocess=None,
+        engine=None,
+        lock=None,
+        data_vars="all",
+        coords="different",
+        combine="by_coords",
+        autoclose=None,
+        parallel=False,
+        join="outer",
+        attrs_file=None,
+        **kwargs,
 ):
     """Open multiple files as a single dataset.
 
@@ -982,17 +979,17 @@ WRITEABLE_STORES: Dict[str, Callable] = {
 
 
 def to_netcdf(
-    dataset: Dataset,
-    path_or_file=None,
-    mode: str = "w",
-    format: str = None,
-    group: str = None,
-    engine: str = None,
-    encoding: Mapping = None,
-    unlimited_dims: Iterable[Hashable] = None,
-    compute: bool = True,
-    multifile: bool = False,
-    invalid_netcdf: bool = False,
+        dataset: Dataset,
+        path_or_file=None,
+        mode: str = "w",
+        format: str = None,
+        group: str = None,
+        engine: str = None,
+        encoding: Mapping = None,
+        unlimited_dims: Iterable[Hashable] = None,
+        compute: bool = True,
+        multifile: bool = False,
+        invalid_netcdf: bool = False,
 ) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, "Delayed", None]:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
@@ -1104,7 +1101,7 @@ def to_netcdf(
 
 
 def dump_to_store(
-    dataset, store, writer=None, encoder=None, encoding=None, unlimited_dims=None
+        dataset, store, writer=None, encoder=None, encoding=None, unlimited_dims=None
 ):
     """Store dataset contents to a backends.*DataStore object."""
     if writer is None:
@@ -1129,7 +1126,7 @@ def dump_to_store(
 
 
 def save_mfdataset(
-    datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
+        datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
 ):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
@@ -1255,11 +1252,11 @@ def _validate_datatypes_for_zarr_append(dataset):
 
     def check_dtype(var):
         if (
-            not np.issubdtype(var.dtype, np.number)
-            and not np.issubdtype(var.dtype, np.datetime64)
-            and not np.issubdtype(var.dtype, np.bool_)
-            and not coding.strings.is_unicode_dtype(var.dtype)
-            and not var.dtype == object
+                not np.issubdtype(var.dtype, np.number)
+                and not np.issubdtype(var.dtype, np.datetime64)
+                and not np.issubdtype(var.dtype, np.bool_)
+                and not coding.strings.is_unicode_dtype(var.dtype)
+                and not var.dtype == object
         ):
             # and not re.match('^bytes[1-9]+$', var.dtype.name)):
             raise ValueError(
@@ -1275,7 +1272,7 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 
 def _validate_append_dim_and_encoding(
-    ds_to_append, store, append_dim, encoding, **open_kwargs
+        ds_to_append, store, append_dim, encoding, **open_kwargs
 ):
     try:
         ds = backends.zarr.open_zarr(store, **open_kwargs)
@@ -1316,16 +1313,16 @@ def _validate_append_dim_and_encoding(
 
 
 def to_zarr(
-    dataset,
-    store=None,
-    chunk_store=None,
-    mode=None,
-    synchronizer=None,
-    group=None,
-    encoding=None,
-    compute=True,
-    consolidated=False,
-    append_dim=None,
+        dataset,
+        store=None,
+        chunk_store=None,
+        mode=None,
+        synchronizer=None,
+        group=None,
+        encoding=None,
+        compute=True,
+        consolidated=False,
+        append_dim=None,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
