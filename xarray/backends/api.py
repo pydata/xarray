@@ -505,7 +505,7 @@ def open_dataset(
         if engine is None:
             engine = _get_default_engine(filename_or_obj, allow_remote=True)
 
-        select_backend = {
+        backend_switch = {
             "netcdf4": backends.NetCDF4DataStore.open,
             "scipy": backends.ScipyDataStore,
             "pydap": backends.PydapDataStore.open,
@@ -519,7 +519,7 @@ def open_dataset(
             extra_kwargs["lock"] = lock
         elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
             extra_kwargs["lock"] = lock
-        store = select_backend.get(engine)(
+        store = backend_switch.get(engine)(
             filename_or_obj, **backend_kwargs, **extra_kwargs
         )
 
