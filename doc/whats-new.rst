@@ -84,6 +84,7 @@ Bug fixes
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
   that contains NaNs (:pull:`4233`).
   By `Jens Svensmark <https://github.com/jenssss>`_
+- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`)
 
 Documentation
 ~~~~~~~~~~~~~
