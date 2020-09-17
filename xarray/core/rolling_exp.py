@@ -93,7 +93,7 @@ class RollingExp:
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").mean()
         <xarray.DataArray (x: 5)>
-        array([1.      , 1.      , 1.692308, 1.9     , 1.966942])
+        array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
         Dimensions without coordinates: x
         """
 

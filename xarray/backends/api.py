@@ -1189,6 +1189,17 @@ def save_mfdataset(
 
     Save a dataset into one netCDF per year of data:
 
+    >>> ds = xr.Dataset(
+    ...     {"a": ("time", np.linspace(0, 1, 48))},
+    ...     coords={"time": pd.date_range("2010-01-01", freq="M", periods=48)},
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:  (time: 48)
+    Coordinates:
+      * time     (time) datetime64[ns] 2010-01-31 2010-02-28 ... 2013-12-31
+    Data variables:
+        a        (time) float64 0.0 0.02128 0.04255 0.06383 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
     >>> paths = ["%s.nc" % y for y in years]
     >>> xr.save_mfdataset(datasets, paths)
