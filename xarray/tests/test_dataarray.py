@@ -938,7 +938,7 @@ class TestDataArray:
         with raises_regex(ValueError, "cannot use non-scalar arrays"):
             array.sel(x=slice(array.x))
 
-    def test_sel_dataarray_datetime(self):
+    def test_sel_dataarray_datetime_slice(self):
         # regression test for GH1240
         times = pd.date_range("2000-01-01", freq="D", periods=365)
         array = DataArray(np.arange(365), [("time", times)])
@@ -1077,6 +1077,12 @@ class TestDataArray:
         assert_identical(da[:3], da.loc[["a", "b", "c"]])
         assert_identical(da[:3, :4], da.loc[["a", "b", "c"], np.arange(4)])
         assert_identical(da[:, :4], da.loc[:, self.ds["y"] < 4])
+
+    def test_loc_datetime64_value(self):
+        # regression test for https://github.com/pydata/xarray/issues/4283
+        t = np.array(["2017-09-05T12", "2017-09-05T15"], dtype="datetime64[ns]")
+        array = DataArray(np.ones(t.shape), dims=("time",), coords=(t,))
+        assert_identical(array.loc[{"time": t[0]}], array[0])
 
     def test_loc_assign(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
@@ -6186,13 +6192,41 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
+def test_coarsen_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    da = xr.DataArray(
+        np.linspace(0, 364, num=364),
+        dims="time",
+        coords={"time": pd.date_range("15/12/1999", periods=364)},
+        attrs=_attrs,
+    )
+
+    da2 = da.copy(deep=True)
+
+    # Test dropped attrs
+    dat = da.coarsen(time=3, boundary="trim").mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with xr.set_options(keep_attrs=True):
+        dat = da.coarsen(time=3, boundary="trim").mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs in original object
+    xr.testing.assert_identical(da, da2)
+
+
+@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Mean of empty slice")
-        rolling_obj_mean = rolling_obj.mean()
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da["time"])
     assert_identical(rolling_obj.window_labels, da["time"])
@@ -6200,10 +6234,8 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da["time"].isel(time=i)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            actual = rolling_obj_mean.isel(time=i)
-            expected = window_da.mean("time")
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean("time")
 
         # TODO add assert_allclose_with_nan, which compares nan position
         # as well as the closeness of the values.
@@ -6487,6 +6519,11 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+@pytest.mark.filterwarnings("error")
+def test_no_warning_for_all_nan():
+    _ = xr.DataArray([np.NaN, np.NaN]).mean()
 
 
 def test_name_in_masking():
@@ -6833,3 +6870,9 @@ def test_delete_coords():
     assert a1.dims == ("y", "x")
     assert set(a0.coords.keys()) == {"x", "y"}
     assert set(a1.coords.keys()) == {"x"}
+
+
+def test_deepcopy_obj_array():
+    x0 = DataArray(np.array([object()]))
+    x1 = deepcopy(x0)
+    assert x0.values[0] is not x1.values[0]

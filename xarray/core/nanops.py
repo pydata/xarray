@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from . import dtypes, nputils, utils
@@ -43,7 +45,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 
 def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
-    """ In house nanargmin, nanargmax for object arrays. Always return integer
+    """In house nanargmin, nanargmax for object arrays. Always return integer
     type
     """
     valid_count = count(value, axis=axis)
@@ -133,10 +135,14 @@ def nanmean(a, axis=None, dtype=None, out=None):
     if a.dtype.kind == "O":
         return _nanmean_ddof_object(0, a, axis=axis, dtype=dtype)
 
-    if isinstance(a, dask_array_type):
-        return dask_array.nanmean(a, axis=axis, dtype=dtype)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", r"Mean of empty slice", category=RuntimeWarning
+        )
+        if isinstance(a, dask_array_type):
+            return dask_array.nanmean(a, axis=axis, dtype=dtype)
 
-    return np.nanmean(a, axis=axis, dtype=dtype)
+        return np.nanmean(a, axis=axis, dtype=dtype)
 
 
 def nanmedian(a, axis=None, out=None):

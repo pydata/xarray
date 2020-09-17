@@ -59,10 +59,10 @@ def figure_context(*args, **kwargs):
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
-       Notes:  Scope is kept to module (only invoke this function once per test
-       module) else tests cannot be run in parallel (locally). Disadvantage: only
-       catches one open figure per run. May still give a false positive if tests
-       are run in parallel.
+    Notes:  Scope is kept to module (only invoke this function once per test
+    module) else tests cannot be run in parallel (locally). Disadvantage: only
+    catches one open figure per run. May still give a false positive if tests
+    are run in parallel.
     """
     yield None
 
@@ -2261,6 +2261,13 @@ class TestDatasetScatterPlots(PlotTestCase):
         # and raise an error if explicitly not allowed to do so
         with pytest.raises(ValueError):
             ds2.plot.scatter(x="A", y="B", hue="hue", hue_style="continuous")
+
+    def test_legend_labels(self):
+        # regression test for #4126: incorrect legend labels
+        ds2 = self.ds.copy()
+        ds2["hue"] = ["a", "a", "b", "b"]
+        lines = ds2.plot.scatter(x="A", y="B", hue="hue")
+        assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")

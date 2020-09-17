@@ -221,8 +221,7 @@ def _adjust_n_years(other, n, month, reference_day):
 
 
 def _shift_month(date, months, day_option="start"):
-    """Shift the date to a month start or end a given number of months away.
-    """
+    """Shift the date to a month start or end a given number of months away."""
     import cftime
 
     delta_year = (date.month + months) // 12
@@ -354,8 +353,7 @@ _MONTH_ABBREVIATIONS = {
 
 
 class QuarterOffset(BaseCFTimeOffset):
-    """Quarter representation copied off of pandas/tseries/offsets.py
-    """
+    """Quarter representation copied off of pandas/tseries/offsets.py"""
 
     _freq: ClassVar[str]
     _default_month: ClassVar[int]
@@ -941,7 +939,7 @@ def cftime_range(
     >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
-                dtype='object')
+                dtype='object', length=6, calendar='noleap')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with

@@ -24,7 +24,7 @@ def pytest_runtest_setup(item):
 
 
 @pytest.fixture(autouse=True)
-def add_standard_imports(doctest_namespace):
+def add_standard_imports(doctest_namespace, tmpdir):
     import numpy as np
     import pandas as pd
 
@@ -33,3 +33,9 @@ def add_standard_imports(doctest_namespace):
     doctest_namespace["np"] = np
     doctest_namespace["pd"] = pd
     doctest_namespace["xr"] = xr
+
+    # always seed numpy.random to make the examples deterministic
+    np.random.seed(0)
+
+    # always switch to the temporary directory, so files get written there
+    tmpdir.chdir()

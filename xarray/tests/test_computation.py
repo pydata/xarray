@@ -473,10 +473,13 @@ def test_unified_dim_sizes():
         "x": 1,
         "y": 2,
     }
-    assert unified_dim_sizes(
-        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-        exclude_dims={"z"},
-    ) == {"x": 1, "y": 2}
+    assert (
+        unified_dim_sizes(
+            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+            exclude_dims={"z"},
+        )
+        == {"x": 1, "y": 2}
+    )
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -692,8 +695,7 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    with raises_regex(ValueError, "with different chunksize present"):
-        check(data_array, 0 * data_array.compute())
+    check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
@@ -707,7 +709,7 @@ def test_apply_dask_parallelized_errors():
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
-    # formerly from _apply_blockwise, now from dask.array.apply_gufunc
+    # formerly from _apply_blockwise, now from apply_variable_ufunc
     with raises_regex(ValueError, "consists of multiple chunks"):
         apply_ufunc(
             identity,
@@ -782,7 +784,7 @@ def test_apply_dask_new_output_dimension():
             output_core_dims=[["sign"]],
             dask="parallelized",
             output_dtypes=[obj.dtype],
-            output_sizes={"sign": 2},
+            dask_gufunc_kwargs=dict(output_sizes={"sign": 2}),
         )
 
     expected = stack_negative(data_array.compute())
@@ -870,7 +872,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
 
     expected = data_array.copy()
     actual = apply_ufunc(
-        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
     )
 
     assert_identical(expected, actual)
@@ -891,7 +896,7 @@ def test_vectorize_dask_dtype_meta():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[int],
-        meta=np.ndarray((0, 0), dtype=np.float),
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=np.float)),
     )
 
     assert_identical(expected, actual)
@@ -1073,7 +1078,8 @@ def test_corr(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a, da_b", arrays_w_tuples()[1],
+    "da_a, da_b",
+    arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
@@ -1093,7 +1099,8 @@ def test_covcorr_consistency(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a", arrays_w_tuples()[0],
+    "da_a",
+    arrays_w_tuples()[0],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
 def test_autocov(da_a, dim):
@@ -1121,7 +1128,7 @@ def test_vectorize_dask_new_output_dims():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={"z": 1},
+        dask_gufunc_kwargs=dict(output_sizes={"z": 1}),
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
@@ -1133,7 +1140,7 @@ def test_vectorize_dask_new_output_dims():
             vectorize=True,
             dask="parallelized",
             output_dtypes=[float],
-            output_sizes={"z1": 1},
+            dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
     with raises_regex(

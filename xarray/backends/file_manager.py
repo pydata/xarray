@@ -314,8 +314,7 @@ class _HashedSequence(list):
 
 
 class DummyFileManager(FileManager):
-    """FileManager that simply wraps an open file in the FileManager interface.
-    """
+    """FileManager that simply wraps an open file in the FileManager interface."""
 
     def __init__(self, value):
         self._value = value

@@ -29,7 +29,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -592,8 +592,7 @@ def apply_variable_ufunc(
     keep_attrs=False,
     dask_gufunc_kwargs=None,
 ):
-    """Apply a ndarray level function over Variable and/or ndarray objects.
-    """
+    """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
     dim_sizes = unified_dim_sizes(
@@ -611,7 +610,7 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(isinstance(array, dask_array_type) for array in input_data):
+    if any(is_duck_dask_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -625,6 +624,26 @@ def apply_variable_ufunc(
 
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
+
+            allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
+            if allow_rechunk is None:
+                for n, (data, core_dims) in enumerate(
+                    zip(input_data, signature.input_core_dims)
+                ):
+                    if is_duck_dask_array(data):
+                        # core dimensions cannot span multiple chunks
+                        for axis, dim in enumerate(core_dims, start=-len(core_dims)):
+                            if len(data.chunks[axis]) != 1:
+                                raise ValueError(
+                                    f"dimension {dim} on {n}th function argument to "
+                                    "apply_ufunc with dask='parallelized' consists of "
+                                    "multiple chunks, but is also a core dimension. To "
+                                    "fix, either rechunk into a single dask array chunk along "
+                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
+                                    "but beware that this may significantly increase memory usage."
+                                )
+                dask_gufunc_kwargs["allow_rechunk"] = True
 
             output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
             if output_sizes:
@@ -727,7 +746,7 @@ def apply_variable_ufunc(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(isinstance(arg, dask_array_type) for arg in args):
+    if any(is_duck_dask_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -895,7 +914,7 @@ def apply_ufunc(
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
     <xarray.DataArray (x: 3)>
-    array([1.414214, 2.828427, 4.242641])
+    array([1.41421356, 2.82842712, 4.24264069])
     Coordinates:
       * x        (x) float64 0.1 0.2 0.3
 
@@ -1014,6 +1033,8 @@ def apply_ufunc(
     if dask == "parallelized":
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
+        else:
+            dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
         # todo: remove warnings after deprecation cycle
         if meta is not None:
             warnings.warn(
@@ -1123,6 +1144,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1160,7 +1182,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     array(-3.53055556)
     >>> xr.cov(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
-    array([ 0.2, -0.5,  1.69333333])
+    array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
@@ -1200,6 +1222,7 @@ def corr(da_a, da_b, dim=None):
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1331,8 +1354,10 @@ def dot(*arrays, dims=None, **kwargs):
     <xarray.DataArray (a: 3, b: 2, c: 2)>
     array([[[ 0,  1],
             [ 2,  3]],
+    <BLANKLINE>
            [[ 4,  5],
             [ 6,  7]],
+    <BLANKLINE>
            [[ 8,  9],
             [10, 11]]])
     Dimensions without coordinates: a, b, c
@@ -1476,13 +1501,13 @@ def where(cond, x, y):
     <xarray.DataArray 'sst' (lat: 10)>
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)>
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -1496,8 +1521,8 @@ def where(cond, x, y):
            [0.3, 0.4, 0.5],
            [0.6, 0.7, 0.8]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
     <xarray.DataArray (lat: 3, lon: 3)>
@@ -1505,8 +1530,8 @@ def where(cond, x, y):
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> cond = xr.DataArray([True, False], dims=["x"])
     >>> x = xr.DataArray([1, 2], dims=["y"])
@@ -1605,7 +1630,7 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle dask arrays.
-    if isinstance(array.data, dask_array_type):
+    if is_duck_dask_array(array.data):
         import dask.array
 
         chunks = dict(zip(array.dims, array.chunks))

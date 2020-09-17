@@ -33,7 +33,12 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import cupy_array_type, dask_array_type, integer_types
+from .pycompat import (
+    cupy_array_type,
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+)
 from .utils import (
     OrderedSet,
     _default,
@@ -42,10 +47,16 @@ from .utils import (
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
+    is_duck_array,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+    (
+        indexing.ExplicitlyIndexed,
+        pd.Index,
+    )
+    + dask_array_type
+    + cupy_array_type
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
@@ -64,8 +75,7 @@ Usage::
 
 
 class MissingDimensionsError(ValueError):
-    """Error class used when we can't safely guess a dimension name.
-    """
+    """Error class used when we can't safely guess a dimension name."""
 
     # inherits from ValueError for backward compatibility
     # TODO: move this to an xarray.exceptions module?
@@ -343,9 +353,7 @@ class Variable(
 
     @property
     def data(self):
-        if hasattr(self._data, "__array_function__") or isinstance(
-            self._data, dask_array_type
-        ):
+        if is_duck_array(self._data):
             return self._data
         else:
             return self.values
@@ -423,9 +431,9 @@ class Variable(
         --------
         dask.array.compute
         """
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not hasattr(self._data, "__array_function__"):
+        elif not is_duck_array(self._data):
             self._data = np.asarray(self._data)
         return self
 
@@ -458,7 +466,7 @@ class Variable(
         return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             return self._data.__dask_graph__()
         else:
             return None
@@ -539,8 +547,7 @@ class Variable(
 
     @property
     def dims(self):
-        """Tuple of dimension names with which this variable is associated.
-        """
+        """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
@@ -766,8 +773,7 @@ class Variable(
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
-        """Used by IndexVariable to return IndexVariable objects when possible.
-        """
+        """Used by IndexVariable to return IndexVariable objects when possible."""
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
@@ -786,7 +792,7 @@ class Variable(
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-            if isinstance(self._data, dask_array_type):
+            if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
                 # https://github.com/dask/dask/pull/2967
@@ -843,8 +849,7 @@ class Variable(
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
-        """Dictionary of local attributes on this variable.
-        """
+        """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -855,8 +860,7 @@ class Variable(
 
     @property
     def encoding(self):
-        """Dictionary of encodings on this variable.
-        """
+        """Dictionary of encodings on this variable."""
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
@@ -916,7 +920,7 @@ class Variable(
 
         >>> var.copy(data=[0.1, 0.2, 0.3])
         <xarray.Variable (x: 3)>
-        array([ 0.1,  0.2,  0.3])
+        array([0.1, 0.2, 0.3])
         >>> var
         <xarray.Variable (x: 3)>
         array([7, 2, 3])
@@ -933,13 +937,8 @@ class Variable(
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if hasattr(data, "__array_function__") or isinstance(
-                    data, dask_array_type
-                ):
-                    data = data.copy()
-                elif not isinstance(data, PandasIndexAdapter):
-                    # pandas.Index is immutable
-                    data = np.array(data)
+                data = copy.deepcopy(data)
+
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
@@ -1025,7 +1024,7 @@ class Variable(
             chunks = self.chunks or self.shape
 
         data = self._data
-        if isinstance(data, da.Array):
+        if is_duck_dask_array(data):
             data = data.rechunk(chunks)
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
@@ -1172,7 +1171,7 @@ class Variable(
             constant_values=fill_value,
         )
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1331,7 +1330,7 @@ class Variable(
 
         data = duck_array_ops.concatenate(arrays, axis)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1636,10 +1635,14 @@ class Variable(
 
         input_data = self.data if allow_lazy else self.values
 
-        if axis is not None:
-            data = func(input_data, axis=axis, **kwargs)
-        else:
-            data = func(input_data, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
+            )
+            if axis is not None:
+                data = func(input_data, axis=axis, **kwargs)
+            else:
+                data = func(input_data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
@@ -1768,8 +1771,7 @@ class Variable(
         return self.equals(other, equiv=equiv)
 
     def identical(self, other, equiv=duck_array_ops.array_equiv):
-        """Like equals, but also checks attributes.
-        """
+        """Like equals, but also checks attributes."""
         try:
             return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
                 other, equiv=equiv
@@ -1861,7 +1863,7 @@ class Variable(
             exclude_dims=set(dim),
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
-            output_sizes={"quantile": len(q)},
+            dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
             kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
@@ -1904,7 +1906,7 @@ class Variable(
 
         data = self.data
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             raise TypeError(
                 "rank does not work for arrays stored as dask "
                 "arrays. Load the data via .compute() or .load() "
@@ -1956,15 +1958,29 @@ class Variable(
         Examples
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
-        >>> v.rolling_window(x, "b", 3, "window_dim")
+        >>> v.rolling_window("b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
 
-        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
+        >>> v.rolling_window("b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
-               [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
+        array([[[nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.],
+                [ 2.,  3., nan]],
+        <BLANKLINE>
+               [[nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.],
+                [ 6.,  7., nan]]])
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
@@ -1991,7 +2007,9 @@ class Variable(
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
+    def coarsen(
+        self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
+    ):
         """
         Apply reduction function.
         """
@@ -1999,13 +2017,22 @@ class Variable(
         if not windows:
             return self.copy()
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        if keep_attrs:
+            _attrs = self.attrs
+        else:
+            _attrs = None
+
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self._replace(data=func(reshaped, axis=axes, **kwargs))
+
+        return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
         """
@@ -2070,9 +2097,6 @@ class Variable(
             else:
                 shape.append(variable.shape[i])
 
-        keep_attrs = _get_keep_attrs(default=False)
-        variable.attrs = variable._attrs if keep_attrs else {}
-
         return variable.data.reshape(shape), tuple(axes)
 
     @property
@@ -2131,7 +2155,7 @@ class Variable(
         return func
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
-        """ A (private) method to convert datetime array to numeric dtype
+        """A (private) method to convert datetime array to numeric dtype
         See duck_array_ops.datetime_to_numeric
         """
         numeric_array = duck_array_ops.datetime_to_numeric(

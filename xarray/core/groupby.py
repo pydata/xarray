@@ -102,8 +102,7 @@ def _is_one_or_none(obj):
 
 
 def _consolidate_slices(slices):
-    """Consolidate adjacent slices in a list of slices.
-    """
+    """Consolidate adjacent slices in a list of slices."""
     result = []
     last_slice = slice(None)
     for slice_ in slices:
@@ -600,7 +599,7 @@ class GroupBy(SupportsArithmetic):
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
-        ...     dims=("y", "y"),
+        ...     dims=("x", "y"),
         ... )
         >>> ds = xr.Dataset({"a": da})
         >>> da.groupby("x").quantile(0)
@@ -625,13 +624,14 @@ class GroupBy(SupportsArithmetic):
                 [4.2 , 6.3 , 8.4 ],
                 [0.7 , 5.05, 9.4 ],
                 [1.5 , 4.2 , 6.9 ]],
+        <BLANKLINE>
                [[6.5 , 6.5 , 6.5 ],
                 [7.3 , 7.3 , 7.3 ],
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
-          * y         (y) int64 1 1 2 2
           * quantile  (quantile) float64 0.0 0.5 1.0
+          * y         (y) int64 1 1 2 2
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>
@@ -688,13 +688,11 @@ class GroupBy(SupportsArithmetic):
         return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
 
     def first(self, skipna=None, keep_attrs=None):
-        """Return the first element of each group along the group dimension
-        """
+        """Return the first element of each group along the group dimension"""
         return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
     def last(self, skipna=None, keep_attrs=None):
-        """Return the last element of each group along the group dimension
-        """
+        """Return the last element of each group along the group dimension"""
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
     def assign_coords(self, coords=None, **coords_kwargs):
@@ -719,8 +717,7 @@ def _maybe_reorder(xarray_obj, dim, positions):
 
 
 class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
-    """GroupBy object specialized to grouping DataArray objects
-    """
+    """GroupBy object specialized to grouping DataArray objects"""
 
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without

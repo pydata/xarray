@@ -250,7 +250,9 @@ class TestConcatDataset:
             assert_equal(actual, expected[join])
 
         # regression test for #3681
-        actual = concat([ds1.drop("x"), ds2.drop("x")], join="override", dim="y")
+        actual = concat(
+            [ds1.drop_vars("x"), ds2.drop_vars("x")], join="override", dim="y"
+        )
         expected = Dataset(
             {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
         )

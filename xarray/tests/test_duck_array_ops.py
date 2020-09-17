@@ -120,11 +120,9 @@ class TestOps:
         result = concatenate([[1], ["b"]])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
+    @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "All-NaN slice")
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            assert np.isnan(mean([np.nan, np.nan]))
+        assert np.isnan(mean([np.nan, np.nan]))
 
 
 def test_cumsum_1d():
@@ -257,7 +255,7 @@ def from_series_or_scalar(se):
 
 
 def series_reduce(da, func, dim, **kwargs):
-    """ convert DataArray to pd.Series, apply pd.func, then convert back to
+    """convert DataArray to pd.Series, apply pd.func, then convert back to
     a DataArray. Multiple dims cannot be specified."""
     if dim is None or da.ndim == 1:
         se = da.to_series()
