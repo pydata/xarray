@@ -648,11 +648,6 @@ def open_zarr(
     http://zarr.readthedocs.io/
     """
 
-    warnings.warn(
-        "open_zarr is deprecated. Use open_dataset(engine='zarr') instead.",
-        DeprecationWarning,
-    )
-
     if kwargs:
         raise TypeError(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
