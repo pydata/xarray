@@ -2490,15 +2490,19 @@ class DataArray(AbstractArray, DataWithCoords):
     def to_netcdf(self, *args, **kwargs) -> Union[bytes, "Delayed", None]:
         """Write DataArray contents to a netCDF file.
 
-        All parameters are passed directly to `xarray.Dataset.to_netcdf`.
+        All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
 
         Notes
         -----
         Only xarray.Dataset objects can be written to netCDF files, so
         the xarray.DataArray is converted to a xarray.Dataset object
         containing a single variable. If the DataArray has no name, or if the
-        name is the same as a co-ordinate name, then it is given the name
-        '__xarray_dataarray_variable__'.
+        name is the same as a coordinate name, then it is given the name
+        ``"__xarray_dataarray_variable__"``.
+
+        See Also
+        --------
+        Dataset.to_netcdf
         """
         from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
 
