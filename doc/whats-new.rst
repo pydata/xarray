@@ -55,9 +55,9 @@ New Features
 ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
-  multiple dimension to reduce over. (:pull:`4356`) 
+  multiple dimension to reduce over; (:pull:`4356`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values. (:pull:`4351`)
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values; (:pull:`4351`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add support for parsing datetime strings formatted following the default
   string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
@@ -92,7 +92,7 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). by `Julia Kent <https://github.com/jukent>`_.
+- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). By `Julia Kent <https://github.com/jukent>`_.
 - fix the signature of the plot methods. (:pull:`4359`) By `Justus Magin <https://github.com/keewis>`_.
 - Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
   By `Mathias Hauser <https://github.com/mathause>`_.
@@ -104,6 +104,9 @@ Bug fixes
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -114,6 +117,8 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 - Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`). By `Justus Magin <https://github.com/keewis>`_.
+- Make sure the examples from the docstrings actually work (:pull:`4408`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Updated Vectorized Indexing to a clearer example.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
