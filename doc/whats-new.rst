@@ -84,13 +84,11 @@ Bug fixes
 - Fix `KeyError` when doing linear interpolation to an nd `DataArray`
   that contains NaNs (:pull:`4233`).
   By `Jens Svensmark <https://github.com/jenssss>`_
-- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`)
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
 - Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Justus Magin <https://github.com/keewis>`_.
-  
 
 Documentation
 ~~~~~~~~~~~~~
