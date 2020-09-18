@@ -35,7 +35,6 @@ Thomas Zilio, Tobias Kölling, Tom Augspurger, alexamici, crusaderky, darikg,
 inakleinbottle, jenssss, johnomotani, keewis, rpgoldman 
 
 Breaking changes
-
 ~~~~~~~~~~~~~~~~
 
 - :py:meth:`DataArray.astype` and :py:meth:`Dataset.astype` now preserve attributes. Keep the
