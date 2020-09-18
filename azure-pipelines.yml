@@ -74,6 +74,18 @@ jobs:
   - bash: black --check .
     displayName: black formatting check
 
+- job: Doctests
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+    - template: ci/azure/install.yml
+    - bash: |
+        source activate xarray-tests
+        python -m pytest --doctest-modules xarray --ignore xarray/tests
+      displayName: doctests
+
 - job: TypeChecking
   variables:
     conda_env: py38
