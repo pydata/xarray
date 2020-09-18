@@ -71,7 +71,7 @@ New Features
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
   document the new method in :doc:`internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
-- Allow per-variable fill values in most functions. (:pull:`4237`)
+- Allow per-variable fill values in most functions. (:pull:`4237`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Expose ``use_cftime`` option in :py:func:`~xarray.open_zarr` (:issue:`2886`, :pull:`3229`)
   By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
