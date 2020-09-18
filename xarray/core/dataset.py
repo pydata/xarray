@@ -777,10 +777,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     @staticmethod
     def _dask_postpersist(dsk, info, *args):
         variables = {}
+        # postpersist is called in both dask.optimize and dask.persist
+        # When persisting, we want to filter out unrelated keys for
+        # each Variable's task graph.
+        is_persist = len(dsk) == len(info)
         for is_dask, k, v in info:
             if is_dask:
                 func, args2 = v
-                result = func(dsk, *args2)
+                if is_persist:
+                    name = args2[1][0]
+                    dsk2 = {k: v for k, v in dsk.items() if k[0] == name}
+                else:
+                    dsk2 = dsk
+                result = func(dsk2, *args2)
             else:
                 result = v
             variables[k] = result

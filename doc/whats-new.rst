@@ -89,6 +89,8 @@ Bug fixes
 - Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Justus Magin <https://github.com/keewis>`_.
+ - Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
+  By `Tom Augspurger <https://github.com/TomAugspurger>`_
 
 Documentation
 ~~~~~~~~~~~~~
