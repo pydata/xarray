@@ -99,6 +99,8 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 - Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
+- Updated Vectorized Indexing to a clearer example.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
