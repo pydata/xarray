@@ -88,6 +88,9 @@ Bug fixes
   By `Peter Hausamann <https://github.com/phausamann>`_.
 - Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -100,6 +103,8 @@ Documentation
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
 - Make sure the examples from the docstrings actually work (:pull:`4408`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Updated Vectorized Indexing to a clearer example.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
