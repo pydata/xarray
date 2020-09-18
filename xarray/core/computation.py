@@ -260,9 +260,8 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    first_obj = _first_of_type(args, DataArray)
-
     if keep_attrs:
+        first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
     else:
         name = result_name(args)
@@ -408,14 +407,15 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    first_obj = _first_of_type(args, Dataset)
-
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
             "dataset_fill_value argument."
         )
+
+    if keep_attrs:
+        first_obj = _first_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
