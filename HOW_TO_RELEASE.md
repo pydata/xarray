@@ -27,7 +27,7 @@ upstream        https://github.com/pydata/xarray (push)
     ```
     This will return the number of contributors:
     ```sh
-    git log v0.16.0.. --format=%aN | sort -u | wc -l
+    git log v{0.X.Y-1}.. --format=%aN | sort -u | wc -l
     ```
  3. Write a release summary: ~50 words describing the high level features. This
     will be used in the release emails, tweets, GitHub release notes, etc.
