@@ -32,7 +32,9 @@ Bednar, Joe Hamman, Julia Kent, Kai Mühlbauer, Keisuke Fujii, Mathias Hauser,
 Maximilian Roos, Nick R. Papior, Pascal Bourgault, Peter Hausamann, Romain
 Martinez, Russell Manser, Samnan Rahee, Sander, Spencer Clark, Stephan Hoyer,
 Thomas Zilio, Tobias Kölling, Tom Augspurger, alexamici, crusaderky, darikg,
-inakleinbottle, jenssss, johnomotani, keewis, rpgoldman Breaking changes
+inakleinbottle, jenssss, johnomotani, keewis, rpgoldman 
+
+Breaking changes
 
 ~~~~~~~~~~~~~~~~
 
