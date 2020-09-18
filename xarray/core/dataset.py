@@ -1142,7 +1142,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = {k: self.dims[k] for k in needed_dims}
 
-        for k in self._coord_names:
+        # preserves ordering of coordinates
+        for k in self._variables:
+            if k not in self._coord_names:
+                continue
+
             if set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
@@ -5729,10 +5733,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
-            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            reference_time  datetime64[ns] 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
@@ -5742,10 +5746,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:         (time: 3, x: 2, y: 2)
         Coordinates:
-            reference_time  datetime64[ns] 2014-09-05
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
           * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
-            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            reference_time  datetime64[ns] 2014-09-05
         Dimensions without coordinates: x, y
         Data variables:
             temperature     (x, y, time) float64 29.11 18.2 22.83 ... 18.28 16.15 26.63

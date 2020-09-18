@@ -349,7 +349,11 @@ def _parse_datasets(
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
-        for dim in set(ds.dims) - dims:
+        # preserves ordering of dimensions
+        for dim in ds.dims:
+            if dim in dims:
+                continue
+
             if dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)

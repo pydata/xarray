@@ -33,7 +33,7 @@ New Features
   now accept more than 1 dimension. (:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
-  multiple dimension to reduce over. (:pull:`4356`) 
+  multiple dimension to reduce over. (:pull:`4356`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values. (:pull:`4351`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -77,7 +77,7 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). by `Julia Kent <https://github.com/jukent>`_.
+- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). By `Julia Kent <https://github.com/jukent>`_.
 - fix the signature of the plot methods. (:pull:`4359`) By `Justus Magin <https://github.com/keewis>`_.
 - Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
   By `Mathias Hauser <https://github.com/mathause>`_.
@@ -86,6 +86,8 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
+- Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Justus Magin <https://github.com/keewis>`_.
@@ -99,6 +101,8 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 - Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
+- Make sure the examples from the docstrings actually work (:pull:`4408`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Updated Vectorized Indexing to a clearer example.
   By `Maximilian Roos <https://github.com/max-sixty>`_
 
