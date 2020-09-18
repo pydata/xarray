@@ -68,7 +68,6 @@ New Features
   By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
-
 Bug fixes
 ~~~~~~~~~
 - Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
