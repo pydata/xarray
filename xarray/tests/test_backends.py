@@ -1444,7 +1444,6 @@ class TestNetCDF4Data(NetCDF4Base):
 
 @requires_netCDF4
 class TestNetCDF4AlreadyOpen:
-
     def test_base_case(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
@@ -2444,7 +2443,6 @@ class TestH5NetCDFData(NetCDF4Base):
 
 @requires_h5netcdf
 class TestH5NetCDFAlreadyOpen:
-
     def test_open_dataset_group(self):
         import h5netcdf
 
