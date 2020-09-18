@@ -84,7 +84,7 @@ jobs:
     - bash: |
         source activate xarray-tests
         python -m pytest --doctest-modules xarray --ignore xarray/tests
-      displayName: doctests
+      displayName: Run doctests
 
 - job: TypeChecking
   variables:
