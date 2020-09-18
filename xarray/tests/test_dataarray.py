@@ -2488,21 +2488,20 @@ class TestDataArray:
         assert_identical(new_actual, expected)
         assert actual.attrs == {"a": 1, "b": 2}
 
-    def test_propagate_attrs(self):
+    @pytest.mark.parametrize(
+        "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
+    )
+    def test_propagate_attrs(self, func):
         da = DataArray(self.va)
 
         # test defaults
-        assert (np.float64(1.0) * da).attrs == da.attrs
-        assert np.abs(da).attrs == da.attrs
-        # not sure about the next two
-        assert da.clip(0, 1).attrs != da.attrs
-        assert abs(da).attrs != da.attrs
+        assert func(da).attrs == da.attrs
 
         with set_options(keep_attrs=False):
-            assert da.clip(0, 1).attrs != da.attrs
-            assert (np.float64(1.0) * da).attrs != da.attrs
-            assert np.abs(da).attrs != da.attrs
-            assert abs(da).attrs != da.attrs
+            assert func(da).attrs == {}
+
+        with set_options(keep_attrs=True):
+            assert func(da).attrs == da.attrs
 
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
