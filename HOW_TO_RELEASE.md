@@ -51,7 +51,7 @@ upstream        https://github.com/pydata/xarray (push)
       ```
  8. Check that the ReadTheDocs build is passing.
  9. On the master branch, commit the release in git:
-      ```s
+      ```sh
       git commit -am 'Release v{0.X.Y}'
       ```
 10. Tag the release:
