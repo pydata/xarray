@@ -52,7 +52,7 @@ New Features
   dimensions order (:issue:`4331`, :pull:`4333`).
   By `Thomas Zilio <https://github.com/thomas-z>`_.
 - Support multiple outputs in :py:func:`xarray.apply_ufunc` when using
-``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
+  ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
   multiple dimension to reduce over; (:pull:`4356`).
