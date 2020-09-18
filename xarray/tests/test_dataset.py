@@ -4487,6 +4487,10 @@ class TestDataset:
             assert func(ds).attrs != ds.attrs
             assert func(ds).a.attrs != ds.a.attrs
 
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
     def test_where(self):
         ds = Dataset({"a": ("x", range(5))})
         expected = Dataset({"a": ("x", [np.nan, np.nan, 2, 3, 4])})
