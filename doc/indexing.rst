@@ -339,7 +339,7 @@ MATLAB, or after using the :py:func:`numpy.ix_` helper:
         coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
     )
     da
-    da[[1, 2, 2], [0, 3]]
+    da[[0, 2, 2], [1, 3]]
 
 For more flexibility, you can supply :py:meth:`~xarray.DataArray` objects
 as indexers.
