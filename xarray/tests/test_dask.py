@@ -1607,10 +1607,3 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
         assert_equal(map_da.astype(map_da.dtype), map_da)
         assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)
-
-
-def test_optimize():
-    a = dask.array.ones((10, 5), chunks=(1, 3))
-    arr = xr.DataArray(a).chunk(5)
-    (arr2,) = dask.optimize(arr)
-    arr2.compute()
