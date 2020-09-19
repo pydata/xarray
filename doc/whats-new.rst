@@ -86,6 +86,8 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
+- Preserve dimension and coordinate order during :py:func:`xarray.concat` (:issue:`2811`, :issue:`4072`, :pull:`4419`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
