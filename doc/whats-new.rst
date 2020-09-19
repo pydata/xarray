@@ -104,6 +104,8 @@ Bug fixes
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Preserve dimension and coordinate order during :py:func:`xarray.concat` (:issue:`2811`, :issue:`4072`, :pull:`4419`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
   By `Justus Magin <https://github.com/keewis>`_.
 
