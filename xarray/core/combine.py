@@ -711,8 +711,8 @@ def combine_by_coords(
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
-      * x              (x) int64 10 20 30
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 1.743 0.4044 16.65
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.7992 0.4615 0.7805

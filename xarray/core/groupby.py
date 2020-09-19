@@ -607,8 +607,8 @@ class GroupBy(SupportsArithmetic):
         array([[0.7, 4.2, 0.7, 1.5],
                [6.5, 7.3, 2.6, 1.9]])
         Coordinates:
-            quantile  float64 0.0
           * y         (y) int64 1 1 2 2
+            quantile  float64 0.0
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile(0, dim=...)
         <xarray.Dataset>
@@ -630,8 +630,8 @@ class GroupBy(SupportsArithmetic):
                 [2.6 , 2.6 , 2.6 ],
                 [1.9 , 1.9 , 1.9 ]]])
         Coordinates:
-          * quantile  (quantile) float64 0.0 0.5 1.0
           * y         (y) int64 1 1 2 2
+          * quantile  (quantile) float64 0.0 0.5 1.0
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>
