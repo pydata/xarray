@@ -19,7 +19,7 @@ What's New
 v0.16.1 (2020-09-20)
 ---------------------
 
-This patch release fixes an incompatability with a recent pandas change, which
+This patch release fixes an incompatibility with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
 improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
 bug fixes. Our documentation has a number of improvements, including fixing all 
