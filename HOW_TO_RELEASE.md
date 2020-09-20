@@ -19,7 +19,7 @@ upstream        https://github.com/pydata/xarray (push)
      git pull upstream master
      ```
  2. Confirm there are no commits on stable that are not yet merged
-    ([ref](https://github.com/pydata/xarray/issues/2821)):
+    ([ref](https://github.com/pydata/xarray/pull/4440)):
      ```sh
      git merge upstream stable
      ```
