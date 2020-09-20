@@ -715,6 +715,9 @@ Consider this dataset
     ds
 
 
+Scatter
+~~~~~~~
+
 Suppose we want to scatter ``A`` against ``B``
 
 .. ipython:: python
@@ -761,6 +764,24 @@ Faceting is also possible
 
 
 For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
+
+Quiver
+~~~~~~
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_simple_quiver.png
+    ds.isel(w=1, z=1).plot.quiver(x="x", y="y", u="A", v="B")
+
+
+Again, faceting is also possible
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_quiver.png
+    ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
 
 
 .. _plot-maps:
