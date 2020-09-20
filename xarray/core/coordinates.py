@@ -141,7 +141,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                     code, level = factorize_from_iterable(index)
                     codes = [code]
                     levels = [level]
-                    
+
                 # compute the cartesian product
                 code_list += [np.tile(np.repeat(code, b[i]), a[i]) for code in codes]
                 level_list += levels
