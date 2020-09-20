@@ -16,58 +16,73 @@ What's New
 
 .. _whats-new.0.16.1:
 
-v0.16.1 (unreleased)
+v0.16.1 (2020-09-20)
 ---------------------
+
+This patch release fixes an incompatability with a recent pandas change, which
+was causing an issue indexing with a ``datetime64``. It also includes
+improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
+bug fixes.
+
+Many thanks to the 36 contributors who contributed to this release:
+
+Aaron Spring, Akio Taniguchi, Aleksandar Jelenak, Alexandre Poux,
+Caleb, Dan Nowacki, Deepak Cherian, Gerardo Rivera, Jacob Tomlinson, James A.
+Bednar, Joe Hamman, Julia Kent, Kai Mühlbauer, Keisuke Fujii, Mathias Hauser,
+Maximilian Roos, Nick R. Papior, Pascal Bourgault, Peter Hausamann, Romain
+Martinez, Russell Manser, Samnan Rahee, Sander, Spencer Clark, Stephan Hoyer,
+Thomas Zilio, Tobias Kölling, Tom Augspurger, alexamici, crusaderky, darikg,
+inakleinbottle, jenssss, johnomotani, keewis, rpgoldman 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
 - :py:meth:`DataArray.astype` and :py:meth:`Dataset.astype` now preserve attributes. Keep the
   old behavior by passing `keep_attrs=False` (:issue:`2049`, :pull:`4314`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_ and `Gabriel Joel Mitchell <https://github.com/gajomi>`_.
 
 New Features
 ~~~~~~~~~~~~
-- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`)
-  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+
 - :py:meth:`~xarray.DataArray.rolling` and :py:meth:`~xarray.Dataset.rolling`
   now accept more than 1 dimension. (:pull:`4219`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
-  multiple dimension to reduce over. (:pull:`4356`) 
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
-- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values. (:pull:`4351`)
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
-  property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
-  ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
-  By `Aaron Spring <https://github.com/aaronspring>`_.
-- Relaxed the :ref:`mindeps_policy` to support:
-
-  - all versions of setuptools released in the last 42 months (but no older than 38.4)
-  - all versions of dask and dask.distributed released in the last 12 months (but no
-    older than 2.9)
-  - all versions of other packages released in the last 12 months
-
-  All are  up from 6 months (:issue:`4295`)
-  `Guido Imperiale <https://github.com/crusaderky>`_.
-- Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
-  of :py:class:`DataArray` and :py:class:`Dataset` objects and
-  document the new method in :doc:`internals`. (:pull:`4248`).
-  By `Justus Magin <https://github.com/keewis>`_.
-- Add support for parsing datetime strings formatted following the default
-  string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
-  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
-  (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`~xarray.DataArray.to_dataframe` and :py:meth:`~xarray.Dataset.to_dataframe`
   now accept a ``dim_order`` parameter allowing to specify the resulting dataframe's
   dimensions order (:issue:`4331`, :pull:`4333`).
   By `Thomas Zilio <https://github.com/thomas-z>`_.
+- Support multiple outputs in :py:func:`xarray.apply_ufunc` when using
+  ``dask='parallelized'``. (:issue:`1815`, :pull:`4060`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- ``min_count`` can be supplied to reductions such as ``.sum`` when specifying
+  multiple dimension to reduce over; (:pull:`4356`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now handle missing values; (:pull:`4351`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Add support for parsing datetime strings formatted following the default
+  string representation of cftime objects, i.e. YYYY-MM-DD hh:mm:ss, in
+  partial datetime string indexing, as well as :py:meth:`~xarray.cftime_range`
+  (:issue:`4337`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Build ``CFTimeIndex.__repr__`` explicitly as :py:class:`pandas.Index`. Add ``calendar`` as a new
+  property for :py:class:`CFTimeIndex` and show ``calendar`` and ``length`` in
+  ``CFTimeIndex.__repr__`` (:issue:`2416`, :pull:`4092`)
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+- Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
+  of :py:class:`DataArray` and :py:class:`Dataset` objects and
+  document the new method in :doc:`internals`. (:pull:`4248`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Allow per-variable fill values in most functions. (:pull:`4237`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Expose ``use_cftime`` option in :py:func:`~xarray.open_zarr` (:issue:`2886`, :pull:`3229`)
   By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix indexing with datetime64 scalars with pandas 1.1 (:issue:`4283`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Justus Magin <https://github.com/keewis>`_.
 - Variables which are chunked using dask only along some dimensions can be chunked while storing with zarr along previously
   unchunked dimensions (:pull:`4312`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Fixed a bug in backend caused by basic installation of Dask (:issue:`4164`, :pull:`4318`)
@@ -77,7 +92,7 @@ Bug fixes
   and :py:meth:`DataArray.str.wrap` (:issue:`4334`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Fixed overflow issue causing incorrect results in computing means of :py:class:`cftime.datetime`
   arrays (:issue:`4341`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). by `Julia Kent <https://github.com/jukent>`_.
+- Fixed :py:meth:`Dataset.coarsen`, :py:meth:`DataArray.coarsen` dropping attributes on original object (:issue:`4120`, :pull:`4360`). By `Julia Kent <https://github.com/jukent>`_.
 - fix the signature of the plot methods. (:pull:`4359`) By `Justus Magin <https://github.com/keewis>`_.
 - Fix :py:func:`xarray.apply_ufunc` with ``vectorize=True`` and ``exclude_dims`` (:issue:`3890`).
   By `Mathias Hauser <https://github.com/mathause>`_.
@@ -91,6 +106,13 @@ Bug fixes
   `Justus Magin <https://github.com/keewis>`_.
  - Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
   By `Tom Augspurger <https://github.com/TomAugspurger>`_
+- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
+  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
+  By `Guido Imperiale <https://github.com/crusaderky>`_
+- Preserve dimension and coordinate order during :py:func:`xarray.concat` (:issue:`2811`, :issue:`4072`, :pull:`4419`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Avoid relying on :py:class:`set` objects for the ordering of the coordinates (:pull:`4409`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -100,15 +122,26 @@ Documentation
 - Removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 - Update the contributing guide to use merges instead of rebasing and state
-  that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
+  that we squash-merge. (:pull:`4355`). By `Justus Magin <https://github.com/keewis>`_.
+- Make sure the examples from the docstrings actually work (:pull:`4408`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Updated Vectorized Indexing to a clearer example.
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Relaxed the :ref:`mindeps_policy` to support:
+
+  - all versions of setuptools released in the last 42 months (but no older than 38.4)
+  - all versions of dask and dask.distributed released in the last 12 months (but no
+    older than 2.9)
+  - all versions of other packages released in the last 12 months
+
+  All are  up from 6 months (:issue:`4295`)
+  `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
   :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
-- Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
-  directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
-  By `Guido Imperiale <https://github.com/crusaderky>`_
 - Align ``mypy`` versions to ``0.782`` across ``requirements`` and
   ``.pre-commit-config.yml`` files. (:pull:`4390`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
