@@ -442,32 +442,6 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def quiver(ds, x, y, ax, u, v, **kwargs):
-    import matplotlib as mpl
-
-    if x is None or y is None or u is None or v is None:
-        raise ValueError("Must specify x, y, u, v for quiver plots.")
-
-    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
-
-    args = [x.values, y.values, u.values, v.values]
-    hue = kwargs.pop("hue")
-    if hue:
-        args.append(ds[hue].values)
-
-    # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
-    cmap_params = kwargs.pop("cmap_params")
-    if not cmap_params["norm"]:
-        cmap_params["norm"] = mpl.colors.Normalize(
-            cmap_params.pop("vmin"), cmap_params.pop("vmax")
-        )
-
-    kwargs.pop("hue_style")
-    hdl = ax.quiver(*args, **kwargs, **cmap_params)
-    return hdl
-
-
-@_dsplot
 def scatter(ds, x, y, ax, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
@@ -520,3 +494,31 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
         )
 
     return primitive
+
+
+@_dsplot
+def quiver(ds, x, y, ax, u, v, **kwargs):
+    import matplotlib as mpl
+
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for quiver plots.")
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    cmap_params = kwargs.pop("cmap_params")
+
+    if hue:
+        args.append(ds[hue].values)
+
+        # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+        if not cmap_params["norm"]:
+            cmap_params["norm"] = mpl.colors.Normalize(
+                cmap_params.pop("vmin"), cmap_params.pop("vmax")
+            )
+
+    kwargs.pop("hue_style")
+    kwargs.setdefault("pivot", "middle")
+    hdl = ax.quiver(*args, **kwargs, **cmap_params)
+    return hdl

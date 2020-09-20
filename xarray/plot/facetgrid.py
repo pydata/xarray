@@ -349,19 +349,22 @@ class FacetGrid:
         kwargs["_is_facetgrid"] = True
 
         if func.__name__ == "quiver" and "scale" not in kwargs:
-            if "scale_units" in kwargs and kwargs["scale_units"] is not None:
-                raise NotImplementedError("Can't pass only scale_units.")
-            # autoscaling
-            ax = self.axes[0, 0]
-            magnitude = _get_nice_quiver_magnitude(
-                self.data[kwargs["u"]], self.data[kwargs["v"]]
-            )
-            # matplotlib autoscaling algorithm
-            span = ax.get_transform().inverted().transform_bbox(ax.bbox).width
-            npts = self.data.sizes[x] * self.data.sizes[y]
-            # scale is typical arrow length as a multiple of the arrow width
-            scale = 1.8 * magnitude * max(10, np.sqrt(npts)) / span
-            kwargs["scale"] = 1 / scale  # TODO: why?
+            raise ValueError("Please provide scale.")
+            # TODO: come up with an algorithm for reasonable scale choice
+            # if "scale_units" in kwargs and kwargs["scale_units"] is not None:
+            #     raise NotImplementedError("Can't pass only scale_units.")
+            # # autoscaling
+            # ax = self.axes[0, 0]
+            # magnitude = _get_nice_quiver_magnitude(
+            #     self.data[kwargs["u"]], self.data[kwargs["v"]]
+            # )
+            # # matplotlib autoscaling algorithm
+            # span = ax.get_transform().inverted().transform_bbox(ax.bbox).width
+            # npts = self.data.sizes[x] * self.data.sizes[y]
+            # # scale is typical arrow length as a multiple of the arrow width
+            # print(magnitude, np.sqrt(npts), span)
+            # kwargs["scale"] = 1.8 * magnitude * min(10, np.sqrt(npts)) / span
+            # print(kwargs["scale"])
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -457,17 +460,17 @@ class FacetGrid:
         units = self.data[u].attrs.get("units", "")
         self.quiverkey = self.axes.flat[-1].quiverkey(
             self._mappables[-1],
-            X=0.85,
-            Y=1.03,
+            X=0.8,
+            Y=0.9,
             U=magnitude,
             label=f"{magnitude}\n{units}",
             labelpos="E",
-            coordinates="axes",
+            coordinates="figure",
         )
 
         # TODO: does not work because self.quiverkey.get_window_extent(renderer) = 0
-        # self._adjust_fig_for_guide(self.quiverkey)
-
+        # https://github.com/matplotlib/matplotlib/issues/18530
+        # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
