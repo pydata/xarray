@@ -22,7 +22,8 @@ v0.16.1 (2020-09-20)
 This patch release fixes an incompatability with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
 improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
-bug fixes.
+bug fixes. Our documentation has a number of improvements, including fixing all 
+doctests and confirming their accuracy on every commit.
 
 Many thanks to the 36 contributors who contributed to this release:
 
@@ -32,7 +33,7 @@ Bednar, Joe Hamman, Julia Kent, Kai Mühlbauer, Keisuke Fujii, Mathias Hauser,
 Maximilian Roos, Nick R. Papior, Pascal Bourgault, Peter Hausamann, Romain
 Martinez, Russell Manser, Samnan Rahee, Sander, Spencer Clark, Stephan Hoyer,
 Thomas Zilio, Tobias Kölling, Tom Augspurger, alexamici, crusaderky, darikg,
-inakleinbottle, jenssss, johnomotani, keewis, rpgoldman 
+inakleinbottle, jenssss, johnomotani, keewis, and rpgoldman.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -128,6 +129,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Fixed all doctests and enabled their running in CI.
+  By `Justus Magin <https://github.com/keewis>`_.
 - Relaxed the :ref:`mindeps_policy` to support:
 
   - all versions of setuptools released in the last 42 months (but no older than 38.4)
