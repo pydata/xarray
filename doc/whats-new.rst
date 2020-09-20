@@ -17,8 +17,8 @@ What's New
 
 .. _whats-new.{0.16.2}:
 
-v{0.16.2} (unreleased)
----------------------
+v0.16.2 (unreleased)
+--------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
