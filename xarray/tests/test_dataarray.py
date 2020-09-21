@@ -3523,16 +3523,16 @@ class TestDataArray:
     def test_to_dataframe_multiindex(self):
         # regression test for #3008
         arr_np = np.random.randn(4, 3)
-     
-        mindex = pd.MultiIndex.from_product([[1, 2], list('ab')], names=['A', 'B'])
 
-        arr = DataArray(arr_np, [('MI', mindex), ('C', [5, 6, 7])], name="foo")
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
 
         actual = arr.to_dataframe()
-        assert_array_equal(actual['foo'].values, arr_np.flatten())
-        assert_array_equal(actual.index.names, list('ABC'))
+        assert_array_equal(actual["foo"].values, arr_np.flatten())
+        assert_array_equal(actual.index.names, list("ABC"))
         assert_array_equal(actual.index.levels[0], [1, 2])
-        assert_array_equal(actual.index.levels[1], ['a', 'b'])
+        assert_array_equal(actual.index.levels[1], ["a", "b"])
         assert_array_equal(actual.index.levels[2], [5, 6, 7])
 
     def test_to_pandas_name_matches_coordinate(self):
