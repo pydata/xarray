@@ -1615,15 +1615,13 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
         # Using chunks = None should return non-chunked arrays
-        NO_CHUNKS = (None,)
-        for no_chunk in NO_CHUNKS:
-            open_kwargs = {"chunks": no_chunk}
-            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-                for k, v in actual.variables.items():
-                    # only index variables should be in memory
-                    assert v._in_memory == (k in actual.dims)
-                    # there should be no chunks
-                    assert v.chunks is None
+        open_kwargs = {"chunks": None}
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                assert v._in_memory == (k in actual.dims)
+                # there should be no chunks
+                assert v.chunks is None
 
         # uniform arrays
         for i in range(2, 6):
