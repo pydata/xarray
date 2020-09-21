@@ -511,7 +511,7 @@ def open_dataset(
             # auto chunking needs to be here and not in ZarrStore because
             # the variable chunks does not survive decode_cf
             # return trivial case
-            if not chunks:  # e.g. chunks is 0, None or {}
+            if chunks is None:
                 return ds
 
             if isinstance(chunks, int):

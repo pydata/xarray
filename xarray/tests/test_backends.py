@@ -1614,8 +1614,8 @@ class ZarrBase(CFEncodedBase):
     def test_manual_chunk(self):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
-        # All of these should return non-chunked arrays
-        NO_CHUNKS = (None, 0, {})
+        # Using chunks = None should return non-chunked arrays
+        NO_CHUNKS = (None,)
         for no_chunk in NO_CHUNKS:
             open_kwargs = {"chunks": no_chunk}
             with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
