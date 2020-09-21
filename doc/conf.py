@@ -14,11 +14,11 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
-import jinja2.defaults
 import sphinx_autosummary_accessors
 
 import xarray
@@ -99,16 +99,13 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 
 autosummary_generate = True
 
-
-def github_url(name):
-    url = "https://github.com/pydata/xarray/blob/{branch}/{path}"
-    branch = "master"
-    path = "/".join(name.split("."))
-
-    print(f"got: {name}, pointing to {url.format(branch=branch, path=path)}")
-
-    return url.format(branch=branch, path=path)
-
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
 
 autodoc_typehints = "none"
 
@@ -417,7 +414,3 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
 }
-
-
-def setup(app):
-    jinja2.defaults.DEFAULT_FILTERS["github_url"] = github_url
