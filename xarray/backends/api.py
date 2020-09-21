@@ -352,7 +352,10 @@ def open_dataset(
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays.
+        chunk for all arrays. When using ``engine="zarr"`, if `chunks='auto'`,
+        dask chunks are created based on the variable's zarr chunks, and if
+        `chunks=None`, zarr array data will lazily convert to numpy arrays upon
+        access. This accepts all the chunk specifications as Dask does.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
