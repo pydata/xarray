@@ -107,8 +107,6 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             (dim,) = ordered_dims
             return self._data.get_index(dim)  # type: ignore
         else:
-            from pandas.core.arrays.categorical import factorize_from_iterable
-
             indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
 
             # compute the sizes of the repeat and tile for the cartesian product
@@ -118,14 +116,14 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
             if cumprodX[-1] != 0:
                 # sizes of the repeats
-                b = cumprodX[-1] / cumprodX
+                repeat_counts = cumprodX[-1] / cumprodX
             else:
                 # if any factor is empty, the cartesian product is empty
-                b = np.zeros_like(cumprodX)
+                repeat_counts = np.zeros_like(cumprodX)
 
             # sizes of the tiles
-            a = np.roll(cumprodX, 1)
-            a[0] = 1
+            tile_counts = np.roll(cumprodX, 1)
+            tile_counts[0] = 1
 
             # loop over the indexes
             # for each MultiIndex or Index compute the cartesian product of the codes
@@ -138,12 +136,12 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                 if isinstance(index, pd.MultiIndex):
                     codes, levels = index.codes, index.levels
                 else:
-                    code, level = factorize_from_iterable(index)
+                    code, level = pd.factorize(index)
                     codes = [code]
                     levels = [level]
 
                 # compute the cartesian product
-                code_list += [np.tile(np.repeat(code, b[i]), a[i]) for code in codes]
+                code_list += [np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]) for code in codes]
                 level_list += levels
                 names += index.names
 
