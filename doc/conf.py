@@ -79,6 +79,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -105,6 +106,7 @@ html_context = {
     "github_user": "pydata",
     "github_repo": "xarray",
     "github_version": "master",
+    "conf_py_path": "/doc/",
 }
 
 autodoc_typehints = "none"
