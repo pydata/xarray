@@ -15,10 +15,10 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.{0.16.2}:
+.. _whats-new.0.16.2:
 
-v{0.16.2} (unreleased)
----------------------
+v0.16.2 (unreleased)
+--------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
