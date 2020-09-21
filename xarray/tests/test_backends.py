@@ -1441,7 +1441,10 @@ class TestNetCDF4Data(NetCDF4Base):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
 
-    def test_already_open_dataset(self):
+
+@requires_netCDF4
+class TestNetCDF4AlreadyOpen:
+    def test_base_case(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 v = nc.createVariable("x", "int")
@@ -1453,7 +1456,7 @@ class TestNetCDF4Data(NetCDF4Base):
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset_group(self):
+    def test_group(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 group = nc.createGroup("g")
@@ -1475,6 +1478,21 @@ class TestNetCDF4Data(NetCDF4Base):
             with nc4.Dataset(tmp_file, mode="r") as nc:
                 with pytest.raises(ValueError, match="must supply a root"):
                     backends.NetCDF4DataStore(nc.groups["g"], group="g")
+
+    def test_deepcopy(self):
+        # regression test for https://github.com/pydata/xarray/issues/4425
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("x", 10)
+                v = nc.createVariable("y", np.int32, ("x",))
+                v[:] = np.arange(10)
+
+            h5 = nc4.Dataset(tmp_file, mode="r")
+            store = backends.NetCDF4DataStore(h5)
+            with open_dataset(store) as ds:
+                copied = ds.copy(deep=True)
+                expected = Dataset({"y": ("x", np.arange(10))})
+                assert_identical(expected, copied)
 
 
 @requires_netCDF4
@@ -1563,6 +1581,15 @@ class ZarrBase(CFEncodedBase):
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
+
+    def test_with_chunkstore(self):
+        expected = create_test_data()
+        with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
+            save_kwargs = {"chunk_store": chunk_store}
+            self.save(expected, store_target, **save_kwargs)
+            open_kwargs = {"chunk_store": chunk_store}
+            with self.open(store_target, **open_kwargs) as ds:
+                assert_equal(ds, expected)
 
     @requires_dask
     def test_auto_chunk(self):
@@ -2005,6 +2032,27 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds1.isel(t=0)) as ds2:
                 assert_equal(ds2, original.isel(t=0))
 
+    @requires_dask
+    def test_chunk_encoding_with_partial_dask_chunks(self):
+        original = xr.Dataset(
+            {"x": xr.DataArray(np.random.random(size=(6, 8)), dims=("a", "b"))}
+        ).chunk({"a": 3})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"x": {"chunks": [3, 2]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
+    @requires_cftime
+    def test_open_zarr_use_cftime(self):
+        ds = create_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, consolidated=True)
+            ds_a = xr.open_zarr(store_target, consolidated=True)
+            assert_identical(ds, ds_a)
+            ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
+            assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -2392,7 +2440,10 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
 
-    def test_already_open_dataset_group(self):
+
+@requires_h5netcdf
+class TestH5NetCDFAlreadyOpen:
+    def test_open_dataset_group(self):
         import h5netcdf
 
         with create_tmp_file() as tmp_file:
@@ -2412,6 +2463,22 @@ class TestH5NetCDFData(NetCDF4Base):
             with open_dataset(store) as ds:
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
+
+    def test_deepcopy(self):
+        import h5netcdf
+
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("x", 10)
+                v = nc.createVariable("y", np.int32, ("x",))
+                v[:] = np.arange(10)
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5)
+            with open_dataset(store) as ds:
+                copied = ds.copy(deep=True)
+                expected = Dataset({"y": ("x", np.arange(10))})
+                assert_identical(expected, copied)
 
 
 @requires_h5netcdf

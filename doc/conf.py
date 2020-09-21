@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -15,7 +14,6 @@
 
 import datetime
 import os
-import pathlib
 import subprocess
 import sys
 from contextlib import suppress
@@ -23,12 +21,7 @@ from contextlib import suppress
 import jinja2.defaults
 import sphinx_autosummary_accessors
 
-# make sure the source version is preferred (#3567)
-root = pathlib.Path(__file__).absolute().parent.parent
-os.environ["PYTHONPATH"] = str(root)
-sys.path.insert(0, str(root))
-
-import xarray  # isort:skip
+import xarray
 
 allowed_failures = set()
 
@@ -42,7 +35,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
     import matplotlib
@@ -119,8 +112,58 @@ def github_url(name):
 
 autodoc_typehints = "none"
 
-napoleon_use_param = True
+napoleon_use_param = False
 napoleon_use_rtype = True
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "iterable": ":term:`iterable`",
+    "callable": ":py:func:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
+    # stdlib type aliases
+    "MutableMapping": "~collections.abc.MutableMapping",
+    "sys.stdout": ":obj:`sys.stdout`",
+    "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
+    # matplotlib terms
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # objects without namespace
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
+    "ndarray": "~numpy.ndarray",
+    "MaskedArray": "~numpy.ma.MaskedArray",
+    "dtype": "~numpy.dtype",
+    "ComplexWarning": "~numpy.ComplexWarning",
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
+    "Categorical": "~pandas.Categorical",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
+}
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
@@ -297,9 +340,9 @@ htmlhelp_basename = "xarraydoc"
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
-]
+# latex_documents = [
+#     ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
+# ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -326,7 +369,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
+# man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -337,17 +380,17 @@ man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [
-    (
-        "index",
-        "xarray",
-        "xarray Documentation",
-        "xarray Developers",
-        "xarray",
-        "N-D labeled arrays and datasets in Python.",
-        "Miscellaneous",
-    )
-]
+# texinfo_documents = [
+#     (
+#         "index",
+#         "xarray",
+#         "xarray Documentation",
+#         "xarray Developers",
+#         "xarray",
+#         "N-D labeled arrays and datasets in Python.",
+#         "Miscellaneous",
+#     )
+# ]
 
 # Documents to append as an appendix to all manuals.
 # texinfo_appendices = []

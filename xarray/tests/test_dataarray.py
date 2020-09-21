@@ -938,7 +938,7 @@ class TestDataArray:
         with raises_regex(ValueError, "cannot use non-scalar arrays"):
             array.sel(x=slice(array.x))
 
-    def test_sel_dataarray_datetime(self):
+    def test_sel_dataarray_datetime_slice(self):
         # regression test for GH1240
         times = pd.date_range("2000-01-01", freq="D", periods=365)
         array = DataArray(np.arange(365), [("time", times)])
@@ -1077,6 +1077,12 @@ class TestDataArray:
         assert_identical(da[:3], da.loc[["a", "b", "c"]])
         assert_identical(da[:3, :4], da.loc[["a", "b", "c"], np.arange(4)])
         assert_identical(da[:, :4], da.loc[:, self.ds["y"] < 4])
+
+    def test_loc_datetime64_value(self):
+        # regression test for https://github.com/pydata/xarray/issues/4283
+        t = np.array(["2017-09-05T12", "2017-09-05T15"], dtype="datetime64[ns]")
+        array = DataArray(np.ones(t.shape), dims=("time",), coords=(t,))
+        assert_identical(array.loc[{"time": t[0]}], array[0])
 
     def test_loc_assign(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
@@ -1521,16 +1527,25 @@ class TestDataArray:
         expected = DataArray([10, 20, np.nan], coords=[("y", y)])
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {None: 2, "u": 1}])
     def test_reindex_fill_value(self, fill_value):
-        x = DataArray([10, 20], dims="y", coords={"y": [0, 1]})
+        x = DataArray([10, 20], dims="y", coords={"y": [0, 1], "u": ("y", [1, 2])})
         y = [0, 1, 2]
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_var = fill_value_u = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_var = fill_value[None]
+            fill_value_u = fill_value["u"]
+        else:
+            fill_value_var = fill_value_u = fill_value
         actual = x.reindex(y=y, fill_value=fill_value)
-        expected = DataArray([10, 20, fill_value], coords=[("y", y)])
+        expected = DataArray(
+            [10, 20, fill_value_var],
+            dims="y",
+            coords={"y": y, "u": ("y", [1, 2, fill_value_u])},
+        )
         assert_identical(expected, actual)
 
     def test_rename(self):
@@ -1873,6 +1888,19 @@ class TestDataArray:
         assert_array_equal(self.dv, np.maximum(self.v, self.dv))
         bar = Variable(["x", "y"], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
+
+    def test_astype_attrs(self):
+        for v in [self.va.copy(), self.mda.copy(), self.ds.copy()]:
+            v.attrs["foo"] = "bar"
+            assert v.attrs == v.astype(float).attrs
+            assert not v.astype(float, keep_attrs=False).attrs
+
+    def test_astype_dtype(self):
+        original = DataArray([-1, 1, 2, 3, 1000])
+        converted = original.astype(float)
+        assert_array_equal(original, converted)
+        assert np.issubdtype(original.dtype, np.integer)
+        assert np.issubdtype(converted.dtype, np.floating)
 
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
@@ -3463,14 +3491,17 @@ class TestDataArray:
 
     def test_to_dataframe(self):
         # regression test for #260
-        arr = DataArray(
-            np.random.randn(3, 4), [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo"
-        )
+        arr_np = np.random.randn(3, 4)
+
+        arr = DataArray(arr_np, [("B", [1, 2, 3]), ("A", list("cdef"))], name="foo")
         expected = arr.to_series()
         actual = arr.to_dataframe()["foo"]
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.name, actual.name)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        actual = arr.to_dataframe(dim_order=["A", "B"])["foo"]
+        assert_array_equal(arr_np.transpose().reshape(-1), actual.values)
 
         # regression test for coords with different dimensions
         arr.coords["C"] = ("B", [-1, -2, -3])
@@ -3481,6 +3512,9 @@ class TestDataArray:
         assert_array_equal(expected.values, actual.values)
         assert_array_equal(expected.columns.values, actual.columns.values)
         assert_array_equal(expected.index.values, actual.index.values)
+
+        with pytest.raises(ValueError, match="does not match the set of dimensions"):
+            arr.to_dataframe(dim_order=["B", "A", "C"])
 
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):
@@ -4282,8 +4316,14 @@ class TestDataArray:
         ).T
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
 
+        # Full output and deficient rank
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.RankWarning)
+            out = da.polyfit("x", 12, full=True)
+            assert out.polyfit_residuals.isnull().all()
+
         # With NaN
-        da_raw[0, 1] = np.nan
+        da_raw[0, 1:3] = np.nan
         if use_dask:
             da = da_raw.chunk({"d": 1})
         else:
@@ -4297,6 +4337,11 @@ class TestDataArray:
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
         assert out.x_matrix_rank == 3
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.RankWarning)
+            out = da.polyfit("x", 8, full=True)
+            np.testing.assert_array_equal(out.polyfit_residuals.isnull(), [True, False])
 
     def test_pad_constant(self):
         ar = DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5))
@@ -6147,13 +6192,41 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
+def test_coarsen_keep_attrs():
+    _attrs = {"units": "test", "long_name": "testing"}
+
+    da = xr.DataArray(
+        np.linspace(0, 364, num=364),
+        dims="time",
+        coords={"time": pd.date_range("15/12/1999", periods=364)},
+        attrs=_attrs,
+    )
+
+    da2 = da.copy(deep=True)
+
+    # Test dropped attrs
+    dat = da.coarsen(time=3, boundary="trim").mean()
+    assert dat.attrs == {}
+
+    # Test kept attrs using dataset keyword
+    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs using global option
+    with xr.set_options(keep_attrs=True):
+        dat = da.coarsen(time=3, boundary="trim").mean()
+    assert dat.attrs == _attrs
+
+    # Test kept attrs in original object
+    xr.testing.assert_identical(da, da2)
+
+
+@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "Mean of empty slice")
-        rolling_obj_mean = rolling_obj.mean()
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da["time"])
     assert_identical(rolling_obj.window_labels, da["time"])
@@ -6161,10 +6234,8 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da["time"].isel(time=i)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            actual = rolling_obj_mean.isel(time=i)
-            expected = window_da.mean("time")
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean("time")
 
         # TODO add assert_allclose_with_nan, which compares nan position
         # as well as the closeness of the values.
@@ -6448,6 +6519,11 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+@pytest.mark.filterwarnings("error")
+def test_no_warning_for_all_nan():
+    _ = xr.DataArray([np.NaN, np.NaN]).mean()
 
 
 def test_name_in_masking():
@@ -6794,3 +6870,9 @@ def test_delete_coords():
     assert a1.dims == ("y", "x")
     assert set(a0.coords.keys()) == {"x", "y"}
     assert set(a1.coords.keys()) == {"x"}
+
+
+def test_deepcopy_obj_array():
+    x0 = DataArray(np.array([object()]))
+    x1 = deepcopy(x0)
+    assert x0.values[0] is not x1.values[0]

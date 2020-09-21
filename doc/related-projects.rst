@@ -58,6 +58,7 @@ Other domains
 ~~~~~~~~~~~~~
 - `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
+- `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,6 +66,7 @@ Extend xarray capabilities
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
+- `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-custom <https://github.com/astropenguin/xarray-custom>`_: Data classes for custom xarray creation.
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.

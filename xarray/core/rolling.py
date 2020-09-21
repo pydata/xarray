@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 try:
     import bottleneck
@@ -54,17 +54,14 @@ class Rolling:
         ----------
         obj : Dataset or DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
-        min_periods : int, default None
+        windows : mapping of hashable to int
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -149,7 +146,7 @@ class Rolling:
             else:
                 for d in self.dim:
                     if d not in arg:
-                        raise KeyError("argument has no key {}.".format(d))
+                        raise KeyError(f"argument has no key {d}.")
                 return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
@@ -174,17 +171,14 @@ class DataArrayRolling(Rolling):
         ----------
         obj : DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
-        min_periods : int, default None
+        windows : mapping of hashable to int
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, default False
+        center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -234,12 +228,12 @@ class DataArrayRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str or a mapping, optional
+        window_dim : str or mapping, optional
             A mapping from dimension name to the new window dimension names.
             Just a string can be used for 1d-rolling.
-        stride: integer or a mapping, optional
+        stride : int or mapping of int, optional
             Size of stride for the rolling window.
-        fill_value: optional. Default dtypes.NA
+        fill_value : default: dtypes.NA
             Filling value to match the dimension size.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
@@ -256,15 +250,29 @@ class DataArrayRolling(Rolling):
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
         Dimensions without coordinates: a, b, window_dim
 
         >>> rolling = da.rolling(b=3, center=True)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
-               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        array([[[nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.],
+                [ 2.,  3., nan]],
+        <BLANKLINE>
+               [[nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.],
+                [ 6.,  7., nan]]])
         Dimensions without coordinates: a, b, window_dim
 
         """
@@ -299,7 +307,7 @@ class DataArrayRolling(Rolling):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
@@ -317,8 +325,15 @@ class DataArrayRolling(Rolling):
         >>> rolling = da.rolling(b=3)
         >>> rolling.construct("window_dim")
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
         Dimensions without coordinates: a, b, window_dim
 
         >>> rolling.reduce(np.sum)
@@ -332,10 +347,10 @@ class DataArrayRolling(Rolling):
         <xarray.DataArray (a: 2, b: 4)>
         array([[ 0.,  1.,  3.,  6.],
                [ 4.,  9., 15., 18.]])
-
+        Dimensions without coordinates: a, b
         """
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         windows = self.construct(rolling_dim)
@@ -349,7 +364,7 @@ class DataArrayRolling(Rolling):
         """ Number of non-nan entries in each rolling window. """
 
         rolling_dim = {
-            d: utils.get_temp_dimname(self.obj.dims, "_rolling_dim_{}".format(d))
+            d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
         # We use False as the fill_value instead of np.nan, since boolean
@@ -382,7 +397,7 @@ class DataArrayRolling(Rolling):
 
         padded = self.obj.variable
         if self.center[0]:
-            if isinstance(padded.data, dask_array_type):
+            if is_duck_dask_array(padded.data):
                 # Workaround to make the padded chunk size is larger than
                 # self.window-1
                 shift = -(self.window[0] + 1) // 2
@@ -395,7 +410,7 @@ class DataArrayRolling(Rolling):
                 valid = (slice(None),) * axis + (slice(-shift, None),)
             padded = padded.pad({self.dim[0]: (0, -shift)}, mode="constant")
 
-        if isinstance(padded.data, dask_array_type):
+        if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
             values = dask_rolling_wrapper(
                 func, padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -424,7 +439,7 @@ class DataArrayRolling(Rolling):
 
         if (
             bottleneck_move_func is not None
-            and not isinstance(self.obj.data, dask_array_type)
+            and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):
             # TODO: renable bottleneck with dask after the issues
@@ -448,17 +463,14 @@ class DatasetRolling(Rolling):
         ----------
         obj : Dataset
             Object to window.
-        windows : A mapping from a dimension name to window size
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
-        min_periods : int, default None
+        windows : mapping of hashable to int
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
+        min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : boolean, or a mapping from dimension name to boolean, default False
+        center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
@@ -513,7 +525,7 @@ class DatasetRolling(Rolling):
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
@@ -558,12 +570,12 @@ class DatasetRolling(Rolling):
 
         Parameters
         ----------
-        window_dim: str or a mapping, optional
+        window_dim : str or mapping, optional
             A mapping from dimension name to the new window dimension names.
             Just a string can be used for 1d-rolling.
-        stride: integer, optional
+        stride : int, optional
             size of stride for the rolling window.
-        fill_value: optional. Default dtypes.NA
+        fill_value : Any, default: dtypes.NA
             Filling value to match the dimension size.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
@@ -635,12 +647,9 @@ class Coarsen:
         ----------
         obj : Dataset or DataArray
             Object to window.
-        windows : A mapping from a dimension name to window size
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+        windows : mapping of hashable to int
+            A mapping from the name of the dimension to create the rolling
+            exponential window along (e.g. `time`) to the size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimed.
@@ -702,7 +711,7 @@ class DataArrayCoarsen(Coarsen):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side, **kwargs
+                self.windows, func, self.boundary, self.side, self.keep_attrs, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -715,6 +724,7 @@ class DataArrayCoarsen(Coarsen):
                             self.coord_func[c],
                             self.boundary,
                             self.side,
+                            self.keep_attrs,
                             **kwargs,
                         )
                     else:
