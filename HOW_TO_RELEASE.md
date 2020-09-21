@@ -3,18 +3,21 @@
 Time required: about an hour.
 
 These instructions assume that `upstream` refers to the main repository:
-```
+
+```sh
 $ git remote -v
 {...}
 upstream        https://github.com/pydata/xarray (fetch)
 upstream        https://github.com/pydata/xarray (push)
 ```
 
+<!-- markdownlint-disable MD031 -->
+
  1. Ensure your master branch is synced to upstream:
      ```sh
      git pull upstream master
      ```
- 2. Get a list of contributors with:
+ 2. Add a list of contributors with:
     ```sh
     git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
@@ -22,9 +25,12 @@ upstream        https://github.com/pydata/xarray (push)
     ```sh
     git log v{0.X.Y-1}.. --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
-    Add these into `whats-new.rst` somewhere :)
+    This will return the number of contributors:
+    ```sh
+    git log v{0.X.Y-1}.. --format=%aN | sort -u | wc -l
+    ```
  3. Write a release summary: ~50 words describing the high level features. This
-    will be used in the release emails, tweets, GitHub release notes, etc. 
+    will be used in the release emails, tweets, GitHub release notes, etc.
  4. Look over whats-new.rst and the docs. Make sure "What's New" is complete
     (check the date!) and add the release summary at the top.
     Things to watch out for:
@@ -45,7 +51,7 @@ upstream        https://github.com/pydata/xarray (push)
       ```
  8. Check that the ReadTheDocs build is passing.
  9. On the master branch, commit the release in git:
-      ```s
+      ```sh
       git commit -am 'Release v{0.X.Y}'
       ```
 10. Tag the release:
@@ -67,7 +73,7 @@ upstream        https://github.com/pydata/xarray (push)
       twine upload dist/xarray-{0.X.Y}*
       ```
     You will need to be listed as a package owner at
-    https://pypi.python.org/pypi/xarray for this to work.
+    <https://pypi.python.org/pypi/xarray> for this to work.
 14. Push your changes to master:
       ```sh
       git push upstream master
@@ -80,11 +86,11 @@ upstream        https://github.com/pydata/xarray (push)
       git push --force upstream stable
       git checkout master
      ```
-    It's OK to force push to 'stable' if necessary. (We also update the stable 
-    branch with `git cherry-pick` for documentation only fixes that apply the 
+    It's OK to force push to 'stable' if necessary. (We also update the stable
+    branch with `git cherry-pick` for documentation only fixes that apply the
     current released version.)
 16. Add a section for the next release {0.X.Y+1} to doc/whats-new.rst:
-     ```
+     ```rst
      .. _whats-new.{0.X.Y+1}:
 
      v{0.X.Y+1} (unreleased)
@@ -116,12 +122,12 @@ upstream        https://github.com/pydata/xarray (push)
       ```
     You're done pushing to master!
 18. Issue the release on GitHub. Click on "Draft a new release" at
-    https://github.com/pydata/xarray/releases. Type in the version number
+    <https://github.com/pydata/xarray/releases>. Type in the version number
     and paste the release summary in the notes.
-19. Update the docs. Login to https://readthedocs.org/projects/xray/versions/
+19. Update the docs. Login to <https://readthedocs.org/projects/xray/versions/>
     and switch your new release tag (at the bottom) from "Inactive" to "Active".
     It should now build automatically.
-20. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I 
+20. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com
@@ -132,6 +138,8 @@ upstream        https://github.com/pydata/xarray (push)
 
     Google search will turn up examples of prior release announcements (look for
     "ANN xarray").
+
+<!-- markdownlint-enable MD013 -->
 
 ## Note on version numbering
 
