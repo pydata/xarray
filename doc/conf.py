@@ -20,6 +20,7 @@ import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
 import xarray
 
@@ -416,3 +417,11 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
 }
+
+
+def escape_underscores(string):
+    return string.replace("_", r"\_")
+
+
+def setup(app):
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores
