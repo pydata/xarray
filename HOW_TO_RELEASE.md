@@ -15,7 +15,13 @@ upstream        https://github.com/pydata/xarray (push)
 
  1. Ensure your master branch is synced to upstream:
      ```sh
+     git switch master
      git pull upstream master
+     ```
+ 2. Confirm there are no commits on stable that are not yet merged
+    ([ref](https://github.com/pydata/xarray/pull/4440)):
+     ```sh
+     git merge upstream stable
      ```
  2. Add a list of contributors with:
     ```sh
@@ -81,12 +87,12 @@ upstream        https://github.com/pydata/xarray (push)
       ```
 15. Update the stable branch (used by ReadTheDocs) and switch back to master:
      ```sh
-      git checkout stable
+      git switch stable
       git rebase master
       git push --force upstream stable
-      git checkout master
+      git switch master
      ```
-    It's OK to force push to 'stable' if necessary. (We also update the stable
+    It's OK to force push to `stable` if necessary. (We also update the stable
     branch with `git cherry-pick` for documentation only fixes that apply the
     current released version.)
 16. Add a section for the next release {0.X.Y+1} to doc/whats-new.rst:
