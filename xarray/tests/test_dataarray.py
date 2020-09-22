@@ -946,7 +946,7 @@ class TestDataArray:
         with raises_regex(ValueError, "cannot use non-scalar arrays"):
             array.sel(x=slice(array.x))
 
-    def test_sel_dataarray_datetime(self):
+    def test_sel_dataarray_datetime_slice(self):
         # regression test for GH1240
         times = pd.date_range("2000-01-01", freq="D", periods=365)
         array = DataArray(np.arange(365), [("time", times)])
@@ -1085,6 +1085,12 @@ class TestDataArray:
         assert_identical(da[:3], da.loc[["a", "b", "c"]])
         assert_identical(da[:3, :4], da.loc[["a", "b", "c"], np.arange(4)])
         assert_identical(da[:, :4], da.loc[:, self.ds["y"] < 4])
+
+    def test_loc_datetime64_value(self):
+        # regression test for https://github.com/pydata/xarray/issues/4283
+        t = np.array(["2017-09-05T12", "2017-09-05T15"], dtype="datetime64[ns]")
+        array = DataArray(np.ones(t.shape), dims=("time",), coords=(t,))
+        assert_identical(array.loc[{"time": t[0]}], array[0])
 
     def test_loc_assign(self):
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
