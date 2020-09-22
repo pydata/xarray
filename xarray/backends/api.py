@@ -1,5 +1,6 @@
 import os.path
 import warnings
+from collections.abc import MutableMapping
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -344,14 +345,16 @@ def open_dataset(
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf"}, optional
+        "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
     chunks : int or dict, optional
-        If chunks is provided, it used to load the new dataset into dask
+        If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays.
+        chunk for all arrays. When using ``engine="zarr"`, setting
+        `chunks='auto'` will create dask chunks based on the variable's zarr
+        chunks.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
@@ -413,6 +416,7 @@ def open_dataset(
         "pynio",
         "cfgrib",
         "pseudonetcdf",
+        "zarr",
     ]
     if engine not in engines:
         raise ValueError(
@@ -447,7 +451,7 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    def maybe_decode_store(store, lock=False):
+    def maybe_decode_store(store, chunks, lock=False):
         ds = conventions.decode_cf(
             store,
             mask_and_scale=mask_and_scale,
@@ -461,7 +465,7 @@ def open_dataset(
 
         _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None:
+        if chunks is not None and engine != "zarr":
             from dask.base import tokenize
 
             # if passed an actual file path, augment the token with
@@ -487,10 +491,40 @@ def open_dataset(
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-            ds2._file_obj = ds._file_obj
+
+        elif engine == "zarr":
+            # adapted from Dataset.Chunk() and taken from open_zarr
+            if not (isinstance(chunks, (int, dict)) or chunks is None):
+                if chunks != "auto":
+                    raise ValueError(
+                        "chunks must be an int, dict, 'auto', or None. "
+                        "Instead found %s. " % chunks
+                    )
+
+            if chunks == "auto":
+                try:
+                    import dask.array  # noqa
+                except ImportError:
+                    chunks = None
+
+            # auto chunking needs to be here and not in ZarrStore because
+            # the variable chunks does not survive decode_cf
+            # return trivial case
+            if chunks is None:
+                return ds
+
+            if isinstance(chunks, int):
+                chunks = dict.fromkeys(ds.dims, chunks)
+
+            variables = {
+                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
+            ds2 = ds._replace(variables)
+
         else:
             ds2 = ds
-
+        ds2._file_obj = ds._file_obj
         return ds2
 
     if isinstance(filename_or_obj, Path):
@@ -498,6 +532,17 @@ def open_dataset(
 
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
+
+    elif isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
+        # Zarr supports a wide range of access modes, but for now xarray either
+        # reads or writes from a store, never both.
+        # For open_dataset(engine="zarr"), we only read (i.e. mode="r")
+        mode = "r"
+        _backend_kwargs = backend_kwargs.copy()
+        overwrite_encoded_chunks = _backend_kwargs.pop("overwrite_encoded_chunks", None)
+        store = backends.ZarrStore.open_group(
+            filename_or_obj, mode=mode, group=group, **_backend_kwargs
+        )
 
     elif isinstance(filename_or_obj, str):
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -526,7 +571,16 @@ def open_dataset(
             store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs
             )
-
+        elif engine == "zarr":
+            # on ZarrStore, mode='r', synchronizer=None, group=None,
+            # consolidated=False.
+            _backend_kwargs = backend_kwargs.copy()
+            overwrite_encoded_chunks = _backend_kwargs.pop(
+                "overwrite_encoded_chunks", None
+            )
+            store = backends.ZarrStore.open_group(
+                filename_or_obj, group=group, **_backend_kwargs
+            )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
             raise ValueError(
@@ -542,7 +596,7 @@ def open_dataset(
             )
 
     with close_on_error(store):
-        ds = maybe_decode_store(store)
+        ds = maybe_decode_store(store, chunks)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
@@ -794,7 +848,7 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", "zarr"}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
