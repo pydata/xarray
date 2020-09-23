@@ -179,7 +179,7 @@ def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
     datetime64 and timedelta64, according to the pandas convention. Also used for
     validating that datetime64 and timedelta64 objects are within the valid date
-    range for ns precision, as pandas will raise an error if they are not.  
+    range for ns precision, as pandas will raise an error if they are not.
     """
     return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
