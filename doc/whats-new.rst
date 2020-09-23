@@ -30,7 +30,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`).
+  `Andrew Pauling <https://github.com/andrewpauling>`_
 
 Documentation
 ~~~~~~~~~~~~~
