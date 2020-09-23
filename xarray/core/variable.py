@@ -927,28 +927,41 @@ class Variable(
         pandas.DataFrame.copy
         """
         if data is None:
-            data = self._data
-
-            if isinstance(data, indexing.MemoryCachedArray):
-                # don't share caching between copies
-                data = indexing.MemoryCachedArray(data.array)
-
-            if deep:
-                data = copy.deepcopy(data)
-
+            return copy.deepcopy(self) if deep else copy.copy(self)
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
                 raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
-                    )
+                    f"Data shape {data.shape} must match shape of object"
+                    f"{self.shape}"
                 )
+            return self._replace(data=data)
 
+    def __copy__(self):
+        data = self._data
+        if isinstance(data, indexing.MemoryCachedArray):
+            # don't share mutable caches between copies
+            # TODO: Can we remove this special case? It seems unnecessary and
+            # inconsistent with how shallow copies work with NumPy array data.
+            data = indexing.MemoryCachedArray(data.array)
         # note:
         # dims is already an immutable tuple
         # attributes and encoding will be copied when the new Array is created
         return self._replace(data=data)
+
+    def __deepcopy__(self, memo):
+        data = self._data
+        if is_duck_array(data) or isinstance(data, PandasIndexAdapter):
+            data = copy.deepcopy(data, memo)
+        else:
+            # TODO: remove this legacy code path? It exists to ensure that
+            # xarray's lazy backend array objects get loaded into memory by a
+            # copy, but that purpose is better served by load() or compute().
+            # See https://github.com/pydata/xarray/issues/4449 for discussion.
+            data = np.asarray(data)
+        copied = self._replace(data=data)
+        memo[id(self)] = copied
+        return copied
 
     def _replace(
         self, dims=_default, data=_default, attrs=_default, encoding=_default
@@ -956,20 +969,12 @@ class Variable(
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
-            data = copy.copy(self.data)
+            data = self.data
         if attrs is _default:
             attrs = copy.copy(self._attrs)
         if encoding is _default:
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
-
-    def __copy__(self):
-        return self.copy(deep=False)
-
-    def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
@@ -2431,42 +2436,6 @@ class IndexVariable(Variable):
                 utils.remove_incompatible_items(attrs, var.attrs)
 
         return cls(first_var.dims, data, attrs)
-
-    def copy(self, deep=True, data=None):
-        """Returns a copy of this object.
-
-        `deep` is ignored since data is stored in the form of
-        pandas.Index, which is already immutable. Dimensions, attributes
-        and encodings are always copied.
-
-        Use `data` to create a new object with the same structure as
-        original but entirely new data.
-
-        Parameters
-        ----------
-        deep : bool, optional
-            Deep is ignored when data is given. Whether the data array is
-            loaded into memory and copied onto the new object. Default is True.
-        data : array_like, optional
-            Data to use in the new object. Must have same shape as original.
-
-        Returns
-        -------
-        object : Variable
-            New object with dimensions, attributes, encodings, and optionally
-            data copied from original.
-        """
-        if data is None:
-            data = self._data.copy(deep=deep)
-        else:
-            data = as_compatible_data(data)
-            if self.shape != data.shape:
-                raise ValueError(
-                    "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
-                    )
-                )
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
