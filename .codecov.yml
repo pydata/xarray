@@ -1,0 +1,16 @@
+codecov:
+  ci:
+    # by default, codecov doesn't recognize azure as a CI provider
+    - dev.azure.com
+  require_ci_to_pass: yes
+
+coverage:
+  status:
+    project:
+      default:
+        # Require 1% coverage, i.e., always succeed
+        target: 1
+    patch: false
+    changes: false
+
+comment: off

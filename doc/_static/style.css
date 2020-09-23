@@ -16,3 +16,12 @@
 .wy-nav-top {
   background-color: #555;
 }
+
+table.colwidths-given {
+    table-layout: fixed;
+    width: 100%;
+}
+table.docutils td {
+    white-space: unset;
+    word-wrap: break-word;
+}

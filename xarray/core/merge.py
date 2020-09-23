@@ -1,64 +1,101 @@
-import typing
-from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import pandas as pd
 
+from . import dtypes, pdcompat
 from .alignment import deep_align
-from .pycompat import TYPE_CHECKING
-from .utils import Frozen
-from .variable import (
-    Variable, as_variable, assert_unique_multiindex_level_names)
+from .duck_array_ops import lazy_array_equiv
+from .utils import Frozen, compat_dict_union, dict_equiv
+from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
+    from .coordinates import Coordinates
+    from .dataarray import DataArray
     from .dataset import Dataset
 
+    DimsLike = Union[Hashable, Sequence[Hashable]]
+    ArrayLike = Any
+    VariableLike = Union[
+        ArrayLike,
+        Tuple[DimsLike, ArrayLike],
+        Tuple[DimsLike, ArrayLike, Mapping],
+        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
+    ]
+    XarrayValue = Union[DataArray, Variable, VariableLike]
+    DatasetLike = Union[Dataset, Mapping[Hashable, XarrayValue]]
+    CoercibleValue = Union[XarrayValue, pd.Series, pd.DataFrame]
+    CoercibleMapping = Union[Dataset, Mapping[Hashable, CoercibleValue]]
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 
-_VALID_COMPAT = Frozen({'identical': 0,
-                        'equals': 1,
-                        'broadcast_equals': 2,
-                        'minimal': 3,
-                        'no_conflicts': 4})
+PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
+
+_VALID_COMPAT = Frozen(
+    {
+        "identical": 0,
+        "equals": 1,
+        "broadcast_equals": 2,
+        "minimal": 3,
+        "no_conflicts": 4,
+        "override": 5,
+    }
+)
 
 
-def broadcast_dimension_size(
-    variables: List[Variable],
-) -> 'OrderedDict[Any, int]':
+def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
     Raises ValueError if any dimensions have different sizes.
     """
-    dims = OrderedDict()  # type: OrderedDict[Any, int]
+    dims: Dict[Hashable, int] = {}
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
-                raise ValueError('index %r not aligned' % dim)
+                raise ValueError("index %r not aligned" % dim)
             dims[dim] = size
     return dims
 
 
 class MergeError(ValueError):
-    """Error class for merge failures due to incompatible arguments.
-    """
+    """Error class for merge failures due to incompatible arguments."""
+
     # inherits from ValueError for backward compatibility
     # TODO: move this to an xarray.exceptions module?
 
 
-def unique_variable(name, variables, compat='broadcast_equals'):
-    # type: (Any, List[Variable], str) -> Variable
+def unique_variable(
+    name: Hashable,
+    variables: List[Variable],
+    compat: str = "broadcast_equals",
+    equals: bool = None,
+) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
 
     Parameters
     ----------
     name : hashable
         Name for this variable.
-    variables : list of xarray.Variable
+    variables : list of Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Type of equality check to use.
+    equals : None or bool, optional
+        corresponding to result of compat test
 
     Returns
     -------
@@ -67,173 +104,239 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     Raises
     ------
     MergeError: if any of the variables are not equal.
-    """  # noqa
+    """
     out = variables[0]
-    if len(variables) > 1:
-        combine_method = None
 
-        if compat == 'minimal':
-            compat = 'broadcast_equals'
+    if len(variables) == 1 or compat == "override":
+        return out
 
-        if compat == 'broadcast_equals':
-            dim_lengths = broadcast_dimension_size(variables)
-            out = out.set_dims(dim_lengths)
+    combine_method = None
 
-        if compat == 'no_conflicts':
-            combine_method = 'fillna'
+    if compat == "minimal":
+        compat = "broadcast_equals"
 
+    if compat == "broadcast_equals":
+        dim_lengths = broadcast_dimension_size(variables)
+        out = out.set_dims(dim_lengths)
+
+    if compat == "no_conflicts":
+        combine_method = "fillna"
+
+    if equals is None:
+        # first check without comparing values i.e. no computes
         for var in variables[1:]:
-            if not getattr(out, compat)(var):
-                raise MergeError('conflicting values for variable %r on '
-                                 'objects to be combined:\n'
-                                 'first value: %r\nsecond value: %r'
-                                 % (name, out, var))
-            if combine_method:
-                # TODO: add preservation of attrs into fillna
-                out = getattr(out, combine_method)(var)
-                out.attrs = var.attrs
+            equals = getattr(out, compat)(var, equiv=lazy_array_equiv)
+            if equals is not True:
+                break
+
+        if equals is None:
+            # now compare values with minimum number of computes
+            out = out.compute()
+            for var in variables[1:]:
+                equals = getattr(out, compat)(var)
+                if not equals:
+                    break
+
+    if not equals:
+        raise MergeError(
+            f"conflicting values for variable {name!r} on objects to be combined. "
+            "You can skip this check by specifying compat='override'."
+        )
+
+    if combine_method:
+        for var in variables[1:]:
+            out = getattr(out, combine_method)(var)
 
     return out
 
 
 def _assert_compat_valid(compat):
     if compat not in _VALID_COMPAT:
-        raise ValueError("compat=%r invalid: must be %s"
-                         % (compat, set(_VALID_COMPAT)))
+        raise ValueError(
+            "compat={!r} invalid: must be {}".format(compat, set(_VALID_COMPAT))
+        )
 
 
-class OrderedDefaultDict(OrderedDict):
-    # minimal version of an ordered defaultdict
-    # beware: does not pickle or copy properly
-    def __init__(self, default_factory):
-        self.default_factory = default_factory
-        super(OrderedDefaultDict, self).__init__()
-
-    def __missing__(self, key):
-        self[key] = default = self.default_factory()
-        return default
+MergeElement = Tuple[Variable, Optional[pd.Index]]
 
 
-def merge_variables(
-        list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
-        priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
-        compat='minimal',         # type: str
-):
-    # type: (...) -> OrderedDict[Any, Variable]
+def merge_collected(
+    grouped: Dict[Hashable, List[MergeElement]],
+    prioritized: Mapping[Hashable, MergeElement] = None,
+    compat: str = "minimal",
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
     ----------
-    lists_of_variables_dicts : list of mappings with Variable values
-        List of mappings for which each value is a xarray.Variable object.
-    priority_vars : mapping with Variable or None values, optional
-        If provided, variables are always taken from this dict in preference to
-        the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals', 'minimal', 'no_conflicts'}, optional
+    grouped : mapping
+    prioritized : mapping
+    compat : str
         Type of equality check to use when checking for conflicts.
 
     Returns
     -------
-    OrderedDict with keys taken by the union of keys on list_of_variable_dicts,
+    Dict with keys taken by the union of keys on list_of_mappings,
     and Variable values corresponding to those that should be found on the
     merged result.
-    """  # noqa
-    if priority_vars is None:
-        priority_vars = {}
+    """
+    if prioritized is None:
+        prioritized = {}
 
     _assert_compat_valid(compat)
-    dim_compat = min(compat, 'equals', key=_VALID_COMPAT.get)
 
-    lookup = OrderedDefaultDict(list)
-    for variables in list_of_variables_dicts:
-        for name, var in variables.items():
-            lookup[name].append(var)
+    merged_vars: Dict[Hashable, Variable] = {}
+    merged_indexes: Dict[Hashable, pd.Index] = {}
 
-    # n.b. it's important to fill up merged in the original order in which
-    # variables appear
-    merged = OrderedDict()  # type: OrderedDict[Any, Variable]
-
-    for name, var_list in lookup.items():
-        if name in priority_vars:
-            # one of these arguments (e.g., the first for in-place arithmetic
-            # or the second for Dataset.update) takes priority
-            merged[name] = priority_vars[name]
+    for name, elements_list in grouped.items():
+        if name in prioritized:
+            variable, index = prioritized[name]
+            merged_vars[name] = variable
+            if index is not None:
+                merged_indexes[name] = index
         else:
-            dim_variables = [var for var in var_list if (name,) == var.dims]
-            if dim_variables:
-                # if there are dimension coordinates, these must be equal (or
-                # identical), and they take priority over non-dimension
-                # coordinates
-                merged[name] = unique_variable(name, dim_variables, dim_compat)
+            indexed_elements = [
+                (variable, index)
+                for variable, index in elements_list
+                if index is not None
+            ]
+
+            if indexed_elements:
+                # TODO(shoyer): consider adjusting this logic. Are we really
+                # OK throwing away variable without an index in favor of
+                # indexed variables, without even checking if values match?
+                variable, index = indexed_elements[0]
+                for _, other_index in indexed_elements[1:]:
+                    if not index.equals(other_index):
+                        raise MergeError(
+                            "conflicting values for index %r on objects to be "
+                            "combined:\nfirst value: %r\nsecond value: %r"
+                            % (name, index, other_index)
+                        )
+                if compat == "identical":
+                    for other_variable, _ in indexed_elements[1:]:
+                        if not dict_equiv(variable.attrs, other_variable.attrs):
+                            raise MergeError(
+                                "conflicting attribute values on combined "
+                                "variable %r:\nfirst value: %r\nsecond value: %r"
+                                % (name, variable.attrs, other_variable.attrs)
+                            )
+                merged_vars[name] = variable
+                merged_indexes[name] = index
             else:
+                variables = [variable for variable, _ in elements_list]
                 try:
-                    merged[name] = unique_variable(name, var_list, compat)
+                    merged_vars[name] = unique_variable(name, variables, compat)
                 except MergeError:
-                    if compat != 'minimal':
+                    if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
 
-    return merged
+    return merged_vars, merged_indexes
 
 
-def expand_variable_dicts(
-    list_of_variable_dicts: 'List[Union[Dataset, OrderedDict]]',
-) -> 'List[Mapping[Any, Variable]]':
-    """Given a list of dicts with xarray object values, expand the values.
+def collect_variables_and_indexes(
+    list_of_mappings: "List[DatasetLike]",
+) -> Dict[Hashable, List[MergeElement]]:
+    """Collect variables and indexes from list of mappings of xarray objects.
 
-    Parameters
-    ----------
-    list_of_variable_dicts : list of dict or Dataset objects
-        Each value for the mappings must be of the following types:
-        - an xarray.Variable
-        - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
-          an xarray.Variable
-        - or an xarray.DataArray
-
-    Returns
-    -------
-    A list of ordered dictionaries corresponding to inputs, or coordinates from
-    an input's values. The values of each ordered dictionary are all
-    xarray.Variable objects.
+    Mappings must either be Dataset objects, or have values of one of the
+    following types:
+    - an xarray.Variable
+    - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
+      an xarray.Variable
+    - or an xarray.DataArray
     """
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    var_dicts = []
+    grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
 
-    for variables in list_of_variable_dicts:
-        if isinstance(variables, Dataset):
-            var_dicts.append(variables.variables)
+    def append(name, variable, index):
+        values = grouped.setdefault(name, [])
+        values.append((variable, index))
+
+    def append_all(variables, indexes):
+        for name, variable in variables.items():
+            append(name, variable, indexes.get(name))
+
+    for mapping in list_of_mappings:
+        if isinstance(mapping, Dataset):
+            append_all(mapping.variables, mapping.indexes)
             continue
 
-        # append coords to var_dicts before appending sanitized_vars,
-        # because we want coords to appear first
-        sanitized_vars = OrderedDict()  # type: OrderedDict[Any, Variable]
-
-        for name, var in variables.items():
-            if isinstance(var, DataArray):
-                # use private API for speed
-                coords = var._coords.copy()
+        for name, variable in mapping.items():
+            if isinstance(variable, DataArray):
+                coords = variable._coords.copy()  # use private API for speed
+                indexes = dict(variable.indexes)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
-                var_dicts.append(coords)
+                indexes.pop(name, None)
+                append_all(coords, indexes)
 
-            var = as_variable(var, name=name)
-            sanitized_vars[name] = var
+            variable = as_variable(variable, name=name)
+            if variable.dims == (name,):
+                variable = variable.to_index_variable()
+                index = variable.to_index()
+            else:
+                index = None
+            append(name, variable, index)
 
-        var_dicts.append(sanitized_vars)
-
-    return var_dicts
+    return grouped
 
 
-def determine_coords(list_of_variable_dicts):
-    # type: (List[Dict]) -> Tuple[Set, Set]
+def collect_from_coordinates(
+    list_of_coords: "List[Coordinates]",
+) -> Dict[Hashable, List[MergeElement]]:
+    """Collect variables and indexes to be merged from Coordinate objects."""
+    grouped: Dict[Hashable, List[Tuple[Variable, pd.Index]]] = {}
+
+    for coords in list_of_coords:
+        variables = coords.variables
+        indexes = coords.indexes
+        for name, variable in variables.items():
+            value = grouped.setdefault(name, [])
+            value.append((variable, indexes.get(name)))
+    return grouped
+
+
+def merge_coordinates_without_align(
+    objects: "List[Coordinates]",
+    prioritized: Mapping[Hashable, MergeElement] = None,
+    exclude_dims: AbstractSet = frozenset(),
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
+    """Merge variables/indexes from coordinates without automatic alignments.
+
+    This function is used for merging coordinate from pre-existing xarray
+    objects.
+    """
+    collected = collect_from_coordinates(objects)
+
+    if exclude_dims:
+        filtered: Dict[Hashable, List[MergeElement]] = {}
+        for name, elements in collected.items():
+            new_elements = [
+                (variable, index)
+                for variable, index in elements
+                if exclude_dims.isdisjoint(variable.dims)
+            ]
+            if new_elements:
+                filtered[name] = new_elements
+    else:
+        filtered = collected
+
+    return merge_collected(filtered, prioritized)
+
+
+def determine_coords(
+    list_of_mappings: Iterable["DatasetLike"],
+) -> Tuple[Set[Hashable], Set[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 
     Parameters
     ----------
-    list_of_variable_dicts : list of dict or Dataset objects
+    list_of_mappings : list of dict or list of Dataset
         Of the same form as the arguments to expand_variable_dicts.
 
     Returns
@@ -246,15 +349,15 @@ def determine_coords(list_of_variable_dicts):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    coord_names = set()  # type: set
-    noncoord_names = set()  # type: set
+    coord_names: Set[Hashable] = set()
+    noncoord_names: Set[Hashable] = set()
 
-    for variables in list_of_variable_dicts:
-        if isinstance(variables, Dataset):
-            coord_names.update(variables.coords)
-            noncoord_names.update(variables.data_vars)
+    for mapping in list_of_mappings:
+        if isinstance(mapping, Dataset):
+            coord_names.update(mapping.coords)
+            noncoord_names.update(mapping.data_vars)
         else:
-            for name, var in variables.items():
+            for name, var in mapping.items():
                 if isinstance(var, DataArray):
                     coords = set(var._coords)  # use private API for speed
                     # explicitly overwritten variables should take precedence
@@ -264,31 +367,31 @@ def determine_coords(list_of_variable_dicts):
     return coord_names, noncoord_names
 
 
-def coerce_pandas_values(objects):
+def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["DatasetLike"]:
     """Convert pandas values found in a list of labeled objects.
 
     Parameters
     ----------
-    objects : list of Dataset or mappings
+    objects : list of Dataset or mapping
         The mappings may contain any sort of objects coercible to
         xarray.Variables as keys, including pandas objects.
 
     Returns
     -------
-    List of Dataset or OrderedDict objects. Any inputs or values in the inputs
+    List of Dataset or dictionary objects. Any inputs or values in the inputs
     that were pandas objects have been converted into native xarray objects.
     """
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     out = []
     for obj in objects:
         if isinstance(obj, Dataset):
-            variables = obj
+            variables: "DatasetLike" = obj
         else:
-            variables = OrderedDict()
+            variables = {}
             if isinstance(obj, PANDAS_TYPES):
-                obj = OrderedDict(obj.iteritems())
+                obj = dict(obj.iteritems())
             for k, v in obj.items():
                 if isinstance(v, PANDAS_TYPES):
                     v = DataArray(v)
@@ -297,18 +400,9 @@ def coerce_pandas_values(objects):
     return out
 
 
-def merge_coords_for_inplace_math(objs, priority_vars=None):
-    """Merge coordinate variables without worrying about alignment.
-
-    This function is used for merging variables in coordinates.py.
-    """
-    expanded = expand_variable_dicts(objs)
-    variables = merge_variables(expanded, priority_vars)
-    assert_unique_multiindex_level_names(variables)
-    return variables
-
-
-def _get_priority_vars(objects, priority_arg, compat='equals'):
+def _get_priority_vars_and_indexes(
+    objects: List["DatasetLike"], priority_arg: Optional[int], compat: str = "equals"
+) -> Dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 
     We need this method because in some cases the priority argument itself
@@ -317,39 +411,36 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
 
     Parameters
     ----------
-    objects : list of dictionaries of variables
+    objects : list of dict-like of Variable
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts"}, optional
         Compatibility checks to use when merging variables.
 
     Returns
     -------
-    None, if priority_arg is None, or an OrderedDict with Variable objects as
-    values indicating priority variables.
-    """  # noqa
-    if priority_arg is None:
-        priority_vars = {}
-    else:
-        expanded = expand_variable_dicts([objects[priority_arg]])
-        priority_vars = merge_variables(expanded, compat=compat)
-    return priority_vars
-
-
-def expand_and_merge_variables(objs, priority_arg=None):
-    """Merge coordinate variables without worrying about alignment.
-
-    This function is used for merging variables in computation.py.
+    A dictionary of variables and associated indexes (if any) to prioritize.
     """
-    expanded = expand_variable_dicts(objs)
-    priority_vars = _get_priority_vars(objs, priority_arg)
-    variables = merge_variables(expanded, priority_vars)
-    return variables
+    if priority_arg is None:
+        return {}
+
+    collected = collect_variables_and_indexes([objects[priority_arg]])
+    variables, indexes = merge_collected(collected, compat=compat)
+    grouped: Dict[Hashable, MergeElement] = {}
+    for name, variable in variables.items():
+        grouped[name] = (variable, indexes.get(name))
+    return grouped
 
 
-def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
-                 indexes=None):
+def merge_coords(
+    objects: Iterable["CoercibleMapping"],
+    compat: str = "minimal",
+    join: str = "outer",
+    priority_arg: Optional[int] = None,
+    indexes: Optional[Mapping[Hashable, pd.Index]] = None,
+    fill_value: object = dtypes.NA,
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge coordinate variables.
 
     See merge_core below for argument descriptions. This works similarly to
@@ -357,27 +448,28 @@ def merge_coords(objs, compat='minimal', join='outer', priority_arg=None,
     coordinates or not.
     """
     _assert_compat_valid(compat)
-    coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
-    expanded = expand_variable_dicts(aligned)
-    priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
-    variables = merge_variables(expanded, priority_vars, compat=compat)
+    coerced = coerce_pandas_values(objects)
+    aligned = deep_align(
+        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+    )
+    collected = collect_variables_and_indexes(aligned)
+    prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
+    variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     assert_unique_multiindex_level_names(variables)
+    return variables, out_indexes
 
-    return variables
 
-
-def merge_data_and_coords(data, coords, compat='broadcast_equals',
-                          join='outer'):
+def merge_data_and_coords(data, coords, compat="broadcast_equals", join="outer"):
     """Used in Dataset.__init__."""
-    objs = [data, coords]
+    objects = [data, coords]
     explicit_coords = coords.keys()
-    indexes = dict(extract_indexes(coords))
-    return merge_core(objs, compat, join, explicit_coords=explicit_coords,
-                      indexes=indexes)
+    indexes = dict(_extract_indexes_from_coords(coords))
+    return merge_core(
+        objects, compat, join, explicit_coords=explicit_coords, indexes=indexes
+    )
 
 
-def extract_indexes(coords):
+def _extract_indexes_from_coords(coords):
     """Yields the name & index of valid indexes from a mapping of coords"""
     for name, variable in coords.items():
         variable = as_variable(variable, name=name)
@@ -394,104 +486,198 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
     for coord_name in explicit_coords:
         if coord_name in dims and variables[coord_name].dims != (coord_name,):
             raise MergeError(
-                'coordinate %s shares a name with a dataset dimension, but is '
-                'not a 1D variable along that dimension. This is disallowed '
-                'by the xarray data model.' % coord_name)
+                "coordinate %s shares a name with a dataset dimension, but is "
+                "not a 1D variable along that dimension. This is disallowed "
+                "by the xarray data model." % coord_name
+            )
 
 
-def merge_core(objs,
-               compat='broadcast_equals',
-               join='outer',
-               priority_arg=None,
-               explicit_coords=None,
-               indexes=None):
+def merge_attrs(variable_attrs, combine_attrs):
+    """Combine attributes from different variables according to combine_attrs"""
+    if not variable_attrs:
+        # no attributes to merge
+        return None
+
+    if combine_attrs == "drop":
+        return {}
+    elif combine_attrs == "override":
+        return variable_attrs[0]
+    elif combine_attrs == "no_conflicts":
+        result = dict(variable_attrs[0])
+        for attrs in variable_attrs[1:]:
+            try:
+                result = compat_dict_union(result, attrs)
+            except ValueError:
+                raise MergeError(
+                    "combine_attrs='no_conflicts', but some values are not "
+                    "the same. Merging %s with %s" % (str(result), str(attrs))
+                )
+        return result
+    elif combine_attrs == "identical":
+        result = dict(variable_attrs[0])
+        for attrs in variable_attrs[1:]:
+            if not dict_equiv(result, attrs):
+                raise MergeError(
+                    "combine_attrs='identical', but attrs differ. First is %s "
+                    ", other is %s." % (str(result), str(attrs))
+                )
+        return result
+    else:
+        raise ValueError("Unrecognised value for combine_attrs=%s" % combine_attrs)
+
+
+class _MergeResult(NamedTuple):
+    variables: Dict[Hashable, Variable]
+    coord_names: Set[Hashable]
+    dims: Dict[Hashable, int]
+    indexes: Dict[Hashable, pd.Index]
+    attrs: Dict[Hashable, Any]
+
+
+def merge_core(
+    objects: Iterable["CoercibleMapping"],
+    compat: str = "broadcast_equals",
+    join: str = "outer",
+    combine_attrs: Optional[str] = "override",
+    priority_arg: Optional[int] = None,
+    explicit_coords: Optional[Sequence] = None,
+    indexes: Optional[Mapping[Hashable, pd.Index]] = None,
+    fill_value: object = dtypes.NA,
+) -> _MergeResult:
     """Core logic for merging labeled objects.
 
     This is not public API.
 
     Parameters
     ----------
-    objs : list of mappings
+    objects : list of mapping
         All values must be convertable to labeled arrays.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Compatibility checks to use when merging variables.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {"outer", "inner", "left", "right"}, optional
         How to combine objects with different indexes.
-    priority_arg : integer, optional
-        Optional argument in `objs` that takes precedence over the others.
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, optional
+        How to combine attributes of objects
+    priority_arg : int, optional
+        Optional argument in `objects` that takes precedence over the others.
     explicit_coords : set, optional
-        An explicit list of variables from `objs` that are coordinates.
+        An explicit list of variables from `objects` that are coordinates.
     indexes : dict, optional
         Dictionary with values given by pandas.Index objects.
+    fill_value : scalar, optional
+        Value to use for newly missing values
 
     Returns
     -------
-    variables : OrderedDict
-        Ordered dictionary of Variable objects.
+    variables : dict
+        Dictionary of Variable objects.
     coord_names : set
         Set of coordinate names.
     dims : dict
         Dictionary mapping from dimension names to sizes.
+    attrs : dict
+        Dictionary of attributes
 
     Raises
     ------
     MergeError if the merge cannot be done successfully.
-    """  # noqa
-    from .dataset import calculate_dimensions
+    """
+    from .dataarray import DataArray
+    from .dataset import Dataset, calculate_dimensions
 
     _assert_compat_valid(compat)
 
-    coerced = coerce_pandas_values(objs)
-    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
-    expanded = expand_variable_dicts(aligned)
+    coerced = coerce_pandas_values(objects)
+    aligned = deep_align(
+        coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
+    )
+    collected = collect_variables_and_indexes(aligned)
 
-    coord_names, noncoord_names = determine_coords(coerced)
-
-    priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
-    variables = merge_variables(expanded, priority_vars, compat=compat)
+    prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
+    variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 
+    coord_names, noncoord_names = determine_coords(coerced)
     if explicit_coords is not None:
         assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
-
     for dim, size in dims.items():
         if dim in variables:
             coord_names.add(dim)
-
     ambiguous_coords = coord_names.intersection(noncoord_names)
     if ambiguous_coords:
-        raise MergeError('unable to determine if these variables should be '
-                         'coordinates or not in the merged result: %s'
-                         % ambiguous_coords)
+        raise MergeError(
+            "unable to determine if these variables should be "
+            "coordinates or not in the merged result: %s" % ambiguous_coords
+        )
 
-    return variables, coord_names, dict(dims)
+    attrs = merge_attrs(
+        [
+            var.attrs
+            for var in coerced
+            if isinstance(var, Dataset) or isinstance(var, DataArray)
+        ],
+        combine_attrs,
+    )
+
+    return _MergeResult(variables, coord_names, dims, out_indexes, attrs)
 
 
-def merge(objects, compat='no_conflicts', join='outer'):
+def merge(
+    objects: Iterable[Union["DataArray", "CoercibleMapping"]],
+    compat: str = "no_conflicts",
+    join: str = "outer",
+    fill_value: object = dtypes.NA,
+    combine_attrs: str = "drop",
+) -> "Dataset":
     """Merge any number of xarray objects into a single Dataset as variables.
 
     Parameters
     ----------
-    objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
+    objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
-        - 'broadcast_equals': all values must be equal when variables are
+        - "broadcast_equals": all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
           same.
-        - 'no_conflicts': only values which are not null in both datasets
+        - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        How to combine objects with different indexes.
+        - "override": skip comparing and pick variable from first dataset
+    join : {"outer", "inner", "left", "right", "exact"}, optional
+        String indicating how to combine differing indexes in objects.
+
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
+        - "override": if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
+                    default: "drop"
+        String indicating how to combine attrs of the objects being merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -500,18 +686,150 @@ def merge(objects, compat='no_conflicts', join='outer'):
 
     Examples
     --------
-    >>> arrays = [xr.DataArray(n, name='var%d' % n) for n in range(5)]
-    >>> xr.merge(arrays)
-    <xarray.Dataset>
-    Dimensions:  ()
+    >>> import xarray as xr
+    >>> x = xr.DataArray(
+    ...     [[1.0, 2.0], [3.0, 5.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ...     name="var1",
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[5.0, 6.0], [7.0, 8.0]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 150.0]},
+    ...     name="var2",
+    ... )
+    >>> z = xr.DataArray(
+    ...     [[0.0, 3.0], [4.0, 9.0]],
+    ...     dims=("time", "lon"),
+    ...     coords={"time": [30.0, 60.0], "lon": [100.0, 150.0]},
+    ...     name="var3",
+    ... )
+
+    >>> x
+    <xarray.DataArray 'var1' (lat: 2, lon: 2)>
+    array([[1., 2.],
+           [3., 5.]])
     Coordinates:
-        *empty*
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
+
+    >>> y
+    <xarray.DataArray 'var2' (lat: 2, lon: 2)>
+    array([[5., 6.],
+           [7., 8.]])
+    Coordinates:
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 150.0
+
+    >>> z
+    <xarray.DataArray 'var3' (time: 2, lon: 2)>
+    array([[0., 3.],
+           [4., 9.]])
+    Coordinates:
+      * time     (time) float64 30.0 60.0
+      * lon      (lon) float64 100.0 150.0
+
+    >>> xr.merge([x, y, z])
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
     Data variables:
-        var0     int64 0
-        var1     int64 1
-        var2     int64 2
-        var3     int64 3
-        var4     int64 4
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], compat="identical")
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], compat="equals")
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], compat="equals", fill_value=-999.0)
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 -999.0 3.0 ... -999.0 -999.0 -999.0
+        var2     (lat, lon) float64 5.0 -999.0 6.0 -999.0 ... -999.0 7.0 -999.0 8.0
+        var3     (time, lon) float64 0.0 -999.0 3.0 4.0 -999.0 9.0
+
+    >>> xr.merge([x, y, z], join="override")
+    <xarray.Dataset>
+    Dimensions:  (lat: 2, lon: 2, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 3.0 5.0
+        var2     (lat, lon) float64 5.0 6.0 7.0 8.0
+        var3     (time, lon) float64 0.0 3.0 4.0 9.0
+
+    >>> xr.merge([x, y, z], join="inner")
+    <xarray.Dataset>
+    Dimensions:  (lat: 1, lon: 1, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0
+        var2     (lat, lon) float64 5.0
+        var3     (time, lon) float64 0.0 4.0
+
+    >>> xr.merge([x, y, z], compat="identical", join="inner")
+    <xarray.Dataset>
+    Dimensions:  (lat: 1, lon: 1, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0
+        var2     (lat, lon) float64 5.0
+        var3     (time, lon) float64 0.0 4.0
+
+    >>> xr.merge([x, y, z], compat="broadcast_equals", join="outer")
+    <xarray.Dataset>
+    Dimensions:  (lat: 3, lon: 3, time: 2)
+    Coordinates:
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0 150.0
+      * time     (time) float64 30.0 60.0
+    Data variables:
+        var1     (lat, lon) float64 1.0 2.0 nan 3.0 5.0 nan nan nan nan
+        var2     (lat, lon) float64 5.0 nan 6.0 nan nan nan 7.0 nan 8.0
+        var3     (time, lon) float64 0.0 nan 3.0 4.0 nan 9.0
+
+    >>> xr.merge([x, y, z], join="exact")
+    Traceback (most recent call last):
+    ...
+    ValueError: indexes along dimension 'lat' are not equal
 
     Raises
     ------
@@ -521,32 +839,49 @@ def merge(objects, compat='no_conflicts', join='outer'):
     See also
     --------
     concat
-    """  # noqa
+    """
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    dict_like_objects = [
-        obj.to_dataset() if isinstance(obj, DataArray) else obj
-        for obj in objects]
+    dict_like_objects = []
+    for obj in objects:
+        if not isinstance(obj, (DataArray, Dataset, dict)):
+            raise TypeError(
+                "objects must be an iterable containing only "
+                "Dataset(s), DataArray(s), and dictionaries."
+            )
 
-    variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
-    # TODO: don't always recompute indexes
-    merged = Dataset._construct_direct(
-        variables, coord_names, dims, indexes=None)
+        obj = obj.to_dataset(promote_attrs=True) if isinstance(obj, DataArray) else obj
+        dict_like_objects.append(obj)
 
+    merge_result = merge_core(
+        dict_like_objects,
+        compat,
+        join,
+        combine_attrs=combine_attrs,
+        fill_value=fill_value,
+    )
+    merged = Dataset._construct_direct(**merge_result._asdict())
     return merged
 
 
-def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
+def dataset_merge_method(
+    dataset: "Dataset",
+    other: "CoercibleMapping",
+    overwrite_vars: Union[Hashable, Iterable[Hashable]],
+    compat: str,
+    join: str,
+    fill_value: Any,
+) -> _MergeResult:
     """Guts of the Dataset.merge method."""
-
     # we are locked into supporting overwrite_vars for the Dataset.merge
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, str):
-        overwrite_vars = set([overwrite_vars])
-    overwrite_vars = set(overwrite_vars)
+    if isinstance(overwrite_vars, Iterable) and not isinstance(overwrite_vars, str):
+        overwrite_vars = set(overwrite_vars)
+    else:
+        overwrite_vars = {overwrite_vars}
 
     if not overwrite_vars:
         objs = [dataset, other]
@@ -555,8 +890,8 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
         objs = [dataset, other]
         priority_arg = 1
     else:
-        other_overwrite = OrderedDict()
-        other_no_overwrite = OrderedDict()
+        other_overwrite: Dict[Hashable, CoercibleValue] = {}
+        other_no_overwrite: Dict[Hashable, CoercibleValue] = {}
         for k, v in other.items():
             if k in overwrite_vars:
                 other_overwrite[k] = v
@@ -565,28 +900,39 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
         objs = [dataset, other_no_overwrite, other_overwrite]
         priority_arg = 2
 
-    return merge_core(objs, compat, join, priority_arg=priority_arg)
+    return merge_core(
+        objs, compat, join, priority_arg=priority_arg, fill_value=fill_value
+    )
 
 
-def dataset_update_method(dataset, other):
+def dataset_update_method(
+    dataset: "Dataset", other: "CoercibleMapping"
+) -> _MergeResult:
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
     `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
     GH2180).
     """
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     if not isinstance(other, Dataset):
-        other = OrderedDict(other)
+        other = dict(other)
         for key, value in other.items():
             if isinstance(value, DataArray):
                 # drop conflicting coordinates
-                coord_names = [c for c in value.coords
-                               if c not in value.dims and c in dataset.coords]
+                coord_names = [
+                    c
+                    for c in value.coords
+                    if c not in value.dims and c in dataset.coords
+                ]
                 if coord_names:
-                    other[key] = value.drop(coord_names)
+                    other[key] = value.drop_vars(coord_names)
 
-    return merge_core([dataset, other], priority_arg=1,
-                      indexes=dataset.indexes)
+    return merge_core(
+        [dataset, other],
+        priority_arg=1,
+        indexes=dataset.indexes,
+        combine_attrs="override",
+    )

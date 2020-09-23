@@ -6,50 +6,70 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import OrderedDict
-from collections.abc import Iterable, Mapping, MutableMapping, MutableSet
+from enum import Enum
+from typing import (
+    AbstractSet,
+    Any,
+    Callable,
+    Collection,
+    Container,
+    Dict,
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSet,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import dask_array_type
+K = TypeVar("K")
+V = TypeVar("V")
+T = TypeVar("T")
 
 
-def _check_inplace(inplace, default=False):
-    if inplace is None:
-        inplace = default
-    else:
-        warnings.warn('The inplace argument has been deprecated and will be '
-                      'removed in a future version of xarray.',
-                      FutureWarning, stacklevel=3)
-
-    return inplace
+def _check_inplace(inplace: Optional[bool]) -> None:
+    if inplace is not None:
+        raise TypeError(
+            "The `inplace` argument has been removed from xarray. "
+            "You can achieve an identical effect with python's standard assignment."
+        )
 
 
-def alias_message(old_name, new_name):
-    return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
+def alias_message(old_name: str, new_name: str) -> str:
+    return f"{old_name} has been deprecated. Use {new_name} instead."
 
 
-def alias_warning(old_name, new_name, stacklevel=3):
-    warnings.warn(alias_message(old_name, new_name), FutureWarning,
-                  stacklevel=stacklevel)
+def alias_warning(old_name: str, new_name: str, stacklevel: int = 3) -> None:
+    warnings.warn(
+        alias_message(old_name, new_name), FutureWarning, stacklevel=stacklevel
+    )
 
 
-def alias(obj, old_name):
+def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     assert isinstance(old_name, str)
 
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
+
     wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index):
+def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
 
-    if index.dtype == 'O':
+    if len(index) > 0 and index.dtype == "O":
         try:
             return CFTimeIndex(index)
         except (ImportError, TypeError):
@@ -58,7 +78,13 @@ def _maybe_cast_to_cftimeindex(index):
         return index
 
 
-def safe_cast_to_index(array):
+def maybe_cast_to_coords_dtype(label, coords_dtype):
+    if coords_dtype.kind == "f" and not isinstance(label, slice):
+        label = np.asarray(label, dtype=coords_dtype)
+    return label
+
+
+def safe_cast_to_index(array: Any) -> pd.Index:
     """Given an array, safely cast it to a pandas.Index.
 
     If it is already a pandas.Index, return it unchanged.
@@ -69,17 +95,19 @@ def safe_cast_to_index(array):
     """
     if isinstance(array, pd.Index):
         index = array
-    elif hasattr(array, 'to_index'):
+    elif hasattr(array, "to_index"):
         index = array.to_index()
     else:
         kwargs = {}
-        if hasattr(array, 'dtype') and array.dtype.kind == 'O':
-            kwargs['dtype'] = object
+        if hasattr(array, "dtype") and array.dtype.kind == "O":
+            kwargs["dtype"] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return _maybe_cast_to_cftimeindex(index)
 
 
-def multiindex_from_product_levels(levels, names=None):
+def multiindex_from_product_levels(
+    levels: Sequence[pd.Index], names: Sequence[str] = None
+) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 
     Keeping levels the same gives back the original labels when we unstack.
@@ -88,7 +116,7 @@ def multiindex_from_product_levels(levels, names=None):
     ----------
     levels : sequence of pd.Index
         Values for each MultiIndex level.
-    names : optional sequence of objects
+    names : sequence of str, optional
         Names for each level.
 
     Returns
@@ -96,10 +124,10 @@ def multiindex_from_product_levels(levels, names=None):
     pandas.MultiIndex
     """
     if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError('levels must be a list of pd.Index objects')
+        raise TypeError("levels must be a list of pd.Index objects")
 
     split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing='ij')
+    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
     labels = [x.ravel() for x in labels_mesh]
     return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
@@ -117,22 +145,38 @@ def maybe_wrap_array(original, new_array):
         return new_array
 
 
-def equivalent(first, second):
+def equivalent(first: T, second: T) -> bool:
     """Compare two objects for equivalence (identity or equality), using
-    array_equiv if either object is an ndarray
+    array_equiv if either object is an ndarray. If both objects are lists,
+    equivalent is sequentially called on all the elements.
     """
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
+
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
+    elif isinstance(first, list) or isinstance(second, list):
+        return list_equiv(first, second)
     else:
-        return ((first is second) or
-                (first == second) or
-                (pd.isnull(first) and pd.isnull(second)))
+        return (
+            (first is second)
+            or (first == second)
+            or (pd.isnull(first) and pd.isnull(second))
+        )
 
 
-def peek_at(iterable):
-    """Returns the first value from iterable, as well as a new iterable with
+def list_equiv(first, second):
+    equiv = True
+    if len(first) != len(second):
+        return False
+    else:
+        for f, s in zip(first, second):
+            equiv = equiv and equivalent(f, s)
+    return equiv
+
+
+def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
+    """Returns the first value from iterable, as well as a new iterator with
     the same content as the original iterable
     """
     gen = iter(iterable)
@@ -140,7 +184,11 @@ def peek_at(iterable):
     return peek, itertools.chain([peek], gen)
 
 
-def update_safety_check(first_dict, second_dict, compat=equivalent):
+def update_safety_check(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> None:
     """Check the safety of updating one dictionary with another.
 
     Raises ValueError if dictionaries have non-compatible values for any key,
@@ -158,11 +206,17 @@ def update_safety_check(first_dict, second_dict, compat=equivalent):
     """
     for k, v in second_dict.items():
         if k in first_dict and not compat(v, first_dict[k]):
-            raise ValueError('unsafe to merge dictionaries without '
-                             'overriding values; conflicting key %r' % k)
+            raise ValueError(
+                "unsafe to merge dictionaries without "
+                "overriding values; conflicting key %r" % k
+            )
 
 
-def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
+def remove_incompatible_items(
+    first_dict: MutableMapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> None:
     """Remove incompatible items from the first dictionary in-place.
 
     Items are retained if their keys are found in both dictionaries and the
@@ -177,45 +231,76 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
         checks for equivalence.
     """
     for k in list(first_dict):
-        if (k not in second_dict or
-            (k in second_dict and
-                not compat(first_dict[k], second_dict[k]))):
+        if k not in second_dict or not compat(first_dict[k], second_dict[k]):
             del first_dict[k]
 
 
-def is_dict_like(value):
-    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
+def is_dict_like(value: Any) -> bool:
+    return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
-def is_full_slice(value):
+def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def either_dict_or_kwargs(pos_kwargs, kw_kwargs, func_name):
+def is_list_like(value: Any) -> bool:
+    return isinstance(value, list) or isinstance(value, tuple)
+
+
+def is_duck_array(value: Any) -> bool:
+    if isinstance(value, np.ndarray):
+        return True
+    return (
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and hasattr(value, "__array_function__")
+        and hasattr(value, "__array_ufunc__")
+    )
+
+
+def either_dict_or_kwargs(
+    pos_kwargs: Optional[Mapping[Hashable, T]],
+    kw_kwargs: Mapping[str, T],
+    func_name: str,
+) -> Mapping[Hashable, T]:
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
-            raise ValueError('the first argument to .%s must be a dictionary'
-                             % func_name)
+            raise ValueError(
+                "the first argument to .%s must be a dictionary" % func_name
+            )
         if kw_kwargs:
-            raise ValueError('cannot specify both keyword and positional '
-                             'arguments to .%s' % func_name)
+            raise ValueError(
+                "cannot specify both keyword and positional "
+                "arguments to .%s" % func_name
+            )
         return pos_kwargs
     else:
-        return kw_kwargs
+        # Need an explicit cast to appease mypy due to invariance; see
+        # https://github.com/python/mypy/issues/6228
+        return cast(Mapping[Hashable, T], kw_kwargs)
 
 
-def is_scalar(value):
+def is_scalar(value: Any, include_0d: bool = True) -> bool:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
     """
+    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+
+    if include_0d:
+        include_0d = getattr(value, "ndim", None) == 0
     return (
-        getattr(value, 'ndim', None) == 0 or
-        isinstance(value, (str, bytes)) or not
-        isinstance(value, (Iterable, ) + dask_array_type))
+        include_0d
+        or isinstance(value, (str, bytes))
+        or not (
+            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
+            or hasattr(value, "__array_function__")
+        )
+    )
 
 
-def is_valid_numpy_dtype(dtype):
+def is_valid_numpy_dtype(dtype: Any) -> bool:
     try:
         np.dtype(dtype)
     except (TypeError, ValueError):
@@ -224,23 +309,26 @@ def is_valid_numpy_dtype(dtype):
         return True
 
 
-def to_0d_object_array(value):
+def to_0d_object_array(value: Any) -> np.ndarray:
     """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
     return result
 
 
-def to_0d_array(value):
+def to_0d_array(value: Any) -> np.ndarray:
     """Given a value, wrap it in a 0-D numpy.ndarray."""
-    if np.isscalar(value) or (isinstance(value, np.ndarray) and
-                              value.ndim == 0):
+    if np.isscalar(value) or (isinstance(value, np.ndarray) and value.ndim == 0):
         return np.array(value)
     else:
         return to_0d_object_array(value)
 
 
-def dict_equiv(first, second, compat=equivalent):
+def dict_equiv(
+    first: Mapping[K, V],
+    second: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> bool:
     """Test equivalence of two dict-like objects. If any of the values are
     numpy arrays, compare them correctly.
 
@@ -266,8 +354,12 @@ def dict_equiv(first, second, compat=equivalent):
     return True
 
 
-def ordered_dict_intersection(first_dict, second_dict, compat=equivalent):
-    """Return the intersection of two dictionaries as a new OrderedDict.
+def compat_dict_intersection(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
+    """Return the intersection of two dictionaries as a new dictionary.
 
     Items are retained if their keys are found in both dictionaries and the
     values are compatible.
@@ -282,184 +374,174 @@ def ordered_dict_intersection(first_dict, second_dict, compat=equivalent):
 
     Returns
     -------
-    intersection : OrderedDict
+    intersection : dict
         Intersection of the contents.
     """
-    new_dict = OrderedDict(first_dict)
+    new_dict = dict(first_dict)
     remove_incompatible_items(new_dict, second_dict, compat)
     return new_dict
 
 
-class SingleSlotPickleMixin(object):
-    """Mixin class to add the ability to pickle objects whose state is defined
-    by a single __slots__ attribute. Only necessary under Python 2.
+def compat_dict_union(
+    first_dict: Mapping[K, V],
+    second_dict: Mapping[K, V],
+    compat: Callable[[V, V], bool] = equivalent,
+) -> MutableMapping[K, V]:
+    """Return the union of two dictionaries as a new dictionary.
+
+    An exception is raised if any keys are found in both dictionaries and the
+    values are not compatible.
+
+    Parameters
+    ----------
+    first_dict, second_dict : dict-like
+        Mappings to merge.
+    compat : function, optional
+        Binary operator to determine if two values are compatible. By default,
+        checks for equivalence.
+
+    Returns
+    -------
+    union : dict
+        union of the contents.
     """
-
-    def __getstate__(self):
-        return getattr(self, self.__slots__[0])
-
-    def __setstate__(self, state):
-        setattr(self, self.__slots__[0], state)
+    new_dict = dict(first_dict)
+    update_safety_check(first_dict, second_dict, compat)
+    new_dict.update(second_dict)
+    return new_dict
 
 
-class Frozen(Mapping, SingleSlotPickleMixin):
+class Frozen(Mapping[K, V]):
     """Wrapper around an object implementing the mapping interface to make it
     immutable. If you really want to modify the mapping, the mutable version is
     saved under the `mapping` attribute.
     """
-    __slots__ = ['mapping']
 
-    def __init__(self, mapping):
+    __slots__ = ("mapping",)
+
+    def __init__(self, mapping: Mapping[K, V]):
         self.mapping = mapping
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: K) -> V:
         return self.mapping[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[K]:
         return iter(self.mapping)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.mapping)
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         return key in self.mapping
 
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.mapping)
+    def __repr__(self) -> str:
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
-def FrozenOrderedDict(*args, **kwargs):
-    return Frozen(OrderedDict(*args, **kwargs))
+def FrozenDict(*args, **kwargs) -> Frozen:
+    return Frozen(dict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping, SingleSlotPickleMixin):
+class SortedKeysDict(MutableMapping[K, V]):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
     mapping.
     """
-    __slots__ = ['mapping']
 
-    def __init__(self, mapping=None):
+    __slots__ = ("mapping",)
+
+    def __init__(self, mapping: MutableMapping[K, V] = None):
         self.mapping = {} if mapping is None else mapping
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: K) -> V:
         return self.mapping[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: K, value: V) -> None:
         self.mapping[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: K) -> None:
         del self.mapping[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[K]:
         return iter(sorted(self.mapping))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.mapping)
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
         return key in self.mapping
 
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.mapping)
-
-    def copy(self):
-        return type(self)(self.mapping.copy())
+    def __repr__(self) -> str:
+        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
-class ChainMap(MutableMapping, SingleSlotPickleMixin):
-    """Partial backport of collections.ChainMap from Python>=3.3
-
-    Don't return this from any public APIs, since some of the public methods
-    for a MutableMapping are missing (they will raise a NotImplementedError)
-    """
-    __slots__ = ['maps']
-
-    def __init__(self, *maps):
-        self.maps = maps
-
-    def __getitem__(self, key):
-        for mapping in self.maps:
-            try:
-                return mapping[key]
-            except KeyError:
-                pass
-        raise KeyError(key)
-
-    def __setitem__(self, key, value):
-        self.maps[0][key] = value
-
-    def __delitem__(self, value):  # pragma: no cover
-        raise NotImplementedError
-
-    def __iter__(self):
-        seen = set()
-        for mapping in self.maps:
-            for item in mapping:
-                if item not in seen:
-                    yield item
-                    seen.add(item)
-
-    def __len__(self):
-        raise len(iter(self))
-
-
-class OrderedSet(MutableSet):
+class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
-    The API matches the builtin set, but it preserves insertion order of
-    elements, like an OrderedDict.
+    The API matches the builtin set, but it preserves insertion order of elements, like
+    a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
-    def __init__(self, values=None):
-        self._ordered_dict = OrderedDict()
+    _d: Dict[T, None]
+
+    __slots__ = ("_d",)
+
+    def __init__(self, values: AbstractSet[T] = None):
+        self._d = {}
         if values is not None:
-            self |= values
+            # Disable type checking - both mypy and PyCharm believe that
+            # we're altering the type of self in place (see signature of
+            # MutableSet.__ior__)
+            self |= values  # type: ignore
 
     # Required methods for MutableSet
 
-    def __contains__(self, value):
-        return value in self._ordered_dict
+    def __contains__(self, value: object) -> bool:
+        return value in self._d
 
-    def __iter__(self):
-        return iter(self._ordered_dict)
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._d)
 
-    def __len__(self):
-        return len(self._ordered_dict)
+    def __len__(self) -> int:
+        return len(self._d)
 
-    def add(self, value):
-        self._ordered_dict[value] = None
+    def add(self, value: T) -> None:
+        self._d[value] = None
 
-    def discard(self, value):
-        del self._ordered_dict[value]
+    def discard(self, value: T) -> None:
+        del self._d[value]
 
     # Additional methods
 
-    def update(self, values):
-        self |= values
+    def update(self, values: AbstractSet[T]) -> None:
+        # See comment on __init__ re. type checking
+        self |= values  # type: ignore
 
-    def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, list(self))
+    def __repr__(self) -> str:
+        return "{}({!r})".format(type(self).__name__, list(self))
 
 
-class NdimSizeLenMixin(object):
+class NdimSizeLenMixin:
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
+
+    __slots__ = ()
+
     @property
-    def ndim(self):
+    def ndim(self: Any) -> int:
         return len(self.shape)
 
     @property
-    def size(self):
+    def size(self: Any) -> int:
         # cast to int so that shape = () gives size = 1
         return int(np.prod(self.shape))
 
-    def __len__(self):
+    def __len__(self: Any) -> int:
         try:
             return self.shape[0]
         except IndexError:
-            raise TypeError('len() of unsized object')
+            raise TypeError("len() of unsized object")
 
 
 class NDArrayMixin(NdimSizeLenMixin):
@@ -469,29 +551,47 @@ class NDArrayMixin(NdimSizeLenMixin):
     A subclass should set the `array` property and override one or more of
     `dtype`, `shape` and `__getitem__`.
     """
+
+    __slots__ = ()
+
     @property
-    def dtype(self):
+    def dtype(self: Any) -> np.dtype:
         return self.array.dtype
 
     @property
-    def shape(self):
+    def shape(self: Any) -> Tuple[int]:
         return self.array.shape
 
-    def __getitem__(self, key):
+    def __getitem__(self: Any, key):
         return self.array[key]
 
-    def __repr__(self):
-        return '%s(array=%r)' % (type(self).__name__, self.array)
+    def __repr__(self: Any) -> str:
+        return "{}(array={!r})".format(type(self).__name__, self.array)
 
 
-class ReprObject(object):
+class ReprObject:
     """Object that prints as the given value, for use with sentinel values."""
+
+    __slots__ = ("_value",)
 
     def __init__(self, value: str):
         self._value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._value
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, ReprObject):
+            return self._value == other._value
+        return False
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._value))
+
+    def __dask_tokenize__(self):
+        from dask.base import normalize_token
+
+        return normalize_token((type(self), self._value))
 
 
 @contextlib.contextmanager
@@ -506,16 +606,16 @@ def close_on_error(f):
         raise
 
 
-def is_remote_uri(path):
-    return bool(re.search(r'^https?\://', path))
+def is_remote_uri(path: str) -> bool:
+    return bool(re.search(r"^https?\://", path))
 
 
-def is_grib_path(path):
+def is_grib_path(path: str) -> bool:
     _, ext = os.path.splitext(path)
-    return ext in ['.grib', '.grb', '.grib2', '.grb2']
+    return ext in [".grib", ".grb", ".grib2", ".grb2"]
 
 
-def is_uniform_spaced(arr, **kwargs):
+def is_uniform_spaced(arr, **kwargs) -> bool:
     """Return True if values of an array are uniformly spaced and sorted.
 
     >>> is_uniform_spaced(range(5))
@@ -527,10 +627,10 @@ def is_uniform_spaced(arr, **kwargs):
     """
     arr = np.array(arr, dtype=float)
     diffs = np.diff(arr)
-    return np.isclose(diffs.min(), diffs.max(), **kwargs)
+    return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v):
+def hashable(v: Any) -> bool:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
@@ -543,9 +643,10 @@ def not_implemented(*args, **kwargs):
     return NotImplemented
 
 
-def decode_numpy_dict_values(attrs):
+def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
-    for use in to_dict"""
+    for use in to_dict
+    """
     attrs = dict(attrs)
     for k, v in attrs.items():
         if isinstance(v, np.ndarray):
@@ -559,53 +660,76 @@ def ensure_us_time_resolution(val):
     """Convert val out of numpy time, for use in to_dict.
     Needed because of numpy bug GH#7619"""
     if np.issubdtype(val.dtype, np.datetime64):
-        val = val.astype('datetime64[us]')
+        val = val.astype("datetime64[us]")
     elif np.issubdtype(val.dtype, np.timedelta64):
-        val = val.astype('timedelta64[us]')
+        val = val.astype("timedelta64[us]")
     return val
 
 
-class HiddenKeyDict(MutableMapping):
-    '''
-    Acts like a normal dictionary, but hides certain keys.
-    '''
+class HiddenKeyDict(MutableMapping[K, V]):
+    """Acts like a normal dictionary, but hides certain keys."""
+
+    __slots__ = ("_data", "_hidden_keys")
+
     # ``__init__`` method required to create instance from class.
 
-    def __init__(self, data, hidden_keys):
+    def __init__(self, data: MutableMapping[K, V], hidden_keys: Iterable[K]):
         self._data = data
-        if type(hidden_keys) not in (list, tuple):
-            raise TypeError("hidden_keys must be a list or tuple")
-        self._hidden_keys = hidden_keys
+        self._hidden_keys = frozenset(hidden_keys)
 
-    def _raise_if_hidden(self, key):
+    def _raise_if_hidden(self, key: K) -> None:
         if key in self._hidden_keys:
-            raise KeyError('Key `%r` is hidden.' % key)
+            raise KeyError("Key `%r` is hidden." % key)
 
     # The next five methods are requirements of the ABC.
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: K, value: V) -> None:
         self._raise_if_hidden(key)
         self._data[key] = value
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: K) -> V:
         self._raise_if_hidden(key)
         return self._data[key]
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: K) -> None:
         self._raise_if_hidden(key)
         del self._data[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[K]:
         for k in self._data:
             if k not in self._hidden_keys:
                 yield k
 
-    def __len__(self):
-        num_hidden = sum([k in self._hidden_keys for k in self._data])
+    def __len__(self) -> int:
+        num_hidden = len(self._hidden_keys & self._data.keys())
         return len(self._data) - num_hidden
 
 
-def get_temp_dimname(dims, new_dim):
-    """ Get an new dimension name based on new_dim, that is not used in dims.
+def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+    """
+    Resolves a supplied list containing an ellispsis representing other items, to
+    a generator with the 'realized' list of all items
+    """
+    if ... in dims_supplied:
+        if len(set(dims_all)) != len(dims_all):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        if len([d for d in dims_supplied if d == ...]) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = [d for d in dims_all if d not in dims_supplied]
+        for d in dims_supplied:
+            if d == ...:
+                yield from other_dims
+            else:
+                yield d
+    else:
+        if set(dims_supplied) ^ set(dims_all):
+            raise ValueError(
+                f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
+            )
+        yield from dims_supplied
+
+
+def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
+    """Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -618,5 +742,79 @@ def get_temp_dimname(dims, new_dim):
         -> ['__rolling']
     """
     while new_dim in dims:
-        new_dim = '_' + new_dim
+        new_dim = "_" + str(new_dim)
     return new_dim
+
+
+def drop_dims_from_indexers(
+    indexers: Mapping[Hashable, Any],
+    dims: Union[list, Mapping[Hashable, int]],
+    missing_dims: str,
+) -> Mapping[Hashable, Any]:
+    """Depending on the setting of missing_dims, drop any dimensions from indexers that
+    are not present in dims.
+
+    Parameters
+    ----------
+    indexers : dict
+    dims : sequence
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            raise ValueError(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return indexers
+
+    elif missing_dims == "warn":
+
+        # don't modify input
+        indexers = dict(indexers)
+
+        invalid = indexers.keys() - set(dims)
+        if invalid:
+            warnings.warn(
+                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+        for key in invalid:
+            indexers.pop(key)
+
+        return indexers
+
+    elif missing_dims == "ignore":
+        return {key: val for key, val in indexers.items() if key in dims}
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+class UncachedAccessor:
+    """Acts like a property, but on both classes and class instances
+
+    This class is necessary because some tools (e.g. pydoc and sphinx)
+    inspect classes for which property returns itself and not the
+    accessor.
+    """
+
+    def __init__(self, accessor):
+        self._accessor = accessor
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self._accessor
+
+        return self._accessor(obj)
+
+
+# Singleton type, as per https://github.com/python/typing/pull/240
+class Default(Enum):
+    token = 0
+
+
+_default = Default.token

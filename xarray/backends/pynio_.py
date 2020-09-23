@@ -1,12 +1,11 @@
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
-from ..core.utils import Frozen, FrozenOrderedDict
+from ..core.utils import Frozen, FrozenDict
+from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
-from .locks import (
-    HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock)
+from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -15,7 +14,6 @@ PYNIO_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK, NCL_LOCK])
 
 
 class NioArrayWrapper(BackendArray):
-
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -29,7 +27,8 @@ class NioArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
+        )
 
     def _getitem(self, key):
         with self.datastore.lock:
@@ -42,19 +41,20 @@ class NioArrayWrapper(BackendArray):
 
 
 class NioDataStore(AbstractDataStore):
-    """Store for accessing datasets via PyNIO
-    """
+    """Store for accessing datasets via PyNIO"""
 
-    def __init__(self, filename, mode='r', lock=None, **kwargs):
+    def __init__(self, filename, mode="r", lock=None, **kwargs):
         import Nio
+
         if lock is None:
             lock = PYNIO_LOCK
         self.lock = ensure_lock(lock)
         self._manager = CachingFileManager(
-            Nio.open_file, filename, lock=lock, mode=mode, kwargs=kwargs)
+            Nio.open_file, filename, lock=lock, mode=mode, kwargs=kwargs
+        )
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
-        self.ds.set_option('MaskedArrayMode', 'MaskedNever')
+        self.ds.set_option("MaskedArrayMode", "MaskedNever")
 
     @property
     def ds(self):
@@ -65,8 +65,9 @@ class NioDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in self.ds.variables.items())
+        return FrozenDict(
+            (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
+        )
 
     def get_attrs(self):
         return Frozen(self.ds.attributes)
@@ -75,10 +76,9 @@ class NioDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions if self.ds.unlimited(k)])
-        return encoding
+        return {
+            "unlimited_dims": {k for k in self.ds.dimensions if self.ds.unlimited(k)}
+        }
 
     def close(self):
         self._manager.close()

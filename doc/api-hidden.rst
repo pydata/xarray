@@ -2,12 +2,12 @@
 .. This extra page is a work around for sphinx not having any support for
 .. hiding an autosummary table.
 
+:orphan:
+
 .. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/
-
-   auto_combine
 
    Dataset.nbytes
    Dataset.chunks
@@ -16,6 +16,8 @@
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.idxmax
+   Dataset.idxmin
    Dataset.max
    Dataset.min
    Dataset.mean
@@ -25,14 +27,110 @@
    Dataset.std
    Dataset.var
 
+   core.coordinates.DatasetCoordinates.get
+   core.coordinates.DatasetCoordinates.items
+   core.coordinates.DatasetCoordinates.keys
+   core.coordinates.DatasetCoordinates.merge
+   core.coordinates.DatasetCoordinates.to_dataset
+   core.coordinates.DatasetCoordinates.to_index
+   core.coordinates.DatasetCoordinates.update
+   core.coordinates.DatasetCoordinates.values
+   core.coordinates.DatasetCoordinates.dims
+   core.coordinates.DatasetCoordinates.indexes
+   core.coordinates.DatasetCoordinates.variables
+
+   core.rolling.DatasetCoarsen.all
+   core.rolling.DatasetCoarsen.any
+   core.rolling.DatasetCoarsen.count
+   core.rolling.DatasetCoarsen.max
+   core.rolling.DatasetCoarsen.mean
+   core.rolling.DatasetCoarsen.median
+   core.rolling.DatasetCoarsen.min
+   core.rolling.DatasetCoarsen.prod
+   core.rolling.DatasetCoarsen.std
+   core.rolling.DatasetCoarsen.sum
+   core.rolling.DatasetCoarsen.var
+   core.rolling.DatasetCoarsen.boundary
+   core.rolling.DatasetCoarsen.coord_func
+   core.rolling.DatasetCoarsen.keep_attrs
+   core.rolling.DatasetCoarsen.obj
+   core.rolling.DatasetCoarsen.side
+   core.rolling.DatasetCoarsen.trim_excess
+   core.rolling.DatasetCoarsen.windows
+
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
    core.groupby.DatasetGroupBy.first
    core.groupby.DatasetGroupBy.last
    core.groupby.DatasetGroupBy.fillna
+   core.groupby.DatasetGroupBy.quantile
    core.groupby.DatasetGroupBy.where
+   core.groupby.DatasetGroupBy.all
+   core.groupby.DatasetGroupBy.any
+   core.groupby.DatasetGroupBy.count
+   core.groupby.DatasetGroupBy.max
+   core.groupby.DatasetGroupBy.mean
+   core.groupby.DatasetGroupBy.median
+   core.groupby.DatasetGroupBy.min
+   core.groupby.DatasetGroupBy.prod
+   core.groupby.DatasetGroupBy.std
+   core.groupby.DatasetGroupBy.sum
+   core.groupby.DatasetGroupBy.var
+   core.groupby.DatasetGroupBy.dims
+   core.groupby.DatasetGroupBy.groups
+
+   core.resample.DatasetResample.all
+   core.resample.DatasetResample.any
+   core.resample.DatasetResample.apply
+   core.resample.DatasetResample.assign
+   core.resample.DatasetResample.assign_coords
+   core.resample.DatasetResample.bfill
+   core.resample.DatasetResample.count
+   core.resample.DatasetResample.ffill
+   core.resample.DatasetResample.fillna
+   core.resample.DatasetResample.first
+   core.resample.DatasetResample.last
+   core.resample.DatasetResample.map
+   core.resample.DatasetResample.max
+   core.resample.DatasetResample.mean
+   core.resample.DatasetResample.median
+   core.resample.DatasetResample.min
+   core.resample.DatasetResample.prod
+   core.resample.DatasetResample.quantile
+   core.resample.DatasetResample.reduce
+   core.resample.DatasetResample.std
+   core.resample.DatasetResample.sum
+   core.resample.DatasetResample.var
+   core.resample.DatasetResample.where
+   core.resample.DatasetResample.dims
+   core.resample.DatasetResample.groups
+
+   core.rolling.DatasetRolling.argmax
+   core.rolling.DatasetRolling.argmin
+   core.rolling.DatasetRolling.count
+   core.rolling.DatasetRolling.max
+   core.rolling.DatasetRolling.mean
+   core.rolling.DatasetRolling.median
+   core.rolling.DatasetRolling.min
+   core.rolling.DatasetRolling.prod
+   core.rolling.DatasetRolling.std
+   core.rolling.DatasetRolling.sum
+   core.rolling.DatasetRolling.var
+   core.rolling.DatasetRolling.center
+   core.rolling.DatasetRolling.dim
+   core.rolling.DatasetRolling.keep_attrs
+   core.rolling.DatasetRolling.min_periods
+   core.rolling.DatasetRolling.obj
+   core.rolling.DatasetRolling.rollings
+   core.rolling.DatasetRolling.window
+
+   core.weighted.DatasetWeighted.obj
+   core.weighted.DatasetWeighted.weights
+
+   core.rolling_exp.RollingExp.mean
 
    Dataset.argsort
+   Dataset.astype
    Dataset.clip
    Dataset.conj
    Dataset.conjugate
@@ -42,6 +140,9 @@
    Dataset.cumsum
    Dataset.cumprod
    Dataset.rank
+
+   Dataset.load_store
+   Dataset.dump_to_store
 
    DataArray.ndim
    DataArray.nbytes
@@ -58,6 +159,8 @@
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.idxmax
+   DataArray.idxmin
    DataArray.max
    DataArray.min
    DataArray.mean
@@ -67,11 +170,103 @@
    DataArray.std
    DataArray.var
 
+   core.coordinates.DataArrayCoordinates.get
+   core.coordinates.DataArrayCoordinates.items
+   core.coordinates.DataArrayCoordinates.keys
+   core.coordinates.DataArrayCoordinates.merge
+   core.coordinates.DataArrayCoordinates.to_dataset
+   core.coordinates.DataArrayCoordinates.to_index
+   core.coordinates.DataArrayCoordinates.update
+   core.coordinates.DataArrayCoordinates.values
+   core.coordinates.DataArrayCoordinates.dims
+   core.coordinates.DataArrayCoordinates.indexes
+   core.coordinates.DataArrayCoordinates.variables
+
+   core.rolling.DataArrayCoarsen.all
+   core.rolling.DataArrayCoarsen.any
+   core.rolling.DataArrayCoarsen.count
+   core.rolling.DataArrayCoarsen.max
+   core.rolling.DataArrayCoarsen.mean
+   core.rolling.DataArrayCoarsen.median
+   core.rolling.DataArrayCoarsen.min
+   core.rolling.DataArrayCoarsen.prod
+   core.rolling.DataArrayCoarsen.std
+   core.rolling.DataArrayCoarsen.sum
+   core.rolling.DataArrayCoarsen.var
+   core.rolling.DataArrayCoarsen.boundary
+   core.rolling.DataArrayCoarsen.coord_func
+   core.rolling.DataArrayCoarsen.keep_attrs
+   core.rolling.DataArrayCoarsen.obj
+   core.rolling.DataArrayCoarsen.side
+   core.rolling.DataArrayCoarsen.trim_excess
+   core.rolling.DataArrayCoarsen.windows
+
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first
    core.groupby.DataArrayGroupBy.last
    core.groupby.DataArrayGroupBy.fillna
+   core.groupby.DataArrayGroupBy.quantile
    core.groupby.DataArrayGroupBy.where
+   core.groupby.DataArrayGroupBy.all
+   core.groupby.DataArrayGroupBy.any
+   core.groupby.DataArrayGroupBy.count
+   core.groupby.DataArrayGroupBy.max
+   core.groupby.DataArrayGroupBy.mean
+   core.groupby.DataArrayGroupBy.median
+   core.groupby.DataArrayGroupBy.min
+   core.groupby.DataArrayGroupBy.prod
+   core.groupby.DataArrayGroupBy.std
+   core.groupby.DataArrayGroupBy.sum
+   core.groupby.DataArrayGroupBy.var
+   core.groupby.DataArrayGroupBy.dims
+   core.groupby.DataArrayGroupBy.groups
+
+   core.resample.DataArrayResample.all
+   core.resample.DataArrayResample.any
+   core.resample.DataArrayResample.apply
+   core.resample.DataArrayResample.assign_coords
+   core.resample.DataArrayResample.bfill
+   core.resample.DataArrayResample.count
+   core.resample.DataArrayResample.ffill
+   core.resample.DataArrayResample.fillna
+   core.resample.DataArrayResample.first
+   core.resample.DataArrayResample.last
+   core.resample.DataArrayResample.map
+   core.resample.DataArrayResample.max
+   core.resample.DataArrayResample.mean
+   core.resample.DataArrayResample.median
+   core.resample.DataArrayResample.min
+   core.resample.DataArrayResample.prod
+   core.resample.DataArrayResample.quantile
+   core.resample.DataArrayResample.reduce
+   core.resample.DataArrayResample.std
+   core.resample.DataArrayResample.sum
+   core.resample.DataArrayResample.var
+   core.resample.DataArrayResample.where
+   core.resample.DataArrayResample.dims
+   core.resample.DataArrayResample.groups
+
+   core.rolling.DataArrayRolling.argmax
+   core.rolling.DataArrayRolling.argmin
+   core.rolling.DataArrayRolling.count
+   core.rolling.DataArrayRolling.max
+   core.rolling.DataArrayRolling.mean
+   core.rolling.DataArrayRolling.median
+   core.rolling.DataArrayRolling.min
+   core.rolling.DataArrayRolling.prod
+   core.rolling.DataArrayRolling.std
+   core.rolling.DataArrayRolling.sum
+   core.rolling.DataArrayRolling.var
+   core.rolling.DataArrayRolling.center
+   core.rolling.DataArrayRolling.dim
+   core.rolling.DataArrayRolling.keep_attrs
+   core.rolling.DataArrayRolling.min_periods
+   core.rolling.DataArrayRolling.obj
+   core.rolling.DataArrayRolling.window
+   core.rolling.DataArrayRolling.window_labels
+
+   core.weighted.DataArrayWeighted.obj
+   core.weighted.DataArrayWeighted.weights
 
    DataArray.argsort
    DataArray.clip
@@ -85,6 +280,236 @@
    DataArray.cumsum
    DataArray.cumprod
    DataArray.rank
+
+   core.accessor_dt.DatetimeAccessor.ceil
+   core.accessor_dt.DatetimeAccessor.floor
+   core.accessor_dt.DatetimeAccessor.round
+   core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.day
+   core.accessor_dt.DatetimeAccessor.dayofweek
+   core.accessor_dt.DatetimeAccessor.dayofyear
+   core.accessor_dt.DatetimeAccessor.days_in_month
+   core.accessor_dt.DatetimeAccessor.daysinmonth
+   core.accessor_dt.DatetimeAccessor.hour
+   core.accessor_dt.DatetimeAccessor.is_leap_year
+   core.accessor_dt.DatetimeAccessor.is_month_end
+   core.accessor_dt.DatetimeAccessor.is_month_start
+   core.accessor_dt.DatetimeAccessor.is_quarter_end
+   core.accessor_dt.DatetimeAccessor.is_quarter_start
+   core.accessor_dt.DatetimeAccessor.is_year_end
+   core.accessor_dt.DatetimeAccessor.is_year_start
+   core.accessor_dt.DatetimeAccessor.microsecond
+   core.accessor_dt.DatetimeAccessor.minute
+   core.accessor_dt.DatetimeAccessor.month
+   core.accessor_dt.DatetimeAccessor.nanosecond
+   core.accessor_dt.DatetimeAccessor.quarter
+   core.accessor_dt.DatetimeAccessor.season
+   core.accessor_dt.DatetimeAccessor.second
+   core.accessor_dt.DatetimeAccessor.time
+   core.accessor_dt.DatetimeAccessor.week
+   core.accessor_dt.DatetimeAccessor.weekday
+   core.accessor_dt.DatetimeAccessor.weekday_name
+   core.accessor_dt.DatetimeAccessor.weekofyear
+   core.accessor_dt.DatetimeAccessor.year
+
+   core.accessor_dt.TimedeltaAccessor.ceil
+   core.accessor_dt.TimedeltaAccessor.floor
+   core.accessor_dt.TimedeltaAccessor.round
+   core.accessor_dt.TimedeltaAccessor.days
+   core.accessor_dt.TimedeltaAccessor.microseconds
+   core.accessor_dt.TimedeltaAccessor.nanoseconds
+   core.accessor_dt.TimedeltaAccessor.seconds
+
+   core.accessor_str.StringAccessor.capitalize
+   core.accessor_str.StringAccessor.center
+   core.accessor_str.StringAccessor.contains
+   core.accessor_str.StringAccessor.count
+   core.accessor_str.StringAccessor.decode
+   core.accessor_str.StringAccessor.encode
+   core.accessor_str.StringAccessor.endswith
+   core.accessor_str.StringAccessor.find
+   core.accessor_str.StringAccessor.get
+   core.accessor_str.StringAccessor.index
+   core.accessor_str.StringAccessor.isalnum
+   core.accessor_str.StringAccessor.isalpha
+   core.accessor_str.StringAccessor.isdecimal
+   core.accessor_str.StringAccessor.isdigit
+   core.accessor_str.StringAccessor.islower
+   core.accessor_str.StringAccessor.isnumeric
+   core.accessor_str.StringAccessor.isspace
+   core.accessor_str.StringAccessor.istitle
+   core.accessor_str.StringAccessor.isupper
+   core.accessor_str.StringAccessor.len
+   core.accessor_str.StringAccessor.ljust
+   core.accessor_str.StringAccessor.lower
+   core.accessor_str.StringAccessor.lstrip
+   core.accessor_str.StringAccessor.match
+   core.accessor_str.StringAccessor.pad
+   core.accessor_str.StringAccessor.repeat
+   core.accessor_str.StringAccessor.replace
+   core.accessor_str.StringAccessor.rfind
+   core.accessor_str.StringAccessor.rindex
+   core.accessor_str.StringAccessor.rjust
+   core.accessor_str.StringAccessor.rstrip
+   core.accessor_str.StringAccessor.slice
+   core.accessor_str.StringAccessor.slice_replace
+   core.accessor_str.StringAccessor.startswith
+   core.accessor_str.StringAccessor.strip
+   core.accessor_str.StringAccessor.swapcase
+   core.accessor_str.StringAccessor.title
+   core.accessor_str.StringAccessor.translate
+   core.accessor_str.StringAccessor.upper
+   core.accessor_str.StringAccessor.wrap
+   core.accessor_str.StringAccessor.zfill
+
+   Variable.all
+   Variable.any
+   Variable.argmax
+   Variable.argmin
+   Variable.argsort
+   Variable.astype
+   Variable.broadcast_equals
+   Variable.chunk
+   Variable.clip
+   Variable.coarsen
+   Variable.compute
+   Variable.concat
+   Variable.conj
+   Variable.conjugate
+   Variable.copy
+   Variable.count
+   Variable.cumprod
+   Variable.cumsum
+   Variable.equals
+   Variable.fillna
+   Variable.get_axis_num
+   Variable.identical
+   Variable.isel
+   Variable.isnull
+   Variable.item
+   Variable.load
+   Variable.max
+   Variable.mean
+   Variable.median
+   Variable.min
+   Variable.no_conflicts
+   Variable.notnull
+   Variable.pad
+   Variable.prod
+   Variable.quantile
+   Variable.rank
+   Variable.reduce
+   Variable.roll
+   Variable.rolling_window
+   Variable.round
+   Variable.searchsorted
+   Variable.set_dims
+   Variable.shift
+   Variable.squeeze
+   Variable.stack
+   Variable.std
+   Variable.sum
+   Variable.to_base_variable
+   Variable.to_coord
+   Variable.to_dict
+   Variable.to_index
+   Variable.to_index_variable
+   Variable.to_variable
+   Variable.transpose
+   Variable.unstack
+   Variable.var
+   Variable.where
+   Variable.T
+   Variable.attrs
+   Variable.chunks
+   Variable.data
+   Variable.dims
+   Variable.dtype
+   Variable.encoding
+   Variable.imag
+   Variable.nbytes
+   Variable.ndim
+   Variable.real
+   Variable.shape
+   Variable.size
+   Variable.sizes
+   Variable.values
+
+   IndexVariable.all
+   IndexVariable.any
+   IndexVariable.argmax
+   IndexVariable.argmin
+   IndexVariable.argsort
+   IndexVariable.astype
+   IndexVariable.broadcast_equals
+   IndexVariable.chunk
+   IndexVariable.clip
+   IndexVariable.coarsen
+   IndexVariable.compute
+   IndexVariable.concat
+   IndexVariable.conj
+   IndexVariable.conjugate
+   IndexVariable.copy
+   IndexVariable.count
+   IndexVariable.cumprod
+   IndexVariable.cumsum
+   IndexVariable.equals
+   IndexVariable.fillna
+   IndexVariable.get_axis_num
+   IndexVariable.get_level_variable
+   IndexVariable.identical
+   IndexVariable.isel
+   IndexVariable.isnull
+   IndexVariable.item
+   IndexVariable.load
+   IndexVariable.max
+   IndexVariable.mean
+   IndexVariable.median
+   IndexVariable.min
+   IndexVariable.no_conflicts
+   IndexVariable.notnull
+   IndexVariable.pad
+   IndexVariable.prod
+   IndexVariable.quantile
+   IndexVariable.rank
+   IndexVariable.reduce
+   IndexVariable.roll
+   IndexVariable.rolling_window
+   IndexVariable.round
+   IndexVariable.searchsorted
+   IndexVariable.set_dims
+   IndexVariable.shift
+   IndexVariable.squeeze
+   IndexVariable.stack
+   IndexVariable.std
+   IndexVariable.sum
+   IndexVariable.to_base_variable
+   IndexVariable.to_coord
+   IndexVariable.to_dict
+   IndexVariable.to_index
+   IndexVariable.to_index_variable
+   IndexVariable.to_variable
+   IndexVariable.transpose
+   IndexVariable.unstack
+   IndexVariable.var
+   IndexVariable.where
+   IndexVariable.T
+   IndexVariable.attrs
+   IndexVariable.chunks
+   IndexVariable.data
+   IndexVariable.dims
+   IndexVariable.dtype
+   IndexVariable.encoding
+   IndexVariable.imag
+   IndexVariable.level_names
+   IndexVariable.name
+   IndexVariable.nbytes
+   IndexVariable.ndim
+   IndexVariable.real
+   IndexVariable.shape
+   IndexVariable.size
+   IndexVariable.sizes
+   IndexVariable.values
 
    ufuncs.angle
    ufuncs.arccos
@@ -146,10 +571,239 @@
    ufuncs.tanh
    ufuncs.trunc
 
+   plot.plot
+   plot.line
+   plot.step
+   plot.hist
+   plot.contour
+   plot.contourf
+   plot.imshow
+   plot.pcolormesh
+   plot.scatter
+
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles
    plot.FacetGrid.set_ticks
    plot.FacetGrid.map
 
+   CFTimeIndex.all
+   CFTimeIndex.any
+   CFTimeIndex.append
+   CFTimeIndex.argsort
+   CFTimeIndex.argmax
+   CFTimeIndex.argmin
+   CFTimeIndex.asof
+   CFTimeIndex.asof_locs
+   CFTimeIndex.astype
+   CFTimeIndex.calendar
+   CFTimeIndex.ceil
+   CFTimeIndex.contains
+   CFTimeIndex.copy
+   CFTimeIndex.days_in_month
+   CFTimeIndex.delete
+   CFTimeIndex.difference
+   CFTimeIndex.drop
+   CFTimeIndex.drop_duplicates
+   CFTimeIndex.droplevel
+   CFTimeIndex.dropna
+   CFTimeIndex.duplicated
+   CFTimeIndex.equals
+   CFTimeIndex.factorize
+   CFTimeIndex.fillna
+   CFTimeIndex.floor
+   CFTimeIndex.format
+   CFTimeIndex.get_indexer
+   CFTimeIndex.get_indexer_for
+   CFTimeIndex.get_indexer_non_unique
+   CFTimeIndex.get_level_values
+   CFTimeIndex.get_loc
+   CFTimeIndex.get_slice_bound
+   CFTimeIndex.get_value
+   CFTimeIndex.groupby
+   CFTimeIndex.holds_integer
+   CFTimeIndex.identical
+   CFTimeIndex.insert
+   CFTimeIndex.intersection
+   CFTimeIndex.is_
+   CFTimeIndex.is_boolean
+   CFTimeIndex.is_categorical
+   CFTimeIndex.is_floating
+   CFTimeIndex.is_integer
+   CFTimeIndex.is_interval
+   CFTimeIndex.is_mixed
+   CFTimeIndex.is_numeric
+   CFTimeIndex.is_object
+   CFTimeIndex.is_type_compatible
+   CFTimeIndex.isin
+   CFTimeIndex.isna
+   CFTimeIndex.isnull
+   CFTimeIndex.item
+   CFTimeIndex.join
+   CFTimeIndex.map
+   CFTimeIndex.max
+   CFTimeIndex.memory_usage
+   CFTimeIndex.min
+   CFTimeIndex.notna
+   CFTimeIndex.notnull
+   CFTimeIndex.nunique
+   CFTimeIndex.putmask
+   CFTimeIndex.ravel
+   CFTimeIndex.reindex
+   CFTimeIndex.rename
+   CFTimeIndex.repeat
+   CFTimeIndex.round
+   CFTimeIndex.searchsorted
+   CFTimeIndex.set_names
+   CFTimeIndex.set_value
    CFTimeIndex.shift
+   CFTimeIndex.slice_indexer
+   CFTimeIndex.slice_locs
+   CFTimeIndex.sort
+   CFTimeIndex.sort_values
+   CFTimeIndex.sortlevel
+   CFTimeIndex.strftime
+   CFTimeIndex.symmetric_difference
+   CFTimeIndex.take
    CFTimeIndex.to_datetimeindex
+   CFTimeIndex.to_flat_index
+   CFTimeIndex.to_frame
+   CFTimeIndex.to_list
+   CFTimeIndex.to_native_types
+   CFTimeIndex.to_numpy
+   CFTimeIndex.to_series
+   CFTimeIndex.tolist
+   CFTimeIndex.transpose
+   CFTimeIndex.union
+   CFTimeIndex.unique
+   CFTimeIndex.value_counts
+   CFTimeIndex.view
+   CFTimeIndex.where
+
+   CFTimeIndex.T
+   CFTimeIndex.array
+   CFTimeIndex.asi8
+   CFTimeIndex.date_type
+   CFTimeIndex.day
+   CFTimeIndex.dayofweek
+   CFTimeIndex.dayofyear
+   CFTimeIndex.dtype
+   CFTimeIndex.empty
+   CFTimeIndex.has_duplicates
+   CFTimeIndex.hasnans
+   CFTimeIndex.hour
+   CFTimeIndex.inferred_type
+   CFTimeIndex.is_all_dates
+   CFTimeIndex.is_monotonic
+   CFTimeIndex.is_monotonic_increasing
+   CFTimeIndex.is_monotonic_decreasing
+   CFTimeIndex.is_unique
+   CFTimeIndex.microsecond
+   CFTimeIndex.minute
+   CFTimeIndex.month
+   CFTimeIndex.name
+   CFTimeIndex.names
+   CFTimeIndex.nbytes
+   CFTimeIndex.ndim
+   CFTimeIndex.nlevels
+   CFTimeIndex.second
+   CFTimeIndex.shape
+   CFTimeIndex.size
+   CFTimeIndex.values
+   CFTimeIndex.year
+
+   backends.NetCDF4DataStore.close
+   backends.NetCDF4DataStore.encode
+   backends.NetCDF4DataStore.encode_attribute
+   backends.NetCDF4DataStore.encode_variable
+   backends.NetCDF4DataStore.get_attrs
+   backends.NetCDF4DataStore.get_dimensions
+   backends.NetCDF4DataStore.get_encoding
+   backends.NetCDF4DataStore.get_variables
+   backends.NetCDF4DataStore.load
+   backends.NetCDF4DataStore.open
+   backends.NetCDF4DataStore.open_store_variable
+   backends.NetCDF4DataStore.prepare_variable
+   backends.NetCDF4DataStore.set_attribute
+   backends.NetCDF4DataStore.set_attributes
+   backends.NetCDF4DataStore.set_dimension
+   backends.NetCDF4DataStore.set_dimensions
+   backends.NetCDF4DataStore.set_variable
+   backends.NetCDF4DataStore.set_variables
+   backends.NetCDF4DataStore.store
+   backends.NetCDF4DataStore.store_dataset
+   backends.NetCDF4DataStore.sync
+   backends.NetCDF4DataStore.autoclose
+   backends.NetCDF4DataStore.ds
+   backends.NetCDF4DataStore.format
+   backends.NetCDF4DataStore.is_remote
+   backends.NetCDF4DataStore.lock
+
+   backends.H5NetCDFStore.autoclose
+   backends.H5NetCDFStore.close
+   backends.H5NetCDFStore.encode
+   backends.H5NetCDFStore.encode_attribute
+   backends.H5NetCDFStore.encode_variable
+   backends.H5NetCDFStore.format
+   backends.H5NetCDFStore.get_attrs
+   backends.H5NetCDFStore.get_dimensions
+   backends.H5NetCDFStore.get_encoding
+   backends.H5NetCDFStore.get_variables
+   backends.H5NetCDFStore.is_remote
+   backends.H5NetCDFStore.load
+   backends.H5NetCDFStore.lock
+   backends.H5NetCDFStore.open
+   backends.H5NetCDFStore.open_store_variable
+   backends.H5NetCDFStore.prepare_variable
+   backends.H5NetCDFStore.set_attribute
+   backends.H5NetCDFStore.set_attributes
+   backends.H5NetCDFStore.set_dimension
+   backends.H5NetCDFStore.set_dimensions
+   backends.H5NetCDFStore.set_variable
+   backends.H5NetCDFStore.set_variables
+   backends.H5NetCDFStore.store
+   backends.H5NetCDFStore.store_dataset
+   backends.H5NetCDFStore.sync
+   backends.H5NetCDFStore.ds
+
+   backends.PydapDataStore.close
+   backends.PydapDataStore.get_attrs
+   backends.PydapDataStore.get_dimensions
+   backends.PydapDataStore.get_encoding
+   backends.PydapDataStore.get_variables
+   backends.PydapDataStore.load
+   backends.PydapDataStore.open
+   backends.PydapDataStore.open_store_variable
+
+   backends.ScipyDataStore.close
+   backends.ScipyDataStore.encode
+   backends.ScipyDataStore.encode_attribute
+   backends.ScipyDataStore.encode_variable
+   backends.ScipyDataStore.get_attrs
+   backends.ScipyDataStore.get_dimensions
+   backends.ScipyDataStore.get_encoding
+   backends.ScipyDataStore.get_variables
+   backends.ScipyDataStore.load
+   backends.ScipyDataStore.open_store_variable
+   backends.ScipyDataStore.prepare_variable
+   backends.ScipyDataStore.set_attribute
+   backends.ScipyDataStore.set_attributes
+   backends.ScipyDataStore.set_dimension
+   backends.ScipyDataStore.set_dimensions
+   backends.ScipyDataStore.set_variable
+   backends.ScipyDataStore.set_variables
+   backends.ScipyDataStore.store
+   backends.ScipyDataStore.store_dataset
+   backends.ScipyDataStore.sync
+   backends.ScipyDataStore.ds
+
+   backends.FileManager.acquire
+   backends.FileManager.acquire_context
+   backends.FileManager.close
+
+   backends.CachingFileManager.acquire
+   backends.CachingFileManager.acquire_context
+   backends.CachingFileManager.close
+
+   backends.DummyFileManager.acquire
+   backends.DummyFileManager.acquire_context
+   backends.DummyFileManager.close

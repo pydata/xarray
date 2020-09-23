@@ -1,0 +1,122 @@
+variables:
+  pytest_extra_flags: ''
+  allow_failure: false
+  upstream_dev: false
+
+jobs:
+
+- job: Linux
+  strategy:
+    matrix:
+      py36-bare-minimum:
+        conda_env: py36-bare-minimum
+      py36-min-all-deps:
+        conda_env: py36-min-all-deps
+      py36-min-nep18:
+        conda_env: py36-min-nep18
+      py36:
+        conda_env: py36
+      py37:
+        conda_env: py37
+      py38:
+        conda_env: py38
+      py38-all-but-dask:
+        conda_env: py38-all-but-dask
+      py38-upstream-dev:
+        conda_env: py38
+        upstream_dev: true
+      py38-flaky:
+        conda_env: py38
+        pytest_extra_flags: --run-flaky --run-network-tests
+        allow_failure: true
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/unit-tests.yml
+
+- job: MacOSX
+  strategy:
+    matrix:
+      py38:
+        conda_env: py38
+  pool:
+    vmImage: 'macOS-10.15'
+  steps:
+  - template: ci/azure/unit-tests.yml
+
+- job: Windows
+  strategy:
+    matrix:
+      py37:
+        conda_env: py37-windows
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - template: ci/azure/unit-tests.yml
+
+- job: LintFlake8
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UsePythonVersion@0
+  - bash: python -m pip install flake8
+    displayName: Install flake8
+  - bash: flake8
+    displayName: flake8 lint checks
+
+- job: FormattingBlack
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UsePythonVersion@0
+  - bash: python -m pip install black
+    displayName: Install black
+  - bash: black --check .
+    displayName: black formatting check
+
+- job: Doctests
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+    - template: ci/azure/install.yml
+    - bash: |
+        source activate xarray-tests
+        python -m pytest --doctest-modules xarray --ignore xarray/tests
+      displayName: Run doctests
+
+- job: TypeChecking
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/install.yml
+  - bash: |
+      source activate xarray-tests
+      mypy .
+    displayName: mypy type checks
+
+- job: isort
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/install.yml
+  - bash: |
+      source activate xarray-tests
+      isort --check .
+    displayName: isort formatting checks
+
+- job: MinimumVersionsPolicy
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - template: ci/azure/add-conda-to-path.yml
+  - bash: |
+      conda install -y pyyaml
+      python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
+      python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
+    displayName: minimum versions policy

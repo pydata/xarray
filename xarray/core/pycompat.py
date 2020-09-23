@@ -1,18 +1,37 @@
-# flake8: noqa
-import sys
-import typing
-
 import numpy as np
 
-integer_types = (int, np.integer, )
+from .utils import is_duck_array
+
+integer_types = (int, np.integer)
+
+try:
+    import dask.array
+    from dask.base import is_dask_collection
+
+    # solely for isinstance checks
+    dask_array_type = (dask.array.Array,)
+
+    def is_duck_dask_array(x):
+        return is_duck_array(x) and is_dask_collection(x)
+
+
+except ImportError:  # pragma: no cover
+    dask_array_type = ()
+    is_duck_dask_array = lambda _: False
+    is_dask_collection = lambda _: False
 
 try:
     # solely for isinstance checks
-    import dask.array
-    dask_array_type = (dask.array.Array,)
-except ImportError:  # pragma: no cover
-    dask_array_type = ()
+    import sparse
 
-# Ensure we have some more recent additions to the typing module.
-# Note that TYPE_CHECKING itself is not available on Python 3.5.1.
-TYPE_CHECKING = sys.version >= '3.5.3' and typing.TYPE_CHECKING
+    sparse_array_type = (sparse.SparseArray,)
+except ImportError:  # pragma: no cover
+    sparse_array_type = ()
+
+try:
+    # solely for isinstance checks
+    import cupy
+
+    cupy_array_type = (cupy.ndarray,)
+except ImportError:  # pragma: no cover
+    cupy_array_type = ()

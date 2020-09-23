@@ -24,26 +24,25 @@ def test_file_manager_mock_write(file_cache):
     opener = mock.Mock(spec=open, return_value=mock_file)
     lock = mock.MagicMock(spec=threading.Lock())
 
-    manager = CachingFileManager(
-        opener, 'filename', lock=lock, cache=file_cache)
+    manager = CachingFileManager(opener, "filename", lock=lock, cache=file_cache)
     f = manager.acquire()
-    f.write('contents')
+    f.write("contents")
     manager.close()
 
     assert not file_cache
-    opener.assert_called_once_with('filename')
-    mock_file.write.assert_called_once_with('contents')
+    opener.assert_called_once_with("filename")
+    mock_file.write.assert_called_once_with("contents")
     mock_file.close.assert_called_once_with()
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
 
 
-@pytest.mark.parametrize('expected_warning', [None, RuntimeWarning])
+@pytest.mark.parametrize("expected_warning", [None, RuntimeWarning])
 def test_file_manager_autoclose(expected_warning):
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
     cache = {}
 
-    manager = CachingFileManager(opener, 'filename', cache=cache)
+    manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
     assert cache
 
@@ -61,7 +60,7 @@ def test_file_manager_autoclose_while_locked():
     lock = threading.Lock()
     cache = {}
 
-    manager = CachingFileManager(opener, 'filename', lock=lock, cache=cache)
+    manager = CachingFileManager(opener, "filename", lock=lock, cache=cache)
     manager.acquire()
     assert cache
 
@@ -77,8 +76,8 @@ def test_file_manager_autoclose_while_locked():
 
 def test_file_manager_repr():
     opener = mock.Mock()
-    manager = CachingFileManager(opener, 'my-file')
-    assert 'my-file' in repr(manager)
+    manager = CachingFileManager(opener, "my-file")
+    assert "my-file" in repr(manager)
 
 
 def test_file_manager_refcounts():
@@ -87,14 +86,14 @@ def test_file_manager_refcounts():
     cache = {}
     ref_counts = {}
 
-    manager = CachingFileManager(
-        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     assert ref_counts[manager._key] == 1
     manager.acquire()
     assert cache
 
     manager2 = CachingFileManager(
-        opener, 'filename', cache=cache, ref_counts=ref_counts)
+        opener, "filename", cache=cache, ref_counts=ref_counts
+    )
     assert cache
     assert manager._key == manager2._key
     assert ref_counts[manager._key] == 2
@@ -120,14 +119,12 @@ def test_file_manager_replace_object():
     cache = {}
     ref_counts = {}
 
-    manager = CachingFileManager(
-        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     manager.acquire()
     assert ref_counts[manager._key] == 1
     assert cache
 
-    manager = CachingFileManager(
-        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     assert ref_counts[manager._key] == 1
     assert cache
 
@@ -135,76 +132,105 @@ def test_file_manager_replace_object():
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):
-    path1 = str(tmpdir.join('testing1.txt'))
-    path2 = str(tmpdir.join('testing2.txt'))
-    manager1 = CachingFileManager(open, path1, mode='w', cache=file_cache)
-    manager2 = CachingFileManager(open, path2, mode='w', cache=file_cache)
+    path1 = str(tmpdir.join("testing1.txt"))
+    path2 = str(tmpdir.join("testing2.txt"))
+    manager1 = CachingFileManager(open, path1, mode="w", cache=file_cache)
+    manager2 = CachingFileManager(open, path2, mode="w", cache=file_cache)
     f1a = manager1.acquire()
-    f1a.write('foo')
+    f1a.write("foo")
     f1a.flush()
     f2 = manager2.acquire()
-    f2.write('bar')
+    f2.write("bar")
     f2.flush()
     f1b = manager1.acquire()
-    f1b.write('baz')
-    assert (getattr(file_cache, 'maxsize', float('inf')) > 1) == (f1a is f1b)
+    f1b.write("baz")
+    assert (getattr(file_cache, "maxsize", float("inf")) > 1) == (f1a is f1b)
     manager1.close()
     manager2.close()
 
-    with open(path1, 'r') as f:
-        assert f.read() == 'foobaz'
-    with open(path2, 'r') as f:
-        assert f.read() == 'bar'
+    with open(path1) as f:
+        assert f.read() == "foobaz"
+    with open(path2) as f:
+        assert f.read() == "bar"
 
 
 def test_file_manager_write_concurrent(tmpdir, file_cache):
-    path = str(tmpdir.join('testing.txt'))
-    manager = CachingFileManager(open, path, mode='w', cache=file_cache)
+    path = str(tmpdir.join("testing.txt"))
+    manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f1 = manager.acquire()
     f2 = manager.acquire()
     f3 = manager.acquire()
     assert f1 is f2
     assert f2 is f3
-    f1.write('foo')
+    f1.write("foo")
     f1.flush()
-    f2.write('bar')
+    f2.write("bar")
     f2.flush()
-    f3.write('baz')
+    f3.write("baz")
     f3.flush()
     manager.close()
 
-    with open(path, 'r') as f:
-        assert f.read() == 'foobarbaz'
+    with open(path) as f:
+        assert f.read() == "foobarbaz"
 
 
 def test_file_manager_write_pickle(tmpdir, file_cache):
-    path = str(tmpdir.join('testing.txt'))
-    manager = CachingFileManager(open, path, mode='w', cache=file_cache)
+    path = str(tmpdir.join("testing.txt"))
+    manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f = manager.acquire()
-    f.write('foo')
+    f.write("foo")
     f.flush()
     manager2 = pickle.loads(pickle.dumps(manager))
     f2 = manager2.acquire()
-    f2.write('bar')
+    f2.write("bar")
     manager2.close()
     manager.close()
 
-    with open(path, 'r') as f:
-        assert f.read() == 'foobar'
+    with open(path) as f:
+        assert f.read() == "foobar"
 
 
 def test_file_manager_read(tmpdir, file_cache):
-    path = str(tmpdir.join('testing.txt'))
+    path = str(tmpdir.join("testing.txt"))
 
-    with open(path, 'w') as f:
-        f.write('foobar')
+    with open(path, "w") as f:
+        f.write("foobar")
 
     manager = CachingFileManager(open, path, cache=file_cache)
     f = manager.acquire()
-    assert f.read() == 'foobar'
+    assert f.read() == "foobar"
     manager.close()
 
 
 def test_file_manager_invalid_kwargs():
     with pytest.raises(TypeError):
-        CachingFileManager(open, 'dummy', mode='w', invalid=True)
+        CachingFileManager(open, "dummy", mode="w", invalid=True)
+
+
+def test_file_manager_acquire_context(tmpdir, file_cache):
+    path = str(tmpdir.join("testing.txt"))
+
+    with open(path, "w") as f:
+        f.write("foobar")
+
+    class AcquisitionError(Exception):
+        pass
+
+    manager = CachingFileManager(open, path, cache=file_cache)
+    with pytest.raises(AcquisitionError):
+        with manager.acquire_context() as f:
+            assert f.read() == "foobar"
+            raise AcquisitionError
+    assert not file_cache  # file was *not* already open
+
+    with manager.acquire_context() as f:
+        assert f.read() == "foobar"
+
+    with pytest.raises(AcquisitionError):
+        with manager.acquire_context() as f:
+            f.seek(0)
+            assert f.read() == "foobar"
+            raise AcquisitionError
+    assert file_cache  # file *was* already open
+
+    manager.close()

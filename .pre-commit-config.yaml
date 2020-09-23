@@ -1,0 +1,33 @@
+# https://pre-commit.com/
+repos:
+  # isort should run before black as black sometimes tweaks the isort output
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.4.2
+    hooks:
+      - id: isort
+  # https://github.com/python/black#version-control-integration
+  - repo: https://github.com/psf/black
+    rev: 20.8b1
+    hooks:
+      - id: black
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.1.2
+    hooks:
+      - id: blackdoc
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.3
+    hooks:
+      - id: flake8
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.782  # Must match ci/requirements/*.yml
+    hooks:
+      - id: mypy
+  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
+  # - repo: https://github.com/asottile/pyupgrade
+  #   rev: v1.22.1
+  #   hooks:
+  #     - id: pyupgrade
+  #       args:
+  #         - "--py3-only"
+  #         # remove on f-strings in Py3.7
+  #         - "--keep-percent-format"

@@ -1,7 +1,8 @@
 import contextlib
+import io
 import threading
-from typing import Any, Dict
 import warnings
+from typing import Any, Dict, cast
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -9,17 +10,18 @@ from .locks import acquire
 from .lru_cache import LRUCache
 
 # Global cache for storing open files.
-FILE_CACHE = LRUCache(
-    OPTIONS['file_cache_maxsize'], on_evict=lambda k, v: v.close())
-assert FILE_CACHE.maxsize, 'file cache must be at least size one'
+FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
+    maxsize=cast(int, OPTIONS["file_cache_maxsize"]), on_evict=lambda k, v: v.close()
+)
+assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
 
-REF_COUNTS = {}  # type: Dict[Any, int]
+REF_COUNTS: Dict[Any, int] = {}
 
-_DEFAULT_MODE = utils.ReprObject('<unused>')
+_DEFAULT_MODE = utils.ReprObject("<unused>")
 
 
-class FileManager(object):
+class FileManager:
     """Manager for acquiring and closing a file object.
 
     Use FileManager subclasses (CachingFileManager in particular) on backend
@@ -29,11 +31,20 @@ class FileManager(object):
 
     def acquire(self, needs_lock=True):
         """Acquire the file object from this manager."""
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file. Yields a file object.
+
+        The context manager unwinds any actions taken as part of acquisition
+        (i.e., removes it from any cache) if an exception is raised from the
+        context. It *does not* automatically close the file.
+        """
+        raise NotImplementedError()
 
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 class CachingFileManager(FileManager):
@@ -64,7 +75,16 @@ class CachingFileManager(FileManager):
 
     """
 
-    def __init__(self, opener, *args, **keywords):
+    def __init__(
+        self,
+        opener,
+        *args,
+        mode=_DEFAULT_MODE,
+        kwargs=None,
+        lock=None,
+        cache=None,
+        ref_counts=None,
+    ):
         """Initialize a FileManager.
 
         The cache and ref_counts arguments exist solely to facilitate
@@ -102,17 +122,6 @@ class CachingFileManager(FileManager):
             Optional dict to use for keeping track the number of references to
             the same file.
         """
-        # TODO: replace with real keyword arguments when we drop Python 2
-        # support
-        mode = keywords.pop('mode', _DEFAULT_MODE)
-        kwargs = keywords.pop('kwargs', None)
-        lock = keywords.pop('lock', None)
-        cache = keywords.pop('cache', FILE_CACHE)
-        ref_counts = keywords.pop('ref_counts', REF_COUNTS)
-        if keywords:
-            raise TypeError('FileManager() got unexpected keyword arguments: '
-                            '%s' % list(keywords))
-
         self._opener = opener
         self._args = args
         self._mode = mode
@@ -122,21 +131,27 @@ class CachingFileManager(FileManager):
         self._lock = threading.Lock() if self._default_lock else lock
 
         # cache[self._key] stores the file associated with this object.
+        if cache is None:
+            cache = FILE_CACHE
         self._cache = cache
         self._key = self._make_key()
 
         # ref_counts[self._key] stores the number of CachingFileManager objects
         # in memory referencing this same file. We use this to know if we can
         # close a file when the manager is deallocated.
+        if ref_counts is None:
+            ref_counts = REF_COUNTS
         self._ref_counter = _RefCounter(ref_counts)
         self._ref_counter.increment(self._key)
 
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
-        value = (self._opener,
-                 self._args,
-                 'a' if self._mode == 'w' else self._mode,
-                 tuple(sorted(self._kwargs.items())))
+        value = (
+            self._opener,
+            self._args,
+            "a" if self._mode == "w" else self._mode,
+            tuple(sorted(self._kwargs.items())),
+        )
         return _HashedSequence(value)
 
     @contextlib.contextmanager
@@ -149,7 +164,7 @@ class CachingFileManager(FileManager):
             yield
 
     def acquire(self, needs_lock=True):
-        """Acquiring a file object from the manager.
+        """Acquire a file object from the manager.
 
         A new file is only opened if it has expired from the
         least-recently-used cache.
@@ -160,8 +175,25 @@ class CachingFileManager(FileManager):
 
         Returns
         -------
-        An open file object, as returned by ``opener(*args, **kwargs)``.
+        file-like
+            An open file object, as returned by ``opener(*args, **kwargs)``.
         """
+        file, _ = self._acquire_with_cache_info(needs_lock)
+        return file
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        """Context manager for acquiring a file."""
+        file, cached = self._acquire_with_cache_info(needs_lock)
+        try:
+            yield file
+        except Exception:
+            if not cached:
+                self.close(needs_lock)
+            raise
+
+    def _acquire_with_cache_info(self, needs_lock=True):
+        """Acquire a file, returning the file and whether it was cached."""
         with self._optional_lock(needs_lock):
             try:
                 file = self._cache[self._key]
@@ -169,13 +201,15 @@ class CachingFileManager(FileManager):
                 kwargs = self._kwargs
                 if self._mode is not _DEFAULT_MODE:
                     kwargs = kwargs.copy()
-                    kwargs['mode'] = self._mode
+                    kwargs["mode"] = self._mode
                 file = self._opener(*self._args, **kwargs)
-                if self._mode == 'w':
+                if self._mode == "w":
                     # ensure file doesn't get overriden when opened again
-                    self._mode = 'a'
+                    self._mode = "a"
                 self._cache[self._key] = file
-        return file
+                return file, False
+            else:
+                return file, True
 
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
@@ -211,11 +245,13 @@ class CachingFileManager(FileManager):
                 finally:
                     self._lock.release()
 
-            if OPTIONS['warn_for_unclosed_files']:
+            if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(
-                    'deallocating {}, but file is not already closed. '
-                    'This may indicate a bug.'
-                    .format(self), RuntimeWarning, stacklevel=2)
+                    "deallocating {}, but file is not already closed. "
+                    "This may indicate a bug.".format(self),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
     def __getstate__(self):
         """State for pickling."""
@@ -230,15 +266,17 @@ class CachingFileManager(FileManager):
         self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock)
 
     def __repr__(self):
-        args_string = ', '.join(map(repr, self._args))
+        args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
-            args_string += ', mode={!r}'.format(self._mode)
-        return '{}({!r}, {}, kwargs={})'.format(
-            type(self).__name__, self._opener, args_string, self._kwargs)
+            args_string += f", mode={self._mode!r}"
+        return "{}({!r}, {}, kwargs={})".format(
+            type(self).__name__, self._opener, args_string, self._kwargs
+        )
 
 
-class _RefCounter(object):
+class _RefCounter:
     """Class for keeping track of reference counts."""
+
     def __init__(self, counts):
         self._counts = counts
         self._lock = threading.Lock()
@@ -276,14 +314,19 @@ class _HashedSequence(list):
 
 
 class DummyFileManager(FileManager):
-    """FileManager that simply wraps an open file in the FileManager interface.
-    """
+    """FileManager that simply wraps an open file in the FileManager interface."""
+
     def __init__(self, value):
         self._value = value
 
     def acquire(self, needs_lock=True):
         del needs_lock  # ignored
         return self._value
+
+    @contextlib.contextmanager
+    def acquire_context(self, needs_lock=True):
+        del needs_lock
+        yield self._value
 
     def close(self, needs_lock=True):
         del needs_lock  # ignored

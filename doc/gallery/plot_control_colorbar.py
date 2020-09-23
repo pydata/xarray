@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ===========================
 Control the plot's colorbar
@@ -12,7 +11,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 # Load the data
-air_temp = xr.tutorial.load_dataset('air_temperature')
+air_temp = xr.tutorial.load_dataset("air_temperature")
 air2d = air_temp.air.isel(time=500)
 
 # Prepare the figure
@@ -23,9 +22,10 @@ levels = [245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 310, 340]
 
 # Plot data
 air2d.plot(ax=ax1, levels=levels)
-air2d.plot(ax=ax2, levels=levels, cbar_kwargs={'ticks': levels})
-air2d.plot(ax=ax3, levels=levels, cbar_kwargs={'ticks': levels,
-                                               'spacing': 'proportional'})
+air2d.plot(ax=ax2, levels=levels, cbar_kwargs={"ticks": levels})
+air2d.plot(
+    ax=ax3, levels=levels, cbar_kwargs={"ticks": levels, "spacing": "proportional"}
+)
 
 # Show plots
 plt.tight_layout()
