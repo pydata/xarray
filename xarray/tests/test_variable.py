@@ -295,9 +295,9 @@ class VariableSubclassobjects:
         assert actual.dtype == data.dtype
 
     def test_datetime64_valid_range(self):
-        data = np.datetime64('1250-01-01', 'us')
+        data = np.datetime64("1250-01-01", "us")
         pderror = pd._libs.tslibs.np_datetime.OutOfBoundsDatetime
-        with raises_regex(pderror, 'Out of bounds nanosecond'):
+        with raises_regex(pderror, "Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
     def test_pandas_data(self):
