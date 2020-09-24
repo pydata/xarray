@@ -294,6 +294,12 @@ class VariableSubclassobjects:
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
+    def test_datetime64_valid_range(self):
+        data = np.datetime64('1250-01-01', 'us')
+        pderror = pd._libs.tslibs.np_datetime.OutOfBoundsDatetime
+        with raises_regex(pderror, 'Out of bounds nanosecond'):
+            self.cls(["t"], [data])
+
     def test_pandas_data(self):
         v = self.cls(["x"], pd.Series([0, 1, 2], index=[3, 2, 1]))
         assert_identical(v, v[[0, 1, 2]])
