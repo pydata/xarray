@@ -7,7 +7,6 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict
 from ..core.variable import Variable
-from .api import open_dataset
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
 # need some special secret attributes to tell us the dimensions
@@ -647,6 +646,7 @@ def open_zarr(
     ----------
     http://zarr.readthedocs.io/
     """
+    from .api import open_dataset
 
     if kwargs:
         raise TypeError(
