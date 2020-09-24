@@ -1,6 +1,5 @@
 import os.path
 import warnings
-from collections.abc import MutableMapping
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -544,12 +543,7 @@ def open_dataset(
 
             if engine is None:
                 engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        elif isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
-            # Zarr supports a wide range of access modes, but for now xarray either
-            # reads or writes from a store, never both.
-            # For open_dataset(engine="zarr"), we only read (i.e. mode="r")
-            extra_kwargs["mode"] = "r"
-        else:
+        elif engine != "zarr":
             if engine not in [None, "scipy", "h5netcdf"]:
                 raise ValueError(
                     "can only read bytes or file-like objects "
@@ -567,6 +561,7 @@ def open_dataset(
             overwrite_encoded_chunks = backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
+            extra_kwargs["mode"] = "r"
             extra_kwargs["group"] = group
 
         opener = _get_backend_cls(engine)
