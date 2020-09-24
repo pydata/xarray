@@ -121,6 +121,19 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
+        if isinstance(filename, bytes):
+            if filename.startswith(b"\211HDF\r\n\032\n"):
+                raise ValueError(
+                    "can't open netCDF4/HDF5 as bytes "
+                    "try passing a path or file-like object"
+                )
+        elif not isinstance(filename, str) and filename.tell() != 0:
+            raise ValueError(
+                "file-like object read/write pointer not at zero "
+                "please close and reopen, or use a context "
+                "manager"
+            )
+
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
@@ -141,7 +154,16 @@ class H5NetCDFStore(WritableCFDataStore):
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
-        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        try:
+            instance = cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+        except OSError:
+            if isinstance(filename, bytes) and len(filename) > 80:
+                filename = filename[:80] + b"..."
+            raise ValueError(
+                "{} is not a valid netCDF file "
+                "did you mean to pass a string for a path instead?".format(filename)
+            )
+        return instance
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:

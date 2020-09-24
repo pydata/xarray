@@ -134,20 +134,8 @@ def _get_engine_from_magic_number(filename_or_obj):
 
     if magic_number.startswith(b"CDF"):
         engine = "scipy"
-    elif magic_number.startswith(b"\211HDF\r\n\032\n"):
-        engine = "h5netcdf"
-        if isinstance(filename_or_obj, bytes):
-            raise ValueError(
-                "can't open netCDF4/HDF5 as bytes "
-                "try passing a path or file-like object"
-            )
     else:
-        if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
-            filename_or_obj = filename_or_obj[:80] + b"..."
-        raise ValueError(
-            "{} is not a valid netCDF file "
-            "did you mean to pass a string for a path instead?".format(filename_or_obj)
-        )
+        engine = "h5netcdf"
     return engine
 
 
@@ -160,6 +148,14 @@ def _get_default_engine(path, allow_remote=False):
         engine = _get_default_engine_gz()
     else:
         engine = _get_default_engine_netcdf()
+    return engine
+
+
+def _autodetect_engine(filename_or_obj):
+    if isinstance(filename_or_obj, str):
+        engine = _get_default_engine(filename_or_obj, allow_remote=True)
+    else:
+        engine = _get_engine_from_magic_number(filename_or_obj)
     return engine
 
 
@@ -535,21 +531,14 @@ def open_dataset(
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
 
+    if isinstance(filename_or_obj, str):
+        filename_or_obj = _normalize_path(filename_or_obj)
+
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
     else:
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = _normalize_path(filename_or_obj)
-
-            if engine is None:
-                engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        elif engine != "zarr":
-            if engine not in [None, "scipy", "h5netcdf"]:
-                raise ValueError(
-                    "can only read bytes or file-like objects "
-                    "with engine='scipy' or 'h5netcdf'"
-                )
-            engine = _get_engine_from_magic_number(filename_or_obj)
+        if engine is None:
+            engine = _autodetect_engine(filename_or_obj)
 
         if engine in ["netcdf4", "h5netcdf"]:
             extra_kwargs["group"] = group

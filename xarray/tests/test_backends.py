@@ -2224,7 +2224,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine="foobar")
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, "can only read bytes or file-like"):
+        with raises_regex(ValueError, "unrecognized engine"):
             open_dataset(BytesIO(netcdf_bytes), engine="foobar")
 
     def test_cross_engine_read_write_netcdf3(self):
