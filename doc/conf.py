@@ -107,7 +107,6 @@ html_context = {
     "github_user": "pydata",
     "github_repo": "xarray",
     "github_version": "master",
-    "conf_py_path": "/doc/",
 }
 
 autodoc_typehints = "none"
