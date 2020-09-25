@@ -428,7 +428,7 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v1":
+    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
         kwargs = locals().copy()
         from . import apiv2
         if engine in apiv2.ENGINES:
