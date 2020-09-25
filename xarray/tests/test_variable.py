@@ -296,7 +296,14 @@ class VariableSubclassobjects:
 
     def test_datetime64_valid_range(self):
         data = np.datetime64("1250-01-01", "us")
-        pderror = pd._libs.tslibs.np_datetime.OutOfBoundsDatetime
+        pderror = pd.errors.OutOfBoundsDatetime
+        with raises_regex(pderror, "Out of bounds nanosecond"):
+            self.cls(["t"], [data])
+
+    @pytest.mark.xfail
+    def test_timedelta64_valid_range(self):
+        data = np.timedelta64("200000", "D")
+        pderror = pd.errors.OutOfBoundsTimedelta
         with raises_regex(pderror, "Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
