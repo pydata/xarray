@@ -2531,6 +2531,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     with open_dataset(bio, engine="h5netcdf") as actual:
                         assert_identical(expected, actual)
 
+                f.seek(0)
+                with raises_regex(TypeError, "not a valid NetCDF 3"):
+                    open_dataset(f, engine="scipy")
+
 
 @requires_h5netcdf
 @requires_dask
