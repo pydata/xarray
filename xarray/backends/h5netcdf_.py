@@ -134,7 +134,7 @@ class H5NetCDFStore(WritableCFDataStore):
                     "{} is not a valid netCDF file "
                     "did you mean to pass a string for a path instead?".format(filename)
                 )
-        elif hasattr(filename, 'tell') and filename.tell() != 0:
+        elif hasattr(filename, "tell") and filename.tell() != 0:
             raise ValueError(
                 "file-like object read/write pointer not at zero "
                 "please close and reopen, or use a context "
@@ -162,7 +162,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
         manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
         try:
-            instance = cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+            instance = cls(
+                manager, group=group, mode=mode, lock=lock, autoclose=autoclose
+            )
         except OSError:
             if isinstance(filename, bytes) and len(filename) > 80:
                 filename = filename[:80] + b"..."
