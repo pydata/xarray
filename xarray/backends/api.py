@@ -171,10 +171,14 @@ def _get_backend_cls(engine):
 
 
 def _normalize_path(path):
-    if is_remote_uri(path):
-        return path
-    else:
-        return os.path.abspath(os.path.expanduser(path))
+    if isinstance(path, Path):
+        path = str(path)
+
+    if isinstance(path, str):
+        if not is_remote_uri(path):
+            path = os.path.abspath(os.path.expanduser(path))
+
+    return path
 
 
 def _validate_dataset_names(dataset):
@@ -528,11 +532,7 @@ def open_dataset(
         ds2._file_obj = ds._file_obj
         return ds2
 
-    if isinstance(filename_or_obj, Path):
-        filename_or_obj = str(filename_or_obj)
-
-    if isinstance(filename_or_obj, str):
-        filename_or_obj = _normalize_path(filename_or_obj)
+    filename_or_obj = _normalize_path(filename_or_obj)
 
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
