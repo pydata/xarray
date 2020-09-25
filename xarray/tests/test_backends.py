@@ -2527,6 +2527,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     assert_identical(expected, actual)
 
                 f.seek(0)
+                with open_dataset(f) as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
                 with BytesIO(f.read()) as bio:
                     with open_dataset(bio, engine="h5netcdf") as actual:
                         assert_identical(expected, actual)
@@ -2534,6 +2538,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                 f.seek(0)
                 with raises_regex(TypeError, "not a valid NetCDF 3"):
                     open_dataset(f, engine="scipy")
+
+                f.seek(8)
+                with raises_regex(ValueError, "read/write pointer not at zero"):
+                    open_dataset(f)
 
 
 @requires_h5netcdf
