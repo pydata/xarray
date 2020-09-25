@@ -140,8 +140,8 @@ class H5NetCDFStore(WritableCFDataStore):
                     if isinstance(filename, bytes) and len(filename) > 80:
                         filename = filename[:80] + b"..."
                     raise ValueError(
-                        "{} is not a valid netCDF file "
-                        "did you mean to pass a string for a path instead?".format(filename)
+                        "{} is not a valid netCDF file did you mean"
+                        "to pass a string for a path instead?".format(filename)
                     )
 
         if format not in [None, "NETCDF4"]:
