@@ -1,6 +1,5 @@
 import os.path
 import warnings
-from collections.abc import MutableMapping
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -40,6 +39,17 @@ if TYPE_CHECKING:
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
+
+ENGINES = {
+    "netcdf4": backends.NetCDF4DataStore.open,
+    "scipy": backends.ScipyDataStore,
+    "pydap": backends.PydapDataStore.open,
+    "h5netcdf": backends.H5NetCDFStore.open,
+    "pynio": backends.NioDataStore,
+    "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
+    "cfgrib": backends.CfGribDataStore,
+    "zarr": backends.ZarrStore.open_group,
+}
 
 
 def _get_default_engine_remote_uri():
@@ -151,6 +161,17 @@ def _get_default_engine(path, allow_remote=False):
     else:
         engine = _get_default_engine_netcdf()
     return engine
+
+
+def _get_backend_cls(engine):
+    """Select open_dataset method based on current engine"""
+    try:
+        return ENGINES[engine]
+    except KeyError:
+        raise ValueError(
+            "unrecognized engine for open_dataset: {}\n"
+            "must be one of: {}".format(engine, list(ENGINES))
+        )
 
 
 def _normalize_path(path):
@@ -409,23 +430,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    engines = [
-        None,
-        "netcdf4",
-        "scipy",
-        "pydap",
-        "h5netcdf",
-        "pynio",
-        "cfgrib",
-        "pseudonetcdf",
-        "zarr",
-    ]
-    if engine not in engines:
-        raise ValueError(
-            "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, engines)
-        )
-
     if autoclose is not None:
         warnings.warn(
             "The autoclose argument is no longer used by "
@@ -452,6 +456,7 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
+    extra_kwargs = {}
 
     def maybe_decode_store(store, chunks, lock=False):
         ds = conventions.decode_cf(
@@ -534,71 +539,38 @@ def open_dataset(
 
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
-
-    elif isinstance(filename_or_obj, MutableMapping) and engine == "zarr":
-        # Zarr supports a wide range of access modes, but for now xarray either
-        # reads or writes from a store, never both.
-        # For open_dataset(engine="zarr"), we only read (i.e. mode="r")
-        mode = "r"
-        _backend_kwargs = backend_kwargs.copy()
-        overwrite_encoded_chunks = _backend_kwargs.pop("overwrite_encoded_chunks", None)
-        store = backends.ZarrStore.open_group(
-            filename_or_obj, mode=mode, group=group, **_backend_kwargs
-        )
-
-    elif isinstance(filename_or_obj, str):
-        if fs is None:
+    else:
+        if isinstance(filename_or_obj, str) and fs is None:
             filename_or_obj = _normalize_path(filename_or_obj)
 
-        if engine is None:
-            engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        if engine == "netcdf4":
-            store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "scipy":
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == "pydap":
-            store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
-        elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "pynio":
-            store = backends.NioDataStore(filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == "pseudonetcdf":
-            store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, lock=lock, **backend_kwargs
-            )
-        elif engine == "cfgrib":
-            store = backends.CfGribDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs
-            )
+            if engine is None:
+                engine = _get_default_engine(filename_or_obj, allow_remote=True)
+        elif engine != "zarr":
+            if engine not in [None, "scipy", "h5netcdf"]:
+                raise ValueError(
+                    "can only read bytes or file-like objects "
+                    "with engine='scipy' or 'h5netcdf'"
+                )
+            engine = _get_engine_from_magic_number(filename_or_obj)
+
+        if engine in ["netcdf4", "h5netcdf"]:
+            extra_kwargs["group"] = group
+            extra_kwargs["lock"] = lock
+        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+            extra_kwargs["lock"] = lock
         elif engine == "zarr":
-            # on ZarrStore, mode='r', synchronizer=None, group=None,
-            # consolidated=False.
-            _backend_kwargs = backend_kwargs.copy()
-            overwrite_encoded_chunks = _backend_kwargs.pop(
+            backend_kwargs = backend_kwargs.copy()
+            overwrite_encoded_chunks = backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
+            extra_kwargs["mode"] = "r"
+            extra_kwargs["group"] = group
+            extra_kwargs['storage_options'] = storage_options
             if fs is not None:
                 filename_or_obj = fs.get_mapper(filename_or_obj)
-            store = backends.ZarrStore.open_group(
-                filename_or_obj, group=group, storage_options=storage_options, **_backend_kwargs
-            )
-    else:
-        if engine not in [None, "scipy", "h5netcdf"]:
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
-            )
-        engine = _get_engine_from_magic_number(filename_or_obj)
-        if engine == "scipy":
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
+
+        opener = _get_backend_cls(engine)
+        store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
 
     with close_on_error(store):
         ds = maybe_decode_store(store, chunks)
