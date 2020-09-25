@@ -138,7 +138,7 @@ def _get_engine_from_magic_number(filename_or_obj):
         engine = "h5netcdf"
     else:
         raise ValueError(
-            "{} is not the signature of any supported file format "
+            f"{magic_number} is not the signature of any supported file format "
             "did you mean to pass a string for a path instead?".format(magic_number)
         )
     return engine
