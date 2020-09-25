@@ -2494,13 +2494,13 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "is not a supported file format"):
+        with raises_regex(ValueError, "not the signature of any supported file"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
-        with raises_regex(ValueError, "not a valid netCDF"):
+        with raises_regex(ValueError, "not the signature of a valid netCDF file"):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 

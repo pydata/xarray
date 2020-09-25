@@ -137,11 +137,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 magic_number = filename.read(8)
                 filename.seek(0)
                 if not magic_number.startswith(b"\211HDF\r\n\032\n"):
-                    if isinstance(filename, bytes) and len(filename) > 80:
-                        filename = filename[:80] + b"..."
                     raise ValueError(
-                        "{} is not a valid netCDF file did you mean"
-                        "to pass a string for a path instead?".format(filename)
+                        "{} is not the signature "
+                        "of a valid netCDF file".format(magic_number)
                     )
 
         if format not in [None, "NETCDF4"]:
