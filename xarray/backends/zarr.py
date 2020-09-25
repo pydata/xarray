@@ -279,6 +279,7 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None
     ):
         import zarr
 
@@ -288,9 +289,9 @@ class ZarrStore(AbstractWritableDataStore):
 
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
-            zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            zarr_group = zarr.open_consolidated(store, storage_options=storage_options, **open_kwargs)
         else:
-            zarr_group = zarr.open_group(store, **open_kwargs)
+            zarr_group = zarr.open_group(store, storage_options=storage_options, **open_kwargs)
         return cls(zarr_group, consolidate_on_close)
 
     def __init__(self, zarr_group, consolidate_on_close=False):

@@ -303,6 +303,8 @@ def open_dataset(
     backend_kwargs=None,
     use_cftime=None,
     decode_timedelta=None,
+    storage_options=None,
+    fs=None
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -545,7 +547,8 @@ def open_dataset(
         )
 
     elif isinstance(filename_or_obj, str):
-        filename_or_obj = _normalize_path(filename_or_obj)
+        if fs is None:
+            filename_or_obj = _normalize_path(filename_or_obj)
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj, allow_remote=True)
@@ -578,8 +581,10 @@ def open_dataset(
             overwrite_encoded_chunks = _backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
+            if fs is not None:
+                filename_or_obj = fs.get_mapper(filename_or_obj)
             store = backends.ZarrStore.open_group(
-                filename_or_obj, group=group, **_backend_kwargs
+                filename_or_obj, group=group, storage_options=storage_options, **_backend_kwargs
             )
     else:
         if engine not in [None, "scipy", "h5netcdf"]:
@@ -931,13 +936,24 @@ def open_mfdataset(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
+            if engine != "zarr":
+                raise ValueError(
+                    "cannot do wild-card matching for paths that are remote URLs: "
+                    "{!r}. Instead, supply paths as an explicit list of strings.".format(
+                        paths
+                    )
                 )
-            )
-        paths = sorted(glob(paths))
+            else:
+                import fsspec  #
+                storage_options = kwargs.get('storage_options', None)
+                fs, _, _ = fsspec.core.get_fs_token_paths(
+                    paths, storage_options=storage_options
+                )
+                paths = fs.expand_path(paths)
+                kwargs['fs'] = fs
+
+        else:
+            paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 

@@ -607,7 +607,7 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r"^https?\://", path))
+    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
 def is_grib_path(path: str) -> bool:
