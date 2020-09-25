@@ -34,6 +34,10 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- Fix silently overwriting the `engine` key when passing a file object to an incompatible netCDF to
+  :py:func:`open_dataset` (:issue:#4457). Now incompatible combinations of files and engines
+  raise an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
