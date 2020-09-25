@@ -130,8 +130,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if filename.tell() != 0:
                 raise ValueError(
                     "file-like object read/write pointer not at zero "
-                    "please close and reopen, or use a context "
-                    "manager"
+                    "please close and reopen, or use a context manager"
                 )
             else:
                 magic_number = filename.read(8)

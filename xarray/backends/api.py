@@ -126,8 +126,7 @@ def _get_engine_from_magic_number(filename_or_obj):
         if filename_or_obj.tell() != 0:
             raise ValueError(
                 "file-like object read/write pointer not at zero "
-                "please close and reopen, or use a context "
-                "manager"
+                "please close and reopen, or use a context manager"
             )
         magic_number = filename_or_obj.read(8)
         filename_or_obj.seek(0)
