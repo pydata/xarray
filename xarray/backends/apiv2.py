@@ -17,7 +17,7 @@ from .api import (
     _normalize_path,
     _protect_dataset_variables_inplace,
 )
-from .common import AbstractDataStore, ArrayWriter
+from . import h5netcdf_
 
 if TYPE_CHECKING:
     try:
@@ -30,7 +30,7 @@ DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
 ENGINES = {
-    "h5netcdf": backends.H5NetCDFStore.open,
+    "h5netcdf": h5netcdf_.open_dataset_h5necdf_,
 }
 
 
@@ -184,21 +184,10 @@ def open_dataset(
         backend_kwargs = {}
     extra_kwargs = {}
 
-    def maybe_decode_store(store, chunks, lock=False):
-        ds = conventions.decode_cf(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
-
+    def chunk_backend_ds(ds, chunks, lock=False):
         _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None and engine != "zarr":
+        if chunks is not None:
             from dask.base import tokenize
 
             # if passed an actual file path, augment the token with
@@ -224,36 +213,6 @@ def open_dataset(
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-
-        elif engine == "zarr":
-            # adapted from Dataset.Chunk() and taken from open_zarr
-            if not (isinstance(chunks, (int, dict)) or chunks is None):
-                if chunks != "auto":
-                    raise ValueError(
-                        "chunks must be an int, dict, 'auto', or None. "
-                        "Instead found %s. " % chunks
-                    )
-
-            if chunks == "auto":
-                try:
-                    import dask.array  # noqa
-                except ImportError:
-                    chunks = None
-
-            # auto chunking needs to be here and not in ZarrStore because
-            # the variable chunks does not survive decode_cf
-            # return trivial case
-            if chunks is None:
-                return ds
-
-            if isinstance(chunks, int):
-                chunks = dict.fromkeys(ds.dims, chunks)
-
-            variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-                for k, v in ds.variables.items()
-            }
-            ds2 = ds._replace(variables)
 
         else:
             ds2 = ds
@@ -289,11 +248,22 @@ def open_dataset(
         extra_kwargs["mode"] = "r"
         extra_kwargs["group"] = group
 
-    opener = _get_backend_cls(engine)
-    store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
+    opener = _get_backend_cls(engine, engines=ENGINES)
 
-    with close_on_error(store):
-        ds = maybe_decode_store(store, chunks)
+    backend_ds = opener(
+        filename_or_obj,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
+        **backend_kwargs,
+        **extra_kwargs
+    )
+
+    ds = chunk_backend_ds(backend_ds, chunks, lock=False)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
