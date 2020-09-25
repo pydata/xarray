@@ -1,4 +1,4 @@
-import os.path
+import os
 import warnings
 from glob import glob
 from io import BytesIO
@@ -428,6 +428,12 @@ def open_dataset(
     --------
     open_mfdataset
     """
+    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v1":
+        kwargs = locals().copy()
+        from . import apiv2
+        if engine in apiv2.ENGINES:
+            return apiv2.open_dataset(**kwargs)
+
     if autoclose is not None:
         warnings.warn(
             "The autoclose argument is no longer used by "
