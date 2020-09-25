@@ -134,8 +134,15 @@ def _get_engine_from_magic_number(filename_or_obj):
 
     if magic_number.startswith(b"CDF"):
         engine = "scipy"
-    else:
+    elif magic_number.startswith(b"\211HDF\r\n\032\n"):
         engine = "h5netcdf"
+    else:
+        if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
+            filename_or_obj = filename_or_obj[:80] + b"..."
+        raise ValueError(
+            "{} is not a supported file format "
+            "did you mean to pass a string for a path instead?".format(filename_or_obj)
+        )
     return engine
 
 
