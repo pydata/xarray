@@ -127,7 +127,14 @@ class H5NetCDFStore(WritableCFDataStore):
                     "can't open netCDF4/HDF5 as bytes "
                     "try passing a path or file-like object"
                 )
-        elif not isinstance(filename, str) and filename.tell() != 0:
+            else:
+                if len(filename) > 80:
+                    filename = filename[:80] + b"..."
+                raise ValueError(
+                    "{} is not a valid netCDF file "
+                    "did you mean to pass a string for a path instead?".format(filename)
+                )
+        elif hasattr(filename, 'tell') and filename.tell() != 0:
             raise ValueError(
                 "file-like object read/write pointer not at zero "
                 "please close and reopen, or use a context "
