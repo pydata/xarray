@@ -163,10 +163,10 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
-def _get_backend_cls(engine):
+def _get_backend_cls(engine, engines=ENGINES):
     """Select open_dataset method based on current engine"""
     try:
-        return ENGINES[engine]
+        return engines[engine]
     except KeyError:
         raise ValueError(
             "unrecognized engine for open_dataset: {}\n"
