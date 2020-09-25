@@ -263,37 +263,34 @@ def open_dataset(
     if isinstance(filename_or_obj, Path):
         filename_or_obj = str(filename_or_obj)
 
-    if isinstance(filename_or_obj, AbstractDataStore):
-        store = filename_or_obj
-    else:
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = _normalize_path(filename_or_obj)
+    if isinstance(filename_or_obj, str):
+        filename_or_obj = _normalize_path(filename_or_obj)
 
-            if engine is None:
-                engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        elif engine != "zarr":
-            if engine not in [None, "scipy", "h5netcdf"]:
-                raise ValueError(
-                    "can only read bytes or file-like objects "
-                    "with engine='scipy' or 'h5netcdf'"
-                )
-            engine = _get_engine_from_magic_number(filename_or_obj)
-
-        if engine in ["netcdf4", "h5netcdf"]:
-            extra_kwargs["group"] = group
-            extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
-        elif engine == "zarr":
-            backend_kwargs = backend_kwargs.copy()
-            overwrite_encoded_chunks = backend_kwargs.pop(
-                "overwrite_encoded_chunks", None
+        if engine is None:
+            engine = _get_default_engine(filename_or_obj, allow_remote=True)
+    elif engine != "zarr":
+        if engine not in [None, "scipy", "h5netcdf"]:
+            raise ValueError(
+                "can only read bytes or file-like objects "
+                "with engine='scipy' or 'h5netcdf'"
             )
-            extra_kwargs["mode"] = "r"
-            extra_kwargs["group"] = group
+        engine = _get_engine_from_magic_number(filename_or_obj)
 
-        opener = _get_backend_cls(engine)
-        store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
+    if engine in ["netcdf4", "h5netcdf"]:
+        extra_kwargs["group"] = group
+        extra_kwargs["lock"] = lock
+    elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+        extra_kwargs["lock"] = lock
+    elif engine == "zarr":
+        backend_kwargs = backend_kwargs.copy()
+        overwrite_encoded_chunks = backend_kwargs.pop(
+            "overwrite_encoded_chunks", None
+        )
+        extra_kwargs["mode"] = "r"
+        extra_kwargs["group"] = group
+
+    opener = _get_backend_cls(engine)
+    store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
 
     with close_on_error(store):
         ds = maybe_decode_store(store, chunks)
@@ -304,4 +301,3 @@ def open_dataset(
             ds.encoding["source"] = filename_or_obj
 
     return ds
-
