@@ -139,7 +139,7 @@ def _get_engine_from_magic_number(filename_or_obj):
     else:
         raise ValueError(
             f"{magic_number} is not the signature of any supported file format "
-            "did you mean to pass a string for a path instead?".format(magic_number)
+            "did you mean to pass a string for a path instead?"
         )
     return engine
 
