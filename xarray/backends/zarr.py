@@ -286,11 +286,13 @@ class ZarrStore(AbstractWritableDataStore):
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
 
+        if storage_options:
+            open_kwargs["storage_options"] = storage_options
         if consolidated:
             # TODO: an option to pass the metadata_key keyword
-            zarr_group = zarr.open_consolidated(store, storage_options=storage_options, **open_kwargs)
+            zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
-            zarr_group = zarr.open_group(store, storage_options=storage_options, **open_kwargs)
+            zarr_group = zarr.open_group(store, **open_kwargs)
         return cls(zarr_group, consolidate_on_close)
 
     def __init__(self, zarr_group, consolidate_on_close=False):

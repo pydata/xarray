@@ -324,8 +324,6 @@ def open_dataset(
     backend_kwargs=None,
     use_cftime=None,
     decode_timedelta=None,
-    storage_options=None,
-    fs=None
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -540,6 +538,8 @@ def open_dataset(
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
     else:
+        backend_kwargs = backend_kwargs.copy()
+        fs = backend_kwargs.pop("fs", None)
         if isinstance(filename_or_obj, str) and fs is None:
             filename_or_obj = _normalize_path(filename_or_obj)
 
@@ -565,9 +565,9 @@ def open_dataset(
             )
             extra_kwargs["mode"] = "r"
             extra_kwargs["group"] = group
-            extra_kwargs['storage_options'] = storage_options
             if fs is not None:
                 filename_or_obj = fs.get_mapper(filename_or_obj)
+                backend_kwargs.pop("storage_options", None)
 
         opener = _get_backend_cls(engine)
         store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
@@ -917,13 +917,15 @@ def open_mfdataset(
                 )
             else:
                 import fsspec  #
-                storage_options = kwargs.get('storage_options', None)
+                backend_kwargs = kwargs.get('backend_kwargs', {})
+                storage_options = backend_kwargs.get('storage_options', None)
+
                 fs, _, _ = fsspec.core.get_fs_token_paths(
                     paths, storage_options=storage_options
                 )
                 paths = fs.expand_path(paths)
-                kwargs['fs'] = fs
-
+                backend_kwargs['fs'] = fs
+                kwargs['backend_kwargs'] = backend_kwargs
         else:
             paths = sorted(glob(paths))
     else:
