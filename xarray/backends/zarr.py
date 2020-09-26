@@ -278,7 +278,7 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
-        storage_options=None
+        storage_options=None,
     ):
         import zarr
 

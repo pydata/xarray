@@ -917,15 +917,16 @@ def open_mfdataset(
                 )
             else:
                 import fsspec  #
-                backend_kwargs = kwargs.get('backend_kwargs', {})
-                storage_options = backend_kwargs.get('storage_options', None)
+
+                backend_kwargs = kwargs.get("backend_kwargs", {})
+                storage_options = backend_kwargs.get("storage_options", None)
 
                 fs, _, _ = fsspec.core.get_fs_token_paths(
                     paths, storage_options=storage_options
                 )
                 paths = fs.expand_path(paths)
-                backend_kwargs['fs'] = fs
-                kwargs['backend_kwargs'] = backend_kwargs
+                backend_kwargs["fs"] = fs
+                kwargs["backend_kwargs"] = backend_kwargs
         else:
             paths = sorted(glob(paths))
     else:
