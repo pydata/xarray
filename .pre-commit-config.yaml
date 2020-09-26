@@ -1,7 +1,7 @@
 # https://pre-commit.com/
 repos:
   # isort should run before black as black sometimes tweaks the isort output
-  - repo: https://github.com/timothycrosley/isort
+  - repo: https://github.com/PyCQA/isort
     rev: 5.4.2
     hooks:
       - id: isort
