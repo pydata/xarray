@@ -736,6 +736,7 @@ def open_mfdataset(
     parallel=False,
     join="outer",
     attrs_file=None,
+    tolerance=0,
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -849,6 +850,10 @@ def open_mfdataset(
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
+    tolerance: numerical or dict of numerical
+        Value used to check equality with numerical tolerance between the 
+        coordinates with the same name across all datasets.  If a dict, maps
+        coordinate names to tolerance values.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -950,6 +955,7 @@ def open_mfdataset(
                 coords=coords,
                 join=join,
                 combine_attrs="drop",
+                tolerance=tolerance
             )
         else:
             raise ValueError(
