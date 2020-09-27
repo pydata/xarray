@@ -111,18 +111,20 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
             # compute the sizes of the repeat and tile for the cartesian product
             # (taken from pandas.core.reshape.util)
-            lenX = np.fromiter((len(index) for index in indexes), dtype=np.intp)
-            cumprodX = np.cumproduct(lenX)
+            index_lengths = np.fromiter(
+                (len(index) for index in indexes), dtype=np.intp
+            )
+            cumprod_lengths = np.cumproduct(index_lengths)
 
-            if cumprodX[-1] != 0:
+            if cumprod_lengths[-1] != 0:
                 # sizes of the repeats
-                repeat_counts = cumprodX[-1] / cumprodX
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
             else:
                 # if any factor is empty, the cartesian product is empty
-                repeat_counts = np.zeros_like(cumprodX)
+                repeat_counts = np.zeros_like(cumprod_lengths)
 
             # sizes of the tiles
-            tile_counts = np.roll(cumprodX, 1)
+            tile_counts = np.roll(cumprod_lengths, 1)
             tile_counts[0] = 1
 
             # loop over the indexes
@@ -141,7 +143,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                     levels = [level]
 
                 # compute the cartesian product
-                code_list += [np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i]) for code in codes]
+                code_list += [
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    for code in codes
+                ]
                 level_list += levels
                 names += index.names
 
