@@ -1,6 +1,7 @@
 import itertools
 from collections import Counter
 
+import numpy as np
 import pandas as pd
 
 from . import dtypes
@@ -44,7 +45,7 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
-def _infer_concat_order_from_coords(datasets):
+def _infer_concat_order_from_coords(datasets, tolerance=0):
 
     concat_dims = []
     tile_ids = [() for ds in datasets]
@@ -64,9 +65,25 @@ def _infer_concat_order_from_coords(datasets):
                     "inferring concatenation order"
                 )
 
+            # tolerance can be a dict with dims as key or a constant value
+            if isinstance(tolerance, dict):
+                atol = tolerance.get(dim, 0)
+            else:
+                atol = tolerance
+
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
-            if not all(index.equals(indexes[0]) for index in indexes[1:]):
+            if not (
+                all(index.equals(indexes[0]) for index in indexes[1:])
+                or (
+                    atol > 0
+                    and all(index.is_numeric() for index in indexes)
+                    and all(
+                        np.allclose(index, indexes[0], atol=atol, rtol=0)
+                        for index in indexes[1:]
+                    )
+                )
+            ):
 
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
@@ -547,6 +564,7 @@ def combine_by_coords(
     fill_value=dtypes.NA,
     join="outer",
     combine_attrs="no_conflicts",
+    tolerance=0,
 ):
     """
     Attempt to auto-magically combine the given datasets into one by using
@@ -634,6 +652,10 @@ def combine_by_coords(
           the same name must also have the same value.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+    tolerance: numerical or dict of numeric
+        Value used to check equality with numerical tolerance between the 
+        coordinates with the same name across all datasets.  If a dict, maps
+        coordinate names to tolerance value.
 
     Returns
     -------
@@ -757,7 +779,7 @@ def combine_by_coords(
     concatenated_grouped_by_data_vars = []
     for vars, datasets_with_same_vars in grouped_by_vars:
         combined_ids, concat_dims = _infer_concat_order_from_coords(
-            list(datasets_with_same_vars)
+            list(datasets_with_same_vars), tolerance
         )
 
         if fill_value is None:
