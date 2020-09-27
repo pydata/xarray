@@ -3535,6 +3535,18 @@ class TestDataArray:
         assert_array_equal(actual.index.levels[1], ["a", "b"])
         assert_array_equal(actual.index.levels[2], [5, 6, 7])
 
+    def test_to_dataframe_0length(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 0)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert len(actual) == 0
+        assert_array_equal(actual.index.names, list("ABC"))
+
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
