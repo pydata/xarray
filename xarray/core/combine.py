@@ -652,10 +652,10 @@ def combine_by_coords(
           the same name must also have the same value.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
-    tolerance: numerical or dict of numeric
-        Value used to check equality with numerical tolerance between the 
+    tolerance: numerical or dict of numerical
+        Value used to check equality with numerical tolerance between the
         coordinates with the same name across all datasets.  If a dict, maps
-        coordinate names to tolerance value.
+        coordinate names to tolerance values.
 
     Returns
     -------

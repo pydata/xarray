@@ -851,7 +851,7 @@ def open_mfdataset(
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
     tolerance: numerical or dict of numerical
-        Value used to check equality with numerical tolerance between the 
+        Value used to check equality with numerical tolerance between the
         coordinates with the same name across all datasets.  If a dict, maps
         coordinate names to tolerance values.
     **kwargs : optional

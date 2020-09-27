@@ -845,10 +845,10 @@ class TestCombineAuto:
         )
 
         # fail if tolerance is not properly implemented
-        combined = combine_by_coords([ds1, ds2], tolerance=1e-6)
+        combine_by_coords([ds1, ds2], tolerance=1e-6)
 
         # fail if tolerance is not properly implemented
-        combined = combine_by_coords([ds1, ds2], tolerance={"x": 1e-6})
+        combine_by_coords([ds1, ds2], tolerance={"x": 1e-6})
 
 
 @requires_cftime
