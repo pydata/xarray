@@ -12,10 +12,11 @@ from .api import (
     _normalize_path,
     _protect_dataset_variables_inplace,
 )
-from . import h5netcdf_
+from . import h5netcdf_, cfgrib_
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
+    "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
 }
 
 
