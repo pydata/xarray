@@ -916,7 +916,7 @@ def open_mfdataset(
                     )
                 )
             else:
-                import fsspec  #
+                import fsspec  # type: ignore
 
                 backend_kwargs = kwargs.get("backend_kwargs", {})
                 storage_options = backend_kwargs.get("storage_options", None)
