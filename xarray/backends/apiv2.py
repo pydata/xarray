@@ -12,10 +12,11 @@ from .api import (
     _normalize_path,
     _protect_dataset_variables_inplace,
 )
-from . import h5netcdf_
+from . import h5netcdf_, zarr
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
+    "zaar": zarr.open_backend_dataset_zarr,
 }
 
 
@@ -170,8 +171,7 @@ def open_dataset(
 
     def chunk_backend_ds(ds, chunks, lock=False):
         _protect_dataset_variables_inplace(ds, cache)
-
-        if chunks is not None:
+        if chunks is not None and engine != "zarr":
             from dask.base import tokenize
 
             # if passed an actual file path, augment the token with
@@ -197,6 +197,36 @@ def open_dataset(
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+
+        elif engine == "zarr":
+            # adapted from Dataset.Chunk() and taken from open_zarr
+            if not (isinstance(chunks, (int, dict)) or chunks is None):
+                if chunks != "auto":
+                    raise ValueError(
+                        "chunks must be an int, dict, 'auto', or None. "
+                        "Instead found %s. " % chunks
+                    )
+
+            if chunks == "auto":
+                try:
+                    import dask.array  # noqa
+                except ImportError:
+                    chunks = None
+
+            # auto chunking needs to be here and not in ZarrStore because
+            # the variable chunks does not survive decode_cf
+            # return trivial case
+            if chunks is None:
+                return ds
+
+            if isinstance(chunks, int):
+                chunks = dict.fromkeys(ds.dims, chunks)
+
+            variables = {
+                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
+            ds2 = ds._replace(variables)
 
         else:
             ds2 = ds
