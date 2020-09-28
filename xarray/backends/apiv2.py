@@ -11,6 +11,7 @@ from .api import (
     _get_engine_from_magic_number,
     _normalize_path,
     _protect_dataset_variables_inplace,
+    _autodetect_engine,
 )
 from . import h5netcdf_, zarr
 
@@ -233,21 +234,11 @@ def open_dataset(
         ds2._file_obj = ds._file_obj
         return ds2
 
-    if isinstance(filename_or_obj, Path):
-        filename_or_obj = str(filename_or_obj)
 
-    if isinstance(filename_or_obj, str):
-        filename_or_obj = _normalize_path(filename_or_obj)
+    filename_or_obj = _normalize_path(filename_or_obj)
 
-        if engine is None:
-            engine = _get_default_engine(filename_or_obj, allow_remote=True)
-    elif engine != "zarr":
-        if engine not in [None, "scipy", "h5netcdf"]:
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
-            )
-        engine = _get_engine_from_magic_number(filename_or_obj)
+    if engine is None:
+        engine = _autodetect_engine(filename_or_obj)
 
     if engine in ["netcdf4", "h5netcdf"]:
         extra_kwargs["group"] = group

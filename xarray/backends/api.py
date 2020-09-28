@@ -154,6 +154,7 @@ def _get_default_engine(path, allow_remote=False):
         engine = _get_default_engine_netcdf()
     return engine
 
+
 def _autodetect_engine(filename_or_obj):
     if isinstance(filename_or_obj, str):
         engine = _get_default_engine(filename_or_obj, allow_remote=True)
