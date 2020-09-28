@@ -227,9 +227,7 @@ def open_dataset(
         extra_kwargs["lock"] = lock
     elif engine == "zarr":
         backend_kwargs = backend_kwargs.copy()
-        overwrite_encoded_chunks = backend_kwargs.pop(
-            "overwrite_encoded_chunks", None
-        )
+        overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
         extra_kwargs["mode"] = "r"
         extra_kwargs["group"] = group
 
@@ -245,7 +243,7 @@ def open_dataset(
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
         **backend_kwargs,
-        **extra_kwargs
+        **extra_kwargs,
     )
 
     ds = chunk_backend_ds(backend_ds, chunks, lock=False)
