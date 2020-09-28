@@ -306,7 +306,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def open_dataset_h5necdf_(
+def open_backend_dataset_h5necdf(
     filename_or_obj,
     mask_and_scale=None,
     decode_times=None,

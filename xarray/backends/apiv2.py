@@ -1,12 +1,7 @@
 import os
 import warnings
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
 
-)
-
-from .. import backends, conventions
 
 from ..core.dataset import Dataset
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
@@ -19,18 +14,8 @@ from .api import (
 )
 from . import h5netcdf_
 
-if TYPE_CHECKING:
-    try:
-        from dask.delayed import Delayed
-    except ImportError:
-        Delayed = None
-
-
-DATAARRAY_NAME = "__xarray_dataarray_name__"
-DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
-
 ENGINES = {
-    "h5netcdf": h5netcdf_.open_dataset_h5necdf_,
+    "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
 }
 
 
@@ -155,7 +140,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-
     if autoclose is not None:
         warnings.warn(
             "The autoclose argument is no longer used by "
@@ -248,9 +232,9 @@ def open_dataset(
         extra_kwargs["mode"] = "r"
         extra_kwargs["group"] = group
 
-    opener = _get_backend_cls(engine, engines=ENGINES)
+    open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
 
-    backend_ds = opener(
+    backend_ds = open_backend_dataset(
         filename_or_obj,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
