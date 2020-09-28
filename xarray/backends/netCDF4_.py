@@ -333,6 +333,12 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
+        if not isinstance(filename, str):
+            raise ValueError(
+                "can only read bytes or file-like objects "
+                "with engine='scipy' or 'h5netcdf'"
+            )
+
         if format is None:
             format = "NETCDF4"
 
