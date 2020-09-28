@@ -74,15 +74,15 @@ class CfGribDataStore(AbstractDataStore):
 
 
 def open_backend_dataset_cfgrib(
-        filename_or_obj,
-        mask_and_scale=None,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
-        drop_variables=None,
-        use_cftime=None,
-        decode_timedelta=None,
-        **kwargs
+    filename_or_obj,
+    mask_and_scale=None,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    **kwargs,
 ):
     store = CfGribDataStore(filename_or_obj, **kwargs)
 
