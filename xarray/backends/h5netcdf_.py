@@ -123,6 +123,25 @@ class H5NetCDFStore(WritableCFDataStore):
     ):
         import h5netcdf
 
+        if isinstance(filename, bytes):
+            raise ValueError(
+                "can't open netCDF4/HDF5 as bytes "
+                "try passing a path or file-like object"
+            )
+        elif hasattr(filename, "tell"):
+            if filename.tell() != 0:
+                raise ValueError(
+                    "file-like object read/write pointer not at zero "
+                    "please close and reopen, or use a context manager"
+                )
+            else:
+                magic_number = filename.read(8)
+                filename.seek(0)
+                if not magic_number.startswith(b"\211HDF\r\n\032\n"):
+                    raise ValueError(
+                        f"{magic_number} is not the signature of a valid netCDF file"
+                    )
+
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
