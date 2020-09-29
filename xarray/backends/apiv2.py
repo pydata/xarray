@@ -234,7 +234,6 @@ def open_dataset(
         ds2._file_obj = ds._file_obj
         return ds2
 
-
     filename_or_obj = _normalize_path(filename_or_obj)
 
     if engine is None:
