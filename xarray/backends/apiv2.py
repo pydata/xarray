@@ -17,7 +17,7 @@ from . import h5netcdf_, zarr, cfgrib_
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
-    "zaar": zarr.open_backend_dataset_zarr,
+    "zarr": zarr.open_backend_dataset_zarr,
     "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
 }
 
@@ -225,7 +225,7 @@ def open_dataset(
                 chunks = dict.fromkeys(ds.dims, chunks)
 
             variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
                 for k, v in ds.variables.items()
             }
             ds2 = ds._replace(variables)
