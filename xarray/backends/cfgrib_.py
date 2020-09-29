@@ -88,7 +88,6 @@ def open_backend_dataset_cfgrib(
 
     with close_on_error(store):
         vars, attrs = store.load()
-        extra_coords = set()
         file_obj = store
         encoding = store.get_encoding()
 
@@ -105,7 +104,7 @@ def open_backend_dataset_cfgrib(
         )
 
         ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
+        ds = ds.set_coords(coord_names.intersection(vars))
         ds._file_obj = file_obj
         ds.encoding = encoding
 
