@@ -40,6 +40,17 @@ if TYPE_CHECKING:
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
 
+ENGINES = {
+    "netcdf4": backends.NetCDF4DataStore.open,
+    "scipy": backends.ScipyDataStore,
+    "pydap": backends.PydapDataStore.open,
+    "h5netcdf": backends.H5NetCDFStore.open,
+    "pynio": backends.NioDataStore,
+    "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
+    "cfgrib": backends.CfGribDataStore,
+    "zarr": backends.ZarrStore.open_group,
+}
+
 
 def _get_default_engine_remote_uri():
     try:
@@ -115,8 +126,7 @@ def _get_engine_from_magic_number(filename_or_obj):
         if filename_or_obj.tell() != 0:
             raise ValueError(
                 "file-like object read/write pointer not at zero "
-                "please close and reopen, or use a context "
-                "manager"
+                "please close and reopen, or use a context manager"
             )
         magic_number = filename_or_obj.read(8)
         filename_or_obj.seek(0)
@@ -125,17 +135,10 @@ def _get_engine_from_magic_number(filename_or_obj):
         engine = "scipy"
     elif magic_number.startswith(b"\211HDF\r\n\032\n"):
         engine = "h5netcdf"
-        if isinstance(filename_or_obj, bytes):
-            raise ValueError(
-                "can't open netCDF4/HDF5 as bytes "
-                "try passing a path or file-like object"
-            )
     else:
-        if isinstance(filename_or_obj, bytes) and len(filename_or_obj) > 80:
-            filename_or_obj = filename_or_obj[:80] + b"..."
         raise ValueError(
-            "{} is not a valid netCDF file "
-            "did you mean to pass a string for a path instead?".format(filename_or_obj)
+            f"{magic_number} is not the signature of any supported file format "
+            "did you mean to pass a string for a path instead?"
         )
     return engine
 
@@ -152,11 +155,33 @@ def _get_default_engine(path, allow_remote=False):
     return engine
 
 
-def _normalize_path(path):
-    if is_remote_uri(path):
-        return path
+def _autodetect_engine(filename_or_obj):
+    if isinstance(filename_or_obj, str):
+        engine = _get_default_engine(filename_or_obj, allow_remote=True)
     else:
-        return os.path.abspath(os.path.expanduser(path))
+        engine = _get_engine_from_magic_number(filename_or_obj)
+    return engine
+
+
+def _get_backend_cls(engine):
+    """Select open_dataset method based on current engine"""
+    try:
+        return ENGINES[engine]
+    except KeyError:
+        raise ValueError(
+            "unrecognized engine for open_dataset: {}\n"
+            "must be one of: {}".format(engine, list(ENGINES))
+        )
+
+
+def _normalize_path(path):
+    if isinstance(path, Path):
+        path = str(path)
+
+    if isinstance(path, str) and not is_remote_uri(path):
+        path = os.path.abspath(os.path.expanduser(path))
+
+    return path
 
 
 def _validate_dataset_names(dataset):
@@ -344,14 +369,16 @@ def open_dataset(
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf"}, optional
+        "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
     chunks : int or dict, optional
-        If chunks is provided, it used to load the new dataset into dask
+        If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays.
+        chunk for all arrays. When using ``engine="zarr"``, setting
+        ``chunks='auto'`` will create dask chunks based on the variable's zarr
+        chunks.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
@@ -404,22 +431,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    engines = [
-        None,
-        "netcdf4",
-        "scipy",
-        "pydap",
-        "h5netcdf",
-        "pynio",
-        "cfgrib",
-        "pseudonetcdf",
-    ]
-    if engine not in engines:
-        raise ValueError(
-            "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, engines)
-        )
-
     if autoclose is not None:
         warnings.warn(
             "The autoclose argument is no longer used by "
@@ -446,8 +457,9 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
+    extra_kwargs = {}
 
-    def maybe_decode_store(store, lock=False):
+    def maybe_decode_store(store, chunks, lock=False):
         ds = conventions.decode_cf(
             store,
             mask_and_scale=mask_and_scale,
@@ -461,7 +473,7 @@ def open_dataset(
 
         _protect_dataset_variables_inplace(ds, cache)
 
-        if chunks is not None:
+        if chunks is not None and engine != "zarr":
             from dask.base import tokenize
 
             # if passed an actual file path, augment the token with
@@ -487,62 +499,68 @@ def open_dataset(
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-            ds2._file_obj = ds._file_obj
+
+        elif engine == "zarr":
+            # adapted from Dataset.Chunk() and taken from open_zarr
+            if not (isinstance(chunks, (int, dict)) or chunks is None):
+                if chunks != "auto":
+                    raise ValueError(
+                        "chunks must be an int, dict, 'auto', or None. "
+                        "Instead found %s. " % chunks
+                    )
+
+            if chunks == "auto":
+                try:
+                    import dask.array  # noqa
+                except ImportError:
+                    chunks = None
+
+            # auto chunking needs to be here and not in ZarrStore because
+            # the variable chunks does not survive decode_cf
+            # return trivial case
+            if chunks is None:
+                return ds
+
+            if isinstance(chunks, int):
+                chunks = dict.fromkeys(ds.dims, chunks)
+
+            variables = {
+                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
+            ds2 = ds._replace(variables)
+
         else:
             ds2 = ds
-
+        ds2._file_obj = ds._file_obj
         return ds2
 
-    if isinstance(filename_or_obj, Path):
-        filename_or_obj = str(filename_or_obj)
+    filename_or_obj = _normalize_path(filename_or_obj)
 
     if isinstance(filename_or_obj, AbstractDataStore):
         store = filename_or_obj
-
-    elif isinstance(filename_or_obj, str):
-        filename_or_obj = _normalize_path(filename_or_obj)
-
-        if engine is None:
-            engine = _get_default_engine(filename_or_obj, allow_remote=True)
-        if engine == "netcdf4":
-            store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "scipy":
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == "pydap":
-            store = backends.PydapDataStore.open(filename_or_obj, **backend_kwargs)
-        elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
-        elif engine == "pynio":
-            store = backends.NioDataStore(filename_or_obj, lock=lock, **backend_kwargs)
-        elif engine == "pseudonetcdf":
-            store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, lock=lock, **backend_kwargs
-            )
-        elif engine == "cfgrib":
-            store = backends.CfGribDataStore(
-                filename_or_obj, lock=lock, **backend_kwargs
-            )
-
     else:
-        if engine not in [None, "scipy", "h5netcdf"]:
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
+        if engine is None:
+            engine = _autodetect_engine(filename_or_obj)
+
+        if engine in ["netcdf4", "h5netcdf"]:
+            extra_kwargs["group"] = group
+            extra_kwargs["lock"] = lock
+        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
+            extra_kwargs["lock"] = lock
+        elif engine == "zarr":
+            backend_kwargs = backend_kwargs.copy()
+            overwrite_encoded_chunks = backend_kwargs.pop(
+                "overwrite_encoded_chunks", None
             )
-        engine = _get_engine_from_magic_number(filename_or_obj)
-        if engine == "scipy":
-            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
-        elif engine == "h5netcdf":
-            store = backends.H5NetCDFStore.open(
-                filename_or_obj, group=group, lock=lock, **backend_kwargs
-            )
+            extra_kwargs["mode"] = "r"
+            extra_kwargs["group"] = group
+
+        opener = _get_backend_cls(engine)
+        store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
 
     with close_on_error(store):
-        ds = maybe_decode_store(store)
+        ds = maybe_decode_store(store, chunks)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
@@ -794,7 +812,7 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", "zarr"}, \
         optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for

@@ -27,11 +27,19 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 
+- :py:func:`open_dataset` and :py:func:`open_mfdataset`
+  now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
+  By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 
 Bug fixes
 ~~~~~~~~~
 - Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`, :pull:`4454`).
   By `Andrew Pauling <https://github.com/andrewpauling>`_
+
+- Fix silently overwriting the `engine` key when passing :py:func:`open_dataset` a file object
+  to an incompatible netCDF (:issue:`4457`). Now incompatible combinations of files and engines raise
+  an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
