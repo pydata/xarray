@@ -4674,10 +4674,12 @@ def test_extract_zarr_variable_encoding():
 @requires_zarr
 @requires_fsspec
 def test_open_fsspec():
-    import fsspec
+    import fsspec  # type: ignore
     import zarr
 
-    if not hasattr(zarr.storage.FSStore, "getitems"):
+    if not hasattr(zarr.storage, "FSStore") or not hasattr(
+        zarr.storage.FSStore, "getitems"
+    ):
         pytest.skip("zarr too old")
 
     ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
