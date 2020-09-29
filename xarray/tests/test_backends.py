@@ -2225,7 +2225,7 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
                 open_dataset(tmp_file, engine="foobar")
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, "can only read bytes or file-like"):
+        with raises_regex(ValueError, "unrecognized engine"):
             open_dataset(BytesIO(netcdf_bytes), engine="foobar")
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -2495,13 +2495,13 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "not a valid netCDF"):
+        with raises_regex(ValueError, "not the signature of any supported file"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
-        with raises_regex(ValueError, "not a valid netCDF"):
+        with raises_regex(ValueError, "not the signature of a valid netCDF file"):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
@@ -2528,9 +2528,21 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     assert_identical(expected, actual)
 
                 f.seek(0)
+                with open_dataset(f) as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
                 with BytesIO(f.read()) as bio:
                     with open_dataset(bio, engine="h5netcdf") as actual:
                         assert_identical(expected, actual)
+
+                f.seek(0)
+                with raises_regex(TypeError, "not a valid NetCDF 3"):
+                    open_dataset(f, engine="scipy")
+
+                f.seek(8)
+                with raises_regex(ValueError, "read/write pointer not at zero"):
+                    open_dataset(f)
 
 
 @requires_h5netcdf
