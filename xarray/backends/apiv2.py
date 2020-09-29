@@ -13,11 +13,12 @@ from .api import (
     _protect_dataset_variables_inplace,
     _autodetect_engine,
 )
-from . import h5netcdf_, zarr
+from . import h5netcdf_, zarr, cfgrib_
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
     "zaar": zarr.open_backend_dataset_zarr,
+    "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
 }
 
 
