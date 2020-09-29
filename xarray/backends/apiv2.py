@@ -1,14 +1,9 @@
 import os
-import warnings
-from pathlib import Path
-
 
 from ..core.dataset import Dataset
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .api import (
     _get_backend_cls,
-    _get_default_engine,
-    _get_engine_from_magic_number,
     _normalize_path,
     _protect_dataset_variables_inplace,
     _autodetect_engine,
@@ -22,23 +17,18 @@ ENGINES = {
 }
 
 
+def filter_None(d):
+    return {k: v for k, v in d.items() if v is not None}
+
+
 def open_dataset(
     filename_or_obj,
-    group=None,
-    decode_cf=True,
-    mask_and_scale=None,
-    decode_times=True,
-    autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
+    *,
     engine=None,
     chunks=None,
-    lock=None,
     cache=None,
-    drop_variables=None,
     backend_kwargs=None,
-    use_cftime=None,
-    decode_timedelta=None,
+    **kwargs
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -143,33 +133,12 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-    if mask_and_scale is None:
-        mask_and_scale = not engine == "pseudonetcdf"
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     if cache is None:
         cache = chunks is None
 
     if backend_kwargs is None:
         backend_kwargs = {}
-    extra_kwargs = {}
 
     def chunk_backend_ds(ds, chunks, lock=False):
         _protect_dataset_variables_inplace(ds, cache)
@@ -185,17 +154,10 @@ def open_dataset(
             token = tokenize(
                 filename_or_obj,
                 mtime,
-                group,
-                decode_cf,
-                mask_and_scale,
-                decode_times,
-                concat_characters,
-                decode_coords,
                 engine,
                 chunks,
-                drop_variables,
-                use_cftime,
-                decode_timedelta,
+                **backend_kwargs,
+                **kwargs
             )
             name_prefix = "open_dataset-%s" % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -240,32 +202,18 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    if engine in ["netcdf4", "h5netcdf"]:
-        extra_kwargs["group"] = group
-        extra_kwargs["lock"] = lock
-    elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-        extra_kwargs["lock"] = lock
-    elif engine == "zarr":
+    if engine == "zarr":
         backend_kwargs = backend_kwargs.copy()
         overwrite_encoded_chunks = backend_kwargs.pop(
             "overwrite_encoded_chunks", None
         )
-        extra_kwargs["mode"] = "r"
-        extra_kwargs["group"] = group
 
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
 
     backend_ds = open_backend_dataset(
         filename_or_obj,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
-        drop_variables=drop_variables,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
         **backend_kwargs,
-        **extra_kwargs
+        **filter_None(kwargs),
     )
 
     ds = chunk_backend_ds(backend_ds, chunks, lock=False)

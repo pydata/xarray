@@ -1,4 +1,5 @@
 import functools
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -327,16 +328,43 @@ class H5NetCDFStore(WritableCFDataStore):
 
 def open_backend_dataset_h5necdf(
     filename_or_obj,
-    mask_and_scale=None,
+    *,
+    decode_cf=True,
+    mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
     use_cftime=None,
     decode_timedelta=None,
-    **kwargs
+    format=None,
+    group=None,
+    lock=None,
+    invalid_netcdf=None,
+    phony_dims=None,
+    **kwargs,
 ):
-    store = H5NetCDFStore.open(filename_or_obj, **kwargs)
+    if kwargs:
+        warnings.warn(
+            "The following keywords are not supported by h5netcdf "
+            "and they will bw ignored:%r" % kwargs
+        )
+
+    if not decode_cf:
+        mask_and_scale = False
+        decode_times = False
+        concat_characters = False
+        decode_coords = False
+        decode_timedelta = False
+
+    store = H5NetCDFStore.open(
+        filename_or_obj,
+        format=format,
+        group=group,
+        lock=lock,
+        invalid_netcdf=invalid_netcdf,
+        phony_dims=phony_dims,
+    )
 
     with close_on_error(store):
         vars, attrs = store.load()

@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 
 from .. import conventions
@@ -75,16 +76,48 @@ class CfGribDataStore(AbstractDataStore):
 
 def open_backend_dataset_cfgrib(
     filename_or_obj,
-    mask_and_scale=None,
+    *,
+    decode_cf=True,
+    mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
     use_cftime=None,
     decode_timedelta=None,
+    lock=None,
+    indexpath='{path}.{short_hash}.idx',
+    filter_by_keys={},
+    read_keys=[],
+    encode_cf=('parameter', 'time', 'geography', 'vertical'),
+    squeeze=True,
+    time_dims=('time', 'step'),
     **kwargs,
 ):
-    store = CfGribDataStore(filename_or_obj, **kwargs)
+    if kwargs:
+        warnings.warn(
+            "The following keywords are not supported by cfgrib "
+            "backend and they will bw ignored:%r" % kwargs
+        )
+
+    if not decode_cf:
+        mask_and_scale = False
+        decode_times = False
+        concat_characters = False
+        decode_coords = False
+        decode_timedelta = False
+
+
+    store = CfGribDataStore(
+        filename_or_obj,
+        indexpath=indexpath,
+        filter_by_keys=filter_by_keys,
+        read_keys=read_keys,
+        encode_cf=encode_cf,
+        squeeze=squeeze,
+        time_dims=time_dims,
+        lock=lock,
+    )
 
     with close_on_error(store):
         vars, attrs = store.load()
