@@ -54,6 +54,7 @@ from . import (
     requires_cfgrib,
     requires_cftime,
     requires_dask,
+    requires_fsspec,
     requires_h5netcdf,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -4656,3 +4657,31 @@ def test_extract_zarr_variable_encoding():
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
+
+
+@requires_zarr
+@requires_fsspec
+def test_open_fsspec():
+    import fsspec
+    import zarr
+
+    if not hasattr(zarr.storage.FSStore, "getitems"):
+        pytest.skip("zarr too old")
+
+    ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
+
+    m = fsspec.filesystem("memory")
+    mm = m.get_mapper("out1.zarr")
+    ds.to_zarr(mm)  # old interface
+    ds0 = ds.copy()
+    ds0["time"] = ds.time + pd.to_timedelta("1 day")
+    mm = m.get_mapper("out2.zarr")
+    ds0.to_zarr(mm)  # old interface
+
+    url = "memory://out2.zarr"
+    ds2 = open_dataset(url, engine="zarr")
+    assert ds0 == ds2
+
+    url = "memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    assert xr.concat([ds, ds0], dim="time") == ds2
