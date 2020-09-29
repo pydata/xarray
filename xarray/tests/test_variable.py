@@ -300,7 +300,7 @@ class VariableSubclassobjects:
         with raises_regex(pderror, "Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
-    @pytest.mark.xfail
+    @pytest.mark.xfail(reason="pandas issue 36615")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
