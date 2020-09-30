@@ -913,6 +913,9 @@ storage buckets using zarr. This example uses the `gcsfs`_ package to provide
 a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
 pass to xarray::
 
+
+.. ipython:: python
+
     import gcsfs
     fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
     gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
@@ -921,6 +924,22 @@ pass to xarray::
     # read it back
     ds_gcs = xr.open_zarr(gcsmap)
 
+New in v0.16.2: general `fsspec`_ URLs are now parsed and the store set up for you
+automatically when reading, such that the read part of the above code can
+be replaced with
+
+.. ipython:: python
+
+    ds_gcs = xr.open_dataset(
+        "gcs://<bucket-name>/path.zarr",
+        backend_kwargs={"storage_options": {"project":  '<project-name>', token=None}},
+        engine="zarr"
+    )
+
+This also works with ``open_mfdataset``, allowing you to pass a list of paths or
+a URL to be interpreted as a glob string.
+
+.. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
 .. _Zarr: http://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
