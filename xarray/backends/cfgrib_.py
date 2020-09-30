@@ -86,12 +86,12 @@ def open_backend_dataset_cfgrib(
     use_cftime=None,
     decode_timedelta=None,
     lock=None,
-    indexpath='{path}.{short_hash}.idx',
+    indexpath="{path}.{short_hash}.idx",
     filter_by_keys={},
     read_keys=[],
-    encode_cf=('parameter', 'time', 'geography', 'vertical'),
+    encode_cf=("parameter", "time", "geography", "vertical"),
     squeeze=True,
-    time_dims=('time', 'step'),
+    time_dims=("time", "step"),
     **kwargs,
 ):
     if kwargs:

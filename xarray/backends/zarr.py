@@ -693,7 +693,7 @@ def open_backend_dataset_zarr(
     use_cftime=None,
     decode_timedelta=None,
     group=None,
-    mode='r',
+    mode="r",
     synchronizer=None,
     consolidated=False,
     consolidate_on_close=False,

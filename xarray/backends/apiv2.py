@@ -18,14 +18,14 @@ ENGINES = {
 
 
 def dataset_from_backend_dataset(
-        ds,
-        filename_or_obj,
-        engine,
-        chunks,
-        cache,
-        overwrite_encoded_chunks,
-        backend_kwargs,
-        **kwargs,
+    ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    backend_kwargs,
+    **kwargs,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
         if chunks != "auto":
@@ -45,12 +45,7 @@ def dataset_from_backend_dataset(
         else:
             mtime = None
         token = tokenize(
-            filename_or_obj,
-            mtime,
-            engine,
-            chunks,
-            **backend_kwargs,
-            **kwargs
+            filename_or_obj, mtime, engine, chunks, **backend_kwargs, **kwargs
         )
         name_prefix = "open_dataset-%s" % token
         ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -94,7 +89,7 @@ def open_dataset(
     chunks=None,
     cache=None,
     backend_kwargs=None,
-    **kwargs
+    **kwargs,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -212,9 +207,7 @@ def open_dataset(
         engine = _autodetect_engine(filename_or_obj)
 
     backend_kwargs = backend_kwargs.copy()
-    overwrite_encoded_chunks = backend_kwargs.pop(
-        "overwrite_encoded_chunks", None
-    )
+    overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
     backend_ds = open_backend_dataset(
@@ -230,7 +223,7 @@ def open_dataset(
         cache,
         overwrite_encoded_chunks,
         backend_kwargs,
-        **kwargs
+        **kwargs,
     )
 
     return ds
