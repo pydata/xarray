@@ -21,6 +21,77 @@ def filter_None(d):
     return {k: v for k, v in d.items() if v is not None}
 
 
+def dataset_from_backend_dataset (
+        ds,
+        filename_or_obj,
+        engine,
+        chunks,
+        cache,
+        overwrite_encoded_chunks,
+        backend_kwargs,
+        **kwargs,
+):
+    if not (isinstance(chunks, (int, dict)) or chunks is None):
+        if chunks != "auto":
+            raise ValueError(
+                "chunks must be an int, dict, 'auto', or None. "
+                "Instead found %s. " % chunks
+            )
+
+    _protect_dataset_variables_inplace(ds, cache)
+    if chunks is not None and engine != "zarr":
+        from dask.base import tokenize
+
+        # if passed an actual file path, augment the token with
+        # the file modification time
+        if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+            mtime = os.path.getmtime(filename_or_obj)
+        else:
+            mtime = None
+        token = tokenize(
+            filename_or_obj,
+            mtime,
+            engine,
+            chunks,
+            **backend_kwargs,
+            **kwargs
+        )
+        name_prefix = "open_dataset-%s" % token
+        ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+
+    elif engine == "zarr":
+
+        if chunks == "auto":
+            try:
+                import dask.array  # noqa
+            except ImportError:
+                chunks = None
+
+        if chunks is None:
+            return ds
+
+        if isinstance(chunks, int):
+            chunks = dict.fromkeys(ds.dims, chunks)
+
+        variables = {
+            k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+            for k, v in ds.variables.items()
+        }
+        ds2 = ds._replace(variables)
+
+    else:
+        ds2 = ds
+    ds2._file_obj = ds._file_obj
+
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if "source" not in ds.encoding:
+        if isinstance(filename_or_obj, str):
+            ds.encoding["source"] = filename_or_obj
+
+    return ds2
+
+
+
 def open_dataset(
     filename_or_obj,
     *,
@@ -140,73 +211,16 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    def chunk_backend_ds(ds, chunks, lock=False):
-        _protect_dataset_variables_inplace(ds, cache)
-        if chunks is not None and engine != "zarr":
-            from dask.base import tokenize
-
-            # if passed an actual file path, augment the token with
-            # the file modification time
-            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-                mtime = os.path.getmtime(filename_or_obj)
-            else:
-                mtime = None
-            token = tokenize(
-                filename_or_obj,
-                mtime,
-                engine,
-                chunks,
-                **backend_kwargs,
-                **kwargs
-            )
-            name_prefix = "open_dataset-%s" % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-
-        elif engine == "zarr":
-            # adapted from Dataset.Chunk() and taken from open_zarr
-            if not (isinstance(chunks, (int, dict)) or chunks is None):
-                if chunks != "auto":
-                    raise ValueError(
-                        "chunks must be an int, dict, 'auto', or None. "
-                        "Instead found %s. " % chunks
-                    )
-
-            if chunks == "auto":
-                try:
-                    import dask.array  # noqa
-                except ImportError:
-                    chunks = None
-
-            # auto chunking needs to be here and not in ZarrStore because
-            # the variable chunks does not survive decode_cf
-            # return trivial case
-            if chunks is None:
-                return ds
-
-            if isinstance(chunks, int):
-                chunks = dict.fromkeys(ds.dims, chunks)
-
-            variables = {
-                k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-                for k, v in ds.variables.items()
-            }
-            ds2 = ds._replace(variables)
-
-        else:
-            ds2 = ds
-        ds2._file_obj = ds._file_obj
-        return ds2
-
     filename_or_obj = _normalize_path(filename_or_obj)
 
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    if engine == "zarr":
-        backend_kwargs = backend_kwargs.copy()
-        overwrite_encoded_chunks = backend_kwargs.pop(
-            "overwrite_encoded_chunks", None
-        )
+
+    backend_kwargs = backend_kwargs.copy()
+    overwrite_encoded_chunks = backend_kwargs.pop(
+        "overwrite_encoded_chunks", None
+    )
 
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
 
@@ -215,12 +229,6 @@ def open_dataset(
         **backend_kwargs,
         **filter_None(kwargs),
     )
-
-    ds = chunk_backend_ds(backend_ds, chunks, lock=False)
-
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+    ds = dataset_from_backend_dataset(backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, backend_kwargs, **kwargs)
 
     return ds
