@@ -216,14 +216,12 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop(
         "overwrite_encoded_chunks", None
     )
 
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
-
     backend_ds = open_backend_dataset(
         filename_or_obj,
         **backend_kwargs,
