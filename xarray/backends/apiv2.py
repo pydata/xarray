@@ -2,13 +2,13 @@ import os
 
 from ..core.dataset import Dataset
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from . import cfgrib_, h5netcdf_, zarr
 from .api import (
+    _autodetect_engine,
     _get_backend_cls,
     _normalize_path,
     _protect_dataset_variables_inplace,
-    _autodetect_engine,
 )
-from . import h5netcdf_, zarr, cfgrib_
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,

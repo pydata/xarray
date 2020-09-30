@@ -1,10 +1,11 @@
 import warnings
+
 import numpy as np
 
 from .. import conventions
 from ..core import indexing
 from ..core.dataset import Dataset
-from ..core.utils import close_on_error, Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .locks import SerializableLock, ensure_lock

@@ -7,7 +7,7 @@ import numpy as np
 from .. import conventions
 from ..core import indexing
 from ..core.dataset import Dataset
-from ..core.utils import close_on_error, FrozenDict, is_remote_uri
+from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager

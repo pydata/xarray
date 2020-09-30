@@ -6,7 +6,7 @@ from .. import coding, conventions
 from ..core import indexing
 from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
-from ..core.utils import close_on_error, FrozenDict, HiddenKeyDict
+from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
