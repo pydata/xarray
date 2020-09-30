@@ -932,7 +932,7 @@ be replaced with
 
     ds_gcs = xr.open_dataset(
         "gcs://<bucket-name>/path.zarr",
-        backend_kwargs={"storage_options": {"project":  '<project-name>', token=None}},
+        backend_kwargs={"storage_options": {"project":  '<project-name>', "token": None}},
         engine="zarr"
     )
 
