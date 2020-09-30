@@ -346,8 +346,8 @@ def open_backend_dataset_h5necdf(
 ):
     if kwargs:
         warnings.warn(
-            "The following keywords are not supported by h5netcdf "
-            "and they will bw ignored:%r" % kwargs
+            "The following keywords are not supported by the engine "
+            "and will be ignored: %r" % kwargs
         )
 
     if not decode_cf:

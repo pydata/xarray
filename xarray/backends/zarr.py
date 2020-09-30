@@ -702,8 +702,8 @@ def open_backend_dataset_zarr(
 ):
     if kwargs:
         warnings.warn(
-            "The following keywords are not supported by zarr"
-            "and they will bw ignored:%r" % kwargs
+            "The following keywords are not supported by the engine "
+            "and will be ignored: %r" % kwargs
         )
 
     if not decode_cf:
