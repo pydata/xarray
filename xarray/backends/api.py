@@ -338,6 +338,7 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
+        Also supports arbitrary ``fsspec`` URLs, only for the "zarr" backend.
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -398,7 +399,10 @@ def open_dataset(
     backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        allow user control of dataset processing. When using an ``fsspec``
+        path for the filename, they key ``storage_options`` can be used
+        here to configure the backend storage instance. Alternatively, a
+        pre-configured file instance can be supplied with key ``fs``.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -781,7 +785,8 @@ def open_mfdataset(
         files to open. Paths can be given as strings or as pathlib Paths. If
         concatenation along more than one dimension is desired, then ``paths`` must be a
         nested list-of-lists (see ``combine_nested`` for details). (A string glob will
-        be expanded to a 1-dimensional list.)
+        be expanded to a 1-dimensional list.). When engine=="zarr", the path(s) can
+        be of any type understood by ``fsspec``.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk

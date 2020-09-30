@@ -31,6 +31,11 @@ New Features
   now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 
+- :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
+  (including globs for the latter) for ``engine="zarr"``, and so allow reading from
+  many remote and other file systems (:pull:`4461`)
+  By `Martin Durant <https://github.com/martindurant>`_
+
 Bug fixes
 ~~~~~~~~~
 
