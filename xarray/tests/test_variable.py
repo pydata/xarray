@@ -294,6 +294,19 @@ class VariableSubclassobjects:
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
+    def test_datetime64_valid_range(self):
+        data = np.datetime64("1250-01-01", "us")
+        pderror = pd.errors.OutOfBoundsDatetime
+        with raises_regex(pderror, "Out of bounds nanosecond"):
+            self.cls(["t"], [data])
+
+    @pytest.mark.xfail(reason="pandas issue 36615")
+    def test_timedelta64_valid_range(self):
+        data = np.timedelta64("200000", "D")
+        pderror = pd.errors.OutOfBoundsTimedelta
+        with raises_regex(pderror, "Out of bounds nanosecond"):
+            self.cls(["t"], [data])
+
     def test_pandas_data(self):
         v = self.cls(["x"], pd.Series([0, 1, 2], index=[3, 2, 1]))
         assert_identical(v, v[[0, 1, 2]])
