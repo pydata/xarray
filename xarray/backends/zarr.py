@@ -2,7 +2,6 @@ import warnings
 
 import numpy as np
 
-
 from .. import coding, conventions
 from ..core import indexing
 from ..core.dataset import Dataset

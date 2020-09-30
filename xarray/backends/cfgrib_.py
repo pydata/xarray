@@ -107,7 +107,6 @@ def open_backend_dataset_cfgrib(
         decode_coords = False
         decode_timedelta = False
 
-
     store = CfGribDataStore(
         filename_or_obj,
         indexpath=indexpath,

@@ -17,11 +17,7 @@ ENGINES = {
 }
 
 
-def filter_None(d):
-    return {k: v for k, v in d.items() if v is not None}
-
-
-def dataset_from_backend_dataset (
+def dataset_from_backend_dataset(
         ds,
         filename_or_obj,
         engine,
@@ -224,8 +220,17 @@ def open_dataset(
     backend_ds = open_backend_dataset(
         filename_or_obj,
         **backend_kwargs,
-        **filter_None(kwargs),
+        **{k: v for k, v in kwargs.items() if v is not None},
     )
-    ds = dataset_from_backend_dataset(backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, backend_kwargs, **kwargs)
+    ds = dataset_from_backend_dataset(
+        backend_ds,
+        filename_or_obj,
+        engine,
+        chunks,
+        cache,
+        overwrite_encoded_chunks,
+        backend_kwargs,
+        **kwargs
+    )
 
     return ds
