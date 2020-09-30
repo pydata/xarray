@@ -1,7 +1,6 @@
 import os
 
-from ..core.dataset import Dataset
-from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.utils import is_remote_uri
 from . import cfgrib_, h5netcdf_, zarr
 from .api import (
     _autodetect_engine,
