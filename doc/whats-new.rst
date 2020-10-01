@@ -39,7 +39,6 @@ Bug fixes
 - Fix silently overwriting the `engine` key when passing :py:func:`open_dataset` a file object
   to an incompatible netCDF (:issue:`4457`). Now incompatible combinations of files and engines raise
   an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
-
 - The `min_count` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
   is now ignored when not applicable, i.e. when `skipna=False` or when `skipna=None`
   and the dtype does not have a missing value (:issue:`4352`).
