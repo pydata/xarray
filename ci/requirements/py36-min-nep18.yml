@@ -10,7 +10,7 @@ dependencies:
   - distributed=2.9
   - numpy=1.17
   - pandas=0.25
-  - pint=0.13
+  - pint=0.15
   - pip
   - pytest
   - pytest-cov

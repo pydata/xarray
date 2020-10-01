@@ -177,7 +177,9 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
+    datetime64 and timedelta64, according to the pandas convention. Also used for
+    validating that datetime64 and timedelta64 objects are within the valid date
+    range for ns precision, as pandas will raise an error if they are not.
     """
     return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
@@ -238,16 +240,16 @@ def as_compatible_data(data, fastpath=False):
                     '"1"'
                 )
 
-    # validate whether the data is valid data types
+    # validate whether the data is valid data types.
     data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == "O":
             data = _possibly_convert_objects(data)
         elif data.dtype.kind == "M":
-            data = np.asarray(data, "datetime64[ns]")
+            data = _possibly_convert_objects(data)
         elif data.dtype.kind == "m":
-            data = np.asarray(data, "timedelta64[ns]")
+            data = _possibly_convert_objects(data)
 
     return _maybe_wrap_data(data)
 
@@ -501,9 +503,6 @@ class Variable(
 
     @staticmethod
     def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        if isinstance(results, dict):  # persist case
-            name = array_args[0]
-            results = {k: v for k, v in results.items() if k[0] == name}
         data = array_func(results, *array_args)
         return Variable(dims, data, attrs=attrs, encoding=encoding)
 

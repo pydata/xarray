@@ -349,7 +349,11 @@ def _parse_datasets(
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
-        for dim in set(ds.dims) - dims:
+        # preserves ordering of dimensions
+        for dim in ds.dims:
+            if dim in dims:
+                continue
+
             if dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
@@ -459,6 +463,9 @@ def _dataset_concat(
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
+        elif k in result_vars:
+            # preserves original variable order
+            result_vars[k] = result_vars.pop(k)
 
     result = Dataset(result_vars, attrs=result_attrs)
     absent_coord_names = coord_names - set(result.variables)

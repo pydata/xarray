@@ -255,7 +255,9 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> array.map_blocks(
-    ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array,
+    ...     calculate_anomaly,
+    ...     kwargs={"groupby_type": "time.year"},
+    ...     template=array,
     ... )  # doctest: +ELLIPSIS
     <xarray.DataArray (time: 24)>
     dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>

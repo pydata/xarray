@@ -1441,7 +1441,10 @@ class TestNetCDF4Data(NetCDF4Base):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
 
-    def test_already_open_dataset(self):
+
+@requires_netCDF4
+class TestNetCDF4AlreadyOpen:
+    def test_base_case(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 v = nc.createVariable("x", "int")
@@ -1453,7 +1456,7 @@ class TestNetCDF4Data(NetCDF4Base):
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
 
-    def test_already_open_dataset_group(self):
+    def test_group(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode="w") as nc:
                 group = nc.createGroup("g")
@@ -1475,6 +1478,21 @@ class TestNetCDF4Data(NetCDF4Base):
             with nc4.Dataset(tmp_file, mode="r") as nc:
                 with pytest.raises(ValueError, match="must supply a root"):
                     backends.NetCDF4DataStore(nc.groups["g"], group="g")
+
+    def test_deepcopy(self):
+        # regression test for https://github.com/pydata/xarray/issues/4425
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("x", 10)
+                v = nc.createVariable("y", np.int32, ("x",))
+                v[:] = np.arange(10)
+
+            h5 = nc4.Dataset(tmp_file, mode="r")
+            store = backends.NetCDF4DataStore(h5)
+            with open_dataset(store) as ds:
+                copied = ds.copy(deep=True)
+                expected = Dataset({"y": ("x", np.arange(10))})
+                assert_identical(expected, copied)
 
 
 @requires_netCDF4
@@ -1537,7 +1555,7 @@ class ZarrBase(CFEncodedBase):
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
-        with xr.open_zarr(store_target, **kwargs) as ds:
+        with xr.open_dataset(store_target, engine="zarr", **kwargs) as ds:
             yield ds
 
     @contextlib.contextmanager
@@ -1547,7 +1565,7 @@ class ZarrBase(CFEncodedBase):
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
-            open_kwargs = {}
+            open_kwargs = {"chunks": "auto"}
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
@@ -1559,7 +1577,7 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(
             expected,
             save_kwargs={"consolidated": True},
-            open_kwargs={"consolidated": True},
+            open_kwargs={"backend_kwargs": {"consolidated": True}},
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
@@ -1569,7 +1587,7 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store_target, self.create_zarr_target() as chunk_store:
             save_kwargs = {"chunk_store": chunk_store}
             self.save(expected, store_target, **save_kwargs)
-            open_kwargs = {"chunk_store": chunk_store}
+            open_kwargs = {"backend_kwargs": {"chunk_store": chunk_store}}
             with self.open(store_target, **open_kwargs) as ds:
                 assert_equal(ds, expected)
 
@@ -1596,16 +1614,14 @@ class ZarrBase(CFEncodedBase):
     def test_manual_chunk(self):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
-        # All of these should return non-chunked arrays
-        NO_CHUNKS = (None, 0, {})
-        for no_chunk in NO_CHUNKS:
-            open_kwargs = {"chunks": no_chunk}
-            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
-                for k, v in actual.variables.items():
-                    # only index variables should be in memory
-                    assert v._in_memory == (k in actual.dims)
-                    # there should be no chunks
-                    assert v.chunks is None
+        # Using chunks = None should return non-chunked arrays
+        open_kwargs = {"chunks": None}
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                assert v._in_memory == (k in actual.dims)
+                # there should be no chunks
+                assert v.chunks is None
 
         # uniform arrays
         for i in range(2, 6):
@@ -1621,7 +1637,10 @@ class ZarrBase(CFEncodedBase):
         chunks = {"dim1": 2, "dim2": 3, "dim3": 5}
         rechunked = original.chunk(chunks=chunks)
 
-        open_kwargs = {"chunks": chunks, "overwrite_encoded_chunks": True}
+        open_kwargs = {
+            "chunks": chunks,
+            "backend_kwargs": {"overwrite_encoded_chunks": True},
+        }
         with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
             for k, v in actual.variables.items():
                 assert v.chunks == rechunked[k].chunks
@@ -1660,7 +1679,7 @@ class ZarrBase(CFEncodedBase):
     @requires_dask
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             with self.roundtrip(original, open_kwargs={"auto_chunk": True}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
@@ -1668,7 +1687,7 @@ class ZarrBase(CFEncodedBase):
                     # chunk size should be the same as original
                     assert v.chunks == original[k].chunks
 
-        with pytest.warns(FutureWarning):
+        with pytest.raises(TypeError):
             with self.roundtrip(original, open_kwargs={"auto_chunk": False}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
@@ -1829,7 +1848,9 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, mode="w", group=group)
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_zarr(store_target, group=group)
+            actual = xr.open_dataset(
+                store_target, group=group, chunks="auto", engine="zarr"
+            )
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
@@ -1920,11 +1941,11 @@ class ZarrBase(CFEncodedBase):
             encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding)
             ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_zarr(store_target)
+            actual_ds = xr.open_dataset(store_target, chunks="auto", engine="zarr")
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_zarr(store_target).compute(),
+                xr.open_dataset(store_target, chunks="auto", engine="zarr").compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -1939,7 +1960,9 @@ class ZarrBase(CFEncodedBase):
             ds_with_new_var.to_zarr(store_target, mode="a")
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(combined, xr.open_zarr(store_target))
+            assert_identical(
+                combined, xr.open_dataset(store_target, chunks="auto", engine="zarr")
+            )
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
@@ -2422,7 +2445,10 @@ class TestH5NetCDFData(NetCDF4Base):
             assert actual.x.encoding["compression"] == "lzf"
             assert actual.x.encoding["compression_opts"] is None
 
-    def test_already_open_dataset_group(self):
+
+@requires_h5netcdf
+class TestH5NetCDFAlreadyOpen:
+    def test_open_dataset_group(self):
         import h5netcdf
 
         with create_tmp_file() as tmp_file:
@@ -2443,6 +2469,22 @@ class TestH5NetCDFData(NetCDF4Base):
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
 
+    def test_deepcopy(self):
+        import h5netcdf
+
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode="w") as nc:
+                nc.createDimension("x", 10)
+                v = nc.createVariable("y", np.int32, ("x",))
+                v[:] = np.arange(10)
+
+            h5 = h5netcdf.File(tmp_file, mode="r")
+            store = backends.H5NetCDFStore(h5)
+            with open_dataset(store) as ds:
+                copied = ds.copy(deep=True)
+                expected = Dataset({"y": ("x", np.arange(10))})
+                assert_identical(expected, copied)
+
 
 @requires_h5netcdf
 class TestH5NetCDFFileObject(TestH5NetCDFData):
@@ -2452,13 +2494,13 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "not a valid netCDF"):
+        with raises_regex(ValueError, "not the signature of any supported file"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
-        with raises_regex(ValueError, "not a valid netCDF"):
+        with raises_regex(ValueError, "not the signature of a valid netCDF file"):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
@@ -2485,9 +2527,21 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     assert_identical(expected, actual)
 
                 f.seek(0)
+                with open_dataset(f) as actual:
+                    assert_identical(expected, actual)
+
+                f.seek(0)
                 with BytesIO(f.read()) as bio:
                     with open_dataset(bio, engine="h5netcdf") as actual:
                         assert_identical(expected, actual)
+
+                f.seek(0)
+                with raises_regex(TypeError, "not a valid NetCDF 3"):
+                    open_dataset(f, engine="scipy")
+
+                f.seek(8)
+                with raises_regex(ValueError, "read/write pointer not at zero"):
+                    open_dataset(f)
 
 
 @requires_h5netcdf
@@ -2530,7 +2584,7 @@ class TestH5NetCDFViaDaskData(TestH5NetCDFData):
             assert actual["y"].encoding["chunksizes"] == (100, 50)
 
 
-@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio"])
+@pytest.fixture(params=["scipy", "netcdf4", "h5netcdf", "pynio", "zarr"])
 def readengine(request):
     return request.param
 
@@ -2590,7 +2644,10 @@ def test_open_mfdataset_manyfiles(
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
-            subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            if writeengine != "zarr":
+                subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+            else:  # if writeengine == "zarr":
+                subds.to_zarr(store=tmpfiles[ii])
 
         # check that calculation on opened datasets works properly
         with open_mfdataset(
@@ -2599,7 +2656,7 @@ def test_open_mfdataset_manyfiles(
             concat_dim="x",
             engine=readengine,
             parallel=parallel,
-            chunks=chunks,
+            chunks=chunks if (not chunks and readengine != "zarr") else "auto",
         ) as actual:
 
             # check that using open_mfdataset returns dask arrays for variables
