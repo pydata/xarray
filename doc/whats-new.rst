@@ -40,6 +40,10 @@ Bug fixes
   to an incompatible netCDF (:issue:`4457`). Now incompatible combinations of files and engines raise
   an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
 
+- The `min_count` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
+  is now ignored when not applicable, i.e. when `skipna=False` or when `skipna=None`
+  and the dtype does not have a missing value (:issue:`4352`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -137,10 +141,6 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
-- The `min_count` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
-  is now ignored when not applicable, i.e. when `skipna=False` or when `skipna=None`
-  and the dtype does not have a missing value (:issue:`4352`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
 - Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
   By `Tom Augspurger <https://github.com/TomAugspurger>`_
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
