@@ -325,7 +325,6 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
-            # Method 1
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
             func = _dask_or_eager_func(name, dask_module=dask_module)
@@ -562,20 +561,6 @@ def mean(array, axis=None, skipna=None, **kwargs):
 
 
 mean.numeric_only = True  # type: ignore
-
-
-# Method 2
-def sum(array, axis=None, skipna=None, **kwargs):
-
-    # get rid of min_count if not applicable
-    if (skipna is None and array.dtype.kind not in "cfO") or not skipna:
-        kwargs.pop("min_count", None)
-
-    return _sum(array, axis=axis, skipna=skipna, **kwargs)
-
-
-sum.numeric_only = True  # type: ignore
-sum.available_min_count = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
