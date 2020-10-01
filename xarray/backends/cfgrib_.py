@@ -121,7 +121,7 @@ def open_backend_dataset_cfgrib(
 
     with close_on_error(store):
         vars, attrs = store.load()
-        file_obj = store
+        # file_obj = store
         encoding = store.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
