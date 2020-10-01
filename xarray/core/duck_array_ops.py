@@ -352,9 +352,9 @@ argmax = _create_nan_agg_method("argmax", coerce_strings=True)
 argmin = _create_nan_agg_method("argmin", coerce_strings=True)
 max = _create_nan_agg_method("max", coerce_strings=True)
 min = _create_nan_agg_method("min", coerce_strings=True)
-_sum = _create_nan_agg_method("sum")
-# sum.numeric_only = True
-# sum.available_min_count = True
+sum = _create_nan_agg_method("sum")
+sum.numeric_only = True
+sum.available_min_count = True
 std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
