@@ -138,6 +138,18 @@ pandas) installed first. Then, install xarray with pip::
 
     $ pip install xarray
 
+We also maintain other dependency sets for different subsets of functionality::
+
+    $ pip install "xarray[io]"        # Install requirements for handling I/O
+    $ pip install "xarray[accel]"     # Install requirements for accelerating xarray
+    $ pip install "xarray[parallel]"  # Install requirements for dask arrays
+    $ pip install "xarray[viz]"       # Install requirements for visualization
+    $ pip install "xarray[complete]"  # Install all the above
+
+The above commands should install most of the `optional dependencies`_. However,
+some packages which are either not listed in the PyPI or require extra
+libraries are omitted and would require extra installation steps.
+
 Testing
 -------
 
