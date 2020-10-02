@@ -377,9 +377,7 @@ class ZarrStore(AbstractWritableDataStore):
                 spec = chunks[dim]
                 if isinstance(spec, int):
                     spec = (spec,)
-
                 if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
-                    if len(spec) > 1:
                     if any(s % chunk_spec[dim] for s in spec):
                         warnings.warn(
                             "Specified Dask chunks %r would "
@@ -726,7 +724,7 @@ def open_backend_dataset_zarr(
 
     with close_on_error(store):
         vars, attrs = store.load()
-        #file_obj = store
+        file_obj = store
         encoding = store.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
