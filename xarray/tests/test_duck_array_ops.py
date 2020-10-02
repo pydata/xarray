@@ -580,15 +580,17 @@ def test_dask_gradient(axis, edge_order):
 @pytest.mark.parametrize("dask", [False, True])
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("aggdim", [None, "x"])
-def test_min_count(dim_num, dtype, dask, func, aggdim):
+@pytest.mark.parametrize("contains_nan", [True, False])
+@pytest.mark.parametrize("skipna", [True, False, None])
+def test_min_count(dim_num, dtype, dask, func, aggdim, contains_nan, skipna):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan, dask=dask)
     min_count = 3
 
-    actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
-    expected = series_reduce(da, func, skipna=True, dim=aggdim, min_count=min_count)
+    actual = getattr(da, func)(dim=aggdim, skipna=skipna, min_count=min_count)
+    expected = series_reduce(da, func, skipna=skipna, dim=aggdim, min_count=min_count)
     assert_allclose(actual, expected)
     assert_dask_array(actual, dask)
 
