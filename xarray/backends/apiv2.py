@@ -25,16 +25,15 @@ def get_mtime(filename_or_obj):
     return mtime
 
 
-def add_source(ds, filename_or_obj):
+def set_source(ds, filename_or_obj):
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
             ds.encoding["source"] = filename_or_obj
     return ds
 
 
-
 def dataset_from_backend_dataset(
-    ds,
+    backend_ds,
     filename_or_obj,
     engine,
     chunks,
@@ -48,25 +47,19 @@ def dataset_from_backend_dataset(
             "chunks must be an int, dict, 'auto', or None. "
             "Instead found %s. " % chunks
         )
-    _protect_dataset_variables_inplace(ds, cache)
 
+    _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
-        return add_source(ds, filename_or_obj)
+        return set_source(backend_ds, filename_or_obj)
 
-    file_obj = ds._file_obj
     if engine != "zarr":
         from dask.base import tokenize
         mtime = get_mtime(filename_or_obj)
         token = tokenize(
-            filename_or_obj,
-            mtime,
-            engine,
-            chunks,
-            **backend_kwargs,
-            **kwargs
+            filename_or_obj, mtime, engine, chunks, **backend_kwargs, **kwargs
         )
         name_prefix = "open_dataset-%s" % token
-        ds = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
     else:
         if chunks == "auto":
             try:
@@ -74,14 +67,14 @@ def dataset_from_backend_dataset(
             except ImportError:
                 chunks = None
         if isinstance(chunks, int):
-            chunks = dict.fromkeys(ds.dims, chunks)
+            chunks = dict.fromkeys(backend_ds.dims, chunks)
         variables = {
             k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in ds.variables.items()
+            for k, v in backend_ds.variables.items()
         }
-        ds = ds._replace(variables)
-    ds._file_obj = file_obj
-    return add_source(ds, filename_or_obj)
+        ds = backend_ds._replace(variables)
+    ds._file_obj = backend_ds._file_obj
+    return set_source(ds, filename_or_obj)
 
 
 def open_dataset(
