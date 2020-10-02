@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from ..core.utils import is_remote_uri
 from . import cfgrib_, h5netcdf_, zarr
@@ -14,6 +15,36 @@ ENGINES = {
     "zarr": zarr.open_backend_dataset_zarr,
     "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
 }
+
+
+def check_chunks_compatibility(chunks, chunk_spec):
+    for dim in chunk_spec:
+        if dim in chunks:
+            spec = chunks[dim]
+            if isinstance(spec, int):
+                spec = (spec,)
+            if any(s % chunk_spec[dim] for s in spec):
+                warnings.warn(
+                    "Specified Dask chunks %r would "
+                    "separate on disks chunk shape %r for "
+                    "dimension %r. This could "
+                    "degrades performance. Consider "
+                    "rechunking after loading instead."
+                    % (chunks[dim], chunk_spec[dim], dim),
+                    stacklevel=2,
+                )
+
+
+def get_chunk(name, var, chunks):
+    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks", {})))
+    if chunks == 'auto':
+        return dict(zip(var.dims, var.encoding.get("chunks", {})))
+    # Coordinate labels aren't chunked
+    if var.ndim == 1 and var.dims[0] == name:
+        return chunk_spec
+    check_chunks_compatibility(chunks, chunk_spec)
+    return chunk_spec
+
 
 def get_mtime(filename_or_obj):
     # if passed an actual file path, augment the token with
