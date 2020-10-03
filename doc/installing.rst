@@ -148,7 +148,11 @@ We also maintain other dependency sets for different subsets of functionality::
 
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
-installation steps are omitted.
+installation steps are omitted. To know which dependencies would be installed,
+take a look at the ``[options.extras_require]`` section in setup.cfg_.
+
+.. _setup.cfg: https://github.com/pydata/xarray/blob/stable/setup.cfg
+
 
 Testing
 -------
