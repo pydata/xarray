@@ -77,7 +77,7 @@ def map(
     Dimensions without coordinates: dim_0, dim_1, x
     Data variables:
         foo      (dim_0, dim_1) float64 1.0 1.0 1.0 1.0 1.0 1.0
-        bar      (x) float64 0.0 0.0
+        bar      (x) int64 0 0
 
 
     See Also
