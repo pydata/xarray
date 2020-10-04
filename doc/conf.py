@@ -14,11 +14,13 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
 import xarray
 
@@ -78,6 +80,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -97,6 +100,15 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
+
 autodoc_typehints = "none"
 
 napoleon_use_param = False
@@ -404,3 +416,11 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
 }
+
+
+def escape_underscores(string):
+    return string.replace("_", r"\_")
+
+
+def setup(app):
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores
