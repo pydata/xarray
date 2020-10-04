@@ -4394,14 +4394,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 1.0 2.0
         """
-        variables = {
-            k: maybe_wrap_array(v, func(v, *args, **kwargs))
-            for k, v in self.data_vars.items()
-        }
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-        attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, attrs=attrs)
+        from xarray.core.map import map
+        _keep_attrs = 0 if keep_attrs else None
+        res = map([self], func, _keep_attrs, args, kwargs)
+        return res
 
     def apply(
         self,
