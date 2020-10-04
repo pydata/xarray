@@ -991,11 +991,6 @@ Documentation
 v0.13.0 (17 Sep 2019)
 ---------------------
 
-- Dataset.copy(deep=True) now creates a deep copy of the attrs (:issue:`2835`).
-  By `Andras Gefferth <https://github.com/kefirbandi>`_.
-- ``swap_dims`` would create incorrect ``indexes`` (:issue:`2842`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
 This release includes many exciting changes: wrapping of
 `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
 numpy-like arrays; new :py:meth:`~Dataset.plot.scatter` plotting method that can scatter

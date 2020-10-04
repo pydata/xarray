@@ -33,6 +33,7 @@ Top-level functions
    corr
    dot
    polyval
+   map
    map_blocks
    show_versions
    set_options
