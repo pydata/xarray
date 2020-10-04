@@ -28,5 +28,6 @@ dependencies:
   - zarr>=2.4
   - pip
   - pip:
+      - scanpydoc
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
