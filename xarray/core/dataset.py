@@ -94,7 +94,6 @@ from .utils import (
     infix_dims,
     is_dict_like,
     is_scalar,
-    maybe_wrap_array,
 )
 from .variable import (
     IndexVariable,

@@ -17,13 +17,13 @@ class TestMap:
         assert_allclose(r, xr.ones_like(ds1))
 
     def test_different_variables_with_overlap(self):
-        ds1 = xr.Dataset({"foo": ("x",[1, 2]), "bar": ("x", [-1, 2]),
-                          "oof" : ("x", [3,4])})
-        ds2 = xr.Dataset({"foo": ("x",[11, 22]), "oof": ("x", [-1, 3])})
-        ds3 = xr.Dataset({"bar": ("x",[11, 22]), "oof": ("x", [-1, 2])})
+        ds1 = xr.Dataset({"foo": ("x", [1, 2]), "bar": ("x", [-1, 2]),
+                          "oof" : ("x", [3, 4])})
+        ds2 = xr.Dataset({"foo": ("x", [11, 22]), "oof": ("x", [-1, 3])})
+        ds3 = xr.Dataset({"bar": ("x", [11, 22]), "oof": ("x", [-1, 2])})
 
         ds_out = xr.Dataset({"oof": ("x", [3, 5])})
-        f = lambda x, y, z: x+y-z
+        f = lambda x, y, z: x + y - z
         r = xr.map([ds1, ds2, ds3], f)
         assert_identical(r, ds_out)
 
@@ -36,22 +36,22 @@ class TestMap:
         r = xr.map([ds1, ds2], f)
         assert_identical(r, ds_out)
 
-
     def test_with_args_and_kwargs(self):
         ds1 = xr.Dataset({"foo": ("x", [1, 1]), "oof": ("x", [3, 3])})
         ds2 = xr.Dataset({"foo": ("x", [2, 2]), "oof": ("x", [4, 4])})
 
         ds_out = xr.Dataset({"foo": ("x", [8, 8]), "oof": ("x", [18, 18])})
-        def f(da1, da2,  multiplier_1, multiplier_2):
+
+        def f(da1, da2, multiplier_1, multiplier_2):
             return multiplier_1 * da1 + multiplier_2 * da2
 
         r = xr.map([ds1, ds2], f, args=[2], kwargs={'multiplier_2' : 3})
         assert_identical(r, ds_out)
 
     def test_keep_attrs(self):
-        ds1 = xr.Dataset({"foo": ("x", [1, 1]), "oof": ("x", [3, 3])}, attrs={'value':1})
-        ds2 = xr.Dataset({"foo": ("x", [2, 2]), "oof": ("x", [4, 4])}, attrs={'value':2})
-        ds3 = xr.Dataset({"foo": ("x", [3, 3]), "oof": ("x", [5, 5])}, attrs={'value':3})
+        ds1 = xr.Dataset({"foo": ("x", [1, 1]), "oof": ("x", [3, 3])}, attrs={'value': 1})
+        ds2 = xr.Dataset({"foo": ("x", [2, 2]), "oof": ("x", [4, 4])}, attrs={'value': 2})
+        ds3 = xr.Dataset({"foo": ("x", [3, 3]), "oof": ("x", [5, 5])}, attrs={'value': 3})
 
         def f(da1, da2, da3, selector):
             return [da1, da2, da3][selector]

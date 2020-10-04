@@ -3,14 +3,15 @@ from typing import (
     Callable,
     Dict,
     Iterable,
-    Optional
+    Optional,
 )
 
 from .options import _get_keep_attrs
 from .utils import (
     maybe_wrap_array,
 )
-from .. import  Dataset, DataArray
+from .. import Dataset
+
 
 def map(
     datasets: Iterable[Any],
@@ -18,7 +19,7 @@ def map(
     keep_attrs: Optional[int] = None,
     args: Iterable[Any] = (),
     kwargs: Dict = None,
-    ) -> "Dataset":
+) -> "Dataset":
     """Apply a function to each variable in the provided dataset(s).
 
     The function may take several DataArrays as inputs. The number of DataArrays
@@ -52,7 +53,7 @@ def map(
 
     Examples
     --------
-    >>> da = xr.DataArray(np.random.randn(2, 3))
+    >>> da = xr.DataArray([[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]])
     >>> ds1 = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
     >>> ds2 = xr.Dataset({"foo": da+1, "bar": ("x", [-1, 2])})
     >>> ds1
@@ -60,14 +61,14 @@ def map(
     Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
     Dimensions without coordinates: dim_0, dim_1, x
     Data variables:
-        foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
+        foo      (dim_0, dim_1) float64 1.1 2.2 3.3 4.4 5.5 6.6
         bar      (x) int64 -1 2
     >>> ds2
     <xarray.Dataset>
     Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
     Dimensions without coordinates: dim_0, dim_1, x
     Data variables:
-        foo      (dim_0, dim_1) float64 2.764 1.4002 1.9787 3.241 2.868 0.0227
+        foo      (dim_0, dim_1) float64 2.1 3.2 4.3 5.4 6.5 7.6
         bar      (x) int64 -1 2
     >>> f = lambda a, b: b-a
     >>> map([ds1, ds2], f)
@@ -89,8 +90,8 @@ def map(
     if len(datasets):
         shared_variable_names = set.intersection(*(set(ds.data_vars) for ds in datasets))
         for k in shared_variable_names:
-            data_arrays  = [d[k] for d in datasets]
-            v = maybe_wrap_array(datasets[0][k], func(*(data_arrays+list(args)), **kwargs))
+            data_arrays = [d[k] for d in datasets]
+            v = maybe_wrap_array(datasets[0][k], func(*(data_arrays + list(args)), **kwargs))
             variables[k] = v
 
     if keep_attrs is None:
@@ -104,5 +105,3 @@ def map(
         attrs = None
 
     return Dataset(variables, attrs=attrs)
-
-
