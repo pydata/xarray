@@ -28,56 +28,61 @@ def map(
     If the same variable name is present in all Datasets, then the function will be performed on
     those DataArrays
 
-            Parameters
-            ----------
-            datasets : sequence of Datasets
-                The Dataset whose variables will be the input DataArrays of the function
-            func : callable
-                Function which can be called in the form `func(x,y,z, ..., *args, **kwargs)`
-                to transform each sequence of DataArrays `x`, `y`, `z` in the datasets into another
-                DataArray.
-            keep_attrs : int or bool, optional
-                If False, the new object will be returned without attributes.
-                If is an integer between 0 and len(datasets-1), it will give the index of the Dataset in
-                datasets parameter whose attributes needs to be copied
-            args : tuple, optional
-                Positional arguments passed on to `func`.
-            kwargs : dict, optional
-                Keyword arguments passed on to `func`.
+    Parameters
+    ----------
+    datasets : sequence of Datasets
+        The Dataset whose variables will be the input DataArrays of the function
+    func : callable
+        Function which can be called in the form `func(x,y,z, ..., *args, **kwargs)`
+        to transform each sequence of DataArrays `x`, `y`, `z` in the datasets into another
+        DataArray.
+    keep_attrs : int or bool, optional
+        If False, the new object will be returned without attributes.
+        If is an integer between 0 and len(datasets-1), it will give the index of the Dataset in
+        datasets parameter whose attributes needs to be copied
+    args : tuple, optional
+        Positional arguments passed on to `func`.
+    kwargs : dict, optional
+        Keyword arguments passed on to `func`.
 
-            Returns
-            -------
-            applied : Dataset
-                Resulting dataset from applying ``func`` to each tuple of data variables.
+    Returns
+    -------
+    applied : Dataset
+        Resulting dataset from applying ``func`` to each tuple of data variables.
 
-            Examples
-            --------
-            >>> da = xr.DataArray(np.random.randn(2, 3))
-            >>> ds1 = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
-            >>> ds2 = xr.Dataset({"foo": da+1, "bar": ("x", [-1, 2])})
-            >>> ds1
-            <xarray.Dataset>
-            Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-            Dimensions without coordinates: dim_0, dim_1, x
-            Data variables:
-                foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
-                bar      (x) int64 -1 2
-            >>> ds2
-            <xarray.Dataset>
-            Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-            Dimensions without coordinates: dim_0, dim_1, x
-            Data variables:
-                foo      (dim_0, dim_1) float64 2.764 1.4002 1.9787 3.241 2.868 0.0227
-                bar      (x) int64 -1 2
-            >>> f = lambda a, b: b-a
-            >>> map([ds1, ds2], f)
-            <xarray.Dataset>
-            Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
-            Dimensions without coordinates: dim_0, dim_1, x
-            Data variables:
-                foo      (dim_0, dim_1) float64 1.0 1.0 1.0 1.0 1.0 1.0
-                bar      (x) float64 0.0 0.0
-            """
+    Examples
+    --------
+    >>> da = xr.DataArray(np.random.randn(2, 3))
+    >>> ds1 = xr.Dataset({"foo": da, "bar": ("x", [-1, 2])})
+    >>> ds2 = xr.Dataset({"foo": da+1, "bar": ("x", [-1, 2])})
+    >>> ds1
+    <xarray.Dataset>
+    Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+    Dimensions without coordinates: dim_0, dim_1, x
+    Data variables:
+        foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 -0.9773
+        bar      (x) int64 -1 2
+    >>> ds2
+    <xarray.Dataset>
+    Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+    Dimensions without coordinates: dim_0, dim_1, x
+    Data variables:
+        foo      (dim_0, dim_1) float64 2.764 1.4002 1.9787 3.241 2.868 0.0227
+        bar      (x) int64 -1 2
+    >>> f = lambda a, b: b-a
+    >>> map([ds1, ds2], f)
+    <xarray.Dataset>
+    Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+    Dimensions without coordinates: dim_0, dim_1, x
+    Data variables:
+        foo      (dim_0, dim_1) float64 1.0 1.0 1.0 1.0 1.0 1.0
+        bar      (x) float64 0.0 0.0
+
+
+    See Also
+    --------
+    Dataset.map
+    """
     if kwargs is None:
         kwargs = {}
     variables = {}

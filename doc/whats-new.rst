@@ -31,6 +31,10 @@ New Features
   now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 
+- New function :py:func:`map` introduced as a generalization of :py:meth:`Dataset.map`
+  for the case when the mapping function has more than one DataArray as input.
+  By `Andras Gefferth <https://github.com/kefirbandi>`_.
+
 Bug fixes
 ~~~~~~~~~
 

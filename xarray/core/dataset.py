@@ -4393,6 +4393,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Data variables:
             foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 1.0 2.0
+
+        See also
+        --------
+        xarray.map
         """
         from xarray.core.map import map
         _keep_attrs = 0 if keep_attrs else None
