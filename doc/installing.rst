@@ -16,6 +16,12 @@ Required dependencies
 Optional dependencies
 ---------------------
 
+.. note::
+
+  If you are using pip to install xarray, optional dependencies are resolved by
+  specifying *extras*. :ref:`installation-instructions` for both pip and conda
+  are mentioned below.
+
 For netCDF and IO
 ~~~~~~~~~~~~~~~~~
 
@@ -115,6 +121,7 @@ You can see the actual minimum tested versions:
 - `For everything else
   <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-all-deps.yml>`_
 
+.. _installation-instructions:
 
 Instructions
 ------------
@@ -148,10 +155,14 @@ We also maintain other dependency sets for different subsets of functionality::
 
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
-installation steps are omitted. To know which dependencies would be installed,
-take a look at the ``[options.extras_require]`` section in setup.cfg_.
+installation steps are commented. To know which dependencies would be
+installed, take a look at the ``[options.extras_require]`` section in
+``setup.cfg``:
 
-.. _setup.cfg: https://github.com/pydata/xarray/blob/stable/setup.cfg
+.. literalinclude:: ../setup.cfg
+   :language: ini
+   :start-at: [options.extras_require]
+   :end-before: [options.package_data]
 
 
 Testing
