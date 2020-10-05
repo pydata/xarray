@@ -13,7 +13,7 @@ dependencies:
   - ipython
   - iris>=2.3
   - jupyter_client
-  - matplotlib-base=3.3.0
+  - matplotlib-base
   - nbsphinx
   - netcdf4>=1.5
   - numba
