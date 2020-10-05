@@ -53,11 +53,12 @@ Internal Changes
 
 - Optional dependencies can be installed along with xarray by specifying
   extras as ``pip install "xarray[extra]"`` where ``extra`` can be one of ``io``,
-  ``accel``, ``parallel``, ``viz`` and ``complete``. See `docs for more info
-  <https://xarray.pydata.org/en/stable/installing.html#optional-dependencies>`_
+  ``accel``, ``parallel``, ``viz`` and ``complete``. See docs for updated
+  :ref:`installation instructions <installation-instructions>`.
   (:issue:`2888`, :pull:`4480`).
-  By `Ashwin Vishnu <https://github.com/ashwinvis>`_.
-
+  By `Ashwin Vishnu <https://github.com/ashwinvis>`_, `keewis
+  <https://github.com/keewis>`_ and `Mathias Hauser
+  <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 
