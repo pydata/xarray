@@ -453,7 +453,7 @@ class TestDataArray:
         assert not expected.identical(actual)
 
         actual = expected.copy()
-        actual["a"] = 100000
+        actual["a"] = 100_000
         assert not expected.equals(actual)
         assert not expected.identical(actual)
 
@@ -3371,6 +3371,37 @@ class TestDataArray:
                 DataArray([1, 2, 3], dims=["x"]),
                 DataArray([1, 2], coords=[("x", [0, 1])]),
             )
+
+    def test_align_with_tolerance_when_nearly_equal_index(self):
+        da1 = DataArray([1, 2, 3], coords=[("x", [1.0001, 2.0004, 2.9999])])
+
+        da2 = DataArray([4, 5, 6], coords=[("x", [1, 2, 3])])
+
+        aligned_da1, aligned_da2 = align(da1, da2, tolerance=4e-4)
+
+        assert_identical(aligned_da1.x, da1.x)
+        assert_identical(aligned_da2.x, da1.x)
+
+    def test_align_with_tolereance_and_intersect(self):
+        da1 = DataArray([1, 2, 3, 4], coords=[("x", [1.0001, 1.5, 2.0004, 2.9999])])
+
+        da2 = DataArray([5, 6, 7, 8], coords=[("x", [1, 2, 3, 5])])
+
+        aligned_da1, aligned_da2 = align(da1, da2, tolerance=4e-4, join="inner")
+
+        assert_identical(aligned_da1.x, aligned_da2.x)
+        print(aligned_da1.x)
+        assert_array_equal(aligned_da1.x, np.array([1.0, 2.0, 2.9999]))
+
+    def test_align_with_tolereance_and_union(self):
+        da1 = DataArray([1, 2, 3, 4], coords=[("x", [1.0001, 1.5, 2.0004, 2.9999])])
+
+        da2 = DataArray([5, 6, 7, 8], coords=[("x", [1, 2, 3, 5])])
+
+        aligned_da1, aligned_da2 = align(da1, da2, tolerance=4e-4, join="outer")
+
+        assert_identical(aligned_da1.x, aligned_da2.x)
+        assert_array_equal(aligned_da1.x, np.array([1.0, 1.5, 2.0, 2.9999, 5.0]))
 
     def test_broadcast_arrays(self):
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")

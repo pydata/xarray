@@ -11,17 +11,32 @@ from . import dtypes, utils
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
+from .indexes import or_with_tolerance, and_with_tolerance, equal_indexes_with_tolerance
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
 
-def _get_joiner(join):
+def _get_joiner(join, tolerance=0):
     if join == "outer":
-        return functools.partial(functools.reduce, operator.or_)
+        if tolerance == 0:
+            or_ = operator.or_
+        else:
+
+            def or_(x1, x2, tolerance=tolerance):
+                return or_with_tolerance(x1, x2, tolerance)
+
+        return functools.partial(functools.reduce, or_)
     elif join == "inner":
-        return functools.partial(functools.reduce, operator.and_)
+        if tolerance == 0:
+            and_ = operator.and_
+        else:
+
+            def and_(x1, x2, tolerance=tolerance):
+                return and_with_tolerance(x1, x2, tolerance)
+
+        return functools.partial(functools.reduce, and_)
     elif join == "left":
         return operator.itemgetter(0)
     elif join == "right":
@@ -65,6 +80,7 @@ def align(
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
+    tolerance=0,
 ):
     """
     Given any number of Dataset and/or DataArray objects, returns new
@@ -107,6 +123,8 @@ def align(
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
+    tolerance: numerical
+        Value used to check equality between the coordinate values with numerical tolerance.
 
     Returns
     -------
@@ -284,30 +302,41 @@ def align(
     # - It ensures it's possible to do operations that don't require alignment
     #   on indexes with duplicate values (which cannot be reindexed with
     #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
-    joiner = _get_joiner(join)
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
             index = utils.safe_cast_to_index(indexes[dim])
             if (
-                any(not index.equals(other) for other in matching_indexes)
-                or dim in unlabeled_dim_sizes
-            ):
+                not equal_indexes_with_tolerance(index, matching_indexes, tolerance)
+            ) or dim in unlabeled_dim_sizes:
                 joined_indexes[dim] = index
-        else:
+        elif (
+            any(not matching_indexes[0].equals(other) for other in matching_indexes[1:])
+            or dim in unlabeled_dim_sizes
+        ):
             if (
-                any(
-                    not matching_indexes[0].equals(other)
-                    for other in matching_indexes[1:]
+                not equal_indexes_with_tolerance(
+                    matching_indexes[0], matching_indexes[1:], tolerance
                 )
                 or dim in unlabeled_dim_sizes
             ):
                 if join == "exact":
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
+                # this logic could be moved out if _get_joiner is changed into _do_join(join, matching_index, tolerance)
+                if (tolerance > 0) and all(
+                    index.is_numeric() for index in matching_indexes
+                ):
+                    joiner = _get_joiner(join, tolerance)
+                else:
+                    joiner = _get_joiner(join)
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
+                # they are identical within tolerance, reindexing is necessary
                 index = matching_indexes[0]
+                joined_indexes[dim] = index
+        else:
+            index = matching_indexes[0]  # I believe this line is not useful...
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
@@ -336,6 +365,14 @@ def align(
         if not valid_indexers:
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
+        elif tolerance > 0:
+            new_obj = obj.reindex(
+                copy=copy,
+                fill_value=fill_value,
+                **valid_indexers,
+                tolerance=tolerance,
+                method="nearest",
+            )
         else:
             new_obj = obj.reindex(copy=copy, fill_value=fill_value, **valid_indexers)
         new_obj.encoding = obj.encoding
