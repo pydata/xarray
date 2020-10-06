@@ -877,6 +877,7 @@ can be omitted as it will internally be set to ``'a'``.
 .. ipython:: python
 
     ds1 = xr.Dataset(
+    ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
         coords={
             "x": [10, 20, 30, 40],
@@ -910,25 +911,15 @@ Cloud Storage Buckets
 
 It is possible to read and write xarray datasets directly from / to cloud
 storage buckets using zarr. This example uses the `gcsfs`_ package to provide
-a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
-pass to xarray::
+an interface to `Google Cloud Storage`_.
 
-
-.. ipython:: python
-
-    import gcsfs
-    fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
-    gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
-    # write to the bucket
-    ds.to_zarr(store=gcsmap)
-    # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
-
-New in v0.16.2: general `fsspec`_ URLs are now parsed and the store set up for you
-automatically when reading, such that the read part of the above code can
-be replaced with
+From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
+automatically when reading, such that you can open a dataset ina  single
+call. You should include any arguments to the storage backend as the
+key ``storage_options``, part of ``backend_kwargs``.
 
 .. ipython:: python
+   :okexcept:
 
     ds_gcs = xr.open_dataset(
         "gcs://<bucket-name>/path.zarr",
@@ -938,6 +929,21 @@ be replaced with
 
 This also works with ``open_mfdataset``, allowing you to pass a list of paths or
 a URL to be interpreted as a glob string.
+
+For older versions, and for writing, you must explicitly set up a ``MutibleMapping``
+instance and pass this, as follows:
+
+.. ipython:: python
+   :okexcept:
+
+    import gcsfs
+    fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
+    gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
+    # write to the bucket
+    ds.to_zarr(store=gcsmap)
+    # read it back
+    ds_gcs = xr.open_zarr(gcsmap)
+
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
 .. _Zarr: http://zarr.readthedocs.io/
