@@ -918,8 +918,7 @@ automatically when reading, such that you can open a dataset ina  single
 call. You should include any arguments to the storage backend as the
 key ``storage_options``, part of ``backend_kwargs``.
 
-.. ipython:: python
-   :okexcept:
+.. code:: python
 
     ds_gcs = xr.open_dataset(
         "gcs://<bucket-name>/path.zarr",
@@ -933,8 +932,7 @@ a URL to be interpreted as a glob string.
 For older versions, and for writing, you must explicitly set up a ``MutibleMapping``
 instance and pass this, as follows:
 
-.. ipython:: python
-   :okexcept:
+.. code:: python
 
     import gcsfs
     fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
