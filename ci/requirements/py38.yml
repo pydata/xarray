@@ -32,7 +32,6 @@ dependencies:
   - pip
   - pseudonetcdf
   - pydap
-  - pynio
   - pytest
   - pytest-cov
   - pytest-env
