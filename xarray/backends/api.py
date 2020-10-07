@@ -18,14 +18,14 @@ from typing import (
 import numpy as np
 
 from .. import backends, coding, conventions
-from ..core import dataset, indexing
+from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
-from ..core.dataset import Dataset
+from ..core.dataset import Dataset, _maybe_chunk
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
@@ -524,16 +524,10 @@ def open_dataset(
             if isinstance(chunks, int):
                 chunks = dict.fromkeys(ds.dims, chunks)
 
-            variables = {}
-            for name, var in ds.variables.items():
-                chunk_spec = store.get_chunk(name, var, chunks)
-                if chunk_spec is not None:
-                    variables[name] = dataset._maybe_chunk(
-                        name,
-                        var,
-                        chunk_spec,
-                        overwrite_encoded_chunks=overwrite_encoded_chunks,
-                    )
+            variables = {
+                k: _maybe_chunk(k, v, store.get_chunk(k, v, chunks), overwrite_encoded_chunks=overwrite_encoded_chunks)
+                for k, v in ds.variables.items()
+            }
             ds2 = ds._replace(variables)
 
         else:
