@@ -18,7 +18,7 @@ from typing import (
 import numpy as np
 
 from .. import backends, coding, conventions
-from ..core import indexing
+from ..core import dataset, indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -524,10 +524,16 @@ def open_dataset(
             if isinstance(chunks, int):
                 chunks = dict.fromkeys(ds.dims, chunks)
 
-            variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-                for k, v in ds.variables.items()
-            }
+            variables = {}
+            for name, var in ds.variables.items():
+                chunk_spec = store.get_chunk(name, var, chunks)
+                if chunk_spec is not None:
+                    variables[name] = dataset._maybe_chunk(
+                        name,
+                        var,
+                        chunk_spec,
+                        overwrite_encoded_chunks=overwrite_encoded_chunks,
+                    )
             ds2 = ds._replace(variables)
 
         else:
