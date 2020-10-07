@@ -942,6 +942,7 @@ instance and pass this, as follows:
     # read it back
     ds_gcs = xr.open_zarr(gcsmap)
 
+(or use the utility function ``fsspec.get_mapper()``).
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
 .. _Zarr: http://zarr.readthedocs.io/
