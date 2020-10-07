@@ -1806,10 +1806,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "object: %s" % bad_dims
                 )
 
-        variables = {
-            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
-            for k, v in self.variables.items()
-        }
+        variables = {k: _maybe_chunk(k, v, chunks, token, lock, name_prefix) for k, v in self.variables.items()}
         return self._replace(variables)
 
     def _validate_indexers(
