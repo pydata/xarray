@@ -300,7 +300,7 @@ def load_dataarray(filename_or_obj, **kwargs):
         The newly created DataArray.
 
     See Also
-    --------
+    --------dataset
     open_dataarray
     """
     if "cache" in kwargs:
@@ -525,7 +525,12 @@ def open_dataset(
                 chunks = dict.fromkeys(ds.dims, chunks)
 
             variables = {
-                k: _maybe_chunk(k, v, store.get_chunk(k, v, chunks), overwrite_encoded_chunks=overwrite_encoded_chunks)
+                k: _maybe_chunk(
+                    k,
+                    v,
+                    store.get_chunk(k, v, chunks),
+                    overwrite_encoded_chunks=overwrite_encoded_chunks,
+                )
                 for k, v in ds.variables.items()
             }
             ds2 = ds._replace(variables)
