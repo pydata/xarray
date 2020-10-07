@@ -300,7 +300,7 @@ def load_dataarray(filename_or_obj, **kwargs):
         The newly created DataArray.
 
     See Also
-    --------dataset
+    --------
     open_dataarray
     """
     if "cache" in kwargs:
