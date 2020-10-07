@@ -32,6 +32,7 @@ dependencies:
   - pip
   - pseudonetcdf
   - pydap
+  # - pynio: not compatible with newest netCDF4; only tested in py36-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
