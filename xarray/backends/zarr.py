@@ -362,8 +362,8 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-    @classmethod
-    def get_chunk(cls, name, var, chunks):
+    @staticmethod
+    def get_chunk(name, var, chunks):
         chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
 
         # Coordinate labels aren't chunked
