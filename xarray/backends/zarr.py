@@ -390,22 +390,6 @@ class ZarrStore(AbstractWritableDataStore):
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
 
-    def maybe_chunk(self, name, var, chunks, overwrite_encoded_chunks):
-        chunk_spec = self.get_chunk(name, var, chunks)
-
-        if (var.ndim > 0) and (chunk_spec is not None):
-            from dask.base import tokenize
-
-            # does this cause any data to be read?
-            token2 = tokenize(name, var._data, chunks)
-            name2 = f"xarray-{name}-{token2}"
-            var = var.chunk(chunk_spec, name=name2, lock=None)
-            if overwrite_encoded_chunks and var.chunks is not None:
-                var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
-            return var
-        else:
-            return var
-
     def store(
         self,
         variables,
