@@ -457,9 +457,8 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
-    extra_kwargs = {}
 
-    def maybe_decode_store(store, chunks, lock=False):
+    def maybe_decode_store(store, chunks):
         ds = conventions.decode_cf(
             store,
             mask_and_scale=mask_and_scale,
@@ -543,18 +542,17 @@ def open_dataset(
         if engine is None:
             engine = _autodetect_engine(filename_or_obj)
 
-        if engine in ["netcdf4", "h5netcdf"]:
+        extra_kwargs = {}
+        if group is not None:
             extra_kwargs["group"] = group
+        if lock is not None:
             extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
-        elif engine == "zarr":
+
+        if engine == "zarr":
             backend_kwargs = backend_kwargs.copy()
             overwrite_encoded_chunks = backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
-            extra_kwargs["mode"] = "r"
-            extra_kwargs["group"] = group
 
         opener = _get_backend_cls(engine)
         store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
