@@ -2153,6 +2153,29 @@ class TestFacetedLinePlots(PlotTestCase):
 
 
 @requires_matplotlib
+class TestDatasetQuiverPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        das = [
+            DataArray(
+                np.random.randn(3, 3, 4, 4),
+                dims=["x", "row", "col", "hue"],
+                coords=[range(k) for k in [3, 3, 4, 4]],
+            )
+            for _ in [1, 2]
+        ]
+        ds = Dataset({"A": das[0], "B": das[1]})
+        ds.hue.name = "huename"
+        ds.hue.attrs["units"] = "hunits"
+        ds.x.attrs["units"] = "xunits"
+        ds.col.attrs["units"] = "colunits"
+        ds.row.attrs["units"] = "rowunits"
+        ds.A.attrs["units"] = "Aunits"
+        ds.B.attrs["units"] = "Bunits"
+        self.ds = ds
+
+
+@requires_matplotlib
 class TestDatasetScatterPlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
