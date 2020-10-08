@@ -35,15 +35,13 @@ def check_chunks_compatibility(chunks, chunk_spec):
                 )
 
 
-def get_chunk(name, var, chunks):
+def get_chunk(var, chunks):
     chunk_spec = dict(zip(var.dims, var.encoding.get("chunks", {})))
     if chunks == 'auto':
-        return dict(zip(var.dims, var.encoding.get("chunks", {})))
-    # Coordinate labels aren't chunked
-    if var.ndim == 1 and var.dims[0] == name:
-        return chunk_spec
-    check_chunks_compatibility(chunks, chunk_spec)
-    return chunk_spec
+        chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
+    if chunks is not None:
+        check_chunks_compatibility(chunks, chunk_spec)
+    return chunks
 
 
 def get_mtime(filename_or_obj):
@@ -56,13 +54,6 @@ def get_mtime(filename_or_obj):
     return mtime
 
 
-def set_source(ds, filename_or_obj):
-    if "source" not in ds.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
-    return ds
-
-
 def dataset_from_backend_dataset(
     backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
@@ -72,12 +63,16 @@ def dataset_from_backend_dataset(
                 "chunks must be an int, dict, 'auto', or None. "
                 "Instead found %s. " % chunks
             )
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+        except ImportError:
+            chunks = None
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
-        return set_source(backend_ds, filename_or_obj)
-
-    if engine != "zarr":
+        ds = backend_ds
+    elif engine != "zarr":
         from dask.base import tokenize
         mtime = get_mtime(filename_or_obj)
         token = tokenize(
