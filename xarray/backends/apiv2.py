@@ -17,13 +17,7 @@ ENGINES = {
 
 
 def dataset_from_backend_dataset(
-    ds,
-    filename_or_obj,
-    engine,
-    chunks,
-    cache,
-    overwrite_encoded_chunks,
-    extra_tokens,
+    ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
         if chunks != "auto":
@@ -42,9 +36,7 @@ def dataset_from_backend_dataset(
             mtime = os.path.getmtime(filename_or_obj)
         else:
             mtime = None
-        token = tokenize(
-            filename_or_obj, mtime, engine, chunks, **extra_tokens
-        )
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
         name_prefix = "open_dataset-%s" % token
         ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
