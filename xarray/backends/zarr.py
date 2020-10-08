@@ -698,13 +698,7 @@ def open_backend_dataset_zarr(
     consolidated=False,
     consolidate_on_close=False,
     chunk_store=None,
-    **kwargs,
 ):
-    if kwargs:
-        raise ValueError(
-            "The following keywords are not supported by the engine "
-            "and will be ignored: %r" % kwargs
-        )
 
     if not decode_cf:
         mask_and_scale = False
