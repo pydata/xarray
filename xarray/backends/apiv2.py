@@ -23,8 +23,7 @@ def dataset_from_backend_dataset(
     chunks,
     cache,
     overwrite_encoded_chunks,
-    backend_kwargs,
-    **kwargs,
+    extra_tokens,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
         if chunks != "auto":
@@ -44,7 +43,7 @@ def dataset_from_backend_dataset(
         else:
             mtime = None
         token = tokenize(
-            filename_or_obj, mtime, engine, chunks, **backend_kwargs, **kwargs
+            filename_or_obj, mtime, engine, chunks, **extra_tokens
         )
         name_prefix = "open_dataset-%s" % token
         ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -221,8 +220,7 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
-        backend_kwargs,
-        **kwargs,
+        {**backend_kwargs, **kwargs},
     )
 
     return ds
