@@ -359,12 +359,6 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _selkeys(dict_, keys):
-    if dict_ is None:
-        return None
-    return {d: dict_[d] for d in keys if d in dict_}
-
-
 def _maybe_chunk(
     name,
     var,
@@ -376,7 +370,8 @@ def _maybe_chunk(
 ):
     from dask.base import tokenize
 
-    chunks = _selkeys(chunks, var.dims)
+    if chunks is not None:
+        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
     if var.ndim:
         # when rechunking by different amounts, make sure dask names change
         # by provinding chunks as an input to tokenize.
