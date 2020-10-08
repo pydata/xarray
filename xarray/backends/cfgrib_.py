@@ -96,7 +96,7 @@ def open_backend_dataset_cfgrib(
     **kwargs,
 ):
     if kwargs:
-        warnings.warn(
+        raise ValueError(
             "The following keywords are not supported by the engine "
             "and will be ignored: %r" % kwargs
         )
