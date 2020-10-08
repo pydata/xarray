@@ -1,5 +1,4 @@
 import functools
-import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -342,13 +341,7 @@ def open_backend_dataset_h5necdf(
     lock=None,
     invalid_netcdf=None,
     phony_dims=None,
-    **kwargs,
 ):
-    if kwargs:
-        warnings.warn(
-            "The following keywords are not supported by the engine "
-            "and will be ignored: %r" % kwargs
-        )
 
     if not decode_cf:
         mask_and_scale = False

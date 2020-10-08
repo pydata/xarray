@@ -362,8 +362,8 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-    @classmethod
-    def get_chunk(cls, name, var, chunks):
+    @staticmethod
+    def get_chunk(name, var, chunks):
         chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
 
         # Coordinate labels aren't chunked
@@ -697,13 +697,7 @@ def open_backend_dataset_zarr(
     consolidated=False,
     consolidate_on_close=False,
     chunk_store=None,
-    **kwargs,
 ):
-    if kwargs:
-        warnings.warn(
-            "The following keywords are not supported by the engine "
-            "and will be ignored: %r" % kwargs
-        )
 
     if not decode_cf:
         mask_and_scale = False

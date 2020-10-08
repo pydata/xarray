@@ -64,20 +64,14 @@ def set_source(ds, filename_or_obj):
 
 
 def dataset_from_backend_dataset(
-    backend_ds,
-    filename_or_obj,
-    engine,
-    chunks,
-    cache,
-    overwrite_encoded_chunks,
-    backend_kwargs,
-    **kwargs,
+    backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or (chunks is None) or (chunks == "auto")):
-        raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
-        )
+    if not (isinstance(chunks, (int, dict)) or chunks is None):
+        if chunks != "auto":
+            raise ValueError(
+                "chunks must be an int, dict, 'auto', or None. "
+                "Instead found %s. " % chunks
+            )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -87,7 +81,7 @@ def dataset_from_backend_dataset(
         from dask.base import tokenize
         mtime = get_mtime(filename_or_obj)
         token = tokenize(
-            filename_or_obj, mtime, engine, chunks, **backend_kwargs, **kwargs
+            filename_or_obj, mtime, engine, chunks, **extra_tokens
         )
         name_prefix = "open_dataset-%s" % token
         ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -248,8 +242,7 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
-        backend_kwargs,
-        **kwargs,
+        {**backend_kwargs, **kwargs},
     )
 
     return ds

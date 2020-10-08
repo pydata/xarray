@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 from .. import conventions
@@ -93,13 +91,7 @@ def open_backend_dataset_cfgrib(
     encode_cf=("parameter", "time", "geography", "vertical"),
     squeeze=True,
     time_dims=("time", "step"),
-    **kwargs,
 ):
-    if kwargs:
-        warnings.warn(
-            "The following keywords are not supported by the engine "
-            "and will be ignored: %r" % kwargs
-        )
 
     if not decode_cf:
         mask_and_scale = False
