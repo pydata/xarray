@@ -1,8 +1,8 @@
 # https://pre-commit.com/
 repos:
   # isort should run before black as black sometimes tweaks the isort output
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.4.2
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.5.4
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.1.2
+    rev: v0.2
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
