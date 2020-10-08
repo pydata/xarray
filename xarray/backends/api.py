@@ -25,7 +25,7 @@ from ..core.combine import (
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
-from ..core.dataset import Dataset
+from ..core.dataset import Dataset, _maybe_chunk
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
@@ -524,7 +524,12 @@ def open_dataset(
                 chunks = dict.fromkeys(ds.dims, chunks)
 
             variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                k: _maybe_chunk(
+                    k,
+                    v,
+                    store.get_chunk(k, v, chunks),
+                    overwrite_encoded_chunks=overwrite_encoded_chunks,
+                )
                 for k, v in ds.variables.items()
             }
             ds2 = ds._replace(variables)
