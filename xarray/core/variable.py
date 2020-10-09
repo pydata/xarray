@@ -1623,16 +1623,14 @@ class Variable(
         if dim is not None:
             axis = self.get_axis_num(dim)
 
-        input_data = self.data
-
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis is not None:
-                data = func(input_data, axis=axis, **kwargs)
+                data = func(self.data, axis=axis, **kwargs)
             else:
-                data = func(input_data, **kwargs)
+                data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
