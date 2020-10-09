@@ -17,30 +17,30 @@ ENGINES = {
 }
 
 
-def check_chunks_compatibility(chunks, chunk_spec):
-    for dim in chunk_spec:
-        if dim in chunks:
-            spec = chunks[dim]
-            if isinstance(spec, int):
-                spec = (spec,)
-            if any(s % chunk_spec[dim] for s in spec):
-                warnings.warn(
-                    "Specified Dask chunks %r would "
-                    "separate on disks chunk shape %r for "
-                    "dimension %r. This could "
-                    "degrades performance. Consider "
-                    "rechunking after loading instead."
-                    % (chunks[dim], chunk_spec[dim], dim),
-                    stacklevel=2,
-                )
+def check_chunks_compatibility(dim, chunks, chunk_spec):
+    spec = chunks[dim]
+    if isinstance(spec, int):
+        spec = (spec,)
+    if any(s % chunk_spec[dim] for s in spec):
+        warnings.warn(
+            "Specified Dask chunks %r would "
+            "separate on disks chunk shape %r for "
+            "dimension %r. This could "
+            "degrades performance. Consider "
+            "rechunking after loading instead."
+            % (chunks[dim], chunk_spec[dim], dim),
+            stacklevel=2,
+        )
 
 
 def get_chunk(var, chunks):
     chunk_spec = dict(zip(var.dims, var.encoding.get("chunks", {})))
-    if chunks == 'auto':
-        chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
     if chunks is not None:
-        check_chunks_compatibility(chunks, chunk_spec)
+        for dim in chunk_spec:
+            if dim in chunks:
+                check_chunks_compatibility(chunks, chunk_spec)
+            else:
+                chunks[dim] = chunk_spec[dim]
     return chunks
 
 
@@ -58,16 +58,10 @@ def dataset_from_backend_dataset(
     backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
-        if chunks != "auto":
-            raise ValueError(
-                "chunks must be an int, dict, 'auto', or None. "
-                "Instead found %s. " % chunks
-            )
-    if chunks == "auto":
-        try:
-            import dask.array  # noqa
-        except ImportError:
-            chunks = None
+        raise ValueError(
+            "chunks must be an int, dict, 'auto', or None. "
+            "Instead found %s. " % chunks
+        )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -81,11 +75,7 @@ def dataset_from_backend_dataset(
         name_prefix = "open_dataset-%s" % token
         ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
     else:
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
+
         if isinstance(chunks, int):
             chunks = dict.fromkeys(backend_ds.dims, chunks)
         variables = {
@@ -94,7 +84,11 @@ def dataset_from_backend_dataset(
         }
         ds = backend_ds._replace(variables)
     ds._file_obj = backend_ds._file_obj
-    return set_source(ds, filename_or_obj)
+
+    if "source" not in ds.encoding:
+        if isinstance(filename_or_obj, str):
+            ds.encoding["source"] = filename_or_obj
+    return ds
 
 
 def open_dataset(
