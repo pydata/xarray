@@ -43,11 +43,11 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
-    """" Returns either first object of type 'kind' or None if not found. """
+    """ Return either first object of type 'kind' or raise if not found. """
     for arg in args:
         if isinstance(arg, kind):
             return arg
-    raise NotImplementedError("This should be unreachable.")
+    raise ValueError("This should be unreachable.")
 
 
 class _UFuncSignature:
