@@ -1582,7 +1582,6 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1624,15 +1623,7 @@ class Variable(
         if dim is not None:
             axis = self.get_axis_num(dim)
 
-        if allow_lazy is not None:
-            warnings.warn(
-                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
-                DeprecationWarning,
-            )
-        else:
-            allow_lazy = True
-
-        input_data = self.data if allow_lazy else self.values
+        input_data = self.data
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
