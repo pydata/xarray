@@ -3,6 +3,7 @@ import itertools
 import math
 import os.path
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -907,11 +908,13 @@ class CFEncodedBase(DatasetIOBase):
         ve = (ValueError, "string must be length 1 or")
         data = np.random.random((2, 2))
         da = xr.DataArray(data)
-        for name, e in zip([0, (4, 5), True, ""], [te, te, te, ve]):
+        for name, (error, msg) in zip([0, (4, 5), True, ""], [te, te, te, ve]):
             ds = Dataset({name: da})
-            with raises_regex(*e):
+            with pytest.raises(error) as excinfo:
                 with self.roundtrip(ds):
                     pass
+            excinfo.match(msg)
+            excinfo.match(repr(name))
 
     def test_encoding_kwarg(self):
         ds = Dataset({"x": ("y", np.arange(10.0))})
@@ -4307,17 +4310,17 @@ class TestValidateAttrs:
             ds, attrs = new_dataset_and_attrs()
 
             attrs[123] = "test"
-            with raises_regex(TypeError, "Invalid name for attr"):
+            with raises_regex(TypeError, "Invalid name for attr: 123"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[MiscObject()] = "test"
-            with raises_regex(TypeError, "Invalid name for attr"):
+            with raises_regex(TypeError, "Invalid name for attr: "):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[""] = "test"
-            with raises_regex(ValueError, "Invalid name for attr"):
+            with raises_regex(ValueError, "Invalid name for attr '':"):
                 ds.to_netcdf("test.nc")
 
             # This one should work
@@ -4328,12 +4331,12 @@ class TestValidateAttrs:
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = {"a": 5}
-            with raises_regex(TypeError, "Invalid value for attr"):
+            with raises_regex(TypeError, "Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = MiscObject()
-            with raises_regex(TypeError, "Invalid value for attr"):
+            with raises_regex(TypeError, "Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
