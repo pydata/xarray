@@ -3,7 +3,6 @@ import itertools
 import math
 import os.path
 import pickle
-import re
 import shutil
 import sys
 import tempfile
