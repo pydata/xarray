@@ -191,14 +191,15 @@ def _validate_dataset_names(dataset):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
-                    "Invalid name for DataArray or Dataset key: "
+                    f"Invalid name {name!r} for DataArray or Dataset key: "
                     "string must be length 1 or greater for "
                     "serialization to netCDF files"
                 )
         elif name is not None:
             raise TypeError(
-                "DataArray.name or Dataset key must be either a "
-                "string or None for serialization to netCDF files"
+                f"Invalid name {name!r} for DataArray or Dataset key: "
+                "must be either a string or None for serialization to netCDF "
+                "files"
             )
 
     for k in dataset.variables:
@@ -214,22 +215,22 @@ def _validate_attrs(dataset):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
-                    "Invalid name for attr: string must be "
+                    f"Invalid name for attr {name!r}: string must be "
                     "length 1 or greater for serialization to "
                     "netCDF files"
                 )
         else:
             raise TypeError(
-                "Invalid name for attr: {} must be a string for "
-                "serialization to netCDF files".format(name)
+                f"Invalid name for attr: {name!r} must be a string for "
+                "serialization to netCDF files"
             )
 
         if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
             raise TypeError(
-                "Invalid value for attr: {} must be a number, "
+                f"Invalid value for attr {name!r}: {value!r} must be a number, "
                 "a string, an ndarray or a list/tuple of "
                 "numbers/strings for serialization to netCDF "
-                "files".format(value)
+                "files"
             )
 
     # Check attrs on the dataset itself
