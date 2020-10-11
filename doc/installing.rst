@@ -18,7 +18,7 @@ Optional dependencies
 
 .. note::
 
-  If you are using pip to install xarray, optional dependencies are resolved by
+  If you are using pip to install xarray, optional dependencies can be installed by
   specifying *extras*. :ref:`installation-instructions` for both pip and conda
   are mentioned below.
 
@@ -155,7 +155,7 @@ We also maintain other dependency sets for different subsets of functionality::
 
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
-installation steps are commented. To know which dependencies would be
+installation steps are excluded. To know which dependencies would be
 installed, take a look at the ``[options.extras_require]`` section in
 ``setup.cfg``:
 
