@@ -93,7 +93,9 @@ def _infer_concat_order_from_coords(datasets):
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
                 series = first_items.to_series()
-                rank = series.rank(method="dense", ascending=ascending)
+                rank = series.rank(
+                    method="dense", ascending=ascending, numeric_only=False
+                )
                 order = rank.astype(int).values - 1
 
                 # Append positions along extra dimension to structure which
