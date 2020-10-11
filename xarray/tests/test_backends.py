@@ -4670,3 +4670,24 @@ def test_extract_zarr_variable_encoding():
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
+
+
+@requires_h5netcdf
+def test_load_single_value_h5netcdf(tmp_path):
+    """Test that numeric single-element vector attributes are handled fine.
+
+    At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
+    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    backend.  This was leading to a ValueError upon loading a single value from
+    a file, see #4471.  Test that loading causes no failure.
+    """
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                np.array([0]), dims=("x",), attrs={"scale_factor": 1, "add_offset": 0}
+            )
+        }
+    )
+    ds.to_netcdf(tmp_path / "test.nc")
+    with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
+        ds2["test"][0].load()
