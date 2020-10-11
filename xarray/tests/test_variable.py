@@ -1570,10 +1570,6 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "cannot supply both"):
             v.mean(dim="x", axis=0)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=True)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=False)
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])

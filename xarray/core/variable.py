@@ -1582,7 +1582,6 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1624,24 +1623,14 @@ class Variable(
         if dim is not None:
             axis = self.get_axis_num(dim)
 
-        if allow_lazy is not None:
-            warnings.warn(
-                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
-                DeprecationWarning,
-            )
-        else:
-            allow_lazy = True
-
-        input_data = self.data if allow_lazy else self.values
-
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis is not None:
-                data = func(input_data, axis=axis, **kwargs)
+                data = func(self.data, axis=axis, **kwargs)
             else:
-                data = func(input_data, **kwargs)
+                data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims

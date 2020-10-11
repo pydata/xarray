@@ -4271,7 +4271,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
-        allow_lazy: bool = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Reduce this dataset by applying `func` along some dimension(s).
@@ -4346,7 +4345,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         dim=reduce_dims,
                         keep_attrs=keep_attrs,
                         keepdims=keepdims,
-                        allow_lazy=allow_lazy,
                         **kwargs,
                     )
 
