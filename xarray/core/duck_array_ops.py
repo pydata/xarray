@@ -101,6 +101,8 @@ def isnull(data):
         return isnan(data)
     elif issubclass(scalar_type, (np.bool_, np.integer, np.character, np.void)):
         # these types cannot represent missing values
+        if hasattr(data, "_meta"):
+            data._meta = None  # workaround for GH4502
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
