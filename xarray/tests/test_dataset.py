@@ -4841,9 +4841,7 @@ class TestDataset:
         actual = ds.reduce(mean_only_one_axis, "y")
         assert_identical(expected, actual)
 
-        with raises_regex(
-            TypeError, "missing 1 required positional argument: 'axis'"
-        ):
+        with raises_regex(TypeError, "missing 1 required positional argument: 'axis'"):
             ds.reduce(mean_only_one_axis)
 
         with raises_regex(TypeError, "non-integer axis"):

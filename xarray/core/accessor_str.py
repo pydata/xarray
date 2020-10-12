@@ -903,9 +903,7 @@ class StringAccessor:
                     "pattern with regex=False"
                 )
             if callable(repl):
-                raise ValueError(
-                    "Cannot use a callable replacement when regex=False"
-                )
+                raise ValueError("Cannot use a callable replacement when regex=False")
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)
 

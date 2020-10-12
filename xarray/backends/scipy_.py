@@ -70,9 +70,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
         except TypeError as e:
             # TODO: gzipped loading only works with NetCDF3 files.
             if "is not a valid NetCDF 3 file" in e.message:
-                raise ValueError(
-                    "gzipped file loading only supports NetCDF 3 files."
-                )
+                raise ValueError("gzipped file loading only supports NetCDF 3 files.")
             else:
                 raise
 
@@ -110,9 +108,7 @@ class ScipyDataStore(WritableCFDataStore):
         self, filename_or_obj, mode="r", format=None, group=None, mmap=None, lock=None
     ):
         if group is not None:
-            raise ValueError(
-                "cannot save to a group with the scipy.io.netcdf backend"
-            )
+            raise ValueError("cannot save to a group with the scipy.io.netcdf backend")
 
         if format is None or format == "NETCDF3_64BIT":
             version = 2

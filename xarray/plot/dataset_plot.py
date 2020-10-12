@@ -54,9 +54,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         add_colorbar = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError(
-            "hue_style must be either None, 'discrete' or 'continuous'."
-        )
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
 
     if hue:
         hue_label = label_from_attrs(ds[hue])

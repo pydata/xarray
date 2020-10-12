@@ -5107,9 +5107,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         elif label == "lower":
             kwargs_new = kwargs_start
         else:
-            raise ValueError(
-                "The 'label' argument has to be either 'upper' or 'lower'"
-            )
+            raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
         variables = {}
 
