@@ -71,7 +71,7 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of" " True, False or 'default'."
+            "The global option keep_attrs must be one of True, False or 'default'."
         )
 
 

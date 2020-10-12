@@ -357,7 +357,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
-        raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
+        raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
 
     if ds is not None:
         if drawstyle is None:
@@ -876,7 +876,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
-            "imshow requires 1D coordinates, try using " "pcolormesh or contour(f)"
+            "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
     # Centering the pixels- Assumes uniform spacing

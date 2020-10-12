@@ -197,7 +197,7 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> Dict[Hashabl
         for dim, size in zip(var.dims, var.shape):
             if dim in scalar_vars:
                 raise ValueError(
-                    "dimension %r already exists as a scalar " "variable" % dim
+                    "dimension %r already exists as a scalar variable" % dim
                 )
             if dim not in dims:
                 dims[dim] = size
@@ -286,7 +286,7 @@ def merge_indexes(
     new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}
     new_variables.update(vars_to_replace)
 
-    # update dimensions if necessary  GH: 3512
+    # update dimensions if necessary, GH: 3512
     for k, v in new_variables.items():
         if any(d in dims_to_replace for d in v.dims):
             new_dims = [dims_to_replace.get(d, d) for d in v.dims]
@@ -1314,7 +1314,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if utils.is_dict_like(key):
             raise NotImplementedError(
-                "cannot yet use a dictionary as a key " "to set Dataset values"
+                "cannot yet use a dictionary as a key to set Dataset values"
             )
 
         self.update({key: value})
@@ -1673,7 +1673,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if mode not in ["w", "w-", "a"]:
             # TODO: figure out how to handle 'r+'
             raise ValueError(
-                "The only supported options for mode are 'w'," "'w-' and 'a'."
+                "The only supported options for mode are 'w', 'w-' and 'a'."
             )
         from ..backends.api import to_zarr
 
@@ -5107,9 +5107,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         elif label == "lower":
             kwargs_new = kwargs_start
         else:
-            raise ValueError(
-                "The 'label' argument has to be either " "'upper' or 'lower'"
-            )
+            raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
         variables = {}
 

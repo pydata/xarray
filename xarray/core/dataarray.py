@@ -2565,7 +2565,7 @@ class DataArray(AbstractArray, DataWithCoords):
             }
 
         where "t" is the name of the dimesion, "a" is the name of the array,
-        and  x and t are lists, numpy.arrays, or pandas objects.
+        and x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
         ----------
@@ -2949,7 +2949,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Positive offsets roll to the right; negative offsets roll to the
             left.
         roll_coords : bool
-            Indicates whether to  roll the coordinates by the offset
+            Indicates whether to roll the coordinates by the offset
             The current default of roll_coords (None, equivalent to True) is
             deprecated and will change to False in a future version.
             Explicitly pass roll_coords to silence the warning.

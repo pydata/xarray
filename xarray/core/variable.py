@@ -1060,7 +1060,7 @@ class Variable(
         """
         import sparse
 
-        # TODO  what to do if dask-backended?
+        # TODO: what to do if dask-backended?
         if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
@@ -1286,7 +1286,7 @@ class Variable(
         if isinstance(end_values, dict):
             end_values = self._pad_options_dim_to_index(end_values)
 
-        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
@@ -2135,7 +2135,7 @@ class Variable(
                 raise TypeError("cannot add a Dataset to a Variable in-place")
             self_data, other_data, dims = _broadcast_compat_data(self, other)
             if dims != self.dims:
-                raise ValueError("dimensions cannot change for in-place " "operations")
+                raise ValueError("dimensions cannot change for in-place operations")
             with np.errstate(all="ignore"):
                 self.values = f(self_data, other_data)
             return self

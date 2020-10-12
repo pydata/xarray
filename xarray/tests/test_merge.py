@@ -64,7 +64,7 @@ class TestMergeFunction:
         assert actual.identical(expected)
 
     @pytest.mark.parametrize(
-        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, " "expect_exception",
+        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
         [
             (
                 "no_conflicts",
