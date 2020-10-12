@@ -84,6 +84,14 @@ def open_dataset(
     engine=None,
     chunks=None,
     cache=None,
+    decode_cf=True,
+    mask_and_scale=None,
+    decode_times=None,
+    decode_timedelta=None,
+    use_cftime=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -97,9 +105,24 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    group : str, optional
-        Path to the netCDF4 group in the given file to open (only works for
-        netCDF4 files).
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf", "zarr"}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
+        "netcdf4".
+    chunks : int or dict, optional
+        If chunks is provided, it is used to load the new dataset into dask
+        arrays. ``chunks={}`` loads the dataset with dask using a single
+        chunk for all arrays. When using ``engine="zarr"``, setting
+        ``chunks='auto'`` will create dask chunks based on the variable's zarr
+        chunks.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -115,49 +138,11 @@ def open_dataset(
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
-        Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4".
-    chunks : int or dict, optional
-        If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
-    lock : False or lock-like, optional
-        Resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler.
-    cache : bool, optional
-        If True, cache data loaded from the underlying datastore in memory as
-        NumPy arrays when accessed to avoid reading from the underlying data-
-        store multiple times. Defaults to True unless you specify the `chunks`
-        argument to use dask, in which case it defaults to False. Does not
-        change the behavior of coordinates corresponding to dimensions, which
-        always load their data from disk into a ``pandas.Index``.
-    drop_variables: str or iterable, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
-    backend_kwargs: dict, optional
-        A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -168,11 +153,31 @@ def open_dataset(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
+    decode_coords : bool, optional
+        If True, decode the 'coordinates' attribute to identify coordinates in
+        the resulting dataset.
+    drop_variables: str or iterable, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
+    backend_kwargs: dict, optional
+        A dictionary of keyword arguments to pass on to the backend. This
+        may be useful when backend options would improve performance or
+        allow user control of dataset processing.
+    kwargs: dict, optional
+        A dictionary of keyword arguments to pass on to the backend, such as
+        **group** (path to the netCDF4 group in the given file to open given as a str),
+        **lock** (resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler),
+        **chunks** (int or dict, if chunks is provided, it is used to load the new dataset into dask
+        arrays).
 
     Returns
     -------
@@ -196,6 +201,15 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
+
+    kwargs["decode_cf"] = decode_cf
+    kwargs["mask_and_scale"] = mask_and_scale
+    kwargs["decode_times"] = decode_times
+    kwargs["decode_timedelta"] = decode_timedelta
+    kwargs["use_cftime"] = use_cftime
+    kwargs["concat_characters"] = concat_characters
+    kwargs["decode_coords"] = decode_coords
+    kwargs["drop_variables"] = drop_variables
 
     filename_or_obj = _normalize_path(filename_or_obj)
 
