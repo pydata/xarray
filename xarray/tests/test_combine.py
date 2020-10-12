@@ -855,5 +855,4 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
     with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
-
         combine_by_coords([da_1, da_2])
