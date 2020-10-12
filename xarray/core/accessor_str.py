@@ -496,7 +496,7 @@ class StringAccessor:
 
         Strings in the array are padded with '0' characters on the
         left of the string to reach a total string length  `width`. Strings
-        in the array  with length greater or equal to `width` are unchanged.
+        in the array with length greater or equal to `width` are unchanged.
 
         Parameters
         ----------
@@ -879,7 +879,7 @@ class StringAccessor:
             if is_compiled_re:
                 if (case is not None) or (flags != 0):
                     raise ValueError(
-                        "case and flags cannot be set" " when pat is a compiled regex"
+                        "case and flags cannot be set when pat is a compiled regex"
                     )
             else:
                 # not a compiled regex
@@ -904,7 +904,7 @@ class StringAccessor:
                 )
             if callable(repl):
                 raise ValueError(
-                    "Cannot use a callable replacement when " "regex=False"
+                    "Cannot use a callable replacement when regex=False"
                 )
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)

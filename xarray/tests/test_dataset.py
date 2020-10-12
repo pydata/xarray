@@ -1413,7 +1413,7 @@ class TestDataset:
 
         with raises_regex(
             ValueError,
-            "Vectorized selection is " "not available along MultiIndex variable:" " x",
+            "Vectorized selection is not available along MultiIndex variable: x",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -4250,7 +4250,7 @@ class TestDataset:
             "t": {"data": t, "dims": "t"},
             "b": {"dims": "t", "data": y},
         }
-        with raises_regex(ValueError, "cannot convert dict " "without the key 'dims'"):
+        with raises_regex(ValueError, "cannot convert dict without the key 'dims'"):
             Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):
@@ -4842,7 +4842,7 @@ class TestDataset:
         assert_identical(expected, actual)
 
         with raises_regex(
-            TypeError, "missing 1 required positional argument: " "'axis'"
+            TypeError, "missing 1 required positional argument: 'axis'"
         ):
             ds.reduce(mean_only_one_axis)
 

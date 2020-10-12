@@ -178,7 +178,7 @@ Internal Changes
     older than 2.9)
   - all versions of other packages released in the last 12 months
 
-  All are  up from 6 months (:issue:`4295`)
+  All are up from 6 months (:issue:`4295`)
   `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
   :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
@@ -2516,7 +2516,7 @@ Breaking changes
 - A new resampling interface to match pandas' groupby-like API was added to
   :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
   (:issue:`1272`). :ref:`Timeseries resampling <resampling>` is
-  fully supported for data  with arbitrary dimensions as is both downsampling
+  fully supported for data with arbitrary dimensions as is both downsampling
   and upsampling (including linear, quadratic, cubic, and spline interpolation).
 
   Old syntax:
@@ -3647,7 +3647,7 @@ Bug fixes
 - Restore checks for shape consistency between data and coordinates in the
   DataArray constructor (:issue:`758`).
 - Single dimension variables no longer transpose as part of a broader
-  ``.transpose``. This  behavior was causing ``pandas.PeriodIndex`` dimensions
+  ``.transpose``. This behavior was causing ``pandas.PeriodIndex`` dimensions
   to lose their type (:issue:`749`)
 - :py:class:`~xarray.Dataset` labels remain as their native type on ``.to_dataset``.
   Previously they were coerced to strings (:issue:`745`)

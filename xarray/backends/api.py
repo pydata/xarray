@@ -87,7 +87,7 @@ def _get_default_engine_grib():
     if msgs:
         raise ValueError(" or\n".join(msgs))
     else:
-        raise ValueError("PyNIO or cfgrib is required for accessing " "GRIB files")
+        raise ValueError("PyNIO or cfgrib is required for accessing GRIB files")
 
 
 def _get_default_engine_gz():
@@ -1228,7 +1228,7 @@ def save_mfdataset(
     """
     if mode == "w" and len(set(paths)) < len(paths):
         raise ValueError(
-            "cannot use mode='w' when writing multiple " "datasets to the same path"
+            "cannot use mode='w' when writing multiple datasets to the same path"
         )
 
     for obj in datasets:

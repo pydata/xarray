@@ -483,7 +483,7 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     if contains_nan:
         if not skipna:
             pytest.skip(
-                "numpy's argmin (not nanargmin) does not handle " "object-dtype"
+                "numpy's argmin (not nanargmin) does not handle object-dtype"
             )
         if skipna and np.dtype(dtype).kind in "iufc":
             pytest.skip("numpy's nanargmin raises ValueError for all nan axis")

@@ -38,7 +38,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
         if not hue_is_numeric and (hue_style == "continuous"):
             raise ValueError(
-                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
             )
 
         if add_guide is None or add_guide is True:
@@ -55,7 +55,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError(
-            "hue_style must be either None, 'discrete' " "or 'continuous'."
+            "hue_style must be either None, 'discrete' or 'continuous'."
         )
 
     if hue:
@@ -131,7 +131,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, " "or Normalize object."
+        err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
