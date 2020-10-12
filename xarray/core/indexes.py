@@ -100,7 +100,7 @@ def isel_variable_and_index(
 
     if len(variable.dims) > 1:
         raise NotImplementedError(
-            "indexing multi-dimensional variable with indexes is not " "supported yet"
+            "indexing multi-dimensional variable with indexes is not supported yet"
         )
 
     new_variable = variable.isel(indexers)

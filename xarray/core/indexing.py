@@ -121,7 +121,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     if isinstance(label, slice):
         if method is not None or tolerance is not None:
             raise NotImplementedError(
-                "cannot use ``method`` argument if any indexers are " "slice objects"
+                "cannot use ``method`` argument if any indexers are slice objects"
             )
         indexer = index.slice_indexer(
             _sanitize_slice_element(label.start),

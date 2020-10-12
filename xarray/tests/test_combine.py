@@ -169,7 +169,7 @@ class TestTileIDsFromCoords:
         ds1 = Dataset({"x": [3, 2]})
         with raises_regex(
             ValueError,
-            "Coordinate variable x is neither " "monotonically increasing nor",
+            "Coordinate variable x is neither monotonically increasing nor",
         ):
             _infer_concat_order_from_coords([ds1, ds0])
 
@@ -556,11 +556,11 @@ class TestNestedCombine:
         ds = create_test_data
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
-        with raises_regex(ValueError, "sub-lists do not have " "consistent lengths"):
+        with raises_regex(ValueError, "sub-lists do not have consistent lengths"):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
-        with raises_regex(ValueError, "sub-lists do not have " "consistent depths"):
+        with raises_regex(ValueError, "sub-lists do not have consistent depths"):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
@@ -798,7 +798,7 @@ class TestCombineAuto:
         ds0 = Dataset({"x": [0, 1, 5]})
         ds1 = Dataset({"x": [2, 3]})
         with raises_regex(
-            ValueError, "does not have monotonic global indexes" " along dimension x"
+            ValueError, "does not have monotonic global indexes along dimension x"
         ):
             combine_by_coords([ds1, ds0])
 

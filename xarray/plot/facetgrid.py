@@ -131,7 +131,7 @@ class FacetGrid:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row " "were passed")
+                warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
         elif not row and col:

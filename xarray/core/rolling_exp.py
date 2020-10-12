@@ -31,7 +31,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     """
     valid_count = count_not_none(comass, span, halflife, alpha)
     if valid_count > 1:
-        raise ValueError("comass, span, halflife, and alpha " "are mutually exclusive")
+        raise ValueError("comass, span, halflife, and alpha are mutually exclusive")
 
     # Convert to center of mass; domain checks ensure 0 < alpha <= 1
     if comass is not None:

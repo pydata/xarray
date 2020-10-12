@@ -237,7 +237,7 @@ of multi-index levels:
     mda.reorder_levels(x=["wavenumber", "band"])
 
 As of xarray v0.9 coordinate labels for each dimension are optional.
-You can also  use ``.set_index`` / ``.reset_index`` to add / remove
+You can also use ``.set_index`` / ``.reset_index`` to add / remove
 labels for one or several dimensions:
 
 .. ipython:: python
