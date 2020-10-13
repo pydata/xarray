@@ -56,6 +56,7 @@ from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS
+from .pycompat import sparse_array_type
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
@@ -2466,8 +2467,20 @@ class DataArray(AbstractArray, DataWithCoords):
         The Series is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
         """
-        index = self.coords.to_index()
-        return pd.Series(self.values.reshape(-1), index=index, name=self.name)
+        if isinstance(self.data, sparse_array_type):
+            # Use sparse.COO.coords and .data (each already 1-D) to avoid a
+            # .todense() call, which could raise MemoryError.
+            # FIXME other subclasses of sparse_array_type, e.g. DOK, may lack
+            #       these attrs
+            index = pd.MultiIndex.from_arrays(
+                self.data.coords, names=self.dims
+            ).set_levels([self.coords[d].values for d in self.dims])
+            data = self.data.data
+        else:
+            index = self.coords.to_index()
+            data = self.values.reshape(-1)
+
+        return pd.Series(data, index=index, name=self.name)
 
     def to_masked_array(self, copy: bool = True) -> np.ma.MaskedArray:
         """Convert this array into a numpy.ma.MaskedArray
