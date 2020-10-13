@@ -71,7 +71,7 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of" " True, False or 'default'."
+            "The global option keep_attrs must be one of True, False or 'default'."
         )
 
 
@@ -114,13 +114,14 @@ class set_options:
     <xarray.Dataset>
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 3 4 5 6 ...
+      * x        (x) int64 0 1 2 ... 998 999
     Data variables:
         *empty*
 
     Or to set global options:
 
-    >>> xr.set_options(display_width=80)
+    >>> xr.set_options(display_width=80)  # doctest: +ELLIPSIS
+    <xarray.core.options.set_options object at 0x...>
     """
 
     def __init__(self, **kwargs):
@@ -132,7 +133,15 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
+                if k == ARITHMETIC_JOIN:
+                    expected = f"Expected one of {_JOIN_OPTIONS!r}"
+                elif k == DISPLAY_STYLE:
+                    expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                else:
+                    expected = ""
+                raise ValueError(
+                    f"option {k!r} given an invalid value: {v!r}. " + expected
+                )
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

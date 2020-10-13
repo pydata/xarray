@@ -19,16 +19,23 @@ def pytest_runtest_setup(item):
         pytest.skip("set --run-flaky option to run flaky tests")
     if "network" in item.keywords and not item.config.getoption("--run-network-tests"):
         pytest.skip(
-            "set --run-network-tests to run test requiring an " "internet connection"
+            "set --run-network-tests to run test requiring an internet connection"
         )
 
 
 @pytest.fixture(autouse=True)
-def add_standard_imports(doctest_namespace):
+def add_standard_imports(doctest_namespace, tmpdir):
     import numpy as np
     import pandas as pd
+
     import xarray as xr
 
     doctest_namespace["np"] = np
     doctest_namespace["pd"] = pd
     doctest_namespace["xr"] = xr
+
+    # always seed numpy.random to make the examples deterministic
+    np.random.seed(0)
+
+    # always switch to the temporary directory, so files get written there
+    tmpdir.chdir()

@@ -67,8 +67,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf
-    """
+    """Store for reading and writing data via h5netcdf"""
 
     __slots__ = (
         "autoclose",
@@ -121,6 +120,25 @@ class H5NetCDFStore(WritableCFDataStore):
         phony_dims=None,
     ):
         import h5netcdf
+
+        if isinstance(filename, bytes):
+            raise ValueError(
+                "can't open netCDF4/HDF5 as bytes "
+                "try passing a path or file-like object"
+            )
+        elif hasattr(filename, "tell"):
+            if filename.tell() != 0:
+                raise ValueError(
+                    "file-like object read/write pointer not at zero "
+                    "please close and reopen, or use a context manager"
+                )
+            else:
+                magic_number = filename.read(8)
+                filename.seek(0)
+                if not magic_number.startswith(b"\211HDF\r\n\032\n"):
+                    raise ValueError(
+                        f"{magic_number} is not the signature of a valid netCDF file"
+                    )
 
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
@@ -262,7 +280,7 @@ class H5NetCDFStore(WritableCFDataStore):
             and "compression_opts" in encoding
             and encoding["complevel"] != encoding["compression_opts"]
         ):
-            raise ValueError("'complevel' and 'compression_opts' encodings " "mismatch")
+            raise ValueError("'complevel' and 'compression_opts' encodings mismatch")
         complevel = encoding.pop("complevel", 0)
         if complevel != 0:
             encoding.setdefault("compression_opts", complevel)

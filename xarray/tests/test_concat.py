@@ -250,7 +250,9 @@ class TestConcatDataset:
             assert_equal(actual, expected[join])
 
         # regression test for #3681
-        actual = concat([ds1.drop("x"), ds2.drop("x")], join="override", dim="y")
+        actual = concat(
+            [ds1.drop_vars("x"), ds2.drop_vars("x")], join="override", dim="y"
+        )
         expected = Dataset(
             {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
         )
@@ -349,18 +351,26 @@ class TestConcatDataset:
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value):
         datasets = [
-            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
+            Dataset({"a": ("x", [2, 3]), "b": ("x", [-2, 1]), "x": [1, 2]}),
+            Dataset({"a": ("x", [1, 2]), "b": ("x", [3, -1]), "x": [0, 1]}),
         ]
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_a = fill_value_b = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_a = fill_value["a"]
+            fill_value_b = fill_value["b"]
+        else:
+            fill_value_a = fill_value_b = fill_value
         expected = Dataset(
-            {"a": (("t", "x"), [[fill_value, 2, 3], [1, 2, fill_value]])},
+            {
+                "a": (("t", "x"), [[fill_value_a, 2, 3], [1, 2, fill_value_a]]),
+                "b": (("t", "x"), [[fill_value_b, -2, 1], [3, -1, fill_value_b]]),
+            },
             {"x": [0, 1, 2]},
         )
         actual = concat(datasets, dim="t", fill_value=fill_value)
@@ -548,3 +558,36 @@ def test_concat_merge_single_non_dim_coord():
     for coords in ["different", "all"]:
         with raises_regex(ValueError, "'y' not present in all datasets"):
             concat([da1, da2, da3], dim="x")
+
+
+def test_concat_preserve_coordinate_order():
+    x = np.arange(0, 5)
+    y = np.arange(0, 10)
+    time = np.arange(0, 4)
+    data = np.zeros((4, 10, 5), dtype=bool)
+
+    ds1 = Dataset(
+        {"data": (["time", "y", "x"], data[0:2])},
+        coords={"time": time[0:2], "y": y, "x": x},
+    )
+    ds2 = Dataset(
+        {"data": (["time", "y", "x"], data[2:4])},
+        coords={"time": time[2:4], "y": y, "x": x},
+    )
+
+    expected = Dataset(
+        {"data": (["time", "y", "x"], data)},
+        coords={"time": time, "y": y, "x": x},
+    )
+
+    actual = concat([ds1, ds2], dim="time")
+
+    # check dimension order
+    for act, exp in zip(actual.dims, expected.dims):
+        assert act == exp
+        assert actual.dims[act] == expected.dims[exp]
+
+    # check coordinate order
+    for act, exp in zip(actual.coords, expected.coords):
+        assert act == exp
+        assert_identical(actual.coords[act], expected.coords[exp])

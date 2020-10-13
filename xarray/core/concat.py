@@ -1,3 +1,16 @@
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    overload,
+)
+
 import pandas as pd
 
 from . import dtypes, utils
@@ -6,6 +19,40 @@ from .duck_array_ops import lazy_array_equiv
 from .merge import _VALID_COMPAT, merge_attrs, unique_variable
 from .variable import IndexVariable, Variable, as_variable
 from .variable import concat as concat_vars
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
+
+@overload
+def concat(
+    objs: Iterable["Dataset"],
+    dim: Union[str, "DataArray", pd.Index],
+    data_vars: Union[str, List[str]] = "all",
+    coords: Union[str, List[str]] = "different",
+    compat: str = "equals",
+    positions: Optional[Iterable[int]] = None,
+    fill_value: object = dtypes.NA,
+    join: str = "outer",
+    combine_attrs: str = "override",
+) -> "Dataset":
+    ...
+
+
+@overload
+def concat(
+    objs: Iterable["DataArray"],
+    dim: Union[str, "DataArray", pd.Index],
+    data_vars: Union[str, List[str]] = "all",
+    coords: Union[str, List[str]] = "different",
+    compat: str = "equals",
+    positions: Optional[Iterable[int]] = None,
+    fill_value: object = dtypes.NA,
+    join: str = "outer",
+    combine_attrs: str = "override",
+) -> "DataArray":
+    ...
 
 
 def concat(
@@ -23,7 +70,7 @@ def concat(
 
     Parameters
     ----------
-    objs : sequence of Dataset and DataArray objects
+    objs : sequence of Dataset and DataArray
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
@@ -34,74 +81,76 @@ def concat(
         unchanged. If dimension is provided as a DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+    data_vars : {"minimal", "different", "all"} or list of str, optional
         These data variables will be concatenated together:
-          * 'minimal': Only data variables in which the dimension already
+          * "minimal": Only data variables in which the dimension already
             appears are included.
-          * 'different': Data variables which are not equal (ignoring
+          * "different": Data variables which are not equal (ignoring
             attributes) across all datasets are also concatenated (as well as
             all for which dimension already appears). Beware: this option may
             load the data payload of data variables into memory if they are not
             already loaded.
-          * 'all': All data variables will be concatenated.
+          * "all": All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
-            addition to the 'minimal' data variables.
+            addition to the "minimal" data variables.
 
-        If objects are DataArrays, data_vars must be 'all'.
-    coords : {'minimal', 'different', 'all' or list of str}, optional
+        If objects are DataArrays, data_vars must be "all".
+    coords : {"minimal", "different", "all"} or list of str, optional
         These coordinate variables will be concatenated together:
-          * 'minimal': Only coordinates in which the dimension already appears
+          * "minimal": Only coordinates in which the dimension already appears
             are included.
-          * 'different': Coordinates which are not equal (ignoring attributes)
+          * "different": Coordinates which are not equal (ignoring attributes)
             across all datasets are also concatenated (as well as all for which
             dimension already appears). Beware: this option may load the data
             payload of coordinate variables into memory if they are not already
             loaded.
-          * 'all': All coordinate variables will be concatenated, except
+          * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
-            in addition to the 'minimal' coordinates.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+            in addition to the "minimal" coordinates.
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare non-concatenated variables of the same name for
         potential conflicts. This is passed down to merge.
 
-        - 'broadcast_equals': all values must be equal when variables are
+        - "broadcast_equals": all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
           same.
-        - 'no_conflicts': only values which are not null in both datasets
+        - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-        - 'override': skip comparing and pick variable from first dataset
+        - "override": skip comparing and pick variable from first dataset
     positions : None or list of integer arrays, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
-    fill_value : scalar, optional
-        Value to use for newly missing values
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
+    join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
         (excluding dim) in objects
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {'drop', 'identical', 'no_conflicts', 'override'},
-                    default 'override
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
+                    default: "override"
         String indicating how to combine attrs of the objects being merged:
 
-        - 'drop': empty attrs on returned Dataset.
-        - 'identical': all attrs must be the same on every object.
-        - 'no_conflicts': attrs from all objects are combined, any that have
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
-        - 'override': skip comparing and copy attrs from the first dataset to
+        - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
     Returns
@@ -116,8 +165,8 @@ def concat(
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
     # dimension already exists
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     try:
         first_obj, objs = utils.peek_at(objs)
@@ -285,20 +334,26 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
-def _parse_datasets(datasets):
+def _parse_datasets(
+    datasets: Iterable["Dataset"],
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, int], Set[Hashable], Set[Hashable]]:
 
-    dims = set()
-    all_coord_names = set()
-    data_vars = set()  # list of data_vars
-    dim_coords = {}  # maps dim name to variable
-    dims_sizes = {}  # shared dimension sizes to expand variables
+    dims: Set[Hashable] = set()
+    all_coord_names: Set[Hashable] = set()
+    data_vars: Set[Hashable] = set()  # list of data_vars
+    dim_coords: Dict[Hashable, Variable] = {}  # maps dim name to variable
+    dims_sizes: Dict[Hashable, int] = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:
         dims_sizes.update(ds.dims)
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
-        for dim in set(ds.dims) - dims:
+        # preserves ordering of dimensions
+        for dim in ds.dims:
+            if dim in dims:
+                continue
+
             if dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
@@ -307,16 +362,16 @@ def _parse_datasets(datasets):
 
 
 def _dataset_concat(
-    datasets,
-    dim,
-    data_vars,
-    coords,
-    compat,
-    positions,
-    fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="override",
-):
+    datasets: List["Dataset"],
+    dim: Union[str, "DataArray", pd.Index],
+    data_vars: Union[str, List[str]],
+    coords: Union[str, List[str]],
+    compat: str,
+    positions: Optional[Iterable[int]],
+    fill_value: object = dtypes.NA,
+    join: str = "outer",
+    combine_attrs: str = "override",
+) -> "Dataset":
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
@@ -356,7 +411,9 @@ def _dataset_concat(
 
     result_vars = {}
     if variables_to_merge:
-        to_merge = {var: [] for var in variables_to_merge}
+        to_merge: Dict[Hashable, List[Variable]] = {
+            var: [] for var in variables_to_merge
+        }
 
         for ds in datasets:
             for var in variables_to_merge:
@@ -406,6 +463,9 @@ def _dataset_concat(
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
+        elif k in result_vars:
+            # preserves original variable order
+            result_vars[k] = result_vars.pop(k)
 
     result = Dataset(result_vars, attrs=result_attrs)
     absent_coord_names = coord_names - set(result.variables)
@@ -427,16 +487,16 @@ def _dataset_concat(
 
 
 def _dataarray_concat(
-    arrays,
-    dim,
-    data_vars,
-    coords,
-    compat,
-    positions,
-    fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="override",
-):
+    arrays: Iterable["DataArray"],
+    dim: Union[str, "DataArray", pd.Index],
+    data_vars: Union[str, List[str]],
+    coords: Union[str, List[str]],
+    compat: str,
+    positions: Optional[Iterable[int]],
+    fill_value: object = dtypes.NA,
+    join: str = "outer",
+    combine_attrs: str = "override",
+) -> "DataArray":
     arrays = list(arrays)
 
     if data_vars != "all":

@@ -42,7 +42,7 @@ NUM_BINARY_OPS = [
 NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ["astype", "argsort", "clip", "conj", "conjugate"]
+NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
 PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
@@ -90,12 +90,7 @@ Reduce this {cls}'s data by applying `{name}` along some dimension(s).
 
 Parameters
 ----------
-{extra_args}
-skipna : bool, optional
-    If True, skip missing values (as marked by NaN). By default, only
-    skips missing values for float dtypes; other dtypes either do not
-    have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64).{min_count_docs}
+{extra_args}{skip_na_docs}{min_count_docs}
 keep_attrs : bool, optional
     If True, the attributes (`attrs`) will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -111,8 +106,15 @@ reduced : {cls}
     indicated dimension(s) removed.
 """
 
+_SKIPNA_DOCSTRING = """
+skipna : bool, optional
+    If True, skip missing values (as marked by NaN). By default, only
+    skips missing values for float dtypes; other dtypes either do not
+    have a sentinel missing value (int) or skipna=True has not been
+    implemented (object, datetime64 or timedelta64)."""
+
 _MINCOUNT_DOCSTRING = """
-min_count : int, default None
+min_count : int, default: None
     The required number of valid values to perform the operation.
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
@@ -138,22 +140,22 @@ def fillna(data, other, join="left", dataset_join="left"):
 
     Parameters
     ----------
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {"outer", "inner", "left", "right"}, optional
         Method for joining the indexes of the passed objects along each
         dimension
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': raise `ValueError` instead of aligning when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {"outer", "inner", "left", "right"}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
-        - 'outer': take variables from both Dataset objects
-        - 'inner': take only overlapped variables
-        - 'left': take only variables from the first object
-        - 'right': take only variables from the last object
+        - "outer": take variables from both Dataset objects
+        - "inner": take only overlapped variables
+        - "left": take only variables from the first object
+        - "right": take only variables from the last object
     """
     from .computation import apply_ufunc
 
@@ -260,6 +262,7 @@ def inject_reduce_methods(cls):
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, "numeric_only", False)
         available_min_count = getattr(f, "available_min_count", False)
+        skip_na_docs = _SKIPNA_DOCSTRING if include_skipna else ""
         min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ""
 
         func = cls._reduce_method(f, include_skipna, numeric_only)
@@ -268,6 +271,7 @@ def inject_reduce_methods(cls):
             name=name,
             cls=cls.__name__,
             extra_args=cls._reduce_extra_args_docstring.format(name=name),
+            skip_na_docs=skip_na_docs,
             min_count_docs=min_count_docs,
         )
         setattr(cls, name, func)

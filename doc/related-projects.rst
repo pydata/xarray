@@ -3,9 +3,11 @@
 Xarray related projects
 -----------------------
 
-Here below is a list of existing open source projects that build
+Below is a list of existing open source projects that build
 functionality upon xarray. See also section :ref:`internals` for more
-details on how to build xarray extensions.
+details on how to build xarray extensions. We also maintain the 
+`xarray-contrib <https://github.com/xarray-contrib>`_ GitHub organization
+as a place to curate projects that build upon xarray.
 
 Geosciences
 ~~~~~~~~~~~
@@ -36,6 +38,7 @@ Geosciences
   harmonic wind analysis in Python.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
+- `xarray-spatial <https://makepath.github.io/xarray-spatial>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
 - `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
@@ -55,6 +58,7 @@ Other domains
 ~~~~~~~~~~~~~
 - `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
+- `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +66,7 @@ Extend xarray capabilities
 - `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
+- `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
 - `xarray-custom <https://github.com/astropenguin/xarray-custom>`_: Data classes for custom xarray creation.
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.
@@ -73,7 +78,7 @@ Extend xarray capabilities
 
 Visualization
 ~~~~~~~~~~~~~
-- `Datashader <https://datashader.org>`_, `geoviews <http://geo.holoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
+- `datashader <https://datashader.org>`_, `geoviews <http://geoviews.org>`_, `holoviews <http://holoviews.org/>`_, : visualization packages for large data.
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.

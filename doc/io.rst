@@ -26,7 +26,7 @@ The recommended way to store xarray data structures is `netCDF`__, which
 is a binary file format for self-described datasets that originated
 in the geosciences. xarray is based on the netCDF data model, so netCDF files
 on disk directly correspond to :py:class:`Dataset` objects (more accurately,
-a group in a netCDF file directly corresponds to a to :py:class:`Dataset` object.
+a group in a netCDF file directly corresponds to a :py:class:`Dataset` object.
 See :ref:`io.netcdf_groups` for more.)
 
 NetCDF is supported on almost all platforms, and parsers exist
@@ -104,6 +104,12 @@ Data is *always* loaded lazily from netCDF files. You can manipulate, slice and 
 Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
+
+There may be minor differences in the :py:class:`Dataset` object returned
+when reading a NetCDF file with different engines. For example,
+single-valued attributes are returned as scalars by the default
+``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
+``engine=h5netcdf``.
 
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
@@ -1094,6 +1100,11 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 We recommend installing PyNIO via conda::
 
     conda install -c conda-forge pynio
+
+    .. note::
+    
+    PyNIO is no longer actively maintained and conflicts with netcdf4 > 1.5.3.
+    The PyNIO backend may be moved outside of xarray in the future.
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
