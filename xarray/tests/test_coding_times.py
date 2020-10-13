@@ -54,6 +54,7 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     ([[0]], "days since 1000-01-01"),
     (np.arange(2), "days since 1000-01-01"),
     (np.arange(0, 100000, 20000), "days since 1900-01-01"),
+    (np.arange(0, 100000, 20000), "days since 1-01-01"),
     (17093352.0, "hours since 1-1-1 00:00:0.0"),
     ([0.5, 1.5], "hours since 1900-01-01T00:00:00"),
     (0, "milliseconds since 2000-01-01T00:00:00"),
@@ -109,20 +110,16 @@ def test_cf_datetime(num_dates, units, calendar):
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded, _, _ = coding.times.encode_cf_datetime(actual, units, calendar)
-    if "1-1-1" not in units:
-        # pandas parses this date very strangely, so the original
-        # units/encoding cannot be preserved in this case:
-        # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
-        # Timestamp('2001-01-01 00:00:00')
+
+    assert_array_equal(num_dates, np.around(encoded, 1))
+    if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
+        # verify that wrapping with a pandas.Index works
+        # note that it *does not* currently work to even put
+        # non-datetime64 compatible dates into a pandas.Index
+        encoded, _, _ = coding.times.encode_cf_datetime(
+            pd.Index(actual), units, calendar
+        )
         assert_array_equal(num_dates, np.around(encoded, 1))
-        if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
-            # verify that wrapping with a pandas.Index works
-            # note that it *does not* currently work to even put
-            # non-datetime64 compatible dates into a pandas.Index
-            encoded, _, _ = coding.times.encode_cf_datetime(
-                pd.Index(actual), units, calendar
-            )
-            assert_array_equal(num_dates, np.around(encoded, 1))
 
 
 @requires_cftime
