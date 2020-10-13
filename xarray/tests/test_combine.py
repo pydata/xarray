@@ -839,3 +839,20 @@ def test_combine_by_coords_distant_cftime_dates():
         [0, 1, 2], dims=["time"], coords=[expected_time], name="a"
     ).to_dataset()
     assert_identical(result, expected)
+
+
+@requires_cftime
+def test_combine_by_coords_raises_for_differing_calendars():
+    # previously failed with uninformative StopIteration instead of TypeError
+    # https://github.com/pydata/xarray/issues/4495
+
+    import cftime
+
+    time_1 = [cftime.DatetimeGregorian(2000, 1, 1)]
+    time_2 = [cftime.DatetimeProlepticGregorian(2001, 1, 1)]
+
+    da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
+
+    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+        combine_by_coords([da_1, da_2])

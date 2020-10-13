@@ -45,6 +45,8 @@ Bug fixes
   is now ignored when not applicable, i.e. when ``skipna=False`` or when ``skipna=None``
   and the dtype does not have a missing value (:issue:`4352`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:func:`combine_by_coords` now raises an informative error when passing coordinates
+  with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
