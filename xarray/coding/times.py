@@ -53,14 +53,38 @@ def _netcdf_to_numpy_timeunit(units):
     }[units]
 
 
+def _ensure_padded_year(ref_date):
+    # Reference dates without a padded year (e.g. since 1-1-1 or since 2-3-4)
+    # are ambiguous (is it YMD or DMY). This can lead to some very odd
+    # behaviour e.g. pandas (via dateutil) passes '1-1-1 00:00:0.0' as
+    # '2001-01-01 00:00:00' (because it assumes a) DMY and b) that year 1 is
+    # shorthand for 2001 (like 02 would be shorthand for year 2002).
+
+    # Here we ensure that there is always a four-digit year, with the
+    # assumption being that year comes first if we get something ambiguous.
+    matches_year = re.match(r".*\d{4}.*", ref_date)
+    if not matches_year:
+        # No four-digit strings, assume the first digits are the year and pad
+        # appropriately
+        # QUESTION: should we raise a warning or something here that we're doing this padding?
+        matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+        ref_year, everything_else = [s for s in matches_start_digits.groups()]
+        ref_date = "{:04d}{}".format(int(ref_year), everything_else)
+
+    return ref_date
+
 def _unpack_netcdf_time_units(units):
     # CF datetime units follow the format: "UNIT since DATE"
     # this parses out the unit and date allowing for extraneous
-    # whitespace.
-    matches = re.match("(.+) since (.+)", units)
+    # whitespace. It also ensures that the year is padded with zeros
+    # so it will be correctly understood by pandas (via dateutil).
+    matches = re.match(r"(.+) since (.+)", units)
     if not matches:
         raise ValueError("invalid time units: %s" % units)
+
     delta_units, ref_date = [s.strip() for s in matches.groups()]
+    ref_date = _ensure_padded_year(ref_date)
+
     return delta_units, ref_date
 
 
