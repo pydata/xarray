@@ -73,6 +73,7 @@ def _ensure_padded_year(ref_date):
 
     return ref_date
 
+
 def _unpack_netcdf_time_units(units):
     # CF datetime units follow the format: "UNIT since DATE"
     # this parses out the unit and date allowing for extraneous
