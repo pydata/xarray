@@ -450,7 +450,7 @@ class ZarrStore(AbstractWritableDataStore):
 
         if self._write_region is None:
             self.set_attributes(attributes)
-        self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+            self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )

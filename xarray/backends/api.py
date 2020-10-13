@@ -1437,6 +1437,12 @@ def to_zarr(
             f"'w-' and 'a', but mode={mode!r}"
         )
 
+    if consolidated and region is not None:
+        raise ValueError(
+            "cannot use consolidated=True when the region argument is set. "
+            "Instead, set consolidated=True when writing to zarr with "
+            "compute=False before writing data.")
+
     if isinstance(store, Path):
         store = str(store)
 
