@@ -2090,9 +2090,7 @@ class ZarrBase(CFEncodedBase):
             data2.to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "cannot use consolidated=True"
-            ):
+            with raises_regex(ValueError, "cannot use consolidated=True"):
                 data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
 
         with setup_and_verify_store() as store:

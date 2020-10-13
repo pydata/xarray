@@ -512,9 +512,7 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array.attrs.put(encoded_attrs)
 
             write_region = self._write_region if self._write_region is not None else {}
-            write_region = {
-                dim: write_region.get(dim, slice(None)) for dim in dims
-            }
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
 
             if self._append_dim is not None and self._append_dim in dims:
                 # resize existing variable
