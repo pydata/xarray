@@ -298,8 +298,6 @@ class ZarrStore(AbstractWritableDataStore):
     def __init__(
         self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
     ):
-        if write_region is None:
-            write_region = {}
         self.ds = zarr_group
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
@@ -450,7 +448,8 @@ class ZarrStore(AbstractWritableDataStore):
             variables_with_encoding, _ = self.encode(variables_with_encoding, {})
             variables_encoded.update(variables_with_encoding)
 
-        self.set_attributes(attributes)
+        if self._write_region is None:
+            self.set_attributes(attributes)
         self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
@@ -512,8 +511,9 @@ class ZarrStore(AbstractWritableDataStore):
                 )
                 zarr_array.attrs.put(encoded_attrs)
 
+            write_region = self._write_region if self._write_region is not None else {}
             write_region = {
-                dim: self._write_region.get(dim, slice(None)) for dim in dims
+                dim: write_region.get(dim, slice(None)) for dim in dims
             }
 
             if self._append_dim is not None and self._append_dim in dims:

@@ -2051,6 +2051,27 @@ class ZarrBase(CFEncodedBase):
             with xr.open_zarr(store, consolidated=consolidated) as actual:
                 assert_identical(actual, nonzeros)
 
+    def test_write_region_metadata(self):
+        """Metadata should not be overwritten in "region" writes."""
+        template = Dataset(
+            {"u": (("x",), np.zeros(10), {"variable": "template"})},
+            attrs={"global": "template"},
+        )
+        data = Dataset(
+            {"u": (("x",), np.arange(1, 11), {"variable": "data"})},
+            attrs={"global": "data"},
+        )
+        expected = Dataset(
+            {"u": (("x",), np.arange(1, 11), {"variable": "template"})},
+            attrs={"global": "template"},
+        )
+
+        with self.create_zarr_target() as store:
+            template.to_zarr(store, compute=False)
+            data.to_zarr(store, region={"x": slice(None)})
+            with self.open(store) as actual:
+                assert_identical(actual, expected)
+
     def test_write_region_errors(self):
         data = Dataset({"u": (("x",), np.arange(5))})
         data2 = Dataset({"u": (("x",), np.array([10, 11]))})
