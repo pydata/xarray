@@ -37,6 +37,8 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when being passed by :py:func:`encode_cf_datetime`.
+  By `Zebedee Nicholls <https://github.com/znicholls>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
 - Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`, :pull:`4454`).
@@ -79,7 +81,7 @@ v0.16.1 (2020-09-20)
 This patch release fixes an incompatibility with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
 improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
-bug fixes. Our documentation has a number of improvements, including fixing all 
+bug fixes. Our documentation has a number of improvements, including fixing all
 doctests and confirming their accuracy on every commit.
 
 Many thanks to the 36 contributors who contributed to this release:
@@ -159,7 +161,7 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
-- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
+- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`)
   By `Tom Augspurger <https://github.com/TomAugspurger>`_
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
