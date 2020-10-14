@@ -58,6 +58,8 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Ensure tests are not skipped in the `py38-all-but-dask` test environment
+  (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 
