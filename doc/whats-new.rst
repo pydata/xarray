@@ -30,6 +30,8 @@ New Features
 - :py:func:`open_dataset` and :py:func:`open_mfdataset`
   now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+- Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
