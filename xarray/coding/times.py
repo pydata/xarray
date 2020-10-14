@@ -55,10 +55,10 @@ def _netcdf_to_numpy_timeunit(units):
 
 def _ensure_padded_year(ref_date):
     # Reference dates without a padded year (e.g. since 1-1-1 or since 2-3-4)
-    # are ambiguous (is it YMD or DMY). This can lead to some very odd
+    # are ambiguous (is it YMD or DMY?). This can lead to some very odd
     # behaviour e.g. pandas (via dateutil) passes '1-1-1 00:00:0.0' as
     # '2001-01-01 00:00:00' (because it assumes a) DMY and b) that year 1 is
-    # shorthand for 2001 (like 02 would be shorthand for year 2002).
+    # shorthand for 2001 (like 02 would be shorthand for year 2002)).
 
     # Here we ensure that there is always a four-digit year, with the
     # assumption being that year comes first if we get something ambiguous.
