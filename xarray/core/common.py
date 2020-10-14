@@ -812,8 +812,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         center : bool or mapping, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If True (default), the object's attributes (`attrs`) will be copied
+            from the original object to the new one.  If False, the new
             object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
@@ -863,8 +863,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(

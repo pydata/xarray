@@ -64,8 +64,8 @@ class Rolling:
         center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If None (default) or True, the object's attributes (`attrs`) will be
+            copied from the original object to the new one. If False, the new
             object will be returned without attributes.
 
         Returns
@@ -89,7 +89,7 @@ class Rolling:
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
         self.keep_attrs = keep_attrs
 
     def __repr__(self):
@@ -181,8 +181,8 @@ class DataArrayRolling(Rolling):
         center : bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If None (default) or True, the object's attributes (`attrs`) will be
+            copied from the original object to the new one. If False, the new
             object will be returned without attributes.
 
         Returns
@@ -196,8 +196,6 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
         super().__init__(
             obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
         )
@@ -294,8 +292,14 @@ class DataArrayRolling(Rolling):
         window = self.obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
         )
+
+        attrs = self.obj.attrs if self.keep_attrs else {}
+
         result = DataArray(
-            window, dims=self.obj.dims + tuple(window_dim), coords=self.obj.coords
+            window,
+            dims=self.obj.dims + tuple(window_dim),
+            coords=self.obj.coords,
+            attrs=attrs,
         )
         return result.isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
@@ -354,14 +358,16 @@ class DataArrayRolling(Rolling):
             for d in self.dim
         }
         windows = self.construct(rolling_dim)
-        result = windows.reduce(func, dim=list(rolling_dim.values()), **kwargs)
+        result = windows.reduce(
+            func, dim=list(rolling_dim.values()), keep_attrs=self.keep_attrs, **kwargs
+        )
 
         # Find valid windows based on count.
         counts = self._counts()
         return result.where(counts >= self.min_periods)
 
     def _counts(self):
-        """ Number of non-nan entries in each rolling window. """
+        """Number of non-nan entries in each rolling window."""
 
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
@@ -422,7 +428,10 @@ class DataArrayRolling(Rolling):
 
         if self.center[0]:
             values = values[valid]
-        result = DataArray(values, self.obj.coords)
+
+        attrs = self.obj.attrs if self.keep_attrs else {}
+
+        result = DataArray(values, self.obj.coords, attrs=attrs)
 
         return result
 
@@ -473,8 +482,8 @@ class DatasetRolling(Rolling):
         center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
         keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            If None (default) or True, the object's attributes (`attrs`) will be
+            copied from the original object to the new one. If False, the new
             object will be returned without attributes.
 
         Returns
@@ -587,6 +596,15 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing 'keep_attrs' to 'construct' is deprecated."
+                " Please pass 'keep_attrs' directly to ``rolling``",
+                FutureWarning,
+            )
+        else:
+            keep_attrs = self.keep_attrs
+
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
                 raise ValueError(
@@ -599,12 +617,9 @@ class DatasetRolling(Rolling):
         )
         stride = self._mapping_to_list(stride, default=1)
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-
         dataset = {}
         for key, da in self.obj.data_vars.items():
-            # keeps rollings only for the dataset depending on slf.dim
+            # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
             if len(dims) > 0:
                 wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
@@ -614,7 +629,13 @@ class DatasetRolling(Rolling):
                 )
             else:
                 dataset[key] = da
-        return Dataset(dataset, coords=self.obj.coords).isel(
+
+            if not keep_attrs:
+                dataset[key].attrs = {}
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
         )
 

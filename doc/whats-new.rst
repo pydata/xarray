@@ -32,6 +32,10 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also respect the ``keep_attrs``
+  keyword for their ``DataArray``s (previously only the global attrs were retained). ``keep_attrs``
+  is now set to ``True`` per default for rolling operations (:issue:`4497`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Bug fixes
 ~~~~~~~~~

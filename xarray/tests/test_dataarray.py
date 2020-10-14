@@ -6295,6 +6295,7 @@ def test_rolling_properties(da):
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
         da.rolling(time=-2)
+
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
         da.rolling(time=2, min_periods=0)
 
@@ -6536,6 +6537,41 @@ def test_ndrolling_construct(center, fill_value):
         .construct(z="z1", fill_value=fill_value)
     )
     assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [("reduce", (np.mean,)), ("mean", ()), ("construct", ("window_dim",))],
+)
+def test_rolling_keep_attrs(funcname, argument):
+
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = DataArray(
+        data,
+        dims=("coord"),
+        coords={"coord": coords},
+        attrs=attrs_da,
+    )
+
+    # attrs are now kept per default
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    dat = func(*argument)
+    assert dat.attrs == attrs_da
+
+    # discard attrs
+    func = getattr(ds.rolling(dim={"coord": 5}, keep_attrs=False), funcname)
+    dat = func(*argument)
+    assert dat.attrs == {}
+
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    dat = func(*argument)
+    assert dat.attrs == {}
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

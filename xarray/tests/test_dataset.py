@@ -5995,33 +5995,69 @@ def test_coarsen_keep_attrs():
     xr.testing.assert_identical(ds, ds2)
 
 
-def test_rolling_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [("reduce", (np.mean,)), ("mean", ()), ("construct", ("window_dim",))],
+)
+def test_rolling_keep_attrs(funcname, argument):
+    global_attrs = {"units": "test", "long_name": "testing"}
+    attrs_da = {"da_attr": "test"}
 
-    var1 = np.linspace(10, 15, 100)
-    var2 = np.linspace(5, 10, 100)
+    data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        data_vars={"da": ("coord", data)},
         coords={"coord": coords},
-        attrs=_attrs,
+        attrs=global_attrs,
     )
+    ds.da.attrs = attrs_da
 
-    # Test dropped attrs
-    dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
+    # attrs are now kept per default
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    dat = func(*argument)
+    assert dat.attrs == global_attrs
+    assert dat.da.attrs == attrs_da
+
+    # discard attrs
+    func = getattr(ds.rolling(dim={"coord": 5}, keep_attrs=False), funcname)
+    dat = func(*argument)
     assert dat.attrs == {}
+    assert dat.da.attrs == {}
 
-    # Test kept attrs using dataset keyword
-    dat = ds.rolling(
-        dim={"coord": 5}, min_periods=None, center=False, keep_attrs=True
-    ).mean()
-    assert dat.attrs == _attrs
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    dat = func(*argument)
+    assert dat.attrs == {}
+    assert dat.da.attrs == {}
 
-    # Test kept attrs using global option
-    with set_options(keep_attrs=True):
-        dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
-    assert dat.attrs == _attrs
+
+def test_rolling_keep_attrs_construct_deprecated():
+    global_attrs = {"units": "test", "long_name": "testing"}
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"da": ("coord", data)},
+        coords={"coord": coords},
+        attrs=global_attrs,
+    )
+    ds.da.attrs = attrs_da
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing 'keep_attrs' to 'construct' is deprecated"
+    ):
+        dat = ds.rolling(dim={"coord": 5}, keep_attrs=True).construct(
+            "window_dim", keep_attrs=False
+        )
+
+    # takes precedence over 'keep_attrs' passed to rolling
+    assert dat.attrs == {}
+    assert dat.da.attrs == {}
 
 
 def test_rolling_properties(ds):
