@@ -4473,6 +4473,28 @@ class TestDataset:
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
 
+    @pytest.mark.parametrize(
+        "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
+    )
+    def test_propagate_attrs(self, func):
+
+        da = DataArray(range(5), name="a", attrs={"attr": "da"})
+        ds = Dataset({"a": da}, attrs={"attr": "ds"})
+
+        # test defaults
+        assert func(ds).attrs == ds.attrs
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=True):
+            assert func(ds).attrs == ds.attrs
+            assert func(ds).a.attrs == ds.a.attrs
+
     def test_where(self):
         ds = Dataset({"a": ("x", range(5))})
         expected = Dataset({"a": ("x", [np.nan, np.nan, 2, 3, 4])})

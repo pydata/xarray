@@ -3,7 +3,7 @@ import numbers
 
 import numpy as np
 
-from .options import OPTIONS
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
 from .utils import not_implemented
 
@@ -77,6 +77,7 @@ class SupportsArithmetic:
             dataset_fill_value=np.nan,
             kwargs=kwargs,
             dask="allowed",
+            keep_attrs=_get_keep_attrs(default=True),
         )
 
     # this has no runtime function - these are listed so IDEs know these
