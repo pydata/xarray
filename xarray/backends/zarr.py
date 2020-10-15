@@ -208,7 +208,7 @@ def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for zarr " "backend:  %r" % invalid
+                "unexpected encoding parameters for zarr backend:  %r" % invalid
             )
     else:
         for k in list(encoding):

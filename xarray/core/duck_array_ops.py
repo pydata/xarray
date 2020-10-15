@@ -325,6 +325,8 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
+            if name in ["sum", "prod"]:
+                kwargs.pop("min_count", None)
             func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
@@ -361,7 +363,7 @@ median = _create_nan_agg_method("median", dask_module=dask_array_compat)
 median.numeric_only = True
 prod = _create_nan_agg_method("prod")
 prod.numeric_only = True
-sum.available_min_count = True
+prod.available_min_count = True
 cumprod_1d = _create_nan_agg_method("cumprod")
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum")

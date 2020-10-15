@@ -102,7 +102,7 @@ class BaseCFTimeOffset:
         import cftime
 
         if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract a cftime.datetime " "from a time offset.")
+            raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
@@ -122,7 +122,7 @@ class BaseCFTimeOffset:
 
     def __rsub__(self, other):
         if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
-            raise TypeError("Cannot subtract cftime offsets of differing " "types")
+            raise TypeError("Cannot subtract cftime offsets of differing types")
         return -self + other
 
     def __apply__(self):
