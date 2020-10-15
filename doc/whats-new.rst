@@ -56,6 +56,15 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Optional dependencies can be installed along with xarray by specifying
+  extras as ``pip install "xarray[extra]"`` where ``extra`` can be one of ``io``,
+  ``accel``, ``parallel``, ``viz`` and ``complete``. See docs for updated
+  :ref:`installation instructions <installation-instructions>`.
+  (:issue:`2888`, :pull:`4480`).
+  By `Ashwin Vishnu <https://github.com/ashwinvis>`_, `Justus Magin
+  <https://github.com/keewis>`_ and `Mathias Hauser
+  <https://github.com/mathause>`_.
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
