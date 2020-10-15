@@ -116,7 +116,15 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
+@contextmanager
+def dummy_context():
+    yield None
+
+
 def raise_if_dask_computes(max_computes=0):
+    # return a dummy context manager so that this can be used for non-dask objects
+    if not has_dask:
+        return dummy_context()
     scheduler = CountingScheduler(max_computes)
     return dask.config.set(scheduler=scheduler)
 
