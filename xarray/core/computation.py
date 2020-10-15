@@ -42,6 +42,14 @@ _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
+def _first_of_type(args, kind):
+    """ Return either first object of type 'kind' or raise if not found. """
+    for arg in args:
+        if isinstance(arg, kind):
+            return arg
+    raise ValueError("This should be unreachable.")
+
+
 class _UFuncSignature:
     """Core dimensions signature for a given function.
 
@@ -252,8 +260,9 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs and hasattr(args[0], "name"):
-        name = args[0].name
+    if keep_attrs:
+        first_obj = _first_of_type(args, DataArray)
+        name = first_obj.name
     else:
         name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
@@ -269,6 +278,14 @@ def apply_dataarray_vfunc(
     else:
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
+
+    if keep_attrs:
+        if isinstance(out, tuple):
+            for da in out:
+                # This is adding attrs in place
+                da._copy_attrs_from(first_obj)
+        else:
+            out._copy_attrs_from(first_obj)
 
     return out
 
@@ -390,14 +407,15 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
-
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
             "dataset_fill_value argument."
         )
+
+    if keep_attrs:
+        first_obj = _first_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
@@ -417,9 +435,11 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs and isinstance(first_obj, Dataset):
+    if keep_attrs:
         if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+            for ds in out:
+                # This is adding attrs in place
+                ds._copy_attrs_from(first_obj)
         else:
             out._copy_attrs_from(first_obj)
     return out
@@ -595,6 +615,8 @@ def apply_variable_ufunc(
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
+    first_obj = _first_of_type(args, Variable)
+
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
     )
@@ -734,8 +756,8 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs and isinstance(args[0], Variable):
-            var.attrs.update(args[0].attrs)
+        if keep_attrs:
+            var.attrs.update(first_obj.attrs)
         output.append(var)
 
     if signature.num_outputs == 1:

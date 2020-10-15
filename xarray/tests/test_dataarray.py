@@ -9,7 +9,15 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import DataArray, Dataset, IndexVariable, Variable, align, broadcast
+from xarray import (
+    DataArray,
+    Dataset,
+    IndexVariable,
+    Variable,
+    align,
+    broadcast,
+    set_options,
+)
 from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
@@ -2485,6 +2493,21 @@ class TestDataArray:
         new_actual = actual.assign_attrs({"c": 3})
         assert_identical(new_actual, expected)
         assert actual.attrs == {"a": 1, "b": 2}
+
+    @pytest.mark.parametrize(
+        "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
+    )
+    def test_propagate_attrs(self, func):
+        da = DataArray(self.va)
+
+        # test defaults
+        assert func(da).attrs == da.attrs
+
+        with set_options(keep_attrs=False):
+            assert func(da).attrs == {}
+
+        with set_options(keep_attrs=True):
+            assert func(da).attrs == da.attrs
 
     def test_fillna(self):
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")

@@ -1060,7 +1060,7 @@ class Variable(
         """
         import sparse
 
-        # TODO  what to do if dask-backended?
+        # TODO: what to do if dask-backended?
         if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
@@ -1286,7 +1286,7 @@ class Variable(
         if isinstance(end_values, dict):
             end_values = self._pad_options_dim_to_index(end_values)
 
-        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
@@ -1582,7 +1582,6 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
@@ -1624,24 +1623,14 @@ class Variable(
         if dim is not None:
             axis = self.get_axis_num(dim)
 
-        if allow_lazy is not None:
-            warnings.warn(
-                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
-                DeprecationWarning,
-            )
-        else:
-            allow_lazy = True
-
-        input_data = self.data if allow_lazy else self.values
-
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis is not None:
-                data = func(input_data, axis=axis, **kwargs)
+                data = func(self.data, axis=axis, **kwargs)
             else:
-                data = func(input_data, **kwargs)
+                data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
@@ -2113,8 +2102,14 @@ class Variable(
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             with np.errstate(all="ignore"):
-                return self.__array_wrap__(f(self.data, *args, **kwargs))
+                result = self.__array_wrap__(f(self.data, *args, **kwargs))
+                if keep_attrs:
+                    result.attrs = self.attrs
+                return result
 
         return func
 
@@ -2146,7 +2141,7 @@ class Variable(
                 raise TypeError("cannot add a Dataset to a Variable in-place")
             self_data, other_data, dims = _broadcast_compat_data(self, other)
             if dims != self.dims:
-                raise ValueError("dimensions cannot change for in-place " "operations")
+                raise ValueError("dimensions cannot change for in-place operations")
             with np.errstate(all="ignore"):
                 self.values = f(self_data, other_data)
             return self

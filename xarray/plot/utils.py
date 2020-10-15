@@ -421,9 +421,9 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:

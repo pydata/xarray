@@ -197,7 +197,7 @@ def calculate_dimensions(variables: Mapping[Hashable, Variable]) -> Dict[Hashabl
         for dim, size in zip(var.dims, var.shape):
             if dim in scalar_vars:
                 raise ValueError(
-                    "dimension %r already exists as a scalar " "variable" % dim
+                    "dimension %r already exists as a scalar variable" % dim
                 )
             if dim not in dims:
                 dims[dim] = size
@@ -286,7 +286,7 @@ def merge_indexes(
     new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}
     new_variables.update(vars_to_replace)
 
-    # update dimensions if necessary  GH: 3512
+    # update dimensions if necessary, GH: 3512
     for k, v in new_variables.items():
         if any(d in dims_to_replace for d in v.dims):
             new_dims = [dims_to_replace.get(d, d) for d in v.dims]
@@ -357,6 +357,34 @@ def split_indexes(
 def _assert_empty(args: tuple, msg: str = "%s") -> None:
     if args:
         raise ValueError(msg % args)
+
+
+def _maybe_chunk(
+    name,
+    var,
+    chunks=None,
+    token=None,
+    lock=None,
+    name_prefix="xarray-",
+    overwrite_encoded_chunks=False,
+):
+    from dask.base import tokenize
+
+    if chunks is not None:
+        chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
+    if var.ndim:
+        # when rechunking by different amounts, make sure dask names change
+        # by provinding chunks as an input to tokenize.
+        # subtle bugs result otherwise. see GH3350
+        token2 = tokenize(name, token if token else var._data, chunks)
+        name2 = f"{name_prefix}{name}-{token2}"
+        var = var.chunk(chunks, name=name2, lock=lock)
+
+        if overwrite_encoded_chunks and var.chunks is not None:
+            var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
+        return var
+    else:
+        return var
 
 
 def as_dataset(obj: Any) -> "Dataset":
@@ -1286,7 +1314,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if utils.is_dict_like(key):
             raise NotImplementedError(
-                "cannot yet use a dictionary as a key " "to set Dataset values"
+                "cannot yet use a dictionary as a key to set Dataset values"
             )
 
         self.update({key: value})
@@ -1645,7 +1673,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if mode not in ["w", "w-", "a"]:
             # TODO: figure out how to handle 'r+'
             raise ValueError(
-                "The only supported options for mode are 'w'," "'w-' and 'a'."
+                "The only supported options for mode are 'w', 'w-' and 'a'."
             )
         from ..backends.api import to_zarr
 
@@ -1761,7 +1789,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         chunked : xarray.Dataset
         """
-        from dask.base import tokenize
 
         if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
@@ -1774,26 +1801,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     "object: %s" % bad_dims
                 )
 
-        def selkeys(dict_, keys):
-            if dict_ is None:
-                return None
-            return {d: dict_[d] for d in keys if d in dict_}
-
-        def maybe_chunk(name, var, chunks):
-            chunks = selkeys(chunks, var.dims)
-            if not chunks:
-                chunks = None
-            if var.ndim > 0:
-                # when rechunking by different amounts, make sure dask names change
-                # by provinding chunks as an input to tokenize.
-                # subtle bugs result otherwise. see GH3350
-                token2 = tokenize(name, token if token else var._data, chunks)
-                name2 = f"{name_prefix}{name}-{token2}"
-                return var.chunk(chunks, name=name2, lock=lock)
-            else:
-                return var
-
-        variables = {k: maybe_chunk(k, v, chunks) for k, v in self.variables.items()}
+        variables = {
+            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
+            for k, v in self.variables.items()
+        }
         return self._replace(variables)
 
     def _validate_indexers(
@@ -4260,7 +4271,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
-        allow_lazy: bool = None,
         **kwargs: Any,
     ) -> "Dataset":
         """Reduce this dataset by applying `func` along some dimension(s).
@@ -4335,7 +4345,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         dim=reduce_dims,
                         keep_attrs=keep_attrs,
                         keepdims=keepdims,
-                        allow_lazy=allow_lazy,
                         **kwargs,
                     )
 
@@ -4394,12 +4403,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 1.0 2.0
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            for k, v in variables.items():
+                v._copy_attrs_from(self.data_vars[k])
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -4930,15 +4942,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     @staticmethod
-    def _unary_op(f, keep_attrs=False):
+    def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             variables = {}
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             for k, v in self._variables.items():
                 if k in self._coord_names:
                     variables[k] = v
                 else:
                     variables[k] = f(v, *args, **kwargs)
+                    if keep_attrs:
+                        variables[k].attrs = v._attrs
             attrs = self._attrs if keep_attrs else None
             return self._replace_with_new_dims(variables, attrs=attrs)
 
@@ -5098,9 +5115,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         elif label == "lower":
             kwargs_new = kwargs_start
         else:
-            raise ValueError(
-                "The 'label' argument has to be either " "'upper' or 'lower'"
-            )
+            raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
         variables = {}
 
@@ -5677,11 +5692,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def real(self):
-        return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
+        return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
     def imag(self):
-        return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
+        return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
