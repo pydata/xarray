@@ -68,7 +68,6 @@ Internal Changes
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
-
 .. _whats-new.0.16.1:
 
 v0.16.1 (2020-09-20)
