@@ -20,7 +20,7 @@ Optional dependencies
 
   If you are using pip to install xarray, optional dependencies can be installed by
   specifying *extras*. :ref:`installation-instructions` for both pip and conda
-  are mentioned below.
+  are given below.
 
 For netCDF and IO
 ~~~~~~~~~~~~~~~~~
