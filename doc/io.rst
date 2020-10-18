@@ -875,8 +875,8 @@ can be omitted as it will internally be set to ``'a'``.
     ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
+    :okexcept:
 
-    ds1 = xr.Dataset(
     ds1 = xr.Dataset(
         {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
         coords={
