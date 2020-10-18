@@ -32,6 +32,7 @@ from xarray.tests import (
     assert_equal,
     assert_identical,
     has_dask,
+    raise_if_dask_computes,
     raises_regex,
     requires_bottleneck,
     requires_dask,
@@ -41,8 +42,6 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
-
-from .test_dask import raise_if_dask_computes
 
 
 class TestDataArray:

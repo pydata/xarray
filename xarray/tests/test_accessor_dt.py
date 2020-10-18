@@ -6,13 +6,14 @@ import xarray as xr
 
 from . import (
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
     assert_identical,
+    raise_if_dask_computes,
     raises_regex,
     requires_cftime,
     requires_dask,
 )
-from .test_dask import assert_chunks_equal, raise_if_dask_computes
 
 
 class TestDatetimeAccessor:

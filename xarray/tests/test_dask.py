@@ -23,6 +23,7 @@ from . import (
     assert_equal,
     assert_frame_equal,
     assert_identical,
+    raise_if_dask_computes,
     raises_regex,
     requires_pint_0_15,
     requires_scipy_or_netCDF4,
@@ -34,30 +35,6 @@ da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
 
 ON_WINDOWS = sys.platform == "win32"
-
-
-class CountingScheduler:
-    """Simple dask scheduler counting the number of computes.
-
-    Reference: https://stackoverflow.com/questions/53289286/"""
-
-    def __init__(self, max_computes=0):
-        self.total_computes = 0
-        self.max_computes = max_computes
-
-    def __call__(self, dsk, keys, **kwargs):
-        self.total_computes += 1
-        if self.total_computes > self.max_computes:
-            raise RuntimeError(
-                "Too many computes. Total: %d > max: %d."
-                % (self.total_computes, self.max_computes)
-            )
-        return dask.get(dsk, keys, **kwargs)
-
-
-def raise_if_dask_computes(max_computes=0):
-    scheduler = CountingScheduler(max_computes)
-    return dask.config.set(scheduler=scheduler)
 
 
 def test_raise_if_dask_computes():
