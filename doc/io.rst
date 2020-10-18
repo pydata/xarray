@@ -929,7 +929,7 @@ key ``storage_options``, part of ``backend_kwargs``.
 This also works with ``open_mfdataset``, allowing you to pass a list of paths or
 a URL to be interpreted as a glob string.
 
-For older versions, and for writing, you must explicitly set up a ``MutibleMapping``
+For older versions, and for writing, you must explicitly set up a ``MutableMapping``
 instance and pass this, as follows:
 
 .. code:: python
