@@ -65,7 +65,7 @@ def align(
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-):
+) -> Tuple[Union["Dataset", "DataArray"], ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -660,7 +660,7 @@ def _broadcast_helper(arg, exclude, dims_map, common_coords):
         raise ValueError("all input must be Dataset or DataArray objects")
 
 
-def broadcast(*args, exclude=None):
+def broadcast(*args, exclude=None) -> Tuple[Union["Dataset", "DataArray"], ...]:
     """Explicitly broadcast any number of DataArray or Dataset objects against
     one another.
 
