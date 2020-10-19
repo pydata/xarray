@@ -925,3 +925,22 @@ def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _ALL_CALENDARS)
+def test_decode_ambiguous_time_warns(calendar):
+    # GH 4422, 4506
+    from cftime import num2date
+
+    dates = [1, 2, 3]
+    units = "days since 1-1-1"
+    expected = num2date(
+        dates, units, calendar=calendar, only_use_cftime_datetimes=True
+    )
+    with pytest.warns(None) as record:
+        result = decode_cf_datetime(dates, units, calendar=calendar)
+
+    np.testing.assert_array_equal(result, expected)
+
+    assert len(record) == 1
