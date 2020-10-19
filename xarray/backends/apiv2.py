@@ -23,7 +23,6 @@ def dataset_from_backend_dataset(
         chunks = {}
 
     if not (isinstance(chunks, (int, dict)) or chunks is None):
-
         if chunks != {}:
             raise ValueError(
                 "chunks must be an int, dict, 'auto', or None. "
@@ -45,6 +44,7 @@ def dataset_from_backend_dataset(
         ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
     elif engine == "zarr":
+
         if chunks == {}:
             try:
                 import dask.array  # noqa
