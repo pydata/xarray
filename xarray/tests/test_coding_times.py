@@ -939,10 +939,7 @@ def test_decode_ambiguous_time_warns(calendar):
 
     dates = [1, 2, 3]
     units = "days since 1-1-1"
-    expected = num2date(
-        dates, units, calendar=calendar, only_use_cftime_datetimes=True
-    )
-
+    expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
     exp_warn_type = SerializationWarning if standard_calendar else None
 
@@ -951,7 +948,8 @@ def test_decode_ambiguous_time_warns(calendar):
 
     if standard_calendar:
         relevant_warnings = [
-            r for r in record.list
+            r
+            for r in record.list
             if str(r.message).startswith("Ambiguous reference date string: 1-1-1")
         ]
         assert len(relevant_warnings) == 1
