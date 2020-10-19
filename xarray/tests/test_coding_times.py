@@ -391,15 +391,15 @@ def test_decode_multidim_time_outside_timestamp_range(calendar):
 
 
 @requires_cftime
-@pytest.mark.parametrize("calendar", ["360_day", "all_leap", "366_day"])
-def test_decode_non_standard_calendar_single_element(calendar):
+@pytest.mark.parametrize(
+    ("calendar", "num_time"),
+    [("360_day", 720058.0), ("all_leap", 732059.0), ("366_day", 732059.0)],
+)
+def test_decode_non_standard_calendar_single_element(calendar, num_time):
     import cftime
 
     units = "days since 0001-01-01"
 
-    dt = cftime.datetime(2001, 2, 29)
-
-    num_time = cftime.date2num(dt, units, calendar)
     actual = coding.times.decode_cf_datetime(num_time, units, calendar=calendar)
 
     expected = np.asarray(
