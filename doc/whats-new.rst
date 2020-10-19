@@ -36,7 +36,13 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
-- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Previously, without ``cftime``, such times would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would be passed (via ``dateutil``) to "since 2001-1-1".
+- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when
+  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
+  it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
+  and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
+  would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
+  be passed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
