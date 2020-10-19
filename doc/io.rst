@@ -105,6 +105,12 @@ Dataset and DataArray objects, and no array values are loaded into memory until
 you try to perform some sort of actual computation. For an example of how these
 lazy arrays work, see the OPeNDAP section below.
 
+There may be minor differences in the :py:class:`Dataset` object returned
+when reading a NetCDF file with different engines. For example,
+single-valued attributes are returned as scalars by the default
+``engine=netcdf4``, but as arrays of size ``(1,)`` when reading with
+``engine=h5netcdf``.
+
 It is important to note that when you modify values of a Dataset, even one
 linked to files on disk, only the in-memory copy you are manipulating in xarray
 is modified: the original file on disk is never touched.
@@ -1045,6 +1051,11 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 We recommend installing PyNIO via conda::
 
     conda install -c conda-forge pynio
+
+    .. note::
+    
+    PyNIO is no longer actively maintained and conflicts with netcdf4 > 1.5.3.
+    The PyNIO backend may be moved outside of xarray in the future.
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 

@@ -342,7 +342,8 @@ class VariableSubclassobjects:
         assert_array_equal(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(["x"], x, {"units": "meters"})
-        assert_identical(base_v, +v2)
+        with set_options(keep_attrs=False):
+            assert_identical(base_v, +v2)
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
@@ -1570,10 +1571,6 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "cannot supply both"):
             v.mean(dim="x", axis=0)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=True)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=False)
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])

@@ -320,7 +320,6 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     assert not result.attrs
 
 
-@pytest.mark.xfail(reason="xr.Dataset.map does not copy attrs of DataArrays GH: 3595")
 @pytest.mark.parametrize("operation", ("sum", "mean"))
 def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595

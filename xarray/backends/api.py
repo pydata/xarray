@@ -25,7 +25,7 @@ from ..core.combine import (
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
-from ..core.dataset import Dataset
+from ..core.dataset import Dataset, _maybe_chunk
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
@@ -87,7 +87,7 @@ def _get_default_engine_grib():
     if msgs:
         raise ValueError(" or\n".join(msgs))
     else:
-        raise ValueError("PyNIO or cfgrib is required for accessing " "GRIB files")
+        raise ValueError("PyNIO or cfgrib is required for accessing GRIB files")
 
 
 def _get_default_engine_gz():
@@ -191,14 +191,15 @@ def _validate_dataset_names(dataset):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
-                    "Invalid name for DataArray or Dataset key: "
+                    f"Invalid name {name!r} for DataArray or Dataset key: "
                     "string must be length 1 or greater for "
                     "serialization to netCDF files"
                 )
         elif name is not None:
             raise TypeError(
-                "DataArray.name or Dataset key must be either a "
-                "string or None for serialization to netCDF files"
+                f"Invalid name {name!r} for DataArray or Dataset key: "
+                "must be either a string or None for serialization to netCDF "
+                "files"
             )
 
     for k in dataset.variables:
@@ -214,22 +215,22 @@ def _validate_attrs(dataset):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
-                    "Invalid name for attr: string must be "
+                    f"Invalid name for attr {name!r}: string must be "
                     "length 1 or greater for serialization to "
                     "netCDF files"
                 )
         else:
             raise TypeError(
-                "Invalid name for attr: {} must be a string for "
-                "serialization to netCDF files".format(name)
+                f"Invalid name for attr: {name!r} must be a string for "
+                "serialization to netCDF files"
             )
 
         if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
             raise TypeError(
-                "Invalid value for attr: {} must be a number, "
+                f"Invalid value for attr {name!r}: {value!r} must be a number, "
                 "a string, an ndarray or a list/tuple of "
                 "numbers/strings for serialization to netCDF "
-                "files".format(value)
+                "files"
             )
 
     # Check attrs on the dataset itself
@@ -461,9 +462,8 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
-    extra_kwargs = {}
 
-    def maybe_decode_store(store, chunks, lock=False):
+    def maybe_decode_store(store, chunks):
         ds = conventions.decode_cf(
             store,
             mask_and_scale=mask_and_scale,
@@ -529,7 +529,12 @@ def open_dataset(
                 chunks = dict.fromkeys(ds.dims, chunks)
 
             variables = {
-                k: store.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
+                k: _maybe_chunk(
+                    k,
+                    v,
+                    store.get_chunk(k, v, chunks),
+                    overwrite_encoded_chunks=overwrite_encoded_chunks,
+                )
                 for k, v in ds.variables.items()
             }
             ds2 = ds._replace(variables)
@@ -550,12 +555,13 @@ def open_dataset(
         if engine is None:
             engine = _autodetect_engine(filename_or_obj)
 
-        if engine in ["netcdf4", "h5netcdf"]:
+        extra_kwargs = {}
+        if group is not None:
             extra_kwargs["group"] = group
+        if lock is not None:
             extra_kwargs["lock"] = lock
-        elif engine in ["pynio", "pseudonetcdf", "cfgrib"]:
-            extra_kwargs["lock"] = lock
-        elif engine == "zarr":
+
+        if engine == "zarr":
             backend_kwargs = backend_kwargs.copy()
             backend_kwargs.pop("fs", None)
             overwrite_encoded_chunks = backend_kwargs.pop(
@@ -1250,7 +1256,7 @@ def save_mfdataset(
     """
     if mode == "w" and len(set(paths)) < len(paths):
         raise ValueError(
-            "cannot use mode='w' when writing multiple " "datasets to the same path"
+            "cannot use mode='w' when writing multiple datasets to the same path"
         )
 
     for obj in datasets:

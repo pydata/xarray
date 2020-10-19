@@ -908,11 +908,13 @@ class CFEncodedBase(DatasetIOBase):
         ve = (ValueError, "string must be length 1 or")
         data = np.random.random((2, 2))
         da = xr.DataArray(data)
-        for name, e in zip([0, (4, 5), True, ""], [te, te, te, ve]):
+        for name, (error, msg) in zip([0, (4, 5), True, ""], [te, te, te, ve]):
             ds = Dataset({name: da})
-            with raises_regex(*e):
+            with pytest.raises(error) as excinfo:
                 with self.roundtrip(ds):
                     pass
+            excinfo.match(msg)
+            excinfo.match(repr(name))
 
     def test_encoding_kwarg(self):
         ds = Dataset({"x": ("y", np.arange(10.0))})
@@ -4308,17 +4310,17 @@ class TestValidateAttrs:
             ds, attrs = new_dataset_and_attrs()
 
             attrs[123] = "test"
-            with raises_regex(TypeError, "Invalid name for attr"):
+            with raises_regex(TypeError, "Invalid name for attr: 123"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[MiscObject()] = "test"
-            with raises_regex(TypeError, "Invalid name for attr"):
+            with raises_regex(TypeError, "Invalid name for attr: "):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[""] = "test"
-            with raises_regex(ValueError, "Invalid name for attr"):
+            with raises_regex(ValueError, "Invalid name for attr '':"):
                 ds.to_netcdf("test.nc")
 
             # This one should work
@@ -4329,12 +4331,12 @@ class TestValidateAttrs:
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = {"a": 5}
-            with raises_regex(TypeError, "Invalid value for attr"):
+            with raises_regex(TypeError, "Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = MiscObject()
-            with raises_regex(TypeError, "Invalid value for attr"):
+            with raises_regex(TypeError, "Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
@@ -4699,3 +4701,25 @@ def test_open_fsspec():
     url = "memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
     assert xr.concat([ds, ds0], dim="time") == ds2
+
+
+@requires_h5netcdf
+def test_load_single_value_h5netcdf(tmp_path):
+    """Test that numeric single-element vector attributes are handled fine.
+
+    At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
+    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    backend.  This was leading to a ValueError upon loading a single value from
+    a file, see #4471.  Test that loading causes no failure.
+    """
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                np.array([0]), dims=("x",), attrs={"scale_factor": 1, "add_offset": 0}
+            )
+        }
+    )
+    ds.to_netcdf(tmp_path / "test.nc")
+    with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
+        ds2["test"][0].load()
+>>>>>>> master
