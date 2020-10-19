@@ -19,8 +19,12 @@ ENGINES = {
 def dataset_from_backend_dataset(
     ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
 ):
+    if chunks == 'auto':
+        chunks = {}
+
     if not (isinstance(chunks, (int, dict)) or chunks is None):
-        if chunks != "auto":
+
+        if chunks != {}:
             raise ValueError(
                 "chunks must be an int, dict, 'auto', or None. "
                 "Instead found %s. " % chunks
@@ -41,8 +45,7 @@ def dataset_from_backend_dataset(
         ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
     elif engine == "zarr":
-
-        if chunks == "auto":
+        if chunks == {}:
             try:
                 import dask.array  # noqa
             except ImportError:
