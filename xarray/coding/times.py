@@ -76,7 +76,7 @@ def _ensure_padded_year(ref_date):
     warning_msg = (
         f"Ambiguous reference date string: {ref_date}. The first value is "
         "assumed to be the year hence will be padded with zeros to remove "
-        f"the ambiguity (the padded reference date string is: {ref_date_padded}. "
+        f"the ambiguity (the padded reference date string is: {ref_date_padded}). "
         "To remove this message, remove the ambiguity by padding your reference "
         "date strings with zeros."
     )
@@ -92,7 +92,7 @@ def _unpack_netcdf_time_units(units):
     # so it will be correctly understood by pandas (via dateutil).
     matches = re.match(r"(.+) since (.+)", units)
     if not matches:
-        raise ValueError("invalid time units: %s" % units)
+        raise ValueError(f"invalid time units: {units}")
 
     delta_units, ref_date = [s.strip() for s in matches.groups()]
     ref_date = _ensure_padded_year(ref_date)

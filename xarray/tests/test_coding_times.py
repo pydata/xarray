@@ -114,7 +114,7 @@ def test_cf_datetime(num_dates, units, calendar):
     assert_array_equal(num_dates, np.around(encoded, 1))
     if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
         # verify that wrapping with a pandas.Index works
-        # note that it *does not* currently work to even put
+        # note that it *does not* currently work to put
         # non-datetime64 compatible dates into a pandas.Index
         encoded, _, _ = coding.times.encode_cf_datetime(
             pd.Index(actual), units, calendar
@@ -933,20 +933,20 @@ def test_decode_ambiguous_time_warns(calendar):
     # GH 4422, 4506
     from cftime import num2date
 
-    # we don't even attempt to decode non-standard calendards with
+    # we don't decode non-standard calendards with
     # pandas so expect no warning will be emitted
-    standard_calendar = calendar in coding.times._STANDARD_CALENDARS
+    is_standard_calendar = calendar in coding.times._STANDARD_CALENDARS
 
     dates = [1, 2, 3]
     units = "days since 1-1-1"
     expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
-    exp_warn_type = SerializationWarning if standard_calendar else None
+    exp_warn_type = SerializationWarning if is_standard_calendar else None
 
     with pytest.warns(exp_warn_type) as record:
         result = decode_cf_datetime(dates, units, calendar=calendar)
 
-    if standard_calendar:
+    if is_standard_calendar:
         relevant_warnings = [
             r
             for r in record.list

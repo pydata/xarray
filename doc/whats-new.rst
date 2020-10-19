@@ -42,7 +42,7 @@ Bug fixes
   it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
   would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
-  be passed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
+  be parsed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
