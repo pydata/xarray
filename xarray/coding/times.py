@@ -63,15 +63,26 @@ def _ensure_padded_year(ref_date):
     # Here we ensure that there is always a four-digit year, with the
     # assumption being that year comes first if we get something ambiguous.
     matches_year = re.match(r".*\d{4}.*", ref_date)
-    if not matches_year:
-        # No four-digit strings, assume the first digits are the year and pad
-        # appropriately
-        # QUESTION: should we raise a warning or something here that we're doing this padding?
-        matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
-        ref_year, everything_else = [s for s in matches_start_digits.groups()]
-        ref_date = "{:04d}{}".format(int(ref_year), everything_else)
+    if matches_year:
+        # all good, return
+        return ref_date
 
-    return ref_date
+    # No four-digit strings, assume the first digits are the year and pad
+    # appropriately
+    matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+    ref_year, everything_else = [s for s in matches_start_digits.groups()]
+    ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
+
+    warning_msg = (
+        f"Ambiguous reference date string: {ref_date}. The first value is "
+        "assumed to be the year hence will be padded with zeros to remove "
+        f"the ambiguity (the padded reference date string is: {ref_date_padded}. "
+        "To remove this message, remove the ambiguity by padding your reference "
+        "date strings with zeros."
+    )
+    warnings.warn(warning_msg, SerializationWarning)
+
+    return ref_date_padded
 
 
 def _unpack_netcdf_time_units(units):

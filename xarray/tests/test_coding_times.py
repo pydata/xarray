@@ -933,14 +933,29 @@ def test_decode_ambiguous_time_warns(calendar):
     # GH 4422, 4506
     from cftime import num2date
 
+    # we don't even attempt to decode non-standard calendards with
+    # pandas so expect no warning will be emitted
+    standard_calendar = calendar in coding.times._STANDARD_CALENDARS
+
     dates = [1, 2, 3]
     units = "days since 1-1-1"
     expected = num2date(
         dates, units, calendar=calendar, only_use_cftime_datetimes=True
     )
-    with pytest.warns(None) as record:
+
+
+    exp_warn_type = SerializationWarning if standard_calendar else None
+
+    with pytest.warns(exp_warn_type) as record:
         result = decode_cf_datetime(dates, units, calendar=calendar)
 
-    np.testing.assert_array_equal(result, expected)
+    if standard_calendar:
+        relevant_warnings = [
+            r for r in record.list
+            if str(r.message).startswith("Ambiguous reference date string: 1-1-1")
+        ]
+        assert len(relevant_warnings) == 1
+    else:
+        assert not record
 
-    assert len(record) == 1
+    np.testing.assert_array_equal(result, expected)
