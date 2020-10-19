@@ -4722,4 +4722,3 @@ def test_load_single_value_h5netcdf(tmp_path):
     ds.to_netcdf(tmp_path / "test.nc")
     with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
         ds2["test"][0].load()
->>>>>>> master
