@@ -980,8 +980,9 @@ undesirable to write your entire dataset at once.
     existing Zarr store. It is up to the user to ensure that coordinates are
     consistent.
 
-To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
-with ``mode='a'`` on a Dataset containing the new variables.
+To add or overwrite entire variables, simple call :py:meth:`~Dataset.to_zarr`
+with ``mode='a'`` on a Dataset containing the new variables, passing in an
+existing Zarr store or path to a Zarr store.
 
 To resize and then append values along an existing dimension in a store, set
 ``append_dim``. This is a good option if data always arives in a particular
@@ -1042,7 +1043,8 @@ Zarr:
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr`` without any further
 coordination. The ``region`` provides a mapping from dimension names to Python
-``slice`` objects indicating where the data should be written, e.g.,
+``slice`` objects indicating where the data should be written (in index space,
+not coordinate space), e.g.,
 
 .. ipython:: python
 

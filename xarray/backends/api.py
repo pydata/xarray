@@ -1368,11 +1368,7 @@ def _validate_append_dim_and_encoding(
             for dim, size in existing_var.sizes.items():
                 if region is not None and dim in region:
                     start, stop, stride = region[dim].indices(size)
-                    if stride != 1:
-                        raise ValueError(
-                            "only stride=1 supported for limited region writes "
-                            "in to_zarr()."
-                        )
+                    assert stride == 1  # region was already validated above
                     size = stop - start
                 if dim != append_dim:
                     existing_sizes[dim] = size
