@@ -2102,8 +2102,14 @@ class Variable(
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             with np.errstate(all="ignore"):
-                return self.__array_wrap__(f(self.data, *args, **kwargs))
+                result = self.__array_wrap__(f(self.data, *args, **kwargs))
+                if keep_attrs:
+                    result.attrs = self.attrs
+                return result
 
         return func
 

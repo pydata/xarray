@@ -4410,12 +4410,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             foo      (dim_0, dim_1) float64 1.764 0.4002 0.9787 2.241 1.868 0.9773
             bar      (x) float64 1.0 2.0
         """
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         variables = {
             k: maybe_wrap_array(v, func(v, *args, **kwargs))
             for k, v in self.data_vars.items()
         }
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs:
+            for k, v in variables.items():
+                v._copy_attrs_from(self.data_vars[k])
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -4946,15 +4949,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return obj
 
     @staticmethod
-    def _unary_op(f, keep_attrs=False):
+    def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             variables = {}
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             for k, v in self._variables.items():
                 if k in self._coord_names:
                     variables[k] = v
                 else:
                     variables[k] = f(v, *args, **kwargs)
+                    if keep_attrs:
+                        variables[k].attrs = v._attrs
             attrs = self._attrs if keep_attrs else None
             return self._replace_with_new_dims(variables, attrs=attrs)
 
@@ -5691,11 +5699,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @property
     def real(self):
-        return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
+        return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
     def imag(self):
-        return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
+        return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 

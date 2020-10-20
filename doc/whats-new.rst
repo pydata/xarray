@@ -30,10 +30,13 @@ New Features
 - :py:func:`open_dataset` and :py:func:`open_mfdataset`
   now works with ``engine="zarr"`` (:issue:`3668`, :pull:`4003`, :pull:`4187`).
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
+- Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
 - Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`, :pull:`4454`).
@@ -54,8 +57,19 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Optional dependencies can be installed along with xarray by specifying
+  extras as ``pip install "xarray[extra]"`` where ``extra`` can be one of ``io``,
+  ``accel``, ``parallel``, ``viz`` and ``complete``. See docs for updated
+  :ref:`installation instructions <installation-instructions>`.
+  (:issue:`2888`, :pull:`4480`).
+  By `Ashwin Vishnu <https://github.com/ashwinvis>`_, `Justus Magin
+  <https://github.com/keewis>`_ and `Mathias Hauser
+  <https://github.com/mathause>`_.
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Ensure tests are not skipped in the `py38-all-but-dask` test environment
+  (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 

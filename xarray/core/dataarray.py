@@ -55,7 +55,7 @@ from .formatting import format_item
 from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
-from .options import OPTIONS
+from .options import OPTIONS, _get_keep_attrs
 from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
@@ -2734,13 +2734,19 @@ class DataArray(AbstractArray, DataWithCoords):
     def _unary_op(f: Callable[..., Any]) -> Callable[..., "DataArray"]:
         @functools.wraps(f)
         def func(self, *args, **kwargs):
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
                 warnings.filterwarnings(
                     "ignore", r"Mean of empty slice", category=RuntimeWarning
                 )
                 with np.errstate(all="ignore"):
-                    return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                    da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                if keep_attrs:
+                    da.attrs = self.attrs
+                return da
 
         return func
 
