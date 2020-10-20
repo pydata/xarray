@@ -2051,6 +2051,7 @@ class ZarrBase(CFEncodedBase):
             with xr.open_zarr(store, consolidated=consolidated) as actual:
                 assert_identical(actual, nonzeros)
 
+    @requires_dask
     def test_write_region_metadata(self):
         """Metadata should not be overwritten in "region" writes."""
         template = Dataset(
