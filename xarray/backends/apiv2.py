@@ -1,3 +1,4 @@
+import inspect
 import os
 
 from ..core.utils import is_remote_uri
@@ -23,7 +24,7 @@ def dataset_from_backend_dataset(
     chunks,
     cache,
     overwrite_encoded_chunks,
-    extra_tokens,
+    **extra_tokens,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
         if chunks != "auto":
@@ -76,6 +77,15 @@ def dataset_from_backend_dataset(
             ds.encoding["source"] = filename_or_obj
 
     return ds2
+
+
+def resolve_decoders_kwargs(decode_cf, engine, **decoders):
+    signature = inspect.signature(ENGINES[engine]).parameters
+    if decode_cf is False:
+        for d in decoders:
+            if d in signature and d != "use_cftime":
+                decoders[d] = decode_cf
+    return {k: v for k, v in decoders.items() if v is not None}
 
 
 def open_dataset(
@@ -202,19 +212,21 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    kwargs["decode_cf"] = decode_cf
-    kwargs["mask_and_scale"] = mask_and_scale
-    kwargs["decode_times"] = decode_times
-    kwargs["decode_timedelta"] = decode_timedelta
-    kwargs["use_cftime"] = use_cftime
-    kwargs["concat_characters"] = concat_characters
-    kwargs["decode_coords"] = decode_coords
-    kwargs["drop_variables"] = drop_variables
-
     filename_or_obj = _normalize_path(filename_or_obj)
 
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
+
+    decoders = resolve_decoders_kwargs(
+        decode_cf,
+        engine=engine,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        decode_timedelta=decode_timedelta,
+        concat_characters=concat_characters,
+        use_cftime=use_cftime,
+        decode_coords=decode_coords,
+    )
 
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
@@ -222,6 +234,8 @@ def open_dataset(
     open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
     backend_ds = open_backend_dataset(
         filename_or_obj,
+        drop_variables=drop_variables,
+        **decoders,
         **backend_kwargs,
         **{k: v for k, v in kwargs.items() if v is not None},
     )
@@ -232,7 +246,10 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
-        {**backend_kwargs, **kwargs},
+        drop_variables=drop_variables,
+        **decoders,
+        **backend_kwargs,
+        **kwargs,
     )
 
     return ds
