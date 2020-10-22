@@ -4,8 +4,9 @@ import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
+from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenDict, HiddenKeyDict
+from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
 
@@ -361,7 +362,8 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-    def get_chunk(self, name, var, chunks):
+    @staticmethod
+    def get_chunk(name, var, chunks):
         chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
 
         # Coordinate labels aren't chunked
@@ -389,6 +391,23 @@ class ZarrStore(AbstractWritableDataStore):
                         )
                 chunk_spec[dim] = chunks[dim]
         return chunk_spec
+
+    @classmethod
+    def maybe_chunk(cls, name, var, chunks, overwrite_encoded_chunks):
+        chunk_spec = cls.get_chunk(name, var, chunks)
+
+        if (var.ndim > 0) and (chunk_spec is not None):
+            from dask.base import tokenize
+
+            # does this cause any data to be read?
+            token2 = tokenize(name, var._data, chunks)
+            name2 = f"xarray-{name}-{token2}"
+            var = var.chunk(chunk_spec, name=name2, lock=None)
+            if overwrite_encoded_chunks and var.chunks is not None:
+                var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
+            return var
+        else:
+            return var
 
     def store(
         self,
@@ -659,5 +678,65 @@ def open_zarr(
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
     )
+
+    return ds
+
+
+def open_backend_dataset_zarr(
+    filename_or_obj,
+    decode_cf=True,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    group=None,
+    mode="r",
+    synchronizer=None,
+    consolidated=False,
+    consolidate_on_close=False,
+    chunk_store=None,
+):
+
+    if not decode_cf:
+        mask_and_scale = False
+        decode_times = False
+        concat_characters = False
+        decode_coords = False
+        decode_timedelta = False
+
+    store = ZarrStore.open_group(
+        filename_or_obj,
+        group=group,
+        mode=mode,
+        synchronizer=synchronizer,
+        consolidated=consolidated,
+        consolidate_on_close=consolidate_on_close,
+        chunk_store=chunk_store,
+    )
+
+    with close_on_error(store):
+        vars, attrs = store.load()
+        file_obj = store
+        encoding = store.get_encoding()
+
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+
+        ds = Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
 
     return ds
