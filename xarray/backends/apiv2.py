@@ -134,8 +134,9 @@ def open_dataset(
         change the behavior of coordinates corresponding to dimensions, which
         always load their data from disk into a ``pandas.Index``.
     decode_cf : bool, optional
-        Whether to decode these variables, assuming they were saved according
-        to CF conventions.
+        Setting ``decode_cf=False`` will disable ``mask_and_scale``,
+        ``decode_times``, ``decode_timedelta``, ``concat_characters``,
+        ``decode_coords``
     mask_and_scale : bool, optional
         If True, replace array values equal to `_FillValue` with NA and scale
         values according to the formula `original_values * scale_factor +
@@ -175,19 +176,23 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs: dict, optional
-        A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or
-        allow user control of dataset processing.
-    kwargs: dict, optional
-        A dictionary of keyword arguments to pass on to the backend, such as
-        **group** (path to the netCDF4 group in the given file to open given as a str),
-        **lock** (resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler),
-        **chunks** (int or dict, if chunks is provided, it is used to load the new dataset into dask
-        arrays).
+    backend_kwargs:
+        Additional keyword arguments passed on to the engine open function.
+    **kwargs: dict
+        Additional keyword arguments passed on to the engine open function.
+        For example:
+
+        - 'group': path to the netCDF4 group in the given file to open given as
+        a str,supported by "netcdf4", "h5netcdf", "zarr".
+
+        - 'lock': resource lock to use when reading data from disk. Only
+        relevant when using dask or another form of parallelism. By default,
+        appropriate locks are chosen to safely read and write files with the
+        currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
+        "pynio", "pseudonetcdf", "cfgrib".
+
+        See engine open function for kwargs accepted by each specific engine.
+
 
     Returns
     -------
