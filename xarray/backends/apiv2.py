@@ -17,7 +17,13 @@ ENGINES = {
 
 
 def dataset_from_backend_dataset(
-    ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
+    ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    extra_tokens,
 ):
     if not (isinstance(chunks, (int, dict)) or chunks is None):
         if chunks != "auto":
