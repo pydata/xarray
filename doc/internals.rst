@@ -43,7 +43,7 @@ xarray objects via the (readonly) :py:attr:`Dataset.variables
 :py:attr:`DataArray.variable <xarray.DataArray.variable>` attributes.
 
 
-.. _duck_arrays:
+.. _internals.duck_arrays:
 
 Duck arrays
 -----------
