@@ -34,3 +34,11 @@ will still cast to ``numpy`` arrays:
     of ``numpy``)
   * :py:meth:`Dataset.interpolate_na` and :py:meth:`DataArray.interpolate_na` (uses
     :py:func:`numpy.vectorize`)
+
+
+Extensions using duck arrays
+----------------------------
+Here's a list of libraries extending ``xarray`` to make working with wrapped duck arrays
+easier:
+
+- `pint-xarray <https://github.com/xarray-contrib/pint-xarray>`_
