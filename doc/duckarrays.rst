@@ -3,11 +3,11 @@
 Duck arrays
 ===========
 This is a high-level overview, for the technical details of integrating duck arrays with
-``xarray``, see :ref:`internals.duck_arrays`.
+``xarray`` see :ref:`internals.duck_arrays`.
 
 Missing features
 ----------------
-Most of the API does support duck arrays, but there are a areas where the code
+Most of the API does support duck arrays, but there are a few areas where the code
 will still cast to ``numpy`` arrays:
 
 - dimension coordinates, and thus all indexing operations:
