@@ -1,5 +1,7 @@
 blank_issues_enabled: true
 contact_links:
-  - name: General Question
+  - name: Usage question
     url: https://stackoverflow.com/questions/tagged/python-xarray
-    about: "If you have a question like *How do I append to an xarray.Dataset?* then please ask on Stack Overflow using the #python-xarray tag."
+    about: "Post a question on Stack Overflow using the #python-xarray
+    tag. These are regularly reviewed by xarray's maintainers, and questions which
+    include a reproducible example will receive a response."
