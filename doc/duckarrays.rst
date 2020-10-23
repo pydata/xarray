@@ -33,7 +33,7 @@ will still cast to ``numpy`` arrays:
   * :py:meth:`Dataset.rolling` and :py:meth:`DataArray.rolling` (uses internal functions
     of ``numpy``)
   * :py:meth:`Dataset.interpolate_na` and :py:meth:`DataArray.interpolate_na` (uses
-    :py:func:`numpy.vectorize`)
+    :py:class:`numpy.vectorize`)
 
 
 Extensions using duck arrays
