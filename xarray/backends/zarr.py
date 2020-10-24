@@ -499,22 +499,22 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if self.append_dim is not None and self.append_dim in dims:
-                # resize existing variable
+            if name in self.ds:
                 zarr_array = self.ds[name]
-                append_axis = dims.index(self.append_dim)
+                if self.append_dim is not None and self.append_dim in dims:
+                    # resize existing variable
+                    append_axis = dims.index(self.append_dim)
 
-                new_region = [slice(None)] * len(dims)
-                new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
-                region = tuple(new_region)
+                    new_region = [slice(None)] * len(dims)
+                    new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
+                    region = tuple(new_region)
 
-                new_shape = list(zarr_array.shape)
-                new_shape[append_axis] += v.shape[append_axis]
-                zarr_array.resize(new_shape)
-            elif name in self.ds:
-                # override existing variable
-                zarr_array = self.ds[name]
-                region = None
+                    new_shape = list(zarr_array.shape)
+                    new_shape[append_axis] += v.shape[append_axis]
+                    zarr_array.resize(new_shape)
+                else:
+                    # override existing variable
+                    region = None
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
