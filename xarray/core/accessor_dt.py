@@ -354,6 +354,12 @@ class DatetimeAccessor(Properties):
         "time", "Timestamps corresponding to datetimes", object
     )
 
+    isocalendar = Properties._tslib_field_accessor(
+        "isocalendar",
+        "A 3-tuple containing ISO year, week number, and weekday.",
+        object,
+    )
+
     is_month_start = Properties._tslib_field_accessor(
         "is_month_start",
         "Indicates whether the date is the first day of the month.",
