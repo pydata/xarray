@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
+from pandas.testing import assert_index_equal
+from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import (
@@ -3839,11 +3841,11 @@ class TestDataset:
         )
         ds.attrs["dsmeta"] = "dsdata"
 
-        actual = ds.resample(time="24H", loffset="-12H").mean("time").time
-        expected = xr.DataArray(
-            ds.bar.to_series().resample("24H", loffset="-12H").mean()
-        ).time
-        assert_identical(expected, actual)
+        actual = ds.resample(time="24H").mean("time").indexes["time"] + to_offset(
+            "-12H"
+        )
+        expected = ds.bar.to_series().resample("24H").mean().index + to_offset("-12H")
+        assert_index_equal(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
