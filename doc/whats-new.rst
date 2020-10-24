@@ -53,7 +53,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- document the API not supported with duck arrays (:pull:`4530`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
