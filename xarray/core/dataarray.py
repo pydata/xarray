@@ -275,7 +275,7 @@ class DataArray(AbstractArray, DataWithCoords):
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
-        
+
     Examples
     --------
     Import modules:
