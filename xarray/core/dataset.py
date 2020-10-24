@@ -496,7 +496,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     >>> import pandas as pd
     >>> import xarray as xr
 
-
     Create data:
 
     >>> np.random.seed(0)
