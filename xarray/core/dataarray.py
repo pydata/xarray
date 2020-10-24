@@ -275,6 +275,50 @@ class DataArray(AbstractArray, DataWithCoords):
     attrs : dict_like or None, optional
         Attributes to assign to the new instance. By default, an empty
         attribute dictionary is initialized.
+        
+    Examples
+    --------
+    Import modules:
+
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> import xarray as xr
+
+    Create data:
+
+    >>> np.random.seed(0)
+    >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
+    >>> precipitation = 10 * np.random.rand(2, 2, 3)
+    >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+    >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+    >>> time = pd.date_range("2014-09-06", periods=3)
+    >>> reference_time = pd.Timestamp("2014-09-05")
+
+    Initialize a dataarray with multiple dimensions:
+
+    >>> da = xr.DataArray(
+    ...     data = temperature,
+    ...     dims = ["x", "y", "time"],
+    ...     coords={
+    ...         "lon": (["x", "y"], lon),
+    ...         "lat": (["x", "y"], lat),
+    ...         "time": time,
+    ...         "reference_time": reference_time,
+    ...     },
+    ... )
+
+    Find out where the coldest temperature was:
+
+    >>> coldest_temp = da.min() == da
+    >>> da.where(cond=coldest_temp, drop=True)
+    <xarray.DataArray (x: 1, y: 1, time: 1)>
+    array([[[7.18177696]]])
+    Coordinates:
+        lon             (x, y) float64 -99.32
+        lat             (x, y) float64 42.21
+      * time            (time) datetime64[ns] 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Dimensions without coordinates: x, y
     """
 
     _cache: Dict[str, Any]
