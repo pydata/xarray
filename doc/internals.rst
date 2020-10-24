@@ -45,8 +45,8 @@ xarray objects via the (readonly) :py:attr:`Dataset.variables
 
 .. _internals.duck_arrays:
 
-Duck arrays
------------
+Integrating with duck arrays
+----------------------------
 
 .. warning::
 

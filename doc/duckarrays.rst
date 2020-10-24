@@ -1,7 +1,7 @@
 .. currentmodule:: xarray
 
-Using duck arrays with xarray
-=============================
+Working with duck arrays
+========================
 This is a high-level overview, for the technical details of integrating duck arrays with
 ``xarray`` see :ref:`internals.duck_arrays`.
 
