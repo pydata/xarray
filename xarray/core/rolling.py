@@ -123,9 +123,8 @@ class Rolling:
         array_agg_func = getattr(duck_array_ops, name)
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
-        def method(self, **kwargs):
+        def method(self, keep_attrs=None, **kwargs):
 
-            keep_attrs = kwargs.pop("keep_attrs", None)
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
