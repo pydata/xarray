@@ -47,7 +47,14 @@ class Rolling:
     DataArray.rolling
     """
 
-    __slots__ = ("obj", "window_len", "min_periods", "center", "window_dims", "keep_attrs")
+    __slots__ = (
+        "obj",
+        "window_len",
+        "min_periods",
+        "center",
+        "window_dims",
+        "keep_attrs",
+    )
     _attributes = ("window_len", "min_periods", "center", "window_dims", "keep_attrs")
 
     def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
@@ -74,9 +81,9 @@ class Rolling:
         """
         self.window_dims = list(windows.keys())
         self.window_len = list(windows.values())
-        
-        if any(wl <= 0 for wl in window_len):
-                raise ValueError("window must be > 0")
+
+        if any(wl <= 0 for wl in self.window_len):
+            raise ValueError("window must be > 0")
 
         self.center = self._mapping_to_list(center, default=False)
         self.obj = obj
@@ -85,7 +92,9 @@ class Rolling:
         if min_periods is not None and min_periods <= 0:
             raise ValueError("min_periods must be greater than zero or None")
 
-        self.min_periods = np.prod(self.window_len) if min_periods is None else min_periods
+        self.min_periods = (
+            np.prod(self.window_len) if min_periods is None else min_periods
+        )
 
         if keep_attrs is not None:
             warnings.warn(
@@ -115,15 +124,10 @@ class Rolling:
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, **kwargs):
-            
+
             keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                # TODO: remove the self self.keep_attrs part after the deprecation
-                if self.keep_attrs is None:
-                    keep_attrs = _get_keep_attrs(default=True)
-                else: 
-                    keep_attrs = self.keep_attrs
-            
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
             return self._numpy_or_bottleneck_reduce(
                 array_agg_func, bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
@@ -143,8 +147,8 @@ class Rolling:
     var = _reduce_method("var")
     median = _reduce_method("median")
 
-    def count(self):
-        rolling_count = self._counts()
+    def count(self, keep_attrs=None):
+        rolling_count = self._counts(keep_attrs=keep_attrs)
         enough_periods = rolling_count >= self.min_periods
         return rolling_count.where(enough_periods)
 
@@ -167,8 +171,35 @@ class Rolling:
             return [arg]
         else:
             raise ValueError(
-                "Mapping argument is necessary for {}d-rolling.".format(len(self.window_dims))
+                "Mapping argument is necessary for {}d-rolling.".format(
+                    len(self.window_dims)
+                )
             )
+
+    def _get_keep_attrs(self, keep_attrs):
+
+        if keep_attrs is None:
+            # TODO: uncomment the next line and remove the others after the deprecation
+            # keep_attrs = _get_keep_attrs(default=True)
+
+            if self.keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
+            else:
+                keep_attrs = self.keep_attrs
+
+        return keep_attrs
+
+    @property
+    def dim(self):
+        warnings.warn("'dims' has been renamed to 'window_dims'", FutureWarning)
+
+        return self.window_dims
+
+    @property
+    def window(self):
+        warnings.warn("'window' has been renamed to 'window_len'", FutureWarning)
+
+        return self.window_len
 
 
 class DataArrayRolling(Rolling):
@@ -227,7 +258,12 @@ class DataArrayRolling(Rolling):
             yield (label, window)
 
     def construct(
-        self, window_dim=None, stride=1, fill_value=dtypes.NA, keep_attrs=None, **window_dim_kwargs
+        self,
+        window_dim=None,
+        stride=1,
+        fill_value=dtypes.NA,
+        keep_attrs=None,
+        **window_dim_kwargs,
     ):
         """
         Convert this rolling object to xr.DataArray,
@@ -237,8 +273,7 @@ class DataArrayRolling(Rolling):
         ----------
         window_dim : str or mapping, optional
             A mapping from dimension name to the new window dimension names.
-            Just a string can be used for 1d-rolling.
-        stride : int or mapping of int, optional
+        stride : int or mapping of int, default: 1
             Size of stride for the rolling window.
         fill_value : default: dtypes.NA
             Filling value to match the dimension size.
@@ -289,13 +324,8 @@ class DataArrayRolling(Rolling):
         """
 
         from .dataarray import DataArray
-        
-        if keep_attrs is None:
-            # TODO: remove the self self.keep_attrs part after the deprecation
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else: 
-                keep_attrs = self.keep_attrs
+
+        keep_attrs = self._get_keep_attrs(keep_attrs)
 
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
@@ -310,16 +340,21 @@ class DataArrayRolling(Rolling):
         stride = self._mapping_to_list(stride, default=1)
 
         window = self.obj.variable.rolling_window(
-            self.window_dims, self.window_len, window_dim, self.center, fill_value=fill_value
+            self.window_dims,
+            self.window_len,
+            window_dim,
+            self.center,
+            fill_value=fill_value,
         )
 
-        attrs = self.obj.attrs if self.keep_attrs else {}
+        attrs = self.obj.attrs if keep_attrs else {}
 
         result = DataArray(
             window,
             dims=self.obj.dims + tuple(window_dim),
             coords=self.obj.coords,
             attrs=attrs,
+            name=self.obj.name,
         )
         return result.isel(
             **{d: slice(None, None, s) for d, s in zip(self.window_dims, stride)}
@@ -377,14 +412,9 @@ class DataArrayRolling(Rolling):
                [ 4.,  9., 15., 18.]])
         Dimensions without coordinates: a, b
         """
-        
-        if keep_attrs is None:
-            # TODO: remove the self self.keep_attrs part after the deprecation
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else: 
-                keep_attrs = self.keep_attrs
-        
+
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.window_dims
@@ -395,10 +425,10 @@ class DataArrayRolling(Rolling):
         )
 
         # Find valid windows based on count.
-        counts = self._counts()
+        counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
 
-    def _counts(self):
+    def _counts(self, keep_attrs):
         """Number of non-nan entries in each rolling window."""
 
         rolling_dim = {
@@ -409,18 +439,19 @@ class DataArrayRolling(Rolling):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        center = {d: self.center[i] for i, d in enumerate(self.window_dims)}
+        windows = {d: w for d, w in zip(self.window_dims, self.window_len)}
+
         counts = (
             self.obj.notnull()
-            .rolling(
-                center={d: self.center[i] for i, d in enumerate(self.window_dims)},
-                **{d: w for d, w in zip(self.window_dims, self.window_len)},
-            )
+            .rolling(center=center, **windows)
             .construct(rolling_dim, fill_value=False)
-            .sum(dim=list(rolling_dim.values()), skipna=False)
+            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
         )
+
         return counts
 
-    def _bottleneck_reduce(self, func, **kwargs):
+    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         from .dataarray import DataArray
 
         # bottleneck doesn't allow min_count to be 0, although it should
@@ -436,8 +467,8 @@ class DataArrayRolling(Rolling):
         padded = self.obj.variable
         if self.center[0]:
             if is_duck_dask_array(padded.data):
-                # Workaround to make the padded chunk size is larger than
-                # self.window_len-1
+                # workaround to make the padded chunk size larger than
+                # self.window_len - 1
                 shift = -(self.window_len[0] + 1) // 2
                 offset = (self.window_len[0] - 1) // 2
                 valid = (slice(None),) * axis + (
@@ -449,9 +480,13 @@ class DataArrayRolling(Rolling):
             padded = padded.pad({self.window_dims[0]: (0, -shift)}, mode="constant")
 
         if is_duck_dask_array(padded.data):
-            raise AssertionError("should not be reachable")
+            # raise AssertionError("should not be reachable")
             values = dask_rolling_wrapper(
-                func, padded.data, window=self.window_len[0], min_count=min_count, axis=axis
+                func,
+                padded.data,
+                window=self.window_len[0],
+                min_count=min_count,
+                axis=axis,
             )
         else:
             values = func(
@@ -461,18 +496,18 @@ class DataArrayRolling(Rolling):
         if self.center[0]:
             values = values[valid]
 
-        attrs = self.obj.attrs if self.keep_attrs else {}
+        attrs = self.obj.attrs if keep_attrs else {}
 
-        result = DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
-
-        return result
+        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, **kwargs
+        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
     ):
         if "dim" in kwargs:
             warnings.warn(
-                f"Reductions will be applied along the rolling dimension '{self.window_dims}'. Passing the 'dim' kwarg to reduction operations has no effect and will raise an error in xarray 0.16.0.",
+                f"Reductions will be applied along the rolling dimension "
+                f"'{self.window_dims}'. Passing the 'dim' kwarg to reduction "
+                f"operations has no effect.",
                 DeprecationWarning,
                 stacklevel=3,
             )
@@ -486,9 +521,11 @@ class DataArrayRolling(Rolling):
             # TODO: renable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
-            return self._bottleneck_reduce(bottleneck_move_func, **kwargs)
+            return self._bottleneck_reduce(
+                bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
+            )
         else:
-            return self.reduce(array_agg_func, **kwargs)
+            return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetRolling(Rolling):
@@ -526,13 +563,14 @@ class DatasetRolling(Rolling):
         DataArray.groupby
         """
         super().__init__(obj, windows, min_periods, center, keep_attrs)
+
         if any(d not in self.obj.dims for d in self.window_dims):
             raise KeyError(self.window_dims)
 
-        # Keep each Rolling object as a dictionary
+        # Keep a rolling object for each DataArray in a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
-            # keeps rollings only for the dataset depending on slf.dim
+            # keeps rollings only for the dataset depending on self._window_dims
             dims, center = [], {}
             for i, d in enumerate(self.window_dims):
                 if d in da.dims:
@@ -542,20 +580,29 @@ class DatasetRolling(Rolling):
             if len(dims) > 0:
                 w = {d: windows[d] for d in dims}
                 self.rollings[key] = DataArrayRolling(
-                    da, w, min_periods, center,
+                    da,
+                    w,
+                    min_periods,
+                    center,
                 )
 
     def _dataset_implementation(self, func, keep_attrs, **kwargs):
         from .dataset import Dataset
 
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+
         reduced = {}
         for key, da in self.obj.data_vars.items():
             if any(d in da.dims for d in self.window_dims):
-                reduced[key] = func(self.rollings[key], **kwargs)
+                reduced[key] = func(self.rollings[key], keep_attrs=keep_attrs, **kwargs)
             else:
                 reduced[key] = self.obj[key]
+                # we need to delete the attrs of the copied DataArray
+                if not keep_attrs:
+                    reduced[key].attrs = {}
+
         attrs = self.obj.attrs if keep_attrs else {}
-        return Dataset(reduced, coords=self.obj.coords, attrs=attrs, name=self.obj.name)
+        return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
     def reduce(self, func, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -580,14 +627,18 @@ class DatasetRolling(Rolling):
             Array with summarized data.
         """
         return self._dataset_implementation(
-            functools.partial(DataArrayRolling.reduce, func=func), **kwargs
+            functools.partial(DataArrayRolling.reduce, func=func),
+            keep_attrs=keep_attrs,
+            **kwargs,
         )
 
-    def _counts(self):
-        return self._dataset_implementation(DataArrayRolling._counts)
+    def _counts(self, keep_attrs):
+        return self._dataset_implementation(
+            DataArrayRolling._counts, keep_attrs=keep_attrs
+        )
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, **kwargs
+        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
     ):
         return self._dataset_implementation(
             functools.partial(
@@ -595,6 +646,7 @@ class DatasetRolling(Rolling):
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
             ),
+            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -629,12 +681,7 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
-        if keep_attrs is None:
-            # TODO: remove the self self.keep_attrs part after the deprecation
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else: 
-                keep_attrs = self.keep_attrs
+        keep_attrs = self._get_keep_attrs(keep_attrs)
 
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
@@ -653,14 +700,22 @@ class DatasetRolling(Rolling):
             # keeps rollings only for the dataset depending on self.window_dims
             dims = [d for d in self.window_dims if d in da.dims]
             if len(dims) > 0:
-                wi = {d: window_dim[i] for i, d in enumerate(self.window_dims) if d in da.dims}
-                st = {d: stride[i] for i, d in enumerate(self.window_dims) if d in da.dims}
+                wi = {
+                    d: window_dim[i]
+                    for i, d in enumerate(self.window_dims)
+                    if d in da.dims
+                }
+                st = {
+                    d: stride[i] for i, d in enumerate(self.window_dims) if d in da.dims
+                }
+
                 dataset[key] = self.rollings[key].construct(
                     window_dim=wi, fill_value=fill_value, stride=st
                 )
             else:
                 dataset[key] = da
 
+            # as the DataArrays can be copied we need to delete the attrs
             if not keep_attrs:
                 dataset[key].attrs = {}
 
