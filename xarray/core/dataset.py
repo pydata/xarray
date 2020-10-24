@@ -487,6 +487,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     attrs : dict-like, optional
         Global attributes to save on this dataset.
+
+    Examples
+    --------
+    Import modules:
+
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> import xarray as xr
+
+
+    Create data:
+
+    >>> np.random.seed(0)
+    >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
+    >>> precipitation = 10 * np.random.rand(2, 2, 3)
+    >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+    >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+    >>> time = pd.date_range("2014-09-06", periods=3)
+    >>> reference_time = pd.Timestamp("2014-09-05")
+
+    Initialize a dataset with multiple dimensions:
+
+    >>> ds = xr.Dataset(
+    ...     data_vars={
+    ...         "temperature": (["x", "y", "time"], temperature),
+    ...         "precipitation": (["x", "y", "time"], precipitation),
+    ...     },
+    ...     coords={
+    ...         "lon": (["x", "y"], lon),
+    ...         "lat": (["x", "y"], lat),
+    ...         "time": time,
+    ...         "reference_time": reference_time,
+    ...     },
+    ... )
+
+    Find out where the coldest temperature was and what values the
+    other variables had:
+
+    >>> coldest_temp = ds.temperature.min() == ds.temperature
+    >>> ds.where(cond=coldest_temp, drop=True)
+    <xarray.Dataset>
+    Dimensions:         (time: 1, x: 1, y: 1)
+    Coordinates:
+        lon             (x, y) float64 -99.32
+        lat             (x, y) float64 42.21
+      * time            (time) datetime64[ns] 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Dimensions without coordinates: x, y
+    Data variables:
+        temperature     (x, y, time) float64 7.182
+        precipitation   (x, y, time) float64 8.326
     """
 
     _attrs: Optional[Dict[Hashable, Any]]
