@@ -480,7 +480,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         - mapping {coord name: (tuple of dimension names, array-like)}
         - mapping {dimension name: array-like}
           (the dimension name is implicitly set to be the same as the
-           coord name)
+          coord name)
 
         The last notation implies that the coord name is the same as
         the dimension name.
