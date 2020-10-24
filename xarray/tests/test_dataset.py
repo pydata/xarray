@@ -54,6 +54,9 @@ try:
 except ImportError:
     pass
 
+pytestmark = pytest.mark.filterwarnings("error:Mean of empty slice")
+pytestmark = pytest.mark.filterwarnings("error:All-NaN slice encountered")
+
 
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)

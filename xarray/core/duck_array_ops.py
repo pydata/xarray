@@ -330,7 +330,9 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
-            return func(values, axis=axis, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "All-NaN slice encountered")
+                return func(values, axis=axis, **kwargs)
         except AttributeError:
             if not is_duck_dask_array(values):
                 raise
