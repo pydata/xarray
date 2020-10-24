@@ -231,7 +231,7 @@ class DataArray(AbstractArray, DataWithCoords):
       multiple dimensions (known in numpy as "broadcasting") based on
       dimension names, regardless of their original order.
     - Keep track of arbitrary metadata in the form of a Python
-    dictionary: ``x.attrs``
+      dictionary: ``x.attrs``
     - Convert to a pandas Series: ``x.to_series()``.
 
     Getting items from or doing mathematical operations with a
