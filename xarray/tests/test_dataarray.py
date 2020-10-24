@@ -6558,19 +6558,19 @@ def test_rolling_keep_attrs(funcname, argument):
 
     # attrs are now kept per default
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
-    dat = func(*argument)
-    assert dat.attrs == attrs_da
+    result = func(*argument)
+    assert result.attrs == attrs_da
 
     # discard attrs
-    func = getattr(ds.rolling(dim={"coord": 5}, keep_attrs=False), funcname)
-    dat = func(*argument)
-    assert dat.attrs == {}
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
 
     # test discard attrs using global option
     with set_options(keep_attrs=False):
         func = getattr(ds.rolling(dim={"coord": 5}), funcname)
-    dat = func(*argument)
-    assert dat.attrs == {}
+    result = func(*argument)
+    assert result.attrs == {}
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
