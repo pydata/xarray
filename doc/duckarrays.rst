@@ -34,6 +34,7 @@ will still cast to ``numpy`` arrays:
     of ``numpy``)
   * :py:meth:`Dataset.interpolate_na` and :py:meth:`DataArray.interpolate_na` (uses
     :py:class:`numpy.vectorize`)
+  * :py:func:`apply_ufunc` with ``vectorize=True`` (uses :py:class:`numpy.vectorize`)
 
 
 Extensions using duck arrays
