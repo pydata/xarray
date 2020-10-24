@@ -577,13 +577,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> def adder(data, arg):
         ...     return data + arg
-        ...
         >>> def div(data, arg):
         ...     return data / arg
-        ...
         >>> def sub_mult(data, sub_arg, mult_arg):
         ...     return (data * mult_arg) - sub_arg
-        ...
         >>> x.pipe(adder, 2)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
@@ -811,10 +808,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : bool or mapping, default: False
             Set the labels at the center of the window.
-        keep_attrs : bool, optional
-            If True (default), the object's attributes (`attrs`) will be copied
-            from the original object to the new one.  If False, the new
-            object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
