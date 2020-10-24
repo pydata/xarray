@@ -23,6 +23,11 @@ v0.16.2 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
+  via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
+  ``ds.rolling(...).mean(keep_attrs=False)`` instead of ``ds.rolling(..., keep_attrs=False).mean()``
+  Rolling operations now keep their attributes per default (:pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -32,10 +37,6 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also respect the ``keep_attrs``
-  keyword for their ``DataArray``s (previously only the global attrs were retained). ``keep_attrs``
-  is now set to ``True`` per default for rolling operations (:issue:`4497`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -54,6 +55,9 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes of of (wrapped)
+  ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
