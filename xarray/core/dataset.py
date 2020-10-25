@@ -541,9 +541,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     ...         time=time,
     ...         reference_time=reference_time,
     ...     ),
-    ...     attrs=dict(
-    ...         description="Weather related data."
-    ...     ),
+    ...     attrs=dict(description="Weather related data."),
     ... )
     >>> ds
     <xarray.Dataset>

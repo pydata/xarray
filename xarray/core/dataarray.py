@@ -292,8 +292,8 @@ class DataArray(AbstractArray, DataWithCoords):
     Initialize a dataarray with multiple dimensions:
 
     >>> da = xr.DataArray(
-    ...     data = temperature,
-    ...     dims = ["x", "y", "time"],
+    ...     data=temperature,
+    ...     dims=["x", "y", "time"],
     ...     coords=dict(
     ...         lon=(["x", "y"], lon),
     ...         lat=(["x", "y"], lat),
