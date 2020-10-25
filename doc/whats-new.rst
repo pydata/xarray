@@ -179,8 +179,6 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
 - Removed skipna argument from :py:meth:`DataArray.count`, :py:meth:`DataArray.any`, :py:meth:`DataArray.all`. (:issue:`755`)
   By `Sander van Rijn <https://github.com/sjvrijn>`_
-- update the contributing guide to use merges instead of rebasing and state
-  that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
 - Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`). By `Justus Magin <https://github.com/keewis>`_.
 - Make sure the examples from the docstrings actually work (:pull:`4408`).
