@@ -535,7 +535,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         temperature     (x, y, time) float64 7.182
         precipitation   (x, y, time) float64 8.326
     Attributes:
-        description:  Weather data.
+        description:  Weather related data.
     """
 
     _attrs: Optional[Dict[Hashable, Any]]
