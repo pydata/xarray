@@ -54,6 +54,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
+  (:pull:`4532`);
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -178,7 +181,6 @@ Documentation
   By `Sander van Rijn <https://github.com/sjvrijn>`_
 - update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`) By `Justus Magin <https://github.com/keewis>`_.
-- update the docstring of :py:class:`DataArray` and :py:class:`Dataset`. (:pull:`4532`) By `Jimmy Westling <https://github.com/illviljan>`_.
 - Update the contributing guide to use merges instead of rebasing and state
   that we squash-merge. (:pull:`4355`). By `Justus Magin <https://github.com/keewis>`_.
 - Make sure the examples from the docstrings actually work (:pull:`4408`).
