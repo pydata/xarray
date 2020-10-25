@@ -278,12 +278,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Examples
     --------
-    Import modules:
-
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> import xarray as xr
-
     Create data:
 
     >>> np.random.seed(0)
@@ -299,12 +293,12 @@ class DataArray(AbstractArray, DataWithCoords):
     >>> da = xr.DataArray(
     ...     data = temperature,
     ...     dims = ["x", "y", "time"],
-    ...     coords={
-    ...         "lon": (["x", "y"], lon),
-    ...         "lat": (["x", "y"], lat),
-    ...         "time": time,
-    ...         "reference_time": reference_time,
-    ...     },
+    ...     coords=dict(
+    ...         lon=(["x", "y"], lon),
+    ...         lat=(["x", "y"], lat),
+    ...         time=time,
+    ...         reference_time=reference_time,
+    ...     ),
     ... )
 
     Find out where the coldest temperature was:
