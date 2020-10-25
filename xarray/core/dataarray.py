@@ -299,6 +299,10 @@ class DataArray(AbstractArray, DataWithCoords):
     ...         time=time,
     ...         reference_time=reference_time,
     ...     ),
+    ...     attrs=dict(
+    ...         description="Ambient temperature.",
+    ...         units="degC",
+    ...     ),
     ... )
 
     Find out where the coldest temperature was:
@@ -313,6 +317,9 @@ class DataArray(AbstractArray, DataWithCoords):
       * time            (time) datetime64[ns] 2014-09-08
         reference_time  datetime64[ns] 2014-09-05
     Dimensions without coordinates: x, y
+    Attributes:
+        description:  Ambient temperature.
+        units:        degC
     """
 
     _cache: Dict[str, Any]
