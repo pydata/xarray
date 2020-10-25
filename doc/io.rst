@@ -980,7 +980,7 @@ undesirable to write your entire dataset at once.
     existing Zarr store. It is up to the user to ensure that coordinates are
     consistent.
 
-To add or overwrite entire variables, simple call :py:meth:`~Dataset.to_zarr`
+To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
 with ``mode='a'`` on a Dataset containing the new variables, passing in an
 existing Zarr store or path to a Zarr store.
 
@@ -1016,13 +1016,13 @@ order, e.g., for time-stepping a simulation:
 
 Finally, you can use ``region`` to write to limited regions of existing arrays
 in an existing Zarr store. This is a good option for writing data in parallel
-from multiple processes without coordination using dask.
+from independent processes.
 
-To scale this up to writing large datasets, a key first step is creating an
+To scale this up to writing large datasets, the first step is creating an
 initial Zarr store without writing all of its array data. This can be done by
 first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
-and then calling ``to_zarr`` with ``compute=False`` to write only metadata to
-Zarr:
+and then calling ``to_zarr`` with ``compute=False`` to write only metadata
+(including ``attrs``) to Zarr:
 
 .. ipython:: python
     :suppress:
@@ -1041,13 +1041,11 @@ Zarr:
     ds.to_zarr(path, compute=False, consolidated=True)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr`` without any further
-coordination. The ``region`` provides a mapping from dimension names to Python
-``slice`` objects indicating where the data should be written (in index space,
-not coordinate space), e.g.,
+can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
+mapping from dimension names to Python ``slice`` objects indicating where the
+data should be written (in index space, not coordinate space), e.g.,
 
 .. ipython:: python
-
 
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately, possibly even from separate processes.
@@ -1055,6 +1053,9 @@ not coordinate space), e.g.,
     ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
     ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+
+Concurrent writes with ``region`` are safe as long as they modify distinct
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
 
 As a safety check to make it harder to inadvertently override existing values,
 if you set ``region`` then *all* variables included in a Dataset must have
