@@ -304,6 +304,22 @@ class DataArray(AbstractArray, DataWithCoords):
     ...         units="degC",
     ...     ),
     ... )
+    >>> da
+    <xarray.DataArray (x: 2, y: 2, time: 3)>
+    array([[[29.11241877, 18.20125767, 22.82990387],
+            [32.92714559, 29.94046392,  7.18177696]],
+    <BLANKLINE>
+           [[22.60070734, 13.78914233, 14.17424919],
+            [18.28478802, 16.15234857, 26.63418806]]])
+    Coordinates:
+        lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        lat             (x, y) float64 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Dimensions without coordinates: x, y
+    Attributes:
+        description:  Ambient temperature.
+        units:        degC
 
     Find out where the coldest temperature was:
 
