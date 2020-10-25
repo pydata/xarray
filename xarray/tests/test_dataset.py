@@ -54,8 +54,10 @@ try:
 except ImportError:
     pass
 
-pytestmark = pytest.mark.filterwarnings("error:Mean of empty slice")
-pytestmark = pytest.mark.filterwarnings("error:All-NaN slice encountered")
+pytestmark = [
+    pytest.mark.filterwarnings("error:Mean of empty slice"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
+]
 
 
 def create_test_data(seed=None):

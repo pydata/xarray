@@ -45,7 +45,7 @@ from xarray.tests import (
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
-    pytest.mark.filterwarnings("error:All-NaN slice encountered"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
 ]
 
 
