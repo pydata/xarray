@@ -490,12 +490,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     Examples
     --------
-    Import modules:
-
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> import xarray as xr
-
     Create data:
 
     >>> np.random.seed(0)
@@ -509,16 +503,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     Initialize a dataset with multiple dimensions:
 
     >>> ds = xr.Dataset(
-    ...     data_vars={
-    ...         "temperature": (["x", "y", "time"], temperature),
-    ...         "precipitation": (["x", "y", "time"], precipitation),
-    ...     },
-    ...     coords={
-    ...         "lon": (["x", "y"], lon),
-    ...         "lat": (["x", "y"], lat),
-    ...         "time": time,
-    ...         "reference_time": reference_time,
-    ...     },
+    ...     data_vars=dict(
+    ...         temperature=(["x", "y", "time"], temperature),
+    ...         precipitation=(["x", "y", "time"], precipitation),
+    ...     ),
+    ...     coords=dict(
+    ...         lon=(["x", "y"], lon),
+    ...         lat=(["x", "y"], lat),
+    ...         time=time,
+    ...         reference_time=reference_time,
+    ...     ),
+    ...     attrs=dict(
+    ...         description="Weather related data."
+    ...     ),
     ... )
 
     Find out where the coldest temperature was and what values the
@@ -537,6 +534,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     Data variables:
         temperature     (x, y, time) float64 7.182
         precipitation   (x, y, time) float64 8.326
+    Attributes:
+        description:  Weather data.
     """
 
     _attrs: Optional[Dict[Hashable, Any]]
