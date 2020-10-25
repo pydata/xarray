@@ -45,6 +45,9 @@ def test_signature_properties():
     assert sig.num_outputs == 1
     assert str(sig) == "(x),(x,y)->(z)"
     assert sig.to_gufunc_string() == "(dim0),(dim0,dim1)->(dim2)"
+    assert (
+        sig.to_gufunc_string(exclude_dims=set("x")) == "(dim0_0),(dim0_1,dim1)->(dim2)"
+    )
     # dimension names matter
     assert _UFuncSignature([["x"]]) != _UFuncSignature([["y"]])
 
@@ -470,10 +473,13 @@ def test_unified_dim_sizes():
         "x": 1,
         "y": 2,
     }
-    assert unified_dim_sizes(
-        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-        exclude_dims={"z"},
-    ) == {"x": 1, "y": 2}
+    assert (
+        unified_dim_sizes(
+            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+            exclude_dims={"z"},
+        )
+        == {"x": 1, "y": 2}
+    )
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -689,8 +695,7 @@ def test_apply_dask_parallelized_two_args():
     check(data_array, 0 * data_array)
     check(data_array, 0 * data_array[0])
     check(data_array[:, 0], 0 * data_array[0])
-    with raises_regex(ValueError, "with different chunksize present"):
-        check(data_array, 0 * data_array.compute())
+    check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
@@ -704,7 +709,7 @@ def test_apply_dask_parallelized_errors():
     with raises_regex(ValueError, "at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
-    # formerly from _apply_blockwise, now from dask.array.apply_gufunc
+    # formerly from _apply_blockwise, now from apply_variable_ufunc
     with raises_regex(ValueError, "consists of multiple chunks"):
         apply_ufunc(
             identity,
@@ -779,7 +784,7 @@ def test_apply_dask_new_output_dimension():
             output_core_dims=[["sign"]],
             dask="parallelized",
             output_dtypes=[obj.dtype],
-            output_sizes={"sign": 2},
+            dask_gufunc_kwargs=dict(output_sizes={"sign": 2}),
         )
 
     expected = stack_negative(data_array.compute())
@@ -867,7 +872,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
 
     expected = data_array.copy()
     actual = apply_ufunc(
-        identity, data_array.chunk({"x": 1}), vectorize=True, dask="parallelized",
+        identity,
+        data_array.chunk({"x": 1}),
+        vectorize=True,
+        dask="parallelized",
     )
 
     assert_identical(expected, actual)
@@ -888,15 +896,58 @@ def test_vectorize_dask_dtype_meta():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[int],
-        meta=np.ndarray((0, 0), dtype=np.float),
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=np.float)),
     )
 
     assert_identical(expected, actual)
     assert np.float == actual.dtype
 
 
-with raises_regex(TypeError, "Only xr.DataArray is supported"):
-    xr.corr(xr.Dataset(), xr.Dataset())
+def pandas_median_add(x, y):
+    # function which can consume input of unequal length
+    return pd.Series(x).median() + pd.Series(y).median()
+
+
+def test_vectorize_exclude_dims():
+    # GH 3890
+    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
+
+    expected = xr.DataArray([3, 5], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median_add,
+        data_array_a,
+        data_array_b,
+        input_core_dims=[["y"], ["y"]],
+        vectorize=True,
+        exclude_dims=set("y"),
+    )
+    assert_identical(expected, actual)
+
+
+@requires_dask
+def test_vectorize_exclude_dims_dask():
+    # GH 3890
+    data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
+    data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
+
+    expected = xr.DataArray([3, 5], dims=["x"])
+    actual = apply_ufunc(
+        pandas_median_add,
+        data_array_a.chunk({"x": 1}),
+        data_array_b.chunk({"x": 1}),
+        input_core_dims=[["y"], ["y"]],
+        exclude_dims=set("y"),
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[float],
+    )
+    assert_identical(expected, actual)
+
+
+def test_corr_only_dataarray():
+    with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+        xr.corr(xr.Dataset(), xr.Dataset())
 
 
 def arrays_w_tuples():
@@ -939,12 +990,14 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1, ts2 = broadcast(ts1, ts2)
             valid_values = ts1.notnull() & ts2.notnull()
 
+            # While dropping isn't ideal here, numpy will return nan
+            # if any segment contains a NaN.
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.cov(
-                ts1.sel(a=a, x=x).data.flatten(),
-                ts2.sel(a=a, x=x).data.flatten(),
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
                 ddof=ddof,
             )[0, 1]
 
@@ -965,7 +1018,11 @@ def test_cov(da_a, da_b, dim, ddof):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.cov(ts1.data.flatten(), ts2.data.flatten(), ddof=ddof)[0, 1]
+            return np.ma.cov(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+                ddof=ddof,
+            )[0, 1]
 
         expected = np_cov(da_a, da_b)
         actual = xr.cov(da_a, da_b, dim=dim, ddof=ddof)
@@ -988,8 +1045,9 @@ def test_corr(da_a, da_b, dim):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(
-                ts1.sel(a=a, x=x).data.flatten(), ts2.sel(a=a, x=x).data.flatten()
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.sel(a=a, x=x).data.flatten()),
+                np.ma.masked_invalid(ts2.sel(a=a, x=x).data.flatten()),
             )[0, 1]
 
         expected = np.zeros((3, 4))
@@ -1009,7 +1067,10 @@ def test_corr(da_a, da_b, dim):
             ts1 = ts1.where(valid_values)
             ts2 = ts2.where(valid_values)
 
-            return np.corrcoef(ts1.data.flatten(), ts2.data.flatten())[0, 1]
+            return np.ma.corrcoef(
+                np.ma.masked_invalid(ts1.data.flatten()),
+                np.ma.masked_invalid(ts2.data.flatten()),
+            )[0, 1]
 
         expected = np_corr(da_a, da_b)
         actual = xr.corr(da_a, da_b, dim)
@@ -1017,7 +1078,8 @@ def test_corr(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a, da_b", arrays_w_tuples()[1],
+    "da_a, da_b",
+    arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_covcorr_consistency(da_a, da_b, dim):
@@ -1037,15 +1099,17 @@ def test_covcorr_consistency(da_a, da_b, dim):
 
 
 @pytest.mark.parametrize(
-    "da_a", arrays_w_tuples()[0],
+    "da_a",
+    arrays_w_tuples()[0],
 )
-@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
 def test_autocov(da_a, dim):
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
     valid_values = da_a.notnull()
-    da_a = da_a.where(valid_values)
-    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=False)
+    # Because we're using ddof=1, this requires > 1 value in each sample
+    da_a = da_a.where(valid_values.sum(dim=dim) > 1)
+    expected = ((da_a - da_a.mean(dim=dim)) ** 2).sum(dim=dim, skipna=True, min_count=1)
     actual = xr.cov(da_a, da_a, dim=dim) * (valid_values.sum(dim) - 1)
     assert_allclose(actual, expected)
 
@@ -1064,7 +1128,7 @@ def test_vectorize_dask_new_output_dims():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[float],
-        output_sizes={"z": 1},
+        dask_gufunc_kwargs=dict(output_sizes={"z": 1}),
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
@@ -1076,7 +1140,7 @@ def test_vectorize_dask_new_output_dims():
             vectorize=True,
             dask="parallelized",
             output_dtypes=[float],
-            output_sizes={"z1": 1},
+            dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
     with raises_regex(

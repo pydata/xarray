@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -15,11 +14,13 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
 import xarray
 
@@ -35,7 +36,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
     import matplotlib
@@ -79,6 +80,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -98,6 +100,15 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
+
 autodoc_typehints = "none"
 
 napoleon_use_param = False
@@ -405,3 +416,11 @@ intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
 }
+
+
+def escape_underscores(string):
+    return string.replace("_", r"\_")
+
+
+def setup(app):
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores

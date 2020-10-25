@@ -93,7 +93,9 @@ def _infer_concat_order_from_coords(datasets):
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
                 series = first_items.to_series()
-                rank = series.rank(method="dense", ascending=ascending)
+                rank = series.rank(
+                    method="dense", ascending=ascending, numeric_only=False
+                )
                 order = rank.astype(int).values - 1
 
                 # Append positions along extra dimension to structure which
@@ -393,8 +395,10 @@ def combine_nested(
         Details are in the documentation of concat
     coords : {"minimal", "different", "all" or list of str}, optional
         Details are in the documentation of concat
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
     join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
@@ -431,22 +435,48 @@ def combine_nested(
     into 4 parts, 2 each along both the x and y axes, requires organising the
     datasets into a doubly-nested list, e.g:
 
+    >>> x1y1 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
     >>> x1y1
     <xarray.Dataset>
-    Dimensions:         (x: 2, y: 2)
+    Dimensions:        (x: 2, y: 2)
     Dimensions without coordinates: x, y
     Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
+        temperature    (x, y) float64 1.764 0.4002 0.9787 2.241
+        precipitation  (x, y) float64 1.868 -0.9773 0.9501 -0.1514
+    >>> x1y2 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+    >>> x2y1 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+    >>> x2y2 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+
 
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["x", "y"])
+    >>> combined
     <xarray.Dataset>
-    Dimensions:         (x: 4, y: 4)
+    Dimensions:        (x: 4, y: 4)
     Dimensions without coordinates: x, y
     Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
+        temperature    (x, y) float64 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
+        precipitation  (x, y) float64 1.868 -0.9773 0.761 ... -0.7422 0.1549 0.3782
 
     ``manual_combine`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
@@ -454,28 +484,35 @@ def combine_nested(
     to ``concat_dim`` to specify the dimension of the nested list over which
     we wish to use ``merge`` instead of ``concat``:
 
+    >>> t1temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
     >>> t1temp
     <xarray.Dataset>
-    Dimensions:         (t: 5)
+    Dimensions:      (t: 5)
     Dimensions without coordinates: t
     Data variables:
-      temperature       (t) float64 11.04 23.57 20.77 ...
+        temperature  (t) float64 -0.8878 -1.981 -0.3479 0.1563 1.23
 
+    >>> t1precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
     >>> t1precip
     <xarray.Dataset>
-    Dimensions:         (t: 5)
+    Dimensions:        (t: 5)
     Dimensions without coordinates: t
     Data variables:
-      precipitation     (t) float64 5.904 2.453 3.404 ...
+        precipitation  (t) float64 1.202 -0.3873 -0.3023 -1.049 -1.42
+
+    >>> t2temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
+    >>> t2precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
+
 
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
     >>> combined = xr.combine_nested(ds_grid, concat_dim=["t", None])
+    >>> combined
     <xarray.Dataset>
-    Dimensions:         (t: 10)
+    Dimensions:        (t: 10)
     Dimensions without coordinates: t
     Data variables:
-      temperature       (t) float64 11.04 23.57 20.77 ...
-      precipitation     (t) float64 5.904 2.453 3.404 ...
+        temperature    (t) float64 -0.8878 -1.981 -0.3479 ... -0.5097 -0.4381 -1.253
+        precipitation  (t) float64 1.202 -0.3873 -0.3023 ... -0.2127 -0.8955 0.3869
 
     See also
     --------
@@ -569,10 +606,12 @@ def combine_by_coords(
           addition to the "minimal" data variables.
 
         If objects are DataArrays, `data_vars` must be "all".
-    coords : {"minimal", "different", "all" or list of str}, optional
+    coords : {"minimal", "different", "all"} or list of str, optional
         As per the "data_vars" kwarg, but for coordinate variables.
-    fill_value : scalar, optional
-        Value to use for newly missing values. If None, raises a ValueError if
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
     join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
@@ -644,71 +683,71 @@ def combine_by_coords(
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 0 1
-    * x              (x) int64 10 20 30
+      * y              (y) int64 0 1
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 2.543 13.93 9.436
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 0.4679 0.3115 0.945
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 8.473 12.92
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 0.3834 0.7917 0.5289
 
     >>> x2
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 2 3
-    * x              (x) int64 10 20 30
+      * y              (y) int64 2 3
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 9.341 0.1251 6.269 7.709 8.82 2.316
-        precipitation  (y, x) float64 0.1728 0.1178 0.03018 0.6509 0.06938 0.3792
+        temperature    (y, x) float64 11.36 18.51 1.421 1.743 0.4044 16.65
+        precipitation  (y, x) float64 0.7782 0.87 0.9786 0.7992 0.4615 0.7805
 
     >>> x3
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 2 3
-    * x              (x) int64 40 50 60
+      * y              (y) int64 2 3
+      * x              (x) int64 40 50 60
     Data variables:
-        temperature    (y, x) float64 2.789 2.446 6.551 12.46 2.22 15.96
-        precipitation  (y, x) float64 0.4804 0.1902 0.2457 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 2.365 12.8 2.867 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.2646 0.7742 0.4562 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30
-    * y              (y) int64 0 1 2 3
+      * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 7.709 8.82 2.316
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6509 0.06938 0.3792
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 1.743 0.4044 16.65
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.7992 0.4615 0.7805
 
     >>> xr.combine_by_coords([x3, x1])
     <xarray.Dataset>
     Dimensions:        (x: 6, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30 40 50 60
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 0 1 2 3
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 nan ... nan 12.46 2.22 15.96
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30
+      * y              (y) int64 0 1 2 3
     Data variables:
-    temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 12.46 2.22 15.96
-    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
     <xarray.Dataset>
     Dimensions:        (x: 6, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30 40 50 60
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 0 1 2 3
     Data variables:
-    temperature    (y, x) float64 1.654 10.63 7.015 nan ... 12.46 2.22 15.96
-    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
 
     # Group by data vars

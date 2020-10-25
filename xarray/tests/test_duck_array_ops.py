@@ -120,11 +120,9 @@ class TestOps:
         result = concatenate([[1], ["b"]])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
+    @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "All-NaN slice")
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            assert np.isnan(mean([np.nan, np.nan]))
+        assert np.isnan(mean([np.nan, np.nan]))
 
 
 def test_cumsum_1d():
@@ -257,7 +255,7 @@ def from_series_or_scalar(se):
 
 
 def series_reduce(da, func, dim, **kwargs):
-    """ convert DataArray to pd.Series, apply pd.func, then convert back to
+    """convert DataArray to pd.Series, apply pd.func, then convert back to
     a DataArray. Multiple dims cannot be specified."""
     if dim is None or da.ndim == 1:
         se = da.to_series()
@@ -484,9 +482,7 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
 
     if contains_nan:
         if not skipna:
-            pytest.skip(
-                "numpy's argmin (not nanargmin) does not handle " "object-dtype"
-            )
+            pytest.skip("numpy's argmin (not nanargmin) does not handle object-dtype")
         if skipna and np.dtype(dtype).kind in "iufc":
             pytest.skip("numpy's nanargmin raises ValueError for all nan axis")
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan, dask=dask)
@@ -582,15 +578,17 @@ def test_dask_gradient(axis, edge_order):
 @pytest.mark.parametrize("dask", [False, True])
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("aggdim", [None, "x"])
-def test_min_count(dim_num, dtype, dask, func, aggdim):
+@pytest.mark.parametrize("contains_nan", [True, False])
+@pytest.mark.parametrize("skipna", [True, False, None])
+def test_min_count(dim_num, dtype, dask, func, aggdim, contains_nan, skipna):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan, dask=dask)
     min_count = 3
 
-    actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
-    expected = series_reduce(da, func, skipna=True, dim=aggdim, min_count=min_count)
+    actual = getattr(da, func)(dim=aggdim, skipna=skipna, min_count=min_count)
+    expected = series_reduce(da, func, skipna=skipna, dim=aggdim, min_count=min_count)
     assert_allclose(actual, expected)
     assert_dask_array(actual, dask)
 

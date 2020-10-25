@@ -12,8 +12,7 @@ STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
 @lru_cache(None)
 def _load_static_files():
-    """Lazily load the resource files into memory the first time they are needed
-    """
+    """Lazily load the resource files into memory the first time they are needed"""
     return [
         pkg_resources.resource_string("xarray", fname).decode("utf8")
         for fname in STATIC_FILES
@@ -255,12 +254,12 @@ def array_repr(arr):
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
 
     obj_type = "xarray.{}".format(type(arr).__name__)
-    arr_name = "'{}'".format(arr.name) if getattr(arr, "name", None) else ""
+    arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
     coord_names = list(arr.coords) if hasattr(arr, "coords") else []
 
     header_components = [
-        "<div class='xr-obj-type'>{}</div>".format(obj_type),
-        "<div class='xr-array-name'>{}</div>".format(arr_name),
+        f"<div class='xr-obj-type'>{obj_type}</div>",
+        f"<div class='xr-array-name'>{arr_name}</div>",
         format_dims(dims, coord_names),
     ]
 

@@ -291,6 +291,12 @@ def _determine_cmap_params(
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
+    # vmin & vmax needs to be None if norm is passed
+    # TODO: always return a norm with vmin and vmax
+    if norm is not None:
+        vmin = None
+        vmax = None
+
     return dict(
         vmin=vmin, vmax=vmax, cmap=cmap, extend=extend, levels=levels, norm=norm
     )
@@ -395,7 +401,7 @@ def _assert_valid_xy(darray, xy, name):
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
 
     valid_xy = (
         set(darray.dims) | set(darray.coords) | set(darray._level_coords)
@@ -415,9 +421,9 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
@@ -440,8 +446,8 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def label_from_attrs(da, extra=""):
-    """ Makes informative labels if variable metadata (attrs) follows
-        CF conventions. """
+    """Makes informative labels if variable metadata (attrs) follows
+    CF conventions."""
 
     if da.attrs.get("long_name"):
         name = da.attrs["long_name"]
@@ -507,16 +513,20 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
+        remove_drawstyle = False
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
             raise TypeError("Can't step plot intervals against intervals.")
         if _valid_other_type(xval, [pd.Interval]):
             xval, yval = _interval_to_double_bound_points(xval, yval)
+            remove_drawstyle = True
         if _valid_other_type(yval, [pd.Interval]):
             yval, xval = _interval_to_double_bound_points(yval, xval)
+            remove_drawstyle = True
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["drawstyle"]
+        if remove_drawstyle:
+            del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:
@@ -619,6 +629,10 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
+
+    # dont pass extend as kwarg if it is in the mappable
+    if hasattr(primitive, "extend"):
+        cbar_kwargs.pop("extend")
 
     fig = ax.get_figure()
     cbar = fig.colorbar(primitive, **cbar_kwargs)

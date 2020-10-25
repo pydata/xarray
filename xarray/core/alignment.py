@@ -103,8 +103,10 @@ def align(
         used in preference to the aligned indexes.
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
 
     Returns
     -------
@@ -138,30 +140,30 @@ def align(
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> y
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y)
     >>> a
     <xarray.DataArray (lat: 1, lon: 2)>
     array([[25, 35]])
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 1, lon: 2)>
     array([[20,  5]])
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y, join="outer")
     >>> a
@@ -170,16 +172,16 @@ def align(
            [10., 24.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[20.,  5.],
            [nan, nan],
            [ 7., 13.]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y, join="outer", fill_value=-999)
     >>> a
@@ -188,16 +190,16 @@ def align(
            [  10,   24],
            [-999, -999]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  20,    5],
            [-999, -999],
            [   7,   13]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y, join="left")
     >>> a
@@ -205,15 +207,15 @@ def align(
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20.,  5.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y, join="right")
     >>> a
@@ -221,15 +223,15 @@ def align(
     array([[25., 35.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
@@ -243,15 +245,15 @@ def align(
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     """
     if indexes is None:
@@ -581,8 +583,13 @@ def reindex_variables(
 
     for name, var in variables.items():
         if name not in indexers:
+            if isinstance(fill_value, dict):
+                fill_value_ = fill_value.get(name, dtypes.NA)
+            else:
+                fill_value_ = fill_value
+
             if sparse:
-                var = var._as_sparse(fill_value=fill_value)
+                var = var._as_sparse(fill_value=fill_value_)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims
@@ -590,7 +597,7 @@ def reindex_variables(
             needs_masking = any(d in masked_dims for d in var.dims)
 
             if needs_masking:
-                new_var = var._getitem_with_mask(key, fill_value=fill_value)
+                new_var = var._getitem_with_mask(key, fill_value=fill_value_)
             elif all(is_full_slice(k) for k in key):
                 # no reindexing necessary
                 # here we need to manually deal with copying data, since
@@ -686,30 +693,24 @@ def broadcast(*args, exclude=None):
     >>> a
     <xarray.DataArray (x: 3)>
     array([1, 2, 3])
-    Coordinates:
-      * x        (x) int64 0 1 2
+    Dimensions without coordinates: x
     >>> b
     <xarray.DataArray (y: 2)>
     array([5, 6])
-    Coordinates:
-      * y        (y) int64 0 1
+    Dimensions without coordinates: y
     >>> a2, b2 = xr.broadcast(a, b)
     >>> a2
     <xarray.DataArray (x: 3, y: 2)>
     array([[1, 1],
            [2, 2],
            [3, 3]])
-    Coordinates:
-      * x        (x) int64 0 1 2
-      * y        (y) int64 0 1
+    Dimensions without coordinates: x, y
     >>> b2
     <xarray.DataArray (x: 3, y: 2)>
     array([[5, 6],
            [5, 6],
            [5, 6]])
-    Coordinates:
-      * y        (y) int64 0 1
-      * x        (x) int64 0 1 2
+    Dimensions without coordinates: x, y
 
     Fill out the dimensions of all data variables in a dataset:
 
@@ -718,9 +719,7 @@ def broadcast(*args, exclude=None):
     >>> ds2
     <xarray.Dataset>
     Dimensions:  (x: 3, y: 2)
-    Coordinates:
-      * x        (x) int64 0 1 2
-      * y        (y) int64 0 1
+    Dimensions without coordinates: x, y
     Data variables:
         a        (x, y) int64 1 1 2 2 3 3
         b        (x, y) int64 5 6 5 6 5 6

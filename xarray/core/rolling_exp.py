@@ -1,7 +1,7 @@
 import numpy as np
 
 from .pdcompat import count_not_none
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -13,8 +13,8 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
 
 def move_exp_nanmean(array, *, axis, alpha):
-    if isinstance(array, dask_array_type):
-        raise TypeError("rolling_exp is not currently support for dask arrays")
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
 
     if axis == ():
@@ -31,7 +31,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     """
     valid_count = count_not_none(comass, span, halflife, alpha)
     if valid_count > 1:
-        raise ValueError("comass, span, halflife, and alpha " "are mutually exclusive")
+        raise ValueError("comass, span, halflife, and alpha are mutually exclusive")
 
     # Convert to center of mass; domain checks ensure 0 < alpha <= 1
     if comass is not None:
@@ -93,7 +93,7 @@ class RollingExp:
         >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
         >>> da.rolling_exp(x=2, window_type="span").mean()
         <xarray.DataArray (x: 5)>
-        array([1.      , 1.      , 1.692308, 1.9     , 1.966942])
+        array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
         Dimensions without coordinates: x
         """
 

@@ -1413,7 +1413,7 @@ class TestDataset:
 
         with raises_regex(
             ValueError,
-            "Vectorized selection is " "not available along MultiIndex variable:" " x",
+            "Vectorized selection is not available along MultiIndex variable: x",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -1822,6 +1822,25 @@ class TestDataset:
         actual = data.reindex(dim2=data["dim2"][:5:-1])
         assert_identical(actual, expected)
 
+        # multiple fill values
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(data=[[-20, -20, -20, -20]] * len(ds.dim1)),
+        )
+        actual = data.reindex(
+            dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10, "var2": -20}
+        )
+        assert_identical(actual, expected)
+        # use the default value
+        expected = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1]).assign(
+            var1=lambda ds: ds.var1.copy(data=[[-10, -10, -10, -10]] * len(ds.dim1)),
+            var2=lambda ds: ds.var2.copy(
+                data=[[np.nan, np.nan, np.nan, np.nan]] * len(ds.dim1)
+            ),
+        )
+        actual = data.reindex(dim2=[0.1, 2.1, 3.1, 4.1], fill_value={"var1": -10})
+        assert_identical(actual, expected)
+
         # regression test for #279
         expected = Dataset({"x": ("time", np.random.randn(5))}, {"time": range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
@@ -1878,32 +1897,54 @@ class TestDataset:
         actual = ds.reindex_like(alt, method="pad")
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         actual = ds.reindex(y=y, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"x": 2, "z": 1}])
     def test_reindex_like_fill_value(self, fill_value):
-        ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
+        ds = Dataset({"x": ("y", [10, 20]), "z": ("y", [-20, -10]), "y": [0, 1]})
         y = [0, 1, 2]
         alt = Dataset({"y": y})
         actual = ds.reindex_like(alt, fill_value=fill_value)
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
-        expected = Dataset({"x": ("y", [10, 20, fill_value]), "y": y})
+            fill_value_x = fill_value_z = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_x = fill_value["x"]
+            fill_value_z = fill_value["z"]
+        else:
+            fill_value_x = fill_value_z = fill_value
+        expected = Dataset(
+            {
+                "x": ("y", [10, 20, fill_value_x]),
+                "z": ("y", [-20, -10, fill_value_z]),
+                "y": y,
+            }
+        )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value):
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
         y = Dataset({"bar": DataArray([1, 2], dims=["x"], coords={"x": [1, 3]})})
@@ -1911,13 +1952,26 @@ class TestDataset:
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_foo = fill_value_bar = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_foo = fill_value["foo"]
+            fill_value_bar = fill_value["bar"]
+        else:
+            fill_value_foo = fill_value_bar = fill_value
 
         expected_x2 = Dataset(
-            {"foo": DataArray([1, 2, fill_value], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "foo": DataArray(
+                    [1, 2, fill_value_foo], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         expected_y2 = Dataset(
-            {"bar": DataArray([1, fill_value, 2], dims=["x"], coords={"x": [1, 2, 3]})}
+            {
+                "bar": DataArray(
+                    [1, fill_value_bar, 2], dims=["x"], coords={"x": [1, 2, 3]}
+                )
+            }
         )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
@@ -2936,7 +2990,7 @@ class TestDataset:
 
     def test_unstack_fill_value(self):
         ds = xr.Dataset(
-            {"var": (("x",), np.arange(6))},
+            {"var": (("x",), np.arange(6)), "other_var": (("x",), np.arange(3, 9))},
             coords={"x": [0, 1, 2] * 2, "y": (("x",), ["a"] * 3 + ["b"] * 3)},
         )
         # make ds incomplete
@@ -2949,7 +3003,11 @@ class TestDataset:
 
         actual = ds["var"].unstack("index", fill_value=-1)
         expected = ds["var"].unstack("index").fillna(-1).astype(int)
-        assert actual.equals(expected)
+        assert_equal(actual, expected)
+
+        actual = ds.unstack("index", fill_value={"var": -1, "other_var": 1})
+        expected = ds.unstack("index").fillna({"var": -1, "other_var": 1}).astype(int)
+        assert_equal(actual, expected)
 
     @requires_sparse
     def test_unstack_sparse(self):
@@ -4192,7 +4250,7 @@ class TestDataset:
             "t": {"data": t, "dims": "t"},
             "b": {"dims": "t", "data": y},
         }
-        with raises_regex(ValueError, "cannot convert dict " "without the key 'dims'"):
+        with raises_regex(ValueError, "cannot convert dict without the key 'dims'"):
             Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):
@@ -4414,6 +4472,28 @@ class TestDataset:
         assert actual.attrs == ds.attrs
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
+
+    @pytest.mark.parametrize(
+        "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
+    )
+    def test_propagate_attrs(self, func):
+
+        da = DataArray(range(5), name="a", attrs={"attr": "da"})
+        ds = Dataset({"a": da}, attrs={"attr": "ds"})
+
+        # test defaults
+        assert func(ds).attrs == ds.attrs
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=True):
+            assert func(ds).attrs == ds.attrs
+            assert func(ds).a.attrs == ds.a.attrs
 
     def test_where(self):
         ds = Dataset({"a": ("x", range(5))})
@@ -4783,9 +4863,7 @@ class TestDataset:
         actual = ds.reduce(mean_only_one_axis, "y")
         assert_identical(expected, actual)
 
-        with raises_regex(
-            TypeError, "missing 1 required positional argument: " "'axis'"
-        ):
+        with raises_regex(TypeError, "missing 1 required positional argument: 'axis'"):
             ds.reduce(mean_only_one_axis)
 
         with raises_regex(TypeError, "non-integer axis"):
@@ -5202,7 +5280,7 @@ class TestDataset:
         with raises_regex(ValueError, "'label' argument has to"):
             ds.diff("dim2", label="raise_me")
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": -10}])
     def test_shift(self, fill_value):
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
         attrs = {"meta": "data"}
@@ -5212,6 +5290,8 @@ class TestDataset:
             # if we supply the default, we expect the missing value for a
             # float array
             fill_value = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value = fill_value.get("foo", np.nan)
         expected = Dataset({"foo": ("x", [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
@@ -5405,21 +5485,35 @@ class TestDataset:
         )
         actual = full_like(ds, 2)
 
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [2, 2, 2]
-        expect["d2"].values = [2.0, 2.0, 2.0]
-        assert expect["d1"].dtype == int
-        assert expect["d2"].dtype == float
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [2, 2, 2]
+        expected["d2"].values = [2.0, 2.0, 2.0]
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
-        expect = ds.copy(deep=True)
-        expect["d1"].values = [True, True, True]
-        expect["d2"].values = [True, True, True]
-        assert expect["d1"].dtype == bool
-        assert expect["d2"].dtype == bool
-        assert_identical(expect, actual)
+        expected = ds.copy(deep=True)
+        expected["d1"].values = [True, True, True]
+        expected["d2"].values = [True, True, True]
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == bool
+        assert_identical(expected, actual)
+
+        # with multiple fill values
+        actual = full_like(ds, {"d1": 1, "d2": 2.3})
+        expected = ds.assign(d1=("x", [1, 1, 1]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == int
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
+
+        # override multiple dtypes
+        actual = full_like(ds, fill_value={"d1": 1, "d2": 2.3}, dtype={"d1": bool})
+        expected = ds.assign(d1=("x", [True, True, True]), d2=("y", [2.3, 2.3, 2.3]))
+        assert expected["d1"].dtype == bool
+        assert expected["d2"].dtype == float
+        assert_identical(expected, actual)
 
     def test_combine_first(self):
         dsx0 = DataArray([0, 0], [("x", ["a", "b"])]).to_dataset(name="dsx0")
@@ -5882,6 +5976,8 @@ def test_coarsen_keep_attrs():
         attrs=_attrs,
     )
 
+    ds2 = ds.copy(deep=True)
+
     # Test dropped attrs
     dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == {}
@@ -5894,6 +5990,9 @@ def test_coarsen_keep_attrs():
     with set_options(keep_attrs=True):
         dat = ds.coarsen(coord=5).mean()
     assert dat.attrs == _attrs
+
+    # Test kept attrs in original object
+    xr.testing.assert_identical(ds, ds2)
 
 
 def test_rolling_keep_attrs():
@@ -5953,6 +6052,8 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
         expected = getattr(bn, func_name)(
             ds[key].values, window=7, axis=0, min_count=min_periods
         )
+    else:
+        raise ValueError
     assert_array_equal(actual[key].values, expected)
 
     # Test center
@@ -6115,6 +6216,32 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
     assert len(record) == 0
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+def test_raise_no_warning_assert_close(ds):
+    assert_allclose(ds, ds)
+
+
+@pytest.mark.xfail(reason="See https://github.com/pydata/xarray/pull/4369 or docstring")
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("name", ("mean", "max"))
+def test_raise_no_warning_dask_rolling_assert_close(ds, name):
+    """
+    This is a puzzle — I can't easily find the source of the warning. It
+    requires `assert_allclose` to be run, for the `ds` param to be 2, and is
+    different for `mean` and `max`. `sum` raises no warning.
+    """
+
+    ds = ds.chunk({"x": 4})
+
+    rolling_obj = ds.rolling(time=4, x=3)
+
+    actual = getattr(rolling_obj, name)()
+    expected = getattr(getattr(ds.rolling(time=4), name)().rolling(x=3), name)()
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("dask", [True, False])
@@ -6380,3 +6507,9 @@ def test_weakref():
     ds = Dataset()
     r = ref(ds)
     assert r() is ds
+
+
+def test_deepcopy_obj_array():
+    x0 = Dataset(dict(foo=DataArray(np.array([object()]))))
+    x1 = deepcopy(x0)
+    assert x0["foo"].values[0] is not x1["foo"].values[0]

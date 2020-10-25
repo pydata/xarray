@@ -38,7 +38,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
         if not hue_is_numeric and (hue_style == "continuous"):
             raise ValueError(
-                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
             )
 
         if add_guide is None or add_guide is True:
@@ -54,9 +54,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         add_colorbar = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError(
-            "hue_style must be either None, 'discrete' " "or 'continuous'."
-        )
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
@@ -131,7 +129,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, " "or Normalize object."
+        err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
@@ -339,11 +337,7 @@ def _dsplot(plotfunc):
             ax.set_ylabel(meta_data.get("ylabel"))
 
         if meta_data["add_legend"]:
-            ax.legend(
-                handles=primitive,
-                labels=list(meta_data["hue"].values),
-                title=meta_data.get("hue_label", None),
-            )
+            ax.legend(handles=primitive, title=meta_data.get("hue_label", None))
         if meta_data["add_colorbar"]:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if "label" not in cbar_kwargs:
