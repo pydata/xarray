@@ -24,8 +24,8 @@ Parameters
 ----------
 keep_attrs : bool, default: None
     If True, the attributes (``attrs``) will be copied from the original
-    object to the new one.  If False (default), the new object will be
-    returned without attributes. If None uses the global default.
+    object to the new one. If False, the new object will be returned
+    without attributes. If None uses the global default.
 **kwargs : dict
     Additional keyword arguments passed on to `{name}`.
 
@@ -257,8 +257,8 @@ class DataArrayRolling(Rolling):
             Filling value to match the dimension size.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes. If None uses the global default.
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
 
@@ -346,8 +346,8 @@ class DataArrayRolling(Rolling):
             np.ndarray over an the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes. If None uses the global default.
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -578,8 +578,8 @@ class DatasetRolling(Rolling):
             np.ndarray over an the rolling dimension.
         keep_attrs : bool, default: None
             If True, the attributes (``attrs``) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes. If None uses the global default.
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
