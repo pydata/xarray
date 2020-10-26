@@ -55,7 +55,7 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
-- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes of of (wrapped)
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes and names of of (wrapped)
   ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 

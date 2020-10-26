@@ -90,9 +90,9 @@ class Rolling:
 
         if keep_attrs is not None:
             warnings.warn(
-                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an error"
-                " in xarray 0.18. Please pass ``keep_attrs`` directly to the applied function."
-                " Note that keep_attrs is now True per default.",
+                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an"
+                " error in xarray 0.18. Please pass ``keep_attrs`` directly to the"
+                " applied function. Note that keep_attrs is now True per default.",
                 FutureWarning,
             )
         self.keep_attrs = keep_attrs
@@ -139,6 +139,7 @@ class Rolling:
     median = _reduce_method("median")
 
     def count(self, keep_attrs=None):
+        keep_attrs = self._get_keep_attrs(keep_attrs)
         rolling_count = self._counts(keep_attrs=keep_attrs)
         enough_periods = rolling_count >= self.min_periods
         return rolling_count.where(enough_periods)
@@ -473,7 +474,7 @@ class DataArrayRolling(Rolling):
     ):
         if "dim" in kwargs:
             warnings.warn(
-                f"Reductions are applied along the rolling dimension "
+                f"Reductions are applied along the rolling dimension(s) "
                 f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
                 f"operations has no effect.",
                 DeprecationWarning,
@@ -533,8 +534,7 @@ class DatasetRolling(Rolling):
         super().__init__(obj, windows, min_periods, center, keep_attrs)
         if any(d not in self.obj.dims for d in self.dim):
             raise KeyError(self.dim)
-
-        # Keep a rolling object for each DataArray in a dictionary
+        # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
