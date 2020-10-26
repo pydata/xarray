@@ -14,6 +14,11 @@ additional features, like propagating physical units or a different layout in me
 :py:class:`DataArray` and :py:class:`Dataset` objects can wrap these duck arrays, as
 long as they satisfy certain conditions (see :ref:`internals.duck_arrays`).
 
+.. note::
+
+    For ``dask`` support see :ref:`dask`.
+
+
 Missing features
 ----------------
 Most of the API does support :term:`duck array` objects, but there are a few areas where
