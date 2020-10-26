@@ -324,16 +324,14 @@ class DataArray(AbstractArray, DataWithCoords):
 
     Find out where the coldest temperature was:
 
-    >>> coldest_temp = da.min() == da
-    >>> da.where(cond=coldest_temp, drop=True)
-    <xarray.DataArray (x: 1, y: 1, time: 1)>
-    array([[[7.18177696]]])
+    >>> da.isel(da.argmin(...))
+    <xarray.DataArray ()>
+    array(7.18177696)
     Coordinates:
-        lon             (x, y) float64 -99.32
-        lat             (x, y) float64 42.21
-      * time            (time) datetime64[ns] 2014-09-08
+        lon             float64 -99.32
+        lat             float64 42.21
+        time            datetime64[ns] 2014-09-08
         reference_time  datetime64[ns] 2014-09-05
-    Dimensions without coordinates: x, y
     Attributes:
         description:  Ambient temperature.
         units:        degC
