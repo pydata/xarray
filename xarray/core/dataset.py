@@ -561,19 +561,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     Find out where the coldest temperature was and what values the
     other variables had:
 
-    >>> coldest_temp = ds.temperature.min() == ds.temperature
-    >>> ds.where(cond=coldest_temp, drop=True)
+    >>> ds.isel(ds.temperature.argmin(...))
     <xarray.Dataset>
-    Dimensions:         (time: 1, x: 1, y: 1)
+    Dimensions:         ()
     Coordinates:
-        lon             (x, y) float64 -99.32
-        lat             (x, y) float64 42.21
-      * time            (time) datetime64[ns] 2014-09-08
+        lon             float64 -99.32
+        lat             float64 42.21
+        time            datetime64[ns] 2014-09-08
         reference_time  datetime64[ns] 2014-09-05
-    Dimensions without coordinates: x, y
     Data variables:
-        temperature     (x, y, time) float64 7.182
-        precipitation   (x, y, time) float64 8.326
+        temperature     float64 7.182
+        precipitation   float64 8.326
     Attributes:
         description:  Weather related data.
     """
