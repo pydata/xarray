@@ -36,6 +36,14 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when
+  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
+  it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
+  and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
+  would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
+  be parsed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
@@ -55,6 +63,8 @@ Documentation
 ~~~~~~~~~~~~~
 - document the API not supported with duck arrays (:pull:`4530`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
+  is called on a scalar (:issue:`4228`). By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -80,7 +90,7 @@ v0.16.1 (2020-09-20)
 This patch release fixes an incompatibility with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
 improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
-bug fixes. Our documentation has a number of improvements, including fixing all 
+bug fixes. Our documentation has a number of improvements, including fixing all
 doctests and confirming their accuracy on every commit.
 
 Many thanks to the 36 contributors who contributed to this release:
@@ -160,7 +170,7 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
-- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
+- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`)
   By `Tom Augspurger <https://github.com/TomAugspurger>`_
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
