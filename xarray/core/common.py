@@ -3,6 +3,7 @@ from contextlib import suppress
 from html import escape
 from textwrap import dedent
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -26,6 +27,12 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
+
+if TYPE_CHECKING:
+    from xarray.core.variable import IndexVariable
+
+    from .dataarray import DataArray
+
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
@@ -577,13 +584,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> def adder(data, arg):
         ...     return data + arg
-        ...
+
         >>> def div(data, arg):
         ...     return data / arg
-        ...
+
         >>> def sub_mult(data, sub_arg, mult_arg):
         ...     return (data * mult_arg) - sub_arg
-        ...
+
         >>> x.pipe(adder, 2)
         <xarray.Dataset>
         Dimensions:        (lat: 2, lon: 2)
@@ -633,7 +640,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True, restore_coord_dims: bool = None):
+    def groupby(
+        self,
+        group: Union[Hashable, "DataArray", "IndexVariable"],
+        squeeze: bool = True,
+        restore_coord_dims: bool = None,
+    ):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters

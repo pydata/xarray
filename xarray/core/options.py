@@ -9,7 +9,7 @@ CMAP_SEQUENTIAL = "cmap_sequential"
 CMAP_DIVERGENT = "cmap_divergent"
 KEEP_ATTRS = "keep_attrs"
 DISPLAY_STYLE = "display_style"
-
+NUMPY_GROUPIES = "numpy_groupies"
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
@@ -21,6 +21,7 @@ OPTIONS = {
     CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
     DISPLAY_STYLE: "html",
+    NUMPY_GROUPIES: True,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -104,6 +105,7 @@ class set_options:
       Default: ``'default'``.
     - ``display_style``: display style to use in jupyter for xarray objects.
       Default: ``'text'``. Other options are ``'html'``.
+    - ``numpy_groupies``: use numpy groupies.
 
 
     You can use ``set_options`` either as a context manager:

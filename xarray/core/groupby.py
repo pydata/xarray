@@ -1,6 +1,7 @@
 import datetime
 import functools
 import warnings
+from typing import TYPE_CHECKING, Hashable, Iterator, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import propagate_indexes
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
     either_dict_or_kwargs,
@@ -22,6 +23,9 @@ from .utils import (
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable, as_variable
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -55,12 +59,12 @@ def unique_value_groups(ar, sort=True):
         the corresponding value in `unique_values`.
     """
     inverse, values = pd.factorize(ar, sort=sort)
-    groups = [[] for _ in range(len(values))]
+    indices = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
             # pandas uses -1 to mark NaN, but doesn't include them in values
-            groups[g].append(n)
-    return values, groups
+            indices[g].append(n)
+    return values, indices
 
 
 def _dummy_copy(xarray_obj):
@@ -267,7 +271,7 @@ class GroupBy(SupportsArithmetic):
     def __init__(
         self,
         obj,
-        group,
+        group_or_name: Union[Hashable, "DataArray", IndexVariable],
         squeeze=False,
         grouper=None,
         bins=None,
@@ -280,7 +284,7 @@ class GroupBy(SupportsArithmetic):
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray
+        group_or_name : str, DataArray, IndexVariable
             Array with the group values.
         squeeze : bool, optional
             If "group" is a coordinate of object, `squeeze` controls whether
@@ -305,20 +309,22 @@ class GroupBy(SupportsArithmetic):
         if grouper is not None and bins is not None:
             raise TypeError("can't specify both `grouper` and `bins`")
 
-        if not isinstance(group, (DataArray, IndexVariable)):
-            if not hashable(group):
+        if not isinstance(group_or_name, (DataArray, IndexVariable)):
+            if not hashable(group_or_name):
                 raise TypeError(
                     "`group` must be an xarray.DataArray or the "
                     "name of an xarray variable or dimension."
-                    f"Received {group!r} instead."
+                    f"Received {group_or_name!r} instead."
                 )
-            group = obj[group]
+            group = obj[group_or_name]
             if len(group) == 0:
                 raise ValueError(f"{group.name} must not be empty")
 
             if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
+        else:
+            group = group_or_name
 
         if getattr(group, "name", None) is None:
             group.name = "group"
@@ -361,7 +367,8 @@ class GroupBy(SupportsArithmetic):
             if not squeeze:
                 # use slices to do views instead of fancy indexing
                 # equivalent to: group_indices = group_indices.reshape(-1, 1)
-                group_indices = [slice(i, i + 1) for i in group_indices]
+                # TODO: fix type error `Unsupported operand types for + ("slice" and "int")`
+                group_indices = [slice(i, i + 1) for i in group_indices]  # type: ignore
             unique_coord = group
         else:
             if group.isnull().any():
@@ -392,8 +399,15 @@ class GroupBy(SupportsArithmetic):
         # specification for the groupby operation
         self._obj = obj
         self._group = group
+        # The dimension over which to group over. Where the group is a
+        # non-index coord, this wil differ from the group name
         self._group_dim = group_dim
+        # TODO: reword!
+        #
+        # A list containing a list for each group. each list contains the
+        # indices of points the respective group contains
         self._group_indices = group_indices
+        # IndexVariable of unique values (labels?)
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
@@ -404,6 +418,8 @@ class GroupBy(SupportsArithmetic):
         self._groups = None
         self._dims = None
 
+    # TODO: is this correct? Should we be returning the dims of the result? This
+    # will use the original dim where we're grouping by a coord.
     @property
     def dims(self):
         if self._dims is None:
@@ -882,9 +898,105 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         return self.map(reduce_array, shortcut=shortcut)
 
+    def dims_(self) -> Iterator[Hashable]:
+        """ The dims of the resulting object (before any further reduction) """
 
-ops.inject_reduce_methods(DataArrayGroupBy)
-ops.inject_binary_ops(DataArrayGroupBy)
+        for d in self.dims:
+            if d != self._group_dim:
+                yield d
+            # Grouping on a dimension
+            elif self._group_dim == self._group.name:
+                yield d
+            # Grouping on a coord that isn't a dimension
+            else:
+                yield self._group.name
+
+    def _npg_groupby(self, func: str):
+
+        # `.values` seems to be required for datetimes
+        indices, _ = pd.factorize(self._group.values)
+
+        array = npg_aggregate(self._obj, self._group_dim, func, indices)
+
+        # FIXME: Currently we're trying to use as much of the existing
+        # infrastructure as possible, but I'm struggling to fit it in — it may
+        # be easier to start from scratch.
+        #
+        # The existing model checks a single result `applied_example`; which in
+        # this case we don't have — we generate the whole array at once.
+
+        applied = applied_example = type(self._obj)(
+            data=array,
+            dims=tuple(self.dims_()),
+        )
+
+        # The remainder is mostly copied from `_combine`
+
+        # FIXME: this part seems broken at the moment — the `_infer_concat_args`
+        # doesn't return the correct result when the group isn't a dimensioned
+        # coordinate
+
+        coord = self._unique_coord
+        coord, dim, positions = self._infer_concat_args(applied_example)
+        # NB: These are commented out for simplicity.
+        # if shortcut:
+        #     combined = self._concat_shortcut(applied, dim, positions)
+        # else:
+        combined = concat(applied, dim)
+        combined = _maybe_reorder(combined, dim, positions)
+
+        if isinstance(combined, type(self._obj)):
+            # only restore dimension order for arrays
+            combined = self._restore_dim_order(combined)
+        # assign coord when the applied function does not return that coord
+        if coord is not None:  # and dim not in applied_example.dims:
+            # if shortcut:
+            #     coord_var = as_variable(coord)
+            #     combined._coords[coord.name] = coord_var
+            # else:
+            combined.coords[coord.name] = coord
+        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_unstack(combined)
+
+        return combined
+
+    if OPTIONS["numpy_groupies"]:
+
+        def sum(self, dim=None):
+            grouped = self._npg_groupby(func="sum")
+            if dim:
+                return grouped.sum(dim)
+            else:
+                return grouped
+
+        def count(self, dim=None):
+            grouped = self._npg_groupby(func="count")
+            if dim:
+                return grouped.count(dim)
+            else:
+                return grouped
+
+        def mean(self, dim=None):
+            grouped = self._npg_groupby(func="mean")
+            if dim:
+                return grouped.mean(dim)
+            else:
+                return grouped
+
+
+def npg_aggregate(
+    da: "DataArray", dim: str, func: str, group_idx: IndexVariable
+) -> np.array:
+    from numpy_groupies.aggregate_numba import aggregate
+
+    axis = da.get_axis_num(dim)
+    return aggregate(group_idx=group_idx, a=da, func=func, axis=axis)
+
+
+if not OPTIONS["numpy_groupies"]:
+
+    ops.inject_reduce_methods(DataArrayGroupBy)
+    ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
