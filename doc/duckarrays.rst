@@ -1,9 +1,17 @@
 .. currentmodule:: xarray
 
-Working with duck arrays
-========================
-This is a high-level overview, for the technical details of integrating duck arrays with
-``xarray`` see :ref:`internals.duck_arrays`.
+Working with numpy-like arrays
+==============================
+
+.. warning::
+
+   This is a experimental feature, please report any bugs you might find.
+
+Numpy-like arrays (:term:`duck array`) extend the :py:class:`numpy.ndarray` with
+additional features, like propagating physical units or a different layout in memory.
+
+:py:class:`DataArray` and :py:class:`Dataset` objects can wrap these duck arrays, as
+long as they satisfy certain conditions (see :ref:`internals.duck_arrays`).
 
 Missing features
 ----------------
