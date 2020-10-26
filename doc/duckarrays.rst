@@ -7,8 +7,8 @@ This is a high-level overview, for the technical details of integrating duck arr
 
 Missing features
 ----------------
-Most of the API does support duck arrays, but there are a few areas where the code
-will still cast to ``numpy`` arrays:
+Most of the API does support :term:`duck array` objects, but there are a few areas where
+the code will still cast to ``numpy`` arrays:
 
 - dimension coordinates, and thus all indexing operations:
 
