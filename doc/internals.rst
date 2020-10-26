@@ -57,7 +57,7 @@ xarray can wrap custom :term:`duck array` objects as long as they define numpy's
 ``__array_ufunc__`` and ``__array_function__`` methods.
 
 In certain situations (e.g. when printing the collapsed preview of
-variables of a ``Dataset``), xarray will display the repr of a `duck array`_
+variables of a ``Dataset``), xarray will display the repr of a :term:`duck array`
 in a single line, truncating it to a certain number of characters. If that
 would drop too much information, the :term:`duck array` may define a
 ``_repr_inline_`` method that takes ``max_width`` (number of characters) as an
