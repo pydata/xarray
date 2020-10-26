@@ -5997,33 +5997,42 @@ def test_coarsen_keep_attrs():
 
 @pytest.mark.parametrize(
     "funcname, argument",
-    [("reduce", (np.mean,)), ("mean", ()), ("construct", ("window_dim",))],
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+        ("construct", ("window_dim",)),
+        ("count", ()),
+    ],
 )
 def test_rolling_keep_attrs(funcname, argument):
     global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
+    da_attrs = {"da_attr": "test"}
+    da_not_rolled_attrs = {"da_not_rolled_attr": "test"}
 
     data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"da": ("coord", data)},
+        data_vars={"da": ("coord", data), "da_not_rolled": ("no_coord", data)},
         coords={"coord": coords},
         attrs=global_attrs,
     )
-    ds.da.attrs = attrs_da
+    ds.da.attrs = da_attrs
+    ds.da_not_rolled.attrs = da_not_rolled_attrs
 
     # attrs are now kept per default
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == global_attrs
-    assert result.da.attrs == attrs_da
+    assert result.da.attrs == da_attrs
+    assert ds.da_not_rolled.attrs == da_not_rolled_attrs
 
     # discard attrs
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
     assert result.da.attrs == {}
+    assert ds.da_not_rolled.attrs == {}
 
     # test discard attrs using global option
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
@@ -6032,9 +6041,10 @@ def test_rolling_keep_attrs(funcname, argument):
 
     assert result.attrs == {}
     assert result.da.attrs == {}
+    assert ds.da_not_rolled.attrs == {}
 
 
-def test_rolling_keep_attrs_construct_deprecated():
+def test_rolling_keep_attrs_deprecated():
     global_attrs = {"units": "test", "long_name": "testing"}
     attrs_da = {"da_attr": "test"}
 
@@ -6067,9 +6077,6 @@ def test_rolling_keep_attrs_construct_deprecated():
 
     assert result.attrs == {}
     assert result.da.attrs == {}
-
-
-keep_attrs = False
 
 
 def test_rolling_properties(ds):
