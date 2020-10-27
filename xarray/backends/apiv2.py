@@ -94,7 +94,7 @@ def open_dataset(
     engine=None,
     chunks=None,
     cache=None,
-    decode_cf=True,
+    decode_cf=None,
     mask_and_scale=None,
     decode_times=None,
     decode_timedelta=None,
