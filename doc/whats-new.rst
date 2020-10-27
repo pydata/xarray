@@ -62,8 +62,13 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
+  (:pull:`4532`);
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
-  is called on a scalar (:issue:`4228`). By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
+  is called on a scalar, (:issue:`4228`); 
+  By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
