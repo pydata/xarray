@@ -111,6 +111,9 @@ html_context = {
 
 autodoc_typehints = "none"
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
 napoleon_use_param = False
 napoleon_use_rtype = True
 napoleon_preprocess_types = True

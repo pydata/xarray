@@ -456,15 +456,124 @@ class _LocIndexer:
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """A multi-dimensional, in memory, array database.
 
-    A dataset resembles an in-memory representation of a NetCDF file, and
-    consists of variables, coordinates and attributes which together form a
-    self describing dataset.
+    A dataset resembles an in-memory representation of a NetCDF file,
+    and consists of variables, coordinates and attributes which
+    together form a self describing dataset.
 
-    Dataset implements the mapping interface with keys given by variable names
-    and values given by DataArray objects for each variable name.
+    Dataset implements the mapping interface with keys given by variable
+    names and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are index
-    coordinates used for label based indexing.
+    One dimensional variables with name equal to their dimension are
+    index coordinates used for label based indexing.
+
+    To load data from a file or file-like object, use the `open_dataset`
+    function.
+
+    Parameters
+    ----------
+    data_vars : dict-like, optional
+        A mapping from variable names to :py:class:`~xarray.DataArray`
+        objects, :py:class:`~xarray.Variable` objects or to tuples of
+        the form ``(dims, data[, attrs])`` which can be used as
+        arguments to create a new ``Variable``. Each dimension must
+        have the same length in all variables in which it appears.
+
+        The following notations are accepted:
+
+        - mapping {var name: DataArray}
+        - mapping {var name: Variable}
+        - mapping {var name: (dimension name, array-like)}
+        - mapping {var name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (it will be automatically moved to coords, see below)
+
+        Each dimension must have the same length in all variables in
+        which it appears.
+    coords : dict-like, optional
+        Another mapping in similar form as the `data_vars` argument,
+        except the each item is saved on the dataset as a "coordinate".
+        These variables have an associated meaning: they describe
+        constant/fixed/independent quantities, unlike the
+        varying/measured/dependent quantities that belong in
+        `variables`. Coordinates values may be given by 1-dimensional
+        arrays or scalars, in which case `dims` do not need to be
+        supplied: 1D arrays will be assumed to give index values along
+        the dimension with the same name.
+
+        The following notations are accepted:
+
+        - mapping {coord name: DataArray}
+        - mapping {coord name: Variable}
+        - mapping {coord name: (dimension name, array-like)}
+        - mapping {coord name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (the dimension name is implicitly set to be the same as the
+          coord name)
+
+        The last notation implies that the coord name is the same as
+        the dimension name.
+
+    attrs : dict-like, optional
+        Global attributes to save on this dataset.
+
+    Examples
+    --------
+    Create data:
+
+    >>> np.random.seed(0)
+    >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
+    >>> precipitation = 10 * np.random.rand(2, 2, 3)
+    >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+    >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+    >>> time = pd.date_range("2014-09-06", periods=3)
+    >>> reference_time = pd.Timestamp("2014-09-05")
+
+    Initialize a dataset with multiple dimensions:
+
+    >>> ds = xr.Dataset(
+    ...     data_vars=dict(
+    ...         temperature=(["x", "y", "time"], temperature),
+    ...         precipitation=(["x", "y", "time"], precipitation),
+    ...     ),
+    ...     coords=dict(
+    ...         lon=(["x", "y"], lon),
+    ...         lat=(["x", "y"], lat),
+    ...         time=time,
+    ...         reference_time=reference_time,
+    ...     ),
+    ...     attrs=dict(description="Weather related data."),
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:         (time: 3, x: 2, y: 2)
+    Coordinates:
+        lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        lat             (x, y) float64 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Dimensions without coordinates: x, y
+    Data variables:
+        temperature     (x, y, time) float64 29.11 18.2 22.83 ... 18.28 16.15 26.63
+        precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
+    Attributes:
+        description:  Weather related data.
+
+    Find out where the coldest temperature was and what values the
+    other variables had:
+
+    >>> ds.isel(ds.temperature.argmin(...))
+    <xarray.Dataset>
+    Dimensions:         ()
+    Coordinates:
+        lon             float64 -99.32
+        lat             float64 42.21
+        time            datetime64[ns] 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Data variables:
+        temperature     float64 7.182
+        precipitation   float64 8.326
+    Attributes:
+        description:  Weather related data.
     """
 
     _attrs: Optional[Dict[Hashable, Any]]
@@ -501,56 +610,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
     ):
-        """To load data from a file or file-like object, use the `open_dataset`
-        function.
-
-        Parameters
-        ----------
-        data_vars : dict-like, optional
-            A mapping from variable names to :py:class:`~xarray.DataArray`
-            objects, :py:class:`~xarray.Variable` objects or to tuples of the
-            form ``(dims, data[, attrs])`` which can be used as arguments to
-            create a new ``Variable``. Each dimension must have the same length
-            in all variables in which it appears.
-
-            The following notations are accepted:
-
-            - mapping {var name: DataArray}
-            - mapping {var name: Variable}
-            - mapping {var name: (dimension name, array-like)}
-            - mapping {var name: (tuple of dimension names, array-like)}
-            - mapping {dimension name: array-like}
-              (it will be automatically moved to coords, see below)
-
-            Each dimension must have the same length in all variables in which
-            it appears.
-        coords : dict-like, optional
-            Another mapping in similar form as the `data_vars` argument,
-            except the each item is saved on the dataset as a "coordinate".
-            These variables have an associated meaning: they describe
-            constant/fixed/independent quantities, unlike the
-            varying/measured/dependent quantities that belong in `variables`.
-            Coordinates values may be given by 1-dimensional arrays or scalars,
-            in which case `dims` do not need to be supplied: 1D arrays will be
-            assumed to give index values along the dimension with the same
-            name.
-
-            The following notations are accepted:
-
-            - mapping {coord name: DataArray}
-            - mapping {coord name: Variable}
-            - mapping {coord name: (dimension name, array-like)}
-            - mapping {coord name: (tuple of dimension names, array-like)}
-            - mapping {dimension name: array-like}
-              (the dimension name is implicitly set to be the same as the coord name)
-
-            The last notation implies that the coord name is the same as the
-            dimension name.
-
-        attrs : dict-like, optional
-            Global attributes to save on this dataset.
-        """
-
         # TODO(shoyer): expose indexes as a public argument in __init__
 
         if data_vars is None:
