@@ -54,6 +54,7 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     ([[0]], "days since 1000-01-01"),
     (np.arange(2), "days since 1000-01-01"),
     (np.arange(0, 100000, 20000), "days since 1900-01-01"),
+    (np.arange(0, 100000, 20000), "days since 1-01-01"),
     (17093352.0, "hours since 1-1-1 00:00:0.0"),
     ([0.5, 1.5], "hours since 1900-01-01T00:00:00"),
     (0, "milliseconds since 2000-01-01T00:00:00"),
@@ -109,20 +110,16 @@ def test_cf_datetime(num_dates, units, calendar):
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, "s")).all()
     encoded, _, _ = coding.times.encode_cf_datetime(actual, units, calendar)
-    if "1-1-1" not in units:
-        # pandas parses this date very strangely, so the original
-        # units/encoding cannot be preserved in this case:
-        # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
-        # Timestamp('2001-01-01 00:00:00')
+
+    assert_array_equal(num_dates, np.around(encoded, 1))
+    if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
+        # verify that wrapping with a pandas.Index works
+        # note that it *does not* currently work to put
+        # non-datetime64 compatible dates into a pandas.Index
+        encoded, _, _ = coding.times.encode_cf_datetime(
+            pd.Index(actual), units, calendar
+        )
         assert_array_equal(num_dates, np.around(encoded, 1))
-        if hasattr(num_dates, "ndim") and num_dates.ndim == 1 and "1000" not in units:
-            # verify that wrapping with a pandas.Index works
-            # note that it *does not* currently work to even put
-            # non-datetime64 compatible dates into a pandas.Index
-            encoded, _, _ = coding.times.encode_cf_datetime(
-                pd.Index(actual), units, calendar
-            )
-            assert_array_equal(num_dates, np.around(encoded, 1))
 
 
 @requires_cftime
@@ -928,3 +925,35 @@ def test_use_cftime_false_non_standard_calendar(calendar, units_year):
     units = f"days since {units_year}-01-01"
     with pytest.raises(OutOfBoundsDatetime):
         decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _ALL_CALENDARS)
+def test_decode_ambiguous_time_warns(calendar):
+    # GH 4422, 4506
+    from cftime import num2date
+
+    # we don't decode non-standard calendards with
+    # pandas so expect no warning will be emitted
+    is_standard_calendar = calendar in coding.times._STANDARD_CALENDARS
+
+    dates = [1, 2, 3]
+    units = "days since 1-1-1"
+    expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
+
+    exp_warn_type = SerializationWarning if is_standard_calendar else None
+
+    with pytest.warns(exp_warn_type) as record:
+        result = decode_cf_datetime(dates, units, calendar=calendar)
+
+    if is_standard_calendar:
+        relevant_warnings = [
+            r
+            for r in record.list
+            if str(r.message).startswith("Ambiguous reference date string: 1-1-1")
+        ]
+        assert len(relevant_warnings) == 1
+    else:
+        assert not record
+
+    np.testing.assert_array_equal(result, expected)

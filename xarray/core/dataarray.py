@@ -2501,6 +2501,8 @@ class DataArray(AbstractArray, DataWithCoords):
                 "cannot convert an unnamed DataArray to a "
                 "DataFrame: use the ``name`` parameter"
             )
+        if self.ndim == 0:
+            raise ValueError("cannot convert a scalar to a DataFrame")
 
         # By using a unique name, we can convert a DataArray into a DataFrame
         # even if it shares a name with one of its coordinates.
