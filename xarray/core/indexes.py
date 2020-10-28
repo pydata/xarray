@@ -143,3 +143,55 @@ def propagate_indexes(
         new_indexes = None  # type: ignore
 
     return new_indexes
+
+
+def equal_indexes_with_tolerance(
+    index: pd.Index, others: Iterable[pd.Index], tolerance: float
+) -> bool:
+
+    return all(other.equals(index) for other in others) or (
+        tolerance > 0
+        and index.is_numeric()
+        and all(other.is_numeric() for other in others)
+        and all(np.allclose(index, other, atol=tolerance, rtol=0) for other in others)
+    )
+
+
+def unique_with_tolerance(x, tolerance):
+    # check uniqueness based on the difference between successive values
+    # this eliminates all the numbers that are within tolerance of the previous one.
+    # a number can be removed even if the previous one was removed
+
+    x = np.sort(x)
+    # x is sorted
+    notclose = np.diff(x) > tolerance
+
+    unique = x[1:][notclose]
+    return np.insert(unique, 0, x[0])
+
+
+def or_with_tolerance(x1, x2, tolerance):
+    return unique_with_tolerance(np.concatenate((x1, x2)), tolerance=tolerance)
+
+
+def and_with_tolerance(x1, x2, tolerance):
+    # return values common in the two arrays (within some tolerance)
+
+    x = np.concatenate((x1, x2))
+
+    # sort x, remember the origin (x1 or x2)
+    ind = np.argsort(x)
+    x = x[ind]
+
+    # check for close values
+    close = np.diff(x) < tolerance
+
+    origin = ind < len(x1)
+    first = origin[:-1][close]  # where is the 'first' coming from
+    second = origin[1:][close]  # where is the 'second' coming from
+
+    intersect = (
+        first != second
+    )  # they must come from the two different arrays to be an interestion
+
+    return x[:-1][close][intersect]

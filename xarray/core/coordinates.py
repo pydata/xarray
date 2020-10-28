@@ -13,6 +13,7 @@ from typing import (
     cast,
 )
 
+import numpy as np
 import pandas as pd
 
 from . import formatting, indexing
@@ -107,8 +108,49 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             return self._data.get_index(dim)  # type: ignore
         else:
             indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
-            names = list(ordered_dims)
-            return pd.MultiIndex.from_product(indexes, names=names)
+
+            # compute the sizes of the repeat and tile for the cartesian product
+            # (taken from pandas.core.reshape.util)
+            index_lengths = np.fromiter(
+                (len(index) for index in indexes), dtype=np.intp
+            )
+            cumprod_lengths = np.cumproduct(index_lengths)
+
+            if cumprod_lengths[-1] != 0:
+                # sizes of the repeats
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
+            else:
+                # if any factor is empty, the cartesian product is empty
+                repeat_counts = np.zeros_like(cumprod_lengths)
+
+            # sizes of the tiles
+            tile_counts = np.roll(cumprod_lengths, 1)
+            tile_counts[0] = 1
+
+            # loop over the indexes
+            # for each MultiIndex or Index compute the cartesian product of the codes
+
+            code_list = []
+            level_list = []
+            names = []
+
+            for i, index in enumerate(indexes):
+                if isinstance(index, pd.MultiIndex):
+                    codes, levels = index.codes, index.levels
+                else:
+                    code, level = pd.factorize(index)
+                    codes = [code]
+                    levels = [level]
+
+                # compute the cartesian product
+                code_list += [
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    for code in codes
+                ]
+                level_list += levels
+                names += index.names
+
+            return pd.MultiIndex(level_list, code_list, names=names)
 
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
