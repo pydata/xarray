@@ -68,7 +68,8 @@ Documentation
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
   is called on a scalar, (:issue:`4228`); 
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
-
+- Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
