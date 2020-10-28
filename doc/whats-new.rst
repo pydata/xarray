@@ -34,7 +34,7 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
   limited regions of existing Zarr stores (:pull:`4035`).
-  See :ref:`io.zarr.appending`_ for full details.
+  See :ref:`io.zarr.appending` for full details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
