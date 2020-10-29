@@ -73,16 +73,13 @@ def dataset_from_backend_dataset(
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
         ds = backend_ds
-    elif engine != "zarr":
+    else:
         from dask.base import tokenize
         mtime = get_mtime(filename_or_obj)
         token = tokenize(
             filename_or_obj, mtime, engine, chunks, **extra_tokens
         )
         name_prefix = "open_dataset-%s" % token
-        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
-
-    else:
         if isinstance(chunks, int):
             chunks = dict.fromkeys(backend_ds.dims, chunks)
 
@@ -92,6 +89,8 @@ def dataset_from_backend_dataset(
                 var,
                 get_chunk(name, var, chunks),
                 overwrite_encoded_chunks=overwrite_encoded_chunks,
+                name_prefix=name_prefix,
+                token=token,
             )
             for name, var in backend_ds.variables.items()
         }
