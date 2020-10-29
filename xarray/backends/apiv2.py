@@ -1,8 +1,8 @@
 import os
 import warnings
 
+from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
-from ..core.dataset import _maybe_chunk
 from . import cfgrib_, h5netcdf_, zarr
 from .api import (
     _autodetect_engine,
@@ -16,38 +16,6 @@ ENGINES = {
     "zarr": zarr.open_backend_dataset_zarr,
     "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
 }
-
-
-def check_chunks_compatibility(dim, chunks, chunk_spec):
-    spec = chunks[dim]
-    if isinstance(spec, int):
-        spec = (spec,)
-    if any(s % chunk_spec[dim] for s in spec):
-        warnings.warn(
-            "Specified Dask chunks %r would "
-            "separate on disks chunk shape %r for "
-            "dimension %r. This could "
-            "degrades performance. Consider "
-            "rechunking after loading instead."
-            % (chunks[dim], chunk_spec[dim], dim),
-            stacklevel=2,
-        )
-
-
-def get_chunk(name, var, chunks):
-    preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
-    if var.ndim == 1 and var.dims[0] == name:
-        return preferred_chunks
-
-    output_chunks = {}
-    if chunks is not None:
-        for dim in preferred_chunks:
-            if dim in chunks:
-                check_chunks_compatibility(dim, chunks, preferred_chunks)
-                output_chunks[dim] = chunks[dim]
-            else:
-                output_chunks[dim] = preferred_chunks[dim]
-    return output_chunks
 
 
 def get_mtime(filename_or_obj):
@@ -75,10 +43,9 @@ def dataset_from_backend_dataset(
         ds = backend_ds
     else:
         from dask.base import tokenize
+
         mtime = get_mtime(filename_or_obj)
-        token = tokenize(
-            filename_or_obj, mtime, engine, chunks, **extra_tokens
-        )
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
         name_prefix = "open_dataset-%s" % token
         if isinstance(chunks, int):
             chunks = dict.fromkeys(backend_ds.dims, chunks)
@@ -87,7 +54,7 @@ def dataset_from_backend_dataset(
             name: _maybe_chunk(
                 name,
                 var,
-                get_chunk(name, var, chunks),
+                _get_chunk(name, var, chunks),
                 overwrite_encoded_chunks=overwrite_encoded_chunks,
                 name_prefix=name_prefix,
                 token=token,
@@ -220,12 +187,6 @@ def open_dataset(
 
     if chunks == "auto":
         chunks = {}
-
-    if not (isinstance(chunks, (int, dict)) or (chunks is None)):
-        raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
-        )
 
     if cache is None:
         cache = chunks is None

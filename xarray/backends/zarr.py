@@ -362,7 +362,6 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-
     def store(
         self,
         variables,
