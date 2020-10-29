@@ -2,6 +2,7 @@ import os
 import warnings
 
 from ..core.utils import is_remote_uri
+from ..core.dataset import _maybe_chunk
 from . import cfgrib_, h5netcdf_, zarr
 from .api import (
     _autodetect_engine,
@@ -33,15 +34,20 @@ def check_chunks_compatibility(dim, chunks, chunk_spec):
         )
 
 
-def get_chunk(var, chunks):
-    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks", {})))
+def get_chunk(name, var, chunks):
+    preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
+    if var.ndim == 1 and var.dims[0] == name:
+        return preferred_chunks
+
+    output_chunks = {}
     if chunks is not None:
-        for dim in chunk_spec:
+        for dim in preferred_chunks:
             if dim in chunks:
-                check_chunks_compatibility(chunks, chunk_spec)
+                check_chunks_compatibility(dim, chunks, preferred_chunks)
+                output_chunks[dim] = chunks[dim]
             else:
-                chunks[dim] = chunk_spec[dim]
-    return chunks
+                output_chunks[dim] = preferred_chunks[dim]
+    return output_chunks
 
 
 def get_mtime(filename_or_obj):
@@ -55,13 +61,14 @@ def get_mtime(filename_or_obj):
 
 
 def dataset_from_backend_dataset(
-    backend_ds, filename_or_obj, engine, chunks, cache, overwrite_encoded_chunks, extra_tokens,
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
-        )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -74,20 +81,28 @@ def dataset_from_backend_dataset(
         )
         name_prefix = "open_dataset-%s" % token
         ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
-    else:
 
+    else:
         if isinstance(chunks, int):
             chunks = dict.fromkeys(backend_ds.dims, chunks)
+
         variables = {
-            k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in backend_ds.variables.items()
+            name: _maybe_chunk(
+                name,
+                var,
+                get_chunk(name, var, chunks),
+                overwrite_encoded_chunks=overwrite_encoded_chunks,
+            )
+            for name, var in backend_ds.variables.items()
         }
         ds = backend_ds._replace(variables)
+
     ds._file_obj = backend_ds._file_obj
 
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+            backend_ds.encoding["source"] = filename_or_obj
+
     return ds
 
 
@@ -203,6 +218,15 @@ def open_dataset(
     --------
     open_mfdataset
     """
+
+    if chunks == "auto":
+        chunks = {}
+
+    if not (isinstance(chunks, (int, dict)) or (chunks is None)):
+        raise ValueError(
+            "chunks must be an int, dict, 'auto', or None. "
+            "Instead found %s. " % chunks
+        )
 
     if cache is None:
         cache = chunks is None
