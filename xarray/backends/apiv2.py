@@ -1,5 +1,4 @@
 import os
-import warnings
 
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
@@ -187,6 +186,11 @@ def open_dataset(
 
     if chunks == "auto":
         chunks = {}
+    if not (isinstance(chunks, (int, dict)) or chunks is None):
+        raise ValueError(
+            "chunks must be an int, dict, 'auto', or None. "
+            "Instead found %s. " % chunks
+        )
 
     if cache is None:
         cache = chunks is None
