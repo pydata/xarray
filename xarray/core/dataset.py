@@ -403,8 +403,7 @@ def _check_chunks_compatibility(dim, chunks, chunk_spec):
             "separate on disks chunk shape %r for "
             "dimension %r. This could "
             "degrades performance. Consider "
-            "rechunking after loading instead."
-            % (chunks[dim], chunk_spec[dim], dim),
+            "rechunking after loading instead." % (chunks[dim], chunk_spec[dim], dim),
             stacklevel=2,
         )
 
