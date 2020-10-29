@@ -1413,7 +1413,7 @@ class TestDataset:
 
         with raises_regex(
             ValueError,
-            "Vectorized selection is " "not available along MultiIndex variable:" " x",
+            "Vectorized selection is not available along MultiIndex variable: x",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -4250,7 +4250,7 @@ class TestDataset:
             "t": {"data": t, "dims": "t"},
             "b": {"dims": "t", "data": y},
         }
-        with raises_regex(ValueError, "cannot convert dict " "without the key 'dims'"):
+        with raises_regex(ValueError, "cannot convert dict without the key 'dims'"):
             Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):
@@ -4472,6 +4472,28 @@ class TestDataset:
         assert actual.attrs == ds.attrs
         assert actual.a.name == "a"
         assert actual.a.attrs == ds.a.attrs
+
+    @pytest.mark.parametrize(
+        "func", [lambda x: x.clip(0, 1), lambda x: np.float64(1.0) * x, np.abs, abs]
+    )
+    def test_propagate_attrs(self, func):
+
+        da = DataArray(range(5), name="a", attrs={"attr": "da"})
+        ds = Dataset({"a": da}, attrs={"attr": "ds"})
+
+        # test defaults
+        assert func(ds).attrs == ds.attrs
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=False):
+            assert func(ds).attrs != ds.attrs
+            assert func(ds).a.attrs != ds.a.attrs
+
+        with set_options(keep_attrs=True):
+            assert func(ds).attrs == ds.attrs
+            assert func(ds).a.attrs == ds.a.attrs
 
     def test_where(self):
         ds = Dataset({"a": ("x", range(5))})
@@ -4841,9 +4863,7 @@ class TestDataset:
         actual = ds.reduce(mean_only_one_axis, "y")
         assert_identical(expected, actual)
 
-        with raises_regex(
-            TypeError, "missing 1 required positional argument: " "'axis'"
-        ):
+        with raises_regex(TypeError, "missing 1 required positional argument: 'axis'"):
             ds.reduce(mean_only_one_axis)
 
         with raises_regex(TypeError, "non-integer axis"):

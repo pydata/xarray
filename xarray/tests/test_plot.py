@@ -670,11 +670,13 @@ class TestPlotStep(PlotTestCase):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_step(self):
-        self.darray[0, 0].plot.step()
+        hdl = self.darray[0, 0].plot.step()
+        assert "steps" in hdl[0].get_drawstyle()
 
-    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
-    def test_step_with_drawstyle(self, ds):
-        self.darray[0, 0].plot.step(drawstyle=ds)
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_step_with_where(self, where):
+        hdl = self.darray[0, 0].plot.step(where=where)
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
 
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""

@@ -270,7 +270,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
-        resampling  and concatenate them together into a new Dataset.
+        resampling and concatenate them together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
         in this group.

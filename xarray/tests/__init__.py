@@ -17,6 +17,7 @@ from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.core.options import set_options
 from xarray.testing import (  # noqa: F401
+    assert_chunks_equal,
     assert_duckarray_allclose,
     assert_duckarray_equal,
 )
@@ -94,6 +95,39 @@ if has_dask:
     import dask
 
     dask.config.set(scheduler="single-threaded")
+
+
+class CountingScheduler:
+    """Simple dask scheduler counting the number of computes.
+
+    Reference: https://stackoverflow.com/questions/53289286/"""
+
+    def __init__(self, max_computes=0):
+        self.total_computes = 0
+        self.max_computes = max_computes
+
+    def __call__(self, dsk, keys, **kwargs):
+        self.total_computes += 1
+        if self.total_computes > self.max_computes:
+            raise RuntimeError(
+                "Too many computes. Total: %d > max: %d."
+                % (self.total_computes, self.max_computes)
+            )
+        return dask.get(dsk, keys, **kwargs)
+
+
+@contextmanager
+def dummy_context():
+    yield None
+
+
+def raise_if_dask_computes(max_computes=0):
+    # return a dummy context manager so that this can be used for non-dask objects
+    if not has_dask:
+        return dummy_context()
+    scheduler = CountingScheduler(max_computes)
+    return dask.config.set(scheduler=scheduler)
+
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network

@@ -169,7 +169,7 @@ class TestTileIDsFromCoords:
         ds1 = Dataset({"x": [3, 2]})
         with raises_regex(
             ValueError,
-            "Coordinate variable x is neither " "monotonically increasing nor",
+            "Coordinate variable x is neither monotonically increasing nor",
         ):
             _infer_concat_order_from_coords([ds1, ds0])
 
@@ -556,11 +556,11 @@ class TestNestedCombine:
         ds = create_test_data
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
-        with raises_regex(ValueError, "sub-lists do not have " "consistent lengths"):
+        with raises_regex(ValueError, "sub-lists do not have consistent lengths"):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
-        with raises_regex(ValueError, "sub-lists do not have " "consistent depths"):
+        with raises_regex(ValueError, "sub-lists do not have consistent depths"):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
@@ -798,7 +798,7 @@ class TestCombineAuto:
         ds0 = Dataset({"x": [0, 1, 5]})
         ds1 = Dataset({"x": [2, 3]})
         with raises_regex(
-            ValueError, "does not have monotonic global indexes" " along dimension x"
+            ValueError, "does not have monotonic global indexes along dimension x"
         ):
             combine_by_coords([ds1, ds0])
 
@@ -839,3 +839,20 @@ def test_combine_by_coords_distant_cftime_dates():
         [0, 1, 2], dims=["time"], coords=[expected_time], name="a"
     ).to_dataset()
     assert_identical(result, expected)
+
+
+@requires_cftime
+def test_combine_by_coords_raises_for_differing_calendars():
+    # previously failed with uninformative StopIteration instead of TypeError
+    # https://github.com/pydata/xarray/issues/4495
+
+    import cftime
+
+    time_1 = [cftime.DatetimeGregorian(2000, 1, 1)]
+    time_2 = [cftime.DatetimeProlepticGregorian(2001, 1, 1)]
+
+    da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
+
+    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+        combine_by_coords([da_1, da_2])

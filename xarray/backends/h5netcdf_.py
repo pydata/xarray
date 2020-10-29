@@ -282,7 +282,7 @@ class H5NetCDFStore(WritableCFDataStore):
             and "compression_opts" in encoding
             and encoding["complevel"] != encoding["compression_opts"]
         ):
-            raise ValueError("'complevel' and 'compression_opts' encodings " "mismatch")
+            raise ValueError("'complevel' and 'compression_opts' encodings mismatch")
         complevel = encoding.pop("complevel", 0)
         if complevel != 0:
             encoding.setdefault("compression_opts", complevel)

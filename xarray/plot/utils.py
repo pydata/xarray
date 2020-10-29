@@ -421,9 +421,9 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
@@ -513,16 +513,20 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
+        remove_drawstyle = False
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
             raise TypeError("Can't step plot intervals against intervals.")
         if _valid_other_type(xval, [pd.Interval]):
             xval, yval = _interval_to_double_bound_points(xval, yval)
+            remove_drawstyle = True
         if _valid_other_type(yval, [pd.Interval]):
             yval, xval = _interval_to_double_bound_points(yval, xval)
+            remove_drawstyle = True
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["drawstyle"]
+        if remove_drawstyle:
+            del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:

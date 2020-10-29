@@ -371,7 +371,7 @@ class TestCFEncodedDataStore(CFEncodedBase):
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)
 
-    @pytest.mark.skip("cannot roundtrip coordinates yet for " "CFEncodedInMemoryStore")
+    @pytest.mark.skip("cannot roundtrip coordinates yet for CFEncodedInMemoryStore")
     def test_roundtrip_coordinates(self):
         pass
 
