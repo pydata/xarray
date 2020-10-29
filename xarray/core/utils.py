@@ -106,7 +106,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
 
 
 def multiindex_from_product_levels(
-    levels: Sequence[pd.Index], names: Sequence[str] = None
+    levels: Sequence[pd.Index], names: Sequence[Hashable] = None
 ) -> pd.MultiIndex:
     """Creating a MultiIndex from a product without refactorizing levels.
 

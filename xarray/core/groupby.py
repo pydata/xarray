@@ -39,6 +39,14 @@ def check_reduce_dims(reduce_dims, dimensions):
                 % (reduce_dims, dimensions)
             )
 
+# Notes
+- Check out squeeze — it will remove dimensions of size one when squeeze = True
+- Only call unique value groups once if possible
+- Probabyl don't use infer-concat-args
+  - Always aggregated
+  - We're always going to be on the second path
+- Old dims maybe shouldn't be public
+
 
 def unique_value_groups(ar, sort=True):
     """Group an array by its unique values.

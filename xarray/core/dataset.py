@@ -3331,7 +3331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return self._replace(variables, indexes=indexes)
 
-    def _stack_once(self, dims, new_dim):
+    def _stack_once(self, dims: Sequence[Hashable], new_dim: Hashable) -> "Dataset":
         if ... in dims:
             dims = list(infix_dims(dims, self.dims))
         variables = {}
@@ -6109,7 +6109,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 name=name + "polyfit_coefficients",
             )
             if dims_to_stack:
-                coeffs = coeffs.unstack(stacked_dim)
+                # Pylance can't see this that `stacked_dim` always exists when
+                # `dims_to_stack` is true
+                coeffs = coeffs.unstack(stacked_dim)  # type: ignore
             variables[coeffs.name] = coeffs
 
             if full or (cov is True):
@@ -6120,7 +6122,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     name=name + "polyfit_residuals",
                 )
                 if dims_to_stack:
-                    residuals = residuals.unstack(stacked_dim)
+                    residuals = residuals.unstack(stacked_dim)  # type: ignore
                 variables[residuals.name] = residuals
 
             if cov:
