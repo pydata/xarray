@@ -50,6 +50,12 @@ the code will still cast to ``numpy`` arrays:
     :py:class:`numpy.vectorize`)
   * :py:func:`apply_ufunc` with ``vectorize=True`` (uses :py:class:`numpy.vectorize`)
 
+- incompatibilities between different :term:`duck array` libraries:
+
+  * :py:meth:`Dataset.chunk` and :py:meth:`DataArray.chunk`: this fails if the data was
+    not already chunked and the :term:`duck array` should wrap the new ``dask`` array;
+    changing the chunk sizes works.
+
 
 Extensions using duck arrays
 ----------------------------
