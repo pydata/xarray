@@ -74,7 +74,7 @@ def dataset_from_backend_dataset(
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+            ds2.encoding["source"] = filename_or_obj
 
     return ds2
 
