@@ -393,7 +393,7 @@ class DataArrayRolling(Rolling):
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
-        windows = self.construct(rolling_dim)
+        windows = self.construct(rolling_dim, keep_attrs=keep_attrs)
         result = windows.reduce(
             func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
         )
@@ -414,7 +414,7 @@ class DataArrayRolling(Rolling):
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
         counts = (
-            self.obj.notnull()
+            self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
                 **{d: w for d, w in zip(self.dim, self.window)},
@@ -558,7 +558,7 @@ class DatasetRolling(Rolling):
             if any(d in da.dims for d in self.dim):
                 reduced[key] = func(self.rollings[key], keep_attrs=keep_attrs, **kwargs)
             else:
-                reduced[key] = self.obj[key]
+                reduced[key] = self.obj[key].copy(deep=False)
                 # we need to delete the attrs of the copied DataArray
                 if not keep_attrs:
                     reduced[key].attrs = {}
@@ -666,10 +666,13 @@ class DatasetRolling(Rolling):
                 st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
 
                 dataset[key] = self.rollings[key].construct(
-                    window_dim=wi, fill_value=fill_value, stride=st
+                    window_dim=wi,
+                    fill_value=fill_value,
+                    stride=st,
+                    keep_attrs=keep_attrs,
                 )
             else:
-                dataset[key] = da
+                dataset[key] = da.copy(deep=False)
 
             # as the DataArrays can be copied we need to delete the attrs
             if not keep_attrs:
