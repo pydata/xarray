@@ -70,6 +70,9 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure tests are not skipped in the `py38-all-but-dask` test environment
   (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Ignore select numpy warnings around missing values, where xarray handles
+  the values appropriately, (:pull:`4536`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.16.1:
 
