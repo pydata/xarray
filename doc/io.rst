@@ -43,7 +43,7 @@ __ http://www.unidata.ucar.edu/software/netcdf/
 .. _netCDF FAQ: http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
 
 Reading and writing netCDF files with xarray requires scipy or the
-`netCDF4-Python`__ library to be installed (the later is required to
+`netCDF4-Python`__ library to be installed (the latter is required to
 read/write netCDF V4 files and use the compression options described below).
 
 __ https://github.com/Unidata/netcdf4-python
@@ -241,7 +241,7 @@ See its docstring for more details.
 .. note::
 
     A common use-case involves a dataset distributed across a large number of files with
-    each file containing a large number of variables. Commonly a few of these variables
+    each file containing a large number of variables. Commonly, a few of these variables
     need to be concatenated along a dimension (say ``"time"``), while the rest are equal
     across the datasets (ignoring floating point differences). The following command
     with suitable modifications (such as ``parallel=True``) works well with such datasets::
@@ -298,8 +298,8 @@ library::
     combined = read_netcdfs('/all/my/files/*.nc', dim='time')
 
 This function will work in many cases, but it's not very robust. First, it
-never closes files, which means it will fail one you need to load more than
-a few thousands file. Second, it assumes that you want all the data from each
+never closes files, which means it will fail if you need to load more than
+a few thousand files. Second, it assumes that you want all the data from each
 file and that it can all fit into memory. In many situations, you only need
 a small subset or an aggregated summary of the data from each file.
 
@@ -351,7 +351,7 @@ default encoding, or the options in the ``encoding`` attribute, if set.
 This works perfectly fine in most cases, but encoding can be useful for
 additional control, especially for enabling compression.
 
-In the file on disk, these encodings as saved as attributes on each variable, which
+In the file on disk, these encodings are saved as attributes on each variable, which
 allow xarray and other CF-compliant tools for working with netCDF files to correctly
 read the data.
 
@@ -364,7 +364,7 @@ These encoding options work on any version of the netCDF file format:
   or ``'float32'``. This controls the type of the data written on disk.
 - ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
-  to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
+  to integers on disk, because ``NaN`` is not a valid value for integer dtypes. By
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
   output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
@@ -406,8 +406,8 @@ If character arrays are used:
   by setting the ``_Encoding`` field in ``encoding``. But
   `we don't recommend it <http://utf8everywhere.org/>`_.
 - The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
-  ``encoding``. If this is not specified the default name for the character dimension is
-  ``'string%s' % data.shape[-1]``. When decoding character arrays from existing files, the
+  ``encoding``. If the name of the character dimension is not specified, the default is
+  ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
   ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
   the field can be edited by the user.
 
@@ -506,7 +506,7 @@ Iris
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
 similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed xarray can convert a ``DataArray`` into a ``Cube`` using
+installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
 .. ipython:: python
@@ -716,7 +716,7 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
-To export just the dataset schema, without the data itself, use the
+To export just the dataset schema without the data itself, use the
 ``data=False`` option:
 
 .. ipython:: python
@@ -772,7 +772,7 @@ for an example of how to convert these to longitudes and latitudes.
 .. warning::
 
     This feature has been added in xarray v0.9.6 and should still be
-    considered as being experimental. Please report any bug you may find
+    considered experimental. Please report any bugs you may find
     on xarray's github repository.
 
 
@@ -828,7 +828,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 Zarr
 ----
 
-`Zarr`_ is a Python package providing an implementation of chunked, compressed,
+`Zarr`_ is a Python package that provides an implementation of chunked, compressed,
 N-dimensional arrays.
 Zarr has the ability to store arrays in a range of ways, including in memory,
 in files, and in cloud-based object storage such as `Amazon S3`_ and
@@ -846,7 +846,7 @@ At this time, xarray can only open zarr datasets that have been written by
 xarray. For implementation details, see :ref:`zarr_encoding`.
 
 To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
-To write to a local directory, we pass a path to a directory
+To write to a local directory, we pass a path to a directory:
 
 .. ipython:: python
     :suppress:
@@ -1045,7 +1045,7 @@ formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
 PseudoNetCDF can also provide Climate Forecasting Conventions to
 CMAQ files. In addition, PseudoNetCDF can automatically register custom
 readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers heuristically, or format can be specified via a key in
+identify readers either heuristically, or by a format specified via a key in
 `backend_kwargs`.
 
 To use PseudoNetCDF to read such files, supply
