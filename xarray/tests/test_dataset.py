@@ -6025,14 +6025,18 @@ def test_rolling_keep_attrs(funcname, argument):
     result = func(*argument)
     assert result.attrs == global_attrs
     assert result.da.attrs == da_attrs
-    assert ds.da_not_rolled.attrs == da_not_rolled_attrs
+    assert result.da_not_rolled.attrs == da_not_rolled_attrs
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
 
     # discard attrs
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
     assert result.da.attrs == {}
-    assert ds.da_not_rolled.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
 
     # test discard attrs using global option
     func = getattr(ds.rolling(dim={"coord": 5}), funcname)
@@ -6041,7 +6045,9 @@ def test_rolling_keep_attrs(funcname, argument):
 
     assert result.attrs == {}
     assert result.da.attrs == {}
-    assert ds.da_not_rolled.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
 
 
 def test_rolling_keep_attrs_deprecated():

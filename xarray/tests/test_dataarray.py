@@ -6558,27 +6558,27 @@ def test_rolling_keep_attrs(funcname, argument):
     coords = np.linspace(1, 10, 100)
 
     da = DataArray(
-        data,
-        dims=("coord"),
-        coords={"coord": coords},
-        attrs=attrs_da,
+        data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da, name="name"
     )
 
     # attrs are now kept per default
     func = getattr(da.rolling(dim={"coord": 5}), funcname)
     result = func(*argument)
     assert result.attrs == attrs_da
+    assert result.name == "name"
 
     # discard attrs
     func = getattr(da.rolling(dim={"coord": 5}), funcname)
     result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
+    assert result.name == "name"
 
     # test discard attrs using global option
     func = getattr(da.rolling(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=False):
         result = func(*argument)
     assert result.attrs == {}
+    assert result.name == "name"
 
 
 def test_rolling_keep_attrs_deprecated():
