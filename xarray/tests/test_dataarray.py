@@ -3538,6 +3538,9 @@ class TestDataArray:
         with pytest.raises(ValueError, match="does not match the set of dimensions"):
             arr.to_dataframe(dim_order=["B", "A", "C"])
 
+        with pytest.raises(ValueError, match=r"cannot convert a scalar"):
+            arr.sel(A="c", B=2).to_dataframe()
+
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
