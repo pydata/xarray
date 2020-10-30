@@ -313,6 +313,9 @@ class DatetimeAccessor(Properties):
 
         from .dataset import Dataset
 
+        if not is_np_datetime_like(self._obj.data.dtype):
+            raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
+
         return Dataset({"year": self.year, "week": self.week, "day": self.day})
 
     year = Properties._tslib_field_accessor(
