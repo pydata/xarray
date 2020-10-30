@@ -68,11 +68,6 @@ def _sanitize_slice_element(x):
             )
         x = x[()]
 
-    if isinstance(x, np.timedelta64):
-        # pandas does not support indexing with np.timedelta64 yet:
-        # https://github.com/pandas-dev/pandas/issues/20393
-        x = pd.Timedelta(x)
-
     return x
 
 
