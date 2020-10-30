@@ -6049,6 +6049,27 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.da.name == "da"
     assert result.da_not_rolled.name == "da_not_rolled"
 
+    # keyword takes precedence over global option
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+
+    assert result.attrs == global_attrs
+    assert result.da.attrs == da_attrs
+    assert result.da_not_rolled.attrs == da_not_rolled_attrs
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
+
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
+
 
 def test_rolling_keep_attrs_deprecated():
     global_attrs = {"units": "test", "long_name": "testing"}

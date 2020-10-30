@@ -6580,6 +6580,19 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.attrs == {}
     assert result.name == "name"
 
+    # keyword takes precedence over global option
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+    assert result.attrs == attrs_da
+    assert result.name == "name"
+
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    assert result.name == "name"
+
 
 def test_rolling_keep_attrs_deprecated():
 
