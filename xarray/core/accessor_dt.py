@@ -1,3 +1,5 @@
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 
@@ -40,6 +42,8 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif LooseVersion(pd.__version__) > "1.10" and name == "week":
+        field_values = getattr(values_as_series.dt.isocalendar(), name).values
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -304,6 +308,13 @@ class DatetimeAccessor(Properties):
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
         )
 
+    def isocalendar(self):
+        "DataSet containing ISO year, week number, and weekday."
+
+        from .dataset import Dataset
+
+        return Dataset({"year": self.year, "week": self.week, "day": self.day})
+
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
     )
@@ -352,12 +363,6 @@ class DatetimeAccessor(Properties):
 
     time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
-    )
-
-    isocalendar = Properties._tslib_field_accessor(
-        "isocalendar",
-        "A 3-tuple containing ISO year, week number, and weekday.",
-        object,
     )
 
     is_month_start = Properties._tslib_field_accessor(
