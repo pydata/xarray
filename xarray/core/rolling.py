@@ -558,7 +558,7 @@ class DatasetRolling(Rolling):
             if any(d in da.dims for d in self.dim):
                 reduced[key] = func(self.rollings[key], keep_attrs=keep_attrs, **kwargs)
             else:
-                reduced[key] = self.obj[key].copy(deep=False)
+                reduced[key] = self.obj[key].copy()
                 # we need to delete the attrs of the copied DataArray
                 if not keep_attrs:
                     reduced[key].attrs = {}
@@ -672,7 +672,7 @@ class DatasetRolling(Rolling):
                     keep_attrs=keep_attrs,
                 )
             else:
-                dataset[key] = da.copy(deep=False)
+                dataset[key] = da.copy()
 
             # as the DataArrays can be copied we need to delete the attrs
             if not keep_attrs:
