@@ -72,6 +72,8 @@ Documentation
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
