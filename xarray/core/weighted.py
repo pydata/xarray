@@ -99,12 +99,17 @@ class Weighted:
 
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
-
-        if weights.isnull().any():
-            raise ValueError(
-                "`weights` cannot contain missing values. "
-                "Missing values can be replaced by `weights.fillna(0)`."
-            )
+        
+        def _weight_check(w):
+            if w.isnull().any():
+                raise ValueError(
+                    "`weights` cannot contain missing values. "
+                    "Missing values can be replaced by `weights.fillna(0)`."
+                )
+            else:
+                return w
+        
+        weights = weights.map_blocks(_weight_check, template=weights)
 
         self.obj = obj
         self.weights = weights
