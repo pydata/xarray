@@ -316,7 +316,7 @@ class DatetimeAccessor(Properties):
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        return Dataset({"year": self.year, "week": self.week, "day": self.day})
+        return Dataset({"year": self.year, "week": self.week, "weekday": self.weekday})
 
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
