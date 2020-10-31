@@ -53,8 +53,8 @@ the code will still cast to ``numpy`` arrays:
 - incompatibilities between different :term:`duck array` libraries:
 
   * :py:meth:`Dataset.chunk` and :py:meth:`DataArray.chunk`: this fails if the data was
-    not already chunked and the :term:`duck array` should wrap the new ``dask`` array;
-    changing the chunk sizes works.
+    not already chunked and the :term:`duck array` (e.g. a ``pint`` quantity) should
+    wrap the new ``dask`` array; changing the chunk sizes works.
 
 
 Extensions using duck arrays
