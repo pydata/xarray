@@ -63,8 +63,17 @@ Documentation
 ~~~~~~~~~~~~~
 - document the API not supported with duck arrays (:pull:`4530`).
   By `Justus Magin <https://github.com/keewis>`_.
+
+- Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
+  (:pull:`4532`);
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
-  is called on a scalar (:issue:`4228`). By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
+  is called on a scalar, (:issue:`4228`); 
+  By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
+- Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
