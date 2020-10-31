@@ -29,6 +29,22 @@ def test_weighted_weights_nan_raises(as_dataset, weights):
         data.weighted(DataArray(weights))
 
 
+@pytest.mark.parametrize("as_dataset", (True, False))
+@pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
+def test_weighted_weights_nan_raises_dask(as_dataset, weights):
+
+    data = DataArray([1, 2]).chunk({"dim_0": -1})
+    if as_dataset:
+        data = data.to_dataset(name="data")
+
+    weights = DataArray(weights).chunk({"dim_0": -1})
+
+    weighted = data.weighted(weights)
+
+    with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
+        weighted.sum().load()
+
+
 @pytest.mark.parametrize(
     ("weights", "expected"),
     (([1, 2], 3), ([2, 0], 2), ([0, 0], np.nan), ([-1, 1], np.nan)),

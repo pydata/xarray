@@ -99,7 +99,7 @@ class Weighted:
 
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
-        
+
         def _weight_check(w):
             if w.isnull().any():
                 raise ValueError(
@@ -108,9 +108,8 @@ class Weighted:
                 )
             else:
                 return w
-        
-        weights = weights.map_blocks(_weight_check, template=weights)
 
+        weights = weights.map_blocks(_weight_check, template=weights)
         self.obj = obj
         self.weights = weights
 
