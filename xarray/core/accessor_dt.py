@@ -340,7 +340,6 @@ class DatetimeAccessor(Properties):
         obj_type = type(self._obj)
         data_vars = {}
         for i, name in enumerate(["year", "week", "weekday"]):
-
             data_vars[name] = obj_type(
                 values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
             )
@@ -381,11 +380,13 @@ class DatetimeAccessor(Properties):
         )
 
         if LooseVersion(pd.__version__) < "1.1.0":
-            return Properties._tslib_field_accessor(
+            weekofyear = Properties._tslib_field_accessor(
                 "weekofyear", "The week ordinal of the year", np.int64
             ).fget(self)
+        else:
+            weekofyear = self.isocalendar().week
 
-        return self.isocalendar().week
+        return weekofyear
 
     week = weekofyear
     dayofweek = Properties._tslib_field_accessor(

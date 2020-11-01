@@ -22,9 +22,9 @@ v0.16.2 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- :py:class:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:class:`~core.accessor_dt.DatetimeAccessor.week`
-  have been deprecated. Use :py:class:`~core.accessor_dt.DatetimeAccessor.isocalendar().week`
-  instead (:pull:`4534`). By Mathias Hauser <https://github.com/mathause>`_,
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
+  have been deprecated. Use :py:attr:`~core.accessor_dt.DatetimeAccessor.isocalendar().week`
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 
 New Features
@@ -35,9 +35,9 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added :py:class:`~core.accessor_dt.DatetimeAccessor.isocalendar()` that returns a Dataset
+- Added :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()` that returns a Dataset
   with year, week, and weekday calculated according to the ISO 8601 calendar. Requires
-  pandas version 1.1.0 or greater (:pull:`4534`). By Mathias Hauser <https://github.com/mathause>`_,
+  pandas version 1.1.0 or greater (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
