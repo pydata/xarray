@@ -96,6 +96,7 @@ class Weighted:
         """
 
         from .dataarray import DataArray
+        import dask.array as dsa
 
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
@@ -108,7 +109,8 @@ class Weighted:
                 )
             return w
 
-        weights = dask.array.map_blocks(_weight_check, weights.data)
+        weights = weights.map_blocks(_weight_check, template=weights)
+        # weights = dsa.map_blocks(_weight_check, weights.data, dtype=weights.dtype)
         self.obj = obj
         self.weights = weights
 
