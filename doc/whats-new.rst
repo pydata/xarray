@@ -24,7 +24,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
-  have been deprecated. Use :py:attr:`~core.accessor_dt.DatetimeAccessor.isocalendar().week`
+  have been deprecated. Use ``DataArray.dt.isocalendar().week``
   instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 

@@ -500,6 +500,7 @@ Datetimelike properties
 
    DataArray.dt.floor
    DataArray.dt.ceil
+   DataArray.dt.isocalendar
    DataArray.dt.round
    DataArray.dt.strftime
 

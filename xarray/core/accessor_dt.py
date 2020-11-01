@@ -320,7 +320,7 @@ class DatetimeAccessor(Properties):
         )
 
     def isocalendar(self):
-        """DataSet containing ISO year, week number, and weekday.
+        """Dataset containing ISO year, week number, and weekday.
 
         Note
         ----
