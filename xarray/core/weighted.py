@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
+import numpy as np
 from .computation import dot
+from .pycompat import is_duck_dask_array
 from .options import _get_keep_attrs
 
 if TYPE_CHECKING:
@@ -96,21 +98,27 @@ class Weighted:
         """
 
         from .dataarray import DataArray
-        import dask.array as dsa
 
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
 
         def _weight_check(w):
-            if w.isnull().any():
+            if np.isnan(w).any():
                 raise ValueError(
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."
                 )
-            return w
+            return w.data
 
-        weights = weights.map_blocks(_weight_check, template=weights)
-        # weights = dsa.map_blocks(_weight_check, weights.data, dtype=weights.dtype)
+        if is_duck_dask_array(weights.data):
+            import dask.array as dsa
+
+            weights.data = dsa.map_blocks(
+                _weight_check, weights.data, dtype=weights.dtype
+            )
+        else:
+            weights.data = _weight_check(weights.data)
+
         self.obj = obj
         self.weights = weights
 
