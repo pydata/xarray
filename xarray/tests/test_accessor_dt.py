@@ -76,7 +76,15 @@ class TestDatetimeAccessor:
             data = getattr(self.times, field)
 
         expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
-        actual = getattr(self.data.time.dt, field)
+
+        if field in ["week", "weekofyear"]:
+            with pytest.warns(
+                FutureWarning, match="dt.weekofyear and dt.week have been deprecated"
+            ):
+                actual = getattr(self.data.time.dt, field)
+        else:
+            actual = getattr(self.data.time.dt, field)
+
         assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
@@ -89,8 +97,12 @@ class TestDatetimeAccessor:
     )
     def test_isocalendar(self, field, pandas_field):
 
-        data = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
-        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
+        # isocalendar has dtypy UInt32Dtype, convert to Int64
+        expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
+        expected = xr.DataArray(
+            expected, name=field, coords=[self.times], dims=["time"]
+        )
+
         actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
 
@@ -106,6 +118,7 @@ class TestDatetimeAccessor:
         with raises_regex(TypeError, "dt"):
             nontime_data.time.dt
 
+    @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
     @requires_dask
     @pytest.mark.parametrize(
         "field",

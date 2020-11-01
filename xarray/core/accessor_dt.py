@@ -1,3 +1,4 @@
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -43,6 +44,7 @@ def _access_through_series(values, name):
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif LooseVersion(pd.__version__) >= "1.1.0" and name == "isocalendar":
+        # isocalendar returns iso- year, week, and weekday
         field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
         return field_values.T.reshape(3, *values.shape)
     else:
@@ -78,6 +80,7 @@ def _get_date_field(values, name, dtype):
         from dask.array import map_blocks
 
         new_axis = chunks = None
+        # isocalendar adds adds an axis
         if name == "isocalendar":
             chunks = (3,) + values.chunksize
             new_axis = 0
@@ -334,23 +337,15 @@ class DatetimeAccessor(Properties):
 
         values = _get_date_field(self._obj.data, "isocalendar", np.int64)
 
-        data_vars = {}
         obj_type = type(self._obj)
-        print("self._obj", self._obj)
-        print("self._obj.shape", self._obj.shape)
-        print("values.shape", values.shape)
-
+        data_vars = {}
         for i, name in enumerate(["year", "week", "weekday"]):
-            print(i, name)
-            print("values[i].shape", values[i].shape)
 
             data_vars[name] = obj_type(
                 values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
             )
 
         return Dataset(data_vars)
-
-        # return Dataset({"year": self.year, "week": self.week, "weekday": self.weekday})
 
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
@@ -374,9 +369,24 @@ class DatetimeAccessor(Properties):
     nanosecond = Properties._tslib_field_accessor(
         "nanosecond", "The nanoseconds of the datetime", np.int64
     )
-    weekofyear = Properties._tslib_field_accessor(
-        "weekofyear", "The week ordinal of the year", np.int64
-    )
+
+    @property
+    def weekofyear(self):
+        "The week ordinal of the year"
+
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+        )
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            return Properties._tslib_field_accessor(
+                "weekofyear", "The week ordinal of the year", np.int64
+            ).fget(self)
+
+        return self.isocalendar().week
+
     week = weekofyear
     dayofweek = Properties._tslib_field_accessor(
         "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
