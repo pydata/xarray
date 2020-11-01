@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
 import numpy as np
+
 from .computation import dot
-from .pycompat import is_duck_dask_array
 from .options import _get_keep_attrs
+from .pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
     from .dataarray import DataArray, Dataset
