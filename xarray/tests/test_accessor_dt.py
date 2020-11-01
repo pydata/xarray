@@ -1,3 +1,5 @@
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -57,7 +59,6 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
-            "isocalendar",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -68,10 +69,29 @@ class TestDatetimeAccessor:
         ],
     )
     def test_field_access(self, field):
-        expected = xr.DataArray(
-            getattr(self.times, field), name=field, coords=[self.times], dims=["time"]
-        )
+
+        if LooseVersion(pd.__version__) >= "1.1.0" and field in ["week", "weekofyear"]:
+            data = self.times.isocalendar()["week"]
+        else:
+            data = getattr(self.times, field)
+
+        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
         actual = getattr(self.data.time.dt, field)
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        "field, pandas_field",
+        [
+            ("year", "year"),
+            ("week", "week"),
+            ("weekday", "day"),
+        ],
+    )
+    def test_isocalendar(self, field, pandas_field):
+
+        data = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
+        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
+        actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
 
     def test_strftime(self):
@@ -104,7 +124,6 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
-            "isocalendar",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -126,6 +145,32 @@ class TestDatetimeAccessor:
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
+
+        assert isinstance(actual.data, da.Array)
+        assert_chunks_equal(actual, dask_times_2d)
+        assert_equal(actual.compute(), expected.compute())
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "year",
+            "week",
+            "weekday",
+        ],
+    )
+    def test_isocalendar_dask(self, field):
+        import dask.array as da
+
+        expected = getattr(self.times_data.dt.isocalendar(), field)
+
+        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
+        dask_times_2d = xr.DataArray(
+            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
+        )
+
+        with raise_if_dask_computes():
+            actual = dask_times_2d.dt.isocalendar()[field]
 
         assert isinstance(actual.data, da.Array)
         assert_chunks_equal(actual, dask_times_2d)

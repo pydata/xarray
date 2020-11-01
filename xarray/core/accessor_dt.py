@@ -42,8 +42,9 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
-    elif LooseVersion(pd.__version__) > "1.10" and name == "week":
-        field_values = getattr(values_as_series.dt.isocalendar(), name).values
+    elif LooseVersion(pd.__version__) >= "1.1.0" and name == "isocalendar":
+        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
+        return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -76,7 +77,14 @@ def _get_date_field(values, name, dtype):
     if is_duck_dask_array(values):
         from dask.array import map_blocks
 
-        return map_blocks(access_method, values, name, dtype=dtype)
+        new_axis = chunks = None
+        if name == "isocalendar":
+            chunks = (3,) + values.chunksize
+            new_axis = 0
+
+        return map_blocks(
+            access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
+        )
     else:
         return access_method(values, name)
 
@@ -309,14 +317,40 @@ class DatetimeAccessor(Properties):
         )
 
     def isocalendar(self):
-        "DataSet containing ISO year, week number, and weekday."
+        """DataSet containing ISO year, week number, and weekday.
+
+        Note
+        ----
+        The iso year and weekday differ from the nominal year and weekday.
+        """
 
         from .dataset import Dataset
 
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        return Dataset({"year": self.year, "week": self.week, "weekday": self.weekday})
+        if LooseVersion(pd.__version__) < "1.1.0":
+            raise AttributeError("'isocalendar' not available in pandas < 1.1.0")
+
+        values = _get_date_field(self._obj.data, "isocalendar", np.int64)
+
+        data_vars = {}
+        obj_type = type(self._obj)
+        print("self._obj", self._obj)
+        print("self._obj.shape", self._obj.shape)
+        print("values.shape", values.shape)
+
+        for i, name in enumerate(["year", "week", "weekday"]):
+            print(i, name)
+            print("values[i].shape", values[i].shape)
+
+            data_vars[name] = obj_type(
+                values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        return Dataset(data_vars)
+
+        # return Dataset({"year": self.year, "week": self.week, "weekday": self.weekday})
 
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
