@@ -106,8 +106,7 @@ class Weighted:
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."
                 )
-            else:
-                return w
+            return w
 
         weights = dask.array.map_blocks(_weight_check, weights.data)
         self.obj = obj
