@@ -97,6 +97,13 @@ class TestDatetimeAccessor:
     )
     def test_isocalendar(self, field, pandas_field):
 
+        if LooseVersion(pd.__version__) < "1.1.0":
+            with raises_regex(
+                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            ):
+                self.data.time.dt.isocalendar()[field]
+            return
+
         # isocalendar has dtypy UInt32Dtype, convert to Int64
         expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
         expected = xr.DataArray(
@@ -174,6 +181,13 @@ class TestDatetimeAccessor:
     )
     def test_isocalendar_dask(self, field):
         import dask.array as da
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            with raises_regex(
+                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            ):
+                self.data.time.dt.isocalendar()[field]
+            return
 
         expected = getattr(self.times_data.dt.isocalendar(), field)
 
@@ -405,6 +419,15 @@ def test_field_access(data, field):
     )
 
     assert_equal(result, expected)
+
+
+@requires_cftime
+def test_isocalendar_cftime(data):
+
+    with raises_regex(
+        AttributeError, "'CFTimeIndex' object has no attribute 'isocalendar'"
+    ):
+        data.time.dt.isocalendar()
 
 
 @requires_cftime
