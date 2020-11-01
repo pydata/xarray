@@ -5,7 +5,7 @@ import xarray as xr
 from xarray import DataArray
 from xarray.tests import assert_allclose, assert_equal, raises_regex
 
-from . import requires_dask
+from . import requires_dask, raise_if_dask_computes
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -42,7 +42,8 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
 
     weights = DataArray(weights).chunk({"dim_0": -1})
 
-    weighted = data.weighted(weights)
+    with raise_if_dask_computes():
+        weighted = data.weighted(weights)
 
     with pytest.raises(ValueError, match="`weights` cannot contain missing values."):
         weighted.sum().load()
