@@ -109,7 +109,7 @@ class Weighted:
             else:
                 return w
 
-        weights = weights.map_blocks(_weight_check, template=weights)
+        weights = dask.array.map_blocks(_weight_check, weights.data)
         self.obj = obj
         self.weights = weights
 
