@@ -3,12 +3,8 @@ import os
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import cfgrib_, h5netcdf_, zarr
-from .api import (
-    _autodetect_engine,
-    _get_backend_cls,
-    _normalize_path,
-    _protect_dataset_variables_inplace,
-)
+from .api import (_autodetect_engine, _get_backend_cls, _normalize_path,
+                  _protect_dataset_variables_inplace)
 
 ENGINES = {
     "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
