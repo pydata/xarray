@@ -2,7 +2,8 @@ import inspect
 import os
 
 from ..core.utils import is_remote_uri
-from . import cfgrib_, h5netcdf_, zarr
+from . import zarr
+from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
@@ -10,11 +11,6 @@ from .api import (
     _protect_dataset_variables_inplace,
 )
 
-ENGINES = {
-    "h5netcdf": h5netcdf_.open_backend_dataset_h5necdf,
-    "zarr": zarr.open_backend_dataset_zarr,
-    "cfgrib": cfgrib_.open_backend_dataset_cfgrib,
-}
 
 
 def dataset_from_backend_dataset(
@@ -80,7 +76,7 @@ def dataset_from_backend_dataset(
 
 
 def resolve_decoders_kwargs(decode_cf, engine, **decoders):
-    signature = inspect.signature(ENGINES[engine]).parameters
+    signature = plugins.ENGINES[engine]["signature"]
     if decode_cf is False:
         for d in decoders:
             if d in signature and d != "use_cftime":
@@ -240,7 +236,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine, engines=ENGINES)
+    open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)['open_dataset']
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,

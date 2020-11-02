@@ -434,9 +434,10 @@ def open_dataset(
     """
     if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
         kwargs = locals().copy()
+        from . import plugins
         from . import apiv2
 
-        if engine in apiv2.ENGINES:
+        if engine in plugins.ENGINES:
             return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:
