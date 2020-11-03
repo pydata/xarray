@@ -701,7 +701,7 @@ def open_backend_dataset_zarr(
     consolidated=False,
     consolidate_on_close=False,
     chunk_store=None,
-    fs=None
+    fs=None,
 ):
 
     if not decode_cf:

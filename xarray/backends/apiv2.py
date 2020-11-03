@@ -197,7 +197,7 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    if 'fs' not in backend_kwargs:
+    if "fs" not in backend_kwargs:
         # do *not* mange paths meant for a specific file system made in open_mfdataset
         filename_or_obj = _normalize_path(filename_or_obj)
 
