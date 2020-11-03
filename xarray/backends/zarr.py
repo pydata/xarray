@@ -701,6 +701,7 @@ def open_backend_dataset_zarr(
     consolidated=False,
     consolidate_on_close=False,
     chunk_store=None,
+    fs=None
 ):
 
     if not decode_cf:
@@ -709,6 +710,8 @@ def open_backend_dataset_zarr(
         concat_characters = False
         decode_coords = False
         decode_timedelta = False
+    if fs is not None:
+        filename_or_obj = fs.get_mapper(filename_or_obj)
 
     store = ZarrStore.open_group(
         filename_or_obj,
