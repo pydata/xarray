@@ -20,6 +20,9 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
+      py38-backend-api-v2:
+        conda_env: py38
+        environment_variables: XARRAY_BACKEND_API=v2
       py38-all-but-dask:
         conda_env: py38-all-but-dask
       py38-upstream-dev:
