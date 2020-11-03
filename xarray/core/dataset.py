@@ -2893,7 +2893,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def rename(
         self,
         name_dict: Mapping[Hashable, Hashable] = None,
-        inplace: bool = None,
         **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
