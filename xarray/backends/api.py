@@ -1,4 +1,4 @@
-import os.path
+import os
 import warnings
 from glob import glob
 from io import BytesIO
@@ -163,10 +163,10 @@ def _autodetect_engine(filename_or_obj):
     return engine
 
 
-def _get_backend_cls(engine):
+def _get_backend_cls(engine, engines=ENGINES):
     """Select open_dataset method based on current engine"""
     try:
-        return ENGINES[engine]
+        return engines[engine]
     except KeyError:
         raise ValueError(
             "unrecognized engine for open_dataset: {}\n"
@@ -436,6 +436,13 @@ def open_dataset(
     --------
     open_mfdataset
     """
+    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
+        kwargs = locals().copy()
+        from . import apiv2
+
+        if engine in apiv2.ENGINES:
+            return apiv2.open_dataset(**kwargs)
+
     if autoclose is not None:
         warnings.warn(
             "The autoclose argument is no longer used by "
