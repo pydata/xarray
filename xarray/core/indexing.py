@@ -1,6 +1,6 @@
-import math
 import enum
 import functools
+import math
 import operator
 from collections import defaultdict
 from contextlib import suppress
