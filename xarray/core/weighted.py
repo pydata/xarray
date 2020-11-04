@@ -104,6 +104,7 @@ class Weighted:
             raise ValueError("`weights` must be a DataArray")
 
         def _weight_check(w):
+            # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
             if np.isnan(w).any():
                 raise ValueError(
                     "`weights` cannot contain missing values. "
