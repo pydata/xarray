@@ -278,7 +278,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
 
 def _normalize_slice(sl, size):
     """Ensure that given slice only contains positive start and stop values
-    (stop can be -1 for negative steps)"""
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
     return slice(*sl.indices(size))
 
 
@@ -292,7 +292,7 @@ def slice_slice(old_slice, applied_slice, size):
     size_after_old_slice = math.ceil(
         (old_slice.stop - old_slice.start) / old_slice.step
     )
-    if size_after_old_slice < 0:
+    if size_after_old_slice <= 0:
         # nothing left after applying first slice
         return slice(0)
 
@@ -301,6 +301,7 @@ def slice_slice(old_slice, applied_slice, size):
     start = old_slice.start + applied_slice.start * old_slice.step
     if start < 0:
         # nothing left after applying second slice
+        # (can only happen for old_slice.step < 0, e.g. [10::-1], [20:])
         return slice(0)
 
     stop = old_slice.start + applied_slice.stop * old_slice.step
