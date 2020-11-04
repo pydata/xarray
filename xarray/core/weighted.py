@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
-import numpy as np
 
 from . import duck_array_ops
 from .computation import dot
