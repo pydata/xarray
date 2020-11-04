@@ -155,7 +155,7 @@ class HugeAxisSmallSliceIndexing:
         self.ds = xr.open_dataset(self.filepath)
 
     def time_indexing(self):
-            self.ds.isel(x=slice(100))
+        self.ds.isel(x=slice(100))
 
     def cleanup(self):
         self.ds.close()
