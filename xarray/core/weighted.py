@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
 import numpy as np
 
+from . import duck_array_ops
 from .computation import dot
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -105,12 +106,12 @@ class Weighted:
 
         def _weight_check(w):
             # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
-            if np.isnan(w).any():
+            if duck_array_ops.isnull(w).any():
                 raise ValueError(
                     "`weights` cannot contain missing values. "
                     "Missing values can be replaced by `weights.fillna(0)`."
                 )
-            return w.data
+            return w
 
         if is_duck_dask_array(weights.data):
             weights = weights.copy(data=weights.data.map_blocks(_weight_check, dtype=weights.dtype))
