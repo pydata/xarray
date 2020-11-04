@@ -1665,6 +1665,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: bool = True,
         consolidated: bool = False,
         append_dim: Hashable = None,
+        region: Mapping[str, slice] = None,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
@@ -1687,7 +1688,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             internally set to ``"a"``. Otherwise, ``mode`` will default to
             `w-` if not set.
         synchronizer : object, optional
-            Array synchronizer
+            Zarr array synchronizer.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -1695,14 +1696,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
         compute: bool, optional
-            If True compute immediately, otherwise return a
-            ``dask.delayed.Delayed`` object that can be computed later.
+            If True write array data immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed to write
+            array data later. Metadata is always updated eagerly.
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing.
+            after writing metadata.
         append_dim: hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
+        region: dict, optional
+            Optional mapping from dimension names to integer slices along
+            dataset dimensions to indicate the region of existing zarr array(s)
+            in which to write this dataset's data. For example,
+            ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
+            that values should be written to the region ``0:1000`` along ``x``
+            and ``10000:11000`` along ``y``.
+
+            Two restrictions apply to the use of ``region``:
+
+            - If ``region`` is set, _all_ variables in a dataset must have at
+              least one dimension in common with the region. Other variables
+              should be written in a separate call to ``to_zarr()``.
+            - Dimensions cannot be included in both ``region`` and
+              ``append_dim`` at the same time. To create empty arrays to fill
+              in with ``region``, use a separate call to ``to_zarr()`` with
+              ``compute=False``. See "Appending to existing Zarr stores" in
+              the reference documentation for full details.
 
         References
         ----------
@@ -1717,24 +1737,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
         """
+        from ..backends.api import to_zarr
+
         if encoding is None:
             encoding = {}
-        if (mode == "a") or (append_dim is not None):
-            if mode is None:
-                mode = "a"
-            elif mode != "a":
-                raise ValueError(
-                    "append_dim was set along with mode='{}', either set "
-                    "mode='a' or don't set it.".format(mode)
-                )
-        elif mode is None:
-            mode = "w-"
-        if mode not in ["w", "w-", "a"]:
-            # TODO: figure out how to handle 'r+'
-            raise ValueError(
-                "The only supported options for mode are 'w', 'w-' and 'a'."
-            )
-        from ..backends.api import to_zarr
 
         return to_zarr(
             self,
@@ -1747,6 +1753,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             compute=compute,
             consolidated=consolidated,
             append_dim=append_dim,
+            region=region,
         )
 
     def __repr__(self) -> str:
