@@ -138,3 +138,15 @@ class BooleanIndexing:
 
     def time_indexing(self):
         self.ds.isel(time=self.time_filter)
+
+
+class HugeAxisSmallSliceIndexing:
+    # https://github.com/pydata/xarray/pull/4560
+    def setup(self):
+        self.ds = xr.Dataset(
+            {"a": ("time", np.arange(10_000_000))},
+            coords={"time": np.arange(10_000_000)},
+        )
+
+    def time_indexing(self):
+        self.ds.isel(time=slice(1000))
