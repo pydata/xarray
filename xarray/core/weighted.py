@@ -113,11 +113,8 @@ class Weighted:
             return w.data
 
         if is_duck_dask_array(weights.data):
-            import dask.array as dsa
-
-            weights.data = dsa.map_blocks(
-                _weight_check, weights.data, dtype=weights.dtype
-            )
+            weights = weights.copy(data=weights.data.map_blocks(_weight_check, dtype=weights.dtype))
+             
         else:
             weights.data = _weight_check(weights.data)
 
