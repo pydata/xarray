@@ -58,6 +58,7 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fix performance bug where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -66,7 +67,7 @@ Documentation
   (:pull:`4532`);
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
-  is called on a scalar, (:issue:`4228`); 
+  is called on a scalar, (:issue:`4228`);
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
