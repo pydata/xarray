@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -143,10 +145,17 @@ class BooleanIndexing:
 class HugeAxisSmallSliceIndexing:
     # https://github.com/pydata/xarray/pull/4560
     def setup(self):
-        self.ds = xr.Dataset(
-            {"a": ("time", np.arange(10_000_000))},
-            coords={"time": np.arange(10_000_000)},
-        )
+        self.filepath = "test_indexing_huge_axis_small_slice.nc"
+        if not os.path.isfile(self.filepath):
+            xr.Dataset(
+                {"a": ("x", np.arange(10_000_000))},
+                coords={"x": np.arange(10_000_000)},
+            ).to_netcdf(self.filepath, format="NETCDF4")
+
+        self.ds = xr.open_dataset(self.filepath)
 
     def time_indexing(self):
-        self.ds.isel(time=slice(1000))
+            self.ds.isel(x=slice(100))
+
+    def cleanup(self):
+        self.ds.close()
