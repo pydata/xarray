@@ -117,7 +117,7 @@ class Weighted:
             )
 
         else:
-            weights = weights.copy(data=_weight_check(weights.data))
+           _weight_check(weights.data)
 
         self.obj = obj
         self.weights = weights
