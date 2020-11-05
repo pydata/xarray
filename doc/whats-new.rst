@@ -36,6 +36,8 @@ New Features
   limited regions of existing Zarr stores (:pull:`4035`).
   See :ref:`io.zarr.appending` for full details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Added typehints in :py:func:`align` to reflect that the same type received in ``objects`` arg will be returned (:pull:`4522`).
+  By `Michal Baumgartner <https://github.com/m1so>`_.
 - :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted` are now executing value checks lazily if weights are provided as dask arrays (:issue:`4541`, :pull:`4559`).
   By `Julius Busecke <https://github.com/jbusecke>`_.
 

@@ -380,8 +380,8 @@ def _dataset_concat(
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
-    datasets = align(
-        *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
+    datasets = list(
+        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
     dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
