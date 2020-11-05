@@ -58,7 +58,7 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Fix performance bug where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
+- Improve performance where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
 
 Documentation
 ~~~~~~~~~~~~~
