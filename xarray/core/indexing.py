@@ -289,7 +289,7 @@ def slice_slice(old_slice, applied_slice, size):
     old_slice = _normalize_slice(old_slice, size)
 
     size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
-    if not size_after_old_slice:
+    if size_after_old_slice == 0:
         # nothing left after applying first slice
         return slice(0)
 
