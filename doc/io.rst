@@ -1074,4 +1074,4 @@ Third party libraries
 
 More formats are supported by extension libraries:
 
-- `MongoDB <https://xarray-mongodb.readthedocs.io>`_
+- `xarray-mongodb <https://xarray-mongodb.readthedocs.io/en/latest/>`_: Store xarray objects on MongoDB
