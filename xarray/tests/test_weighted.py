@@ -119,7 +119,7 @@ def test_weighted_sum_nan(weights, expected, skipna):
     assert_equal(expected, result)
 
 
-@pytest.mark.filterwarnings("ignore:Mean of empty slice")
+@pytest.mark.filterwarnings("error")
 @pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan], [np.nan, np.nan]))
 @pytest.mark.parametrize("skipna", (True, False))
 @pytest.mark.parametrize("factor", [1, 2, 3.14])
@@ -320,7 +320,6 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     assert not result.attrs
 
 
-@pytest.mark.xfail(reason="xr.Dataset.map does not copy attrs of DataArrays GH: 3595")
 @pytest.mark.parametrize("operation", ("sum", "mean"))
 def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595

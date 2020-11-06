@@ -3,8 +3,10 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
+from .. import conventions
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.dataset import Dataset
+from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
@@ -67,8 +69,7 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf
-    """
+    """Store for reading and writing data via h5netcdf"""
 
     __slots__ = (
         "autoclose",
@@ -121,6 +122,25 @@ class H5NetCDFStore(WritableCFDataStore):
         phony_dims=None,
     ):
         import h5netcdf
+
+        if isinstance(filename, bytes):
+            raise ValueError(
+                "can't open netCDF4/HDF5 as bytes "
+                "try passing a path or file-like object"
+            )
+        elif hasattr(filename, "tell"):
+            if filename.tell() != 0:
+                raise ValueError(
+                    "file-like object read/write pointer not at zero "
+                    "please close and reopen, or use a context manager"
+                )
+            else:
+                magic_number = filename.read(8)
+                filename.seek(0)
+                if not magic_number.startswith(b"\211HDF\r\n\032\n"):
+                    raise ValueError(
+                        f"{magic_number} is not the signature of a valid netCDF file"
+                    )
 
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
@@ -262,7 +282,7 @@ class H5NetCDFStore(WritableCFDataStore):
             and "compression_opts" in encoding
             and encoding["complevel"] != encoding["compression_opts"]
         ):
-            raise ValueError("'complevel' and 'compression_opts' encodings " "mismatch")
+            raise ValueError("'complevel' and 'compression_opts' encodings mismatch")
         complevel = encoding.pop("complevel", 0)
         if complevel != 0:
             encoding.setdefault("compression_opts", complevel)
@@ -303,3 +323,54 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+def open_backend_dataset_h5necdf(
+    filename_or_obj,
+    *,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    format=None,
+    group=None,
+    lock=None,
+    invalid_netcdf=None,
+    phony_dims=None,
+):
+
+    store = H5NetCDFStore.open(
+        filename_or_obj,
+        format=format,
+        group=group,
+        lock=lock,
+        invalid_netcdf=invalid_netcdf,
+        phony_dims=phony_dims,
+    )
+
+    with close_on_error(store):
+        vars, attrs = store.load()
+        file_obj = store
+        encoding = store.get_encoding()
+
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+
+        ds = Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
+
+    return ds

@@ -214,9 +214,10 @@ class DatasetCoordinates(Coordinates):
         return cast("DataArray", self._data[key])
 
     def to_dataset(self) -> "Dataset":
-        """Convert these coordinates into a new Dataset
-        """
-        return self._data._copy_listed(self._names)
+        """Convert these coordinates into a new Dataset"""
+
+        names = [name for name in self._data._variables if name in self._names]
+        return self._data._copy_listed(names)
 
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]

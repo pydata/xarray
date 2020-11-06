@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _dask:
 
 Parallel computing with Dask
@@ -90,7 +92,7 @@ use :py:func:`~xarray.open_mfdataset`::
     xr.open_mfdataset('my/files/*.nc', parallel=True)
 
 This function will automatically concatenate and merge datasets into one in
-the simple cases that it understands (see :py:func:`~xarray.auto_combine`
+the simple cases that it understands (see :py:func:`~xarray.combine_by_coords`
 for the full disclaimer). By default, :py:meth:`~xarray.open_mfdataset` will chunk each
 netCDF file into a single Dask array; again, supply the ``chunks`` argument to
 control the size of the resulting Dask arrays. In more complex cases, you can

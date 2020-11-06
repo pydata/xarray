@@ -100,7 +100,7 @@ def isel_variable_and_index(
 
     if len(variable.dims) > 1:
         raise NotImplementedError(
-            "indexing multi-dimensional variable with indexes is not " "supported yet"
+            "indexing multi-dimensional variable with indexes is not supported yet"
         )
 
     new_variable = variable.isel(indexers)
@@ -130,8 +130,7 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
 def propagate_indexes(
     indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
 ) -> Optional[Dict[Hashable, pd.Index]]:
-    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
-    """
+    """Creates new indexes dict from existing dict optionally excluding some dimensions."""
     if exclude is None:
         exclude = ()
 

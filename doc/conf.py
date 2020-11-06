@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -20,18 +19,10 @@ import subprocess
 import sys
 from contextlib import suppress
 
-# --------- autosummary templates ------------------
-# TODO: eventually replace this with a sphinx.ext.auto_accessor module
-import sphinx
-from sphinx.ext.autodoc import AttributeDocumenter, Documenter, MethodDocumenter
-from sphinx.util import rpartition
+import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
-# make sure the source version is preferred (#3567)
-root = pathlib.Path(__file__).absolute().parent.parent
-os.environ["PYTHONPATH"] = str(root)
-sys.path.insert(0, str(root))
-
-import xarray  # isort:skip
+import xarray
 
 allowed_failures = set()
 
@@ -45,7 +36,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
     import matplotlib
@@ -53,14 +44,14 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio
+    import rasterio  # noqa: F401
 except ImportError:
     allowed_failures.update(
         ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
     )
 
 try:
-    import cartopy
+    import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
@@ -88,6 +79,8 @@ extensions = [
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
+    "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -107,16 +100,78 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
+
 autodoc_typehints = "none"
 
-napoleon_use_param = True
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
+napoleon_use_param = False
 napoleon_use_rtype = True
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "iterable": ":term:`iterable`",
+    "callable": ":py:func:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
+    # stdlib type aliases
+    "MutableMapping": "~collections.abc.MutableMapping",
+    "sys.stdout": ":obj:`sys.stdout`",
+    "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
+    # matplotlib terms
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # objects without namespace
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
+    "ndarray": "~numpy.ndarray",
+    "MaskedArray": "~numpy.ma.MaskedArray",
+    "dtype": "~numpy.dtype",
+    "ComplexWarning": "~numpy.ComplexWarning",
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
+    "Categorical": "~pandas.Categorical",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
+}
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The suffix of source filenames.
 source_suffix = ".rst"
@@ -275,21 +330,21 @@ htmlhelp_basename = "xarraydoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
-}
+# latex_elements = {
+#     # The paper size ('letterpaper' or 'a4paper').
+#     # 'papersize': 'letterpaper',
+#     # The font size ('10pt', '11pt' or '12pt').
+#     # 'pointsize': '10pt',
+#     # Additional stuff for the LaTeX preamble.
+#     # 'preamble': '',
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
-]
+# latex_documents = [
+#     ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
+# ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -316,7 +371,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
+# man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -327,17 +382,17 @@ man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [
-    (
-        "index",
-        "xarray",
-        "xarray Documentation",
-        "xarray Developers",
-        "xarray",
-        "N-D labeled arrays and datasets in Python.",
-        "Miscellaneous",
-    )
-]
+# texinfo_documents = [
+#     (
+#         "index",
+#         "xarray",
+#         "xarray Documentation",
+#         "xarray Developers",
+#         "xarray",
+#         "N-D labeled arrays and datasets in Python.",
+#         "Miscellaneous",
+#     )
+# ]
 
 # Documents to append as an appendix to all manuals.
 # texinfo_appendices = []
@@ -366,111 +421,9 @@ intersphinx_mapping = {
 }
 
 
-# --------- autosummary templates ------------------
-# TODO: eventually replace this with a sphinx.ext.auto_accessor module
-class AccessorDocumenter(MethodDocumenter):
-    """
-    Specialized Documenter subclass for accessors.
-    """
-
-    objtype = "accessor"
-    directivetype = "method"
-
-    # lower than MethodDocumenter so this is not chosen for normal methods
-    priority = 0.6
-
-    def format_signature(self):
-        # this method gives an error/warning for the accessors, therefore
-        # overriding it (accessor has no arguments)
-        return ""
-
-
-class AccessorLevelDocumenter(Documenter):
-    """
-    Specialized Documenter subclass for objects on accessor level (methods,
-    attributes).
-    """
-
-    # This is the simple straightforward version
-    # modname is None, base the last elements (eg 'hour')
-    # and path the part before (eg 'Series.dt')
-    # def resolve_name(self, modname, parents, path, base):
-    #     modname = 'pandas'
-    #     mod_cls = path.rstrip('.')
-    #     mod_cls = mod_cls.split('.')
-    #
-    #     return modname, mod_cls + [base]
-
-    def resolve_name(self, modname, parents, path, base):
-        if modname is None:
-            if path:
-                mod_cls = path.rstrip(".")
-            else:
-                mod_cls = None
-                # if documenting a class-level object without path,
-                # there must be a current class, either from a parent
-                # auto directive ...
-                mod_cls = self.env.temp_data.get("autodoc:class")
-                # ... or from a class directive
-                if mod_cls is None:
-                    mod_cls = self.env.temp_data.get("py:class")
-                # ... if still None, there's no way to know
-                if mod_cls is None:
-                    return None, []
-            # HACK: this is added in comparison to ClassLevelDocumenter
-            # mod_cls still exists of class.accessor, so an extra
-            # rpartition is needed
-            modname, accessor = rpartition(mod_cls, ".")
-            modname, cls = rpartition(modname, ".")
-            parents = [cls, accessor]
-            # if the module name is still missing, get it like above
-            if not modname:
-                modname = self.env.temp_data.get("autodoc:module")
-            if not modname:
-                if sphinx.__version__ > "1.3":
-                    modname = self.env.ref_context.get("py:module")
-                else:
-                    modname = self.env.temp_data.get("py:module")
-            # ... else, it stays None, which means invalid
-        return modname, parents + [base]
-
-
-class AccessorAttributeDocumenter(AccessorLevelDocumenter, AttributeDocumenter):
-
-    objtype = "accessorattribute"
-    directivetype = "attribute"
-
-    # lower than AttributeDocumenter so this is not chosen for normal attributes
-    priority = 0.6
-
-
-class AccessorMethodDocumenter(AccessorLevelDocumenter, MethodDocumenter):
-
-    objtype = "accessormethod"
-    directivetype = "method"
-
-    # lower than MethodDocumenter so this is not chosen for normal methods
-    priority = 0.6
-
-
-class AccessorCallableDocumenter(AccessorLevelDocumenter, MethodDocumenter):
-    """
-    This documenter lets us removes .__call__ from the method signature for
-    callable accessors like Series.plot
-    """
-
-    objtype = "accessorcallable"
-    directivetype = "method"
-
-    # lower than MethodDocumenter; otherwise the doc build prints warnings
-    priority = 0.5
-
-    def format_name(self):
-        return MethodDocumenter.format_name(self).rstrip(".__call__")
+def escape_underscores(string):
+    return string.replace("_", r"\_")
 
 
 def setup(app):
-    app.add_autodocumenter(AccessorDocumenter)
-    app.add_autodocumenter(AccessorAttributeDocumenter)
-    app.add_autodocumenter(AccessorMethodDocumenter)
-    app.add_autodocumenter(AccessorCallableDocumenter)
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores

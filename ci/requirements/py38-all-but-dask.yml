@@ -19,7 +19,7 @@ dependencies:
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.761  # Must match .pre-commit-config.yaml
+  - mypy=0.782  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
@@ -29,7 +29,7 @@ dependencies:
   - pip
   - pseudonetcdf
   - pydap
-  - pynio
+  # - pynio: not compatible with netCDF4>1.5.3; only tested in py36-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env

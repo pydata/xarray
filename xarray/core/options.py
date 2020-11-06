@@ -71,7 +71,7 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of" " True, False or 'default'."
+            "The global option keep_attrs must be one of True, False or 'default'."
         )
 
 
@@ -114,13 +114,14 @@ class set_options:
     <xarray.Dataset>
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 3 4 5 6 ...
+      * x        (x) int64 0 1 2 ... 998 999
     Data variables:
         *empty*
 
     Or to set global options:
 
-    >>> xr.set_options(display_width=80)
+    >>> xr.set_options(display_width=80)  # doctest: +ELLIPSIS
+    <xarray.core.options.set_options object at 0x...>
     """
 
     def __init__(self, **kwargs):
