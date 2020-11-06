@@ -1915,9 +1915,7 @@ class ZarrBase(CFEncodedBase):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
-            with pytest.raises(
-                ValueError, match="append_dim was set along with mode='w'"
-            ):
+            with pytest.raises(ValueError, match="cannot set append_dim unless"):
                 ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
 
     def test_append_with_existing_encoding_raises(self):
@@ -2022,6 +2020,120 @@ class ZarrBase(CFEncodedBase):
 
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
+
+    @pytest.mark.parametrize("consolidated", [False, True])
+    @pytest.mark.parametrize("compute", [False, True])
+    @pytest.mark.parametrize("use_dask", [False, True])
+    def test_write_region(self, consolidated, compute, use_dask):
+        if (use_dask or not compute) and not has_dask:
+            pytest.skip("requires dask")
+
+        zeros = Dataset({"u": (("x",), np.zeros(10))})
+        nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
+
+        if use_dask:
+            zeros = zeros.chunk(2)
+            nonzeros = nonzeros.chunk(2)
+
+        with self.create_zarr_target() as store:
+            zeros.to_zarr(
+                store,
+                consolidated=consolidated,
+                compute=compute,
+                encoding={"u": dict(chunks=2)},
+            )
+            if compute:
+                with xr.open_zarr(store, consolidated=consolidated) as actual:
+                    assert_identical(actual, zeros)
+            for i in range(0, 10, 2):
+                region = {"x": slice(i, i + 2)}
+                nonzeros.isel(region).to_zarr(store, region=region)
+            with xr.open_zarr(store, consolidated=consolidated) as actual:
+                assert_identical(actual, nonzeros)
+
+    @requires_dask
+    def test_write_region_metadata(self):
+        """Metadata should not be overwritten in "region" writes."""
+        template = Dataset(
+            {"u": (("x",), np.zeros(10), {"variable": "template"})},
+            attrs={"global": "template"},
+        )
+        data = Dataset(
+            {"u": (("x",), np.arange(1, 11), {"variable": "data"})},
+            attrs={"global": "data"},
+        )
+        expected = Dataset(
+            {"u": (("x",), np.arange(1, 11), {"variable": "template"})},
+            attrs={"global": "template"},
+        )
+
+        with self.create_zarr_target() as store:
+            template.to_zarr(store, compute=False)
+            data.to_zarr(store, region={"x": slice(None)})
+            with self.open(store) as actual:
+                assert_identical(actual, expected)
+
+    def test_write_region_errors(self):
+        data = Dataset({"u": (("x",), np.arange(5))})
+        data2 = Dataset({"u": (("x",), np.array([10, 11]))})
+
+        @contextlib.contextmanager
+        def setup_and_verify_store(expected=data):
+            with self.create_zarr_target() as store:
+                data.to_zarr(store)
+                yield store
+                with self.open(store) as actual:
+                    assert_identical(actual, expected)
+
+        # verify the base case works
+        expected = Dataset({"u": (("x",), np.array([10, 11, 2, 3, 4]))})
+        with setup_and_verify_store(expected) as store:
+            data2.to_zarr(store, region={"x": slice(2)})
+
+        with setup_and_verify_store() as store:
+            with raises_regex(ValueError, "cannot use consolidated=True"):
+                data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
+
+        with setup_and_verify_store() as store:
+            with raises_regex(
+                ValueError, "cannot set region unless mode='a' or mode=None"
+            ):
+                data.to_zarr(store, region={"x": slice(None)}, mode="w")
+
+        with setup_and_verify_store() as store:
+            with raises_regex(TypeError, "must be a dict"):
+                data.to_zarr(store, region=slice(None))
+
+        with setup_and_verify_store() as store:
+            with raises_regex(TypeError, "must be slice objects"):
+                data2.to_zarr(store, region={"x": [0, 1]})
+
+        with setup_and_verify_store() as store:
+            with raises_regex(ValueError, "step on all slices"):
+                data2.to_zarr(store, region={"x": slice(None, None, 2)})
+
+        with setup_and_verify_store() as store:
+            with raises_regex(
+                ValueError, "all keys in ``region`` are not in Dataset dimensions"
+            ):
+                data.to_zarr(store, region={"y": slice(None)})
+
+        with setup_and_verify_store() as store:
+            with raises_regex(
+                ValueError,
+                "all variables in the dataset to write must have at least one dimension in common",
+            ):
+                data2.assign(v=2).to_zarr(store, region={"x": slice(2)})
+
+        with setup_and_verify_store() as store:
+            with raises_regex(ValueError, "cannot list the same dimension in both"):
+                data.to_zarr(store, region={"x": slice(None)}, append_dim="x")
+
+        with setup_and_verify_store() as store:
+            with raises_regex(
+                ValueError, "variable 'u' already exists with different dimension sizes"
+            ):
+                data2.to_zarr(store, region={"x": slice(3)})
 
     @requires_dask
     def test_encoding_chunksizes(self):

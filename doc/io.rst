@@ -833,7 +833,9 @@ N-dimensional arrays.
 Zarr has the ability to store arrays in a range of ways, including in memory,
 in files, and in cloud-based object storage such as `Amazon S3`_ and
 `Google Cloud Storage`_.
-Xarray's Zarr backend allows xarray to leverage these capabilities.
+Xarray's Zarr backend allows xarray to leverage these capabilities, including
+the ability to store and analyze datasets far too large fit onto disk
+(particularly :ref:`in combination with dask <dask>`).
 
 .. warning::
 
@@ -845,7 +847,8 @@ metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
 xarray. For implementation details, see :ref:`zarr_encoding`.
 
-To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
+To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
+
 To write to a local directory, we pass a path to a directory:
 
 .. ipython:: python
@@ -869,39 +872,10 @@ To write to a local directory, we pass a path to a directory:
 there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
-store, add ``mode='w'`` when invoking ``to_zarr``.
+store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
-It is also possible to append to an existing store. For that, set
-``append_dim`` to the name of the dimension along which to append. ``mode``
-can be omitted as it will internally be set to ``'a'``.
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    ds1 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-01", periods=2),
-        },
-    )
-    ds1.to_zarr("path/to/directory.zarr")
-    ds2 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-03", periods=2),
-        },
-    )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
-
-To store variable length strings use ``dtype=object``.
+To store variable length strings, convert them to object arrays first with
+``dtype=object``.
 
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
@@ -986,6 +960,109 @@ To read a consolidated store, pass the ``consolidated=True`` option to
 Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
+
+.. _io.zarr.appending:
+
+Appending to existing Zarr stores
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports several ways of incrementally writing variables to a Zarr
+store. These options are useful for scenarios when it is infeasible or
+undesirable to write your entire dataset at once.
+
+.. tip::
+
+    If you can load all of your data into a single ``Dataset`` using dask, a
+    single call to ``to_zarr()`` will write all of your data in parallel.
+
+.. warning::
+
+    Alignment of coordinates is currently not checked when modifying an
+    existing Zarr store. It is up to the user to ensure that coordinates are
+    consistent.
+
+To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
+with ``mode='a'`` on a Dataset containing the new variables, passing in an
+existing Zarr store or path to a Zarr store.
+
+To resize and then append values along an existing dimension in a store, set
+``append_dim``. This is a good option if data always arives in a particular
+order, e.g., for time-stepping a simulation:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-01", periods=2),
+        },
+    )
+    ds1.to_zarr("path/to/directory.zarr")
+    ds2 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-03", periods=2),
+        },
+    )
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
+
+Finally, you can use ``region`` to write to limited regions of existing arrays
+in an existing Zarr store. This is a good option for writing data in parallel
+from independent processes.
+
+To scale this up to writing large datasets, the first step is creating an
+initial Zarr store without writing all of its array data. This can be done by
+first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
+and then calling ``to_zarr`` with ``compute=False`` to write only metadata
+(including ``attrs``) to Zarr:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    import dask.array
+    # The values of this dask array are entirely irrelevant; only the dtype,
+    # shape and chunks are used
+    dummies = dask.array.zeros(30, chunks=10)
+    ds = xr.Dataset({"foo": ("x", dummies)})
+    path = "path/to/directory.zarr"
+    # Now we write the metadata without computing any array values
+    ds.to_zarr(path, compute=False, consolidated=True)
+
+Now, a Zarr store with the correct variable shapes and attributes exists that
+can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
+mapping from dimension names to Python ``slice`` objects indicating where the
+data should be written (in index space, not coordinate space), e.g.,
+
+.. ipython:: python
+
+    # For convenience, we'll slice a single dataset, but in the real use-case
+    # we would create them separately, possibly even from separate processes.
+    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+
+Concurrent writes with ``region`` are safe as long as they modify distinct
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
+
+As a safety check to make it harder to inadvertently override existing values,
+if you set ``region`` then *all* variables included in a Dataset must have
+dimensions included in ``region``. Other variables (typically coordinates)
+need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
+with ``mode='a'``.
 
 .. _io.cfgrib:
 
