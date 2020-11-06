@@ -76,8 +76,8 @@ def resolve_decoders_kwargs(decode_cf, engine, **decoders):
     signature = plugins.ENGINES[engine]["signature"]
     if decode_cf is False:
         for d in decoders:
-            if d in signature and d != "use_cftime":
-                decoders[d] = decode_cf
+            if d in signature:
+                decoders[d] = False
     return {k: v for k, v in decoders.items() if v is not None}
 
 
