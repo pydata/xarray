@@ -693,7 +693,6 @@ def open_zarr(
 
 def open_backend_dataset_zarr(
     filename_or_obj,
-    decode_cf=True,
     mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
@@ -708,13 +707,6 @@ def open_backend_dataset_zarr(
     consolidate_on_close=False,
     chunk_store=None,
 ):
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     store = ZarrStore.open_group(
         filename_or_obj,
