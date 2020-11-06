@@ -3,7 +3,8 @@ import typing as T
 
 from . import cfgrib_, h5netcdf_, zarr
 
-ENGINES: T.Dict[str, T.Dict] = {
+
+ENGINES: T.Dict[str, T.Dict[str, T.Any]] = {
     "h5netcdf": {
         "open_dataset": h5netcdf_.open_backend_dataset_h5necdf,
     },
