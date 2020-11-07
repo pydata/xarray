@@ -2569,12 +2569,6 @@ class TestDataset:
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
-    def test_rename_inplace(self):
-        times = pd.date_range("2000-01-01", periods=3)
-        data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        with pytest.raises(TypeError):
-            data.rename({"x": "y"}, inplace=True)
-
     def test_rename_dims(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
         expected = Dataset(
