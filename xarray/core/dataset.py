@@ -2900,7 +2900,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def rename(
         self,
         name_dict: Mapping[Hashable, Hashable] = None,
-        inplace: bool = None,
         **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
@@ -2926,7 +2925,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-        _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, "rename")
         for k in name_dict.keys():
             if k not in self and k not in self.dims:
