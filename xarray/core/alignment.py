@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 def _get_joiner(join):
     if join == "outer":
-        return functools.partial(functools.reduce, operator.or_)
+        return functools.partial(functools.reduce, pd.Index.union)
     elif join == "inner":
-        return functools.partial(functools.reduce, operator.and_)
+        return functools.partial(functools.reduce, pd.Index.intersection)
     elif join == "left":
         return operator.itemgetter(0)
     elif join == "right":
