@@ -112,7 +112,10 @@ class Weighted:
             return w
 
         if is_duck_dask_array(weights.data):
-            weights.data.map_blocks(_weight_check, dtype=weights.dtype)
+            # assign to copy - else the check is not triggered
+            weights = weights.copy(
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype)
+            )
 
         else:
             _weight_check(weights.data)
