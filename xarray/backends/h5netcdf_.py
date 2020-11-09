@@ -328,7 +328,6 @@ class H5NetCDFStore(WritableCFDataStore):
 def open_backend_dataset_h5necdf(
     filename_or_obj,
     *,
-    decode_cf=True,
     mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
@@ -342,13 +341,6 @@ def open_backend_dataset_h5necdf(
     invalid_netcdf=None,
     phony_dims=None,
 ):
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     store = H5NetCDFStore.open(
         filename_or_obj,
