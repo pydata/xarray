@@ -37,6 +37,12 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
+  limited regions of existing Zarr stores (:pull:`4035`).
+  See :ref:`io.zarr.appending` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Added typehints in :py:func:`align` to reflect that the same type received in ``objects`` arg will be returned (:pull:`4522`).
+  By `Michal Baumgartner <https://github.com/m1so>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -66,6 +72,7 @@ Bug fixes
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes and names of of (wrapped)
   ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Improve performance where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -74,11 +81,13 @@ Documentation
   (:pull:`4532`);
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
-  is called on a scalar, (:issue:`4228`); 
+  is called on a scalar, (:issue:`4228`);
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 
 Internal Changes
