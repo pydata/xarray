@@ -2,11 +2,7 @@ import os
 
 from ..core.utils import is_remote_uri
 from . import plugins, zarr
-from .api import (
-    _autodetect_engine,
-    _normalize_path,
-    _protect_dataset_variables_inplace,
-)
+from .api import _autodetect_engine, _normalize_path, _protect_dataset_variables_inplace
 
 
 def _get_backend_cls(engine):
@@ -245,9 +241,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine)[
-        "open_dataset"
-    ]
+    open_backend_dataset = _get_backend_cls(engine)["open_dataset"]
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
