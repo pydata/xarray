@@ -13,7 +13,7 @@ dependencies:
   - coveralls
   - flake8
   - h5netcdf
-  - h5py
+  - h5py=2
   - hdf5
   - hypothesis
   - isort
