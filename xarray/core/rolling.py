@@ -22,6 +22,10 @@ Reduce this object's data windows by applying `{name}` along its dimension.
 
 Parameters
 ----------
+keep_attrs : bool, default: None
+    If True, the attributes (``attrs``) will be copied from the original
+    object to the new one. If False, the new object will be returned
+    without attributes. If None uses the global default.
 **kwargs : dict
     Additional keyword arguments passed on to `{name}`.
 
@@ -56,17 +60,13 @@ class Rolling:
             Object to window.
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
-            exponential window along (e.g. `time`) to the size of the moving window.
+            window along (e.g. `time`) to the size of the moving window.
         min_periods : int, default: None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : bool, default: False
             Set the labels at the center of the window.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -88,8 +88,13 @@ class Rolling:
 
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an"
+                " error in xarray 0.18. Please pass ``keep_attrs`` directly to the"
+                " applied function. Note that keep_attrs is now True per default.",
+                FutureWarning,
+            )
         self.keep_attrs = keep_attrs
 
     def __repr__(self):
@@ -110,9 +115,12 @@ class Rolling:
         array_agg_func = getattr(duck_array_ops, name)
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
-        def method(self, **kwargs):
+        def method(self, keep_attrs=None, **kwargs):
+
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
             return self._numpy_or_bottleneck_reduce(
-                array_agg_func, bottleneck_move_func, **kwargs
+                array_agg_func, bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
 
         method.__name__ = name
@@ -130,8 +138,9 @@ class Rolling:
     var = _reduce_method("var")
     median = _reduce_method("median")
 
-    def count(self):
-        rolling_count = self._counts()
+    def count(self, keep_attrs=None):
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+        rolling_count = self._counts(keep_attrs=keep_attrs)
         enough_periods = rolling_count >= self.min_periods
         return rolling_count.where(enough_periods)
 
@@ -157,6 +166,19 @@ class Rolling:
                 "Mapping argument is necessary for {}d-rolling.".format(len(self.dim))
             )
 
+    def _get_keep_attrs(self, keep_attrs):
+
+        if keep_attrs is None:
+            # TODO: uncomment the next line and remove the others after the deprecation
+            # keep_attrs = _get_keep_attrs(default=True)
+
+            if self.keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
+            else:
+                keep_attrs = self.keep_attrs
+
+        return keep_attrs
+
 
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
@@ -180,10 +202,6 @@ class DataArrayRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : bool, default: False
             Set the labels at the center of the window.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -196,8 +214,6 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
         super().__init__(
             obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
         )
@@ -220,7 +236,12 @@ class DataArrayRolling(Rolling):
             yield (label, window)
 
     def construct(
-        self, window_dim=None, stride=1, fill_value=dtypes.NA, **window_dim_kwargs
+        self,
+        window_dim=None,
+        stride=1,
+        fill_value=dtypes.NA,
+        keep_attrs=None,
+        **window_dim_kwargs,
     ):
         """
         Convert this rolling object to xr.DataArray,
@@ -230,11 +251,14 @@ class DataArrayRolling(Rolling):
         ----------
         window_dim : str or mapping, optional
             A mapping from dimension name to the new window dimension names.
-            Just a string can be used for 1d-rolling.
-        stride : int or mapping of int, optional
+        stride : int or mapping of int, default: 1
             Size of stride for the rolling window.
         fill_value : default: dtypes.NA
             Filling value to match the dimension size.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
 
@@ -279,6 +303,8 @@ class DataArrayRolling(Rolling):
 
         from .dataarray import DataArray
 
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
                 raise ValueError(
@@ -294,14 +320,21 @@ class DataArrayRolling(Rolling):
         window = self.obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
         )
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
         result = DataArray(
-            window, dims=self.obj.dims + tuple(window_dim), coords=self.obj.coords
+            window,
+            dims=self.obj.dims + tuple(window_dim),
+            coords=self.obj.coords,
+            attrs=attrs,
+            name=self.obj.name,
         )
         return result.isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
         )
 
-    def reduce(self, func, **kwargs):
+    def reduce(self, func, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -311,6 +344,10 @@ class DataArrayRolling(Rolling):
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -349,19 +386,24 @@ class DataArrayRolling(Rolling):
                [ 4.,  9., 15., 18.]])
         Dimensions without coordinates: a, b
         """
+
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
-        windows = self.construct(rolling_dim)
-        result = windows.reduce(func, dim=list(rolling_dim.values()), **kwargs)
+        windows = self.construct(rolling_dim, keep_attrs=keep_attrs)
+        result = windows.reduce(
+            func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
+        )
 
         # Find valid windows based on count.
-        counts = self._counts()
+        counts = self._counts(keep_attrs=False)
         return result.where(counts >= self.min_periods)
 
-    def _counts(self):
-        """ Number of non-nan entries in each rolling window. """
+    def _counts(self, keep_attrs):
+        """Number of non-nan entries in each rolling window."""
 
         rolling_dim = {
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
@@ -372,17 +414,17 @@ class DataArrayRolling(Rolling):
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
         counts = (
-            self.obj.notnull()
+            self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
                 **{d: w for d, w in zip(self.dim, self.window)},
             )
-            .construct(rolling_dim, fill_value=False)
-            .sum(dim=list(rolling_dim.values()), skipna=False)
+            .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
+            .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
         )
         return counts
 
-    def _bottleneck_reduce(self, func, **kwargs):
+    def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
         from .dataarray import DataArray
 
         # bottleneck doesn't allow min_count to be 0, although it should
@@ -398,8 +440,8 @@ class DataArrayRolling(Rolling):
         padded = self.obj.variable
         if self.center[0]:
             if is_duck_dask_array(padded.data):
-                # Workaround to make the padded chunk size is larger than
-                # self.window-1
+                # workaround to make the padded chunk size larger than
+                # self.window - 1
                 shift = -(self.window[0] + 1) // 2
                 offset = (self.window[0] - 1) // 2
                 valid = (slice(None),) * axis + (
@@ -422,16 +464,19 @@ class DataArrayRolling(Rolling):
 
         if self.center[0]:
             values = values[valid]
-        result = DataArray(values, self.obj.coords)
 
-        return result
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, **kwargs
+        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
     ):
         if "dim" in kwargs:
             warnings.warn(
-                f"Reductions will be applied along the rolling dimension '{self.dim}'. Passing the 'dim' kwarg to reduction operations has no effect and will raise an error in xarray 0.16.0.",
+                f"Reductions are applied along the rolling dimension(s) "
+                f"'{self.dim}'. Passing the 'dim' kwarg to reduction "
+                f"operations has no effect.",
                 DeprecationWarning,
                 stacklevel=3,
             )
@@ -445,9 +490,11 @@ class DataArrayRolling(Rolling):
             # TODO: renable bottleneck with dask after the issues
             # underlying https://github.com/pydata/xarray/issues/2940 are
             # fixed.
-            return self._bottleneck_reduce(bottleneck_move_func, **kwargs)
+            return self._bottleneck_reduce(
+                bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
+            )
         else:
-            return self.reduce(array_agg_func, **kwargs)
+            return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetRolling(Rolling):
@@ -472,10 +519,6 @@ class DatasetRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -494,7 +537,7 @@ class DatasetRolling(Rolling):
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
-            # keeps rollings only for the dataset depending on slf.dim
+            # keeps rollings only for the dataset depending on self.dim
             dims, center = [], {}
             for i, d in enumerate(self.dim):
                 if d in da.dims:
@@ -503,23 +546,27 @@ class DatasetRolling(Rolling):
 
             if len(dims) > 0:
                 w = {d: windows[d] for d in dims}
-                self.rollings[key] = DataArrayRolling(
-                    da, w, min_periods, center, keep_attrs
-                )
+                self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
-    def _dataset_implementation(self, func, **kwargs):
+    def _dataset_implementation(self, func, keep_attrs, **kwargs):
         from .dataset import Dataset
+
+        keep_attrs = self._get_keep_attrs(keep_attrs)
 
         reduced = {}
         for key, da in self.obj.data_vars.items():
             if any(d in da.dims for d in self.dim):
-                reduced[key] = func(self.rollings[key], **kwargs)
+                reduced[key] = func(self.rollings[key], keep_attrs=keep_attrs, **kwargs)
             else:
-                reduced[key] = self.obj[key]
-        attrs = self.obj.attrs if self.keep_attrs else {}
+                reduced[key] = self.obj[key].copy()
+                # we need to delete the attrs of the copied DataArray
+                if not keep_attrs:
+                    reduced[key].attrs = {}
+
+        attrs = self.obj.attrs if keep_attrs else {}
         return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
 
-    def reduce(self, func, **kwargs):
+    def reduce(self, func, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -529,6 +576,10 @@ class DatasetRolling(Rolling):
             Function which can be called in the form
             `func(x, **kwargs)` to return the result of collapsing an
             np.ndarray over an the rolling dimension.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -538,14 +589,18 @@ class DatasetRolling(Rolling):
             Array with summarized data.
         """
         return self._dataset_implementation(
-            functools.partial(DataArrayRolling.reduce, func=func), **kwargs
+            functools.partial(DataArrayRolling.reduce, func=func),
+            keep_attrs=keep_attrs,
+            **kwargs,
         )
 
-    def _counts(self):
-        return self._dataset_implementation(DataArrayRolling._counts)
+    def _counts(self, keep_attrs):
+        return self._dataset_implementation(
+            DataArrayRolling._counts, keep_attrs=keep_attrs
+        )
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, **kwargs
+        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
     ):
         return self._dataset_implementation(
             functools.partial(
@@ -553,6 +608,7 @@ class DatasetRolling(Rolling):
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
             ),
+            keep_attrs=keep_attrs,
             **kwargs,
         )
 
@@ -587,6 +643,8 @@ class DatasetRolling(Rolling):
 
         from .dataset import Dataset
 
+        keep_attrs = self._get_keep_attrs(keep_attrs)
+
         if window_dim is None:
             if len(window_dim_kwargs) == 0:
                 raise ValueError(
@@ -599,22 +657,30 @@ class DatasetRolling(Rolling):
         )
         stride = self._mapping_to_list(stride, default=1)
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=True)
-
         dataset = {}
         for key, da in self.obj.data_vars.items():
-            # keeps rollings only for the dataset depending on slf.dim
+            # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
             if len(dims) > 0:
                 wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
                 st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
+
                 dataset[key] = self.rollings[key].construct(
-                    window_dim=wi, fill_value=fill_value, stride=st
+                    window_dim=wi,
+                    fill_value=fill_value,
+                    stride=st,
+                    keep_attrs=keep_attrs,
                 )
             else:
-                dataset[key] = da
-        return Dataset(dataset, coords=self.obj.coords).isel(
+                dataset[key] = da.copy()
+
+            # as the DataArrays can be copied we need to delete the attrs
+            if not keep_attrs:
+                dataset[key].attrs = {}
+
+        attrs = self.obj.attrs if keep_attrs else {}
+
+        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
         )
 
