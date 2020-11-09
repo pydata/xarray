@@ -1,17 +1,20 @@
 import inspect
 import typing as T
+import entrypoints
+import sys
 
-from . import cfgrib_, h5netcdf_, zarr
+path = sys.path.copy()
+path = set(path)
 
 ENGINES: T.Dict[str, T.Dict[str, T.Any]] = {
     "h5netcdf": {
-        "open_dataset": h5netcdf_.open_backend_dataset_h5necdf,
+        "open_dataset": entrypoints.get_single("xarray.backends", "h5netcdf", path=path).load(),
     },
     "zarr": {
-        "open_dataset": zarr.open_backend_dataset_zarr,
+        "open_dataset": entrypoints.get_single("xarray.backends", "zarr", path=path).load(),
     },
     "cfgrib": {
-        "open_dataset": cfgrib_.open_backend_dataset_cfgrib,
+        "open_dataset": entrypoints.get_single("xarray.backends", "cfgrib", path=path).load(),
     },
 }
 
