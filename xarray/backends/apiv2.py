@@ -4,10 +4,22 @@ from ..core.utils import is_remote_uri
 from . import plugins, zarr
 from .api import (
     _autodetect_engine,
-    _get_backend_cls,
     _normalize_path,
     _protect_dataset_variables_inplace,
 )
+
+
+def _get_backend_cls(engine):
+    """Select open_dataset method based on current engine"""
+
+    try:
+        return plugins.ENGINES[engine]
+    except KeyError:
+        all_plugins = plugins.ENGINES.keys()
+        raise ValueError(
+            "unrecognized engine for open_dataset: {}\n"
+            "must be one of: {}".format(engine, list(all_plugins))
+        )
 
 
 def dataset_from_backend_dataset(
@@ -233,7 +245,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
+    open_backend_dataset = _get_backend_cls(engine)[
         "open_dataset"
     ]
     backend_ds = open_backend_dataset(
