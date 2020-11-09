@@ -2,7 +2,17 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -13,8 +23,11 @@ from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
+
+    DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
 
 def _get_joiner(join):
@@ -59,13 +72,13 @@ def _override_indexes(objects, all_indexes, exclude):
 
 
 def align(
-    *objects,
+    *objects: "DataAlignable",
     join="inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-):
+) -> Tuple["DataAlignable", ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -337,7 +350,9 @@ def align(
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
         else:
-            new_obj = obj.reindex(copy=copy, fill_value=fill_value, **valid_indexers)
+            new_obj = obj.reindex(
+                copy=copy, fill_value=fill_value, indexers=valid_indexers
+            )
         new_obj.encoding = obj.encoding
         result.append(new_obj)
 
