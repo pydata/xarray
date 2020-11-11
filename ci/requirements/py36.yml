@@ -13,6 +13,7 @@ dependencies:
   - coveralls
   - dask
   - distributed
+  - entrypoints
   - flake8
   - h5netcdf
   - h5py

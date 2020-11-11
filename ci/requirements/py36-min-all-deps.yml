@@ -17,6 +17,7 @@ dependencies:
   - coveralls
   - dask=2.9
   - distributed=2.9
+  - entrypoints
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest

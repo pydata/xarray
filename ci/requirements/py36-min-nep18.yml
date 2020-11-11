@@ -8,6 +8,7 @@ dependencies:
   - coveralls
   - dask=2.9
   - distributed=2.9
+  - entrypoints
   - numpy=1.17
   - pandas=0.25
   - pint=0.15
