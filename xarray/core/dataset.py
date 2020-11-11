@@ -376,7 +376,7 @@ def _check_chunks_compatibility(dim, chunks, chunk_spec):
 
 def _get_chunk(name, var, chunks):
     if chunks == "auto":
-        chunks = {}
+        return chunks
 
     preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
     if var.ndim == 1 and var.dims[0] == name:
@@ -396,7 +396,7 @@ def _get_chunk(name, var, chunks):
 def _maybe_chunk(
     name,
     var,
-    chunks=None,
+    chunks,
     token=None,
     lock=None,
     name_prefix="xarray-",

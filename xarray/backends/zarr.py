@@ -509,7 +509,7 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks="auto",
+    chunks={},
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
