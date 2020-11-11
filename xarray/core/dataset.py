@@ -359,6 +359,40 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
+def _check_chunks_compatibility(dim, chunks, chunk_spec):
+    spec = chunks[dim]
+    if isinstance(spec, int):
+        spec = (spec,)
+    if any(s % chunk_spec[dim] for s in spec):
+        warnings.warn(
+            "Specified Dask chunks %r would "
+            "separate on disks chunk shape %r for "
+            "dimension %r. This could "
+            "degrades performance. Consider "
+            "rechunking after loading instead." % (chunks[dim], chunk_spec[dim], dim),
+            stacklevel=2,
+        )
+
+
+def _get_chunk(name, var, chunks):
+    if chunks == "auto":
+        chunks = {}
+
+    preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
+    if var.ndim == 1 and var.dims[0] == name:
+        return preferred_chunks
+
+    output_chunks = {}
+    if chunks is not None:
+        for dim in preferred_chunks:
+            if dim in chunks:
+                _check_chunks_compatibility(dim, chunks, preferred_chunks)
+                output_chunks[dim] = chunks[dim]
+            else:
+                output_chunks[dim] = preferred_chunks[dim]
+    return output_chunks
+
+
 def _maybe_chunk(
     name,
     var,

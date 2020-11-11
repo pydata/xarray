@@ -1,7 +1,8 @@
 import os
 
+from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
-from . import plugins, zarr
+from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
@@ -28,29 +29,25 @@ def _chunk_ds(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if engine != "zarr":
-        from dask.base import tokenize
+    from dask.base import tokenize
 
-        mtime = _get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
+    if isinstance(chunks, int):
+        chunks = dict.fromkeys(backend_ds.dims, chunks)
 
-    else:
-
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
-
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(backend_ds.dims, chunks)
-
-        variables = {
-            k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in backend_ds.variables.items()
-        }
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        var_chunks = _get_chunk(name, var, chunks)
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            var_chunks,
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
         ds =  backend_ds._replace(variables)
     ds._file_obj = backend_ds._file_obj
     return ds
