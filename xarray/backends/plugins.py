@@ -4,10 +4,12 @@ import typing as T
 import warnings
 from functools import lru_cache
 
-import entrypoints # type: ignore
+import entrypoints  # type: ignore
 
 
 class BackendEntrypoint:
+    __slots__ = ("open_dataset", "open_dataset_parameters")
+
     def __init__(self, open_dataset, open_dataset_parameters=None):
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters

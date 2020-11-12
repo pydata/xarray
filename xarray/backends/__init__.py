@@ -9,12 +9,13 @@ from .file_manager import CachingFileManager, DummyFileManager, FileManager
 from .h5netcdf_ import H5NetCDFStore
 from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
+from .plugins import detect_engines
 from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .zarr import ZarrStore
-from .plugins import detect_engines
+
 __all__ = [
     "AbstractDataStore",
     "FileManager",

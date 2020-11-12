@@ -743,4 +743,5 @@ def open_backend_dataset_zarr(
 
     return ds
 
-zarr_backend = BackendEntrypoint(open_dataset= open_backend_dataset_zarr)
+
+zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)

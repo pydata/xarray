@@ -21,7 +21,6 @@ from .netCDF4_ import (
 from .plugins import BackendEntrypoint
 
 
-
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
