@@ -126,3 +126,5 @@ def open_backend_dataset_cfgrib(
         ds.encoding = encoding
 
     return ds
+
+cfgrib_backend = {'open_dataset': open_backend_dataset_cfgrib}

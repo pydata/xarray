@@ -14,6 +14,7 @@ from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .zarr import ZarrStore
+from .plugins import ENGINES
 
 __all__ = [
     "AbstractDataStore",

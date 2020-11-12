@@ -741,3 +741,5 @@ def open_backend_dataset_zarr(
         ds.encoding = encoding
 
     return ds
+
+zarr_backend = {'open_dataset': open_backend_dataset_zarr}

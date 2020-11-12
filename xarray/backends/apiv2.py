@@ -2,20 +2,12 @@ import os
 
 from ..core.utils import is_remote_uri
 from . import plugins, zarr
-from .api import _autodetect_engine, _normalize_path, _protect_dataset_variables_inplace
-
-
-def _get_backend_cls(engine):
-    """Select open_dataset method based on current engine"""
-
-    try:
-        return plugins.ENGINES[engine]
-    except KeyError:
-        all_plugins = plugins.ENGINES.keys()
-        raise ValueError(
-            "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, list(all_plugins))
-        )
+from .api import (
+    _autodetect_engine,
+    _get_backend_cls,
+    _normalize_path,
+    _protect_dataset_variables_inplace,
+)
 
 
 def dataset_from_backend_dataset(
@@ -80,11 +72,10 @@ def dataset_from_backend_dataset(
     return ds2
 
 
-def resolve_decoders_kwargs(decode_cf, engine, **decoders):
-    signature = plugins.ENGINES[engine]["signature"]
+def resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
     if decode_cf is False:
         for d in decoders:
-            if d in signature:
+            if d in open_backend_dataset_parameters:
                 decoders[d] = False
     return {k: v for k, v in decoders.items() if v is not None}
 
@@ -227,9 +218,13 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
+    backend = _get_backend_cls(engine, engines=plugins.ENGINES)
+    open_backend_dataset = backend["open_dataset"]
+    open_backend_dataset_parameters = backend["open_dataset_parameters"]
+
     decoders = resolve_decoders_kwargs(
         decode_cf,
-        engine=engine,
+        open_backend_dataset_parameters=open_backend_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -241,7 +236,6 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine)["open_dataset"]
     backend_ds = open_backend_dataset(
         filename_or_obj,
         drop_variables=drop_variables,

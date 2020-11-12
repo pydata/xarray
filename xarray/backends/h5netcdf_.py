@@ -325,7 +325,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def open_backend_dataset_h5necdf(
+def open_backend_dataset_h5netcdf(
     filename_or_obj,
     *,
     mask_and_scale=True,
@@ -374,3 +374,6 @@ def open_backend_dataset_h5necdf(
         ds.encoding = encoding
 
     return ds
+
+
+h5netcdf_backend = {'open_dataset': open_backend_dataset_h5netcdf}
