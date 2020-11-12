@@ -646,6 +646,8 @@ def apply_variable_ufunc(
 
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
+            else:
+                dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
 
             allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
             if allow_rechunk is None:

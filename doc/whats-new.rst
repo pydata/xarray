@@ -75,6 +75,7 @@ Bug fixes
   ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Improve performance where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
+- Fix bug where ``dask_gufunc_kwargs`` was silently changed in :py:func:`apply_ufunc` (:pull:`4576`). By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
