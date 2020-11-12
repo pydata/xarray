@@ -30,4 +30,5 @@ __all__ = [
     "H5NetCDFStore",
     "ZarrStore",
     "PseudoNetCDFDataStore",
+    "detect_engines",
 ]
