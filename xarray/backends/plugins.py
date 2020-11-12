@@ -24,20 +24,13 @@ def filter_unique_ids(backend_entrypoints):
     return backend_entrypoints_unique
 
 
-def warning_on_entrypoints_conflict(
-        backend_entrypoints,
-        backend_entrypoints_all
-):
+def warning_on_entrypoints_conflict(backend_entrypoints, backend_entrypoints_all):
 
     # sort and group entrypoints by name
     key_name = lambda ep: ep.name
-    backend_entrypoints_all_unique_ids = sorted(
-        backend_entrypoints_all,
-        key=key_name
-    )
+    backend_entrypoints_all_unique_ids = sorted(backend_entrypoints_all, key=key_name)
     backend_entrypoints_ids_grouped = itertools.groupby(
-        backend_entrypoints_all_unique_ids,
-        key=key_name
+        backend_entrypoints_all_unique_ids, key=key_name
     )
 
     # check if there are multiple entrypoints for the same name
@@ -62,22 +55,19 @@ def detect_parameters(open_dataset):
             inspect.Parameter.VAR_POSITIONAL,
         ):
             raise TypeError(
-                f'All the parameters in {open_dataset!r} signature should be explicit. '
+                f"All the parameters in {open_dataset!r} signature should be explicit. "
                 "*args and **kwargs is not supported"
             )
     return set(parameters)
 
 
 def detect_engines():
-    backend_entrypoints = entrypoints.get_group_named('xarray.backends')
-    backend_entrypoints_all = entrypoints.get_group_all('xarray.backends')
+    backend_entrypoints = entrypoints.get_group_named("xarray.backends")
+    backend_entrypoints_all = entrypoints.get_group_all("xarray.backends")
     backend_entrypoints_all = filter_unique_ids(backend_entrypoints_all)
 
     if len(backend_entrypoints_all) != len(backend_entrypoints):
-        warning_on_entrypoints_conflict(
-            backend_entrypoints,
-            backend_entrypoints_all
-        )
+        warning_on_entrypoints_conflict(backend_entrypoints, backend_entrypoints_all)
 
     engines: T.Dict[str, T.Dict[str, T.Any]] = {}
     for name, backend in backend_entrypoints.items():
@@ -87,10 +77,8 @@ def detect_engines():
         open_dataset = backend["open_dataset"]
         if "signature" in backend:
             pass
-        backend['open_dataset_parameters'] = detect_parameters(open_dataset)
+        backend["open_dataset_parameters"] = detect_parameters(open_dataset)
     return engines
 
 
 ENGINES = detect_engines()
-
-
