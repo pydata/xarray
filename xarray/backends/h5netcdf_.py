@@ -18,6 +18,8 @@ from .netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from .plugins import BackendEntrypoint
+
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -376,4 +378,4 @@ def open_backend_dataset_h5netcdf(
     return ds
 
 
-h5netcdf_backend = {'open_dataset': open_backend_dataset_h5netcdf}
+h5netcdf_backend = BackendEntrypoint(open_dataset=open_backend_dataset_h5netcdf)

@@ -218,9 +218,9 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    backend = _get_backend_cls(engine, engines=plugins.ENGINES)
-    open_backend_dataset = backend["open_dataset"]
-    open_backend_dataset_parameters = backend["open_dataset_parameters"]
+    backend = _get_backend_cls(engine, engines=plugins.detect_engines())
+    open_backend_dataset = backend.open_dataset
+    open_backend_dataset_parameters = backend.open_dataset_parameters
 
     decoders = resolve_decoders_kwargs(
         decode_cf,

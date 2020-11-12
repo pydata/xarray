@@ -7,6 +7,8 @@ from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .locks import SerializableLock, ensure_lock
+from .plugins import BackendEntrypoint
+
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -127,4 +129,4 @@ def open_backend_dataset_cfgrib(
 
     return ds
 
-cfgrib_backend = {'open_dataset': open_backend_dataset_cfgrib}
+cfgrib_backend =  BackendEntrypoint(open_dataset=open_backend_dataset_cfgrib)

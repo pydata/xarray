@@ -437,7 +437,7 @@ def open_dataset(
         kwargs = locals().copy()
         from . import apiv2, plugins
 
-        if engine in plugins.ENGINES:
+        if engine in plugins.detect_engines():
             return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:

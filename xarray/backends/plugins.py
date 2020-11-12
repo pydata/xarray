@@ -2,8 +2,15 @@ import inspect
 import itertools
 import typing as T
 import warnings
+from functools import lru_cache
 
-import entrypoints
+import entrypoints # type: ignore
+
+
+class BackendEntrypoint:
+    def __init__(self, open_dataset, open_dataset_parameters=None):
+        self.open_dataset = open_dataset
+        self.open_dataset_parameters = open_dataset_parameters
 
 
 def get_entrypoint_id(entrypoint):
@@ -40,9 +47,8 @@ def warning_on_entrypoints_conflict(backend_entrypoints, backend_entrypoints_all
         if matches_len > 1:
             selected_entrypoint = backend_entrypoints[name]
             warnings.warn(
-                f"\nFound {matches_len} entrypoints "
-                f"for the engine name {name}:\n {matches}.\n"
-                f"It will be used: {selected_entrypoint}.",
+                f"\nFound {matches_len} entrypoints for the engine name {name}:"
+                f"\n {matches}.\n It will be used: {selected_entrypoint}.",
             )
 
 
@@ -61,6 +67,7 @@ def detect_parameters(open_dataset):
     return set(parameters)
 
 
+@lru_cache(maxsize=1)
 def detect_engines():
     backend_entrypoints = entrypoints.get_group_named("xarray.backends")
     backend_entrypoints_all = entrypoints.get_group_all("xarray.backends")
@@ -74,11 +81,7 @@ def detect_engines():
         backend = backend.load()
         engines[name] = backend
 
-        open_dataset = backend["open_dataset"]
-        if "signature" in backend:
-            pass
-        backend["open_dataset_parameters"] = detect_parameters(open_dataset)
+        if backend.open_dataset_parameters is None:
+            open_dataset = backend.open_dataset
+            backend.open_dataset_parameters = detect_parameters(open_dataset)
     return engines
-
-
-ENGINES = detect_engines()
