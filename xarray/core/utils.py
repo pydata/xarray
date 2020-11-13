@@ -463,7 +463,8 @@ class SortedKeysDict(MutableMapping[K, V]):
         del self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(sorted(self.mapping))
+        # see #4571 for the reason of the type ignore
+        return iter(sorted(self.mapping))  # type: ignore
 
     def __len__(self) -> int:
         return len(self.mapping)
