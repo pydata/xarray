@@ -1853,11 +1853,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None,
             Number,
             str,
             Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
-        ] = None,
+        ] = {},
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
@@ -1889,17 +1888,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         chunked : xarray.Dataset
         """
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+                stacklevel=2,
+            )
+            chunks = {}
 
         if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
-        if chunks is not None:
-            bad_dims = chunks.keys() - self.dims.keys()
-            if bad_dims:
-                raise ValueError(
-                    "some chunks keys are not dimensions on this "
-                    "object: %s" % bad_dims
-                )
+        bad_dims = chunks.keys() - self.dims.keys()
+        if bad_dims:
+            raise ValueError(
+                "some chunks keys are not dimensions on this "
+                "object: %s" % bad_dims
+            )
 
         variables = {
             k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)

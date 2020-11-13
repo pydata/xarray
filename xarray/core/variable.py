@@ -986,7 +986,7 @@ class Variable(
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1015,12 +1015,17 @@ class Variable(
         """
         import dask
         import dask.array as da
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+                stacklevel=1
+            )
+            chunks = {}
 
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
-
-        if chunks is None:
-            chunks = self.chunks or self.shape
 
         data = self._data
         if is_duck_dask_array(data):
@@ -2368,7 +2373,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
