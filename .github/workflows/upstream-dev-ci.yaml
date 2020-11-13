@@ -1,0 +1,51 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '0 0 * * *' # Daily “At 00:00” GMT
+  workflow_dispatch: # allows you to trigger the workflow run manually
+
+jobs:
+  upstream-dev:
+    name: nightly-upstream-dev
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          mamba-version: '*'
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: 3.8
+      - name: Set up conda environment
+        run: |
+          mamba env update -f ci/requirements/upstream-dev.yml
+          conda list
+      - name: Run Tests
+        run: |
+          python -m pytest --verbose -rf > output.log
+
+      - name: Create issue
+        if: ${{ failure() }} # Check the exit code of previous step
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs')
+            const logs = fs.readFileSync('output.log', 'utf8')
+            const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
+            const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+            const issue_body = `[Workflow Run URL](${workflow_url})\n` + "<details>\n<summary>\nTest Summary Info\n</summary>\n\n" + "```bash\n" + `${logs}` + "\n" + "```\n</details>"
+            github.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issue_body,
+              title: title,
+              labels: ['CI']
+            })
