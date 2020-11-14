@@ -27,6 +27,7 @@ steps:
         pint \
         bottleneck \
         sparse
+    conda install -c conda-forge pynio
     python -m pip install \
         -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
