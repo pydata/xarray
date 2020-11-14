@@ -16,7 +16,7 @@ steps:
     --cov=xarray \
     --cov-report=xml \
     $(pytest_extra_flags) \
-    || ([ "$ALLOW_FAILURE" = "true" ] && echo -e "\043#vso[task.logissue type=warning]Ignored CI failure!!")
+    || ([ "$ALLOW_FAILURE" = "true" ] && echo -e "\043#vso[task.logissue type=error]Ignored CI failure!!")
   displayName: Run tests
 
 - bash: |
