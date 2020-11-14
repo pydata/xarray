@@ -475,8 +475,6 @@ Datetimelike properties
    DataArray.dt.second
    DataArray.dt.microsecond
    DataArray.dt.nanosecond
-   DataArray.dt.weekofyear
-   DataArray.dt.week
    DataArray.dt.dayofweek
    DataArray.dt.weekday
    DataArray.dt.weekday_name
@@ -892,6 +890,8 @@ Deprecated / Pending Deprecation
 .. autosummary::
    :toctree: generated/
 
+   DataArray.dt.weekofyear
+   DataArray.dt.week
    Dataset.drop
    DataArray.drop
    Dataset.apply
