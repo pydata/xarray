@@ -14,6 +14,7 @@ steps:
 # NumPy again: https://github.com/pydata/xarray/issues/4146 
 - bash: |
     source activate xarray-tests
+    conda install -c conda-forge pynio
     conda uninstall -y --force \
         numpy \
         scipy \
@@ -27,7 +28,6 @@ steps:
         pint \
         bottleneck \
         sparse
-    conda install -c conda-forge pynio
     python -m pip install \
         -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
         --no-deps \
