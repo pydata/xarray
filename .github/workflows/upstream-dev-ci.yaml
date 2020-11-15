@@ -4,7 +4,7 @@ on:
     branches:
       - master
   schedule:
-    - cron: '0 0 * * *' # Daily “At 00:00” UTC
+    - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger the workflow run manually
 
 jobs:
@@ -17,19 +17,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9']
+        python-version: ["3.7", "3.8", "3.9"]
     steps:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
-          mamba-version: '*'
+          mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
           python-version: ${{ matrix.python-version }}
       - name: Set up conda environment
         run: |
           mamba env update -f ci/requirements/upstream-dev.yml
+          python -m pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
+                         --no-deps --pre --upgrade numpy scipy pandas 
           conda list
       - name: Run Tests
         run: |
