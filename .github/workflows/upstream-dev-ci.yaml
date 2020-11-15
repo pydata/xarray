@@ -63,7 +63,7 @@ jobs:
           rsync -a /tmp/workspace/logs/output-*/ ./logs
           ls -R ./logs
 
-      - name: Create issue
+      - name: Create an issue
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -76,9 +76,7 @@ jobs:
             let content = '';
             for (let i=0; i<files.length; i++) {
                 file = files[i];
-                console.log(file);
                 content = fs.readFileSync(`./logs/${file}`, 'utf8');
-                console.log(content);
                 logs = "\n" + `${logs}` + `\n<details>\n<summary>\nPython ${file.split('-')[1]} Test Summary Info\n</summary>\n\n` + "```bash\n" + `${content}` + "\n" + "```\n</details>";
               };
             const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
