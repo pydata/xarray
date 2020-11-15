@@ -43,7 +43,7 @@ __ http://www.unidata.ucar.edu/software/netcdf/
 .. _netCDF FAQ: http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
 
 Reading and writing netCDF files with xarray requires scipy or the
-`netCDF4-Python`__ library to be installed (the later is required to
+`netCDF4-Python`__ library to be installed (the latter is required to
 read/write netCDF V4 files and use the compression options described below).
 
 __ https://github.com/Unidata/netcdf4-python
@@ -241,7 +241,7 @@ See its docstring for more details.
 .. note::
 
     A common use-case involves a dataset distributed across a large number of files with
-    each file containing a large number of variables. Commonly a few of these variables
+    each file containing a large number of variables. Commonly, a few of these variables
     need to be concatenated along a dimension (say ``"time"``), while the rest are equal
     across the datasets (ignoring floating point differences). The following command
     with suitable modifications (such as ``parallel=True``) works well with such datasets::
@@ -298,8 +298,8 @@ library::
     combined = read_netcdfs('/all/my/files/*.nc', dim='time')
 
 This function will work in many cases, but it's not very robust. First, it
-never closes files, which means it will fail one you need to load more than
-a few thousands file. Second, it assumes that you want all the data from each
+never closes files, which means it will fail if you need to load more than
+a few thousand files. Second, it assumes that you want all the data from each
 file and that it can all fit into memory. In many situations, you only need
 a small subset or an aggregated summary of the data from each file.
 
@@ -351,7 +351,7 @@ default encoding, or the options in the ``encoding`` attribute, if set.
 This works perfectly fine in most cases, but encoding can be useful for
 additional control, especially for enabling compression.
 
-In the file on disk, these encodings as saved as attributes on each variable, which
+In the file on disk, these encodings are saved as attributes on each variable, which
 allow xarray and other CF-compliant tools for working with netCDF files to correctly
 read the data.
 
@@ -364,7 +364,7 @@ These encoding options work on any version of the netCDF file format:
   or ``'float32'``. This controls the type of the data written on disk.
 - ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
-  to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
+  to integers on disk, because ``NaN`` is not a valid value for integer dtypes. By
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
   output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
@@ -406,8 +406,8 @@ If character arrays are used:
   by setting the ``_Encoding`` field in ``encoding``. But
   `we don't recommend it <http://utf8everywhere.org/>`_.
 - The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
-  ``encoding``. If this is not specified the default name for the character dimension is
-  ``'string%s' % data.shape[-1]``. When decoding character arrays from existing files, the
+  ``encoding``. If the name of the character dimension is not specified, the default is
+  ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
   ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
   the field can be edited by the user.
 
@@ -506,7 +506,7 @@ Iris
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
 similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed xarray can convert a ``DataArray`` into a ``Cube`` using
+installed, xarray can convert a ``DataArray`` into a ``Cube`` using
 :py:meth:`DataArray.to_iris`:
 
 .. ipython:: python
@@ -716,7 +716,7 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
-To export just the dataset schema, without the data itself, use the
+To export just the dataset schema without the data itself, use the
 ``data=False`` option:
 
 .. ipython:: python
@@ -772,7 +772,7 @@ for an example of how to convert these to longitudes and latitudes.
 .. warning::
 
     This feature has been added in xarray v0.9.6 and should still be
-    considered as being experimental. Please report any bug you may find
+    considered experimental. Please report any bugs you may find
     on xarray's github repository.
 
 
@@ -828,12 +828,14 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 Zarr
 ----
 
-`Zarr`_ is a Python package providing an implementation of chunked, compressed,
+`Zarr`_ is a Python package that provides an implementation of chunked, compressed,
 N-dimensional arrays.
 Zarr has the ability to store arrays in a range of ways, including in memory,
 in files, and in cloud-based object storage such as `Amazon S3`_ and
 `Google Cloud Storage`_.
-Xarray's Zarr backend allows xarray to leverage these capabilities.
+Xarray's Zarr backend allows xarray to leverage these capabilities, including
+the ability to store and analyze datasets far too large fit onto disk
+(particularly :ref:`in combination with dask <dask>`).
 
 .. warning::
 
@@ -845,8 +847,9 @@ metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
 xarray. For implementation details, see :ref:`zarr_encoding`.
 
-To write a dataset with zarr, we use the :py:attr:`Dataset.to_zarr` method.
-To write to a local directory, we pass a path to a directory
+To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
+
+To write to a local directory, we pass a path to a directory:
 
 .. ipython:: python
     :suppress:
@@ -869,39 +872,10 @@ To write to a local directory, we pass a path to a directory
 there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
-store, add ``mode='w'`` when invoking ``to_zarr``.
+store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
 
-It is also possible to append to an existing store. For that, set
-``append_dim`` to the name of the dimension along which to append. ``mode``
-can be omitted as it will internally be set to ``'a'``.
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    ds1 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-01", periods=2),
-        },
-    )
-    ds1.to_zarr("path/to/directory.zarr")
-    ds2 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-03", periods=2),
-        },
-    )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
-
-To store variable length strings use ``dtype=object``.
+To store variable length strings, convert them to object arrays first with
+``dtype=object``.
 
 To read back a zarr dataset that has been created this way, we use the
 :py:func:`open_zarr` method:
@@ -987,6 +961,109 @@ Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
 
+.. _io.zarr.appending:
+
+Appending to existing Zarr stores
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports several ways of incrementally writing variables to a Zarr
+store. These options are useful for scenarios when it is infeasible or
+undesirable to write your entire dataset at once.
+
+.. tip::
+
+    If you can load all of your data into a single ``Dataset`` using dask, a
+    single call to ``to_zarr()`` will write all of your data in parallel.
+
+.. warning::
+
+    Alignment of coordinates is currently not checked when modifying an
+    existing Zarr store. It is up to the user to ensure that coordinates are
+    consistent.
+
+To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
+with ``mode='a'`` on a Dataset containing the new variables, passing in an
+existing Zarr store or path to a Zarr store.
+
+To resize and then append values along an existing dimension in a store, set
+``append_dim``. This is a good option if data always arives in a particular
+order, e.g., for time-stepping a simulation:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-01", periods=2),
+        },
+    )
+    ds1.to_zarr("path/to/directory.zarr")
+    ds2 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-03", periods=2),
+        },
+    )
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
+
+Finally, you can use ``region`` to write to limited regions of existing arrays
+in an existing Zarr store. This is a good option for writing data in parallel
+from independent processes.
+
+To scale this up to writing large datasets, the first step is creating an
+initial Zarr store without writing all of its array data. This can be done by
+first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
+and then calling ``to_zarr`` with ``compute=False`` to write only metadata
+(including ``attrs``) to Zarr:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    import dask.array
+    # The values of this dask array are entirely irrelevant; only the dtype,
+    # shape and chunks are used
+    dummies = dask.array.zeros(30, chunks=10)
+    ds = xr.Dataset({"foo": ("x", dummies)})
+    path = "path/to/directory.zarr"
+    # Now we write the metadata without computing any array values
+    ds.to_zarr(path, compute=False, consolidated=True)
+
+Now, a Zarr store with the correct variable shapes and attributes exists that
+can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
+mapping from dimension names to Python ``slice`` objects indicating where the
+data should be written (in index space, not coordinate space), e.g.,
+
+.. ipython:: python
+
+    # For convenience, we'll slice a single dataset, but in the real use-case
+    # we would create them separately, possibly even from separate processes.
+    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+
+Concurrent writes with ``region`` are safe as long as they modify distinct
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
+
+As a safety check to make it harder to inadvertently override existing values,
+if you set ``region`` then *all* variables included in a Dataset must have
+dimensions included in ``region``. Other variables (typically coordinates)
+need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
+with ``mode='a'``.
+
 .. _io.cfgrib:
 
 .. ipython:: python
@@ -1045,7 +1122,7 @@ formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
 PseudoNetCDF can also provide Climate Forecasting Conventions to
 CMAQ files. In addition, PseudoNetCDF can automatically register custom
 readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
-identify readers heuristically, or format can be specified via a key in
+identify readers either heuristically, or by a format specified via a key in
 `backend_kwargs`.
 
 To use PseudoNetCDF to read such files, supply

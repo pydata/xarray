@@ -3543,6 +3543,9 @@ class TestDataArray:
         with pytest.raises(ValueError, match="does not match the set of dimensions"):
             arr.to_dataframe(dim_order=["B", "A", "C"])
 
+        with pytest.raises(ValueError, match=r"cannot convert a scalar"):
+            arr.sel(A="c", B=2).to_dataframe()
+
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
@@ -6298,6 +6301,7 @@ def test_rolling_properties(da):
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
         da.rolling(time=-2)
+
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
         da.rolling(time=2, min_periods=0)
 
@@ -6318,7 +6322,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     )
     assert_array_equal(actual.values, expected)
 
-    with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+    with pytest.warns(DeprecationWarning, match="Reductions are applied"):
         getattr(rolling_obj, name)(dim="time")
 
     # Test center
@@ -6337,7 +6341,7 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
     if name != "count":
-        with pytest.warns(DeprecationWarning, match="Reductions will be applied"):
+        with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
     rolling_obj = da_dask.load().rolling(
@@ -6539,6 +6543,92 @@ def test_ndrolling_construct(center, fill_value):
         .construct(z="z1", fill_value=fill_value)
     )
     assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+        ("construct", ("window_dim",)),
+        ("count", ()),
+    ],
+)
+def test_rolling_keep_attrs(funcname, argument):
+
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(
+        data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da, name="name"
+    )
+
+    # attrs are now kept per default
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == attrs_da
+    assert result.name == "name"
+
+    # discard attrs
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    assert result.name == "name"
+
+    # test discard attrs using global option
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
+    assert result.attrs == {}
+    assert result.name == "name"
+
+    # keyword takes precedence over global option
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+    assert result.attrs == attrs_da
+    assert result.name == "name"
+
+    func = getattr(da.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    assert result.name == "name"
+
+
+def test_rolling_keep_attrs_deprecated():
+
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(
+        data,
+        dims=("coord"),
+        coords={"coord": coords},
+        attrs=attrs_da,
+    )
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
+    ):
+        result = da.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
+
+    assert result.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
+    ):
+        result = da.rolling(dim={"coord": 5}, keep_attrs=True).construct(
+            "window_dim", keep_attrs=False
+        )
+
+    assert result.attrs == {}
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

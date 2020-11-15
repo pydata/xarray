@@ -23,6 +23,11 @@ v0.16.2 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
+  via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
+  ``ds.rolling(...).mean(keep_attrs=False)`` instead of ``ds.rolling(..., keep_attrs=False).mean()``
+  Rolling operations now keep their attributes per default (:pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -32,10 +37,26 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
+  limited regions of existing Zarr stores (:pull:`4035`).
+  See :ref:`io.zarr.appending` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Added typehints in :py:func:`align` to reflect that the same type received in ``objects`` arg will be returned (:pull:`4522`).
+  By `Michal Baumgartner <https://github.com/m1so>`_.
+- :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted` are now executing value checks lazily if weights are provided as dask arrays (:issue:`4541`, :pull:`4559`).
+  By `Julius Busecke <https://github.com/jbusecke>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when
+  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
+  it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
+  and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
+  would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
+  be parsed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
@@ -50,10 +71,27 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes and names of of (wrapped)
+  ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Improve performance where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
+- Fix bug where ``dask_gufunc_kwargs`` was silently changed in :py:func:`apply_ufunc` (:pull:`4576`). By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
+  (:pull:`4532`);
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Raise a more informative error when :py:meth:`DataArray.to_dataframe` is
+  is called on a scalar, (:issue:`4228`);
+  By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
+- Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
+  By `Sahid Velji <https://github.com/sahidvelji>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -73,6 +111,9 @@ Internal Changes
 - Ignore select numpy warnings around missing values, where xarray handles
   the values appropriately, (:pull:`4536`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
+  and ``pd.Index.intersection`` as they will stop working as set operations in the future
+  (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 
@@ -82,7 +123,7 @@ v0.16.1 (2020-09-20)
 This patch release fixes an incompatibility with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
 improvements to ``rolling``, ``to_dataframe``, ``cov`` & ``corr`` methods and
-bug fixes. Our documentation has a number of improvements, including fixing all 
+bug fixes. Our documentation has a number of improvements, including fixing all
 doctests and confirming their accuracy on every commit.
 
 Many thanks to the 36 contributors who contributed to this release:
@@ -162,7 +203,7 @@ Bug fixes
   By `Jens Svensmark <https://github.com/jenssss>`_
 - Fix incorrect legend labels for :py:meth:`Dataset.plot.scatter` (:issue:`4126`).
   By `Peter Hausamann <https://github.com/phausamann>`_.
-- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`) 
+- Fix ``dask.optimize`` on ``DataArray`` producing an invalid Dask task graph (:issue:`3698`)
   By `Tom Augspurger <https://github.com/TomAugspurger>`_
 - Fix ``pip install .`` when no ``.git`` directory exists; namely when the xarray source
   directory has been rsync'ed by PyCharm Professional for a remote deployment over SSH.
