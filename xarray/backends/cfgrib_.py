@@ -76,7 +76,6 @@ class CfGribDataStore(AbstractDataStore):
 def open_backend_dataset_cfgrib(
     filename_or_obj,
     *,
-    decode_cf=True,
     mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
@@ -92,13 +91,6 @@ def open_backend_dataset_cfgrib(
     squeeze=True,
     time_dims=("time", "step"),
 ):
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     store = CfGribDataStore(
         filename_or_obj,

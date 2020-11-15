@@ -261,12 +261,13 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "append_dim",
         "ds",
+        "_append_dim",
         "_consolidate_on_close",
         "_group",
         "_read_only",
         "_synchronizer",
+        "_write_region",
     )
 
     @classmethod
@@ -279,6 +280,8 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        append_dim=None,
+        write_region=None,
     ):
         import zarr
 
@@ -291,15 +294,18 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close)
+        return cls(zarr_group, consolidate_on_close, append_dim, write_region)
 
-    def __init__(self, zarr_group, consolidate_on_close=False):
+    def __init__(
+        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
+    ):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
-        self.append_dim = None
+        self._append_dim = append_dim
+        self._write_region = write_region
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -439,6 +445,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
+        import zarr
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -460,11 +467,14 @@ class ZarrStore(AbstractWritableDataStore):
             variables_with_encoding, _ = self.encode(variables_with_encoding, {})
             variables_encoded.update(variables_with_encoding)
 
-        self.set_attributes(attributes)
-        self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+        if self._write_region is None:
+            self.set_attributes(attributes)
+            self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
+        if self._consolidate_on_close:
+            zarr.consolidate_metadata(self.ds.store)
 
     def sync(self):
         pass
@@ -499,22 +509,9 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if self.append_dim is not None and self.append_dim in dims:
-                # resize existing variable
+            if name in self.ds:
+                # existing variable
                 zarr_array = self.ds[name]
-                append_axis = dims.index(self.append_dim)
-
-                new_region = [slice(None)] * len(dims)
-                new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
-                region = tuple(new_region)
-
-                new_shape = list(zarr_array.shape)
-                new_shape[append_axis] += v.shape[append_axis]
-                zarr_array.resize(new_shape)
-            elif name in self.ds:
-                # override existing variable
-                zarr_array = self.ds[name]
-                region = None
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -532,15 +529,27 @@ class ZarrStore(AbstractWritableDataStore):
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)
-                region = None
 
-            writer.add(v.data, zarr_array, region=region)
+            write_region = self._write_region if self._write_region is not None else {}
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
+
+            if self._append_dim is not None and self._append_dim in dims:
+                # resize existing variable
+                append_axis = dims.index(self._append_dim)
+                assert write_region[self._append_dim] == slice(None)
+                write_region[self._append_dim] = slice(
+                    zarr_array.shape[append_axis], None
+                )
+
+                new_shape = list(zarr_array.shape)
+                new_shape[append_axis] += v.shape[append_axis]
+                zarr_array.resize(new_shape)
+
+            region = tuple(write_region[dim] for dim in dims)
+            writer.add(v.data, zarr_array, region)
 
     def close(self):
-        if self._consolidate_on_close:
-            import zarr
-
-            zarr.consolidate_metadata(self.ds.store)
+        pass
 
 
 def open_zarr(
@@ -684,7 +693,6 @@ def open_zarr(
 
 def open_backend_dataset_zarr(
     filename_or_obj,
-    decode_cf=True,
     mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
@@ -699,13 +707,6 @@ def open_backend_dataset_zarr(
     consolidate_on_close=False,
     chunk_store=None,
 ):
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     store = ZarrStore.open_group(
         filename_or_obj,
