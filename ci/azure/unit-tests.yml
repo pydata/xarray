@@ -18,7 +18,7 @@ steps:
     $(pytest_extra_flags) \
     || ( \
       [ "$ALLOW_FAILURE" = "true" ] \
-      && echo -e "\043#vso[task.logissue type=warning]Ignored CI failure!!" \
+      && echo -e "\043#vso[task.logissue type=warning]Allowed CI failure!!" \
       && echo -e "\043#vso[task.complete result=SucceededWithIssues]" \
     )
   displayName: Run tests
