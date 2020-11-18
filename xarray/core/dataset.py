@@ -360,17 +360,22 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
 
 
 def _check_chunks_compatibility(dim, chunks, chunk_spec):
-    spec = chunks[dim]
-    if isinstance(spec, int):
-        spec = (spec,)
-    if any(s % chunk_spec[dim] for s in spec):
+    if dim not in chunks or (dim not in chunk_spec):
+        return
+
+    chunk_spec_dim = chunk_spec.get(dim)
+    chunks_dim = chunks.get(dim)
+
+    if isinstance(chunks_dim, int):
+        chunks_dim = (chunks_dim,)
+    if any(s % chunk_spec_dim for s in chunks_dim):
         warnings.warn(
             "Specified Dask chunks %r would "
             "separate on disks chunk shape %r for "
             "dimension %r. This could "
             "degrades performance. Consider "
-            "rechunking after loading instead." % (chunks[dim], chunk_spec[dim], dim),
-            stacklevel=2,
+            "rechunking after loading instead." % (chunks_dim, chunk_spec_dim, dim),
+            stacklevel=3,
         )
 
 
@@ -384,12 +389,11 @@ def _get_chunk(name, var, chunks):
 
     output_chunks = {}
     if chunks is not None:
-        for dim in preferred_chunks:
-            if dim in chunks:
-                _check_chunks_compatibility(dim, chunks, preferred_chunks)
-                output_chunks[dim] = chunks[dim]
-            else:
-                output_chunks[dim] = preferred_chunks[dim]
+        for dim in var.dims:
+            _check_chunks_compatibility(dim, chunks, preferred_chunks)
+            preferred_chunks_dim = preferred_chunks.get(dim, None)
+            output_chunks[dim] = chunks.get(dim, preferred_chunks_dim)
+
     return output_chunks
 
 
