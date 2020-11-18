@@ -30,6 +30,3 @@ class TestLoadDataset:
         ds_nocache = tutorial.open_dataset(self.testfile, cache=False).load()
         ds_cache = tutorial.open_dataset(self.testfile).load()
         assert_identical(ds_cache, ds_nocache)
-
-    def test_failing(self):
-        assert False
