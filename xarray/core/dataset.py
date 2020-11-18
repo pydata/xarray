@@ -376,7 +376,7 @@ def _check_chunks_compatibility(var, chunks, chunk_spec):
                 "dimension %r. This could "
                 "degrades performance. Consider "
                 "rechunking after loading instead." % (chunks_dim, chunk_spec_dim, dim),
-                stacklevel=3,
+                stacklevel=2,
             )
 
 

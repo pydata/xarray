@@ -4803,3 +4803,33 @@ def test_load_single_value_h5netcdf(tmp_path):
     ds.to_netcdf(tmp_path / "test.nc")
     with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
         ds2["test"][0].load()
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize("chunks", ["auto", -1, {}])
+def test_open_dataset_chunking_zarr(chunks, tmp_path):
+    encoded_chunks = 100
+    ds = xr.Dataset(
+        {
+            'test': xr.DataArray(
+                np.ones((500, 500), dtype="float64"),
+                dims=("x", "y"),
+            )
+        }
+    )
+    ds['test'].encoding['chunks'] = encoded_chunks
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    ds = ds.chunk(encoded_chunks)
+    dask_arr = ds['test'].data
+
+    with dask.config.set({"array.chunk-size": "1MiB"}):
+        dask_arr_chunked = dask_arr.rechunk(chunks)
+        expected = dask_arr_chunked.chunks
+
+        dataset_chunked = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
+        actual = dataset_chunked['test'].chunks
+
+        assert actual == expected
+
