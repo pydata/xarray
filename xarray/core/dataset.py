@@ -359,40 +359,52 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _check_chunks_compatibility(dim, chunks, chunk_spec):
-    if dim not in chunks or (dim not in chunk_spec):
-        return
+def _check_chunks_compatibility(var, chunks, chunk_spec):
+    for dim in var.dims:
+        if dim not in chunks or (dim not in chunk_spec):
+            return
 
-    chunk_spec_dim = chunk_spec.get(dim)
-    chunks_dim = chunks.get(dim)
+        chunk_spec_dim = chunk_spec.get(dim)
+        chunks_dim = chunks.get(dim)
 
-    if isinstance(chunks_dim, int):
-        chunks_dim = (chunks_dim,)
-    if any(s % chunk_spec_dim for s in chunks_dim):
-        warnings.warn(
-            "Specified Dask chunks %r would "
-            "separate on disks chunk shape %r for "
-            "dimension %r. This could "
-            "degrades performance. Consider "
-            "rechunking after loading instead." % (chunks_dim, chunk_spec_dim, dim),
-            stacklevel=3,
-        )
+        if isinstance(chunks_dim, int):
+            chunks_dim = (chunks_dim,)
+        if any(s % chunk_spec_dim for s in chunks_dim):
+            warnings.warn(
+                "Specified Dask chunks %r would "
+                "separate on disks chunk shape %r for "
+                "dimension %r. This could "
+                "degrades performance. Consider "
+                "rechunking after loading instead." % (chunks_dim, chunk_spec_dim, dim),
+                stacklevel=3,
+            )
 
 
-def _get_chunk(name, var, chunks):
-    if chunks == "auto":
-        return chunks
+def _get_chunk(var, chunks):
+    # chunks need to be explicity computed to take correctly into accout
+    # backend preferred chunking
+    import dask.array as da
 
+    preferred_chunks_list = var.encoding.get("chunks", {})
     preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
-    if var.ndim == 1 and var.dims[0] == name:
-        return preferred_chunks
+    if isinstance(var, IndexVariable):
+        return {}
 
-    output_chunks = {}
-    if chunks is not None:
-        for dim in var.dims:
-            _check_chunks_compatibility(dim, chunks, preferred_chunks)
-            preferred_chunks_dim = preferred_chunks.get(dim, None)
-            output_chunks[dim] = chunks.get(dim, preferred_chunks_dim)
+    chunks_list = []
+    for dim in var.dims:
+        chunks_dim = chunks.get(dim, None)
+        preferred_chunks_dim = preferred_chunks.get(dim, None)
+        chunks_list.append(chunks_dim or preferred_chunks_dim)
+
+    output_chunks_list = da.core.normalize_chunks(
+        chunks_list,
+        shape=var.shape,
+        dtype=var.dtype,
+        previous_chunks=preferred_chunks_list
+    )
+
+    output_chunks = dict(zip(var.dims, output_chunks_list))
+    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
 
     return output_chunks
 
