@@ -6145,6 +6145,43 @@ def test_rolling_exp(ds):
     assert isinstance(result, Dataset)
 
 
+@requires_numbagg
+def test_rolling_exp_keep_attrs(ds):
+
+    attrs_global = {"attrs": "global"}
+    attrs_z1 = {"attr": "z1"}
+
+    ds.attrs = attrs_global
+    ds.z1.attrs = attrs_z1
+
+    # attrs are kept per default
+    result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    # discard attrs
+    result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # keyword takes precedence over global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=True)
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    with set_options(keep_attrs=True):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))

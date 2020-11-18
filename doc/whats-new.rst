@@ -45,6 +45,10 @@ New Features
   By `Michal Baumgartner <https://github.com/m1so>`_.
 - :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted` are now executing value checks lazily if weights are provided as dask arrays (:issue:`4541`, :pull:`4559`).
   By `Julius Busecke <https://github.com/jbusecke>`_.
+- Added the ``keep_attrs`` keyword to :py:meth:`~xarray.DataArray.rolling_exp.mean` and :py:meth:`~xarray.Dataset.rolling_exp.mean`.
+  The attributes are now kept per default.
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Bug fixes
 ~~~~~~~~~
