@@ -44,7 +44,7 @@ def _access_through_series(values, name):
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
     elif name == "isocalendar":
-        # isocalendar returns iso- year, week, and weekday
+        # isocalendar returns iso- year, week, and weekday -> reshape
         field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
         return field_values.T.reshape(3, *values.shape)
     else:

@@ -104,7 +104,7 @@ class TestDatetimeAccessor:
                 self.data.time.dt.isocalendar()[field]
             return
 
-        # isocalendar has dtypy UInt32Dtype, convert to Int64
+        # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
         expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
         expected = xr.DataArray(
             expected, name=field, coords=[self.times], dims=["time"]
