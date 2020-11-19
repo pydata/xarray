@@ -3841,9 +3841,9 @@ class TestDataset:
         )
         ds.attrs["dsmeta"] = "dsdata"
 
-        actual = ds.resample(time="24H").mean("time").indexes["time"] + to_offset(
-            "-12H"
-        )
+        # Our use of `loffset` may change if we align our API with pandas' changes.
+        # ref https://github.com/pydata/xarray/pull/4537
+        actual = ds.resample(time="24H", loffset="-12H").mean()
         expected = ds.bar.to_series().resample("24H").mean().index + to_offset("-12H")
         assert_index_equal(actual, expected)
 
