@@ -1021,7 +1021,6 @@ class Variable(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
-                stacklevel=1
             )
             chunks = {}
 

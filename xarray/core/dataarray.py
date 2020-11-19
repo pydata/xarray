@@ -1046,7 +1046,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         chunked : xarray.DataArray
         """
-
         if isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
 

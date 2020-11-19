@@ -1909,7 +1909,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
                 category=FutureWarning,
-                stacklevel=2,
             )
             chunks = {}
 
