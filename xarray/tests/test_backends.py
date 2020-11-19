@@ -4812,7 +4812,9 @@ def test_load_single_value_h5netcdf(tmp_path):
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path):
     encoded_chunks = 100
-    dask_arr = da.from_array(np.ones((500, 500), dtype="float64"), chunks=encoded_chunks)
+    dask_arr = da.from_array(
+        np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
+    )
     ds = xr.Dataset(
         {
             "test": xr.DataArray(
@@ -4826,9 +4828,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(
-            tmp_path / "test.zarr", engine="zarr", chunks=chunks
-        )
+        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
         assert actual == expected
 
 
@@ -4839,7 +4839,9 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 )
 def test_chunking_consintency(chunks, tmp_path):
     encoded_chunks = {}
-    dask_arr = da.from_array(np.ones((500, 500), dtype="float64"), chunks=encoded_chunks)
+    dask_arr = da.from_array(
+        np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
+    )
     ds = xr.Dataset(
         {
             "test": xr.DataArray(
@@ -4854,12 +4856,8 @@ def test_chunking_consintency(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(
-            tmp_path / "test.zarr", engine="zarr", chunks=chunks
-        )
+        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
         xr.testing.assert_chunks_equal(actual, expected)
 
-        actual = xr.open_dataset(
-            tmp_path / "test.nc", chunks=chunks
-        )
+        actual = xr.open_dataset(tmp_path / "test.nc", chunks=chunks)
         xr.testing.assert_chunks_equal(actual, expected)
