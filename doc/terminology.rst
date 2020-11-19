@@ -106,10 +106,9 @@ complete examples, please consult the relevant documentation.*
         :py:class:`list` or :py:class:`tuple` are not.
 
     duck array
-        `Duck arrays`_ are array implementations that behave
+        `Duck arrays`__ are array implementations that behave
         like numpy arrays. They have to define the ``shape``, ``dtype`` and
         ``ndim`` properties. For integration with ``xarray``, the ``__array__``,
         ``__array_ufunc__`` and ``__array_function__`` protocols are also required.
 
-
-.. _Duck arrays: https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
+        __ https://numpy.org/neps/nep-0022-ndarray-duck-typing-overview.html
