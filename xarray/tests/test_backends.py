@@ -4808,27 +4808,26 @@ def test_load_single_value_h5netcdf(tmp_path):
 @requires_zarr
 @requires_dask
 @pytest.mark.parametrize(
-    "chunks",
-    ["auto", -1, {}, {"x": "auto"},  {"x": -1}, {"x": "auto", "y": -1}]
+    "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path):
     encoded_chunks = 100
     ds = xr.Dataset(
         {
-            'test': xr.DataArray(
+            "test": xr.DataArray(
                 np.ones((500, 500), dtype="float64"),
                 dims=("x", "y"),
             )
         }
     )
-    ds['test'].encoding['chunks'] = encoded_chunks
+    ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
 
     ds = ds.chunk(encoded_chunks)
-    dask_arr = ds['test'].data
+    dask_arr = ds["test"].data
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
-        xr2dask_key = {'x': 0, 'y': 1}
+        xr2dask_key = {"x": 0, "y": 1}
         if isinstance(chunks, dict):
             dask_chunks = {xr2dask_key[k]: chunks[k] for k in chunks}
         else:
@@ -4837,8 +4836,9 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
         dask_arr_chunked = dask_arr.rechunk(dask_chunks)
         expected = dask_arr_chunked.chunks
 
-        dataset_chunked = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
-        actual = dataset_chunked['test'].chunks
+        dataset_chunked = xr.open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        )
+        actual = dataset_chunked["test"].chunks
 
         assert actual == expected
-

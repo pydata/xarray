@@ -400,7 +400,7 @@ def _get_chunk(var, chunks):
         chunks_list,
         shape=var.shape,
         dtype=var.dtype,
-        previous_chunks=preferred_chunks_list
+        previous_chunks=preferred_chunks_list,
     )
 
     output_chunks = dict(zip(var.dims, output_chunks_list))
@@ -1919,8 +1919,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         bad_dims = chunks.keys() - self.dims.keys()
         if bad_dims:
             raise ValueError(
-                "some chunks keys are not dimensions on this "
-                "object: %s" % bad_dims
+                "some chunks keys are not dimensions on this " "object: %s" % bad_dims
             )
 
         variables = {

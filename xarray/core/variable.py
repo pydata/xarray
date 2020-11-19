@@ -1015,6 +1015,7 @@ class Variable(
         """
         import dask
         import dask.array as da
+
         if chunks is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
