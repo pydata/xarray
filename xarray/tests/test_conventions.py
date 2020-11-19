@@ -233,6 +233,7 @@ class TestDecodeCF:
         assert_identical(expected, actual)
         assert_identical(expected, actual2)
 
+    @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
     def test_invalid_time_units_raises_eagerly(self):
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
         with raises_regex(ValueError, "unable to decode time"):

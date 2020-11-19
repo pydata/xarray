@@ -86,6 +86,7 @@ def _all_cftime_date_types():
 
 
 @requires_cftime
+@pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
 @pytest.mark.parametrize(["num_dates", "units", "calendar"], _CF_DATETIME_TESTS)
 def test_cf_datetime(num_dates, units, calendar):
     import cftime
