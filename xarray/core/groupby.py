@@ -814,7 +814,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
-    def _combine(self, applied, restore_coord_dims=False, shortcut=False):
+    def _combine(self, applied, shortcut=False):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         coord, dim, positions = self._infer_concat_args(applied_example)
