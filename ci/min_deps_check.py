@@ -13,6 +13,7 @@ import yaml
 IGNORE_DEPS = {
     "black",
     "coveralls",
+    "entrypoints",
     "flake8",
     "hypothesis",
     "isort",
