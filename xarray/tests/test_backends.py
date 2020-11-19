@@ -4812,10 +4812,11 @@ def test_load_single_value_h5netcdf(tmp_path):
 )
 def test_open_dataset_chunking_zarr(chunks, tmp_path):
     encoded_chunks = 100
+    dask_arr = da.from_array(np.ones((500, 500), dtype="float64"), chunks=encoded_chunks)
     ds = xr.Dataset(
         {
             "test": xr.DataArray(
-                np.ones((500, 500), dtype="float64"),
+                dask_arr,
                 dims=("x", "y"),
             )
         }
@@ -4823,22 +4824,42 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
     ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
 
-    ds = ds.chunk(encoded_chunks)
-    dask_arr = ds["test"].data
-
     with dask.config.set({"array.chunk-size": "1MiB"}):
-        xr2dask_key = {"x": 0, "y": 1}
-        if isinstance(chunks, dict):
-            dask_chunks = {xr2dask_key[k]: chunks[k] for k in chunks}
-        else:
-            dask_chunks = chunks
-
-        dask_arr_chunked = dask_arr.rechunk(dask_chunks)
-        expected = dask_arr_chunked.chunks
-
-        dataset_chunked = xr.open_dataset(
+        expected = ds.chunk(chunks)
+        actual = xr.open_dataset(
             tmp_path / "test.zarr", engine="zarr", chunks=chunks
         )
-        actual = dataset_chunked["test"].chunks
-
         assert actual == expected
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize(
+    "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
+)
+def test_chunking_consintency(chunks, tmp_path):
+    encoded_chunks = {}
+    dask_arr = da.from_array(np.ones((500, 500), dtype="float64"), chunks=encoded_chunks)
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
+    ds["test"].encoding["chunks"] = encoded_chunks
+    ds.to_zarr(tmp_path / "test.zarr")
+    ds.to_netcdf(tmp_path / "test.nc")
+
+    with dask.config.set({"array.chunk-size": "1MiB"}):
+        expected = ds.chunk(chunks)
+        actual = xr.open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        )
+        xr.testing.assert_chunks_equal(actual, expected)
+
+        actual = xr.open_dataset(
+            tmp_path / "test.nc", chunks=chunks
+        )
+        xr.testing.assert_chunks_equal(actual, expected)
