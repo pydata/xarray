@@ -43,6 +43,11 @@ from xarray.tests import (
     source_ndarray,
 )
 
+pytestmark = [
+    pytest.mark.filterwarnings("error:Mean of empty slice"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
+]
+
 
 class TestDataArray:
     @pytest.fixture(autouse=True)
@@ -6246,7 +6251,6 @@ def test_coarsen_keep_attrs():
     xr.testing.assert_identical(da, da2)
 
 
-@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 

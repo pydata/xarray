@@ -108,6 +108,9 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure tests are not skipped in the `py38-all-but-dask` test environment
   (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Ignore select numpy warnings around missing values, where xarray handles
+  the values appropriately, (:pull:`4536`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
   and ``pd.Index.intersection`` as they will stop working as set operations in the future
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
