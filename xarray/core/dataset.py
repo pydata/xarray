@@ -384,6 +384,8 @@ def _get_chunk(var, chunks):
     # chunks need to be explicity computed to take correctly into accout
     # backend preferred chunking
     import dask.array as da
+    if isinstance(chunks, int) or (chunks == "auto"):
+        chunks = dict.fromkeys(var.dims, chunks)
 
     preferred_chunks_list = var.encoding.get("chunks", {})
     preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))

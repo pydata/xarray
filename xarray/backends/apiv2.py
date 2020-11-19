@@ -34,8 +34,6 @@ def _chunk_ds(
     mtime = _get_mtime(filename_or_obj)
     token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
     name_prefix = "open_dataset-%s" % token
-    if isinstance(chunks, int) or (chunks == "auto"):
-        chunks = dict.fromkeys(backend_ds.dims, chunks)
 
     variables = {}
     for name, var in backend_ds.variables.items():
