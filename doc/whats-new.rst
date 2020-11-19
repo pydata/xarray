@@ -23,6 +23,10 @@ v0.16.2 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
+  have been deprecated. Use ``DataArray.dt.isocalendar().week``
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
   ``ds.rolling(...).mean(keep_attrs=False)`` instead of ``ds.rolling(..., keep_attrs=False).mean()``
@@ -37,6 +41,10 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()` that returns a Dataset
+  with year, week, and weekday calculated according to the ISO 8601 calendar. Requires
+  pandas version 1.1.0 or greater (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
   limited regions of existing Zarr stores (:pull:`4035`).
   See :ref:`io.zarr.appending` for full details.

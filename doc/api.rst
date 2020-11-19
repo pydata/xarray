@@ -475,8 +475,6 @@ Datetimelike properties
    DataArray.dt.second
    DataArray.dt.microsecond
    DataArray.dt.nanosecond
-   DataArray.dt.weekofyear
-   DataArray.dt.week
    DataArray.dt.dayofweek
    DataArray.dt.weekday
    DataArray.dt.weekday_name
@@ -500,6 +498,7 @@ Datetimelike properties
 
    DataArray.dt.floor
    DataArray.dt.ceil
+   DataArray.dt.isocalendar
    DataArray.dt.round
    DataArray.dt.strftime
 
@@ -896,3 +895,10 @@ Deprecated / Pending Deprecation
    Dataset.apply
    core.groupby.DataArrayGroupBy.apply
    core.groupby.DatasetGroupBy.apply
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.weekofyear
+   DataArray.dt.week

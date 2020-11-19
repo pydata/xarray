@@ -1,3 +1,6 @@
+import warnings
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 
@@ -40,6 +43,10 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "isocalendar":
+        # isocalendar returns iso- year, week, and weekday -> reshape
+        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
+        return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -72,7 +79,15 @@ def _get_date_field(values, name, dtype):
     if is_duck_dask_array(values):
         from dask.array import map_blocks
 
-        return map_blocks(access_method, values, name, dtype=dtype)
+        new_axis = chunks = None
+        # isocalendar adds adds an axis
+        if name == "isocalendar":
+            chunks = (3,) + values.chunksize
+            new_axis = 0
+
+        return map_blocks(
+            access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
+        )
     else:
         return access_method(values, name)
 
@@ -304,6 +319,33 @@ class DatetimeAccessor(Properties):
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
         )
 
+    def isocalendar(self):
+        """Dataset containing ISO year, week number, and weekday.
+
+        Note
+        ----
+        The iso year and weekday differ from the nominal year and weekday.
+        """
+
+        from .dataset import Dataset
+
+        if not is_np_datetime_like(self._obj.data.dtype):
+            raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            raise AttributeError("'isocalendar' not available in pandas < 1.1.0")
+
+        values = _get_date_field(self._obj.data, "isocalendar", np.int64)
+
+        obj_type = type(self._obj)
+        data_vars = {}
+        for i, name in enumerate(["year", "week", "weekday"]):
+            data_vars[name] = obj_type(
+                values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        return Dataset(data_vars)
+
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
     )
@@ -326,9 +368,26 @@ class DatetimeAccessor(Properties):
     nanosecond = Properties._tslib_field_accessor(
         "nanosecond", "The nanoseconds of the datetime", np.int64
     )
-    weekofyear = Properties._tslib_field_accessor(
-        "weekofyear", "The week ordinal of the year", np.int64
-    )
+
+    @property
+    def weekofyear(self):
+        "The week ordinal of the year"
+
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+        )
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            weekofyear = Properties._tslib_field_accessor(
+                "weekofyear", "The week ordinal of the year", np.int64
+            ).fget(self)
+        else:
+            weekofyear = self.isocalendar().week
+
+        return weekofyear
+
     week = weekofyear
     dayofweek = Properties._tslib_field_accessor(
         "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
