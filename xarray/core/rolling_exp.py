@@ -1,7 +1,16 @@
+from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar
+
 import numpy as np
 
+from .options import _get_keep_attrs
 from .pdcompat import count_not_none
 from .pycompat import is_duck_dask_array
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray  # noqa: F401
+    from .dataset import Dataset  # noqa: F401
+
+T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -56,7 +65,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp:
+class RollingExp(Generic[T_DSorDA]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -78,15 +87,27 @@ class RollingExp:
     RollingExp : type of input argument
     """
 
-    def __init__(self, obj, windows, window_type="span"):
-        self.obj = obj
+    def __init__(
+        self,
+        obj: T_DSorDA,
+        windows: Mapping[Hashable, int],
+        window_type: str = "span",
+    ):
+        self.obj: T_DSorDA = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self):
+    def mean(self, keep_attrs: Optional[bool] = None) -> T_DSorDA:
         """
         Exponentially weighted moving average
+
+        Parameters
+        ----------
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
 
         Examples
         --------
@@ -97,4 +118,9 @@ class RollingExp:
         Dimensions without coordinates: x
         """
 
-        return self.obj.reduce(move_exp_nanmean, dim=self.dim, alpha=self.alpha)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return self.obj.reduce(
+            move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
+        )
