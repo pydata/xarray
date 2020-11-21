@@ -961,14 +961,14 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
             2,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian')""",
+            dtype='object', length=2, calendar='gregorian', freq='D')""",
         ),
         (
             4,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00],
-            dtype='object', length=4, calendar='gregorian')""",
+            dtype='object', length=4, calendar='gregorian', freq='D')""",
         ),
         (
             101,
@@ -982,13 +982,13 @@ CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
              2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
              2000-04-10 00:00:00],
-            dtype='object', length=101, calendar='gregorian')""",
+            dtype='object', length=101, calendar='gregorian', freq='D')""",
         ),
     ],
 )
 def test_cftimeindex_repr_formatting(periods, expected):
     """Test that cftimeindex.__repr__ is formatted similar to pd.Index.__repr__."""
-    index = xr.cftime_range(start="2000", periods=periods)
+    index = xr.cftime_range(start="2000", periods=periods, freq='D')
     expected = dedent(expected)
     assert expected == repr(index)
 
