@@ -260,7 +260,7 @@ def format_attrs(index, separator=", "):
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
-        "freq": f"'{index.freq}'"
+        "freq": f"'{index.freq}'",
     }
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
@@ -688,6 +688,7 @@ class CFTimeIndex(pd.Index):
     def freq(self):
         """The frequency used by the dates in the index."""
         from .frequencies import infer_freq
+
         return infer_freq(self)
 
     def _round_via_method(self, freq, method):
