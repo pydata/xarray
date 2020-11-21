@@ -55,6 +55,9 @@ New Features
   By `Julius Busecke <https://github.com/jbusecke>`_.
 - Added the ``keep_attrs`` keyword to ``rolling_exp.mean()``; it now keeps attributes
   per default. By `Mathias Hauser <https://github.com/mathause>`_ (:pull:`4592`).
+- Added ``freq`` as property to :py:class:`CFTimeIndex` and into the
+  ``CFTimeIndex.repr``. (:issue:`2416`, :pull:`4xxx`)
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
 ~~~~~~~~~
