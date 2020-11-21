@@ -61,6 +61,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
       - uses: actions/download-artifact@v2
         with:
           path: /tmp/workspace/logs
@@ -68,30 +71,59 @@ jobs:
         run: |
           rsync -a /tmp/workspace/logs/output-*/ ./logs
           ls -R ./logs
-
-      - name: Create an issue
+      - name: Parse logs
+        run: |
+          python .github/workflows/parse_logs.py
+      - name: Report failures
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const files = fs.readdirSync("./logs").filter(fn => fn.endsWith('log'));
-            console.log(files);
-            let logs = '';
-            let file = '';
-            let content = '';
-            for (let i=0; i<files.length; i++) {
-                file = files[i];
-                content = fs.readFileSync(`./logs/${file}`, 'utf8');
-                logs = "\n" + `${logs}` + `\n<details>\n<summary>\nPython ${file.split('-')[1]} Test Summary Info\n</summary>\n\n` + "```bash\n" + `${content}` + "\n" + "```\n</details>";
-              };
+            const pytest_logs = fs.readFileSync('pytest-logs.txt', 'utf8');
             const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
             const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
-            const issue_body = `[Workflow Run URL](${workflow_url})\n${logs}`
-            github.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: issue_body,
-              title: title,
-              labels: ['CI']
-             })
+            const issue_body = `[Workflow Run URL](${workflow_url})\n${pytest_logs}`
+            
+            // Run GraphQL query against GitHub API to find the most recent open issue used for reporting failures
+            const query = `query($owner:String!, $name:String!, $creator:String!, $label:String!){
+              repository(owner: $owner, name: $name) {
+                issues(first: 1, states: OPEN, filterBy: {createdBy: $creator, labels: [$label]}, orderBy: {field: CREATED_AT, direction: DESC}) {
+                  edges {
+                    node {
+                      body
+                      id
+                      number
+                    }
+                  }
+                }
+              }
+            }`;
+
+            const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                label: 'CI',
+                creator: "github-actions[bot]"
+            }
+            const result = await github.graphql(query, variables)
+            const issue_info = result.repository.issues.edges[0].node
+
+            // If no issue is open, create a new issue, else update the 
+            // body of the existing issue. 
+            if (typeof issue_info.number === 'undefined') {
+                github.issues.create({
+                    owner: variables.owner,
+                    repo: variables.name,
+                    body: issue_body,
+                    title: title,
+                    labels: [variables.label]
+                })
+            } else {
+                github.issues.update({
+                    owner: variables.owner,
+                    repo: variables.name,
+                    issue_number: issue_info.number,
+                    body: issue_body
+                })
+            }
