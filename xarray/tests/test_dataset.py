@@ -54,6 +54,11 @@ try:
 except ImportError:
     pass
 
+pytestmark = [
+    pytest.mark.filterwarnings("error:Mean of empty slice"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
+]
+
 
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)
@@ -6143,6 +6148,43 @@ def test_rolling_exp(ds):
 
     result = ds.rolling_exp(time=10, window_type="span").mean()
     assert isinstance(result, Dataset)
+
+
+@requires_numbagg
+def test_rolling_exp_keep_attrs(ds):
+
+    attrs_global = {"attrs": "global"}
+    attrs_z1 = {"attr": "z1"}
+
+    ds.attrs = attrs_global
+    ds.z1.attrs = attrs_z1
+
+    # attrs are kept per default
+    result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    # discard attrs
+    result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # keyword takes precedence over global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=True)
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    with set_options(keep_attrs=True):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
 
 
 @pytest.mark.parametrize("center", (True, False))
