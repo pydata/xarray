@@ -916,6 +916,7 @@ def test_cftimeindex_calendar_property(calendar, expected):
     assert index.calendar == expected
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize(
     ("calendar", "expected"),
@@ -936,6 +937,7 @@ def test_cftimeindex_calendar_repr(calendar, expected):
     assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize("periods", [2, 40])
 def test_cftimeindex_periods_repr(periods):
@@ -996,6 +998,7 @@ def test_cftimeindex_repr_formatting(periods, expected):
     assert expected == repr(index)
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize("display_width", [40, 80, 100])
 @pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
@@ -1014,6 +1017,7 @@ def test_cftimeindex_repr_formatting_width(periods, display_width):
                 assert s[:len_intro_str] == " " * len_intro_str
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize("periods", [22, 50, 100])
 def test_cftimeindex_repr_101_shorter(periods):
