@@ -41,7 +41,7 @@ jobs:
           conda list
       - name: Run Tests
         run: |
-          python -m pytest --verbose -rf | tee output-${{ matrix.python-version }}-log
+          python -m pytest -rf | tee output-${{ matrix.python-version }}-log
 
       - name: Upload artifacts
         if: "failure()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')" # Check the exit code of previous step
