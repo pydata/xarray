@@ -126,6 +126,8 @@ Internal Changes
 - Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
   and ``pd.Index.intersection`` as they will stop working as set operations in the future
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 
 .. _whats-new.0.16.1:
 
