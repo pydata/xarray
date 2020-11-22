@@ -259,9 +259,10 @@ def format_attrs(index, separator=", "):
     attrs = {
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
-        "calendar": f"'{index.calendar}'",
-        "freq": f"'{index.freq}'",
+        "calendar": f"'{index.calendar}'"
     }
+    if len(index) >= 3:
+        attrs['freq'] = f"'{index.freq}'"
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
