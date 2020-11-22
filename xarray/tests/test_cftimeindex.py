@@ -945,6 +945,7 @@ def test_cftimeindex_periods_repr(periods):
     assert f" length={periods}" in repr_str
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day"])
 @pytest.mark.parametrize("freq", ["1D", "MS", "Y"])
@@ -953,6 +954,7 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
     assert f", freq='{freq}'" in index.__repr__()
 
 
+@requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize(
     "periods,expected",
