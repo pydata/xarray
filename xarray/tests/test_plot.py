@@ -2398,6 +2398,7 @@ class TestAxesKwargs:
         da.plot(ylim=[0, 1000])
         expected = (0.0, 1000.0)
         assert plt.gca().get_ylim() == expected
+        plt.clf()
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_xticks_kwarg(self, da):
