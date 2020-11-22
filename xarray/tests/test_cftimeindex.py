@@ -954,7 +954,8 @@ def test_cftimeindex_periods_repr(periods):
 def test_cftimeindex_freq_in_repr(freq, calendar):
     index = xr.cftime_range(start="2000", periods=3, freq=freq, 
                             calendar=calendar)
-    assert f", freq='{freq}'" in index.__repr__()
+    repr_str = index.__repr__()
+    assert f", freq='{freq}'" in repr_str
 
 
 @requires_cftime_1_1_0
