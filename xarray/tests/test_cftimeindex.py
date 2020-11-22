@@ -950,7 +950,7 @@ def test_cftimeindex_periods_repr(periods):
 @requires_cftime_1_1_0
 @requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day"])
-@pytest.mark.parametrize("freq", ["1D", "MS", "Y"])
+@pytest.mark.parametrize("freq", ["1D", "1H"])
 def test_cftimeindex_freq_in_repr(freq, calendar):
     index = xr.cftime_range(start="2000", periods=3, freq=freq, 
                             calendar=calendar)
@@ -966,7 +966,7 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
             2,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian', freq='D')""",
+            dtype='object', length=2, calendar='gregorian')""",
         ),
         (
             4,
