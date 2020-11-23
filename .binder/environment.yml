@@ -13,7 +13,6 @@ dependencies:
   - dask
   - distributed
   - dask_labextension
-  - entrypoints
   - h5netcdf
   - h5py
   - hdf5

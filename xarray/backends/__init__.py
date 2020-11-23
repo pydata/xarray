@@ -9,7 +9,7 @@ from .file_manager import CachingFileManager, DummyFileManager, FileManager
 from .h5netcdf_ import H5NetCDFStore
 from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
-from .plugins import detect_engines
+from .plugins import list_engines
 from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
@@ -30,5 +30,5 @@ __all__ = [
     "H5NetCDFStore",
     "ZarrStore",
     "PseudoNetCDFDataStore",
-    "detect_engines",
+    "list_engines",
 ]

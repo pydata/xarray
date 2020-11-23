@@ -73,11 +73,12 @@ def dataset_from_backend_dataset(
 
 
 def resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
-    if decode_cf is False:
-        for d in decoders:
-            if d in open_backend_dataset_parameters:
-                decoders[d] = False
-    return {k: v for k, v in decoders.items() if v is not None}
+    for d in list(decoders):
+        if decode_cf is False and d in open_backend_dataset_parameters:
+            decoders[d] = False
+        if decoders[d] is None:
+            decoders.pop(d)
+    return decoders
 
 
 def open_dataset(
@@ -218,13 +219,12 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    backend = _get_backend_cls(engine, engines=plugins.detect_engines())
-    open_backend_dataset = backend.open_dataset
-    open_backend_dataset_parameters = backend.open_dataset_parameters
+    engines = plugins.list_engines()
+    backend = _get_backend_cls(engine, engines=engines)
 
     decoders = resolve_decoders_kwargs(
         decode_cf,
-        open_backend_dataset_parameters=open_backend_dataset_parameters,
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -236,7 +236,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    backend_ds = open_backend_dataset(
+    backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,

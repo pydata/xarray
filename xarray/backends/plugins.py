@@ -1,10 +1,9 @@
 import inspect
 import itertools
-import typing as T
 import warnings
 from functools import lru_cache
 
-import entrypoints  # type: ignore
+import pkg_resources
 
 
 class BackendEntrypoint:
@@ -15,43 +14,28 @@ class BackendEntrypoint:
         self.open_dataset_parameters = open_dataset_parameters
 
 
-def get_entrypoint_id(entrypoint):
-    name = entrypoint.name
-    obj = entrypoint.object_name or ""
-    module = entrypoint.module_name
-    return (name, f"{module}:{obj}")
-
-
-def filter_unique_ids(backend_entrypoints):
-    entrypoints_id = set()
-    backend_entrypoints_unique = []
-    for entrypoint in backend_entrypoints:
-        id = get_entrypoint_id(entrypoint)
-        if id not in entrypoints_id:
-            backend_entrypoints_unique.append(entrypoint)
-            entrypoints_id.add(id)
-    return backend_entrypoints_unique
-
-
-def warning_on_entrypoints_conflict(backend_entrypoints, backend_entrypoints_all):
+def remove_duplicates(backend_entrypoints):
 
     # sort and group entrypoints by name
-    key_name = lambda ep: ep.name
-    backend_entrypoints_all_unique_ids = sorted(backend_entrypoints_all, key=key_name)
-    backend_entrypoints_ids_grouped = itertools.groupby(
-        backend_entrypoints_all_unique_ids, key=key_name
+    backend_entrypoints = sorted(backend_entrypoints, key=lambda ep: ep.name)
+    backend_entrypoints_grouped = itertools.groupby(
+        backend_entrypoints, key=lambda ep: ep.name
     )
-
     # check if there are multiple entrypoints for the same name
-    for name, matches in backend_entrypoints_ids_grouped:
+    unique_backend_entrypoints = []
+    for name, matches in backend_entrypoints_grouped:
         matches = list(matches)
+        unique_backend_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_entrypoint = backend_entrypoints[name]
+            selected_module_name = matches[0].module_name
+            all_module_names = [e.module_name for e in matches]
             warnings.warn(
                 f"\nFound {matches_len} entrypoints for the engine name {name}:"
-                f"\n {matches}.\n It will be used: {selected_entrypoint}.",
+                f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                RuntimeWarning,
             )
+    return unique_backend_entrypoints
 
 
 def detect_parameters(open_dataset):
@@ -66,24 +50,29 @@ def detect_parameters(open_dataset):
                 f"All the parameters in {open_dataset!r} signature should be explicit. "
                 "*args and **kwargs is not supported"
             )
-    return set(parameters)
+    return tuple(parameters)
 
 
-@lru_cache(maxsize=1)
-def detect_engines():
-    backend_entrypoints = entrypoints.get_group_named("xarray.backends")
-    backend_entrypoints_all = entrypoints.get_group_all("xarray.backends")
-    backend_entrypoints_all = filter_unique_ids(backend_entrypoints_all)
-
-    if len(backend_entrypoints_all) != len(backend_entrypoints):
-        warning_on_entrypoints_conflict(backend_entrypoints, backend_entrypoints_all)
-
-    engines: T.Dict[str, T.Dict[str, T.Any]] = {}
-    for name, backend in backend_entrypoints.items():
-        backend = backend.load()
+def create_engines_dict(backend_entrypoints):
+    engines = {}
+    for backend_ep in backend_entrypoints:
+        name = backend_ep.name
+        backend = backend_ep.load()
         engines[name] = backend
+    return engines
 
+
+def set_missing_parameters(engines):
+    for name, backend in engines.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
+
+
+@lru_cache(maxsize=1)
+def list_engines():
+    entrypoints = pkg_resources.iter_entry_points("xarray.backends")
+    backend_entrypoints = remove_duplicates(entrypoints)
+    engines = create_engines_dict(backend_entrypoints)
+    set_missing_parameters(engines)
     return engines
