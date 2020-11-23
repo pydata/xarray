@@ -313,10 +313,9 @@ class TestPlot(PlotTestCase):
             coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
         )
 
-        hdl = da.plot.line(x="lon", hue="x")
-        assert len(hdl) == 5
-
         with figure_context():
+            hdl = da.plot.line(x="lon", hue="x")
+            assert len(hdl) == 5
             hdl = da.plot.line(x="lon", hue="y")
             assert len(hdl) == 4
 
@@ -1756,11 +1755,10 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
     def test_origin_overrides_xyincrease(self):
         da = DataArray(easy_array((3, 2)), coords=[[-2, 0, 2], [-1, 1]])
-        da.plot.imshow(origin="upper")
-        assert plt.xlim()[0] < 0
-        assert plt.ylim()[1] < 0
-
         with figure_context():
+            da.plot.imshow(origin="upper")
+            assert plt.xlim()[0] < 0
+            assert plt.ylim()[1] < 0
             da.plot.imshow(origin="lower")
             assert plt.xlim()[0] < 0
             assert plt.ylim()[0] < 0
