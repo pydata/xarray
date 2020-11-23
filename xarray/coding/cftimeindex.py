@@ -261,8 +261,7 @@ def format_attrs(index, separator=", "):
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
     }
-    if len(index) >= 3:
-        attrs["freq"] = f"'{index.freq}'"
+    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str

@@ -917,7 +917,6 @@ def test_cftimeindex_calendar_property(calendar, expected):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize(
     ("calendar", "expected"),
     [
@@ -938,7 +937,6 @@ def test_cftimeindex_calendar_repr(calendar, expected):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize("periods", [2, 40])
 def test_cftimeindex_periods_repr(periods):
     """Test that cftimeindex has periods property in repr."""
@@ -948,7 +946,6 @@ def test_cftimeindex_periods_repr(periods):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
 @pytest.mark.parametrize("freq", ["D", "H"])
 def test_cftimeindex_freq_in_repr(freq, calendar):
@@ -959,7 +956,6 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize(
     "periods,expected",
     [
@@ -967,7 +963,7 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
             2,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian')""",
+            dtype='object', length=2, calendar='gregorian', freq=None)""",
         ),
         (
             4,
@@ -1000,7 +996,6 @@ def test_cftimeindex_repr_formatting(periods, expected):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize("display_width", [40, 80, 100])
 @pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
 def test_cftimeindex_repr_formatting_width(periods, display_width):
@@ -1019,7 +1014,6 @@ def test_cftimeindex_repr_formatting_width(periods, display_width):
 
 
 @requires_cftime_1_1_0
-@requires_cftime
 @pytest.mark.parametrize("periods", [22, 50, 100])
 def test_cftimeindex_repr_101_shorter(periods):
     index_101 = xr.cftime_range(start="2000", periods=101)
