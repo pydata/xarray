@@ -41,6 +41,7 @@ jobs:
           conda list
       - name: Run Tests
         run: |
+          set -o pipefail
           python -m pytest -rf | tee output-${{ matrix.python-version }}-log
 
       - name: Upload artifacts
