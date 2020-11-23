@@ -62,7 +62,11 @@ jobs:
   report:
     name: report
     needs: upstream-dev
-    if: "always()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')&&(needs.upstream-dev.outputs.artifacts_availability =='true')"
+    if: |
+      always() &&
+      github.event_name == 'schedule' &&
+      github.repository == 'pydata/xarray' &&
+      needs.upstream-dev.outputs.artifacts_availability =='true'
     runs-on: ubuntu-latest
     defaults:
       run:
