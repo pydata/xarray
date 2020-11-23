@@ -21,6 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8"]
+    outputs:
+      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.6.0
@@ -43,6 +45,11 @@ jobs:
         run: |
           set -o pipefail
           python -m pytest -rf | tee output-${{ matrix.python-version }}-log
+      - name: Set availability status of logs
+        if: failure()
+        run: |
+          echo '::set-output name=ARTIFACTS_AVAILABLE::true'
+          exit 1
 
       - name: Upload artifacts
         if: "failure()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')" # Check the exit code of previous step
@@ -55,7 +62,7 @@ jobs:
   report:
     name: report
     needs: upstream-dev
-    if: "always()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')"
+    if: "always()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')&&(needs.upstream-dev.outputs.artifacts_availability =='true')"
     runs-on: ubuntu-latest
     defaults:
       run:
