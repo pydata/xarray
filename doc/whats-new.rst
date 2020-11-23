@@ -23,6 +23,10 @@ v0.16.2 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
+  have been deprecated. Use ``DataArray.dt.isocalendar().week``
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
   ``ds.rolling(...).mean(keep_attrs=False)`` instead of ``ds.rolling(..., keep_attrs=False).mean()``
@@ -37,6 +41,10 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()` that returns a Dataset
+  with year, week, and weekday calculated according to the ISO 8601 calendar. Requires
+  pandas version 1.1.0 or greater (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
   limited regions of existing Zarr stores (:pull:`4035`).
   See :ref:`io.zarr.appending` for full details.
@@ -45,6 +53,8 @@ New Features
   By `Michal Baumgartner <https://github.com/m1so>`_.
 - :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted` are now executing value checks lazily if weights are provided as dask arrays (:issue:`4541`, :pull:`4559`).
   By `Julius Busecke <https://github.com/jbusecke>`_.
+- Added the ``keep_attrs`` keyword to ``rolling_exp.mean()``; it now keeps attributes
+  per default. By `Mathias Hauser <https://github.com/mathause>`_ (:pull:`4592`).
 
 Bug fixes
 ~~~~~~~~~
@@ -79,6 +89,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- document the API not supported with duck arrays (:pull:`4530`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
   (:pull:`4532`);
@@ -108,9 +120,14 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure tests are not skipped in the `py38-all-but-dask` test environment
   (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Ignore select numpy warnings around missing values, where xarray handles
+  the values appropriately, (:pull:`4536`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
   and ``pd.Index.intersection`` as they will stop working as set operations in the future
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
 
 .. _whats-new.0.16.1:
 
