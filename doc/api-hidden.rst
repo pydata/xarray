@@ -613,7 +613,6 @@
    CFTimeIndex.fillna
    CFTimeIndex.floor
    CFTimeIndex.format
-   CFTimeIndex.freq
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
    CFTimeIndex.get_indexer_non_unique
@@ -690,6 +689,7 @@
    CFTimeIndex.dayofyear
    CFTimeIndex.dtype
    CFTimeIndex.empty
+   CFTimeIndex.freq
    CFTimeIndex.has_duplicates
    CFTimeIndex.hasnans
    CFTimeIndex.hour
