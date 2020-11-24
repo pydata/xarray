@@ -316,6 +316,8 @@ class TestPlot(PlotTestCase):
         with figure_context():
             hdl = da.plot.line(x="lon", hue="x")
             assert len(hdl) == 5
+
+        with figure_context():
             hdl = da.plot.line(x="lon", hue="y")
             assert len(hdl) == 4
 
@@ -1759,6 +1761,8 @@ class TestImshow(Common2dMixin, PlotTestCase):
             da.plot.imshow(origin="upper")
             assert plt.xlim()[0] < 0
             assert plt.ylim()[1] < 0
+
+        with figure_context():
             da.plot.imshow(origin="lower")
             assert plt.xlim()[0] < 0
             assert plt.ylim()[0] < 0
