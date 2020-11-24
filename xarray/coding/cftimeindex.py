@@ -261,6 +261,7 @@ def format_attrs(index, separator=", "):
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
     }
+    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
@@ -524,10 +525,10 @@ class CFTimeIndex(pd.Index):
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
-                    dtype='object', length=1, calendar='gregorian')
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
-                    dtype='object', length=1, calendar='gregorian')
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         """
         from .cftime_offsets import to_offset
 
@@ -614,7 +615,7 @@ class CFTimeIndex(pd.Index):
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-                    dtype='object', length=2, calendar='gregorian')
+                    dtype='object', length=2, calendar='gregorian', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
@@ -682,6 +683,13 @@ class CFTimeIndex(pd.Index):
         from .times import infer_calendar_name
 
         return infer_calendar_name(self)
+
+    @property
+    def freq(self):
+        """The frequency used by the dates in the index."""
+        from .frequencies import infer_freq
+
+        return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
