@@ -939,7 +939,7 @@ def cftime_range(
     >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
-                dtype='object', length=6, calendar='noleap')
+                dtype='object', length=6, calendar='noleap', freq='2MS')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with

@@ -689,6 +689,7 @@
    CFTimeIndex.dayofyear
    CFTimeIndex.dtype
    CFTimeIndex.empty
+   CFTimeIndex.freq
    CFTimeIndex.has_duplicates
    CFTimeIndex.hasnans
    CFTimeIndex.hour
