@@ -20,8 +20,8 @@ What's New
 v0.16.2 (unreleased)
 --------------------
 
-Breaking changes
-~~~~~~~~~~~~~~~~
+Deprecations
+~~~~~~~~~~~~
 
 - :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
   have been deprecated. Use ``DataArray.dt.isocalendar().week``
