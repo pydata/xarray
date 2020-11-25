@@ -62,20 +62,20 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
-- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when
+- Fix bug where reference times without padded years (e.g. ``since 1-1-1``) would lose their units when
   being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
   about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
-  it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
+  it is assumed that the first digit is the years, they are padded appropriately (to e.g. ``since 0001-1-1``)
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
   would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
-  be parsed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
+  be parsed (via ``pandas`` and ``dateutil``) to ``since 2001-1-1``.
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
 - Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`, :pull:`4454`).
   By `Andrew Pauling <https://github.com/andrewpauling>`_
-- Fix silently overwriting the `engine` key when passing :py:func:`open_dataset` a file object
+- Fix silently overwriting the ``engine`` key when passing :py:func:`open_dataset` a file object
   to an incompatible netCDF (:issue:`4457`). Now incompatible combinations of files and engines raise
   an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
 - The ``min_count`` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
@@ -121,7 +121,7 @@ Internal Changes
   <https://github.com/mathause>`_.
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Ensure tests are not skipped in the `py38-all-but-dask` test environment
+- Ensure tests are not skipped in the ``py38-all-but-dask`` test environment
   (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Ignore select numpy warnings around missing values, where xarray handles
   the values appropriately, (:pull:`4536`);
