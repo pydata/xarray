@@ -507,7 +507,7 @@ def open_zarr(
     store,
     group=None,
     synchronizer=None,
-    chunks={},
+    chunks="auto",
     decode_cf=True,
     mask_and_scale=True,
     decode_times=True,
@@ -610,6 +610,13 @@ def open_zarr(
     http://zarr.readthedocs.io/
     """
     from .api import open_dataset
+
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+            chunks = {}
+        except ImportError:
+            chunks = None
 
     if kwargs:
         raise TypeError(
