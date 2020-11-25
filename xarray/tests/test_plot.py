@@ -962,6 +962,9 @@ class TestDiscreteColorMap:
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x))))
         self.data_min = distance.min()
         self.data_max = distance.max()
+        yield
+        # Remove all matplotlib figures
+        plt.close("all")
 
     @pytest.mark.slow
     def test_recover_from_seaborn_jet_exception(self):
@@ -2428,8 +2431,10 @@ def test_plot_transposed_nondim_coord(plotfunc):
         dims=["s", "x"],
         coords={"x": x, "s": s, "z": (("s", "x"), z), "zt": (("x", "s"), z.T)},
     )
-    getattr(da.plot, plotfunc)(x="x", y="zt")
-    getattr(da.plot, plotfunc)(x="zt", y="x")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="x", y="zt")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="zt", y="x")
 
 
 @requires_matplotlib
