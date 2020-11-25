@@ -1567,7 +1567,7 @@ class ZarrBase(CFEncodedBase):
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
-            open_kwargs = {"chunks": {}}
+            open_kwargs = {}
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
@@ -1851,7 +1851,7 @@ class ZarrBase(CFEncodedBase):
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
             actual = xr.open_dataset(
-                store_target, group=group, chunks={}, engine="zarr"
+                store_target, group=group,  engine="zarr"
             )
             assert_identical(original, actual)
 
@@ -1941,11 +1941,11 @@ class ZarrBase(CFEncodedBase):
             encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding)
             ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, chunks={}, engine="zarr")
+            actual_ds = xr.open_dataset(store_target, engine="zarr")
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, chunks={}, engine="zarr").compute(),
+                xr.open_dataset(store_target, engine="zarr").compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -1961,7 +1961,7 @@ class ZarrBase(CFEncodedBase):
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
             assert_identical(
-                combined, xr.open_dataset(store_target, chunks={}, engine="zarr")
+                combined, xr.open_dataset(store_target, engine="zarr")
             )
 
     @requires_dask
