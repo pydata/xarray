@@ -614,6 +614,7 @@ def open_zarr(
     if chunks == "auto":
         try:
             import dask.array  # noqa
+
             chunks = {}
         except ImportError:
             chunks = None
