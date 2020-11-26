@@ -56,7 +56,7 @@ from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
-from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
+from .utils import Default, ReprObject, _default, either_dict_or_kwargs
 from .variable import (
     IndexVariable,
     Variable,
@@ -778,7 +778,6 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         names: Union[Iterable[Hashable], Hashable, None] = None,
         drop: bool = False,
-        inplace: bool = None,
     ) -> Union[None, "DataArray", Dataset]:
         """Given names of coordinates, reset them to become variables.
 
@@ -795,7 +794,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         Dataset, or DataArray if ``drop == True``
         """
-        _check_inplace(inplace)
         if names is None:
             names = set(self.coords) - set(self.dims)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
@@ -1745,7 +1743,6 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
-        inplace: bool = None,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> Optional["DataArray"]:
         """Set DataArray (multi-)indexes using one or more existing
@@ -1796,16 +1793,13 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        ds = self._to_temp_dataset().set_index(
-            indexes, append=append, inplace=inplace, **indexes_kwargs
-        )
+        ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
 
     def reset_index(
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-        inplace: bool = None,
     ) -> Optional["DataArray"]:
         """Reset the specified index(es) or multi-index level(s).
 
@@ -1828,7 +1822,6 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.set_index
         """
-        _check_inplace(inplace)
         coords, _ = split_indexes(
             dims_or_levels, self._coords, set(), self._level_coords, drop=drop
         )
@@ -1837,7 +1830,6 @@ class DataArray(AbstractArray, DataWithCoords):
     def reorder_levels(
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
-        inplace: bool = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "DataArray":
         """Rearrange index levels using input order.
@@ -1858,7 +1850,6 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
-        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         replace_coords = {}
         for dim, order in dim_order.items():
@@ -3496,6 +3487,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
+        ...
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
