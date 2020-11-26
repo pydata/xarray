@@ -1158,8 +1158,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        cond : DataArray or Dataset
+        cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
+            If a callable, it must expect this object as its only parameter.
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations filled with NA.
