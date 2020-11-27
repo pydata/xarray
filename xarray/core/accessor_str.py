@@ -40,7 +40,9 @@
 import codecs
 import re
 import textwrap
-from typing import Any, Callable, Mapping, Union
+from functools import reduce
+from operator import or_ as set_union
+from typing import Any, Callable, Hashable, Mapping, Optional, Pattern, Union
 from unicodedata import normalize
 
 import numpy as np
@@ -59,7 +61,7 @@ _cpython_optimized_encoders = (
 _cpython_optimized_decoders = _cpython_optimized_encoders + ("utf-16", "utf-32")
 
 
-def _is_str_like(x):
+def _is_str_like(x: Any) -> bool:
     return isinstance(x, str) or isinstance(x, bytes)
 
 
@@ -83,19 +85,51 @@ class StringAccessor:
     def __init__(self, obj):
         self._obj = obj
 
-    def _apply(self, f, dtype=None):
+    def _stringify(
+        self,
+        invar: Any,
+    ) -> Union[str, bytes]:
+        """
+        Convert a string-like to the correct string/bytes type.
+
+        This is mostly here to tell mypy a pattern is a str/bytes not a re.Pattern.
+        """
+        return self._obj.dtype.type(invar)
+
+    def _apply(
+        self,
+        f: Callable,
+        obj: Any = None,
+        dtype: Union[str, np.dtype] = None,
+        output_core_dims: Union[list, tuple] = ((),),
+        output_sizes: Mapping[Hashable, int] = None,
+        **kwargs,
+    ) -> Any:
         # TODO handling of na values ?
+        if obj is None:
+            obj = self._obj
         if dtype is None:
-            dtype = self._obj.dtype
+            dtype = obj.dtype
 
-        g = np.vectorize(f, otypes=[dtype])
-        return apply_ufunc(g, self._obj, dask="parallelized", output_dtypes=[dtype])
+        dask_gufunc_kwargs = dict()
+        if output_sizes is not None:
+            dask_gufunc_kwargs["output_sizes"] = output_sizes
 
-    def _check_is_compiled_re(self, pat):
-        return isinstance(pat, self._pattern_type)
+        return apply_ufunc(
+            f,
+            obj,
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=[dtype],
+            output_core_dims=output_core_dims,
+            dask_gufunc_kwargs=dask_gufunc_kwargs,
+            **kwargs,
+        )
 
-    def _re_compile(self, pat, flags, case=None):
-        is_compiled_re = self._check_is_compiled_re(pat)
+    def _re_compile(
+        self, pat: Union[str, bytes, Pattern], flags: int, case: bool = None
+    ) -> Pattern:
+        is_compiled_re = isinstance(pat, self._pattern_type)
 
         if is_compiled_re and flags != 0:
             raise ValueError("flags cannot be set when pat is a compiled regex")
@@ -104,18 +138,21 @@ class StringAccessor:
             raise ValueError("case cannot be set when pat is a compiled regex")
 
         if is_compiled_re:
-            return pat
+            # no-op, needed to tell mypy this isn't a string
+            return re.compile(pat)
 
         if case is None:
             case = True
 
+        # The case is handled by the re flags internally.
+        # Add it to the flags if necessary.
         if not case:
             flags |= re.IGNORECASE
 
-        pat = self._obj.dtype.type(pat)
+        pat = self._stringify(pat)
         return re.compile(pat, flags=flags)
 
-    def len(self):
+    def len(self) -> Any:
         """
         Compute the length of each string in the array.
 
@@ -125,7 +162,10 @@ class StringAccessor:
         """
         return self._apply(len, dtype=int)
 
-    def __getitem__(self, key):
+    def __getitem__(
+        self,
+        key: Union[int, slice],
+    ) -> Any:
         if isinstance(key, slice):
             return self.slice(start=key.start, stop=key.stop, step=key.step)
         else:
@@ -134,7 +174,7 @@ class StringAccessor:
     def get(
         self,
         i: int,
-        default: str = "",
+        default: Union[str, bytes] = "",
     ) -> Any:
         """
         Extract character number `i` from each string in the array.
@@ -190,7 +230,7 @@ class StringAccessor:
         self,
         start: int = None,
         stop: int = None,
-        repl: str = "",
+        repl: Union[str, bytes] = "",
     ) -> Any:
         """
         Replace a positional slice of a string with another value.
@@ -213,14 +253,14 @@ class StringAccessor:
         -------
         replaced : same type as values
         """
-        repl = self._obj.dtype.type(repl)
+        repl = self._stringify(repl)
 
         def f(x):
             if len(x[start:stop]) == 0:
                 local_stop = start
             else:
                 local_stop = stop
-            y = self._obj.dtype.type("")
+            y = self._stringify("")
             if start is not None:
                 y += x[:start]
             y += repl
@@ -230,7 +270,7 @@ class StringAccessor:
 
         return self._apply(f)
 
-    def capitalize(self):
+    def capitalize(self) -> Any:
         """
         Convert strings in the array to be capitalized.
 
@@ -240,7 +280,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.capitalize())
 
-    def lower(self):
+    def lower(self) -> Any:
         """
         Convert strings in the array to lowercase.
 
@@ -250,7 +290,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.lower())
 
-    def swapcase(self):
+    def swapcase(self) -> Any:
         """
         Convert strings in the array to be swapcased.
 
@@ -260,7 +300,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.swapcase())
 
-    def title(self):
+    def title(self) -> Any:
         """
         Convert strings in the array to titlecase.
 
@@ -270,7 +310,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.title())
 
-    def upper(self):
+    def upper(self) -> Any:
         """
         Convert strings in the array to uppercase.
 
@@ -280,7 +320,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.upper())
 
-    def casefold(self):
+    def casefold(self) -> Any:
         """
         Convert strings in the array to be casefolded.
 
@@ -307,16 +347,18 @@ class StringAccessor:
 
         Parameters
         ----------
-        side : {"NFC", "NFKC", "NFD", and "NFKD"}
+        form : {"NFC", "NFKC", "NFD", and "NFKD"}
             Unicode form.
 
         Returns
         -------
         normalized : same type as values
+
+
         """
         return self._apply(lambda x: normalize(form, x))
 
-    def isalnum(self):
+    def isalnum(self) -> Any:
         """
         Check whether all characters in each string are alphanumeric.
 
@@ -327,7 +369,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isalnum(), dtype=bool)
 
-    def isalpha(self):
+    def isalpha(self) -> Any:
         """
         Check whether all characters in each string are alphabetic.
 
@@ -338,7 +380,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isalpha(), dtype=bool)
 
-    def isdecimal(self):
+    def isdecimal(self) -> Any:
         """
         Check whether all characters in each string are decimal.
 
@@ -349,7 +391,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isdecimal(), dtype=bool)
 
-    def isdigit(self):
+    def isdigit(self) -> Any:
         """
         Check whether all characters in each string are digits.
 
@@ -360,7 +402,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isdigit(), dtype=bool)
 
-    def islower(self):
+    def islower(self) -> Any:
         """
         Check whether all characters in each string are lowercase.
 
@@ -371,7 +413,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.islower(), dtype=bool)
 
-    def isnumeric(self):
+    def isnumeric(self) -> Any:
         """
         Check whether all characters in each string are numeric.
 
@@ -382,7 +424,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isnumeric(), dtype=bool)
 
-    def isspace(self):
+    def isspace(self) -> Any:
         """
         Check whether all characters in each string are spaces.
 
@@ -393,7 +435,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isspace(), dtype=bool)
 
-    def istitle(self):
+    def istitle(self) -> Any:
         """
         Check whether all characters in each string are titlecase.
 
@@ -404,7 +446,7 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.istitle(), dtype=bool)
 
-    def isupper(self):
+    def isupper(self) -> Any:
         """
         Check whether all characters in each string are uppercase.
 
@@ -417,9 +459,9 @@ class StringAccessor:
 
     def count(
         self,
-        pat: Any,
-        case: bool = True,
+        pat: Union[str, bytes, Pattern],
         flags: int = 0,
+        case: bool = True,
     ) -> Any:
         """
         Count occurrences of pattern in each string of the array.
@@ -431,13 +473,17 @@ class StringAccessor:
         Parameters
         ----------
         pat : str or re.Pattern
-            A string contain a regular expression or
-            a compiled regular expression object.
+            A string containing a regular expression or a compiled regular
+            expression object.
+        flags : int, default: 0
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
         case : bool, default: True
             If True, case sensitive.
-        flags : int, default: 0
-            Flags for the `re` module. Use 0 for no flags. For a complete list,
-            `see here <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
 
         Returns
         -------
@@ -450,7 +496,7 @@ class StringAccessor:
 
     def startswith(
         self,
-        pat: str,
+        pat: Union[str, bytes],
     ) -> Any:
         """
         Test if the start of each string in the array matches a pattern.
@@ -466,13 +512,13 @@ class StringAccessor:
             An array of booleans indicating whether the given pattern matches
             the start of each string element.
         """
-        pat = self._obj.dtype.type(pat)
+        pat = self._stringify(pat)
         f = lambda x: x.startswith(pat)
         return self._apply(f, dtype=bool)
 
     def endswith(
         self,
-        pat: str,
+        pat: Union[str, bytes],
     ) -> Any:
         """
         Test if the end of each string in the array matches a pattern.
@@ -488,7 +534,7 @@ class StringAccessor:
             A Series of booleans indicating whether the given pattern matches
             the end of each string element.
         """
-        pat = self._obj.dtype.type(pat)
+        pat = self._stringify(pat)
         f = lambda x: x.endswith(pat)
         return self._apply(f, dtype=bool)
 
@@ -496,7 +542,7 @@ class StringAccessor:
         self,
         width: int,
         side: str = "left",
-        fillchar: str = " ",
+        fillchar: Union[str, bytes] = " ",
     ) -> Any:
         """
         Pad strings in the array up to width.
@@ -517,7 +563,7 @@ class StringAccessor:
             Array with a minimum number of char in each element.
         """
         width = int(width)
-        fillchar = self._obj.dtype.type(fillchar)
+        fillchar = self._stringify(fillchar)
         if len(fillchar) != 1:
             raise TypeError("fillchar must be a character, not str")
 
@@ -535,7 +581,7 @@ class StringAccessor:
     def center(
         self,
         width: int,
-        fillchar: str = " ",
+        fillchar: Union[str, bytes] = " ",
     ) -> Any:
         """
         Pad left and right side of each string in the array.
@@ -557,7 +603,7 @@ class StringAccessor:
     def ljust(
         self,
         width: int,
-        fillchar: str = " ",
+        fillchar: Union[str, bytes] = " ",
     ) -> Any:
         """
         Pad right side of each string in the array.
@@ -579,7 +625,7 @@ class StringAccessor:
     def rjust(
         self,
         width: int,
-        fillchar: str = " ",
+        fillchar: Union[str, bytes] = " ",
     ) -> Any:
         """
         Pad left side of each string in the array.
@@ -623,8 +669,8 @@ class StringAccessor:
 
     def contains(
         self,
-        pat: Any,
-        case: bool = None,
+        pat: Union[str, bytes, Pattern],
+        case: bool = True,
         flags: int = 0,
         regex: bool = True,
     ) -> Any:
@@ -641,12 +687,17 @@ class StringAccessor:
             or a compiled regular expression object.
         case : bool, default: True
             If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
         flags : int, default: 0
-            Flags to pass through to the re module, e.g. re.IGNORECASE.
-            ``0`` means no flags.
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
         regex : bool, default: True
             If True, assumes the pat is a regular expression.
             If False, treats the pat as a literal string.
+            Cannot be set to `False` if `pat` is a compiled regex.
 
         Returns
         -------
@@ -655,7 +706,7 @@ class StringAccessor:
             given pattern is contained within the string of each element
             of the array.
         """
-        is_compiled_re = self._check_is_compiled_re(pat)
+        is_compiled_re = isinstance(pat, self._pattern_type)
         if is_compiled_re and not regex:
             raise ValueError(
                 "Must use regular expression matching for regular expression object."
@@ -668,7 +719,7 @@ class StringAccessor:
 
             f = lambda x: bool(pat.search(x))
         else:
-            pat = self._obj.dtype.type(pat)
+            pat = self._stringify(pat)
             if case or case is None:
                 f = lambda x: pat in x
             else:
@@ -679,7 +730,7 @@ class StringAccessor:
 
     def match(
         self,
-        pat: str,
+        pat: Union[str, bytes, Pattern],
         case: bool = True,
         flags: int = 0,
     ) -> Any:
@@ -692,37 +743,27 @@ class StringAccessor:
             A string containing a regular expression or
             a compiled regular expression object.
         case : bool, default: True
-            If True, case sensitive
+            If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
         flags : int, default: 0
-            re module flags, e.g. re.IGNORECASE. ``0`` means no flags
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
 
         Returns
         -------
         matched : array of bool
         """
-        is_compiled_re = self._check_is_compiled_re(pat)
+        pat = self._re_compile(pat, flags, case)
 
-        if is_compiled_re and flags != 0:
-            raise ValueError("flags cannot be set when pat is a compiled regex")
-
-        if is_compiled_re and case is not None:
-            raise ValueError("case cannot be set when pat is a compiled regex")
-
-        if case is None:
-            case = True
-
-        if not is_compiled_re:
-            if not case:
-                flags |= re.IGNORECASE
-            pat = self._obj.dtype.type(pat)
-            regex = re.compile(pat, flags=flags)
-
-        f = lambda x: bool(regex.match(x))
+        f = lambda x: bool(pat.match(x))
         return self._apply(f, dtype=bool)
 
     def strip(
         self,
-        to_strip: str = None,
+        to_strip: Union[str, bytes] = None,
         side: str = "both",
     ) -> Any:
         """
@@ -745,7 +786,7 @@ class StringAccessor:
         stripped : same type as values
         """
         if to_strip is not None:
-            to_strip = self._obj.dtype.type(to_strip)
+            to_strip = self._stringify(to_strip)
 
         if side == "both":
             f = lambda x: x.strip(to_strip)
@@ -760,7 +801,7 @@ class StringAccessor:
 
     def lstrip(
         self,
-        to_strip: str = None,
+        to_strip: Union[str, bytes] = None,
     ) -> Any:
         """
         Remove leading characters.
@@ -783,7 +824,7 @@ class StringAccessor:
 
     def rstrip(
         self,
-        to_strip: str = None,
+        to_strip: Union[str, bytes] = None,
     ) -> Any:
         """
         Remove trailing characters.
@@ -832,7 +873,7 @@ class StringAccessor:
 
     def translate(
         self,
-        table: Mapping[str, str],
+        table: Mapping[Union[str, bytes], Union[str, bytes]],
     ) -> Any:
         """
         Map characters of each string through the given mapping table.
@@ -874,7 +915,7 @@ class StringAccessor:
 
     def find(
         self,
-        sub: str,
+        sub: Union[str, bytes],
         start: int = 0,
         end: int = None,
         side: str = "left",
@@ -899,7 +940,7 @@ class StringAccessor:
         -------
         found : array of int
         """
-        sub = self._obj.dtype.type(sub)
+        sub = self._stringify(sub)
 
         if side == "left":
             method = "find"
@@ -917,7 +958,7 @@ class StringAccessor:
 
     def rfind(
         self,
-        sub: str,
+        sub: Union[str, bytes],
         start: int = 0,
         end: int = None,
     ) -> Any:
@@ -943,7 +984,7 @@ class StringAccessor:
 
     def index(
         self,
-        sub: str,
+        sub: Union[str, bytes],
         start: int = 0,
         end: int = None,
         side: str = "left",
@@ -968,8 +1009,13 @@ class StringAccessor:
         Returns
         -------
         found : array of int
+
+        Raises
+        ------
+        ValueError
+            substring is not found
         """
-        sub = self._obj.dtype.type(sub)
+        sub = self._stringify(sub)
 
         if side == "left":
             method = "index"
@@ -987,7 +1033,7 @@ class StringAccessor:
 
     def rindex(
         self,
-        sub: str,
+        sub: Union[str, bytes],
         start: int = 0,
         end: int = None,
     ) -> Any:
@@ -1009,13 +1055,18 @@ class StringAccessor:
         Returns
         -------
         found : array of int
+
+        Raises
+        ------
+        ValueError
+            substring is not found
         """
         return self.index(sub, start=start, end=end, side="right")
 
     def replace(
         self,
-        pat: Any,
-        repl: Union[str, Callable],
+        pat: Union[str, bytes, Pattern],
+        repl: Union[str, bytes, Callable],
         n: int = -1,
         case: bool = None,
         flags: int = 0,
@@ -1034,18 +1085,20 @@ class StringAccessor:
             See :func:`re.sub`.
         n : int, default: -1
             Number of replacements to make from start. Use ``-1`` to replace all.
-        case : bool, default: None
-            - If True, case sensitive (the default if `pat` is a string)
-            - Set to False for case insensitive
-            - Cannot be set if `pat` is a compiled regex
+        case : bool, default: True
+            If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
         flags : int, default: 0
-            - re module flags, e.g. re.IGNORECASE. Use ``0`` for no flags.
-            - Cannot be set if `pat` is a compiled regex
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
         regex : bool, default: True
-            - If True, assumes the passed-in pattern is a regular expression.
-            - If False, treats the pattern as a literal string
-            - Cannot be set to False if `pat` is a compiled regex or `repl` is
-              a callable.
+            If True, assumes the passed-in pattern is a regular expression.
+            If False, treats the pattern as a literal string.
+            Cannot be set to False if `pat` is a compiled regex or `repl` is
+            a callable.
 
         Returns
         -------
@@ -1057,9 +1110,9 @@ class StringAccessor:
             raise TypeError("repl must be a string or callable")
 
         if _is_str_like(repl):
-            repl = self._obj.dtype.type(repl)
+            repl = self._stringify(repl)
 
-        is_compiled_re = self._check_is_compiled_re(pat)
+        is_compiled_re = isinstance(pat, self._pattern_type)
         if not regex and is_compiled_re:
             raise ValueError(
                 "Cannot use a compiled regex as replacement pattern with regex=False"
@@ -1073,9 +1126,834 @@ class StringAccessor:
             n = n if n >= 0 else 0
             f = lambda x: pat.sub(repl=repl, string=x, count=n)
         else:
-            pat = self._obj.dtype.type(pat)
+            pat = self._stringify(pat)
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)
+
+    def extract(
+        self,
+        pat: Union[str, bytes, Pattern],
+        dim: Hashable,
+        case: bool = None,
+        flags: int = 0,
+    ) -> Any:
+        """
+        Extract the first match of capture groups in the regex pat as a new
+        dimension in a DataArray.
+
+        For each string in the DataArray, extract groups from the first match
+        of regular expression pat.
+
+        Parameters
+        ----------
+        pat : str or re.Pattern
+            A string containing a regular expression or a compiled regular
+            expression object.
+        dim : hashable or `None`
+            Name of the new dimension to store the captured strings in.
+            If None, the pattern must have only one capture group and the
+            resulting DataArray will have the same size as the original.
+        case : bool, default: True
+            If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
+        flags : int, default: 0
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
+
+        Returns
+        -------
+        extracted : same type as values or object array
+
+        Raises
+        ------
+        ValueError
+            `pat` has no capture groups.
+        ValueError
+            `dim` is `None` and there is more than one capture group.
+        ValueError
+            `case` is set when `pat` is a compiled regular expression.
+        KeyError
+            The given dimension is already present in the DataArray.
+
+        Examples
+        --------
+        Create a string array
+
+        >>> value = xr.DataArray(
+        ...     [
+        ...         [
+        ...             "a_Xy_0",
+        ...             "ab_xY_10-bab_Xy_110-baab_Xy_1100",
+        ...             "abc_Xy_01-cbc_Xy_2210",
+        ...         ],
+        ...         [
+        ...             "abcd_Xy_-dcd_Xy_33210-dccd_Xy_332210",
+        ...             "",
+        ...             "abcdef_Xy_101-fef_Xy_5543210",
+        ...         ],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Extract matches
+
+        >>> value.str.extract(r"(\\w+)_Xy_(\\d*)", dim="match")
+        <xarray.DataArray (X: 2, Y: 3, match: 2)>
+        array([[['a', '0'],
+                ['bab', '110'],
+                ['abc', '01']],
+        <BLANKLINE>
+               [['abcd', ''],
+                ['', ''],
+                ['abcdef', '101']]], dtype='<U6')
+        Dimensions without coordinates: X, Y, match
+
+        See Also
+        --------
+        DataArray.str.extractall
+        DataArray.str.findall
+        re.compile
+        re.search
+        pandas.Series.str.extract
+        """
+        pat = self._re_compile(pat, flags, case)
+
+        if pat.groups == 0:
+            raise ValueError("No capture groups found in pattern.")
+
+        if dim is None and pat.groups != 1:
+            raise ValueError(
+                "dim must be specified if more than one capture group is given."
+            )
+
+        if dim is not None and dim in self._obj.dims:
+            raise KeyError(f"Dimension {dim} already present in DataArray.")
+
+        def _get_res_single(val, pat=pat):
+            match = pat.search(val)
+            if match is None:
+                return ""
+            res = match.group(1)
+            if res is None:
+                res = ""
+            return res
+
+        def _get_res_multi(val, pat=pat):
+            match = pat.search(val)
+            if match is None:
+                return np.array([""], val.dtype)
+            match = match.groups()
+            match = [grp if grp is not None else "" for grp in match]
+            return np.array(match, val.dtype)
+
+        if dim is None:
+            return self._apply(_get_res_single)
+        else:
+            # dtype MUST be object or strings can be truncated
+            # See: https://github.com/numpy/numpy/issues/8352
+            return self._apply(
+                _get_res_multi,
+                dtype=np.object_,
+                output_core_dims=[[dim]],
+                output_sizes={dim: pat.groups},
+            ).astype(self._obj.dtype.kind)
+
+    def extractall(
+        self,
+        pat: Union[str, bytes, Pattern],
+        group_dim: Hashable,
+        match_dim: Hashable,
+        case: bool = None,
+        flags: int = 0,
+    ) -> Any:
+        """
+        Extract all matches of capture groups in the regex pat as new
+        dimensions in a DataArray.
+
+        For each string in the DataArray, extract groups from all matches
+        of regular expression pat.
+        Equivalent to applying re.findall() to all the elements in the DataArray
+        and splitting the results across dimensions.
+
+        Parameters
+        ----------
+        pat : str or re.Pattern
+            A string containing a regular expression or a compiled regular
+            expression object.
+        group_dim: hashable
+            Name of the new dimensions corresponding to the capture groups.
+            This dimension is added to the new DataArray first.
+        match_dim: hashable
+            Name of the new dimensions corresponding to the matches for each group.
+            This dimension is added to the new DataArray second.
+        case : bool, default: True
+            If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
+        flags : int, default: 0
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
+
+        Returns
+        -------
+        extracted : same type as values or object array
+
+        Raises
+        ------
+        ValueError
+            `pat` has no capture groups.
+        ValueError
+            `case` is set when `pat` is a compiled regular expression.
+        KeyError
+            Either of the given dimensions is already present in the DataArray.
+        KeyError
+            The given dimensions names are the same.
+
+        Examples
+        --------
+        Create a string array
+
+        >>> value = xr.DataArray(
+        ...     [
+        ...         [
+        ...             "a_Xy_0",
+        ...             "ab_xY_10-bab_Xy_110-baab_Xy_1100",
+        ...             "abc_Xy_01-cbc_Xy_2210",
+        ...         ],
+        ...         [
+        ...             "abcd_Xy_-dcd_Xy_33210-dccd_Xy_332210",
+        ...             "",
+        ...             "abcdef_Xy_101-fef_Xy_5543210",
+        ...         ],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Extract matches
+
+        >>> value.str.extractall(
+        ...     r"(\\w+)_Xy_(\\d*)", group_dim="group", match_dim="match"
+        ... )
+        <xarray.DataArray (X: 2, Y: 3, group: 3, match: 2)>
+        array([[[['a', '0'],
+                 ['', ''],
+                 ['', '']],
+        <BLANKLINE>
+                [['bab', '110'],
+                 ['baab', '1100'],
+                 ['', '']],
+        <BLANKLINE>
+                [['abc', '01'],
+                 ['cbc', '2210'],
+                 ['', '']]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[['abcd', ''],
+                 ['dcd', '33210'],
+                 ['dccd', '332210']],
+        <BLANKLINE>
+                [['', ''],
+                 ['', ''],
+                 ['', '']],
+        <BLANKLINE>
+                [['abcdef', '101'],
+                 ['fef', '5543210'],
+                 ['', '']]]], dtype='<U7')
+        Dimensions without coordinates: X, Y, group, match
+
+
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.findall
+        re.compile
+        re.findall
+        pandas.Series.str.extractall
+        """
+        pat = self._re_compile(pat, flags, case)
+
+        if pat.groups == 0:
+            raise ValueError("No capture groups found in pattern.")
+
+        if group_dim in self._obj.dims:
+            raise KeyError(f"Group dimension {group_dim} already present in DataArray.")
+
+        if match_dim in self._obj.dims:
+            raise KeyError(f"Match dimension {match_dim} already present in DataArray.")
+
+        if group_dim == match_dim:
+            raise KeyError(
+                f"Group dimension {group_dim} is the same as match dimension {match_dim}."
+            )
+
+        _get_count = lambda x: len(pat.findall(x))
+        maxcount = self._apply(_get_count, dtype=np.int_).max().data.tolist()
+
+        def _get_res(val, pat=pat, maxcount=maxcount, dtype=self._obj.dtype):
+            matches = pat.findall(val)
+            res = np.zeros([maxcount, pat.groups], dtype)
+
+            if pat.groups == 1:
+                for imatch, match in enumerate(matches):
+                    res[imatch, 0] = match
+            else:
+                for imatch, match in enumerate(matches):
+                    for jmatch, submatch in enumerate(match):
+                        res[imatch, jmatch] = submatch
+
+            return res
+
+        return self._apply(
+            # dtype MUST be object or strings can be truncated
+            # See: https://github.com/numpy/numpy/issues/8352
+            _get_res,
+            dtype=np.object_,
+            output_core_dims=[[group_dim, match_dim]],
+            output_sizes={group_dim: pat.groups, match_dim: maxcount},
+        ).astype(self._obj.dtype.kind)
+
+    def findall(
+        self,
+        pat: Union[str, bytes, Pattern],
+        case: bool = None,
+        flags: int = 0,
+    ) -> Any:
+        """
+        Find all occurrences of pattern or regular expression in the DataArray.
+
+        Equivalent to applying re.findall() to all the elements in the DataArray.
+        Results in an object array of lists.
+        If there is only one capture group, the lists will be a sequence of matches.
+        If there are multiple capture groups, the lists will be a sequence of lists,
+        each of which contains a sequence of matches.
+
+        Parameters
+        ----------
+        pat : str or re.Pattern
+            A string containing a regular expression or a compiled regular
+            expression object.
+        case : bool, default: True
+            If True, case sensitive.
+            Cannot be set if `pat` is a compiled regex.
+            Equivalent to setting the `re.IGNORECASE` flag.
+        flags : int, default: 0
+            Flags to pass through to the re module, e.g. `re.IGNORECASE`.
+            see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
+            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            Cannot be set if `pat` is a compiled regex.
+
+        Returns
+        -------
+        extracted : object array
+
+        Raises
+        ------
+        ValueError
+            `pat` has no capture groups.
+        ValueError
+            `case` is set when `pat` is a compiled regular expression.
+
+        Examples
+        --------
+        Create a string array
+
+        >>> value = xr.DataArray(
+        ...     [
+        ...         [
+        ...             "a_Xy_0",
+        ...             "ab_xY_10-bab_Xy_110-baab_Xy_1100",
+        ...             "abc_Xy_01-cbc_Xy_2210",
+        ...         ],
+        ...         [
+        ...             "abcd_Xy_-dcd_Xy_33210-dccd_Xy_332210",
+        ...             "",
+        ...             "abcdef_Xy_101-fef_Xy_5543210",
+        ...         ],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Extract matches
+
+        >>> value.str.findall(r"(\\w+)_Xy_(\\d*)")
+        <xarray.DataArray (X: 2, Y: 3)>
+        array([[list([('a', '0')]), list([('bab', '110'), ('baab', '1100')]),
+                list([('abc', '01'), ('cbc', '2210')])],
+               [list([('abcd', ''), ('dcd', '33210'), ('dccd', '332210')]),
+                list([]), list([('abcdef', '101'), ('fef', '5543210')])]],
+              dtype=object)
+        Dimensions without coordinates: X, Y
+
+        See Also
+        --------
+        DataArray.str.extract
+        DataArray.str.extractall
+        re.compile
+        re.findall
+        pandas.Series.str.findall
+        """
+        pat = self._re_compile(pat, flags, case)
+
+        if pat.groups == 0:
+            raise ValueError("No capture groups found in pattern.")
+
+        return self._apply(pat.findall, dtype=np.object_)
+
+    def _partitioner(
+        self,
+        func: Callable,
+        dim: Hashable,
+        sep: Optional[Union[str, bytes]],
+    ) -> Any:
+        """
+        Implements logic for `partition` and `rpartition`.
+        """
+        sep = self._stringify(sep)
+
+        if dim is None:
+            f = lambda x: list(func(x, sep))
+            return self._apply(f, dtype=np.object_)
+
+        # _apply breaks on an empty array in this case
+        if not self._obj.size:
+            return self._obj.copy().expand_dims({dim: 0}, -1)
+
+        f = lambda x: np.array(func(x, sep), dtype=self._obj.dtype)
+
+        # dtype MUST be object or strings can be truncated
+        # See: https://github.com/numpy/numpy/issues/8352
+        return self._apply(
+            f,
+            dtype=np.object_,
+            output_core_dims=[[dim]],
+            output_sizes={dim: 3},
+        ).astype(self._obj.dtype.kind)
+
+    def partition(
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes] = " ",
+    ) -> Any:
+        """
+        Split the strings in the DataArray at the first occurrence of separator `sep`.
+
+        This method splits the string at the first occurrence of `sep`,
+        and returns 3 elements containing the part before the separator,
+        the separator itself, and the part after the separator.
+        If the separator is not found, return 3 elements containing the string itself,
+        followed by two empty strings.
+
+        This is equivalent to :meth:`str.partion`.
+
+        Parameters
+        ----------
+        dim : Hashable or `None`
+            Name for the dimension to place the 3 elements in.
+            If `None`, place the results as list elements in an object DataArray
+        sep : str, default `" "`
+            String to split on.
+
+        Returns
+        -------
+        partitioned : same type as values or object array
+
+        See Also
+        --------
+        DataArray.str.rpartition
+        str.partition
+        pandas.Series.str.partition
+        """
+        return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
+
+    def rpartition(
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes] = " ",
+    ) -> Any:
+        """
+        Split the strings in the DataArray at the last occurrence of separator `sep`.
+
+        This method splits the string at the last occurrence of `sep`,
+        and returns 3 elements containing the part before the separator,
+        the separator itself, and the part after the separator.
+        If the separator is not found, return 3 elements containing two empty strings,
+        followed by the string itself.
+
+        This is equivalent to :meth:`str.rpartion`.
+
+        Parameters
+        ----------
+        dim : Hashable or `None`
+            Name for the dimension to place the 3 elements in.
+            If `None`, place the results as list elements in an object DataArray
+        sep : str, default `" "`
+            String to split on.
+
+        Returns
+        -------
+        rpartitioned : same type as values or object array
+
+        See Also
+        --------
+        DataArray.str.partition
+        str.rpartition
+        pandas.Series.str.rpartition
+        """
+        return self._partitioner(func=self._obj.dtype.type.rpartition, dim=dim, sep=sep)
+
+    def _splitter(
+        self,
+        func: Callable,
+        pre: bool,
+        dim: Hashable,
+        sep: Optional[Union[str, bytes]],
+        maxsplit: int,
+    ) -> Any:
+        """
+        Implements logic for `split` and `rsplit`.
+        """
+        if sep is not None:
+            sep = self._stringify(sep)
+
+        if dim is None:
+            f = lambda x: func(x, sep, maxsplit)
+            return self._apply(f, dtype=np.object_)
+
+        # _apply breaks on an empty array in this case
+        if not self._obj.size:
+            return self._obj.copy().expand_dims({dim: 0}, -1)
+
+        f_count = lambda x: max(len(func(x, sep, maxsplit)), 1)
+        maxsplit = self._apply(f_count, dtype=np.int_).max().data.tolist() - 1
+
+        def _dosplit(mystr, sep=sep, maxsplit=maxsplit, dtype=self._obj.dtype):
+            res = func(mystr, sep, maxsplit)
+            if len(res) < maxsplit + 1:
+                pad = [""] * (maxsplit + 1 - len(res))
+                if pre:
+                    res += pad
+                else:
+                    res = pad + res
+            return np.array(res, dtype=dtype)
+
+        # dtype MUST be object or strings can be truncated
+        # See: https://github.com/numpy/numpy/issues/8352
+        return self._apply(
+            _dosplit,
+            dtype=np.object_,
+            output_core_dims=[[dim]],
+            output_sizes={dim: maxsplit},
+        ).astype(self._obj.dtype.kind)
+
+    def split(
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes] = None,
+        maxsplit: int = -1,
+    ) -> Any:
+        """
+        Split strings in a DataArray around the given separator/delimiter `sep`.
+
+        Splits the string in the DataArray from the beginning,
+        at the specified delimiter string.
+
+        This is equivalent to :meth:`str.split`.
+
+        Parameters
+        ----------
+        dim : Hashable or `None`
+            Name for the dimension to place the results in.
+            If `None`, place the results as list elements in an object DataArray
+        sep : str, default is split on any whitespace.
+            String to split on.
+        maxsplit : int, default -1 (all)
+            Limit number of splits in output, starting from the beginning.
+            -1 will return all splits.
+
+        Returns
+        -------
+        splitted : same type as values or object array
+
+        Examples
+        --------
+        Create a string DataArray
+
+        >>> values = xr.DataArray(
+        ...     [
+        ...         ["abc def", "spam\\t\\teggs\\tswallow", "red_blue"],
+        ...         ["test0\\ntest1\\ntest2\\n\\ntest3", "", "abra  ka\\nda\\tbra"],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Split once and put the results in a new dimension
+
+        >>> values.str.split(dim="splitted", maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
+        array([[['abc', 'def'],
+                ['spam', 'eggs\\tswallow'],
+                ['red_blue', '']],
+        <BLANKLINE>
+               [['test0', 'test1\\ntest2\\n\\ntest3'],
+                ['', ''],
+                ['abra', 'ka\\nda\\tbra']]], dtype='<U18')
+        Dimensions without coordinates: X, Y, splitted
+
+        Split as many times as needed and put the results in a new dimension
+
+        >>> values.str.split(dim="splitted")
+        <xarray.DataArray (X: 2, Y: 3, splitted: 4)>
+        array([[['abc', 'def', '', ''],
+                ['spam', 'eggs', 'swallow', ''],
+                ['red_blue', '', '', '']],
+        <BLANKLINE>
+               [['test0', 'test1', 'test2', 'test3'],
+                ['', '', '', ''],
+                ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
+        Dimensions without coordinates: X, Y, splitted
+
+        Split once and put the results in lists
+
+        >>> values.str.split(dim=None, maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3)>
+        array([[list(['abc', 'def']), list(['spam', 'eggs\\tswallow']),
+                list(['red_blue'])],
+               [list(['test0', 'test1\\ntest2\\n\\ntest3']), list([]),
+                list(['abra', 'ka\\nda\\tbra'])]], dtype=object)
+        Dimensions without coordinates: X, Y
+
+        Split as many times as needed and put the results in a list
+
+        >>> values.str.split(dim=None)
+        <xarray.DataArray (X: 2, Y: 3)>
+        array([[list(['abc', 'def']), list(['spam', 'eggs', 'swallow']),
+                list(['red_blue'])],
+               [list(['test0', 'test1', 'test2', 'test3']), list([]),
+                list(['abra', 'ka', 'da', 'bra'])]], dtype=object)
+        Dimensions without coordinates: X, Y
+
+        Split only on spaces
+
+        >>> values.str.split(dim="splitted", sep=" ")
+        <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
+        array([[['abc', 'def', ''],
+                ['spam\\t\\teggs\\tswallow', '', ''],
+                ['red_blue', '', '']],
+        <BLANKLINE>
+               [['test0\\ntest1\\ntest2\\n\\ntest3', '', ''],
+                ['', '', ''],
+                ['abra', '', 'ka\\nda\\tbra']]], dtype='<U24')
+        Dimensions without coordinates: X, Y, splitted
+
+        See Also
+        --------
+        DataArray.str.rsplit
+        str.split
+        pandas.Series.str.split
+        """
+        return self._splitter(
+            func=self._obj.dtype.type.split,
+            pre=True,
+            dim=dim,
+            sep=sep,
+            maxsplit=maxsplit,
+        )
+
+    def rsplit(
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes] = None,
+        maxsplit: int = -1,
+    ) -> Any:
+        """
+        Split strings in a DataArray around the given separator/delimiter `sep`.
+
+        Splits the string in the DataArray from the end,
+        at the specified delimiter string.
+
+        This is equivalent to :meth:`str.rsplit`.
+
+        Parameters
+        ----------
+        dim : Hashable or `None`
+            Name for the dimension to place the results in.
+            If `None`, place the results as list elements in an object DataArray
+        sep : str, default is split on any whitespace.
+            String to split on.
+        maxsplit : int, default -1 (all)
+            Limit number of splits in output, starting from the end.
+            -1 will return all splits.
+            The final number of split values may be less than this if there are no
+            DataArray elements with that many values.
+
+        Returns
+        -------
+        rsplitted : same type as values or object array
+
+        Examples
+        --------
+        Create a string DataArray
+
+        >>> values = xr.DataArray(
+        ...     [
+        ...         ["abc def", "spam\\t\\teggs\\tswallow", "red_blue"],
+        ...         ["test0\\ntest1\\ntest2\\n\\ntest3", "", "abra  ka\\nda\\tbra"],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Split once and put the results in a new dimension
+
+        >>> values.str.rsplit(dim="splitted", maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
+        array([[['abc', 'def'],
+                ['spam\\t\\teggs', 'swallow'],
+                ['', 'red_blue']],
+        <BLANKLINE>
+               [['test0\\ntest1\\ntest2', 'test3'],
+                ['', ''],
+                ['abra  ka\\nda', 'bra']]], dtype='<U17')
+        Dimensions without coordinates: X, Y, splitted
+
+        Split as many times as needed and put the results in a new dimension
+
+        >>> values.str.rsplit(dim="splitted")
+        <xarray.DataArray (X: 2, Y: 3, splitted: 4)>
+        array([[['', '', 'abc', 'def'],
+                ['', 'spam', 'eggs', 'swallow'],
+                ['', '', '', 'red_blue']],
+        <BLANKLINE>
+               [['test0', 'test1', 'test2', 'test3'],
+                ['', '', '', ''],
+                ['abra', 'ka', 'da', 'bra']]], dtype='<U8')
+        Dimensions without coordinates: X, Y, splitted
+
+        Split once and put the results in lists
+
+        >>> values.str.rsplit(dim=None, maxsplit=1)
+        <xarray.DataArray (X: 2, Y: 3)>
+        array([[list(['abc', 'def']), list(['spam\\t\\teggs', 'swallow']),
+                list(['red_blue'])],
+               [list(['test0\\ntest1\\ntest2', 'test3']), list([]),
+                list(['abra  ka\\nda', 'bra'])]], dtype=object)
+        Dimensions without coordinates: X, Y
+
+        Split as many times as needed and put the results in a list
+
+        >>> values.str.rsplit(dim=None)
+        <xarray.DataArray (X: 2, Y: 3)>
+        array([[list(['abc', 'def']), list(['spam', 'eggs', 'swallow']),
+                list(['red_blue'])],
+               [list(['test0', 'test1', 'test2', 'test3']), list([]),
+                list(['abra', 'ka', 'da', 'bra'])]], dtype=object)
+        Dimensions without coordinates: X, Y
+
+        Split only on spaces
+
+        >>> values.str.rsplit(dim="splitted", sep=" ")
+        <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
+        array([[['', 'abc', 'def'],
+                ['', '', 'spam\\t\\teggs\\tswallow'],
+                ['', '', 'red_blue']],
+        <BLANKLINE>
+               [['', '', 'test0\\ntest1\\ntest2\\n\\ntest3'],
+                ['', '', ''],
+                ['abra', '', 'ka\\nda\\tbra']]], dtype='<U24')
+        Dimensions without coordinates: X, Y, splitted
+
+        See Also
+        --------
+        DataArray.str.split
+        str.rsplit
+        pandas.Series.str.rsplit
+        """
+        return self._splitter(
+            func=self._obj.dtype.type.rsplit,
+            pre=False,
+            dim=dim,
+            sep=sep,
+            maxsplit=maxsplit,
+        )
+
+    def get_dummies(
+        self,
+        dim: Hashable,
+        sep: Union[str, bytes] = "|",
+    ) -> Any:
+        """
+        Return DataArray of dummy/indicator variables.
+
+        Each string in the DataArray is split at `sep`.
+        A new dimension is created with coordinates for each unique result,
+        and the corresponding element of that dimension is `True` if
+        that result is present and `False` if not.
+
+        Parameters
+        ----------
+        dim : Hashable
+            Name for the dimension to place the results in.
+        sep : str, default `"|"`.
+            String to split on.
+
+        Returns
+        -------
+        dummies : array of bool
+
+        Examples
+        --------
+        Create a string array
+
+        >>> values = xr.DataArray(
+        ...     [
+        ...         ["a|ab~abc|abc", "ab", "a||abc|abcd"],
+        ...         ["abcd|ab|a", "abc|ab~abc", "|a"],
+        ...     ],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Extract dummy values
+
+        >>> values.str.get_dummies(dim="dummies")
+        <xarray.DataArray (X: 2, Y: 3, dummies: 5)>
+        array([[[ True, False,  True, False,  True],
+                [False,  True, False, False, False],
+                [ True, False,  True,  True, False]],
+        <BLANKLINE>
+               [[ True,  True, False,  True, False],
+                [False, False,  True, False,  True],
+                [ True, False, False, False, False]]])
+        Coordinates:
+          * dummies  (dummies) <U6 'a' 'ab' 'abc' 'abcd' 'ab~abc'
+        Dimensions without coordinates: X, Y
+
+        See Also
+        --------
+        pandas.Series.str.get_dummies
+        """
+        # _apply breaks on an empty array in this case
+        if not self._obj.size:
+            return self._obj.copy().expand_dims({dim: 0}, -1)
+
+        sep = self._stringify(sep)
+        f_set = lambda x: set(x.split(sep)) - {self._stringify("")}
+        setarr = self._apply(f_set, dtype=np.object_)
+        vals = sorted(reduce(set_union, setarr.data.ravel()))
+
+        f = lambda x: np.array([val in x for val in vals], dtype=np.bool_)
+        res = self._apply(
+            f,
+            obj=setarr,
+            output_core_dims=[[dim]],
+            output_sizes={dim: len(vals)},
+            dtype=np.bool_,
+        )
+        res.coords[dim] = vals
+        return res
 
     def decode(
         self,
