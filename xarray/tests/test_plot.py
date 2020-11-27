@@ -313,12 +313,13 @@ class TestPlot(PlotTestCase):
             coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
         )
 
-        hdl = da.plot.line(x="lon", hue="x")
-        assert len(hdl) == 5
+        with figure_context():
+            hdl = da.plot.line(x="lon", hue="x")
+            assert len(hdl) == 5
 
-        plt.clf()
-        hdl = da.plot.line(x="lon", hue="y")
-        assert len(hdl) == 4
+        with figure_context():
+            hdl = da.plot.line(x="lon", hue="y")
+            assert len(hdl) == 4
 
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
@@ -961,6 +962,9 @@ class TestDiscreteColorMap:
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x))))
         self.data_min = distance.min()
         self.data_max = distance.max()
+        yield
+        # Remove all matplotlib figures
+        plt.close("all")
 
     @pytest.mark.slow
     def test_recover_from_seaborn_jet_exception(self):
@@ -1756,14 +1760,15 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
     def test_origin_overrides_xyincrease(self):
         da = DataArray(easy_array((3, 2)), coords=[[-2, 0, 2], [-1, 1]])
-        da.plot.imshow(origin="upper")
-        assert plt.xlim()[0] < 0
-        assert plt.ylim()[1] < 0
+        with figure_context():
+            da.plot.imshow(origin="upper")
+            assert plt.xlim()[0] < 0
+            assert plt.ylim()[1] < 0
 
-        plt.clf()
-        da.plot.imshow(origin="lower")
-        assert plt.xlim()[0] < 0
-        assert plt.ylim()[0] < 0
+        with figure_context():
+            da.plot.imshow(origin="lower")
+            assert plt.xlim()[0] < 0
+            assert plt.ylim()[0] < 0
 
 
 class TestFacetGrid(PlotTestCase):
@@ -2358,60 +2363,60 @@ class TestAxesKwargs:
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xincrease", [True, False])
     def test_xincrease_kwarg(self, da, xincrease):
-        plt.clf()
-        da.plot(xincrease=xincrease)
-        assert plt.gca().xaxis_inverted() == (not xincrease)
+        with figure_context():
+            da.plot(xincrease=xincrease)
+            assert plt.gca().xaxis_inverted() == (not xincrease)
 
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("yincrease", [True, False])
     def test_yincrease_kwarg(self, da, yincrease):
-        plt.clf()
-        da.plot(yincrease=yincrease)
-        assert plt.gca().yaxis_inverted() == (not yincrease)
+        with figure_context():
+            da.plot(yincrease=yincrease)
+            assert plt.gca().yaxis_inverted() == (not yincrease)
 
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xscale", ["linear", "log", "logit", "symlog"])
     def test_xscale_kwarg(self, da, xscale):
-        plt.clf()
-        da.plot(xscale=xscale)
-        assert plt.gca().get_xscale() == xscale
+        with figure_context():
+            da.plot(xscale=xscale)
+            assert plt.gca().get_xscale() == xscale
 
     @pytest.mark.parametrize(
         "da", [DataArray(easy_array((10,))), DataArray(easy_array((10, 3)))]
     )
     @pytest.mark.parametrize("yscale", ["linear", "log", "logit", "symlog"])
     def test_yscale_kwarg(self, da, yscale):
-        plt.clf()
-        da.plot(yscale=yscale)
-        assert plt.gca().get_yscale() == yscale
+        with figure_context():
+            da.plot(yscale=yscale)
+            assert plt.gca().get_yscale() == yscale
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_xlim_kwarg(self, da):
-        plt.clf()
-        expected = (0.0, 1000.0)
-        da.plot(xlim=[0, 1000])
-        assert plt.gca().get_xlim() == expected
+        with figure_context():
+            expected = (0.0, 1000.0)
+            da.plot(xlim=[0, 1000])
+            assert plt.gca().get_xlim() == expected
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_ylim_kwarg(self, da):
-        plt.clf()
-        da.plot(ylim=[0, 1000])
-        expected = (0.0, 1000.0)
-        assert plt.gca().get_ylim() == expected
+        with figure_context():
+            da.plot(ylim=[0, 1000])
+            expected = (0.0, 1000.0)
+            assert plt.gca().get_ylim() == expected
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_xticks_kwarg(self, da):
-        plt.clf()
-        da.plot(xticks=np.arange(5))
-        expected = np.arange(5).tolist()
-        assert_array_equal(plt.gca().get_xticks(), expected)
+        with figure_context():
+            da.plot(xticks=np.arange(5))
+            expected = np.arange(5).tolist()
+            assert_array_equal(plt.gca().get_xticks(), expected)
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_yticks_kwarg(self, da):
-        plt.clf()
-        da.plot(yticks=np.arange(5))
-        expected = np.arange(5)
-        assert_array_equal(plt.gca().get_yticks(), expected)
+        with figure_context():
+            da.plot(yticks=np.arange(5))
+            expected = np.arange(5)
+            assert_array_equal(plt.gca().get_yticks(), expected)
 
 
 @requires_matplotlib
@@ -2426,8 +2431,10 @@ def test_plot_transposed_nondim_coord(plotfunc):
         dims=["s", "x"],
         coords={"x": x, "s": s, "z": (("s", "x"), z), "zt": (("x", "s"), z.T)},
     )
-    getattr(da.plot, plotfunc)(x="x", y="zt")
-    getattr(da.plot, plotfunc)(x="zt", y="x")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="x", y="zt")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="zt", y="x")
 
 
 @requires_matplotlib

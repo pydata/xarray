@@ -133,6 +133,10 @@ Internal Changes
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
   By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+- Ensure all figures are closed properly in plot tests (:pull:`4600`).
+  By `Yash Saboo <https://github.com/yashsaboo>`_, `Nirupam K N
+  <https://github.com/Nirupamkn>`_ and `Mathias Hauser
+  <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 
