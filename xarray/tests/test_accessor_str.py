@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Tests for the `str` accessor are derived from the original
 # pandas string accessor tests.
 
@@ -93,18 +95,52 @@ def test_starts_ends_with(dtype):
     assert_equal(result, expected)
 
 
-def test_case(dtype):
-    da = xr.DataArray(["SOme word"]).astype(dtype)
+def test_case_bytes(dtype):
+    dtype = np.bytes_
+
+    da = xr.DataArray(["SOme wOrd"]).astype(dtype)
     capitalized = xr.DataArray(["Some word"]).astype(dtype)
     lowered = xr.DataArray(["some word"]).astype(dtype)
-    swapped = xr.DataArray(["soME WORD"]).astype(dtype)
+    swapped = xr.DataArray(["soME WoRD"]).astype(dtype)
     titled = xr.DataArray(["Some Word"]).astype(dtype)
     uppered = xr.DataArray(["SOME WORD"]).astype(dtype)
+
     assert_equal(da.str.capitalize(), capitalized)
     assert_equal(da.str.lower(), lowered)
     assert_equal(da.str.swapcase(), swapped)
     assert_equal(da.str.title(), titled)
     assert_equal(da.str.upper(), uppered)
+
+
+def test_case_str(dtype):
+    dtype = np.str_
+
+    # This string includes some unicode characters
+    # that are common case management corner cases
+    da = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(dtype)
+    capitalized = xr.DataArray(["Some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(dtype)
+    lowered = xr.DataArray(["some word ǆ ß ᾓ σς ﬃ⁵å ç ⅰ"]).astype(dtype)
+    swapped = xr.DataArray(["soME WoRD ǆ SS ᾛ σς FFI⁵å ç ⅰ"]).astype(dtype)
+    titled = xr.DataArray(["Some Word ǅ Ss ᾛ Σς Ffi⁵Å Ç Ⅰ"]).astype(dtype)
+    uppered = xr.DataArray(["SOME WORD Ǆ SS ἫΙ ΣΣ FFI⁵Å Ç Ⅰ"]).astype(dtype)
+    casefolded = xr.DataArray(["some word ǆ ss ἣι σσ ffi⁵å ç ⅰ"]).astype(dtype)
+
+    norm_nfc = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(dtype)
+    norm_nfkc = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(dtype)
+    norm_nfd = xr.DataArray(["SOme wOrd Ǆ ß ᾛ ΣΣ ﬃ⁵Å Ç Ⅰ"]).astype(dtype)
+    norm_nfkd = xr.DataArray(["SOme wOrd DŽ ß ᾛ ΣΣ ffi5Å Ç I"]).astype(dtype)
+
+    assert_equal(da.str.capitalize(), capitalized)
+    assert_equal(da.str.lower(), lowered)
+    assert_equal(da.str.swapcase(), swapped)
+    assert_equal(da.str.title(), titled)
+    assert_equal(da.str.upper(), uppered)
+    assert_equal(da.str.casefold(), casefolded)
+
+    assert_equal(da.str.normalize("NFC"), norm_nfc)
+    assert_equal(da.str.normalize("NFKC"), norm_nfkc)
+    assert_equal(da.str.normalize("NFD"), norm_nfd)
+    assert_equal(da.str.normalize("NFKD"), norm_nfkd)
 
 
 def test_replace(dtype):

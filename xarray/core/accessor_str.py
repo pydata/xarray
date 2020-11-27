@@ -41,6 +41,7 @@ import codecs
 import re
 import textwrap
 from typing import Any, Callable, Mapping, Union
+from unicodedata import normalize
 
 import numpy as np
 
@@ -278,6 +279,42 @@ class StringAccessor:
         uppered : same type as values
         """
         return self._apply(lambda x: x.upper())
+
+    def casefold(self):
+        """
+        Convert strings in the array to be casefolded.
+
+        Casefolding is similar to converting to lowercase,
+        but removes all case distinctions.
+        This is important in some languages that have more complicated
+        cases and case conversions.
+
+        Returns
+        -------
+        casefolded : same type as values
+        """
+        return self._apply(lambda x: x.casefold())
+
+    def normalize(
+        self,
+        form: str,
+    ) -> Any:
+        """
+        Return the Unicode normal form for the strings in the datarray.
+
+        For more information on the forms, see the documentation for
+        :func:`unicodedata.normalize`.
+
+        Parameters
+        ----------
+        side : {"NFC", "NFKC", "NFD", and "NFKD"}
+            Unicode form.
+
+        Returns
+        -------
+        normalized : same type as values
+        """
+        return self._apply(lambda x: normalize(form, x))
 
     def isalnum(self):
         """
