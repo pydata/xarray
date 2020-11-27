@@ -181,13 +181,13 @@ def test_replace_compiled_regex(dtype):
     values = xr.DataArray(["fooBAD__barBAD__bad"]).astype(dtype)
     pat = re.compile(dtype("BAD[_]*"))
 
-    with pytest.raises(ValueError, match="case and flags cannot be"):
+    with pytest.raises(ValueError, match="flags cannot be set"):
         result = values.str.replace(pat, "", flags=re.IGNORECASE)
 
-    with pytest.raises(ValueError, match="case and flags cannot be"):
+    with pytest.raises(ValueError, match="case cannot be set"):
         result = values.str.replace(pat, "", case=False)
 
-    with pytest.raises(ValueError, match="case and flags cannot be"):
+    with pytest.raises(ValueError, match="case cannot be set"):
         result = values.str.replace(pat, "", case=True)
 
     # test with callable

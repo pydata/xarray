@@ -77,6 +77,7 @@ class StringAccessor:
     """
 
     __slots__ = ("_obj",)
+    _pattern_type = type(re.compile(""))
 
     def __init__(self, obj):
         self._obj = obj
@@ -88,6 +89,30 @@ class StringAccessor:
 
         g = np.vectorize(f, otypes=[dtype])
         return apply_ufunc(g, self._obj, dask="parallelized", output_dtypes=[dtype])
+
+    def _check_is_compiled_re(self, pat):
+        return isinstance(pat, self._pattern_type)
+
+    def _re_compile(self, pat, flags, case=None):
+        is_compiled_re = self._check_is_compiled_re(pat)
+
+        if is_compiled_re and flags != 0:
+            raise ValueError("flags cannot be set when pat is a compiled regex")
+
+        if is_compiled_re and case is not None:
+            raise ValueError("case cannot be set when pat is a compiled regex")
+
+        if is_compiled_re:
+            return pat
+
+        if case is None:
+            case = True
+
+        if not case:
+            flags |= re.IGNORECASE
+
+        pat = self._obj.dtype.type(pat)
+        return re.compile(pat, flags=flags)
 
     def len(self):
         """
@@ -355,7 +380,8 @@ class StringAccessor:
 
     def count(
         self,
-        pat: str,
+        pat: Any,
+        case: bool = True,
         flags: int = 0,
     ) -> Any:
         """
@@ -367,8 +393,11 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : str
-            Valid regular expression.
+        pat : str or re.Pattern
+            A string contain a regular expression or
+            a compiled regular expression object.
+        case : bool, default: True
+            If True, case sensitive.
         flags : int, default: 0
             Flags for the `re` module. Use 0 for no flags. For a complete list,
             `see here <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
@@ -377,9 +406,9 @@ class StringAccessor:
         -------
         counts : array of int
         """
-        pat = self._obj.dtype.type(pat)
-        regex = re.compile(pat, flags=flags)
-        f = lambda x: len(regex.findall(x))
+        pat = self._re_compile(pat, flags, case)
+
+        f = lambda x: len(pat.findall(x))
         return self._apply(f, dtype=int)
 
     def startswith(
@@ -557,8 +586,8 @@ class StringAccessor:
 
     def contains(
         self,
-        pat: str,
-        case: bool = True,
+        pat: Any,
+        case: bool = None,
         flags: int = 0,
         regex: bool = True,
     ) -> Any:
@@ -570,8 +599,9 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : str
-            Character sequence or regular expression.
+        pat : str or re.Pattern
+            Character sequence, a string containing a regular expression,
+            or a compiled regular expression object.
         case : bool, default: True
             If True, case sensitive.
         flags : int, default: 0
@@ -588,19 +618,21 @@ class StringAccessor:
             given pattern is contained within the string of each element
             of the array.
         """
-        pat = self._obj.dtype.type(pat)
+        is_compiled_re = self._check_is_compiled_re(pat)
+        if is_compiled_re and not regex:
+            raise ValueError(
+                "Must use regular expression matching for regular expression object."
+            )
+
         if regex:
-            if not case:
-                flags |= re.IGNORECASE
-
-            regex_obj = re.compile(pat, flags=flags)
-
-            if regex_obj.groups > 0:  # pragma: no cover
+            pat = self._re_compile(pat, flags, case)
+            if pat.groups > 0:  # pragma: no cover
                 raise ValueError("This pattern has match groups.")
 
-            f = lambda x: bool(regex_obj.search(x))
+            f = lambda x: bool(pat.search(x))
         else:
-            if case:
+            pat = self._obj.dtype.type(pat)
+            if case or case is None:
                 f = lambda x: pat in x
             else:
                 uppered = self._obj.str.upper()
@@ -619,8 +651,9 @@ class StringAccessor:
 
         Parameters
         ----------
-        pat : str
-            Character sequence or regular expression
+        pat : str or re.Pattern
+            A string containing a regular expression or
+            a compiled regular expression object.
         case : bool, default: True
             If True, case sensitive
         flags : int, default: 0
@@ -630,11 +663,23 @@ class StringAccessor:
         -------
         matched : array of bool
         """
-        if not case:
-            flags |= re.IGNORECASE
+        is_compiled_re = self._check_is_compiled_re(pat)
 
-        pat = self._obj.dtype.type(pat)
-        regex = re.compile(pat, flags=flags)
+        if is_compiled_re and flags != 0:
+            raise ValueError("flags cannot be set when pat is a compiled regex")
+
+        if is_compiled_re and case is not None:
+            raise ValueError("case cannot be set when pat is a compiled regex")
+
+        if case is None:
+            case = True
+
+        if not is_compiled_re:
+            if not case:
+                flags |= re.IGNORECASE
+            pat = self._obj.dtype.type(pat)
+            regex = re.compile(pat, flags=flags)
+
         f = lambda x: bool(regex.match(x))
         return self._apply(f, dtype=bool)
 
@@ -932,7 +977,7 @@ class StringAccessor:
 
     def replace(
         self,
-        pat: Union[str, Any],
+        pat: Any,
         repl: Union[str, Callable],
         n: int = -1,
         case: bool = None,
@@ -971,45 +1016,27 @@ class StringAccessor:
             A copy of the object with all matching occurrences of `pat`
             replaced by `repl`.
         """
-        if not (_is_str_like(repl) or callable(repl)):  # pragma: no cover
+        if not _is_str_like(repl) and not callable(repl):  # pragma: no cover
             raise TypeError("repl must be a string or callable")
-
-        if _is_str_like(pat):
-            pat = self._obj.dtype.type(pat)
 
         if _is_str_like(repl):
             repl = self._obj.dtype.type(repl)
 
-        is_compiled_re = isinstance(pat, type(re.compile("")))
-        if regex:
-            if is_compiled_re:
-                if (case is not None) or (flags != 0):
-                    raise ValueError(
-                        "case and flags cannot be set when pat is a compiled regex"
-                    )
-            else:
-                # not a compiled regex
-                # set default case
-                if case is None:
-                    case = True
+        is_compiled_re = self._check_is_compiled_re(pat)
+        if not regex and is_compiled_re:
+            raise ValueError(
+                "Cannot use a compiled regex as replacement pattern with regex=False"
+            )
 
-                # add case flag, if provided
-                if case is False:
-                    flags |= re.IGNORECASE
-            if is_compiled_re or len(pat) > 1 or flags or callable(repl):
-                n = n if n >= 0 else 0
-                compiled = re.compile(pat, flags=flags)
-                f = lambda x: compiled.sub(repl=repl, string=x, count=n)
-            else:
-                f = lambda x: x.replace(pat, repl, n)
+        if not regex and callable(repl):
+            raise ValueError("Cannot use a callable replacement when regex=False")
+
+        if regex:
+            pat = self._re_compile(pat, flags, case)
+            n = n if n >= 0 else 0
+            f = lambda x: pat.sub(repl=repl, string=x, count=n)
         else:
-            if is_compiled_re:
-                raise ValueError(
-                    "Cannot use a compiled regex as replacement "
-                    "pattern with regex=False"
-                )
-            if callable(repl):
-                raise ValueError("Cannot use a callable replacement when regex=False")
+            pat = self._obj.dtype.type(pat)
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)
 
