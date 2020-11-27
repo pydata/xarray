@@ -1405,8 +1405,6 @@ class TestDataArray:
         )
         assert_identical(actual, expected)
 
-        with pytest.raises(TypeError):
-            data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, "cannot be found"):
             data.reset_coords("foo", drop=True)
         with raises_regex(ValueError, "cannot be found"):
@@ -1870,10 +1868,6 @@ class TestDataArray:
 
         obj = self.mda.reorder_levels(x=["level_2", "level_1"])
         assert_identical(obj, expected)
-
-        with pytest.raises(TypeError):
-            array = self.mda.copy()
-            array.reorder_levels(x=["level_2", "level_1"], inplace=True)
 
         array = DataArray([1, 2], dims="x")
         with pytest.raises(KeyError):
