@@ -94,7 +94,9 @@ Documentation
 ~~~~~~~~~~~~~
 - document the API not supported with duck arrays (:pull:`4530`).
   By `Justus Magin <https://github.com/keewis>`_.
-
+- Mention the possibility to pass functions to :py:meth:`Dataset.where` or
+  :py:meth:`DataArray.where` in the parameter documentation (:issue:`4223`, :pull:`4613`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
   (:pull:`4532`);
   By `Jimmy Westling <https://github.com/illviljan>`_.
