@@ -40,6 +40,7 @@
 import codecs
 import re
 import textwrap
+from typing import Any, Callable, Mapping, Union
 
 import numpy as np
 
@@ -104,7 +105,11 @@ class StringAccessor:
         else:
             return self.get(key)
 
-    def get(self, i, default=""):
+    def get(
+        self,
+        i: int,
+        default: str = "",
+    ) -> Any:
         """
         Extract character number `i` from each string in the array.
 
@@ -129,7 +134,12 @@ class StringAccessor:
 
         return self._apply(f)
 
-    def slice(self, start=None, stop=None, step=None):
+    def slice(
+        self,
+        start: int = None,
+        stop: int = None,
+        step: int = None,
+    ) -> Any:
         """
         Slice substrings from each string in the array.
 
@@ -150,7 +160,12 @@ class StringAccessor:
         f = lambda x: x[s]
         return self._apply(f)
 
-    def slice_replace(self, start=None, stop=None, repl=""):
+    def slice_replace(
+        self,
+        start: int = None,
+        stop: int = None,
+        repl: str = "",
+    ) -> Any:
         """
         Replace a positional slice of a string with another value.
 
@@ -338,7 +353,11 @@ class StringAccessor:
         """
         return self._apply(lambda x: x.isupper(), dtype=bool)
 
-    def count(self, pat, flags=0):
+    def count(
+        self,
+        pat: str,
+        flags: int = 0,
+    ) -> Any:
         """
         Count occurrences of pattern in each string of the array.
 
@@ -363,7 +382,10 @@ class StringAccessor:
         f = lambda x: len(regex.findall(x))
         return self._apply(f, dtype=int)
 
-    def startswith(self, pat):
+    def startswith(
+        self,
+        pat: str,
+    ) -> Any:
         """
         Test if the start of each string in the array matches a pattern.
 
@@ -382,7 +404,10 @@ class StringAccessor:
         f = lambda x: x.startswith(pat)
         return self._apply(f, dtype=bool)
 
-    def endswith(self, pat):
+    def endswith(
+        self,
+        pat: str,
+    ) -> Any:
         """
         Test if the end of each string in the array matches a pattern.
 
@@ -401,7 +426,12 @@ class StringAccessor:
         f = lambda x: x.endswith(pat)
         return self._apply(f, dtype=bool)
 
-    def pad(self, width, side="left", fillchar=" "):
+    def pad(
+        self,
+        width: int,
+        side: str = "left",
+        fillchar: str = " ",
+    ) -> Any:
         """
         Pad strings in the array up to width.
 
@@ -436,7 +466,11 @@ class StringAccessor:
 
         return self._apply(f)
 
-    def center(self, width, fillchar=" "):
+    def center(
+        self,
+        width: int,
+        fillchar: str = " ",
+    ) -> Any:
         """
         Pad left and right side of each string in the array.
 
@@ -454,7 +488,11 @@ class StringAccessor:
         """
         return self.pad(width, side="both", fillchar=fillchar)
 
-    def ljust(self, width, fillchar=" "):
+    def ljust(
+        self,
+        width: int,
+        fillchar: str = " ",
+    ) -> Any:
         """
         Pad right side of each string in the array.
 
@@ -472,7 +510,11 @@ class StringAccessor:
         """
         return self.pad(width, side="right", fillchar=fillchar)
 
-    def rjust(self, width, fillchar=" "):
+    def rjust(
+        self,
+        width: int,
+        fillchar: str = " ",
+    ) -> Any:
         """
         Pad left side of each string in the array.
 
@@ -490,7 +532,10 @@ class StringAccessor:
         """
         return self.pad(width, side="left", fillchar=fillchar)
 
-    def zfill(self, width):
+    def zfill(
+        self,
+        width: int,
+    ) -> Any:
         """
         Pad each string in the array by prepending '0' characters.
 
@@ -510,7 +555,13 @@ class StringAccessor:
         """
         return self.pad(width, side="left", fillchar="0")
 
-    def contains(self, pat, case=True, flags=0, regex=True):
+    def contains(
+        self,
+        pat: str,
+        case: bool = True,
+        flags: int = 0,
+        regex: bool = True,
+    ) -> Any:
         """
         Test if pattern or regex is contained within each string of the array.
 
@@ -542,12 +593,12 @@ class StringAccessor:
             if not case:
                 flags |= re.IGNORECASE
 
-            regex = re.compile(pat, flags=flags)
+            regex_obj = re.compile(pat, flags=flags)
 
-            if regex.groups > 0:  # pragma: no cover
+            if regex_obj.groups > 0:  # pragma: no cover
                 raise ValueError("This pattern has match groups.")
 
-            f = lambda x: bool(regex.search(x))
+            f = lambda x: bool(regex_obj.search(x))
         else:
             if case:
                 f = lambda x: pat in x
@@ -557,7 +608,12 @@ class StringAccessor:
 
         return self._apply(f, dtype=bool)
 
-    def match(self, pat, case=True, flags=0):
+    def match(
+        self,
+        pat: str,
+        case: bool = True,
+        flags: int = 0,
+    ) -> Any:
         """
         Determine if each string in the array matches a regular expression.
 
@@ -582,7 +638,11 @@ class StringAccessor:
         f = lambda x: bool(regex.match(x))
         return self._apply(f, dtype=bool)
 
-    def strip(self, to_strip=None, side="both"):
+    def strip(
+        self,
+        to_strip: str = None,
+        side: str = "both",
+    ) -> Any:
         """
         Remove leading and trailing characters.
 
@@ -616,7 +676,10 @@ class StringAccessor:
 
         return self._apply(f)
 
-    def lstrip(self, to_strip=None):
+    def lstrip(
+        self,
+        to_strip: str = None,
+    ) -> Any:
         """
         Remove leading characters.
 
@@ -636,7 +699,10 @@ class StringAccessor:
         """
         return self.strip(to_strip, side="left")
 
-    def rstrip(self, to_strip=None):
+    def rstrip(
+        self,
+        to_strip: str = None,
+    ) -> Any:
         """
         Remove trailing characters.
 
@@ -656,7 +722,11 @@ class StringAccessor:
         """
         return self.strip(to_strip, side="right")
 
-    def wrap(self, width, **kwargs):
+    def wrap(
+        self,
+        width: int,
+        **kwargs,
+    ) -> Any:
         """
         Wrap long strings in the array in paragraphs with length less than `width`.
 
@@ -678,7 +748,10 @@ class StringAccessor:
         f = lambda x: "\n".join(tw.wrap(x))
         return self._apply(f)
 
-    def translate(self, table):
+    def translate(
+        self,
+        table: Mapping[str, str],
+    ) -> Any:
         """
         Map characters of each string through the given mapping table.
 
@@ -697,7 +770,10 @@ class StringAccessor:
         f = lambda x: x.translate(table)
         return self._apply(f)
 
-    def repeat(self, repeats):
+    def repeat(
+        self,
+        repeats: int,
+    ) -> Any:
         """
         Duplicate each string in the array.
 
@@ -714,7 +790,13 @@ class StringAccessor:
         f = lambda x: repeats * x
         return self._apply(f)
 
-    def find(self, sub, start=0, end=None, side="left"):
+    def find(
+        self,
+        sub: str,
+        start: int = 0,
+        end: int = None,
+        side: str = "left",
+    ) -> Any:
         """
         Return lowest or highest indexes in each strings in the array
         where the substring is fully contained between [start:end].
@@ -751,7 +833,12 @@ class StringAccessor:
 
         return self._apply(f, dtype=int)
 
-    def rfind(self, sub, start=0, end=None):
+    def rfind(
+        self,
+        sub: str,
+        start: int = 0,
+        end: int = None,
+    ) -> Any:
         """
         Return highest indexes in each strings in the array
         where the substring is fully contained between [start:end].
@@ -772,7 +859,13 @@ class StringAccessor:
         """
         return self.find(sub, start=start, end=end, side="right")
 
-    def index(self, sub, start=0, end=None, side="left"):
+    def index(
+        self,
+        sub: str,
+        start: int = 0,
+        end: int = None,
+        side: str = "left",
+    ) -> Any:
         """
         Return lowest or highest indexes in each strings where the substring is
         fully contained between [start:end]. This is the same as
@@ -810,7 +903,12 @@ class StringAccessor:
 
         return self._apply(f, dtype=int)
 
-    def rindex(self, sub, start=0, end=None):
+    def rindex(
+        self,
+        sub: str,
+        start: int = 0,
+        end: int = None,
+    ) -> Any:
         """
         Return highest indexes in each strings where the substring is
         fully contained between [start:end]. This is the same as
@@ -832,7 +930,15 @@ class StringAccessor:
         """
         return self.index(sub, start=start, end=end, side="right")
 
-    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+    def replace(
+        self,
+        pat: Union[str, Any],
+        repl: Union[str, Callable],
+        n: int = -1,
+        case: bool = None,
+        flags: int = 0,
+        regex: bool = True,
+    ) -> Any:
         """
         Replace occurrences of pattern/regex in the array with some string.
 
@@ -907,7 +1013,11 @@ class StringAccessor:
             f = lambda x: x.replace(pat, repl, n)
         return self._apply(f)
 
-    def decode(self, encoding, errors="strict"):
+    def decode(
+        self,
+        encoding: str,
+        errors: str = "strict",
+    ) -> Any:
         """
         Decode character string in the array using indicated encoding.
 
@@ -927,7 +1037,11 @@ class StringAccessor:
             f = lambda x: decoder(x, errors)[0]
         return self._apply(f, dtype=np.str_)
 
-    def encode(self, encoding, errors="strict"):
+    def encode(
+        self,
+        encoding: str,
+        errors: str = "strict",
+    ) -> Any:
         """
         Encode character string in the array using indicated encoding.
 
