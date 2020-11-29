@@ -1268,6 +1268,70 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self._file_obj.close()
         self._file_obj = None
 
+    def isnull(self):
+        """Test each value in the array for whether it is a missing value.
+
+        Returns
+        -------
+        isnull : DataArray or Dataset
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.isnull
+
+        Examples
+        --------
+        >>> array = xr.DataArray([1, np.nan, 3], dims="x")
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([ 1., nan,  3.])
+        Dimensions without coordinates: x
+        >>> array.isnull()
+        <xarray.DataArray (x: 3)>
+        array([False,  True, False])
+        Dimensions without coordinates: x
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+        )
+
+    def notnull(self):
+        """Test each value in the array for whether it is not a missing value.
+
+        Returns
+        -------
+        notnull : DataArray or Dataset
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.notnull
+
+        Examples
+        --------
+        >>> array = xr.DataArray([1, np.nan, 3], dims="x")
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([ 1., nan,  3.])
+        Dimensions without coordinates: x
+        >>> array.notnull()
+        <xarray.DataArray (x: 3)>
+        array([ True, False,  True])
+        Dimensions without coordinates: x
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+        )
+
     def isin(self, test_elements):
         """Tests each value in the array for whether it is in test elements.
 
