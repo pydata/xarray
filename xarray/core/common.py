@@ -1268,7 +1268,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self._file_obj.close()
         self._file_obj = None
 
-    def isnull(self):
+    def isnull(self, keep_attrs: bool = None):
         """Test each value in the array for whether it is a missing value.
 
         Returns
@@ -1294,13 +1294,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         from .computation import apply_ufunc
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         return apply_ufunc(
             duck_array_ops.isnull,
             self,
             dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
-    def notnull(self):
+    def notnull(self, keep_attrs: bool = None):
         """Test each value in the array for whether it is not a missing value.
 
         Returns
@@ -1326,10 +1330,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         from .computation import apply_ufunc
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         return apply_ufunc(
             duck_array_ops.notnull,
             self,
             dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
     def isin(self, test_elements):
