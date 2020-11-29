@@ -3784,12 +3784,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self._replace(**merge_result._asdict())
 
-    def _assert_all_in_dataset(
-        self, names: Iterable[Hashable], virtual_okay: bool = False
-    ) -> None:
+    def _assert_all_in_dataset(self, names: Iterable[Hashable]) -> None:
         bad_names = set(names) - set(self._variables)
-        if virtual_okay:
-            bad_names -= self.virtual_variables
         if bad_names:
             raise ValueError(
                 "One or more of the specified variables "
@@ -6132,7 +6128,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
                 skipna_da = True
             elif skipna is None:
-                skipna_da = np.any(da.isnull())
+                # no type checking because ops are injected
+                skipna_da = np.any(da.isnull())  # type: ignore
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
             stacked_coords: Dict[Hashable, DataArray] = {}

@@ -137,6 +137,11 @@ Internal Changes
   By `Yash Saboo <https://github.com/yashsaboo>`_, `Nirupam K N
   <https://github.com/Nirupamkn>`_ and `Mathias Hauser
   <https://github.com/mathause>`_.
+  - Added ``@no_type_check`` to ``__getattr__`` of :py:class:`Dataset` and :py:class:`DataArray`.
+  This can help to identify missing methods but may lead to typing errors in downstream libraries.
+  The recommendation in this case is to use the index operator when accessing variables or
+  coordinates, e.g. ``da["longitude"]``, and to add ``#type: ignore`` for accessors, e.g.
+  ``da.geo  # type: ignore`` (:issue:`4601`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 

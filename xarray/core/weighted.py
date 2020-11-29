@@ -154,7 +154,8 @@ class Weighted:
         """ Calculate the sum of weights, accounting for missing values """
 
         # we need to mask data values that are nan; else the weights are wrong
-        mask = da.notnull()
+        # no type checking because ops are injected
+        mask = da.notnull()  # type: ignore
 
         # bool -> int, because ``xr.dot([True, True], [True, True])`` -> True
         # (and not 2); GH4074

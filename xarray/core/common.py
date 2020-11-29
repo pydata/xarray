@@ -14,6 +14,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    no_type_check,
 )
 
 import numpy as np
@@ -218,6 +219,7 @@ class AttrAccessMixin:
         """List of places to look-up items for key-autocompletion"""
         return []
 
+    @no_type_check  # so missing methods raise a type error
     def __getattr__(self, name: str) -> Any:
         if name not in {"__dict__", "__setstate__"}:
             # this avoids an infinite loop when pickle looks for the
@@ -365,7 +367,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         numpy.squeeze
         """
         dims = get_squeeze_dims(self, dim, axis)
-        return self.isel(drop=drop, **{d: 0 for d in dims})
+        return self.isel({d: 0 for d in dims}, drop=drop)
 
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
@@ -693,7 +695,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 f"`squeeze` must be True or False, but {squeeze} was supplied"
             )
 
-        return self._groupby_cls(
+        return self._groupby_cls(  # type: ignore
             self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
         )
 
@@ -756,7 +758,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        return self._groupby_cls(
+        return self._groupby_cls(  # type: ignore
             self,
             group,
             squeeze=squeeze,
@@ -787,7 +789,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Missing values can be replaced by ``weights.fillna(0)``.
         """
 
-        return self._weighted_cls(self, weights)
+        return self._weighted_cls(self, weights)  # type: ignore
 
     def rolling(
         self,
@@ -861,7 +863,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(
+        return self._rolling_cls(  # type: ignore
             self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
         )
 
@@ -972,7 +974,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
-        return self._coarsen_cls(
+        return self._coarsen_cls(  # type: ignore
             self,
             dim,
             boundary=boundary,
@@ -1139,7 +1141,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
-        resampler = self._resample_cls(
+        resampler = self._resample_cls(  # type: ignore
             self,
             group=group,
             dim=dim_name,
@@ -1374,6 +1376,52 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def __getitem__(self, value):
         # implementations of this class should implement this method
+        raise NotImplementedError()
+
+    def isel(
+        self,
+        indexers: Mapping[Hashable, Any] = None,
+        drop: bool = False,
+        missing_dims: str = "raise",
+        **indexers_kwargs: Any,
+    ):
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    @property
+    def dims(self):
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    @property
+    def indexes(self):
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    @property
+    def sizes(self):
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    def copy(self, deep=True, data=None):
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    @property
+    def encoding(self) -> Dict:
+        # implementations of this class should implement this method / for type checking
+        raise NotImplementedError()
+
+    def reindex(
+        self,
+        indexers: Mapping[Hashable, Any] = None,
+        method: str = None,
+        tolerance=None,
+        copy: bool = True,
+        fill_value: Any = dtypes.NA,
+        **indexers_kwargs: Any,
+    ):
+        # implementations of this class should implement this method / for type checking
         raise NotImplementedError()
 
 
