@@ -2101,7 +2101,7 @@ class Variable(
 
         Examples
         --------
-        >>> var = xr.Variable([1, np.nan, 3], dims="x")
+        >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
         <xarray.Variable (x: 3)>
         array([ 1., nan,  3.])
@@ -2135,7 +2135,7 @@ class Variable(
 
         Examples
         --------
-        >>> var = xr.Variable([1, np.nan, 3], dims="x")
+        >>> var = xr.Variable("x", [1, np.nan, 3])
         >>> var
         <xarray.Variable (x: 3)>
         array([ 1., nan,  3.])
