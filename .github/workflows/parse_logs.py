@@ -11,18 +11,17 @@ args = parser.parse_args()
 filepaths = sorted(p for p in args.filepaths if p.is_file())
 
 
-def extract_short_test_summary_info(path):
-    with open(path) as f:
-        lines = (line.rstrip() for line in f)
-        up_to_start_of_section = itertools.dropwhile(
-            lambda l: "=== short test summary info ===" not in l,
-            lines,
-        )
-        up_to_section_content = itertools.islice(up_to_start_of_section, 1, None)
-        section_content = itertools.takewhile(
-            lambda l: l.startswith("FAILED"), up_to_section_content
-        )
-        content = "\n".join(section_content)
+def extract_short_test_summary_info(raw_lines):
+    lines = (line.rstrip() for line in raw_lines)
+    up_to_start_of_section = itertools.dropwhile(
+        lambda l: "=== short test summary info ===" not in l,
+        lines,
+    )
+    up_to_section_content = itertools.islice(up_to_start_of_section, 1, None)
+    section_content = itertools.takewhile(
+        lambda l: l.startswith("FAILED"), up_to_section_content
+    )
+    content = "\n".join(section_content)
 
     return content
 
@@ -30,7 +29,8 @@ def extract_short_test_summary_info(path):
 def format_log_message(path):
     py_version = path.name.split("-")[1]
     summary = f"Python {py_version} Test Summary Info"
-    data = extract_short_test_summary_info(path)
+    with open(path) as f:
+        data = extract_short_test_summary_info(f)
     message = textwrap.dedent(
         f"""\
         <details><summary>{summary}</summary>
