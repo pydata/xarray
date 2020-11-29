@@ -89,6 +89,13 @@ pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd)
 
 
 def isnull(data):
+    """Test each value in the array for whether it is missing.
+
+    Returns
+    -------
+    isnull: DataArray or Dataset
+        Same type and shape as object, but the dtype of the data is bool.
+    """
     data = asarray(data)
     scalar_type = data.dtype.type
     if issubclass(scalar_type, (np.datetime64, np.timedelta64)):
@@ -115,6 +122,13 @@ def isnull(data):
 
 
 def notnull(data):
+    """Test each value in the array for whether it is not missing.
+
+    Returns
+    -------
+    notnull: DataArray or Dataset
+        Same type and shape as object, but the dtype of the data is bool.
+    """
     return ~isnull(data)
 
 
