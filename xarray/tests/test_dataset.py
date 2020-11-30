@@ -54,6 +54,11 @@ try:
 except ImportError:
     pass
 
+pytestmark = [
+    pytest.mark.filterwarnings("error:Mean of empty slice"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
+]
+
 
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)
@@ -2568,12 +2573,6 @@ class TestDataset:
         newnames = {"var1": "var1", "dim2": "dim2"}
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
-
-    def test_rename_inplace(self):
-        times = pd.date_range("2000-01-01", periods=3)
-        data = Dataset({"z": ("x", [2, 3, 4]), "t": ("t", times)})
-        with pytest.raises(TypeError):
-            data.rename({"x": "y"}, inplace=True)
 
     def test_rename_dims(self):
         original = Dataset({"x": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42})
@@ -5995,33 +5994,115 @@ def test_coarsen_keep_attrs():
     xr.testing.assert_identical(ds, ds2)
 
 
-def test_rolling_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+        ("construct", ("window_dim",)),
+        ("count", ()),
+    ],
+)
+def test_rolling_keep_attrs(funcname, argument):
+    global_attrs = {"units": "test", "long_name": "testing"}
+    da_attrs = {"da_attr": "test"}
+    da_not_rolled_attrs = {"da_not_rolled_attr": "test"}
 
-    var1 = np.linspace(10, 15, 100)
-    var2 = np.linspace(5, 10, 100)
+    data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
+        data_vars={"da": ("coord", data), "da_not_rolled": ("no_coord", data)},
         coords={"coord": coords},
-        attrs=_attrs,
+        attrs=global_attrs,
     )
+    ds.da.attrs = da_attrs
+    ds.da_not_rolled.attrs = da_not_rolled_attrs
 
-    # Test dropped attrs
-    dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
-    assert dat.attrs == {}
+    # attrs are now kept per default
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == global_attrs
+    assert result.da.attrs == da_attrs
+    assert result.da_not_rolled.attrs == da_not_rolled_attrs
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
 
-    # Test kept attrs using dataset keyword
-    dat = ds.rolling(
-        dim={"coord": 5}, min_periods=None, center=False, keep_attrs=True
-    ).mean()
-    assert dat.attrs == _attrs
+    # discard attrs
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
 
-    # Test kept attrs using global option
+    # test discard attrs using global option
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
+
+    # keyword takes precedence over global option
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+
+    assert result.attrs == global_attrs
+    assert result.da.attrs == da_attrs
+    assert result.da_not_rolled.attrs == da_not_rolled_attrs
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
+
+    func = getattr(ds.rolling(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=True):
-        dat = ds.rolling(dim={"coord": 5}, min_periods=None, center=False).mean()
-    assert dat.attrs == _attrs
+        result = func(*argument, keep_attrs=False)
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_rolled.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_rolled.name == "da_not_rolled"
+
+
+def test_rolling_keep_attrs_deprecated():
+    global_attrs = {"units": "test", "long_name": "testing"}
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"da": ("coord", data)},
+        coords={"coord": coords},
+        attrs=global_attrs,
+    )
+    ds.da.attrs = attrs_da
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
+    ):
+        result = ds.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
+    ):
+        result = ds.rolling(dim={"coord": 5}, keep_attrs=True).construct(
+            "window_dim", keep_attrs=False
+        )
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
 
 
 def test_rolling_properties(ds):
@@ -6067,6 +6148,43 @@ def test_rolling_exp(ds):
 
     result = ds.rolling_exp(time=10, window_type="span").mean()
     assert isinstance(result, Dataset)
+
+
+@requires_numbagg
+def test_rolling_exp_keep_attrs(ds):
+
+    attrs_global = {"attrs": "global"}
+    attrs_z1 = {"attr": "z1"}
+
+    ds.attrs = attrs_global
+    ds.z1.attrs = attrs_z1
+
+    # attrs are kept per default
+    result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    # discard attrs
+    result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean()
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
+
+    # keyword takes precedence over global option
+    with set_options(keep_attrs=False):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=True)
+    assert result.attrs == attrs_global
+    assert result.z1.attrs == attrs_z1
+
+    with set_options(keep_attrs=True):
+        result = ds.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+    assert result.z1.attrs == {}
 
 
 @pytest.mark.parametrize("center", (True, False))

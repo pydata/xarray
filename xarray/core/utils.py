@@ -133,7 +133,7 @@ def multiindex_from_product_levels(
 
 
 def maybe_wrap_array(original, new_array):
-    """Wrap a transformed array with __array_wrap__ is it can be done safely.
+    """Wrap a transformed array with __array_wrap__ if it can be done safely.
 
     This lets us treat arbitrary functions that take and return ndarray objects
     like ufuncs, as long as they return an array with the same shape.
@@ -463,7 +463,8 @@ class SortedKeysDict(MutableMapping[K, V]):
         del self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(sorted(self.mapping))
+        # see #4571 for the reason of the type ignore
+        return iter(sorted(self.mapping))  # type: ignore
 
     def __len__(self) -> int:
         return len(self.mapping)
