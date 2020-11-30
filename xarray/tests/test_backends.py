@@ -298,6 +298,18 @@ class DatasetIOBase:
         with open_dataset(path, engine=self.engine, **kwargs) as ds:
             yield ds
 
+    def check_multiple_indexing(self, indexers, in_memory):
+        # make sure a sequence of lazy indexings certainly works.
+        with self.roundtrip(in_memory) as on_disk:
+            actual = on_disk["var3"]
+            expected = in_memory["var3"]
+            for ind in indexers:
+                actual = actual.isel(**ind)
+                expected = expected.isel(**ind)
+                # make sure the array is not yet loaded into memory
+                assert not actual.variable._in_memory
+            assert_identical(expected, actual.load())
+
     def test_zero_dimensional_variable(self):
         expected = create_test_data()
         expected["float_var"] = ([], 1.0e9, {"units": "units of awesome"})
@@ -608,10 +620,6 @@ class DatasetIOBase:
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-    @pytest.mark.xfail(
-        not has_dask,
-        reason="the code for indexing without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -629,18 +637,6 @@ class DatasetIOBase:
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-        def multiple_indexing(indexers):
-            # make sure a sequence of lazy indexings certainly works.
-            with self.roundtrip(in_memory) as on_disk:
-                actual = on_disk["var3"]
-                expected = in_memory["var3"]
-                for ind in indexers:
-                    actual = actual.isel(**ind)
-                    expected = expected.isel(**ind)
-                    # make sure the array is not yet loaded into memory
-                    assert not actual.variable._in_memory
-                assert_identical(expected, actual.load())
-
         # two-staged vectorized-indexing
         indexers = [
             {
@@ -649,7 +645,7 @@ class DatasetIOBase:
             },
             {"a": DataArray([0, 1], dims=["c"]), "b": DataArray([0, 1], dims=["c"])},
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
 
         # vectorized-slice mixed
         indexers = [
@@ -658,7 +654,7 @@ class DatasetIOBase:
                 "dim3": slice(None, 10),
             }
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
 
         # vectorized-integer mixed
         indexers = [
@@ -666,7 +662,7 @@ class DatasetIOBase:
             {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
             {"a": slice(None, None, 2)},
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
 
         # vectorized-integer mixed
         indexers = [
@@ -674,7 +670,14 @@ class DatasetIOBase:
             {"dim1": DataArray([[0, 7], [2, 6], [3, 5]], dims=["a", "b"])},
             {"a": 1, "b": 0},
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
+
+    @pytest.mark.xfail(
+        not has_dask,
+        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+    )
+    def test_vectorized_indexing_negative_step_slice(self):
+        in_memory = create_test_data()
 
         # with negative step slice.
         indexers = [
@@ -683,7 +686,7 @@ class DatasetIOBase:
                 "dim3": slice(-1, 1, -1),
             }
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
 
         # with negative step slice.
         indexers = [
@@ -692,7 +695,7 @@ class DatasetIOBase:
                 "dim3": slice(-1, 1, -2),
             }
         ]
-        multiple_indexing(indexers)
+        self.check_multiple_indexing(indexers, in_memory)
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
@@ -2167,6 +2170,10 @@ class ZarrBase(CFEncodedBase):
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
+    @requires_dask
+    def test_vectorized_indexing_negative_step_slice(self):
+        super().test_vectorized_indexing_negative_step_slice
 
 
 @requires_zarr
