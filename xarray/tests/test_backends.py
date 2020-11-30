@@ -672,10 +672,6 @@ class DatasetIOBase:
         ]
         self.check_multiple_indexing(indexers, in_memory)
 
-    @pytest.mark.xfail(
-        not has_dask,
-        reason="the code for indexing without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing_negative_step_slice(self):
         in_memory = create_test_data()
 
