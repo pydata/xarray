@@ -925,7 +925,7 @@ storage buckets using zarr. This example uses the `gcsfs`_ package to provide
 an interface to `Google Cloud Storage`_.
 
 From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
-automatically when reading, such that you can open a dataset ina  single
+automatically when reading, such that you can open a dataset in a single
 call. You should include any arguments to the storage backend as the
 key ``storage_options``, part of ``backend_kwargs``.
 
