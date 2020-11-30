@@ -1519,15 +1519,15 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        da = xr.DataArray(
-            data=[
-                [0.1, 4.3, 2.1, 9.8],
-                [2.4, 7.9, 0.6, np.nan],
-                [6.9, np.nan, 5.3, 8.7],
-            ],
-            dims=("x", "y"),
-            coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
-        )
+        >>> da = xr.DataArray(
+        ...     data=[
+        ...         [0.1, 4.3, 2.1, 9.8],
+        ...         [2.4, 7.9, 0.6, np.nan],
+        ...         [6.9, np.nan, 5.3, 8.7],
+        ...     ],
+        ...     dims=("x", "y"),
+        ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
+        ... )
         >>> da
         <xarray.DataArray (x: 3, y: 4)>
         array([[0.1, 4.3, 2.1, 9.8],
@@ -2374,6 +2374,10 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     [np.nan, 2, 3, np.nan, 0], dims="x", coords={"x": [0, 1, 2, 3, 4]}
         ... )
         >>> da
+        <xarray.DataArray (x: 5)>
+        array([nan,  2.,  3., nan,  0.])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
 
         >>> da.interpolate_na(dim="x", method="linear")
         <xarray.DataArray (x: 5)>
