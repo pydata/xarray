@@ -2711,6 +2711,78 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={
+        ...         "a": ("x", [5, 7, 4]),
+        ...         "b": (
+        ...             ("x", "y"),
+        ...             [
+        ...                 [0.1, 4.3, 2.1, 9.8],
+        ...                 [2.4, 7.9, 0.6, np.nan],
+        ...                 [6.9, np.nan, 5.3, 8.7],
+        ...             ],
+        ...         ),
+        ...     },
+        ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * y        (y) int64 10 12 14 16
+        Data variables:
+            a        (x) int64 5 7 4
+            b        (x, y) float64 0.1 4.3 2.1 9.8 2.4 7.9 0.6 nan 6.9 nan 5.3 8.7
+
+        1D interpolation with the default method (linear):
+        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75])
+        <xarray.Dataset>
+        Dimensions:  (x: 3)
+        Coordinates:
+            y        (x) float64 0.25 0.5 0.75
+          * x        (x) float64 -0.5 0.0 0.5
+        Data variables:
+            a        (x) float64 5.5 6.0 6.5
+            b        (x) float64 0.675 1.25 1.825
+
+        1D interpolation with a different method:
+        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.25 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 7.0 7.0 4.0
+            b        (x, y) float64 0.1 4.3 2.1 9.8 2.4 7.9 ... 0.6 nan 6.9 nan 5.3 8.7
+
+        1D extrapolation:
+        >>> ds.interp(
+        ...     x=[1.5, 2.5, 3.5], method="linear", kwargs={"fill_value": "extrapolate"}
+        ... )
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 1.5 2.5 3.5
+        Data variables:
+            a        (x) float64 5.5 2.5 -0.5
+            b        (x, y) float64 4.65 nan 2.95 nan 9.15 ... nan 13.65 nan 12.35 nan
+
+        2D interpolation:
+        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 3)
+        Coordinates:
+          * x        (x) float64 0.25 0.75 1.25 1.75
+          * y        (y) int64 11 13 15
+        Data variables:
+            a        (x) float64 5.5 6.5 6.25 4.75
+            b        (x, y) float64 2.938 3.463 nan 4.412 3.987 ... nan nan nan nan nan
         """
         from . import missing
 
@@ -5974,6 +6046,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
+        ...
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)
