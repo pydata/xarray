@@ -672,12 +672,12 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers)
 
-    def test_vectorized_indexing_negative_step_slice(self):
+    def test_vectorized_indexing_negative_step_slice(self, open_kwargs=None):
         in_memory = create_test_data()
 
         def multiple_indexing(indexers):
             # make sure a sequence of lazy indexings certainly works.
-            with self.roundtrip(in_memory) as on_disk:
+            with self.roundtrip(in_memory, open_kwargs=open_kwargs) as on_disk:
                 actual = on_disk["var3"]
                 expected = in_memory["var3"]
                 for ind in indexers:
@@ -2181,7 +2181,7 @@ class ZarrBase(CFEncodedBase):
 
     @requires_dask
     def test_vectorized_indexing_negative_step_slice(self):
-        super().test_vectorized_indexing_negative_step_slice
+        super().test_vectorized_indexing_negative_step_slice(open_kwargs={"chunks": {}})
 
 
 @requires_zarr
