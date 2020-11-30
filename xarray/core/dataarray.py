@@ -1010,12 +1010,11 @@ class DataArray(AbstractArray, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None,
             Number,
             Tuple[Number, ...],
             Tuple[Tuple[Number, ...], ...],
             Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
-        ] = None,
+        ] = {},
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
