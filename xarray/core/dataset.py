@@ -359,6 +359,36 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
+def _get_chunk(name, var, chunks):
+    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
+
+    # Coordinate labels aren't chunked
+    if var.ndim == 1 and var.dims[0] == name:
+        return chunk_spec
+
+    if chunks == "auto":
+        return chunk_spec
+
+    for dim in var.dims:
+        if dim in chunks:
+            spec = chunks[dim]
+            if isinstance(spec, int):
+                spec = (spec,)
+            if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                if any(s % chunk_spec[dim] for s in spec):
+                    warnings.warn(
+                        "Specified Dask chunks %r would "
+                        "separate Zarr chunk shape %r for "
+                        "dimension %r. This significantly "
+                        "degrades performance. Consider "
+                        "rechunking after loading instead."
+                        % (chunks[dim], chunk_spec[dim], dim),
+                        stacklevel=2,
+                    )
+            chunk_spec[dim] = chunks[dim]
+    return chunk_spec
+
+
 def _maybe_chunk(
     name,
     var,
