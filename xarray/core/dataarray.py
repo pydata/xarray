@@ -1520,66 +1520,65 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     data=[
-        ...         [0.1, 4.3, 2.1, 9.8],
-        ...         [2.4, 7.9, 0.6, np.nan],
-        ...         [6.9, np.nan, 5.3, 8.7],
-        ...     ],
+        ...     data=[[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
         ...     dims=("x", "y"),
         ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
         ... )
         >>> da
         <xarray.DataArray (x: 3, y: 4)>
-        array([[0.1, 4.3, 2.1, 9.8],
-               [2.4, 7.9, 0.6, nan],
-               [6.9, nan, 5.3, 8.7]])
+        array([[ 1.,  4.,  2.,  9.],
+               [ 2.,  7.,  6., nan],
+               [ 6., nan,  5.,  8.]])
         Coordinates:
           * x        (x) int64 0 1 2
           * y        (y) int64 10 12 14 16
 
         1D linear interpolation (the default)
-        >>> da.interp(x=[0.25, 0.75, 1.25, 1.75])
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75])
         <xarray.DataArray (x: 4, y: 4)>
-        array([[0.675, 5.2  , 1.725,   nan],
-               [1.825, 7.   , 0.975,   nan],
-               [3.525,   nan, 1.775,   nan],
-               [5.775,   nan, 4.125,   nan]])
+        array([[1.  , 4.  , 2.  ,  nan],
+               [1.75, 6.25, 5.  ,  nan],
+               [3.  ,  nan, 5.75,  nan],
+               [5.  ,  nan, 5.25,  nan]])
         Coordinates:
           * y        (y) int64 10 12 14 16
-          * x        (x) float64 0.25 0.75 1.25 1.75
+          * x        (x) float64 0.0 0.75 1.25 1.75
 
         1D nearest interpolation:
-        >>> da.interp(x=[0.25, 0.75, 1.25, 1.75], method="nearest")
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
         <xarray.DataArray (x: 4, y: 4)>
-        array([[0.1, 4.3, 2.1, 9.8],
-               [2.4, 7.9, 0.6, nan],
-               [2.4, 7.9, 0.6, nan],
-               [6.9, nan, 5.3, 8.7]])
+        array([[ 1.,  4.,  2.,  9.],
+               [ 2.,  7.,  6., nan],
+               [ 2.,  7.,  6., nan],
+               [ 6., nan,  5.,  8.]])
         Coordinates:
           * y        (y) int64 10 12 14 16
-          * x        (x) float64 0.25 0.75 1.25 1.75
+          * x        (x) float64 0.0 0.75 1.25 1.75
 
         1D linear extrapolation:
         >>> da.interp(
-        ...     x=[1.5, 2.5, 3.5], method="linear", kwargs={"fill_value": "extrapolate"}
+        ...     x=[1, 1.5, 2.5, 3.5],
+        ...     method="linear",
+        ...     kwargs={"fill_value": "extrapolate"},
         ... )
-        <xarray.DataArray (x: 3, y: 4)>
-        array([[ 4.65,   nan,  2.95,   nan],
-               [ 9.15,   nan,  7.65,   nan],
-               [13.65,   nan, 12.35,   nan]])
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 2. ,  7. ,  6. ,  nan],
+               [ 4. ,  nan,  5.5,  nan],
+               [ 8. ,  nan,  4.5,  nan],
+               [12. ,  nan,  3.5,  nan]])
         Coordinates:
           * y        (y) int64 10 12 14 16
-          * x        (x) float64 1.5 2.5 3.5
+          * x        (x) float64 1.0 1.5 2.5 3.5
 
         2D linear interpolation:
-        >>> da.interp(x=[0.25, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
         <xarray.DataArray (x: 4, y: 3)>
-        array([[2.9375, 3.4625,    nan],
-               [4.4125, 3.9875,    nan],
-               [   nan,    nan,    nan],
-               [   nan,    nan,    nan]])
+        array([[2.5  , 3.   ,   nan],
+               [4.   , 5.625,   nan],
+               [  nan,   nan,   nan],
+               [  nan,   nan,   nan]])
         Coordinates:
-          * x        (x) float64 0.25 0.75 1.25 1.75
+          * x        (x) float64 0.0 0.75 1.25 1.75
           * y        (y) int64 11 13 15
         """
         if self.dtype.kind not in "uifc":
@@ -2381,7 +2380,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         >>> da.interpolate_na(dim="x", method="linear")
         <xarray.DataArray (x: 5)>
-        array([nan,  2.,  3., nan,  0.])
+        array([nan, 2. , 3. , 1.5, 0. ])
         Coordinates:
           * x        (x) int64 0 1 2 3 4
 

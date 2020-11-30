@@ -2719,11 +2719,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...         "a": ("x", [5, 7, 4]),
         ...         "b": (
         ...             ("x", "y"),
-        ...             [
-        ...                 [0.1, 4.3, 2.1, 9.8],
-        ...                 [2.4, 7.9, 0.6, np.nan],
-        ...                 [6.9, np.nan, 5.3, 8.7],
-        ...             ],
+        ...             [[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
         ...         ),
         ...     },
         ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
@@ -2736,53 +2732,55 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) int64 10 12 14 16
         Data variables:
             a        (x) int64 5 7 4
-            b        (x, y) float64 0.1 4.3 2.1 9.8 2.4 7.9 0.6 nan 6.9 nan 5.3 8.7
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 6.0 nan 6.0 nan 5.0 8.0
 
         1D interpolation with the default method (linear):
-        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75])
-        <xarray.Dataset>
-        Dimensions:  (x: 3)
-        Coordinates:
-            y        (x) float64 0.25 0.5 0.75
-          * x        (x) float64 -0.5 0.0 0.5
-        Data variables:
-            a        (x) float64 5.5 6.0 6.5
-            b        (x) float64 0.675 1.25 1.825
-
-        1D interpolation with a different method:
-        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75], method="nearest")
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 10 12 14 16
-          * x        (x) float64 0.25 0.75 1.25 1.75
+          * x        (x) float64 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 1.0 4.0 2.0 nan 1.75 6.25 ... nan 5.0 nan 5.25 nan
+
+        1D interpolation with a different method:
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
         Data variables:
             a        (x) float64 5.0 7.0 7.0 4.0
-            b        (x, y) float64 0.1 4.3 2.1 9.8 2.4 7.9 ... 0.6 nan 6.9 nan 5.3 8.7
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 ... 6.0 nan 6.0 nan 5.0 8.0
 
         1D extrapolation:
         >>> ds.interp(
-        ...     x=[1.5, 2.5, 3.5], method="linear", kwargs={"fill_value": "extrapolate"}
+        ...     x=[1, 1.5, 2.5, 3.5],
+        ...     method="linear",
+        ...     kwargs={"fill_value": "extrapolate"},
         ... )
         <xarray.Dataset>
-        Dimensions:  (x: 3, y: 4)
+        Dimensions:  (x: 4, y: 4)
         Coordinates:
           * y        (y) int64 10 12 14 16
-          * x        (x) float64 1.5 2.5 3.5
+          * x        (x) float64 1.0 1.5 2.5 3.5
         Data variables:
-            a        (x) float64 5.5 2.5 -0.5
-            b        (x, y) float64 4.65 nan 2.95 nan 9.15 ... nan 13.65 nan 12.35 nan
+            a        (x) float64 7.0 5.5 2.5 -0.5
+            b        (x, y) float64 2.0 7.0 6.0 nan 4.0 nan ... 4.5 nan 12.0 nan 3.5 nan
 
         2D interpolation:
-        >>> ds.interp(x=[0.25, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 3)
         Coordinates:
-          * x        (x) float64 0.25 0.75 1.25 1.75
+          * x        (x) float64 0.0 0.75 1.25 1.75
           * y        (y) int64 11 13 15
         Data variables:
-            a        (x) float64 5.5 6.5 6.25 4.75
-            b        (x, y) float64 2.938 3.463 nan 4.412 3.987 ... nan nan nan nan nan
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 2.5 3.0 nan 4.0 5.625 nan nan nan nan nan nan nan
         """
         from . import missing
 
@@ -5910,6 +5908,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> # Create an example dataset:
+        ...
         >>> import numpy as np
         >>> import pandas as pd
         >>> import xarray as xr
