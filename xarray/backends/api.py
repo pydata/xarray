@@ -26,7 +26,7 @@ from ..core.combine import (
     combine_by_coords,
 )
 from ..core.dataarray import DataArray
-from ..core.dataset import Dataset, _maybe_chunk, _get_chunk
+from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
