@@ -74,7 +74,8 @@ jobs:
           ls -R ./logs
       - name: Parse logs
         run: |
-          python .github/workflows/parse_logs.py
+          shopt -s globstar
+          python .github/workflows/parse_logs.py logs/**/*-log
       - name: Report failures
         uses: actions/github-script@v3
         with:
