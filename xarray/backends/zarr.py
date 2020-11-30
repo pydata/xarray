@@ -712,12 +712,6 @@ def open_backend_dataset_zarr(
     fs=None,
 ):
 
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
     if fs is not None:
         filename_or_obj = fs.get_mapper(filename_or_obj)
 
