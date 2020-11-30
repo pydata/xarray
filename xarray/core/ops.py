@@ -43,7 +43,6 @@ NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
-PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
@@ -333,10 +332,6 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
-
-    for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
-        setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
     setattr(cls, "round", cls._unary_op(f))

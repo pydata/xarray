@@ -2087,6 +2087,74 @@ class Variable(
 
         return variable.data.reshape(shape), tuple(axes)
 
+    def isnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is a missing value.
+
+        Returns
+        -------
+        isnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.isnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.isnull()
+        <xarray.Variable (x: 3)>
+        array([False,  True, False])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
+    def notnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is not a missing value.
+
+        Returns
+        -------
+        notnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.notnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.notnull()
+        <xarray.Variable (x: 3)>
+        array([ True, False,  True])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
     @property
     def real(self):
         return type(self)(self.dims, self.data.real, self._attrs)

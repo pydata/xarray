@@ -109,6 +109,9 @@ Documentation
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Add docstrings to ``isnull`` and ``notnull``, and fix the displayed signature
+  (:issue:`2760`, :pull:`4618`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
