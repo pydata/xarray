@@ -2735,6 +2735,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 6.0 nan 6.0 nan 5.0 8.0
 
         1D interpolation with the default method (linear):
+
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -2746,6 +2747,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             b        (x, y) float64 1.0 4.0 2.0 nan 1.75 6.25 ... nan 5.0 nan 5.25 nan
 
         1D interpolation with a different method:
+
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -2757,6 +2759,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 ... 6.0 nan 6.0 nan 5.0 8.0
 
         1D extrapolation:
+
         >>> ds.interp(
         ...     x=[1, 1.5, 2.5, 3.5],
         ...     method="linear",
@@ -2772,6 +2775,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             b        (x, y) float64 2.0 7.0 6.0 nan 4.0 nan ... 4.5 nan 12.0 nan 3.5 nan
 
         2D interpolation:
+
         >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 3)

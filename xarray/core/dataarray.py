@@ -1533,7 +1533,8 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) int64 0 1 2
           * y        (y) int64 10 12 14 16
 
-        1D linear interpolation (the default)
+        1D linear interpolation (the default):
+
         >>> da.interp(x=[0, 0.75, 1.25, 1.75])
         <xarray.DataArray (x: 4, y: 4)>
         array([[1.  , 4.  , 2.  ,  nan],
@@ -1545,6 +1546,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.75 1.25 1.75
 
         1D nearest interpolation:
+
         >>> da.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  4.,  2.,  9.],
@@ -1556,6 +1558,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.75 1.25 1.75
 
         1D linear extrapolation:
+
         >>> da.interp(
         ...     x=[1, 1.5, 2.5, 3.5],
         ...     method="linear",
@@ -1571,6 +1574,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 1.0 1.5 2.5 3.5
 
         2D linear interpolation:
+
         >>> da.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
         <xarray.DataArray (x: 4, y: 3)>
         array([[2.5  , 3.   ,   nan],
