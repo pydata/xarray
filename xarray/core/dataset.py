@@ -4316,6 +4316,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         numpy.interp
         scipy.interpolate
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": ("x", [np.nan, 2, 3, np.nan, 0]),
+        ...         "B": ("x", [3, 4, np.nan, 1, 7]),
+        ...         "C": ("x", [np.nan, np.nan, np.nan, 5, 0]),
+        ...         "D": ("x", [np.nan, 3, np.nan, -1, 4]),
+        ...     },
+        ...     coords={"x": [0, 1, 2, 3, 4]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 nan 0.0
+            B        (x) float64 3.0 4.0 nan 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 nan -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 1.0 -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 1.0 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 20.0 15.0 10.0 5.0 0.0
+            D        (x) float64 5.0 3.0 1.0 -1.0 4.0
         """
         from .missing import _apply_over_vars_with_dim, interp_na
 
