@@ -2367,6 +2367,25 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         numpy.interp
         scipy.interpolate
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [np.nan, 2, 3, np.nan, 0], dims="x", coords={"x": [0, 1, 2, 3, 4]}
+        ... )
+        >>> da
+
+        >>> da.interpolate_na(dim="x", method="linear")
+        <xarray.DataArray (x: 5)>
+        array([nan,  2.,  3., nan,  0.])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+
+        >>> da.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
+        <xarray.DataArray (x: 5)>
+        array([1. , 2. , 3. , 1.5, 0. ])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
         """
         from .missing import interp_na
 
