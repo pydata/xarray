@@ -226,12 +226,28 @@ def expected_weighted(da, weights, dim, skipna, operation):
         return weighted_mean
 
 
+def check_weighted_operations(data, weights, dim, skipna):
+
+    # check sum of weights
+    result = data.weighted(weights).sum_of_weights(dim)
+    expected = expected_weighted(data, weights, dim, skipna, "sum_of_weights")
+    assert_allclose(expected, result)
+
+    # check weighted sum
+    result = data.weighted(weights).sum(dim, skipna=skipna)
+    expected = expected_weighted(data, weights, dim, skipna, "sum")
+    assert_allclose(expected, result)
+
+    # check weighted mean
+    result = data.weighted(weights).mean(dim, skipna=skipna)
+    expected = expected_weighted(data, weights, dim, skipna, "mean")
+    assert_allclose(expected, result)
+
+
 @pytest.mark.parametrize("dim", ("a", "b", "c", ("a", "b"), ("a", "b", "c"), None))
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
-@pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_operations_3D(dim, operation, add_nans, skipna, as_dataset):
+def test_weighted_operations_3D(dim, add_nans, skipna):
 
     dims = ("a", "b", "c")
     coords = dict(a=[0, 1, 2, 3], b=[0, 1, 2, 3], c=[0, 1, 2, 3])
@@ -247,46 +263,29 @@ def test_weighted_operations_3D(dim, operation, add_nans, skipna, as_dataset):
 
     data = DataArray(data, dims=dims, coords=coords)
 
-    if as_dataset:
-        data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, dim, skipna)
 
-    if operation == "sum_of_weights":
-        result = data.weighted(weights).sum_of_weights(dim)
-    else:
-        result = getattr(data.weighted(weights), operation)(dim, skipna=skipna)
-
-    expected = expected_weighted(data, weights, dim, skipna, operation)
-
-    assert_allclose(expected, result)
+    data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, dim, skipna)
 
 
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
-@pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_operations_nonequal_coords(operation, as_dataset):
+def test_weighted_operations_nonequal_coords():
 
     weights = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[0, 1, 2, 3]))
     data = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[1, 2, 3, 4]))
 
-    if as_dataset:
-        data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, dim="a", skipna=None)
 
-    expected = expected_weighted(
-        data, weights, dim="a", skipna=None, operation=operation
-    )
-    result = getattr(data.weighted(weights), operation)(dim="a")
-
-    assert_allclose(expected, result)
+    data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, dim="a", skipna=None)
 
 
-@pytest.mark.parametrize("dim", ("dim_0", None))
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
 @pytest.mark.parametrize("shape_weights", ((4,), (4, 4), (4, 4, 4)))
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
-@pytest.mark.parametrize("as_dataset", (True, False))
 def test_weighted_operations_different_shapes(
-    dim, shape_data, shape_weights, operation, add_nans, skipna, as_dataset
+    shape_data, shape_weights, add_nans, skipna
 ):
 
     weights = DataArray(np.random.randn(*shape_weights))
@@ -300,17 +299,12 @@ def test_weighted_operations_different_shapes(
 
     data = DataArray(data)
 
-    if as_dataset:
-        data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, "dim_0", skipna)
+    check_weighted_operations(data, weights, None, skipna)
 
-    if operation == "sum_of_weights":
-        result = getattr(data.weighted(weights), operation)(dim)
-    else:
-        result = getattr(data.weighted(weights), operation)(dim, skipna=skipna)
-
-    expected = expected_weighted(data, weights, dim, skipna, operation)
-
-    assert_allclose(expected, result)
+    data = data.to_dataset(name="data")
+    check_weighted_operations(data, weights, "dim_0", skipna)
+    check_weighted_operations(data, weights, None, skipna)
 
 
 @pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
