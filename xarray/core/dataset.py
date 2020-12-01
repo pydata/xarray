@@ -378,8 +378,8 @@ def _get_chunk(name, var, chunks):
                 if any(s % chunk_spec[dim] for s in spec):
                     warnings.warn(
                         "Specified Dask chunks %r would "
-                        "separate Zarr chunk shape %r for "
-                        "dimension %r. This significantly "
+                        "separate on disks chunk shape %r for "
+                        "dimension %r. This could "
                         "degrades performance. Consider "
                         "rechunking after loading instead."
                         % (chunks[dim], chunk_spec[dim], dim),
