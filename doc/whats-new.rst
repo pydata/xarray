@@ -31,7 +31,7 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
-- :py:func:`Xarray.merge` with :py:attr:`combine_attrs='override'` makes a copy of the attrs (:issue:`4627`).
+- :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 
 Documentation
 ~~~~~~~~~~~~~
