@@ -15,10 +15,40 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.{0.16.3}:
+
+v{0.16.3} (unreleased)
+----------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+New Features
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.0.16.2:
 
-v0.16.2 (unreleased)
---------------------
+v0.16.2 (30 Nov 2020)
+---------------------
+
+This release brings the ability to write to limited regions of ``zarr`` files, open zarr files with :py:func:`open_dataset` and :py:func:`open_mfdataset`, increased support for propagating ``attrs`` using the ``keep_attrs`` flag, as well as numerous bugfixes and documentation improvements.
+
+Many thanks to the 31 contributors who contributed to this release:
+Aaron Spring, Akio Taniguchi, Aleksandar Jelenak, alexamici, Alexandre Poux, Anderson Banihirwe, Andrew Pauling, Ashwin Vishnu, aurghs, Brian Ward, Caleb, crusaderky, Dan Nowacki, darikg, David Brochart, David Huard, Deepak Cherian, Dion Häfner, Gerardo Rivera, Gerrit Holl, Illviljan, inakleinbottle, Jacob Tomlinson, James A. Bednar, jenssss, Joe Hamman, johnomotani, Joris Van den Bossche, Julia Kent, Julius Busecke, Kai Mühlbauer, keewis, Keisuke Fujii, Kyle Cranmer, Luke Volpatti, Mathias Hauser, Maximilian Roos, Michaël Defferrard, Michal Baumgartner, Nick R. Papior, Pascal Bourgault, Peter Hausamann, PGijsbers, Ray Bell, Romain Martinez, rpgoldman, Russell Manser, Sahid Velji, Samnan Rahee, Sander, Spencer Clark, Stephan Hoyer, Thomas Zilio, Tobias Kölling, Tom Augspurger, Wei Ji, Yash Saboo, Zeb Nicholls,
 
 Deprecations
 ~~~~~~~~~~~~
@@ -109,6 +139,9 @@ Documentation
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Add docstrings to ``isnull`` and ``notnull``, and fix the displayed signature
+  (:issue:`2760`, :pull:`4618`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
