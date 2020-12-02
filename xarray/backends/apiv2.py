@@ -11,6 +11,16 @@ from .api import (
 )
 
 
+def _get_mtime(filename_or_obj):
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+        mtime = os.path.getmtime(filename_or_obj)
+    else:
+        mtime = None
+    return mtime
+
+
 def _chunk_ds(
     backend_ds,
     filename_or_obj,
@@ -22,12 +32,7 @@ def _chunk_ds(
     if engine != "zarr":
         from dask.base import tokenize
 
-        # if passed an actual file path, augment the token with
-        # the file modification time
-        if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-            mtime = os.path.getmtime(filename_or_obj)
-        else:
-            mtime = None
+        mtime = _get_mtime(filename_or_obj)
         token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
         name_prefix = "open_dataset-%s" % token
         ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
@@ -96,7 +101,6 @@ def dataset_from_backend_dataset(
             ds.encoding["source"] = filename_or_obj
 
     return ds
-
 
 
 def resolve_decoders_kwargs(decode_cf, engine, **decoders):
