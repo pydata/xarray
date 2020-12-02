@@ -29,7 +29,7 @@ dependencies:
   - numpy
   - pandas
   - pint
-  - pip
+  - pip=20.2
   - pseudonetcdf
   - pydap
   # - pynio: not compatible with netCDF4>1.5.3; only tested in py36-bare-minimum
