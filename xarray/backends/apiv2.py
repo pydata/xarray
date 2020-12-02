@@ -1,7 +1,8 @@
 import os
 
+from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
-from . import plugins, zarr
+from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
@@ -54,10 +55,15 @@ def dataset_from_backend_dataset(
         if isinstance(chunks, int):
             chunks = dict.fromkeys(ds.dims, chunks)
 
-        variables = {
-            k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in ds.variables.items()
-        }
+        variables = {}
+        for k, v in ds.variables.items():
+            var_chunks = _get_chunk(k, v, chunks)
+            variables[k] = _maybe_chunk(
+                k,
+                v,
+                var_chunks,
+                overwrite_encoded_chunks=overwrite_encoded_chunks,
+            )
         ds2 = ds._replace(variables)
 
     else:
