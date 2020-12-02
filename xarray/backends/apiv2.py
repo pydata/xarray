@@ -12,7 +12,7 @@ from .api import (
 
 
 def dataset_from_backend_dataset(
-    ds,
+    backend_ds,
     filename_or_obj,
     engine,
     chunks,
@@ -27,7 +27,7 @@ def dataset_from_backend_dataset(
                 "Instead found %s. " % chunks
             )
 
-    _protect_dataset_variables_inplace(ds, cache)
+    _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is not None and engine != "zarr":
         from dask.base import tokenize
 
@@ -39,7 +39,7 @@ def dataset_from_backend_dataset(
             mtime = None
         token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
         name_prefix = "open_dataset-%s" % token
-        ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
+        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
     elif engine == "zarr":
 
@@ -50,13 +50,13 @@ def dataset_from_backend_dataset(
                 chunks = None
 
         if chunks is None:
-            return ds
+            return backend_ds
 
         if isinstance(chunks, int):
-            chunks = dict.fromkeys(ds.dims, chunks)
+            chunks = dict.fromkeys(backend_ds.dims, chunks)
 
         variables = {}
-        for k, v in ds.variables.items():
+        for k, v in backend_ds.variables.items():
             var_chunks = _get_chunk(k, v, chunks)
             variables[k] = _maybe_chunk(
                 k,
@@ -64,18 +64,18 @@ def dataset_from_backend_dataset(
                 var_chunks,
                 overwrite_encoded_chunks=overwrite_encoded_chunks,
             )
-        ds2 = ds._replace(variables)
+        ds = backend_ds._replace(variables)
 
     else:
-        ds2 = ds
-    ds2._file_obj = ds._file_obj
+        ds = backend_ds
+    ds._file_obj = backend_ds._file_obj
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds2.encoding["source"] = filename_or_obj
+            ds.encoding["source"] = filename_or_obj
 
-    return ds2
+    return ds
 
 
 def resolve_decoders_kwargs(decode_cf, engine, **decoders):
