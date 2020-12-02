@@ -64,7 +64,7 @@ def _chunk_ds(
     return ds
 
 
-def dataset_from_backend_dataset(
+def _dataset_from_backend_dataset(
     backend_ds,
     filename_or_obj,
     engine,
@@ -103,7 +103,7 @@ def dataset_from_backend_dataset(
     return ds
 
 
-def resolve_decoders_kwargs(decode_cf, engine, **decoders):
+def _resolve_decoders_kwargs(decode_cf, engine, **decoders):
     signature = plugins.ENGINES[engine]["signature"]
     if decode_cf is False:
         for d in decoders:
@@ -250,7 +250,7 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    decoders = resolve_decoders_kwargs(
+    decoders = _resolve_decoders_kwargs(
         decode_cf,
         engine=engine,
         mask_and_scale=mask_and_scale,
@@ -274,7 +274,7 @@ def open_dataset(
         **backend_kwargs,
         **{k: v for k, v in kwargs.items() if v is not None},
     )
-    ds = dataset_from_backend_dataset(
+    ds = _dataset_from_backend_dataset(
         backend_ds,
         filename_or_obj,
         engine,
