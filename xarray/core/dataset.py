@@ -377,12 +377,10 @@ def _get_chunk(name, var, chunks):
             if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
                 if any(s % chunk_spec[dim] for s in spec):
                     warnings.warn(
-                        "Specified Dask chunks %r would "
-                        "separate on disks chunk shape %r for "
-                        "dimension %r. This could "
-                        "degrades performance. Consider "
-                        "rechunking after loading instead."
-                        % (chunks[dim], chunk_spec[dim], dim),
+                        f"Specified Dask chunks {chunks[dim]} would separate "
+                        f"on disks chunk shape {chunk_spec[dim]} for dimension {dim}. "
+                        "This could degrade performance. "
+                        "Consider rechunking after loading instead.",
                         stacklevel=2,
                     )
             chunk_spec[dim] = chunks[dim]
