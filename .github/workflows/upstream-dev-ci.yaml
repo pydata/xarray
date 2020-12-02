@@ -53,7 +53,10 @@ jobs:
           exit 1
 
       - name: Upload artifacts
-        if: "failure()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')" # Check the exit code of previous step
+        if: |
+          failure()
+          && github.event_name == 'schedule'
+          && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v2
         with:
           name: output-${{ matrix.python-version }}-log
@@ -64,10 +67,10 @@ jobs:
     name: report
     needs: upstream-dev
     if: |
-      always() &&
-      github.event_name == 'schedule' &&
-      github.repository == 'pydata/xarray' &&
-      needs.upstream-dev.outputs.artifacts_availability =='true'
+      always()
+      && github.event_name == 'schedule'
+      && github.repository == 'pydata/xarray'
+      && needs.upstream-dev.outputs.artifacts_availability =='true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -98,7 +101,7 @@ jobs:
             const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
             const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
             const issue_body = `[Workflow Run URL](${workflow_url})\n${pytest_logs}`
-            
+
             // Run GraphQL query against GitHub API to find the most recent open issue used for reporting failures
             const query = `query($owner:String!, $name:String!, $creator:String!, $label:String!){
               repository(owner: $owner, name: $name) {
