@@ -11,24 +11,15 @@ from .api import (
 )
 
 
-def dataset_from_backend_dataset(
+def _chunk_ds(
     backend_ds,
     filename_or_obj,
     engine,
     chunks,
-    cache,
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        if chunks != "auto":
-            raise ValueError(
-                "chunks must be an int, dict, 'auto', or None. "
-                "Instead found %s. " % chunks
-            )
-
-    _protect_dataset_variables_inplace(backend_ds, cache)
-    if chunks is not None and engine != "zarr":
+    if engine != "zarr":
         from dask.base import tokenize
 
         # if passed an actual file path, augment the token with
@@ -41,7 +32,7 @@ def dataset_from_backend_dataset(
         name_prefix = "open_dataset-%s" % token
         ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
 
-    elif engine == "zarr":
+    else:
 
         if chunks == "auto":
             try:
@@ -65,9 +56,38 @@ def dataset_from_backend_dataset(
                 overwrite_encoded_chunks=overwrite_encoded_chunks,
             )
         ds = backend_ds._replace(variables)
+    return ds
 
-    else:
+
+def dataset_from_backend_dataset(
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    **extra_tokens,
+):
+    if not (isinstance(chunks, (int, dict)) or chunks is None):
+        if chunks != "auto":
+            raise ValueError(
+                "chunks must be an int, dict, 'auto', or None. "
+                "Instead found %s. " % chunks
+            )
+
+    _protect_dataset_variables_inplace(backend_ds, cache)
+    if chunks is None:
         ds = backend_ds
+    else:
+        ds = _chunk_ds(
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            **extra_tokens,
+        )
+
     ds._file_obj = backend_ds._file_obj
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
@@ -76,6 +96,7 @@ def dataset_from_backend_dataset(
             ds.encoding["source"] = filename_or_obj
 
     return ds
+
 
 
 def resolve_decoders_kwargs(decode_cf, engine, **decoders):
