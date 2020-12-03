@@ -536,7 +536,7 @@ def open_dataset(
                 k: _maybe_chunk(
                     k,
                     v,
-                    _get_chunk(k, v, chunks),
+                    _get_chunk(v, chunks),
                     overwrite_encoded_chunks=overwrite_encoded_chunks,
                 )
                 for k, v in ds.variables.items()

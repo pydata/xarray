@@ -53,7 +53,7 @@ def _chunk_ds(
 
         variables = {}
         for k, v in backend_ds.variables.items():
-            var_chunks = _get_chunk(k, v, chunks)
+            var_chunks = _get_chunk(v, chunks)
             variables[k] = _maybe_chunk(
                 k,
                 v,
