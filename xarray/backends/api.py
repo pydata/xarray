@@ -377,10 +377,12 @@ def open_dataset(
         "netcdf4".
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
