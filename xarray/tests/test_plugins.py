@@ -56,9 +56,7 @@ def test_create_engines_dict():
         "engine1 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
     ]
-    entrypoints = []
-    for spec in specs:
-        entrypoints.append(pkg_resources.EntryPoint.parse(spec))
+    entrypoints = [pkg_resources.EntryPoint.parse(spec) for spec in specs]
     engines = plugins.create_engines_dict(entrypoints)
     assert len(engines) == 2
     assert engines.keys() == set(("engine1", "engine2"))
