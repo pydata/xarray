@@ -362,7 +362,7 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
 def _check_chunks_compatibility(var, chunks, chunk_spec):
     for dim in var.dims:
         if dim not in chunks or (dim not in chunk_spec):
-            pass
+            continue
 
         chunk_spec_dim = chunk_spec.get(dim)
         chunks_dim = chunks.get(dim)
