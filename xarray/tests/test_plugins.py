@@ -37,7 +37,7 @@ def test_remove_duplicates(dummy_duplicated_entrypoints):
     assert len(entrypoints) == 2
 
 
-def test_remove_duplicates_wargnings(dummy_duplicated_entrypoints):
+def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
 
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.remove_duplicates(dummy_duplicated_entrypoints)
