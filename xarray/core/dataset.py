@@ -383,6 +383,7 @@ def _get_chunk(var, chunks):
     # chunks need to be explicity computed to take correctly into accout
     # backend preferred chunking
     import dask.array as da
+
     if isinstance(var, IndexVariable):
         return {}
 
@@ -393,8 +394,7 @@ def _get_chunk(var, chunks):
     preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
 
     chunks_list = [
-        chunks.get(dim, None) or preferred_chunks.get(dim, None)
-        for dim in var.dims
+        chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
     ]
 
     output_chunks_list = da.core.normalize_chunks(
