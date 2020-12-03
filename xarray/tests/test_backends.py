@@ -608,10 +608,6 @@ class DatasetIOBase:
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-    @pytest.mark.xfail(
-        not has_dask,
-        reason="the code for indexing without dask handles negative steps in slices incorrectly",
-    )
     def test_vectorized_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -675,6 +671,21 @@ class DatasetIOBase:
             {"a": 1, "b": 0},
         ]
         multiple_indexing(indexers)
+
+    def test_vectorized_indexing_negative_step_slice(self, open_kwargs=None):
+        in_memory = create_test_data()
+
+        def multiple_indexing(indexers):
+            # make sure a sequence of lazy indexings certainly works.
+            with self.roundtrip(in_memory, open_kwargs=open_kwargs) as on_disk:
+                actual = on_disk["var3"]
+                expected = in_memory["var3"]
+                for ind in indexers:
+                    actual = actual.isel(**ind)
+                    expected = expected.isel(**ind)
+                    # make sure the array is not yet loaded into memory
+                    assert not actual.variable._in_memory
+                assert_identical(expected, actual.load())
 
         # with negative step slice.
         indexers = [
@@ -1567,7 +1578,7 @@ class ZarrBase(CFEncodedBase):
         if save_kwargs is None:
             save_kwargs = {}
         if open_kwargs is None:
-            open_kwargs = {"chunks": "auto"}
+            open_kwargs = {}
         with self.create_zarr_target() as store_target:
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
@@ -1604,7 +1615,7 @@ class ZarrBase(CFEncodedBase):
                 # there should be no chunks
                 assert v.chunks is None
 
-        with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
@@ -1701,7 +1712,7 @@ class ZarrBase(CFEncodedBase):
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
-        with self.roundtrip(original, open_kwargs={"chunks": "auto"}) as actual:
+        with self.roundtrip(original, open_kwargs={"chunks": {}}) as actual:
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks
@@ -1850,9 +1861,7 @@ class ZarrBase(CFEncodedBase):
             ds.to_zarr(store_target, mode="w", group=group)
             ds_to_append.to_zarr(store_target, append_dim="time", group=group)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_dataset(
-                store_target, group=group, chunks="auto", engine="zarr"
-            )
+            actual = xr.open_dataset(store_target, group=group, engine="zarr")
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
@@ -1941,11 +1950,11 @@ class ZarrBase(CFEncodedBase):
             encoding = {"da": {"compressor": compressor}}
             ds.to_zarr(store_target, mode="w", encoding=encoding)
             ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, chunks="auto", engine="zarr")
+            actual_ds = xr.open_dataset(store_target, engine="zarr")
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, chunks="auto", engine="zarr").compute(),
+                xr.open_dataset(store_target, engine="zarr").compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -1960,9 +1969,7 @@ class ZarrBase(CFEncodedBase):
             ds_with_new_var.to_zarr(store_target, mode="a")
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(
-                combined, xr.open_dataset(store_target, chunks="auto", engine="zarr")
-            )
+            assert_identical(combined, xr.open_dataset(store_target, engine="zarr"))
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
@@ -2171,6 +2178,10 @@ class ZarrBase(CFEncodedBase):
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
+    @requires_dask
+    def test_vectorized_indexing_negative_step_slice(self):
+        super().test_vectorized_indexing_negative_step_slice(open_kwargs={"chunks": {}})
 
 
 @requires_zarr
@@ -4803,3 +4814,61 @@ def test_load_single_value_h5netcdf(tmp_path):
     ds.to_netcdf(tmp_path / "test.nc")
     with xr.open_dataset(tmp_path / "test.nc", engine="h5netcdf") as ds2:
         ds2["test"][0].load()
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize(
+    "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
+)
+def test_open_dataset_chunking_zarr(chunks, tmp_path):
+    encoded_chunks = 100
+    dask_arr = da.from_array(
+        np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
+    )
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
+    ds["test"].encoding["chunks"] = encoded_chunks
+    ds.to_zarr(tmp_path / "test.zarr")
+
+    with dask.config.set({"array.chunk-size": "1MiB"}):
+        expected = ds.chunk(chunks)
+        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
+        xr.testing.assert_chunks_equal(actual, expected)
+
+
+@requires_zarr
+@requires_dask
+@pytest.mark.parametrize(
+    "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
+)
+def test_chunking_consintency(chunks, tmp_path):
+    encoded_chunks = {}
+    dask_arr = da.from_array(
+        np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
+    )
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
+    ds["test"].encoding["chunks"] = encoded_chunks
+    ds.to_zarr(tmp_path / "test.zarr")
+    ds.to_netcdf(tmp_path / "test.nc")
+
+    with dask.config.set({"array.chunk-size": "1MiB"}):
+        expected = ds.chunk(chunks)
+        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
+        xr.testing.assert_chunks_equal(actual, expected)
+
+        actual = xr.open_dataset(tmp_path / "test.nc", chunks=chunks)
+        xr.testing.assert_chunks_equal(actual, expected)
