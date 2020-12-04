@@ -14,6 +14,9 @@ jobs:
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
     defaults:
       run:
         shell: bash -l {0}
