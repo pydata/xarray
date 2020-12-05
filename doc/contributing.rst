@@ -51,8 +51,9 @@ Bug reports must:
    <http://github.github.com/github-flavored-markdown/>`_::
 
       ```python
-      >>> import xarray as xr
-      >>> df = xr.Dataset(...)
+      import xarray as xr
+      df = xr.Dataset(...)
+
       ...
       ```
 

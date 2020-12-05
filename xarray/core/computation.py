@@ -931,6 +931,7 @@ def apply_ufunc(
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
     ...     return xr.apply_ufunc(func, a, b)
+    ...
 
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,
