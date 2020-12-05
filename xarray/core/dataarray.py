@@ -2670,7 +2670,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Converts all variables and attributes to native Python objects.
         Useful for converting to json. To avoid datetime incompatibility
-        use decode_times=False kwarg in xarrray.open_dataset.
+        use decode_times=False kwarg in xarray.open_dataset.
 
         Parameters
         ----------
