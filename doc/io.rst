@@ -1033,6 +1033,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
 .. ipython:: python
 
     import dask.array
+
     # The values of this dask array are entirely irrelevant; only the dtype,
     # shape and chunks are used
     dummies = dask.array.zeros(30, chunks=10)
