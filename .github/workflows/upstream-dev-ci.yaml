@@ -21,6 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.8"]
+    outputs:
+      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.6.0
@@ -30,6 +32,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
+          channel-priority: strict
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
@@ -40,12 +43,17 @@ jobs:
           bash ci/install-upstream-wheels.sh
           conda list
       - name: Run Tests
+        id: status
         run: |
-          set -o pipefail
-          python -m pytest -rf | tee output-${{ matrix.python-version }}-log
-
+          set -euo pipefail
+          python -m pytest -rf | tee output-${{ matrix.python-version }}-log || (
+              echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
+          )
       - name: Upload artifacts
-        if: "failure()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')" # Check the exit code of previous step
+        if: |
+          failure()
+          && github.event_name == 'schedule'
+          && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v2
         with:
           name: output-${{ matrix.python-version }}-log
@@ -55,7 +63,11 @@ jobs:
   report:
     name: report
     needs: upstream-dev
-    if: "always()&&(github.event_name == 'schedule')&&(github.repository == 'pydata/xarray')"
+    if: |
+      always()
+      && github.event_name == 'schedule'
+      && github.repository == 'pydata/xarray'
+      && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -74,7 +86,8 @@ jobs:
           ls -R ./logs
       - name: Parse logs
         run: |
-          python .github/workflows/parse_logs.py
+          shopt -s globstar
+          python .github/workflows/parse_logs.py logs/**/*-log
       - name: Report failures
         uses: actions/github-script@v3
         with:
@@ -85,7 +98,7 @@ jobs:
             const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
             const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
             const issue_body = `[Workflow Run URL](${workflow_url})\n${pytest_logs}`
-            
+
             // Run GraphQL query against GitHub API to find the most recent open issue used for reporting failures
             const query = `query($owner:String!, $name:String!, $creator:String!, $label:String!){
               repository(owner: $owner, name: $name) {
@@ -108,11 +121,10 @@ jobs:
                 creator: "github-actions[bot]"
             }
             const result = await github.graphql(query, variables)
-            const issue_info = result.repository.issues.edges[0].node
 
-            // If no issue is open, create a new issue, else update the 
-            // body of the existing issue. 
-            if (typeof issue_info.number === 'undefined') {
+            // If no issue is open, create a new issue, 
+            // else update the body of the existing issue. 
+            if (result.repository.issues.edges.length === 0) {
                 github.issues.create({
                     owner: variables.owner,
                     repo: variables.name,
@@ -124,7 +136,7 @@ jobs:
                 github.issues.update({
                     owner: variables.owner,
                     repo: variables.name,
-                    issue_number: issue_info.number,
+                    issue_number: result.repository.issues.edges[0].node.number,
                     body: issue_body
                 })
             }

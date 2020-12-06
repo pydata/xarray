@@ -358,6 +358,34 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
+def _get_chunk(name, var, chunks):
+    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
+
+    # Coordinate labels aren't chunked
+    if var.ndim == 1 and var.dims[0] == name:
+        return chunk_spec
+
+    if chunks == "auto":
+        return chunk_spec
+
+    for dim in var.dims:
+        if dim in chunks:
+            spec = chunks[dim]
+            if isinstance(spec, int):
+                spec = (spec,)
+            if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
+                if any(s % chunk_spec[dim] for s in spec):
+                    warnings.warn(
+                        f"Specified Dask chunks {chunks[dim]} would separate "
+                        f"on disks chunk shape {chunk_spec[dim]} for dimension {dim}. "
+                        "This could degrade performance. "
+                        "Consider rechunking after loading instead.",
+                        stacklevel=2,
+                    )
+            chunk_spec[dim] = chunks[dim]
+    return chunk_spec
+
+
 def _maybe_chunk(
     name,
     var,
@@ -2705,6 +2733,80 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={
+        ...         "a": ("x", [5, 7, 4]),
+        ...         "b": (
+        ...             ("x", "y"),
+        ...             [[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
+        ...         ),
+        ...     },
+        ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * y        (y) int64 10 12 14 16
+        Data variables:
+            a        (x) int64 5 7 4
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 6.0 nan 6.0 nan 5.0 8.0
+
+        1D interpolation with the default method (linear):
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 1.0 4.0 2.0 nan 1.75 6.25 ... nan 5.0 nan 5.25 nan
+
+        1D interpolation with a different method:
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 7.0 7.0 4.0
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 ... 6.0 nan 6.0 nan 5.0 8.0
+
+        1D extrapolation:
+
+        >>> ds.interp(
+        ...     x=[1, 1.5, 2.5, 3.5],
+        ...     method="linear",
+        ...     kwargs={"fill_value": "extrapolate"},
+        ... )
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 1.0 1.5 2.5 3.5
+        Data variables:
+            a        (x) float64 7.0 5.5 2.5 -0.5
+            b        (x, y) float64 2.0 7.0 6.0 nan 4.0 nan ... 4.5 nan 12.0 nan 3.5 nan
+
+        2D interpolation:
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 3)
+        Coordinates:
+          * x        (x) float64 0.0 0.75 1.25 1.75
+          * y        (y) int64 11 13 15
+        Data variables:
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 2.5 3.0 nan 4.0 5.625 nan nan nan nan nan nan nan
         """
         from . import missing
 
@@ -4226,6 +4328,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         numpy.interp
         scipy.interpolate
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": ("x", [np.nan, 2, 3, np.nan, 0]),
+        ...         "B": ("x", [3, 4, np.nan, 1, 7]),
+        ...         "C": ("x", [np.nan, np.nan, np.nan, 5, 0]),
+        ...         "D": ("x", [np.nan, 3, np.nan, -1, 4]),
+        ...     },
+        ...     coords={"x": [0, 1, 2, 3, 4]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 nan 0.0
+            B        (x) float64 3.0 4.0 nan 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 nan -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 1.0 -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 1.0 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 20.0 15.0 10.0 5.0 0.0
+            D        (x) float64 5.0 3.0 1.0 -1.0 4.0
         """
         from .missing import _apply_over_vars_with_dim, interp_na
 
@@ -5776,10 +5922,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> # Create an example dataset:
-        ...
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
