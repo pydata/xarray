@@ -1,7 +1,8 @@
 import os
 
+from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
-from . import plugins, zarr
+from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
@@ -10,8 +11,61 @@ from .api import (
 )
 
 
-def dataset_from_backend_dataset(
-    ds,
+def _get_mtime(filename_or_obj):
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+        mtime = os.path.getmtime(filename_or_obj)
+    else:
+        mtime = None
+    return mtime
+
+
+def _chunk_ds(
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    overwrite_encoded_chunks,
+    **extra_tokens,
+):
+    if engine != "zarr":
+        from dask.base import tokenize
+
+        mtime = _get_mtime(filename_or_obj)
+        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+        name_prefix = "open_dataset-%s" % token
+        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
+
+    else:
+
+        if chunks == "auto":
+            try:
+                import dask.array  # noqa
+            except ImportError:
+                chunks = None
+
+        if chunks is None:
+            return backend_ds
+
+        if isinstance(chunks, int):
+            chunks = dict.fromkeys(backend_ds.dims, chunks)
+
+        variables = {}
+        for k, v in backend_ds.variables.items():
+            var_chunks = _get_chunk(k, v, chunks)
+            variables[k] = _maybe_chunk(
+                k,
+                v,
+                var_chunks,
+                overwrite_encoded_chunks=overwrite_encoded_chunks,
+            )
+        ds = backend_ds._replace(variables)
+    return ds
+
+
+def _dataset_from_backend_dataset(
+    backend_ds,
     filename_or_obj,
     engine,
     chunks,
@@ -26,53 +80,30 @@ def dataset_from_backend_dataset(
                 "Instead found %s. " % chunks
             )
 
-    _protect_dataset_variables_inplace(ds, cache)
-    if chunks is not None and engine != "zarr":
-        from dask.base import tokenize
-
-        # if passed an actual file path, augment the token with
-        # the file modification time
-        if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-            mtime = os.path.getmtime(filename_or_obj)
-        else:
-            mtime = None
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-
-    elif engine == "zarr":
-
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
-
-        if chunks is None:
-            return ds
-
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(ds.dims, chunks)
-
-        variables = {
-            k: zarr.ZarrStore.maybe_chunk(k, v, chunks, overwrite_encoded_chunks)
-            for k, v in ds.variables.items()
-        }
-        ds2 = ds._replace(variables)
-
+    _protect_dataset_variables_inplace(backend_ds, cache)
+    if chunks is None:
+        ds = backend_ds
     else:
-        ds2 = ds
-    ds2._file_obj = ds._file_obj
+        ds = _chunk_ds(
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            **extra_tokens,
+        )
+
+    ds._file_obj = backend_ds._file_obj
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
         if isinstance(filename_or_obj, str):
-            ds2.encoding["source"] = filename_or_obj
+            ds.encoding["source"] = filename_or_obj
 
-    return ds2
+    return ds
 
 
-def resolve_decoders_kwargs(decode_cf, engine, **decoders):
+def _resolve_decoders_kwargs(decode_cf, engine, **decoders):
     signature = plugins.ENGINES[engine]["signature"]
     if decode_cf is False:
         for d in decoders:
@@ -219,7 +250,7 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
-    decoders = resolve_decoders_kwargs(
+    decoders = _resolve_decoders_kwargs(
         decode_cf,
         engine=engine,
         mask_and_scale=mask_and_scale,
@@ -243,7 +274,7 @@ def open_dataset(
         **backend_kwargs,
         **{k: v for k, v in kwargs.items() if v is not None},
     )
-    ds = dataset_from_backend_dataset(
+    ds = _dataset_from_backend_dataset(
         backend_ds,
         filename_or_obj,
         engine,

@@ -43,6 +43,11 @@ from xarray.tests import (
     source_ndarray,
 )
 
+pytestmark = [
+    pytest.mark.filterwarnings("error:Mean of empty slice"),
+    pytest.mark.filterwarnings("error:All-NaN (slice|axis) encountered"),
+]
+
 
 class TestDataArray:
     @pytest.fixture(autouse=True)
@@ -6246,7 +6251,6 @@ def test_coarsen_keep_attrs():
     xr.testing.assert_identical(da, da2)
 
 
-@pytest.mark.filterwarnings("error:Mean of empty slice")
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
 
@@ -6925,6 +6929,35 @@ def test_rolling_exp(da, dim, window_type, window):
     )
 
     assert_allclose(expected.variable, result.variable)
+
+
+@requires_numbagg
+def test_rolling_exp_keep_attrs(da):
+
+    attrs = {"attrs": "da"}
+    da.attrs = attrs
+
+    # attrs are kept per default
+    result = da.rolling_exp(time=10).mean()
+    assert result.attrs == attrs
+
+    # discard attrs
+    result = da.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
+
+    # test discard attrs using global option
+    with set_options(keep_attrs=False):
+        result = da.rolling_exp(time=10).mean()
+    assert result.attrs == {}
+
+    # keyword takes precedence over global option
+    with set_options(keep_attrs=False):
+        result = da.rolling_exp(time=10).mean(keep_attrs=True)
+    assert result.attrs == attrs
+
+    with set_options(keep_attrs=True):
+        result = da.rolling_exp(time=10).mean(keep_attrs=False)
+    assert result.attrs == {}
 
 
 def test_no_dict():
