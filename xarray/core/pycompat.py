@@ -10,10 +10,16 @@ try:
 
     # solely for isinstance checks
     dask_array_type = (dask.array.Array,)
-    dask_dataframe_type = (dask.dataframe.core.DataFrame,)
 
     def is_duck_dask_array(x):
         return is_duck_array(x) and is_dask_collection(x)
+
+try:
+    import dask.dataframe
+
+    dask_dataframe_type = (dask.dataframe.core.DataFrame,)
+except ImportError:
+    dask_dataframe_type = ()
 
 
 except ImportError:  # pragma: no cover
