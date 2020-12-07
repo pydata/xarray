@@ -199,13 +199,8 @@ def as_compatible_data(data, fastpath=False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
-    try:
-        from dask.dataframe.core import DataFrame as ddf
-
-        if isinstance(data, ddf):
-            return data.to_dask_array(lengths=True)
-    except ModuleNotFoundError:
-        print("Dask is not installed in your environment")
+    if isinstance(data, dask_dataframe_type):
+        return data.to_dask_array(lengths=True)
 
     if isinstance(data, Variable):
         return data.data
