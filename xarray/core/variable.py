@@ -18,9 +18,9 @@ from typing import (
     Union,
 )
 
+import dask
 import numpy as np
 import pandas as pd
-import dask
 
 import xarray as xr  # only for Dataset and DataArray
 

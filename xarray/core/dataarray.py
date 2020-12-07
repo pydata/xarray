@@ -400,13 +400,12 @@ class DataArray(AbstractArray, DataWithCoords):
                 attrs = getattr(data, "attrs", None)
 
             def compute_delayed_tuple_elements(tuple_):
-                tuple_ = tuple([
-                    elem.compute() 
-                    if hasattr(elem, 'compute') 
-                    else elem 
-                    for elem 
-                    in tuple_
-                    ])
+                tuple_ = tuple(
+                    [
+                        elem.compute() if hasattr(elem, "compute") else elem
+                        for elem in tuple_
+                    ]
+                )
 
                 return tuple_
 
@@ -862,7 +861,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return DataArray(variable, coords, name=name, fastpath=True)
 
     @classmethod
-    def from_dask_dataframe(cls, df: ddf, index_name: str='', columns_name: str=''):
+    def from_dask_dataframe(cls, df: ddf, index_name: str = "", columns_name: str = ""):
         """Convert a pandas.DataFrame into an xarray.DataArray
 
         This method will produce a DataArray from a Dask DataFrame.
@@ -888,23 +887,23 @@ class DataArray(AbstractArray, DataWithCoords):
         xarray.DataArray.from_series
         pandas.DataFrame.to_xarray
         """
-        assert len(set(df.dtypes)) == 1, 'Each variable can include only one data-type'
+        assert len(set(df.dtypes)) == 1, "Each variable can include only one data-type"
 
-        def extract_dim_name(df, dim='index'):
+        def extract_dim_name(df, dim="index"):
             if getattr(df, dim).name is None:
                 getattr(df, dim).name = dim
 
             dim_name = getattr(df, dim).name
 
             return dim_name
-        
-        if index_name == '':
-            index_name = extract_dim_name(df, 'index')
-        if columns_name == '':
-            columns_name = extract_dim_name(df, 'columns')
-            
+
+        if index_name == "":
+            index_name = extract_dim_name(df, "index")
+        if columns_name == "":
+            columns_name = extract_dim_name(df, "columns")
+
         da = cls(df, coords=[df.index, df.columns], dims=[index_name, columns_name])
-        
+
         return da
 
     def load(self, **kwargs) -> "DataArray":
