@@ -15,7 +15,12 @@ steps:
     --junitxml=junit/test-results.xml \
     --cov=xarray \
     --cov-report=xml \
-    $(pytest_extra_flags) || [ "$ALLOW_FAILURE" = "true" ]
+    $(pytest_extra_flags) \
+    || ( \
+      [ "$ALLOW_FAILURE" = "true" ] \
+      && echo "##vso[task.logissue type=warning]Allowed CI failure!!" \
+      && echo "##vso[task.complete result=SucceededWithIssues]" \
+    )
   displayName: Run tests
 
 - bash: |
