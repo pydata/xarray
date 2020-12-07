@@ -117,7 +117,7 @@ used in the :py:class:`~xarray.Dataset` constructor:
 
 .. ipython:: python
 
-    xr.Dataset({"a": arr[:-1], "b": arr[1:]})
+    xr.Dataset({"a": da.isel(x=slice(0, 1)), "b": da.isel(x=slice(1, 2))})
 
 .. _combine:
 
