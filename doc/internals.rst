@@ -116,8 +116,8 @@ xarray:
 
 .. literalinclude:: examples/_code/accessor_example.py
 
-In general, the only requirement is that the accessor's ``__init__`` only has a single
-parameter except from ``self``: the ``Dataset`` or ``DataArray`` object it is supposed
+In general, the only restriction on the accessor class is that the ``__init__`` method
+must have a single parameter: the ``Dataset`` or ``DataArray`` object it is supposed
 to work on.
 
 This achieves the same result as if the ``Dataset`` class had a cached property
