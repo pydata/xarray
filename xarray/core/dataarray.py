@@ -21,6 +21,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from dask.dataframe.core import DataFrame as ddf
 
 from ..plot.plot import _PlotMethods
 from . import (
@@ -398,9 +399,23 @@ class DataArray(AbstractArray, DataWithCoords):
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
 
+            def compute_delayed_tuple_elements(tuple_):
+                tuple_ = tuple([
+                    elem.compute() 
+                    if hasattr(elem, 'compute') 
+                    else elem 
+                    for elem 
+                    in tuple_
+                    ])
+
+                return tuple_
+
+            shape = compute_delayed_tuple_elements(data.shape)
+            coords = compute_delayed_tuple_elements(coords)
+
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
-            coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
+            coords, dims = _infer_coords_and_dims(shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
             indexes = dict(
                 _extract_indexes_from_coords(coords)
@@ -845,6 +860,25 @@ class DataArray(AbstractArray, DataWithCoords):
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
+
+    @classmethod
+    def from_dask_dataframe(cls, df: ddf, index_name: str='', columns_name: str=''):
+            def extract_dim_name(df, dim='index'):
+                if getattr(df, dim).name is None:
+                    getattr(df, dim).name = dim
+
+                dim_name = getattr(df, dim).name
+
+                return dim_name
+            
+            if index_name == '':
+                index_name = extract_dim_name(df, 'index')
+            if columns_name == '':
+                columns_name = extract_dim_name(df, 'columns')
+                
+            da = cls(df, coords=[df.index, df.columns], dims=[index_name, columns_name])
+            
+            return da
 
     def load(self, **kwargs) -> "DataArray":
         """Manually trigger loading of this array's data from disk or a

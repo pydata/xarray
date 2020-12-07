@@ -20,6 +20,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import dask
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -198,6 +199,9 @@ def as_compatible_data(data, fastpath=False):
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
+
+    if isinstance(data, dask.dataframe.core.DataFrame):
+        return data.to_dask_array(lengths=True)
 
     if isinstance(data, Variable):
         return data.data
