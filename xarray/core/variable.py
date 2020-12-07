@@ -18,7 +18,6 @@ from typing import (
     Union,
 )
 
-import dask
 import numpy as np
 import pandas as pd
 
@@ -200,8 +199,13 @@ def as_compatible_data(data, fastpath=False):
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
-    if isinstance(data, dask.dataframe.core.DataFrame):
-        return data.to_dask_array(lengths=True)
+    try:
+        from dask.dataframe.core import DataFrame as ddf
+
+        if isinstance(data, ddf):
+            return data.to_dask_array(lengths=True)
+    except:
+        pass
 
     if isinstance(data, Variable):
         return data.data

@@ -21,7 +21,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from dask.dataframe.core import DataFrame as ddf
 
 from ..plot.plot import _PlotMethods
 from . import (
@@ -861,7 +860,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return DataArray(variable, coords, name=name, fastpath=True)
 
     @classmethod
-    def from_dask_dataframe(cls, df: ddf, index_name: str = "", columns_name: str = ""):
+    def from_dask_dataframe(cls, ddf, index_name: str = "", columns_name: str = ""):
         """Convert a pandas.DataFrame into an xarray.DataArray
 
         This method will produce a DataArray from a Dask DataFrame.
@@ -887,22 +886,22 @@ class DataArray(AbstractArray, DataWithCoords):
         xarray.DataArray.from_series
         pandas.DataFrame.to_xarray
         """
-        assert len(set(df.dtypes)) == 1, "Each variable can include only one data-type"
+        assert len(set(ddf.dtypes)) == 1, "Each variable can include only one data-type"
 
         def extract_dim_name(df, dim="index"):
-            if getattr(df, dim).name is None:
-                getattr(df, dim).name = dim
+            if getattr(ddf, dim).name is None:
+                getattr(ddf, dim).name = dim
 
-            dim_name = getattr(df, dim).name
+            dim_name = getattr(ddf, dim).name
 
             return dim_name
 
         if index_name == "":
-            index_name = extract_dim_name(df, "index")
+            index_name = extract_dim_name(ddf, "index")
         if columns_name == "":
-            columns_name = extract_dim_name(df, "columns")
+            columns_name = extract_dim_name(ddf, "columns")
 
-        da = cls(df, coords=[df.index, df.columns], dims=[index_name, columns_name])
+        da = cls(ddf, coords=[ddf.index, ddf.columns], dims=[index_name, columns_name])
 
         return da
 
