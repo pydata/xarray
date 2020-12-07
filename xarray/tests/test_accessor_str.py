@@ -46,7 +46,7 @@ import pytest
 
 import xarray as xr
 
-from . import assert_equal, requires_dask
+from . import assert_equal, assert_identical, requires_dask
 
 
 @pytest.fixture(params=[np.str_, np.bytes_])
@@ -1206,9 +1206,16 @@ def test_findall_multi_multi_nocase(dtype):
 
 def test_repeat(dtype):
     values = xr.DataArray(["a", "b", "c", "d"]).astype(dtype)
+
     result = values.str.repeat(3)
+    result_mul = values.str * 3
+
     expected = xr.DataArray(["aaa", "bbb", "ccc", "ddd"]).astype(dtype)
+
     assert result.dtype == expected.dtype
+    assert result_mul.dtype == expected.dtype
+
+    assert_equal(result_mul, expected)
     assert_equal(result, expected)
 
 
@@ -2382,3 +2389,475 @@ def test_splitters_empty_array(dtype):
     assert_equal(res_rsplit_none, targ_none)
 
     assert_equal(res_dummies, targ_dim)
+
+
+def test_cat_str(dtype):
+    values_1 = xr.DataArray(
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+    values_2 = "111"
+
+    targ_blank = xr.DataArray(
+        [["a111", "bb111", "cccc111"], ["ddddd111", "eeee111", "fff111"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_space = xr.DataArray(
+        [["a 111", "bb 111", "cccc 111"], ["ddddd 111", "eeee 111", "fff 111"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_bars = xr.DataArray(
+        [["a||111", "bb||111", "cccc||111"], ["ddddd||111", "eeee||111", "fff||111"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_comma = xr.DataArray(
+        [["a, 111", "bb, 111", "cccc, 111"], ["ddddd, 111", "eeee, 111", "fff, 111"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    res_blank = values_1.str.cat(values_2)
+    res_add = values_1.str + values_2
+    res_space = values_1.str.cat(values_2, sep=" ")
+    res_bars = values_1.str.cat(values_2, sep="||")
+    res_comma = values_1.str.cat(values_2, sep=", ")
+
+    assert res_blank.dtype == targ_blank.dtype
+    assert res_add.dtype == targ_blank.dtype
+    assert res_space.dtype == targ_space.dtype
+    assert res_bars.dtype == targ_bars.dtype
+    assert res_comma.dtype == targ_comma.dtype
+
+    assert_equal(res_blank, targ_blank)
+    assert_equal(res_add, targ_blank)
+    assert_equal(res_space, targ_space)
+    assert_equal(res_bars, targ_bars)
+    assert_equal(res_comma, targ_comma)
+
+
+def test_cat_uniform(dtype):
+    values_1 = xr.DataArray(
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+    values_2 = xr.DataArray(
+        [["11111", "222", "33"], ["4", "5555", "66"]],
+        dims=["X", "Y"],
+    )
+
+    targ_blank = xr.DataArray(
+        [["a11111", "bb222", "cccc33"], ["ddddd4", "eeee5555", "fff66"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_space = xr.DataArray(
+        [["a 11111", "bb 222", "cccc 33"], ["ddddd 4", "eeee 5555", "fff 66"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_bars = xr.DataArray(
+        [["a||11111", "bb||222", "cccc||33"], ["ddddd||4", "eeee||5555", "fff||66"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_comma = xr.DataArray(
+        [["a, 11111", "bb, 222", "cccc, 33"], ["ddddd, 4", "eeee, 5555", "fff, 66"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    res_blank = values_1.str.cat(values_2)
+    res_add = values_1.str + values_2
+    res_space = values_1.str.cat(values_2, sep=" ")
+    res_bars = values_1.str.cat(values_2, sep="||")
+    res_comma = values_1.str.cat(values_2, sep=", ")
+
+    assert res_blank.dtype == targ_blank.dtype
+    assert res_add.dtype == targ_blank.dtype
+    assert res_space.dtype == targ_space.dtype
+    assert res_bars.dtype == targ_bars.dtype
+    assert res_comma.dtype == targ_comma.dtype
+
+    assert_equal(res_blank, targ_blank)
+    assert_equal(res_add, targ_blank)
+    assert_equal(res_space, targ_space)
+    assert_equal(res_bars, targ_bars)
+    assert_equal(res_comma, targ_comma)
+
+
+def test_cat_broadcast_right(dtype):
+    values_1 = xr.DataArray(
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+    values_2 = xr.DataArray(
+        ["11111", "222", "33"],
+        dims=["Y"],
+    )
+
+    targ_blank = xr.DataArray(
+        [["a11111", "bb222", "cccc33"], ["ddddd11111", "eeee222", "fff33"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_space = xr.DataArray(
+        [["a 11111", "bb 222", "cccc 33"], ["ddddd 11111", "eeee 222", "fff 33"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_bars = xr.DataArray(
+        [["a||11111", "bb||222", "cccc||33"], ["ddddd||11111", "eeee||222", "fff||33"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_comma = xr.DataArray(
+        [["a, 11111", "bb, 222", "cccc, 33"], ["ddddd, 11111", "eeee, 222", "fff, 33"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    res_blank = values_1.str.cat(values_2)
+    res_add = values_1.str + values_2
+    res_space = values_1.str.cat(values_2, sep=" ")
+    res_bars = values_1.str.cat(values_2, sep="||")
+    res_comma = values_1.str.cat(values_2, sep=", ")
+
+    assert res_blank.dtype == targ_blank.dtype
+    assert res_add.dtype == targ_blank.dtype
+    assert res_space.dtype == targ_space.dtype
+    assert res_bars.dtype == targ_bars.dtype
+    assert res_comma.dtype == targ_comma.dtype
+
+    assert_equal(res_blank, targ_blank)
+    assert_equal(res_add, targ_blank)
+    assert_equal(res_space, targ_space)
+    assert_equal(res_bars, targ_bars)
+    assert_equal(res_comma, targ_comma)
+
+
+def test_cat_broadcast_left(dtype):
+    values_1 = xr.DataArray(
+        ["a", "bb", "cccc"],
+        dims=["Y"],
+    ).astype(dtype)
+    values_2 = xr.DataArray(
+        [["11111", "222", "33"], ["4", "5555", "66"]],
+        dims=["X", "Y"],
+    )
+
+    targ_blank = (
+        xr.DataArray(
+            [["a11111", "bb222", "cccc33"], ["a4", "bb5555", "cccc66"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_space = (
+        xr.DataArray(
+            [["a 11111", "bb 222", "cccc 33"], ["a 4", "bb 5555", "cccc 66"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_bars = (
+        xr.DataArray(
+            [["a||11111", "bb||222", "cccc||33"], ["a||4", "bb||5555", "cccc||66"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_comma = (
+        xr.DataArray(
+            [["a, 11111", "bb, 222", "cccc, 33"], ["a, 4", "bb, 5555", "cccc, 66"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    res_blank = values_1.str.cat(values_2)
+    res_add = values_1.str + values_2
+    res_space = values_1.str.cat(values_2, sep=" ")
+    res_bars = values_1.str.cat(values_2, sep="||")
+    res_comma = values_1.str.cat(values_2, sep=", ")
+
+    assert res_blank.dtype == targ_blank.dtype
+    assert res_add.dtype == targ_blank.dtype
+    assert res_space.dtype == targ_space.dtype
+    assert res_bars.dtype == targ_bars.dtype
+    assert res_comma.dtype == targ_comma.dtype
+
+    assert_equal(res_blank, targ_blank)
+    assert_equal(res_add, targ_blank)
+    assert_equal(res_space, targ_space)
+    assert_equal(res_bars, targ_bars)
+    assert_equal(res_comma, targ_comma)
+
+
+def test_cat_broadcast_both(dtype):
+    values_1 = xr.DataArray(
+        ["a", "bb", "cccc"],
+        dims=["Y"],
+    ).astype(dtype)
+    values_2 = xr.DataArray(
+        ["11111", "4"],
+        dims=["X"],
+    )
+
+    targ_blank = (
+        xr.DataArray(
+            [["a11111", "bb11111", "cccc11111"], ["a4", "bb4", "cccc4"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_space = (
+        xr.DataArray(
+            [["a 11111", "bb 11111", "cccc 11111"], ["a 4", "bb 4", "cccc 4"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_bars = (
+        xr.DataArray(
+            [["a||11111", "bb||11111", "cccc||11111"], ["a||4", "bb||4", "cccc||4"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    targ_comma = (
+        xr.DataArray(
+            [["a, 11111", "bb, 11111", "cccc, 11111"], ["a, 4", "bb, 4", "cccc, 4"]],
+            dims=["X", "Y"],
+        )
+        .astype(dtype)
+        .T
+    )
+
+    res_blank = values_1.str.cat(values_2)
+    res_add = values_1.str + values_2
+    res_space = values_1.str.cat(values_2, sep=" ")
+    res_bars = values_1.str.cat(values_2, sep="||")
+    res_comma = values_1.str.cat(values_2, sep=", ")
+
+    assert res_blank.dtype == targ_blank.dtype
+    assert res_add.dtype == targ_blank.dtype
+    assert res_space.dtype == targ_space.dtype
+    assert res_bars.dtype == targ_bars.dtype
+    assert res_comma.dtype == targ_comma.dtype
+
+    assert_equal(res_blank, targ_blank)
+    assert_equal(res_add, targ_blank)
+    assert_equal(res_space, targ_space)
+    assert_equal(res_bars, targ_bars)
+    assert_equal(res_comma, targ_comma)
+
+
+def test_cat_multi():
+    dtype = np.unicode_
+    values_1 = xr.DataArray(
+        ["11111", "4"],
+        dims=["X"],
+    )
+
+    values_2 = xr.DataArray(
+        ["a", "bb", "cccc"],
+        dims=["Y"],
+    ).astype(np.bytes_)
+
+    values_3 = np.array(3.4)
+
+    values_4 = ""
+
+    values_5 = np.array("", dtype=np.unicode_)
+
+    sep = xr.DataArray(
+        [" ", ", "],
+        dims=["ZZ"],
+    ).astype(dtype)
+
+    targ = xr.DataArray(
+        [
+            [
+                ["11111 a 3.4  ", "11111, a, 3.4, , "],
+                ["11111 bb 3.4  ", "11111, bb, 3.4, , "],
+                ["11111 cccc 3.4  ", "11111, cccc, 3.4, , "],
+            ],
+            [
+                ["4 a 3.4  ", "4, a, 3.4, , "],
+                ["4 bb 3.4  ", "4, bb, 3.4, , "],
+                ["4 cccc 3.4  ", "4, cccc, 3.4, , "],
+            ],
+        ],
+        dims=["X", "Y", "ZZ"],
+    ).astype(dtype)
+
+    res = values_1.str.cat(values_2, values_3, values_4, values_5, sep=sep)
+
+    assert res.dtype == targ.dtype
+    assert_equal(res, targ)
+
+
+def test_join_vector(dtype):
+    values = xr.DataArray(
+        ["a", "bb", "cccc"],
+        dims=["Y"],
+    ).astype(dtype)
+
+    targ_blank = xr.DataArray("abbcccc").astype(dtype)
+    targ_space = xr.DataArray("a bb cccc").astype(dtype)
+
+    res_blank_none = values.str.join()
+    res_blank_y = values.str.join(dim="Y")
+
+    res_space_none = values.str.join(sep=" ")
+    res_space_y = values.str.join(sep=" ", dim="Y")
+
+    assert res_blank_none.dtype == targ_blank.dtype
+    assert res_blank_y.dtype == targ_blank.dtype
+    assert res_space_none.dtype == targ_space.dtype
+    assert res_space_y.dtype == targ_space.dtype
+
+    assert_identical(res_blank_none, targ_blank)
+    assert_identical(res_blank_y, targ_blank)
+    assert_identical(res_space_none, targ_space)
+    assert_identical(res_space_y, targ_space)
+
+
+def test_join_2d(dtype):
+    values = xr.DataArray(
+        [["a", "bb", "cccc"], ["ddddd", "eeee", "fff"]],
+        dims=["X", "Y"],
+    ).astype(dtype)
+
+    targ_blank_x = xr.DataArray(
+        ["addddd", "bbeeee", "ccccfff"],
+        dims=["Y"],
+    ).astype(dtype)
+    targ_space_x = xr.DataArray(
+        ["a ddddd", "bb eeee", "cccc fff"],
+        dims=["Y"],
+    ).astype(dtype)
+
+    targ_blank_y = xr.DataArray(
+        ["abbcccc", "dddddeeeefff"],
+        dims=["X"],
+    ).astype(dtype)
+    targ_space_y = xr.DataArray(
+        ["a bb cccc", "ddddd eeee fff"],
+        dims=["X"],
+    ).astype(dtype)
+
+    res_blank_x = values.str.join(dim="X")
+    res_blank_y = values.str.join(dim="Y")
+
+    res_space_x = values.str.join(dim="X", sep=" ")
+    res_space_y = values.str.join(sep=" ", dim="Y")
+
+    assert res_blank_x.dtype == targ_blank_x.dtype
+    assert res_blank_y.dtype == targ_blank_y.dtype
+    assert res_space_x.dtype == targ_space_x.dtype
+    assert res_space_y.dtype == targ_space_y.dtype
+
+    assert_identical(res_blank_x, targ_blank_x)
+    assert_identical(res_blank_y, targ_blank_y)
+    assert_identical(res_space_x, targ_space_x)
+    assert_identical(res_space_y, targ_space_y)
+
+    with pytest.raises(ValueError):
+        values.str.join()
+
+
+def test_join_broadcast(dtype):
+    values = xr.DataArray(
+        ["a", "bb", "cccc"],
+        dims=["X"],
+    ).astype(dtype)
+
+    sep = xr.DataArray(
+        [" ", ", "],
+        dims=["ZZ"],
+    ).astype(dtype)
+
+    targ = xr.DataArray(
+        ["a bb cccc", "a, bb, cccc"],
+        dims=["ZZ"],
+    ).astype(dtype)
+
+    res = values.str.join(sep=sep)
+
+    assert res.dtype == targ.dtype
+    assert_identical(res, targ)
+
+
+def test_format_scalar():
+    dtype = np.unicode_
+    values = xr.DataArray(
+        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
+        dims=["X"],
+    ).astype(dtype)
+
+    pos0 = 1
+    pos1 = 1.2
+    pos2 = "2.3"
+    X = "'test'"
+    Y = "X"
+    ZZ = None
+    W = "NO!"
+
+    targ = xr.DataArray(
+        ["1.X.None", "1,1.2,'test','test'", "'test'-X-None"],
+        dims=["X"],
+    ).astype(dtype)
+
+    res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
+
+    assert res.dtype == targ.dtype
+    assert_equal(res, targ)
+
+
+def test_format_broadcast(dtype):
+    dtype = np.unicode_
+    values = xr.DataArray(
+        ["{}.{Y}.{ZZ}", "{},{},{X},{X}", "{X}-{Y}-{ZZ}"],
+        dims=["X"],
+    ).astype(dtype)
+
+    pos0 = 1
+    pos1 = 1.2
+
+    pos2 = xr.DataArray(
+        ["2.3", "3.44444"],
+        dims=["YY"],
+    )
+
+    X = "'test'"
+    Y = "X"
+    ZZ = None
+    W = "NO!"
+
+    targ = xr.DataArray(
+        [
+            ["1.X.None", "1.X.None"],
+            ["1,1.2,'test','test'", "1,1.2,'test','test'"],
+            ["'test'-X-None", "'test'-X-None"],
+        ],
+        dims=["X", "YY"],
+    ).astype(dtype)
+
+    res = values.str.format(pos0, pos1, pos2, X=X, Y=Y, ZZ=ZZ, W=W)
+
+    assert res.dtype == targ.dtype
+    assert_equal(res, targ)

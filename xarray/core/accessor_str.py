@@ -77,6 +77,8 @@ class StringAccessor:
         array([4, 4, 2, 2, 5])
         Dimensions without coordinates: dim_0
 
+    It also implements `+`, `*`, and `%`, which operate as elementwise
+    versions of the corresponding `str` methods.
     """
 
     __slots__ = ("_obj",)
@@ -88,17 +90,21 @@ class StringAccessor:
     def _stringify(
         self,
         invar: Any,
-    ) -> Union[str, bytes]:
+    ) -> Union[str, bytes, Any]:
         """
         Convert a string-like to the correct string/bytes type.
 
         This is mostly here to tell mypy a pattern is a str/bytes not a re.Pattern.
         """
-        return self._obj.dtype.type(invar)
+        if hasattr(invar, "astype"):
+            return invar.astype(self._obj.dtype.kind)
+        else:
+            return self._obj.dtype.type(invar)
 
     def _apply(
         self,
-        f: Callable,
+        func: Callable,
+        *args,
         obj: Any = None,
         dtype: Union[str, np.dtype] = None,
         output_core_dims: Union[list, tuple] = ((),),
@@ -116,8 +122,9 @@ class StringAccessor:
             dask_gufunc_kwargs["output_sizes"] = output_sizes
 
         return apply_ufunc(
-            f,
+            func,
             obj,
+            *args,
             vectorize=True,
             dask="parallelized",
             output_dtypes=[dtype],
@@ -170,6 +177,29 @@ class StringAccessor:
             return self.slice(start=key.start, stop=key.stop, step=key.step)
         else:
             return self.get(key)
+
+    def __add__(
+        self,
+        other: Any,
+    ) -> Any:
+        return self.cat(other, sep="")
+
+    def __mul__(
+        self,
+        num: int,
+    ) -> Any:
+        if num <= 0:
+            return self[:0]
+        if num == 1:
+            return self._obj.copy()
+        else:
+            return self.repeat(num)
+
+    def __mod__(
+        self,
+        other: Any,
+    ) -> Any:
+        return self._apply(lambda x: x % other)
 
     def get(
         self,
@@ -269,6 +299,244 @@ class StringAccessor:
             return y
 
         return self._apply(f)
+
+    def cat(
+        self,
+        *others,
+        sep: Any = "",
+    ) -> Any:
+        """
+        Concatenate strings elementwise in the DataArray with other strings.
+
+        The other strings can either be string scalars or other array-like.
+        Dimensions are automatically broadcast together.
+
+        An optional separator can also be specified.
+
+        Parameters
+        ----------
+        *others : str or array-like of str
+            Strings or array-like of strings to concatenate elementwise with
+            the current DataArray.
+        sep : str or array-like, default `""`.
+            Seperator to use between strings.
+            It is broadcast in the same way as the other input strings.
+            If array-like, its dimensions will be placed at the end of the output array dimensions.
+
+        Returns
+        -------
+        concatenated : same type as values
+
+        Examples
+        --------
+        Create a string array
+
+        >>> myarray = xr.DataArray(
+        ...     ["11111", "4"],
+        ...     dims=["X"],
+        ... )
+
+        Create some arrays to concatenate with it
+
+        >>> values_1 = xr.DataArray(
+        ...     ["a", "bb", "cccc"],
+        ...     dims=["Y"],
+        ... )
+        >>> values_2 = np.array(3.4)
+        >>> values_3 = ""
+        >>> values_4 = np.array("test", dtype=np.unicode_)
+
+        Determine the separator to use
+
+        >>> seps = xr.DataArray(
+        ...     [" ", ", "],
+        ...     dims=["ZZ"],
+        ... )
+
+        Concatenate the arrays using the separator
+
+        >>> myarray.str.cat(values_1, values_2, values_3, values_4, sep=seps)
+        <xarray.DataArray (X: 2, Y: 3, ZZ: 2)>
+        array([[['11111 a 3.4  test', '11111, a, 3.4, , test'],
+                ['11111 bb 3.4  test', '11111, bb, 3.4, , test'],
+                ['11111 cccc 3.4  test', '11111, cccc, 3.4, , test']],
+        <BLANKLINE>
+               [['4 a 3.4  test', '4, a, 3.4, , test'],
+                ['4 bb 3.4  test', '4, bb, 3.4, , test'],
+                ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
+        Dimensions without coordinates: X, Y, ZZ
+
+
+        See Also
+        --------
+        pandas.Series.str.cat
+        str.join
+        """
+        sep = self._stringify(sep)
+        others = tuple(self._stringify(x) for x in others)
+
+        # sep will go at the end of the input arguments.
+        func = lambda *x: x[-1].join(x[:-1])
+
+        return self._apply(
+            func,
+            *others,
+            sep,
+            dtype=self._obj.dtype.kind,
+        )
+
+    def join(
+        self,
+        dim: Hashable = None,
+        sep: Any = "",
+    ) -> Any:
+        """
+        Concatenate strings in a DataArray along a particular dimension.
+
+        An optional separator can also be specified.
+
+        Parameters
+        ----------
+        dim : Hashable, optional
+            Dimension along which the strings should be concatenated.
+            Optional for 0D or 1D DataArrays, required for multidimensional DataArrays.
+        sep : str or array-like, default `""`.
+            Seperator to use between strings.
+            It is broadcast in the same way as the other input strings.
+            If array-like, its dimensions will be placed at the end of the output array dimensions.
+
+        Returns
+        -------
+        joined : same type as values
+
+        Examples
+        --------
+        Create an array
+
+        >>> values = xr.DataArray(
+        ...     [["a", "bab", "abc"], ["abcd", "", "abcdef"]],
+        ...     dims=["X", "Y"],
+        ... )
+
+        Determine the separator
+
+        >>> seps = xr.DataArray(
+        ...     ["-", "_"],
+        ...     dims=["ZZ"],
+        ... )
+
+        Join the strings along a given dimension
+
+        >>> values.str.join(dim="Y", sep=seps)
+        <xarray.DataArray (X: 2, ZZ: 2)>
+        array([['a-bab-abc', 'a_bab_abc'],
+               ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
+        Dimensions without coordinates: X, ZZ
+
+
+        See Also
+        --------
+        pandas.Series.str.join
+        str.join
+        """
+        if self._obj.ndim > 1 and dim is None:
+            raise ValueError("Dimension must be specified for multidimensional arrays.")
+
+        if self._obj.ndim > 1:
+            # Move the target dimension to the start and split along it
+            dimshifted = list(self._obj.transpose(dim, ...))
+        elif self._obj.ndim == 1:
+            dimshifted = list(self._obj)
+        else:
+            dimshifted = [self._obj]
+
+        start, *others = dimshifted
+
+        # concatenate the resulting arrays
+        return start.str.cat(*others, sep=sep)
+
+    def format(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Perform python string formatting on each element of the DataArray.
+
+        This is equivalent to calling `str.format` on every element of the
+        DataArray.  The replacement values can either be a string-like
+        scalar or an array-like of string-like values.  If array-like,
+        the values will be broadcast and applied elementwiseto the input
+        DataArray.
+
+        .. note::
+            Array-like values provided as `*args` will have their
+            dimensions added even if those arguments are not used in any
+            string formatting.
+
+        .. warning::
+            Array-like arguments are only applied elementwise for `*args`.
+            For `**kwargs`, values are used as-is.
+
+        Parameters
+        ----------
+        *args : str or bytes or array-like of str or bytes
+            Values for positional formatting.
+            If array-like, the values are broadcast and applied elementwise.
+            The dimensions will be placed at the end of the output array dimensions
+            in the order they are provided.
+        **kwargs : str or bytes or array-like of str or bytes
+            Values for keyword-based formatting.
+            These are **not** broadcast or applied elementwise.
+
+        Returns
+        -------
+        formatted : same type as values
+
+        Examples
+        --------
+        Create an array to format.
+
+        >>> values = xr.DataArray(
+        ...     ["{} is {adj0}", "{} and {} are {adj1}"],
+        ...     dims=["X"],
+        ... )
+
+        Set the values to fill.
+
+        >>> noun0 = xr.DataArray(
+        ...     ["spam", "egg"],
+        ...     dims=["Y"],
+        ... )
+        >>> noun1 = xr.DataArray(
+        ...     ["lancelot", "arthur"],
+        ...     dims=["ZZ"],
+        ... )
+        >>> adj0 = "unexpected"
+        >>> adj1 = "like a duck"
+
+        Insert the values into the array
+
+        >>> values.str.format(noun0, noun1, adj0=adj0, adj1=adj1)
+        <xarray.DataArray (X: 2, Y: 2, ZZ: 2)>
+        array([[['spam is unexpected', 'spam is unexpected'],
+                ['egg is unexpected', 'egg is unexpected']],
+        <BLANKLINE>
+            [['spam and lancelot are like a duck',
+                'spam and arthur are like a duck'],
+                ['egg and lancelot are like a duck',
+                'egg and arthur are like a duck']]], dtype='<U33')
+        Dimensions without coordinates: X, Y, ZZ
+
+
+        See Also
+        --------
+        str.format
+        """
+        func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
+            x, *args, **kwargs
+        )
+        return self._apply(func, *args, kwargs=kwargs)
 
     def capitalize(self) -> Any:
         """
