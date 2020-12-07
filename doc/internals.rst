@@ -116,6 +116,10 @@ xarray:
 
 .. literalinclude:: examples/_code/accessor_example.py
 
+In general, the only requirement on these custom classes is that ``__init__`` has only a
+single parameter except from ``self``: the ``Dataset`` or ``DataArray`` object it is
+supposed to work on.
+
 This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
 
