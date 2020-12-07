@@ -863,22 +863,49 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @classmethod
     def from_dask_dataframe(cls, df: ddf, index_name: str='', columns_name: str=''):
-            def extract_dim_name(df, dim='index'):
-                if getattr(df, dim).name is None:
-                    getattr(df, dim).name = dim
+        """Convert a pandas.DataFrame into an xarray.DataArray
 
-                dim_name = getattr(df, dim).name
+        This method will produce a DataArray from a Dask DataFrame.
+        Dimensions are loaded into memory but the data itself remains
+        a Dask Array. The dataframe you pass can contain only one data-type.
 
-                return dim_name
+        Parameters
+        ----------
+        ddf: DataFrame
+            Dask DataFrame from which to copy data and indices.
+        index_name: str
+            Name of the dimension that will be created from the index
+        columns_name: str
+            Name of the dimension that will be created from the columns
+
+        Returns
+        -------
+        New DataArray.
+
+        See also
+        --------
+        xarray.DataSet.from_dataframe
+        xarray.DataArray.from_series
+        pandas.DataFrame.to_xarray
+        """
+        assert len(set(df.dtypes)) == 1, 'Each variable can include only one data-type'
+
+        def extract_dim_name(df, dim='index'):
+            if getattr(df, dim).name is None:
+                getattr(df, dim).name = dim
+
+            dim_name = getattr(df, dim).name
+
+            return dim_name
+        
+        if index_name == '':
+            index_name = extract_dim_name(df, 'index')
+        if columns_name == '':
+            columns_name = extract_dim_name(df, 'columns')
             
-            if index_name == '':
-                index_name = extract_dim_name(df, 'index')
-            if columns_name == '':
-                columns_name = extract_dim_name(df, 'columns')
-                
-            da = cls(df, coords=[df.index, df.columns], dims=[index_name, columns_name])
-            
-            return da
+        da = cls(df, coords=[df.index, df.columns], dims=[index_name, columns_name])
+        
+        return da
 
     def load(self, **kwargs) -> "DataArray":
         """Manually trigger loading of this array's data from disk or a
