@@ -205,7 +205,7 @@ def as_compatible_data(data, fastpath=False):
         if isinstance(data, ddf):
             return data.to_dask_array(lengths=True)
     except ModuleNotFoundError:
-        print('Dask is not installed in your environment')
+        print("Dask is not installed in your environment")
 
     if isinstance(data, Variable):
         return data.data
