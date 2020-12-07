@@ -35,7 +35,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- add information about requirements for accessor classes (:issue:`2788`, :pull:`4657`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
