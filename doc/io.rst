@@ -1145,3 +1145,11 @@ For CSV files, one might also consider `xarray_extras`_.
 .. _xarray_extras: https://xarray-extras.readthedocs.io/en/latest/api/csv.html
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+
+
+Third party libraries
+---------------------
+
+More formats are supported by extension libraries:
+
+- `xarray-mongodb <https://xarray-mongodb.readthedocs.io/en/latest/>`_: Store xarray objects on MongoDB
