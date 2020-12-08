@@ -42,7 +42,7 @@ import re
 import textwrap
 from functools import reduce
 from operator import or_ as set_union
-from typing import Any, Callable, Hashable, Mapping, Optional, Pattern, Union
+from typing import Any, Callable, Hashable, Mapping, Optional, Pattern, Tuple, Union
 from unicodedata import normalize
 
 import numpy as np
@@ -61,8 +61,72 @@ _cpython_optimized_encoders = (
 _cpython_optimized_decoders = _cpython_optimized_encoders + ("utf-16", "utf-32")
 
 
-def _is_str_like(x: Any) -> bool:
-    return isinstance(x, str) or isinstance(x, bytes)
+def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
+    """Determine if the object fits some rule or is array of objects that do so."""
+    if isinstance(checker, type):
+        targtype = checker
+        checker = lambda x: isinstance(x, targtype)
+
+    if checker(pat):
+        return True
+
+    # If it is not an object array it can't contain compiled re
+    if not getattr(pat, "dtype", "no") == np.object_:
+        return False
+
+    return _apply_str_ufunc(func=checker, obj=pat).all()
+
+
+def _contains_str_like(pat: Any) -> bool:
+    """Determine if the object is a str-like or array of str-like."""
+    if isinstance(pat, (str, bytes)):
+        return True
+
+    if not hasattr(pat, "dtype"):
+        return False
+
+    return pat.dtype.kind == "U" or pat.dtype.kind == "S"
+
+
+def _contains_compiled_re(pat: Any) -> bool:
+    """Determine if the object is a compiled re or array of compiled re."""
+    return _contains_obj_type(pat=pat, checker=re.Pattern)
+
+
+def _contains_callable(pat: Any) -> bool:
+    """Determine if the object is a callable or array of callables."""
+    return _contains_obj_type(pat=pat, checker=callable)
+
+
+def _apply_str_ufunc(
+    *,
+    func: Callable,
+    obj: Any,
+    dtype: Union[str, np.dtype] = None,
+    output_core_dims: Union[list, tuple] = ((),),
+    output_sizes: Mapping[Hashable, int] = None,
+    func_args: Tuple = (),
+    func_kwargs: Mapping = {},
+) -> Any:
+    # TODO handling of na values ?
+    if dtype is None:
+        dtype = obj.dtype
+
+    dask_gufunc_kwargs = dict()
+    if output_sizes is not None:
+        dask_gufunc_kwargs["output_sizes"] = output_sizes
+
+    return apply_ufunc(
+        func,
+        obj,
+        *func_args,
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=[dtype],
+        output_core_dims=output_core_dims,
+        dask_gufunc_kwargs=dask_gufunc_kwargs,
+        **func_kwargs,
+    )
 
 
 class StringAccessor:
@@ -77,12 +141,58 @@ class StringAccessor:
         array([4, 4, 2, 2, 5])
         Dimensions without coordinates: dim_0
 
-    It also implements `+`, `*`, and `%`, which operate as elementwise
-    versions of the corresponding `str` methods.
+    It also implements ``+``, ``*``, and ``%``, which operate as elementwise
+    versions of the corresponding ``str`` methods. These will automatically
+    broadcast for array-like inputs.
+
+        >>> da1 = xr.DataArray(["first", "second", "third"], dims=["X"])
+        >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
+        >>> da1.str + da2
+        <xarray.DataArray (X: 3, Y: 3)>
+        array([['first1', 'first2', 'first3'],
+               ['second1', 'second2', 'second3'],
+               ['third1', 'third2', 'third3']], dtype='<U7')
+        Dimensions without coordinates: X, Y
+
+        >>> da1 = xr.DataArray(["a", "b", "c", "d"], dims=["X"])
+        >>> reps = xr.DataArray([3, 4], dims=["Y"])
+        >>> da1.str * reps
+        <xarray.DataArray (X: 4, Y: 2)>
+        array([['aaa', 'aaaa'],
+               ['bbb', 'bbbb'],
+               ['ccc', 'cccc'],
+               ['ddd', 'dddd']], dtype='<U4')
+        Dimensions without coordinates: X, Y
+
+        >>> da1 = xr.DataArray(["%s_%s", "%s-%s", "%s|%s"], dims=["X"])
+        >>> da2 = xr.DataArray([1, 2], dims=["Y"])
+        >>> da3 = xr.DataArray([0.1, 0.2], dims=["Z"])
+        >>> da1.str % (da2, da3)
+        <xarray.DataArray (X: 3, Y: 2, Z: 2)>
+        array([[['1_0.1', '1_0.2'],
+                ['2_0.1', '2_0.2']],
+        <BLANKLINE>
+               [['1-0.1', '1-0.2'],
+                ['2-0.1', '2-0.2']],
+        <BLANKLINE>
+               [['1|0.1', '1|0.2'],
+                ['2|0.1', '2|0.2']]], dtype='<U5')
+        Dimensions without coordinates: X, Y, Z
+
+    .. note::
+        When using ``%`` formatting with a dict, the values are always used as a
+        single value, they are not applied elementwise.
+
+            >>> da1 = xr.DataArray(["%(a)s"], dims=["X"])
+            >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
+            >>> da1 % {"a": da2}
+            <xarray.DataArray (X: 1)>
+            array(['<xarray.DataArray (Y: 3)>\\narray([1, 2, 3])\\nDimensions without coordinates: Y'],
+                  dtype=object)
+            Dimensions without coordinates: X
     """
 
     __slots__ = ("_obj",)
-    _pattern_type = type(re.compile(""))
 
     def __init__(self, obj):
         self._obj = obj
@@ -103,46 +213,38 @@ class StringAccessor:
 
     def _apply(
         self,
+        *,
         func: Callable,
-        *args,
-        obj: Any = None,
         dtype: Union[str, np.dtype] = None,
         output_core_dims: Union[list, tuple] = ((),),
         output_sizes: Mapping[Hashable, int] = None,
-        **kwargs,
+        func_args: Tuple = (),
+        func_kwargs: Mapping = {},
     ) -> Any:
-        # TODO handling of na values ?
-        if obj is None:
-            obj = self._obj
-        if dtype is None:
-            dtype = obj.dtype
-
-        dask_gufunc_kwargs = dict()
-        if output_sizes is not None:
-            dask_gufunc_kwargs["output_sizes"] = output_sizes
-
-        return apply_ufunc(
-            func,
-            obj,
-            *args,
-            vectorize=True,
-            dask="parallelized",
-            output_dtypes=[dtype],
+        return _apply_str_ufunc(
+            obj=self._obj,
+            func=func,
+            dtype=dtype,
             output_core_dims=output_core_dims,
-            dask_gufunc_kwargs=dask_gufunc_kwargs,
-            **kwargs,
+            output_sizes=output_sizes,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
         )
 
     def _re_compile(
-        self, pat: Union[str, bytes, Pattern], flags: int, case: bool = None
-    ) -> Pattern:
-        is_compiled_re = isinstance(pat, self._pattern_type)
+        self,
+        *,
+        pat: Union[str, bytes, Pattern, Any],
+        flags: int = 0,
+        case: bool = None,
+    ) -> Union[Pattern, Any]:
+        is_compiled_re = isinstance(pat, re.Pattern)
 
         if is_compiled_re and flags != 0:
-            raise ValueError("flags cannot be set when pat is a compiled regex")
+            raise ValueError("Flags cannot be set when pat is a compiled regex.")
 
         if is_compiled_re and case is not None:
-            raise ValueError("case cannot be set when pat is a compiled regex")
+            raise ValueError("Case cannot be set when pat is a compiled regex.")
 
         if is_compiled_re:
             # no-op, needed to tell mypy this isn't a string
@@ -156,8 +258,15 @@ class StringAccessor:
         if not case:
             flags |= re.IGNORECASE
 
-        pat = self._stringify(pat)
-        return re.compile(pat, flags=flags)
+        if getattr(pat, "dtype", None) != np.object_:
+            pat = self._stringify(pat)
+        func = lambda x: re.compile(x, flags=flags)
+        if isinstance(pat, np.ndarray):
+            # apply_ufunc doesn't work for numpy arrays with output object dtypes
+            func = np.vectorize(func)
+            return func(pat)
+        else:
+            return _apply_str_ufunc(func=func, obj=pat, dtype=np.object_)
 
     def len(self) -> Any:
         """
@@ -167,7 +276,7 @@ class StringAccessor:
         -------
         lengths array : array of int
         """
-        return self._apply(len, dtype=int)
+        return self._apply(func=len, dtype=int)
 
     def __getitem__(
         self,
@@ -186,33 +295,39 @@ class StringAccessor:
 
     def __mul__(
         self,
-        num: int,
+        num: Union[int, Any],
     ) -> Any:
-        if num <= 0:
-            return self[:0]
-        if num == 1:
-            return self._obj.copy()
-        else:
-            return self.repeat(num)
+        return self.repeat(num)
 
     def __mod__(
         self,
         other: Any,
     ) -> Any:
-        return self._apply(lambda x: x % other)
+        if isinstance(other, dict):
+            other = {key: self._stringify(val) for key, val in other.items()}
+            return self._apply(func=lambda x: x % other)
+        elif isinstance(other, tuple):
+            other = tuple(self._stringify(x) for x in other)
+            return self._apply(func=lambda x, *y: x % y, func_args=other)
+        else:
+            return self._apply(func=lambda x, y: x % y, func_args=(other,))
 
     def get(
         self,
-        i: int,
+        i: Union[int, Any],
         default: Union[str, bytes] = "",
     ) -> Any:
         """
         Extract character number `i` from each string in the array.
 
+        If `i` is array-like, they are broadcast against the array and
+        applied elementwise.
+
         Parameters
         ----------
-        i : int
+        i : int or array-like of int
             Position of element to extract.
+            If array-like, it is broadcast.
         default : optional
             Value for out-of-range index. If not specified (None) defaults to
             an empty string.
@@ -221,63 +336,71 @@ class StringAccessor:
         -------
         items : array of object
         """
-        s = slice(-1, None) if i == -1 else slice(i, i + 1)
 
-        def f(x):
-            item = x[s]
+        def f(x, iind):
+            islice = slice(-1, None) if iind == -1 else slice(iind, iind + 1)
+            item = x[islice]
 
             return item if item else default
 
-        return self._apply(f)
+        return self._apply(func=f, func_args=(i,))
 
     def slice(
         self,
-        start: int = None,
-        stop: int = None,
-        step: int = None,
+        start: Union[int, Any] = None,
+        stop: Union[int, Any] = None,
+        step: Union[int, Any] = None,
     ) -> Any:
         """
         Slice substrings from each string in the array.
 
+        If `start`, `stop`, or 'step` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        start : int, optional
+        start : int or array-like of int, optional
             Start position for slice operation.
-        stop : int, optional
+            If array-like, it is broadcast.
+        stop : int or array-like of int, optional
             Stop position for slice operation.
-        step : int, optional
+            If array-like, it is broadcast.
+        step : int or array-like of int, optional
             Step size for slice operation.
+            If array-like, it is broadcast.
 
         Returns
         -------
         sliced strings : same type as values
         """
-        s = slice(start, stop, step)
-        f = lambda x: x[s]
-        return self._apply(f)
+        f = lambda x, istart, istop, istep: x[slice(istart, istop, istep)]
+        return self._apply(func=f, func_args=(start, stop, step))
 
     def slice_replace(
         self,
-        start: int = None,
-        stop: int = None,
-        repl: Union[str, bytes] = "",
+        start: Union[int, Any] = None,
+        stop: Union[int, Any] = None,
+        repl: Union[str, bytes, Any] = "",
     ) -> Any:
         """
         Replace a positional slice of a string with another value.
 
+        If `start`, `stop`, or 'repl` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        start : int, optional
+        start : int or array-like of int, optional
             Left index position to use for the slice. If not specified (None),
             the slice is unbounded on the left, i.e. slice from the start
-            of the string.
-        stop : int, optional
+            of the string. If array-like, it is broadcast.
+        stop : int or array-like of int, optional
             Right index position to use for the slice. If not specified (None),
             the slice is unbounded on the right, i.e. slice until the
-            end of the string.
-        repl : str, optional
+            end of the string. If array-like, it is broadcast.
+        repl : str or array-like of str, optional
             String for replacement. If not specified, the sliced region
-            is replaced with an empty string.
+            is replaced with an empty string. If array-like, it is broadcast.
 
         Returns
         -------
@@ -285,25 +408,25 @@ class StringAccessor:
         """
         repl = self._stringify(repl)
 
-        def f(x):
-            if len(x[start:stop]) == 0:
-                local_stop = start
+        def func(x, istart, istop, irepl):
+            if len(x[istart:istop]) == 0:
+                local_stop = istart
             else:
-                local_stop = stop
+                local_stop = istop
             y = self._stringify("")
-            if start is not None:
-                y += x[:start]
-            y += repl
-            if stop is not None:
+            if istart is not None:
+                y += x[:istart]
+            y += irepl
+            if istop is not None:
                 y += x[local_stop:]
             return y
 
-        return self._apply(f)
+        return self._apply(func=func, func_args=(start, stop, repl))
 
     def cat(
         self,
         *others,
-        sep: Any = "",
+        sep: Union[str, bytes, Any] = "",
     ) -> Any:
         """
         Concatenate strings elementwise in the DataArray with other strings.
@@ -311,14 +434,15 @@ class StringAccessor:
         The other strings can either be string scalars or other array-like.
         Dimensions are automatically broadcast together.
 
-        An optional separator can also be specified.
+        An optional separator `sep` can also be specified. If `sep` is
+        array-like, it is broadcast against the array and applied elementwise.
 
         Parameters
         ----------
         *others : str or array-like of str
             Strings or array-like of strings to concatenate elementwise with
             the current DataArray.
-        sep : str or array-like, default `""`.
+        sep : str or array-like of str, default: "".
             Seperator to use between strings.
             It is broadcast in the same way as the other input strings.
             If array-like, its dimensions will be placed at the end of the output array dimensions.
@@ -366,7 +490,6 @@ class StringAccessor:
                 ['4 cccc 3.4  test', '4, cccc, 3.4, , test']]], dtype='<U24')
         Dimensions without coordinates: X, Y, ZZ
 
-
         See Also
         --------
         pandas.Series.str.cat
@@ -374,33 +497,35 @@ class StringAccessor:
         """
         sep = self._stringify(sep)
         others = tuple(self._stringify(x) for x in others)
+        others = others + (sep,)
 
         # sep will go at the end of the input arguments.
         func = lambda *x: x[-1].join(x[:-1])
 
         return self._apply(
-            func,
-            *others,
-            sep,
+            func=func,
+            func_args=others,
             dtype=self._obj.dtype.kind,
         )
 
     def join(
         self,
         dim: Hashable = None,
-        sep: Any = "",
+        sep: Union[str, bytes, Any] = "",
     ) -> Any:
         """
         Concatenate strings in a DataArray along a particular dimension.
 
-        An optional separator can also be specified.
+        An optional separator `sep` can also be specified. If `sep` is
+        array-like, it is broadcast against the array and applied elementwise.
 
         Parameters
         ----------
-        dim : Hashable, optional
+        dim : hashable, optional
             Dimension along which the strings should be concatenated.
+            Only one dimension is allowed at a time.
             Optional for 0D or 1D DataArrays, required for multidimensional DataArrays.
-        sep : str or array-like, default `""`.
+        sep : str or array-like, default: "".
             Seperator to use between strings.
             It is broadcast in the same way as the other input strings.
             If array-like, its dimensions will be placed at the end of the output array dimensions.
@@ -433,7 +558,6 @@ class StringAccessor:
                ['abcd--abcdef', 'abcd__abcdef']], dtype='<U12')
         Dimensions without coordinates: X, ZZ
 
-
         See Also
         --------
         pandas.Series.str.join
@@ -464,8 +588,8 @@ class StringAccessor:
         Perform python string formatting on each element of the DataArray.
 
         This is equivalent to calling `str.format` on every element of the
-        DataArray.  The replacement values can either be a string-like
-        scalar or an array-like of string-like values.  If array-like,
+        DataArray. The replacement values can either be a string-like
+        scalar or array-like of string-like values. If array-like,
         the values will be broadcast and applied elementwiseto the input
         DataArray.
 
@@ -522,21 +646,22 @@ class StringAccessor:
         array([[['spam is unexpected', 'spam is unexpected'],
                 ['egg is unexpected', 'egg is unexpected']],
         <BLANKLINE>
-            [['spam and lancelot are like a duck',
-                'spam and arthur are like a duck'],
+               [['spam and lancelot are like a duck',
+                 'spam and arthur are like a duck'],
                 ['egg and lancelot are like a duck',
-                'egg and arthur are like a duck']]], dtype='<U33')
+                 'egg and arthur are like a duck']]], dtype='<U33')
         Dimensions without coordinates: X, Y, ZZ
-
 
         See Also
         --------
         str.format
         """
+        args = tuple(self._stringify(x) for x in args)
+        kwargs = {key: self._stringify(val) for key, val in kwargs.items()}
         func = lambda x, *args, **kwargs: self._obj.dtype.type.format(
             x, *args, **kwargs
         )
-        return self._apply(func, *args, kwargs=kwargs)
+        return self._apply(func=func, func_args=args, func_kwargs={"kwargs": kwargs})
 
     def capitalize(self) -> Any:
         """
@@ -546,7 +671,7 @@ class StringAccessor:
         -------
         capitalized : same type as values
         """
-        return self._apply(lambda x: x.capitalize())
+        return self._apply(func=lambda x: x.capitalize())
 
     def lower(self) -> Any:
         """
@@ -556,7 +681,7 @@ class StringAccessor:
         -------
         lowerd : same type as values
         """
-        return self._apply(lambda x: x.lower())
+        return self._apply(func=lambda x: x.lower())
 
     def swapcase(self) -> Any:
         """
@@ -566,7 +691,7 @@ class StringAccessor:
         -------
         swapcased : same type as values
         """
-        return self._apply(lambda x: x.swapcase())
+        return self._apply(func=lambda x: x.swapcase())
 
     def title(self) -> Any:
         """
@@ -576,7 +701,7 @@ class StringAccessor:
         -------
         titled : same type as values
         """
-        return self._apply(lambda x: x.title())
+        return self._apply(func=lambda x: x.title())
 
     def upper(self) -> Any:
         """
@@ -586,7 +711,7 @@ class StringAccessor:
         -------
         uppered : same type as values
         """
-        return self._apply(lambda x: x.upper())
+        return self._apply(func=lambda x: x.upper())
 
     def casefold(self) -> Any:
         """
@@ -601,7 +726,7 @@ class StringAccessor:
         -------
         casefolded : same type as values
         """
-        return self._apply(lambda x: x.casefold())
+        return self._apply(func=lambda x: x.casefold())
 
     def normalize(
         self,
@@ -615,16 +740,15 @@ class StringAccessor:
 
         Parameters
         ----------
-        form : {"NFC", "NFKC", "NFD", and "NFKD"}
+        form : {"NFC", "NFKC", "NFD", "NFKD"}
             Unicode form.
 
         Returns
         -------
         normalized : same type as values
 
-
         """
-        return self._apply(lambda x: normalize(form, x))
+        return self._apply(func=lambda x: normalize(form, x))
 
     def isalnum(self) -> Any:
         """
@@ -635,7 +759,7 @@ class StringAccessor:
         isalnum : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isalnum(), dtype=bool)
+        return self._apply(func=lambda x: x.isalnum(), dtype=bool)
 
     def isalpha(self) -> Any:
         """
@@ -646,7 +770,7 @@ class StringAccessor:
         isalpha : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isalpha(), dtype=bool)
+        return self._apply(func=lambda x: x.isalpha(), dtype=bool)
 
     def isdecimal(self) -> Any:
         """
@@ -657,7 +781,7 @@ class StringAccessor:
         isdecimal : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isdecimal(), dtype=bool)
+        return self._apply(func=lambda x: x.isdecimal(), dtype=bool)
 
     def isdigit(self) -> Any:
         """
@@ -668,7 +792,7 @@ class StringAccessor:
         isdigit : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isdigit(), dtype=bool)
+        return self._apply(func=lambda x: x.isdigit(), dtype=bool)
 
     def islower(self) -> Any:
         """
@@ -679,7 +803,7 @@ class StringAccessor:
         islower : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.islower(), dtype=bool)
+        return self._apply(func=lambda x: x.islower(), dtype=bool)
 
     def isnumeric(self) -> Any:
         """
@@ -690,7 +814,7 @@ class StringAccessor:
         isnumeric : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isnumeric(), dtype=bool)
+        return self._apply(func=lambda x: x.isnumeric(), dtype=bool)
 
     def isspace(self) -> Any:
         """
@@ -701,7 +825,7 @@ class StringAccessor:
         isspace : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isspace(), dtype=bool)
+        return self._apply(func=lambda x: x.isspace(), dtype=bool)
 
     def istitle(self) -> Any:
         """
@@ -712,7 +836,7 @@ class StringAccessor:
         istitle : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.istitle(), dtype=bool)
+        return self._apply(func=lambda x: x.istitle(), dtype=bool)
 
     def isupper(self) -> Any:
         """
@@ -723,13 +847,13 @@ class StringAccessor:
         isupper : array of bool
             Array of boolean values with the same shape as the original array.
         """
-        return self._apply(lambda x: x.isupper(), dtype=bool)
+        return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
     def count(
         self,
-        pat: Union[str, bytes, Pattern],
+        pat: Union[str, bytes, Pattern, Any],
         flags: int = 0,
-        case: bool = True,
+        case: bool = None,
     ) -> Any:
         """
         Count occurrences of pattern in each string of the array.
@@ -738,15 +862,19 @@ class StringAccessor:
         pattern is repeated in each of the string elements of the
         :class:`~xarray.DataArray`.
 
+        The pattern `pat` can either be a single ``str`` or `re.Pattern` or
+        array-like of ``str`` or `re.Pattern`. If array-like, it is broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        pat : str or re.Pattern
+        pat : str or re.Pattern or array-like of str or re.Pattern
             A string containing a regular expression or a compiled regular
-            expression object.
+            expression object. If array-like, it is broadcast.
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
         case : bool, default: True
             If True, case sensitive.
@@ -757,22 +885,26 @@ class StringAccessor:
         -------
         counts : array of int
         """
-        pat = self._re_compile(pat, flags, case)
+        pat = self._re_compile(pat=pat, flags=flags, case=case)
 
-        f = lambda x: len(pat.findall(x))
-        return self._apply(f, dtype=int)
+        func = lambda x, ipat: len(ipat.findall(x))
+        return self._apply(func=func, func_args=(pat,), dtype=int)
 
     def startswith(
         self,
-        pat: Union[str, bytes],
+        pat: Union[str, bytes, Any],
     ) -> Any:
         """
         Test if the start of each string in the array matches a pattern.
+
+        The pattern `pat` can either be a ``str`` or array-like of ``str``.
+        If array-like, it will be broadcast and applied elementwise.
 
         Parameters
         ----------
         pat : str
             Character sequence. Regular expressions are not accepted.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -781,20 +913,24 @@ class StringAccessor:
             the start of each string element.
         """
         pat = self._stringify(pat)
-        f = lambda x: x.startswith(pat)
-        return self._apply(f, dtype=bool)
+        func = lambda x, y: x.startswith(y)
+        return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def endswith(
         self,
-        pat: Union[str, bytes],
+        pat: Union[str, bytes, Any],
     ) -> Any:
         """
         Test if the end of each string in the array matches a pattern.
+
+        The pattern `pat` can either be a ``str`` or array-like of ``str``.
+        If array-like, it will be broadcast and applied elementwise.
 
         Parameters
         ----------
         pat : str
             Character sequence. Regular expressions are not accepted.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -803,119 +939,150 @@ class StringAccessor:
             the end of each string element.
         """
         pat = self._stringify(pat)
-        f = lambda x: x.endswith(pat)
-        return self._apply(f, dtype=bool)
+        func = lambda x, y: x.endswith(y)
+        return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def pad(
         self,
-        width: int,
+        width: Union[int, Any],
         side: str = "left",
-        fillchar: Union[str, bytes] = " ",
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad strings in the array up to width.
 
+        If `width` or 'fillchar` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        width : int
+        width : int or array-like of int
             Minimum width of resulting string; additional characters will be
-            filled with character defined in `fillchar`.
+            filled with character defined in ``fillchar``.
+            If array-like, it is broadcast.
         side : {"left", "right", "both"}, default: "left"
             Side from which to fill resulting string.
-        fillchar : str, default: " "
-            Additional character for filling, default is whitespace.
+        fillchar : str or array-like of str, default: " "
+            Additional character for filling, default is a space.
+            If array-like, it is broadcast.
 
         Returns
         -------
         filled : same type as values
             Array with a minimum number of char in each element.
         """
-        width = int(width)
-        fillchar = self._stringify(fillchar)
-        if len(fillchar) != 1:
-            raise TypeError("fillchar must be a character, not str")
-
         if side == "left":
-            f = lambda s: s.rjust(width, fillchar)
+            func = self.rjust
         elif side == "right":
-            f = lambda s: s.ljust(width, fillchar)
+            func = self.ljust
         elif side == "both":
-            f = lambda s: s.center(width, fillchar)
+            func = self.center
         else:  # pragma: no cover
             raise ValueError("Invalid side")
 
-        return self._apply(f)
+        return func(width=width, fillchar=fillchar)
+
+    def _padder(
+        self,
+        *,
+        func: Callable,
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
+    ) -> Any:
+        """
+        Wrapper function to handle padding operations
+        """
+        fillchar = self._stringify(fillchar)
+
+        def overfunc(x, iwidth, ifillchar):
+            if len(ifillchar) != 1:
+                raise TypeError("fillchar must be a character, not str")
+            return func(x, int(iwidth), ifillchar)
+
+        return self._apply(func=overfunc, func_args=(width, fillchar))
 
     def center(
         self,
-        width: int,
-        fillchar: Union[str, bytes] = " ",
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad left and right side of each string in the array.
 
+        If `width` or 'fillchar` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        width : int
+        width : int or array-like of int
             Minimum width of resulting string; additional characters will be
-            filled with ``fillchar``
-        fillchar : str, default: " "
-            Additional character for filling, default is whitespace
+            filled with ``fillchar``. If array-like, it is broadcast.
+        fillchar : str or array-like of str, default: " "
+            Additional character for filling, default is a space.
+            If array-like, it is broadcast.
 
         Returns
         -------
         filled : same type as values
         """
-        return self.pad(width, side="both", fillchar=fillchar)
+        func = self._obj.dtype.type.center
+        return self._padder(func=func, width=width, fillchar=fillchar)
 
     def ljust(
         self,
-        width: int,
-        fillchar: Union[str, bytes] = " ",
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad right side of each string in the array.
 
+        If `width` or 'fillchar` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        width : int
+        width : int or array-like of int
             Minimum width of resulting string; additional characters will be
-            filled with ``fillchar``
-        fillchar : str, default: " "
-            Additional character for filling, default is whitespace
+            filled with ``fillchar``. If array-like, it is broadcast.
+        fillchar : str or array-like of str, default: " "
+            Additional character for filling, default is a space.
+            If array-like, it is broadcast.
 
         Returns
         -------
         filled : same type as values
         """
-        return self.pad(width, side="right", fillchar=fillchar)
+        func = self._obj.dtype.type.ljust
+        return self._padder(func=func, width=width, fillchar=fillchar)
 
     def rjust(
         self,
-        width: int,
-        fillchar: Union[str, bytes] = " ",
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad left side of each string in the array.
 
+        If `width` or 'fillchar` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        width : int
+        width : int or array-like of int
             Minimum width of resulting string; additional characters will be
-            filled with ``fillchar``
-        fillchar : str, default: " "
-            Additional character for filling, default is whitespace
+            filled with ``fillchar``. If array-like, it is broadcast.
+        fillchar : str or array-like of str, default: " "
+            Additional character for filling, default is a space.
+            If array-like, it is broadcast.
 
         Returns
         -------
         filled : same type as values
         """
-        return self.pad(width, side="left", fillchar=fillchar)
+        func = self._obj.dtype.type.rjust
+        return self._padder(func=func, width=width, fillchar=fillchar)
 
-    def zfill(
-        self,
-        width: int,
-    ) -> Any:
+    def zfill(self, width: Union[int, Any]) -> Any:
         """
         Pad each string in the array by prepending '0' characters.
 
@@ -923,22 +1090,25 @@ class StringAccessor:
         left of the string to reach a total string length  `width`. Strings
         in the array with length greater or equal to `width` are unchanged.
 
+        If `width` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
-        width : int
+        width : int or array-like of int
             Minimum length of resulting string; strings with length less
-            than `width` be prepended with '0' characters.
+            than `width` be prepended with '0' characters. If array-like, it is broadcast.
 
         Returns
         -------
         filled : same type as values
         """
-        return self.pad(width, side="left", fillchar="0")
+        return self.rjust(width, fillchar="0")
 
     def contains(
         self,
-        pat: Union[str, bytes, Pattern],
-        case: bool = True,
+        pat: Union[str, bytes, Pattern, Any],
+        case: bool = None,
         flags: int = 0,
         regex: bool = True,
     ) -> Any:
@@ -948,11 +1118,15 @@ class StringAccessor:
         Return boolean array based on whether a given pattern or regex is
         contained within a string of the array.
 
+        The pattern `pat` can either be a single ``str`` or `re.Pattern` or
+        array-like of ``str`` or `re.Pattern`. If array-like, it is broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        pat : str or re.Pattern
+        pat : str or re.Pattern or array-like of str or re.Pattern
             Character sequence, a string containing a regular expression,
-            or a compiled regular expression object.
+            or a compiled regular expression object. If array-like, it is broadcast.
         case : bool, default: True
             If True, case sensitive.
             Cannot be set if `pat` is a compiled regex.
@@ -960,7 +1134,7 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
         regex : bool, default: True
             If True, assumes the pat is a regular expression.
@@ -974,42 +1148,54 @@ class StringAccessor:
             given pattern is contained within the string of each element
             of the array.
         """
-        is_compiled_re = isinstance(pat, self._pattern_type)
+        is_compiled_re = _contains_compiled_re(pat)
         if is_compiled_re and not regex:
             raise ValueError(
                 "Must use regular expression matching for regular expression object."
             )
 
         if regex:
-            pat = self._re_compile(pat, flags, case)
-            if pat.groups > 0:  # pragma: no cover
-                raise ValueError("This pattern has match groups.")
+            if not is_compiled_re:
+                pat = self._re_compile(pat=pat, flags=flags, case=case)
 
-            f = lambda x: bool(pat.search(x))
+            def func(x, ipat):
+                if ipat.groups > 0:  # pragma: no cover
+                    raise ValueError("This pattern has match groups.")
+                return bool(ipat.search(x))
+
         else:
             pat = self._stringify(pat)
             if case or case is None:
-                f = lambda x: pat in x
+                func = lambda x, ipat: ipat in x
+            elif self._obj.dtype.char == "U":
+                uppered = self._obj.str.casefold()
+                uppat = StringAccessor(pat).casefold()
+                return uppered.str.contains(uppat, regex=False)
             else:
                 uppered = self._obj.str.upper()
-                return uppered.str.contains(pat.upper(), regex=False)
+                uppat = StringAccessor(pat).upper()
+                return uppered.str.contains(uppat, regex=False)
 
-        return self._apply(f, dtype=bool)
+        return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def match(
         self,
-        pat: Union[str, bytes, Pattern],
-        case: bool = True,
+        pat: Union[str, bytes, Pattern, Any],
+        case: bool = None,
         flags: int = 0,
     ) -> Any:
         """
         Determine if each string in the array matches a regular expression.
 
+        The pattern `pat` can either be a single ``str`` or `re.Pattern` or
+        array-like of ``str`` or `re.Pattern`. If array-like, it is broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        pat : str or re.Pattern
+        pat : str or re.Pattern or array-like of str or re.Pattern
             A string containing a regular expression or
-            a compiled regular expression object.
+            a compiled regular expression object. If array-like, it is broadcast.
         case : bool, default: True
             If True, case sensitive.
             Cannot be set if `pat` is a compiled regex.
@@ -1017,21 +1203,21 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
 
         Returns
         -------
         matched : array of bool
         """
-        pat = self._re_compile(pat, flags, case)
+        pat = self._re_compile(pat=pat, flags=flags, case=case)
 
-        f = lambda x: bool(pat.match(x))
-        return self._apply(f, dtype=bool)
+        func = lambda x, ipat: bool(ipat.match(x))
+        return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def strip(
         self,
-        to_strip: Union[str, bytes] = None,
+        to_strip: Union[str, bytes, Any] = None,
         side: str = "both",
     ) -> Any:
         """
@@ -1040,13 +1226,16 @@ class StringAccessor:
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from left and/or right sides.
 
+        `to_strip` can either be a ``str`` or array-like of ``str``.
+        If array-like, it will be broadcast and applied elementwise.
+
         Parameters
         ----------
-        to_strip : str or None, default: None
+        to_strip : str or array-like of str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
-            If None then whitespaces are removed.
-        side : {"left", "right", "both"}, default: "left"
+            If None then whitespaces are removed. If array-like, it is broadcast.
+        side : {"left", "right", "both"}, default: "both"
             Side from which to strip.
 
         Returns
@@ -1057,19 +1246,19 @@ class StringAccessor:
             to_strip = self._stringify(to_strip)
 
         if side == "both":
-            f = lambda x: x.strip(to_strip)
+            func = lambda x, y: x.strip(y)
         elif side == "left":
-            f = lambda x: x.lstrip(to_strip)
+            func = lambda x, y: x.lstrip(y)
         elif side == "right":
-            f = lambda x: x.rstrip(to_strip)
+            func = lambda x, y: x.rstrip(y)
         else:  # pragma: no cover
             raise ValueError("Invalid side")
 
-        return self._apply(f)
+        return self._apply(func=func, func_args=(to_strip,))
 
     def lstrip(
         self,
-        to_strip: Union[str, bytes] = None,
+        to_strip: Union[str, bytes, Any] = None,
     ) -> Any:
         """
         Remove leading characters.
@@ -1077,12 +1266,15 @@ class StringAccessor:
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the left side.
 
+        `to_strip` can either be a ``str`` or array-like of ``str``.
+        If array-like, it will be broadcast and applied elementwise.
+
         Parameters
         ----------
-        to_strip : str or None, default: None
+        to_strip : str or array-like of str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
-            If None then whitespaces are removed.
+            If None then whitespaces are removed. If array-like, it is broadcast.
 
         Returns
         -------
@@ -1092,7 +1284,7 @@ class StringAccessor:
 
     def rstrip(
         self,
-        to_strip: Union[str, bytes] = None,
+        to_strip: Union[str, bytes, Any] = None,
     ) -> Any:
         """
         Remove trailing characters.
@@ -1100,12 +1292,15 @@ class StringAccessor:
         Strip whitespaces (including newlines) or a set of specified characters
         from each string in the array from the right side.
 
+        `to_strip` can either be a ``str`` or array-like of ``str``.
+        If array-like, it will be broadcast and applied elementwise.
+
         Parameters
         ----------
-        to_strip : str or None, default: None
+        to_strip : str or array-like of str or None, default: None
             Specifying the set of characters to be removed.
             All combinations of this set of characters will be stripped.
-            If None then whitespaces are removed.
+            If None then whitespaces are removed. If array-like, it is broadcast.
 
         Returns
         -------
@@ -1115,7 +1310,7 @@ class StringAccessor:
 
     def wrap(
         self,
-        width: int,
+        width: Union[int, Any],
         **kwargs,
     ) -> Any:
         """
@@ -1124,10 +1319,14 @@ class StringAccessor:
         This method has the same keyword parameters and defaults as
         :class:`textwrap.TextWrapper`.
 
+        If `width` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
-        width : int
-            Maximum line-width
+        width : int or array-like of int
+            Maximum line-width.
+            If array-like, it is broadcast.
         **kwargs
             keyword arguments passed into :class:`textwrap.TextWrapper`.
 
@@ -1135,9 +1334,10 @@ class StringAccessor:
         -------
         wrapped : same type as values
         """
-        tw = textwrap.TextWrapper(width=width, **kwargs)
-        f = lambda x: "\n".join(tw.wrap(x))
-        return self._apply(f)
+        ifunc = lambda x: textwrap.TextWrapper(width=x, **kwargs)
+        tw = StringAccessor(width)._apply(func=ifunc, dtype=np.object_)
+        func = lambda x, itw: "\n".join(itw.wrap(x))
+        return self._apply(func=func, func_args=(tw,))
 
     def translate(
         self,
@@ -1158,34 +1358,38 @@ class StringAccessor:
         -------
         translated : same type as values
         """
-        f = lambda x: x.translate(table)
-        return self._apply(f)
+        func = lambda x: x.translate(table)
+        return self._apply(func=func)
 
     def repeat(
         self,
-        repeats: int,
+        repeats: Union[int, Any],
     ) -> Any:
         """
-        Duplicate each string in the array.
+        Repeat each string in the array.
+
+        If `repeats` is array-like, it is broadcast against the array and applied
+        elementwise.
 
         Parameters
         ----------
-        repeats : int
+        repeats : int or array-like of int
             Number of repetitions.
+            If array-like, it is broadcast.
 
         Returns
         -------
         repeated : same type as values
             Array of repeated string objects.
         """
-        f = lambda x: repeats * x
-        return self._apply(f)
+        func = lambda x, y: x * y
+        return self._apply(func=func, func_args=(repeats,))
 
     def find(
         self,
-        sub: Union[str, bytes],
-        start: int = 0,
-        end: int = None,
+        sub: Union[str, bytes, Any],
+        start: Union[int, Any] = 0,
+        end: Union[int, Any] = None,
         side: str = "left",
     ) -> Any:
         """
@@ -1193,14 +1397,20 @@ class StringAccessor:
         where the substring is fully contained between [start:end].
         Return -1 on failure.
 
+        If `start`, `end`, or 'sub` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        sub : str
-            Substring being searched
-        start : int
-            Left edge index
-        end : int
-            Right edge index
+        sub : str or array-like of str
+            Substring being searched.
+            If array-like, it is broadcast.
+        start : int or array-like of int
+            Left edge index.
+            If array-like, it is broadcast.
+        end : int or array-like of int
+            Right edge index.
+            If array-like, it is broadcast.
         side : {"left", "right"}, default: "left"
             Starting side for search.
 
@@ -1217,32 +1427,34 @@ class StringAccessor:
         else:  # pragma: no cover
             raise ValueError("Invalid side")
 
-        if end is None:
-            f = lambda x: getattr(x, method)(sub, start)
-        else:
-            f = lambda x: getattr(x, method)(sub, start, end)
-
-        return self._apply(f, dtype=int)
+        func = lambda x, isub, istart, iend: getattr(x, method)(isub, istart, iend)
+        return self._apply(func=func, func_args=(sub, start, end), dtype=int)
 
     def rfind(
         self,
-        sub: Union[str, bytes],
-        start: int = 0,
-        end: int = None,
+        sub: Union[str, bytes, Any],
+        start: Union[int, Any] = 0,
+        end: Union[int, Any] = None,
     ) -> Any:
         """
         Return highest indexes in each strings in the array
         where the substring is fully contained between [start:end].
         Return -1 on failure.
 
+        If `start`, `end`, or 'sub` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        sub : str
-            Substring being searched
-        start : int
-            Left edge index
-        end : int
-            Right edge index
+        sub : str or array-like of str
+            Substring being searched.
+            If array-like, it is broadcast.
+        start : int or array-like of int
+            Left edge index.
+            If array-like, it is broadcast.
+        end : int or array-like of int
+            Right edge index.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -1252,9 +1464,9 @@ class StringAccessor:
 
     def index(
         self,
-        sub: Union[str, bytes],
-        start: int = 0,
-        end: int = None,
+        sub: Union[str, bytes, Any],
+        start: Union[int, Any] = 0,
+        end: Union[int, Any] = None,
         side: str = "left",
     ) -> Any:
         """
@@ -1263,14 +1475,20 @@ class StringAccessor:
         ``str.find`` except instead of returning -1, it raises a ValueError
         when the substring is not found.
 
+        If `start`, `end`, or 'sub` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        sub : str
-            Substring being searched
-        start : int
-            Left edge index
-        end : int
-            Right edge index
+        sub : str or array-like of str
+            Substring being searched.
+            If array-like, it is broadcast.
+        start : int or array-like of int
+            Left edge index.
+            If array-like, it is broadcast.
+        end : int or array-like of int
+            Right edge index.
+            If array-like, it is broadcast.
         side : {"left", "right"}, default: "left"
             Starting side for search.
 
@@ -1292,18 +1510,14 @@ class StringAccessor:
         else:  # pragma: no cover
             raise ValueError("Invalid side")
 
-        if end is None:
-            f = lambda x: getattr(x, method)(sub, start)
-        else:
-            f = lambda x: getattr(x, method)(sub, start, end)
-
-        return self._apply(f, dtype=int)
+        func = lambda x, isub, istart, iend: getattr(x, method)(isub, istart, iend)
+        return self._apply(func=func, func_args=(sub, start, end), dtype=int)
 
     def rindex(
         self,
-        sub: Union[str, bytes],
-        start: int = 0,
-        end: int = None,
+        sub: Union[str, bytes, Any],
+        start: Union[int, Any] = 0,
+        end: Union[int, Any] = None,
     ) -> Any:
         """
         Return highest indexes in each strings where the substring is
@@ -1311,14 +1525,20 @@ class StringAccessor:
         ``str.rfind`` except instead of returning -1, it raises a ValueError
         when the substring is not found.
 
+        If `start`, `end`, or 'sub` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        sub : str
-            Substring being searched
-        start : int
-            Left edge index
-        end : int
-            Right edge index
+        sub : str or array-like of str
+            Substring being searched.
+            If array-like, it is broadcast.
+        start : int or array-like of int
+            Left edge index.
+            If array-like, it is broadcast.
+        end : int or array-like of int
+            Right edge index.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -1333,9 +1553,9 @@ class StringAccessor:
 
     def replace(
         self,
-        pat: Union[str, bytes, Pattern],
-        repl: Union[str, bytes, Callable],
-        n: int = -1,
+        pat: Union[str, bytes, Pattern, Any],
+        repl: Union[str, bytes, Callable, Any],
+        n: Union[int, Any] = -1,
         case: bool = None,
         flags: int = 0,
         regex: bool = True,
@@ -1343,16 +1563,22 @@ class StringAccessor:
         """
         Replace occurrences of pattern/regex in the array with some string.
 
+        If `pat`, `repl`, or 'n` is array-like, they are broadcast
+        against the array and applied elementwise.
+
         Parameters
         ----------
-        pat : str or re.Pattern
+        pat : str or re.Pattern or array-like of str or re.Pattern
             String can be a character sequence or regular expression.
-        repl : str or callable
+            If array-like, it is broadcast.
+        repl : str or callable or array-like of str or callable
             Replacement string or a callable. The callable is passed the regex
             match object and must return a replacement string to be used.
             See :func:`re.sub`.
-        n : int, default: -1
+            If array-like, it is broadcast.
+        n : int or array of int, default: -1
             Number of replacements to make from start. Use ``-1`` to replace all.
+            If array-like, it is broadcast.
         case : bool, default: True
             If True, case sensitive.
             Cannot be set if `pat` is a compiled regex.
@@ -1360,7 +1586,7 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
         regex : bool, default: True
             If True, assumes the passed-in pattern is a regular expression.
@@ -1374,13 +1600,12 @@ class StringAccessor:
             A copy of the object with all matching occurrences of `pat`
             replaced by `repl`.
         """
-        if not _is_str_like(repl) and not callable(repl):  # pragma: no cover
+        if _contains_str_like(repl):
+            repl = self._stringify(repl)
+        elif not _contains_callable(repl):  # pragma: no cover
             raise TypeError("repl must be a string or callable")
 
-        if _is_str_like(repl):
-            repl = self._stringify(repl)
-
-        is_compiled_re = isinstance(pat, self._pattern_type)
+        is_compiled_re = _contains_compiled_re(pat)
         if not regex and is_compiled_re:
             raise ValueError(
                 "Cannot use a compiled regex as replacement pattern with regex=False"
@@ -1390,17 +1615,18 @@ class StringAccessor:
             raise ValueError("Cannot use a callable replacement when regex=False")
 
         if regex:
-            pat = self._re_compile(pat, flags, case)
-            n = n if n >= 0 else 0
-            f = lambda x: pat.sub(repl=repl, string=x, count=n)
+            pat = self._re_compile(pat=pat, flags=flags, case=case)
+            func = lambda x, ipat, irepl, i_n: ipat.sub(
+                repl=irepl, string=x, count=i_n if i_n >= 0 else 0
+            )
         else:
             pat = self._stringify(pat)
-            f = lambda x: x.replace(pat, repl, n)
-        return self._apply(f)
+            func = lambda x, ipat, irepl, i_n: x.replace(ipat, irepl, i_n)
+        return self._apply(func=func, func_args=(pat, repl, n))
 
     def extract(
         self,
-        pat: Union[str, bytes, Pattern],
+        pat: Union[str, bytes, Pattern, Any],
         dim: Hashable,
         case: bool = None,
         flags: int = 0,
@@ -1412,12 +1638,15 @@ class StringAccessor:
         For each string in the DataArray, extract groups from the first match
         of regular expression pat.
 
+        If `pat` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
-        pat : str or re.Pattern
+        pat : str or re.Pattern or array-like of str or re.Pattern
             A string containing a regular expression or a compiled regular
-            expression object.
-        dim : hashable or `None`
+            expression object. If array-like, it is broadcast.
+        dim : hashable or None
             Name of the new dimension to store the captured strings in.
             If None, the pattern must have only one capture group and the
             resulting DataArray will have the same size as the original.
@@ -1428,7 +1657,7 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
 
         Returns
@@ -1440,7 +1669,7 @@ class StringAccessor:
         ValueError
             `pat` has no capture groups.
         ValueError
-            `dim` is `None` and there is more than one capture group.
+            `dim` is None and there is more than one capture group.
         ValueError
             `case` is set when `pat` is a compiled regular expression.
         KeyError
@@ -1487,20 +1716,29 @@ class StringAccessor:
         re.search
         pandas.Series.str.extract
         """
-        pat = self._re_compile(pat, flags, case)
+        pat = self._re_compile(pat=pat, flags=flags, case=case)
 
-        if pat.groups == 0:
+        if isinstance(pat, re.Pattern):
+            maxgroups = pat.groups
+        else:
+            maxgroups = (
+                _apply_str_ufunc(obj=pat, func=lambda x: x.groups, dtype=np.int_)
+                .max()
+                .data.tolist()
+            )
+
+        if maxgroups == 0:
             raise ValueError("No capture groups found in pattern.")
 
-        if dim is None and pat.groups != 1:
+        if dim is None and maxgroups != 1:
             raise ValueError(
-                "dim must be specified if more than one capture group is given."
+                "Dimension must be specified if more than one capture group is given."
             )
 
         if dim is not None and dim in self._obj.dims:
-            raise KeyError(f"Dimension {dim} already present in DataArray.")
+            raise KeyError(f"Dimension '{dim}' already present in DataArray.")
 
-        def _get_res_single(val, pat=pat):
+        def _get_res_single(val, pat):
             match = pat.search(val)
             if match is None:
                 return ""
@@ -1509,7 +1747,7 @@ class StringAccessor:
                 res = ""
             return res
 
-        def _get_res_multi(val, pat=pat):
+        def _get_res_multi(val, pat):
             match = pat.search(val)
             if match is None:
                 return np.array([""], val.dtype)
@@ -1518,20 +1756,21 @@ class StringAccessor:
             return np.array(match, val.dtype)
 
         if dim is None:
-            return self._apply(_get_res_single)
+            return self._apply(func=_get_res_single, func_args=(pat,))
         else:
             # dtype MUST be object or strings can be truncated
             # See: https://github.com/numpy/numpy/issues/8352
             return self._apply(
-                _get_res_multi,
+                func=_get_res_multi,
+                func_args=(pat,),
                 dtype=np.object_,
                 output_core_dims=[[dim]],
-                output_sizes={dim: pat.groups},
+                output_sizes={dim: maxgroups},
             ).astype(self._obj.dtype.kind)
 
     def extractall(
         self,
-        pat: Union[str, bytes, Pattern],
+        pat: Union[str, bytes, Pattern, Any],
         group_dim: Hashable,
         match_dim: Hashable,
         case: bool = None,
@@ -1546,15 +1785,18 @@ class StringAccessor:
         Equivalent to applying re.findall() to all the elements in the DataArray
         and splitting the results across dimensions.
 
+        If `pat` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
         pat : str or re.Pattern
             A string containing a regular expression or a compiled regular
-            expression object.
-        group_dim: hashable
+            expression object. If array-like, it is broadcast.
+        group_dim : hashable
             Name of the new dimensions corresponding to the capture groups.
             This dimension is added to the new DataArray first.
-        match_dim: hashable
+        match_dim : hashable
             Name of the new dimensions corresponding to the matches for each group.
             This dimension is added to the new DataArray second.
         case : bool, default: True
@@ -1564,7 +1806,7 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
 
         Returns
@@ -1634,7 +1876,6 @@ class StringAccessor:
                  ['', '']]]], dtype='<U7')
         Dimensions without coordinates: X, Y, group, match
 
-
         See Also
         --------
         DataArray.str.extract
@@ -1643,30 +1884,46 @@ class StringAccessor:
         re.findall
         pandas.Series.str.extractall
         """
-        pat = self._re_compile(pat, flags, case)
-
-        if pat.groups == 0:
-            raise ValueError("No capture groups found in pattern.")
+        pat = self._re_compile(pat=pat, flags=flags, case=case)
 
         if group_dim in self._obj.dims:
-            raise KeyError(f"Group dimension {group_dim} already present in DataArray.")
+            raise KeyError(
+                f"Group dimension '{group_dim}' already present in DataArray."
+            )
 
         if match_dim in self._obj.dims:
-            raise KeyError(f"Match dimension {match_dim} already present in DataArray.")
+            raise KeyError(
+                f"Match dimension '{match_dim}' already present in DataArray."
+            )
 
         if group_dim == match_dim:
             raise KeyError(
-                f"Group dimension {group_dim} is the same as match dimension {match_dim}."
+                f"Group dimension '{group_dim}' is the same as match dimension '{match_dim}'."
             )
 
-        _get_count = lambda x: len(pat.findall(x))
-        maxcount = self._apply(_get_count, dtype=np.int_).max().data.tolist()
+        _get_count = lambda x, ipat: len(ipat.findall(x))
+        maxcount = (
+            self._apply(func=_get_count, func_args=(pat,), dtype=np.int_)
+            .max()
+            .data.tolist()
+        )
 
-        def _get_res(val, pat=pat, maxcount=maxcount, dtype=self._obj.dtype):
-            matches = pat.findall(val)
-            res = np.zeros([maxcount, pat.groups], dtype)
+        if isinstance(pat, re.Pattern):
+            maxgroups = pat.groups
+        else:
+            maxgroups = (
+                _apply_str_ufunc(obj=pat, func=lambda x: x.groups, dtype=np.int_)
+                .max()
+                .data.tolist()
+            )
 
-            if pat.groups == 1:
+        def _get_res(val, ipat, imaxcount=maxcount, dtype=self._obj.dtype):
+            if ipat.groups == 0:
+                raise ValueError("No capture groups found in pattern.")
+            matches = ipat.findall(val)
+            res = np.zeros([maxcount, ipat.groups], dtype)
+
+            if ipat.groups == 1:
                 for imatch, match in enumerate(matches):
                     res[imatch, 0] = match
             else:
@@ -1679,15 +1936,16 @@ class StringAccessor:
         return self._apply(
             # dtype MUST be object or strings can be truncated
             # See: https://github.com/numpy/numpy/issues/8352
-            _get_res,
+            func=_get_res,
+            func_args=(pat,),
             dtype=np.object_,
             output_core_dims=[[group_dim, match_dim]],
-            output_sizes={group_dim: pat.groups, match_dim: maxcount},
+            output_sizes={group_dim: maxgroups, match_dim: maxcount},
         ).astype(self._obj.dtype.kind)
 
     def findall(
         self,
-        pat: Union[str, bytes, Pattern],
+        pat: Union[str, bytes, Pattern, Any],
         case: bool = None,
         flags: int = 0,
     ) -> Any:
@@ -1700,11 +1958,14 @@ class StringAccessor:
         If there are multiple capture groups, the lists will be a sequence of lists,
         each of which contains a sequence of matches.
 
+        If `pat` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
         pat : str or re.Pattern
             A string containing a regular expression or a compiled regular
-            expression object.
+            expression object. If array-like, it is broadcast.
         case : bool, default: True
             If True, case sensitive.
             Cannot be set if `pat` is a compiled regex.
@@ -1712,7 +1973,7 @@ class StringAccessor:
         flags : int, default: 0
             Flags to pass through to the re module, e.g. `re.IGNORECASE`.
             see `compilation-flags <https://docs.python.org/3/howto/regex.html#compilation-flags>`_.
-            ``0`` means no flags.  Flags can be combined with the bitwise or operator `|`.
+            ``0`` means no flags. Flags can be combined with the bitwise or operator ``|``.
             Cannot be set if `pat` is a compiled regex.
 
         Returns
@@ -1765,18 +2026,22 @@ class StringAccessor:
         re.findall
         pandas.Series.str.findall
         """
-        pat = self._re_compile(pat, flags, case)
+        pat = self._re_compile(pat=pat, flags=flags, case=case)
 
-        if pat.groups == 0:
-            raise ValueError("No capture groups found in pattern.")
+        def func(x, ipat):
+            if ipat.groups == 0:
+                raise ValueError("No capture groups found in pattern.")
 
-        return self._apply(pat.findall, dtype=np.object_)
+            return ipat.findall(x)
+
+        return self._apply(func=func, func_args=(pat,), dtype=np.object_)
 
     def _partitioner(
         self,
+        *,
         func: Callable,
         dim: Hashable,
-        sep: Optional[Union[str, bytes]],
+        sep: Optional[Union[str, bytes, Any]],
     ) -> Any:
         """
         Implements logic for `partition` and `rpartition`.
@@ -1784,19 +2049,20 @@ class StringAccessor:
         sep = self._stringify(sep)
 
         if dim is None:
-            f = lambda x: list(func(x, sep))
-            return self._apply(f, dtype=np.object_)
+            listfunc = lambda x, isep: list(func(x, isep))
+            return self._apply(func=listfunc, func_args=(sep,), dtype=np.object_)
 
         # _apply breaks on an empty array in this case
         if not self._obj.size:
-            return self._obj.copy().expand_dims({dim: 0}, -1)
+            return self._obj.copy().expand_dims({dim: 0}, axis=-1)
 
-        f = lambda x: np.array(func(x, sep), dtype=self._obj.dtype)
+        arrfunc = lambda x, isep: np.array(func(x, isep), dtype=self._obj.dtype)
 
         # dtype MUST be object or strings can be truncated
         # See: https://github.com/numpy/numpy/issues/8352
         return self._apply(
-            f,
+            func=arrfunc,
+            func_args=(sep,),
             dtype=np.object_,
             output_core_dims=[[dim]],
             output_sizes={dim: 3},
@@ -1805,7 +2071,7 @@ class StringAccessor:
     def partition(
         self,
         dim: Optional[Hashable],
-        sep: Union[str, bytes] = " ",
+        sep: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Split the strings in the DataArray at the first occurrence of separator `sep`.
@@ -1816,15 +2082,17 @@ class StringAccessor:
         If the separator is not found, return 3 elements containing the string itself,
         followed by two empty strings.
 
-        This is equivalent to :meth:`str.partion`.
+        If `sep` is array-like, it is broadcast against the array and applied
+        elementwise.
 
         Parameters
         ----------
-        dim : Hashable or `None`
+        dim : hashable or None
             Name for the dimension to place the 3 elements in.
-            If `None`, place the results as list elements in an object DataArray
-        sep : str, default `" "`
+            If `None`, place the results as list elements in an object DataArray.
+        sep : str, default: " "
             String to split on.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -1841,7 +2109,7 @@ class StringAccessor:
     def rpartition(
         self,
         dim: Optional[Hashable],
-        sep: Union[str, bytes] = " ",
+        sep: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Split the strings in the DataArray at the last occurrence of separator `sep`.
@@ -1852,15 +2120,17 @@ class StringAccessor:
         If the separator is not found, return 3 elements containing two empty strings,
         followed by the string itself.
 
-        This is equivalent to :meth:`str.rpartion`.
+        If `sep` is array-like, it is broadcast against the array and applied
+        elementwise.
 
         Parameters
         ----------
-        dim : Hashable or `None`
+        dim : hashable or None
             Name for the dimension to place the 3 elements in.
-            If `None`, place the results as list elements in an object DataArray
-        sep : str, default `" "`
+            If `None`, place the results as list elements in an object DataArray.
+        sep : str, default: " "
             String to split on.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -1876,10 +2146,11 @@ class StringAccessor:
 
     def _splitter(
         self,
+        *,
         func: Callable,
         pre: bool,
         dim: Hashable,
-        sep: Optional[Union[str, bytes]],
+        sep: Optional[Union[str, bytes, Any]],
         maxsplit: int,
     ) -> Any:
         """
@@ -1889,17 +2160,20 @@ class StringAccessor:
             sep = self._stringify(sep)
 
         if dim is None:
-            f = lambda x: func(x, sep, maxsplit)
-            return self._apply(f, dtype=np.object_)
+            f_none = lambda x, isep: func(x, isep, maxsplit)
+            return self._apply(func=f_none, func_args=(sep,), dtype=np.object_)
 
         # _apply breaks on an empty array in this case
         if not self._obj.size:
-            return self._obj.copy().expand_dims({dim: 0}, -1)
+            return self._obj.copy().expand_dims({dim: 0}, axis=-1)
 
-        f_count = lambda x: max(len(func(x, sep, maxsplit)), 1)
-        maxsplit = self._apply(f_count, dtype=np.int_).max().data.tolist() - 1
+        f_count = lambda x, isep: max(len(func(x, isep, maxsplit)), 1)
+        maxsplit = (
+            self._apply(func=f_count, func_args=(sep,), dtype=np.int_).max().data.item()
+            - 1
+        )
 
-        def _dosplit(mystr, sep=sep, maxsplit=maxsplit, dtype=self._obj.dtype):
+        def _dosplit(mystr, sep, maxsplit=maxsplit, dtype=self._obj.dtype):
             res = func(mystr, sep, maxsplit)
             if len(res) < maxsplit + 1:
                 pad = [""] * (maxsplit + 1 - len(res))
@@ -1912,7 +2186,8 @@ class StringAccessor:
         # dtype MUST be object or strings can be truncated
         # See: https://github.com/numpy/numpy/issues/8352
         return self._apply(
-            _dosplit,
+            func=_dosplit,
+            func_args=(sep,),
             dtype=np.object_,
             output_core_dims=[[dim]],
             output_sizes={dim: maxsplit},
@@ -1921,7 +2196,7 @@ class StringAccessor:
     def split(
         self,
         dim: Optional[Hashable],
-        sep: Union[str, bytes] = None,
+        sep: Union[str, bytes, Any] = None,
         maxsplit: int = -1,
     ) -> Any:
         """
@@ -1930,18 +2205,20 @@ class StringAccessor:
         Splits the string in the DataArray from the beginning,
         at the specified delimiter string.
 
-        This is equivalent to :meth:`str.split`.
+        If `sep` is array-like, it is broadcast against the array and applied
+        elementwise.
 
         Parameters
         ----------
-        dim : Hashable or `None`
+        dim : hashable or None
             Name for the dimension to place the results in.
-            If `None`, place the results as list elements in an object DataArray
-        sep : str, default is split on any whitespace.
-            String to split on.
-        maxsplit : int, default -1 (all)
+            If `None`, place the results as list elements in an object DataArray.
+        sep : str, default: None
+            String to split on. If ``None`` (the default), split on any whitespace.
+            If array-like, it is broadcast.
+        maxsplit : int, default: -1
             Limit number of splits in output, starting from the beginning.
-            -1 will return all splits.
+            If -1 (the default), return all splits.
 
         Returns
         -------
@@ -2035,8 +2312,8 @@ class StringAccessor:
     def rsplit(
         self,
         dim: Optional[Hashable],
-        sep: Union[str, bytes] = None,
-        maxsplit: int = -1,
+        sep: Union[str, bytes, Any] = None,
+        maxsplit: Union[int, Any] = -1,
     ) -> Any:
         """
         Split strings in a DataArray around the given separator/delimiter `sep`.
@@ -2044,18 +2321,20 @@ class StringAccessor:
         Splits the string in the DataArray from the end,
         at the specified delimiter string.
 
-        This is equivalent to :meth:`str.rsplit`.
+        If `sep` is array-like, it is broadcast against the array and applied
+        elementwise.
 
         Parameters
         ----------
-        dim : Hashable or `None`
+        dim : hashable or None
             Name for the dimension to place the results in.
             If `None`, place the results as list elements in an object DataArray
-        sep : str, default is split on any whitespace.
-            String to split on.
-        maxsplit : int, default -1 (all)
+        sep : str, default: None
+            String to split on. If ``None`` (the default), split on any whitespace.
+            If array-like, it is broadcast.
+        maxsplit : int, default: -1
             Limit number of splits in output, starting from the end.
-            -1 will return all splits.
+            If -1 (the default), return all splits.
             The final number of split values may be less than this if there are no
             DataArray elements with that many values.
 
@@ -2151,7 +2430,7 @@ class StringAccessor:
     def get_dummies(
         self,
         dim: Hashable,
-        sep: Union[str, bytes] = "|",
+        sep: Union[str, bytes, Any] = "|",
     ) -> Any:
         """
         Return DataArray of dummy/indicator variables.
@@ -2161,12 +2440,16 @@ class StringAccessor:
         and the corresponding element of that dimension is `True` if
         that result is present and `False` if not.
 
+        If `sep` is array-like, it is broadcast against the array and applied
+        elementwise.
+
         Parameters
         ----------
-        dim : Hashable
+        dim : hashable
             Name for the dimension to place the results in.
-        sep : str, default `"|"`.
+        sep : str, default: "|".
             String to split on.
+            If array-like, it is broadcast.
 
         Returns
         -------
@@ -2205,16 +2488,16 @@ class StringAccessor:
         """
         # _apply breaks on an empty array in this case
         if not self._obj.size:
-            return self._obj.copy().expand_dims({dim: 0}, -1)
+            return self._obj.copy().expand_dims({dim: 0}, axis=-1)
 
         sep = self._stringify(sep)
-        f_set = lambda x: set(x.split(sep)) - {self._stringify("")}
-        setarr = self._apply(f_set, dtype=np.object_)
+        f_set = lambda x, isep: set(x.split(isep)) - {self._stringify("")}
+        setarr = self._apply(func=f_set, func_args=(sep,), dtype=np.object_)
         vals = sorted(reduce(set_union, setarr.data.ravel()))
 
-        f = lambda x: np.array([val in x for val in vals], dtype=np.bool_)
-        res = self._apply(
-            f,
+        func = lambda x: np.array([val in x for val in vals], dtype=np.bool_)
+        res = _apply_str_ufunc(
+            func=func,
             obj=setarr,
             output_core_dims=[[dim]],
             output_sizes={dim: len(vals)},
@@ -2234,18 +2517,27 @@ class StringAccessor:
         Parameters
         ----------
         encoding : str
+            The encoding to use.
+            Please see the Python `codecs <encodings>`_ documentation for a list
+            of encodings handlers
         errors : str, optional
+            The handler for encoding errors.
+            Please see the Python `codecs <handlers>`_ documentation for a list
+            of error handlers
 
         Returns
         -------
         decoded : same type as values
+
+        .. _encodings: https://docs.python.org/3/library/codecs.html#standard-encodings
+        .. _handlers: https://docs.python.org/3/library/codecs.html#error-handlers
         """
         if encoding in _cpython_optimized_decoders:
-            f = lambda x: x.decode(encoding, errors)
+            func = lambda x: x.decode(encoding, errors)
         else:
             decoder = codecs.getdecoder(encoding)
-            f = lambda x: decoder(x, errors)[0]
-        return self._apply(f, dtype=np.str_)
+            func = lambda x: decoder(x, errors)[0]
+        return self._apply(func=func, dtype=np.str_)
 
     def encode(
         self,
@@ -2258,15 +2550,24 @@ class StringAccessor:
         Parameters
         ----------
         encoding : str
+            The encoding to use.
+            Please see the Python `codecs <encodings>`_ documentation for a list
+            of encodings handlers
         errors : str, optional
+            The handler for encoding errors.
+            Please see the Python `codecs <handlers>`_ documentation for a list
+            of error handlers
 
         Returns
         -------
         encoded : same type as values
+
+        .. _encodings: https://docs.python.org/3/library/codecs.html#standard-encodings
+        .. _handlers: https://docs.python.org/3/library/codecs.html#error-handlers
         """
         if encoding in _cpython_optimized_encoders:
-            f = lambda x: x.encode(encoding, errors)
+            func = lambda x: x.encode(encoding, errors)
         else:
             encoder = codecs.getencoder(encoding)
-            f = lambda x: encoder(x, errors)[0]
-        return self._apply(f, dtype=np.bytes_)
+            func = lambda x: encoder(x, errors)[0]
+        return self._apply(func=func, dtype=np.bytes_)
