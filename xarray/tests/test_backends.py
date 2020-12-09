@@ -673,7 +673,7 @@ class DatasetIOBase:
         multiple_indexing(indexers)
 
     @pytest.mark.xfail(
-        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+        reason="zarr without dask handles negative steps in slices incorrectly",
     )
     def test_vectorized_indexing_negative_step_no_dask(self, open_kwargs=None):
         in_memory = create_test_data()
