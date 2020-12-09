@@ -36,4 +36,5 @@ python -m pip install \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck
+    git+https://github.com/pydata/bottleneck \
+    git+https://github.com/pydata/sparse
