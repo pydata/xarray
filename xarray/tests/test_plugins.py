@@ -26,10 +26,7 @@ def dummy_duplicated_entrypoints():
         "engine2 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
     ]
-    eps = [
-        pkg_resources.EntryPoint.parse(spec)
-        for spec in specs
-    ]
+    eps = [pkg_resources.EntryPoint.parse(spec) for spec in specs]
     return eps
 
 
