@@ -311,6 +311,7 @@ class ZarrStore(AbstractWritableDataStore):
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
+            "preferred_chunks": zarr_array.chunks,
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
