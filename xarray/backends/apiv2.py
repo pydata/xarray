@@ -29,38 +29,24 @@ def _chunk_ds(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if engine != "zarr":
-        from dask.base import tokenize
+    from dask.base import tokenize
 
-        mtime = _get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
 
-    else:
-
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
-
-        if chunks is None:
-            return backend_ds
-
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(backend_ds.dims, chunks)
-
-        variables = {}
-        for k, v in backend_ds.variables.items():
-            var_chunks = _get_chunk(v, chunks)
-            variables[k] = _maybe_chunk(
-                k,
-                v,
-                var_chunks,
-                overwrite_encoded_chunks=overwrite_encoded_chunks,
-            )
-        ds = backend_ds._replace(variables)
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        var_chunks = _get_chunk(var, chunks)
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            var_chunks,
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
+    ds = backend_ds._replace(variables)
     return ds
 
 
