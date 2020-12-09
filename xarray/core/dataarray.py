@@ -1519,12 +1519,71 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> da = xr.DataArray([1, 3], [("x", np.arange(2))])
-        >>> da.interp(x=0.5)
-        <xarray.DataArray ()>
-        array(2.)
+        >>> da = xr.DataArray(
+        ...     data=[[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
+        ...     dims=("x", "y"),
+        ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 3, y: 4)>
+        array([[ 1.,  4.,  2.,  9.],
+               [ 2.,  7.,  6., nan],
+               [ 6., nan,  5.,  8.]])
         Coordinates:
-            x        float64 0.5
+          * x        (x) int64 0 1 2
+          * y        (y) int64 10 12 14 16
+
+        1D linear interpolation (the default):
+
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75])
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[1.  , 4.  , 2.  ,  nan],
+               [1.75, 6.25, 5.  ,  nan],
+               [3.  ,  nan, 5.75,  nan],
+               [5.  ,  nan, 5.25,  nan]])
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+
+        1D nearest interpolation:
+
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  4.,  2.,  9.],
+               [ 2.,  7.,  6., nan],
+               [ 2.,  7.,  6., nan],
+               [ 6., nan,  5.,  8.]])
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+
+        1D linear extrapolation:
+
+        >>> da.interp(
+        ...     x=[1, 1.5, 2.5, 3.5],
+        ...     method="linear",
+        ...     kwargs={"fill_value": "extrapolate"},
+        ... )
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 2. ,  7. ,  6. ,  nan],
+               [ 4. ,  nan,  5.5,  nan],
+               [ 8. ,  nan,  4.5,  nan],
+               [12. ,  nan,  3.5,  nan]])
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 1.0 1.5 2.5 3.5
+
+        2D linear interpolation:
+
+        >>> da.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[2.5  , 3.   ,   nan],
+               [4.   , 5.625,   nan],
+               [  nan,   nan,   nan],
+               [  nan,   nan,   nan]])
+        Coordinates:
+          * x        (x) float64 0.0 0.75 1.25 1.75
+          * y        (y) int64 11 13 15
         """
         if self.dtype.kind not in "uifc":
             raise TypeError(
@@ -2311,6 +2370,29 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         numpy.interp
         scipy.interpolate
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     [np.nan, 2, 3, np.nan, 0], dims="x", coords={"x": [0, 1, 2, 3, 4]}
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5)>
+        array([nan,  2.,  3., nan,  0.])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+
+        >>> da.interpolate_na(dim="x", method="linear")
+        <xarray.DataArray (x: 5)>
+        array([nan, 2. , 3. , 1.5, 0. ])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+
+        >>> da.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
+        <xarray.DataArray (x: 5)>
+        array([1. , 2. , 3. , 1.5, 0. ])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
         """
         from .missing import interp_na
 
@@ -3496,6 +3578,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
+        ...
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)

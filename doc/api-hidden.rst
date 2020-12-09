@@ -298,6 +298,7 @@
    core.accessor_dt.DatetimeAccessor.is_quarter_start
    core.accessor_dt.DatetimeAccessor.is_year_end
    core.accessor_dt.DatetimeAccessor.is_year_start
+   core.accessor_dt.DatetimeAccessor.isocalendar
    core.accessor_dt.DatetimeAccessor.microsecond
    core.accessor_dt.DatetimeAccessor.minute
    core.accessor_dt.DatetimeAccessor.month
@@ -688,6 +689,7 @@
    CFTimeIndex.dayofyear
    CFTimeIndex.dtype
    CFTimeIndex.empty
+   CFTimeIndex.freq
    CFTimeIndex.has_duplicates
    CFTimeIndex.hasnans
    CFTimeIndex.hour

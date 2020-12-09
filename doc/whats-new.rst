@@ -15,14 +15,54 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.0.16.2:
+.. _whats-new.{0.16.3}:
 
-v0.16.2 (unreleased)
---------------------
+v{0.16.3} (unreleased)
+----------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+
+New Features
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.16.2:
+
+v0.16.2 (30 Nov 2020)
+---------------------
+
+This release brings the ability to write to limited regions of ``zarr`` files, open zarr files with :py:func:`open_dataset` and :py:func:`open_mfdataset`, increased support for propagating ``attrs`` using the ``keep_attrs`` flag, as well as numerous bugfixes and documentation improvements.
+
+Many thanks to the 31 contributors who contributed to this release:
+Aaron Spring, Akio Taniguchi, Aleksandar Jelenak, alexamici, Alexandre Poux, Anderson Banihirwe, Andrew Pauling, Ashwin Vishnu, aurghs, Brian Ward, Caleb, crusaderky, Dan Nowacki, darikg, David Brochart, David Huard, Deepak Cherian, Dion Häfner, Gerardo Rivera, Gerrit Holl, Illviljan, inakleinbottle, Jacob Tomlinson, James A. Bednar, jenssss, Joe Hamman, johnomotani, Joris Van den Bossche, Julia Kent, Julius Busecke, Kai Mühlbauer, keewis, Keisuke Fujii, Kyle Cranmer, Luke Volpatti, Mathias Hauser, Maximilian Roos, Michaël Defferrard, Michal Baumgartner, Nick R. Papior, Pascal Bourgault, Peter Hausamann, PGijsbers, Ray Bell, Romain Martinez, rpgoldman, Russell Manser, Sahid Velji, Samnan Rahee, Sander, Spencer Clark, Stephan Hoyer, Thomas Zilio, Tobias Kölling, Tom Augspurger, Wei Ji, Yash Saboo, Zeb Nicholls,
+
+Deprecations
+~~~~~~~~~~~~
+
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
+  have been deprecated. Use ``DataArray.dt.isocalendar().week``
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
+  via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
+  ``ds.rolling(...).mean(keep_attrs=False)`` instead of ``ds.rolling(..., keep_attrs=False).mean()``
+  Rolling operations now keep their attributes per default (:pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 New Features
 ~~~~~~~~~~~~
@@ -32,30 +72,41 @@ New Features
   By `Miguel Jimenez <https://github.com/Mikejmnez>`_ and `Wei Ji Leong <https://github.com/weiji14>`_.
 - Unary & binary operations follow the ``keep_attrs`` flag (:issue:`3490`, :issue:`4065`, :issue:`3433`, :issue:`3595`, :pull:`4195`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`~core.accessor_dt.DatetimeAccessor.isocalendar()` that returns a Dataset
+  with year, week, and weekday calculated according to the ISO 8601 calendar. Requires
+  pandas version 1.1.0 or greater (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:meth:`Dataset.to_zarr` now supports a ``region`` keyword for writing to
   limited regions of existing Zarr stores (:pull:`4035`).
   See :ref:`io.zarr.appending` for full details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Added typehints in :py:func:`align` to reflect that the same type received in ``objects`` arg will be returned (:pull:`4522`).
   By `Michal Baumgartner <https://github.com/m1so>`_.
+- :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted` are now executing value checks lazily if weights are provided as dask arrays (:issue:`4541`, :pull:`4559`).
+  By `Julius Busecke <https://github.com/jbusecke>`_.
+- Added the ``keep_attrs`` keyword to ``rolling_exp.mean()``; it now keeps attributes
+  per default. By `Mathias Hauser <https://github.com/mathause>`_ (:pull:`4592`).
+- Added ``freq`` as property to :py:class:`CFTimeIndex` and into the
+  ``CFTimeIndex.repr``. (:issue:`2416`, :pull:`4597`)
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- Fix bug where reference times without padded years (e.g. "since 1-1-1") would lose their units when
+- Fix bug where reference times without padded years (e.g. ``since 1-1-1``) would lose their units when
   being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
   about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
-  it is assumed that the first digit is the years, they are padded appropriately (to e.g. "since 0001-1-1")
+  it is assumed that the first digit is the years, they are padded appropriately (to e.g. ``since 0001-1-1``)
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
   would be silently parsed incorrectly (at least based on the CF conventions) e.g. "since 1-1-1" would
-  be parsed (via``pandas`` and ``dateutil``) to "since 2001-1-1".
+  be parsed (via ``pandas`` and ``dateutil``) to ``since 2001-1-1``.
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Fix :py:meth:`DataArray.plot.step`. By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix bug where reading a scalar value from a NetCDF file opened with the ``h5netcdf`` backend would raise a ``ValueError`` when ``decode_cf=True`` (:issue:`4471`, :pull:`4485`).
   By `Gerrit Holl <https://github.com/gerritholl>`_.
 - Fix bug where datetime64 times are silently changed to incorrect values if they are outside the valid date range for ns precision when provided in some other units (:issue:`4427`, :pull:`4454`).
   By `Andrew Pauling <https://github.com/andrewpauling>`_
-- Fix silently overwriting the `engine` key when passing :py:func:`open_dataset` a file object
+- Fix silently overwriting the ``engine`` key when passing :py:func:`open_dataset` a file object
   to an incompatible netCDF (:issue:`4457`). Now incompatible combinations of files and engines raise
   an exception instead. By `Alessandro Amici <https://github.com/alexamici>`_.
 - The ``min_count`` argument to :py:meth:`DataArray.sum()` and :py:meth:`DataArray.prod()`
@@ -64,11 +115,19 @@ Bug fixes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
+- :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes and names of of (wrapped)
+  ``DataArray`` objects, previously only the global attributes were retained (:issue:`4497`, :pull:`4510`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Improve performance where reading small slices from huge dimensions was slower than necessary (:pull:`4560`). By `Dion Häfner <https://github.com/dionhaefner>`_.
+- Fix bug where ``dask_gufunc_kwargs`` was silently changed in :py:func:`apply_ufunc` (:pull:`4576`). By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- document the API not supported with duck arrays (:pull:`4530`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Mention the possibility to pass functions to :py:meth:`Dataset.where` or
+  :py:meth:`DataArray.where` in the parameter documentation (:issue:`4223`, :pull:`4613`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Update the docstring of :py:class:`DataArray` and :py:class:`Dataset`.
   (:pull:`4532`);
   By `Jimmy Westling <https://github.com/illviljan>`_.
@@ -81,6 +140,9 @@ Documentation
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
+- Add docstrings to ``isnull`` and ``notnull``, and fix the displayed signature
+  (:issue:`2760`, :pull:`4618`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -95,8 +157,20 @@ Internal Changes
   <https://github.com/mathause>`_.
 - Removed stray spaces that stem from black removing new lines (:pull:`4504`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Ensure tests are not skipped in the `py38-all-but-dask` test environment
+- Ensure tests are not skipped in the ``py38-all-but-dask`` test environment
   (:issue:`4509`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Ignore select numpy warnings around missing values, where xarray handles
+  the values appropriately, (:pull:`4536`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
+  and ``pd.Index.intersection`` as they will stop working as set operations in the future
+  (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
+  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+- Ensure all figures are closed properly in plot tests (:pull:`4600`).
+  By `Yash Saboo <https://github.com/yashsaboo>`_, `Nirupam K N
+  <https://github.com/Nirupamkn>`_ and `Mathias Hauser
+  <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.1:
 
