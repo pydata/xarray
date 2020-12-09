@@ -676,6 +676,7 @@ class DatasetIOBase:
         reason="zarr without dask handles negative steps in slices incorrectly",
     )
     def test_vectorized_indexing_negative_step(self):
+        # use dask explicitly when present
         if has_dask:
             open_kwargs = {"chunks": {}}
         else:
