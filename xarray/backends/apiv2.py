@@ -53,7 +53,7 @@ def _chunk_ds(
 
         variables = {}
         for k, v in backend_ds.variables.items():
-            var_chunks = _get_chunk(k, v, chunks)
+            var_chunks = _get_chunk(v, chunks)
             variables[k] = _maybe_chunk(
                 k,
                 v,
@@ -146,10 +146,12 @@ def open_dataset(
         "pynio", "cfgrib", "pseudonetcdf", "zarr"}.
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
     cache : bool, optional
         If True, cache data is loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
