@@ -672,7 +672,10 @@ class DatasetIOBase:
         ]
         multiple_indexing(indexers)
 
-    def test_vectorized_indexing_negative_step_slice(self, open_kwargs=None):
+    @pytest.mark.xfail(
+        reason="the code for indexing without dask handles negative steps in slices incorrectly",
+    )
+    def test_vectorized_indexing_negative_step_no_dask(self, open_kwargs=None):
         in_memory = create_test_data()
 
         def multiple_indexing(indexers):
@@ -704,6 +707,10 @@ class DatasetIOBase:
             }
         ]
         multiple_indexing(indexers)
+
+    @requires_dask
+    def test_vectorized_indexing_negative_step_with_dask(self):
+        self.test_vectorized_indexing_negative_step_no_dask(open_kwargs={"chunks": {}})
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
@@ -2178,10 +2185,6 @@ class ZarrBase(CFEncodedBase):
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
-
-    @requires_dask
-    def test_vectorized_indexing_negative_step_slice(self):
-        super().test_vectorized_indexing_negative_step_slice(open_kwargs={"chunks": {}})
 
 
 @requires_zarr
