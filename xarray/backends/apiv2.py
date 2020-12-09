@@ -55,10 +55,7 @@ def _chunk_ds(
         for k, v in backend_ds.variables.items():
             var_chunks = _get_chunk(k, v, chunks)
             variables[k] = _maybe_chunk(
-                k,
-                v,
-                var_chunks,
-                overwrite_encoded_chunks=overwrite_encoded_chunks,
+                k, v, var_chunks, overwrite_encoded_chunks=overwrite_encoded_chunks,
             )
         ds = backend_ds._replace(variables)
     return ds
