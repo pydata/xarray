@@ -5,7 +5,7 @@ import xarray as xr
 from xarray import DataArray
 from xarray.tests import assert_allclose, assert_equal, raises_regex
 
-from . import raise_if_dask_computes, requires_dask, requires_cftime
+from . import raise_if_dask_computes, requires_cftime, requires_dask
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
