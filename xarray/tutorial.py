@@ -17,9 +17,8 @@ from .backends.api import open_dataset as _open_dataset
 from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
-from .vendor import appdirs
 
-_default_cache_dir = pathlib.Path(appdirs.user_cache_dir("xarray_tutorial_data"))
+_default_cache_dir = pathlib.Path.home() / ".xarray_tutorial_data"
 
 
 # based on https://stackoverflow.com/a/29491523
