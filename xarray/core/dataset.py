@@ -359,32 +359,55 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _get_chunk(name, var, chunks):
-    chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
-
-    # Coordinate labels aren't chunked
-    if var.ndim == 1 and var.dims[0] == name:
-        return chunk_spec
-
-    if chunks == "auto":
-        return chunk_spec
-
+def _check_chunks_compatibility(var, chunks, chunk_spec):
     for dim in var.dims:
-        if dim in chunks:
-            spec = chunks[dim]
-            if isinstance(spec, int):
-                spec = (spec,)
-            if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
-                if any(s % chunk_spec[dim] for s in spec):
-                    warnings.warn(
-                        f"Specified Dask chunks {chunks[dim]} would separate "
-                        f"on disks chunk shape {chunk_spec[dim]} for dimension {dim}. "
-                        "This could degrade performance. "
-                        "Consider rechunking after loading instead.",
-                        stacklevel=2,
-                    )
-            chunk_spec[dim] = chunks[dim]
-    return chunk_spec
+        if dim not in chunks or (dim not in chunk_spec):
+            continue
+
+        chunk_spec_dim = chunk_spec.get(dim)
+        chunks_dim = chunks.get(dim)
+
+        if isinstance(chunks_dim, int):
+            chunks_dim = (chunks_dim,)
+        if any(s % chunk_spec_dim for s in chunks_dim):
+            warnings.warn(
+                f"Specified Dask chunks {chunks[dim]} would separate "
+                f"on disks chunk shape {chunk_spec[dim]} for dimension {dim}. "
+                "This could degrade performance. "
+                "Consider rechunking after loading instead.",
+                stacklevel=2,
+            )
+
+
+def _get_chunk(var, chunks):
+    # chunks need to be explicity computed to take correctly into accout
+    # backend preferred chunking
+    import dask.array as da
+
+    if isinstance(var, IndexVariable):
+        return {}
+
+    if isinstance(chunks, int) or (chunks == "auto"):
+        chunks = dict.fromkeys(var.dims, chunks)
+
+    preferred_chunks_list = var.encoding.get("chunks", {})
+    preferred_chunks = dict(zip(var.dims, var.encoding.get("chunks", {})))
+
+    chunks_list = [
+        chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
+    ]
+
+    output_chunks_list = da.core.normalize_chunks(
+        chunks_list,
+        shape=var.shape,
+        dtype=var.dtype,
+        previous_chunks=preferred_chunks_list,
+    )
+
+    output_chunks = dict(zip(var.dims, output_chunks_list))
+    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
+
+    return output_chunks
 
 
 def _maybe_chunk(

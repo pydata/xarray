@@ -611,6 +611,14 @@ def open_zarr(
     """
     from .api import open_dataset
 
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+
+            chunks = {}
+        except ImportError:
+            chunks = None
+
     if kwargs:
         raise TypeError(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
