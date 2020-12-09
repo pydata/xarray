@@ -675,7 +675,11 @@ class DatasetIOBase:
     @pytest.mark.xfail(
         reason="zarr without dask handles negative steps in slices incorrectly",
     )
-    def test_vectorized_indexing_negative_step_no_dask(self, open_kwargs=None):
+    def test_vectorized_indexing_negative_step(self):
+        if has_dask:
+            open_kwargs = {"chunks": {}}
+        else:
+            open_kwargs = None
         in_memory = create_test_data()
 
         def multiple_indexing(indexers):
@@ -707,10 +711,6 @@ class DatasetIOBase:
             }
         ]
         multiple_indexing(indexers)
-
-    @requires_dask
-    def test_vectorized_indexing_negative_step_with_dask(self):
-        self.test_vectorized_indexing_negative_step_no_dask(open_kwargs={"chunks": {}})
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
