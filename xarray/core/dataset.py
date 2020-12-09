@@ -1822,8 +1822,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Number,
             str,
             Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
-        ] = {},
-        name_prefix: str = "xarray-",
+        ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         token: str = None,
         lock: bool = False,
     ) -> "Dataset":
