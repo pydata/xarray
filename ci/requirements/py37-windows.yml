@@ -15,14 +15,14 @@ dependencies:
   - distributed
   - flake8
   - h5netcdf
-  - h5py
+  - h5py=2
   - hdf5
   - hypothesis
   - iris
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib
-  - mypy=0.782  # Must match .pre-commit-config.yaml
+  - mypy=0.790  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba

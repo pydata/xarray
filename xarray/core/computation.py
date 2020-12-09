@@ -646,6 +646,8 @@ def apply_variable_ufunc(
 
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
+            else:
+                dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
 
             allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
             if allow_rechunk is None:
@@ -929,6 +931,7 @@ def apply_ufunc(
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
     ...     return xr.apply_ufunc(func, a, b)
+    ...
 
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,

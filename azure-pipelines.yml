@@ -28,6 +28,7 @@ jobs:
       py38-upstream-dev:
         conda_env: py38
         upstream_dev: true
+        allow_failure: true
       py38-flaky:
         conda_env: py38
         pytest_extra_flags: --run-flaky --run-network-tests
