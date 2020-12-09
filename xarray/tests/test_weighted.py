@@ -49,6 +49,28 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
         weighted.sum().load()
 
 
+@requires_dask
+@pytest.mark.parametrize("time_chunks", (1, 5))
+@pytest.mark.parametrize("resample_spec", ("1AS", "5AS", "10AS"))
+def test_weighted_lazy_resample(time_chunks, resample_spec):
+    # https://github.com/pydata/xarray/issues/4625
+
+    # simple customized weighted mean function
+    def mean_func(ds):
+        return ds.weighted(ds.weights).mean("time")
+
+    # example dataset
+    t = xr.cftime_range(start="2000", periods=1000, freq="1AS")
+    weights = xr.DataArray(np.random.rand(len(t)), dims=["time"], coords={"time": t})
+    data = xr.DataArray(
+        np.random.rand(len(t)), dims=["time"], coords={"time": t, "weights": weights}
+    )
+    ds = xr.Dataset({"data": data}).chunk({"time": time_chunks})
+
+    with raise_if_dask_computes():
+        ds.resample(time=resample_spec).map(mean_func)
+
+
 @pytest.mark.parametrize(
     ("weights", "expected"),
     (([1, 2], 3), ([2, 0], 2), ([0, 0], np.nan), ([-1, 1], np.nan)),
