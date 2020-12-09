@@ -5,7 +5,7 @@ import xarray as xr
 from xarray import DataArray
 from xarray.tests import assert_allclose, assert_equal, raises_regex
 
-from . import raise_if_dask_computes, requires_dask
+from . import raise_if_dask_computes, requires_dask, requires_cftime
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
@@ -31,6 +31,7 @@ def test_weighted_weights_nan_raises(as_dataset, weights):
         data.weighted(DataArray(weights))
 
 
+@requires_cftime
 @requires_dask
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
