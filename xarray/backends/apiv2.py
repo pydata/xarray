@@ -267,7 +267,7 @@ def open_dataset(
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
 
-    open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
+    open_backend_dataset = _get_backend_cls(engine, engines=plugins.list_engines())[
         "open_dataset"
     ]
     backend_ds = open_backend_dataset(
