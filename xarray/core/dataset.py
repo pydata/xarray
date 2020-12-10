@@ -1823,6 +1823,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             str,
             Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
     ) -> "Dataset":
