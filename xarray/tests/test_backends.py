@@ -1454,6 +1454,14 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
+    def test_autoclose_future_warning(self):
+        data = create_test_data()
+        with create_tmp_file() as tmp_file:
+            self.save(data, tmp_file)
+            with pytest.warns(FutureWarning):
+                with self.open(tmp_file, autoclose=True) as actual:
+                    assert_identical(data, actual)
+
 
 @requires_netCDF4
 class TestNetCDF4AlreadyOpen:
