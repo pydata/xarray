@@ -6,7 +6,7 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
-    conda install -y mamba
+    conda install -y mamba -c conda-forge
     mamba env create -n xarray-tests -c conda-forge --override-channels --strict-channel-priority --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
