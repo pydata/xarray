@@ -7,6 +7,7 @@ from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
+from .plugins import BackendEntrypoint
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -700,3 +701,6 @@ def open_backend_dataset_zarr(
         ds.encoding = encoding
 
     return ds
+
+
+zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
