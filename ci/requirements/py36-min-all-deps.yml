@@ -1,6 +1,7 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # MINIMUM VERSIONS POLICY: see doc/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
