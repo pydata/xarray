@@ -1,11 +1,15 @@
 import numpy as np
 
+from .. import conventions
+from ..core.dataset import Dataset
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
+from .plugins import BackendEntrypoint
+
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -82,3 +86,51 @@ class NioDataStore(AbstractDataStore):
 
     def close(self):
         self._manager.close()
+
+
+def open_backend_dataset_pynio(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    mode="r",
+    lock=None,
+
+):
+
+    store = NioDataStore(
+        filename_or_obj,
+        mode=mode,
+        lock=lock,
+    )
+
+    with close_on_error(store):
+        vars, attrs = store.load()
+        file_obj = store
+        encoding = store.get_encoding()
+
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+
+        ds = Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
+
+    return ds
+
+
+pynio_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pynio)

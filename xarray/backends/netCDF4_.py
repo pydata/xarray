@@ -4,10 +4,12 @@ from contextlib import suppress
 
 import numpy as np
 
+from .. import conventions
+from ..core.dataset import Dataset
 from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.utils import FrozenDict, is_remote_uri, close_on_error
 from ..core.variable import Variable
 from .common import (
     BackendArray,
@@ -18,6 +20,7 @@ from .common import (
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from .plugins import BackendEntrypoint
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -496,3 +499,62 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+def open_backend_dataset_netcdf4(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    group=None,
+    mode="r",
+    format="NETCDF4",
+    clobber=True,
+    diskless=False,
+    persist=False,
+    lock=None,
+    autoclose=False,
+):
+
+    store = NetCDF4DataStore.open(
+        filename_or_obj,
+        mode=mode,
+        format=format,
+        group=group,
+        clobber=clobber,
+        diskless=diskless,
+        persist=persist,
+        lock=lock,
+        autoclose=autoclose,
+    )
+
+    with close_on_error(store):
+        vars, attrs = store.load()
+        file_obj = store
+        encoding = store.get_encoding()
+
+        vars, attrs, coord_names = conventions.decode_cf_variables(
+            vars,
+            attrs,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+
+        ds = Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coord_names.intersection(vars))
+        ds._file_obj = file_obj
+        ds.encoding = encoding
+
+    return ds
+
+
+netcdf4_backend = BackendEntrypoint(open_dataset=open_backend_dataset_netcdf4)
