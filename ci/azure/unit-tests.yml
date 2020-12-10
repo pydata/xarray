@@ -15,6 +15,7 @@ steps:
     --junitxml=junit/test-results.xml \
     --cov=xarray \
     --cov-report=xml \
+    --durations=200 \
     $(pytest_extra_flags) \
     || ( \
       [ "$ALLOW_FAILURE" = "true" ] \
