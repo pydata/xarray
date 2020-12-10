@@ -1,8 +1,8 @@
 import numpy as np
 
 from .. import conventions
-from ..core.dataset import Dataset
 from ..core import indexing
+from ..core.dataset import Dataset
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
@@ -99,16 +99,13 @@ def open_backend_dataset_pseudonetcdf(
     drop_variables=None,
     use_cftime=None,
     decode_timedelta=None,
-    mode="r",
+    mode=None,
     lock=None,
     **format_kwargs,
 ):
 
     store = PseudoNetCDFDataStore.open(
-        filename_or_obj,
-        lock=lock,
-        mode=mode,
-        **format_kwargs
+        filename_or_obj, lock=lock, mode=mode, **format_kwargs
     )
 
     with close_on_error(store):
@@ -136,7 +133,6 @@ def open_backend_dataset_pseudonetcdf(
     return ds
 
 
-
 open_dataset_parameters = (
     "filename_or_obj",
     "mask_and_scale",
@@ -152,5 +148,5 @@ open_dataset_parameters = (
 )
 pseudonetcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_pseudonetcdf,
-    open_dataset_parameters=open_dataset_parameters
+    open_dataset_parameters=open_dataset_parameters,
 )

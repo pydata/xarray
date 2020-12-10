@@ -1,10 +1,10 @@
 import numpy as np
 
 from .. import conventions
-from ..core.dataset import Dataset
 from ..core import indexing
+from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, is_dict_like, close_on_error
+from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, robust_getitem
 from .plugins import BackendEntrypoint
@@ -106,7 +106,7 @@ def open_backend_dataset_pydap(
     drop_variables=None,
     use_cftime=None,
     decode_timedelta=None,
-    session=None
+    session=None,
 ):
 
     store = PydapDataStore.open(

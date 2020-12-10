@@ -4,12 +4,11 @@ from contextlib import suppress
 
 import numpy as np
 
-from .. import conventions
-from ..core.dataset import Dataset
-from .. import coding
+from .. import coding, conventions
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri, close_on_error
+from ..core.dataset import Dataset
+from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
     BackendArray,
@@ -517,7 +516,6 @@ def open_backend_dataset_netcdf4(
     diskless=False,
     persist=False,
     lock=None,
-    autoclose=False,
 ):
 
     store = NetCDF4DataStore.open(

@@ -1,15 +1,14 @@
 import numpy as np
 
 from .. import conventions
-from ..core.dataset import Dataset
 from ..core import indexing
+from ..core.dataset import Dataset
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
 from .plugins import BackendEntrypoint
-
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -99,7 +98,6 @@ def open_backend_dataset_pynio(
     decode_timedelta=None,
     mode="r",
     lock=None,
-
 ):
 
     store = NioDataStore(

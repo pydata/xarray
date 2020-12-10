@@ -240,8 +240,7 @@ def open_backend_dataset_scipy(
 ):
 
     store = ScipyDataStore(
-        filename_or_obj,
-        mode=mode, format=format, group=group, mmap=mmap, lock=lock
+        filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
     )
 
     with close_on_error(store):
