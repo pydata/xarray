@@ -527,7 +527,6 @@ def open_backend_dataset_netcdf4(
         diskless=diskless,
         persist=persist,
         lock=lock,
-        autoclose=autoclose,
     )
 
     with close_on_error(store):
