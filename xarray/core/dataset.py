@@ -390,8 +390,8 @@ def _get_chunk(var, chunks):
     if isinstance(chunks, int) or (chunks == "auto"):
         chunks = dict.fromkeys(var.dims, chunks)
 
-    preferred_chunks_list = var.encoding.get("preferred_chunks", {})
-    preferred_chunks = dict(zip(var.dims, preferred_chunks_list))
+    preferred_chunks = var.encoding.get("preferred_chunks", {})
+    preferred_chunks_list = [preferred_chunks.get(dim, None) for dim in var.dims]
 
     chunks_list = [
         chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
