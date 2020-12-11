@@ -33,7 +33,7 @@ that dimension:
     da.isel(y=slice(0, 1)) # same as da[:, :1]
     # This resembles how you would use np.concatenate:
     xr.concat([da[:, :1], da[:, 1:]], dim="y")
-    # For more freindly pandas-like indexing you can use:
+    # For more friendly pandas-like indexing you can use:
     xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
 
 In addition to combining along an existing dimension, ``concat`` can create a
@@ -187,14 +187,14 @@ values:
 
 .. ipython:: python
 
-    arr.equals(arr.copy())
+    da.equals(da.copy())
 
 :py:attr:`~xarray.Dataset.identical` also checks attributes, and the name of each
 object:
 
 .. ipython:: python
 
-    arr.identical(arr.rename("bar"))
+    da.identical(da.rename("bar"))
 
 :py:attr:`~xarray.Dataset.broadcast_equals` does a more relaxed form of equality
 check that allows variables to have different dimensions, as long as values
@@ -214,7 +214,7 @@ numpy):
 
 .. ipython:: python
 
-    arr == arr.copy()
+    da == da.copy()
 
 Note that ``NaN`` does not compare equal to ``NaN`` in element-wise comparison;
 you may need to deal with missing values explicitly.
