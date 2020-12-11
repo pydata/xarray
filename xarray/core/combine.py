@@ -541,8 +541,15 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
+def all_unnamed_data_arrays(data_objects):
+    for data_obj in data_objects:
+        if not isinstance(data_obj, DataArray) or data_obj.name is not None:
+            return False
+    return True
+
+
 def combine_by_coords(
-    datasets,
+    data_objects,
     compat="no_conflicts",
     data_vars="all",
     coords="different",
@@ -576,8 +583,11 @@ def combine_by_coords(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
+    data_objects : sequence of xarray.Dataset or sequence of xarray.DataArray
         Dataset objects to combine.
+
+        This may also be a sequence of xarray.DataArray without variable names.
+        If so, these arrays are assumed to belong to the same variable.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
@@ -749,6 +759,13 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
+
+    # If a set of unnamed data arrays is provided, these arrays are assumed to belong
+    # to the same variable and should be combined.
+    if all_unnamed_data_arrays(data_objects):
+        datasets = [Dataset({'_': data_array}) for data_array in data_objects]
+    else:
+        datasets = data_objects
 
     # Group by data vars
     sorted_datasets = sorted(datasets, key=vars_as_keys)
