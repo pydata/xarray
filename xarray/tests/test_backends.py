@@ -4313,7 +4313,9 @@ class TestRasterio:
     def test_rasterio_vrt_with_transform_and_size(self):
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
-        import rasterio
+
+        # https://github.com/mapbox/rasterio/1768
+        rasterio = pytest.importorskip("docutils", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
 
@@ -4341,7 +4343,9 @@ class TestRasterio:
 
     def test_rasterio_vrt_with_src_crs(self):
         # Test open_rasterio() support of WarpedVRT with specified src_crs
-        import rasterio
+
+        # https://github.com/mapbox/rasterio/1768
+        rasterio = pytest.importorskip("docutils", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually
         with create_tmp_geotiff(crs=None) as (tmp_file, expected):
