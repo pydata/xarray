@@ -391,7 +391,9 @@ def _get_chunk(var, chunks):
         chunks = dict.fromkeys(var.dims, chunks)
 
     preferred_chunks = var.encoding.get("preferred_chunks", {})
-    preferred_chunks_list = [preferred_chunks.get(dim, None) for dim in var.dims]
+    preferred_chunks_list = [
+        preferred_chunks.get(dim, shape) for dim, shape in zip(var.dims, var.shape)
+    ]
 
     chunks_list = [
         chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
