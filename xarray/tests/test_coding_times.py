@@ -486,11 +486,13 @@ PANDAS_FREQUENCIES_TO_ENCODING_UNITS = {
     "S": "seconds",
     "T": "minutes",
     "H": "hours",
-    "D": "days"
+    "D": "days",
 }
 
 
-@pytest.mark.parametrize(("freq", "units"), PANDAS_FREQUENCIES_TO_ENCODING_UNITS.items())
+@pytest.mark.parametrize(
+    ("freq", "units"), PANDAS_FREQUENCIES_TO_ENCODING_UNITS.items()
+)
 def test_infer_datetime_units(freq, units):
     dates = pd.date_range("2000", periods=2, freq=freq)
     expected = f"{units} since 2000-01-01 00:00:00"
