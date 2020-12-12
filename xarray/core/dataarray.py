@@ -3004,10 +3004,10 @@ class DataArray(AbstractArray, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
-        .. note::
-
-            `n` matches numpy's behavior and is different from pandas' first
-            argument named `periods`.
+        Notes
+        -----
+        `n` matches numpy's behavior and is different from pandas' first argument named
+        `periods`.
 
 
         Examples
