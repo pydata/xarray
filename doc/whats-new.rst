@@ -33,8 +33,8 @@ Bug fixes
 
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
-  the `order` and `subok` parameters again. This fixes a regression introduced in version 0.16.1
-  (:issue:`4644`).
+  the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
+  (:issue:`4644`, :pull:`4683`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 
 Documentation
