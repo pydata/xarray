@@ -26,6 +26,7 @@ from .variables import (
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 
 _NS_PER_TIME_DELTA = {
+    "ns": 1,
     "us": int(1e3),
     "ms": int(1e6),
     "s": int(1e9),
@@ -44,6 +45,7 @@ def _netcdf_to_numpy_timeunit(units):
     if not units.endswith("s"):
         units = "%ss" % units
     return {
+        "nanoseconds": "ns",
         "microseconds": "us",
         "milliseconds": "ms",
         "seconds": "s",
@@ -162,10 +164,9 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
     # Cast input dates to integers of nanoseconds because `pd.to_datetime`
     # works much faster when dealing with integers
     # make _NS_PER_TIME_DELTA an array to ensure type upcasting
-    flat_num_dates_ns_int = (
-        flat_num_dates.astype(np.float64) * _NS_PER_TIME_DELTA[delta]
-    ).astype(np.int64)
-
+    flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
+        np.int64
+    )
     return (pd.to_timedelta(flat_num_dates_ns_int, "ns") + ref_date).values
 
 
@@ -252,7 +253,15 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
-    for time_unit in ["days", "hours", "minutes", "seconds"]:
+    for time_unit in [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]:
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
         unit_delta = np.timedelta64(delta_ns, "ns")
         diffs = unique_timedeltas / unit_delta
@@ -416,7 +425,15 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
         # an OverflowError is raised if the ref_date is too far away from
         # dates to be encoded (GH 2272).
-        num = (pd.DatetimeIndex(dates.ravel()) - ref_date) / time_delta
+        dates_as_index = pd.DatetimeIndex(dates.ravel())
+        time_deltas = dates_as_index - ref_date
+
+        # Use floor division if the time_delta evenly divides all differences
+        # to preserve integer dtype if possible.
+        if np.all(time_deltas % time_delta == np.timedelta64(0, delta_units)):
+            num = time_deltas // time_delta
+        else:
+            num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError):

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray import DataArray, Dataset, Variable, coding, decode_cf
+from xarray import DataArray, Dataset, Variable, coding, conventions, decode_cf
 from xarray.coding.times import (
     cftime_to_nptime,
     decode_cf_datetime,
@@ -958,3 +958,56 @@ def test_decode_ambiguous_time_warns(calendar):
         assert not record
 
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("freq", "units"),
+    [
+        ("D", "days"),
+        ("D", "hours"),
+        ("D", "minutes"),
+        ("D", "seconds"),
+        ("D", "milliseconds"),
+        ("D", "microseconds"),
+        ("D", "nanoseconds"),
+        ("H", "hours"),
+        ("H", "minutes"),
+        ("H", "seconds"),
+        ("H", "milliseconds"),
+        ("H", "microseconds"),
+        ("H", "nanoseconds"),
+        ("T", "minutes"),
+        ("T", "seconds"),
+        ("T", "milliseconds"),
+        ("T", "microseconds"),
+        ("T", "nanoseconds"),
+        ("S", "seconds"),
+        ("S", "milliseconds"),
+        ("S", "microseconds"),
+        ("S", "nanoseconds"),
+        ("L", "milliseconds"),
+        ("L", "microseconds"),
+        ("L", "nanoseconds"),
+        ("U", "microseconds"),
+        ("U", "nanoseconds"),
+        ("N", "nanoseconds"),
+    ],
+)
+def test_encode_cf_datetime_preserves_integer_units(freq, units):
+    times = pd.date_range("2000", periods=3, freq=freq)
+    cf_units = f"{units} since 2000-01-01"
+    encoded, _, _ = coding.times.encode_cf_datetime(times, cf_units)
+    assert encoded.dtype == np.int64
+
+
+@pytest.mark.parametrize(
+    "encoding",
+    [{"units": "nanoseconds since 1900-01-01"}, {}],
+    ids=["explicit-units", "no-units"],
+)
+def test_nanosecond_resolution_roundtrip(encoding):
+    times = pd.date_range("2000", periods=12, freq="337N")
+    variable = Variable(["time"], times, encoding=encoding)
+    encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("time", encoded)
+    assert_equal(variable, decoded)
