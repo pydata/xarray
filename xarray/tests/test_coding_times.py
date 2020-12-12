@@ -1000,8 +1000,8 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq)
     encoded, _, _ = coding.times.encode_cf_datetime(times, units)
 
     numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
-    cf_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
-    if data_freq >= cf_units_as_timedelta:
+    encoding_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
+    if data_freq >= encoding_units_as_timedelta:
         assert encoded.dtype == np.int64
     else:
         assert encoded.dtype == np.float64

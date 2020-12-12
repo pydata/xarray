@@ -34,8 +34,8 @@ Bug fixes
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 - By default, when possible, xarray will now always use values of type ``int64`` when encoding
   and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
-  precision and accuracy is maintained in the round-tripping process
-  (:issue:`4045`). It also enables encoding and decoding standard calendar
+  precision and accuracy are maintained in the round-tripping process
+  (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard calendar
   dates with time units of nanoseconds (:pull:`4400`). By `Spencer Clark
   <https://github.com/spencerkclark>`_ and `Mark Harfouche <http://github.com/hmaarrfk>`_.
   
