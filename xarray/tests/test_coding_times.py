@@ -960,44 +960,39 @@ def test_decode_ambiguous_time_warns(calendar):
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.parametrize(
-    ("freq", "units"),
-    [
-        ("D", "days"),
-        ("D", "hours"),
-        ("D", "minutes"),
-        ("D", "seconds"),
-        ("D", "milliseconds"),
-        ("D", "microseconds"),
-        ("D", "nanoseconds"),
-        ("H", "hours"),
-        ("H", "minutes"),
-        ("H", "seconds"),
-        ("H", "milliseconds"),
-        ("H", "microseconds"),
-        ("H", "nanoseconds"),
-        ("T", "minutes"),
-        ("T", "seconds"),
-        ("T", "milliseconds"),
-        ("T", "microseconds"),
-        ("T", "nanoseconds"),
-        ("S", "seconds"),
-        ("S", "milliseconds"),
-        ("S", "microseconds"),
-        ("S", "nanoseconds"),
-        ("L", "milliseconds"),
-        ("L", "microseconds"),
-        ("L", "nanoseconds"),
-        ("U", "microseconds"),
-        ("U", "nanoseconds"),
-        ("N", "nanoseconds"),
-    ],
-)
-def test_encode_cf_datetime_preserves_integer_units(freq, units):
-    times = pd.date_range("2000", periods=3, freq=freq)
-    cf_units = f"{units} since 2000-01-01"
-    encoded, _, _ = coding.times.encode_cf_datetime(times, cf_units)
-    assert encoded.dtype == np.int64
+ENCODING_UNITS = [
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+    "nanoseconds",
+]
+NUMPY_FREQUENCIES = [
+    np.timedelta64(1, "D"),
+    np.timedelta64(1, "h"),
+    np.timedelta64(1, "m"),
+    np.timedelta64(1, "s"),
+    np.timedelta64(1, "ms"),
+    np.timedelta64(1, "us"),
+    np.timedelta64(1, "ns"),
+]
+
+
+@pytest.mark.parametrize("encoding_units", ENCODING_UNITS)
+@pytest.mark.parametrize("data_freq", NUMPY_FREQUENCIES, ids=lambda x: f"{x!r}")
+def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq):
+    times = pd.date_range("2000", periods=3, freq=pd.to_timedelta(data_freq))
+    units = f"{encoding_units} since 2000-01-01"
+    encoded, _, _ = coding.times.encode_cf_datetime(times, units)
+
+    numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
+    cf_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
+    if data_freq >= cf_units_as_timedelta:
+        assert encoded.dtype == np.int64
+    else:
+        assert encoded.dtype == np.float64
 
 
 @pytest.mark.parametrize(
@@ -1005,7 +1000,7 @@ def test_encode_cf_datetime_preserves_integer_units(freq, units):
     [{"units": "nanoseconds since 1900-01-01"}, {}],
     ids=["explicit-units", "no-units"],
 )
-def test_nanosecond_resolution_roundtrip(encoding):
+def test_encode_decode_roundtrip(encoding):
     times = pd.date_range("2000", periods=12, freq="337N")
     variable = Variable(["time"], times, encoding=encoding)
     encoded = conventions.encode_cf_variable(variable)
