@@ -301,6 +301,7 @@ Internal Changes
   `Guido Imperiale <https://github.com/crusaderky>`_.
 - Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
   :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Align ``mypy`` versions to ``0.782`` across ``requirements`` and
   ``.pre-commit-config.yml`` files. (:pull:`4390`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
