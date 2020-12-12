@@ -99,12 +99,10 @@ def test_cf_datetime(num_dates, units, calendar):
     if min_y >= 1678 and max_y < 2262:
         expected = cftime_to_nptime(expected)
 
-    print(expected)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = coding.times.decode_cf_datetime(num_dates, units, calendar)
 
-    print(actual)
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
 
