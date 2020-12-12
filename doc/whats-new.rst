@@ -95,7 +95,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix bug where reference times without padded years (e.g. ``since 1-1-1``) would lose their units when
-  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  being passed by ``encode_cf_datetime`` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
   about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
   it is assumed that the first digit is the years, they are padded appropriately (to e.g. ``since 0001-1-1``)
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
