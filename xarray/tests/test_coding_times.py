@@ -99,10 +99,12 @@ def test_cf_datetime(num_dates, units, calendar):
     if min_y >= 1678 and max_y < 2262:
         expected = cftime_to_nptime(expected)
 
+    print(expected)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "Unable to decode time axis")
         actual = coding.times.decode_cf_datetime(num_dates, units, calendar)
 
+    print(actual)
     abs_diff = np.asarray(abs(actual - expected)).ravel()
     abs_diff = pd.to_timedelta(abs_diff.tolist()).to_numpy()
 
@@ -479,27 +481,36 @@ def test_decoded_cf_datetime_array_2d():
     assert_array_equal(np.asarray(result), expected)
 
 
+PANDAS_FREQUENCIES_TO_ENCODING_UNITS = {
+    "N": "nanoseconds",
+    "U": "microseconds",
+    "L": "milliseconds",
+    "S": "seconds",
+    "T": "minutes",
+    "H": "hours",
+    "D": "days"
+}
+
+
+@pytest.mark.parametrize(("freq", "units"), PANDAS_FREQUENCIES_TO_ENCODING_UNITS.items())
+def test_infer_datetime_units(freq, units):
+    dates = pd.date_range("2000", periods=2, freq=freq)
+    expected = f"{units} since 2000-01-01 00:00:00"
+    assert expected == coding.times.infer_datetime_units(dates)
+
+
 @pytest.mark.parametrize(
     ["dates", "expected"],
     [
-        (pd.date_range("1900-01-01", periods=5), "days since 1900-01-01 00:00:00"),
-        (
-            pd.date_range("1900-01-01 12:00:00", freq="H", periods=2),
-            "hours since 1900-01-01 12:00:00",
-        ),
         (
             pd.to_datetime(["1900-01-01", "1900-01-02", "NaT"]),
             "days since 1900-01-01 00:00:00",
-        ),
-        (
-            pd.to_datetime(["1900-01-01", "1900-01-02T00:00:00.005"]),
-            "seconds since 1900-01-01 00:00:00",
         ),
         (pd.to_datetime(["NaT", "1900-01-01"]), "days since 1900-01-01 00:00:00"),
         (pd.to_datetime(["NaT"]), "days since 1970-01-01 00:00:00"),
     ],
 )
-def test_infer_datetime_units(dates, expected):
+def test_infer_datetime_units_with_NaT(dates, expected):
     assert expected == coding.times.infer_datetime_units(dates)
 
 
