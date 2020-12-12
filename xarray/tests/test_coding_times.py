@@ -1009,8 +1009,10 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq)
 
 @pytest.mark.parametrize("freq", ["N", "U", "L", "S", "T", "H", "D"])
 def test_encode_decode_roundtrip(freq):
+    # See GH #4045. Prior to #4684 this test would fail for frequencies of "S",
+    # "L", "U", and "N".
     initial_time = pd.date_range("1678-01-01", periods=1)
-    times = initial_time.append(pd.date_range("1968", periods=12, freq=freq))
+    times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded)

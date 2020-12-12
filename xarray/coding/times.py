@@ -438,7 +438,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         dates_as_index = pd.DatetimeIndex(dates.ravel())
         time_deltas = dates_as_index - ref_date
 
-        # Use floor division if the time_delta evenly divides all differences
+        # Use floor division if time_delta evenly divides all differences
         # to preserve integer dtype if possible.
         if np.all(time_deltas % time_delta == np.timedelta64(0, delta_units)):
             num = time_deltas // time_delta
