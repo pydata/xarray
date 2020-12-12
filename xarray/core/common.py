@@ -1443,7 +1443,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Notes
         -----
         The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
-        through to the ``asarray`` method of the underlying array when a value
+        through to the ``astype`` method of the underlying array when a value
         different than ``None`` is supplied.
         Make sure to only supply these arguments if the underlying array class
         supports them.
