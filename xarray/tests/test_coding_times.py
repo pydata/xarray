@@ -546,6 +546,7 @@ def test_infer_cftime_datetime_units(calendar, date_args, expected):
         ("1h", "hours", np.int64(1)),
         ("1ms", "milliseconds", np.int64(1)),
         ("1us", "microseconds", np.int64(1)),
+        ("1ns", "nanoseconds", np.int64(1)),
         (["NaT", "0s", "1s"], None, [np.nan, 0, 1]),
         (["30m", "60m"], "hours", [0.5, 1.0]),
         ("NaT", "days", np.nan),

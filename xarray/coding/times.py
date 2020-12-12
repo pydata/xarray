@@ -36,7 +36,15 @@ _NS_PER_TIME_DELTA = {
 }
 
 TIME_UNITS = frozenset(
-    ["days", "hours", "minutes", "seconds", "milliseconds", "microseconds"]
+    [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
 )
 
 
