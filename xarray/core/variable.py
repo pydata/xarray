@@ -387,7 +387,7 @@ class Variable(
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
-        order : {‘C’, ‘F’, ‘A’, ‘K’}, optional
+        order : {'C', 'F', 'A', 'K'}, optional
             Controls the memory layout order of the result. ‘C’ means C order,
             ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
             Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
