@@ -36,14 +36,6 @@ V = TypeVar("V")
 T = TypeVar("T")
 
 
-def _check_inplace(inplace: Optional[bool]) -> None:
-    if inplace is not None:
-        raise TypeError(
-            "The `inplace` argument has been removed from xarray. "
-            "You can achieve an identical effect with python's standard assignment."
-        )
-
-
 def alias_message(old_name: str, new_name: str) -> str:
     return f"{old_name} has been deprecated. Use {new_name} instead."
 
