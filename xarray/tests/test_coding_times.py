@@ -995,14 +995,11 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq)
         assert encoded.dtype == np.float64
 
 
-@pytest.mark.parametrize(
-    "encoding",
-    [{"units": "nanoseconds since 1900-01-01"}, {}],
-    ids=["explicit-units", "no-units"],
-)
-def test_encode_decode_roundtrip(encoding):
-    times = pd.date_range("2000", periods=12, freq="337N")
-    variable = Variable(["time"], times, encoding=encoding)
+@pytest.mark.parametrize("freq", ["N", "U", "L", "S", "T", "H", "D"])
+def test_encode_decode_roundtrip(freq):
+    initial_time = pd.date_range("1678-01-01", periods=1)
+    times = initial_time.append(pd.date_range("1968", periods=12, freq=freq))
+    variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded)
     assert_equal(variable, decoded)
