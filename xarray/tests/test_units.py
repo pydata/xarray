@@ -2420,10 +2420,6 @@ class TestDataArray:
             pytest.param(
                 operator.eq,
                 id="equal",
-                marks=pytest.mark.xfail(
-                    # LooseVersion(pint.__version__) < "0.14",
-                    reason="inconsistencies in the return values of pint's eq",
-                ),
             ),
         ),
     )
