@@ -2977,7 +2977,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3158,7 +3158,7 @@ class TestDataArray:
             method("rename", u="v"),
             pytest.param(
                 method("swap_dims", {"x": "u"}),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             pytest.param(
                 method(
@@ -3166,7 +3166,7 @@ class TestDataArray:
                     dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
                     axis=1,
                 ),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             method("drop_vars", "x"),
             method("reset_coords", names="u"),
@@ -3254,7 +3254,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3299,7 +3299,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3344,7 +3344,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3468,7 +3468,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3544,7 +3544,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3612,7 +3612,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
         array = (
             np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
@@ -3943,7 +3943,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             "coords",
         ),
@@ -4406,7 +4406,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4562,7 +4562,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4654,7 +4654,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4777,7 +4777,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -4830,7 +4830,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -4883,7 +4883,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -5064,7 +5064,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -5400,7 +5400,7 @@ class TestDataset:
                 method(
                     "expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1
                 ),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             method("drop_vars", "x"),
             method("drop_dims", "z"),
