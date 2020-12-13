@@ -1016,4 +1016,6 @@ def test_encode_decode_roundtrip(freq):
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded)
+    print(encoded)
+    print(decoded)
     assert_equal(variable, decoded)

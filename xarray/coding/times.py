@@ -164,14 +164,20 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
     # (GH #2002).
+    print(f"flat_num_dates dtype prior to casting {flat_num_dates.dtype}")
     if flat_num_dates.dtype.kind == "i":
         flat_num_dates = flat_num_dates.astype(np.int64)
+    print(f"flat_num_dates dtype after casting {flat_num_dates.dtype}")
 
     # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
     # works much faster when dealing with integers (GH #1399).
+    print("flat_num_dates_ns_int prior to casting")
+    print(flat_num_dates * _NS_PER_TIME_DELTA[delta])
     flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
         np.int64
     )
+    print("flat_num_dates_ns_int after casting")
+    print(flat_num_dates_ns_int)
 
     # Use pd.to_timedelta to safely cast integer values to timedeltas,
     # and add those to a Timestamp to safely produce a DatetimeIndex.  This
