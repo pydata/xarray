@@ -3,6 +3,10 @@ steps:
 - template: install.yml
 
 - bash: |
+    cat /proc/cpuinfo
+  displayName: System info
+
+- bash: |
     source activate xarray-tests
     python -OO -c "import xarray"
   displayName: Import xarray
