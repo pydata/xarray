@@ -1976,7 +1976,7 @@ class TestVariable:
             method("quantile", q=[0.25, 0.75]),
             pytest.param(
                 method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="rank not implemented for non-ndarray"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
             ),
             method("roll", {"x": 2}),
             pytest.param(
@@ -3634,6 +3634,10 @@ class TestDataArray:
             method("stack", a=("x", "y")),
             method("set_index", x="x2"),
             method("shift", x=2),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
+            ),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
@@ -4711,6 +4715,10 @@ class TestDataset:
             method("stack", u=("x", "y")),
             method("set_index", x="x2"),
             method("shift", x=2),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
+            ),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
