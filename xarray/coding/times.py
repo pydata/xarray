@@ -263,6 +263,7 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
+    unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
     for time_unit in [
         "days",
         "hours",
@@ -273,8 +274,8 @@ def _infer_time_units_from_diff(unique_timedeltas):
         "nanoseconds",
     ]:
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
-        unit_delta = np.timedelta64(delta_ns, "ns")
-        if np.all(unique_timedeltas % unit_delta == np.timedelta64(0, "ns")):
+        unit_delta = pd.to_timedelta(delta_ns, "ns")
+        if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
             return time_unit
     return "seconds"
 
