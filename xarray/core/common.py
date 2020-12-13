@@ -817,8 +817,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Rolling object (core.rolling.DataArrayRolling for DataArray,
-        core.rolling.DatasetRolling for Dataset.)
+        core.rolling.DataArrayRolling or core.rolling.DatasetRolling
+            A rolling object (``DataArrayRolling`` for ``DataArray``,
+            ``DatasetRolling`` for ``Dataset``)
 
         Examples
         --------
