@@ -16,6 +16,7 @@ from xarray.coding.times import (
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
+from xarray.tests.test_backends import ON_WINDOWS
 from xarray.testing import assert_equal
 
 from . import arm_xfail, assert_array_equal, has_cftime, requires_cftime, requires_dask
@@ -1008,6 +1009,9 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq)
 
 
 @pytest.mark.parametrize("freq", ["N", "U", "L", "S", "T", "H", "D"])
+@pytest.mark.xfail(
+    ON_WINDOWS, reason="We do not expect exact round-tripping on Windows"
+)
 def test_encode_decode_roundtrip(freq):
     # See GH #4045. Prior to #4684 this test would fail for frequencies of "S",
     # "L", "U", and "N".
@@ -1016,6 +1020,4 @@ def test_encode_decode_roundtrip(freq):
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded)
-    print(encoded)
-    print(decoded)
     assert_equal(variable, decoded)
