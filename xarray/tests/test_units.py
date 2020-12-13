@@ -2173,12 +2173,7 @@ class TestVariable:
             "median",
             "reflect",
             "edge",
-            pytest.param(
-                "linear_ramp",
-                marks=pytest.mark.xfail(
-                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
-                ),
-            ),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
