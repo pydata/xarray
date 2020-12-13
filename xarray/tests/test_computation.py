@@ -1468,6 +1468,20 @@ def test_where():
     assert_identical(expected, actual)
 
 
+def test_where_attrs():
+    cond = xr.DataArray([True, False], dims="x", attrs={"attr": "value"})
+
+    with xr.set_options(keep_attrs=False):
+        actual = xr.where(cond, 1, 0)
+        expected = xr.DataArray([1, 0], dims="x")
+        assert_identical(expected, actual)
+
+    with xr.set_options(keep_attrs=True):
+        actual = xr.where(cond, 1, 0)
+        expected = xr.DataArray([1, 0], dims="x", attrs={"attr": "value"})
+        assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
 def test_polyval(use_dask, use_datetime):
