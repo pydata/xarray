@@ -445,7 +445,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
         # Use floor division if time_delta evenly divides all differences
         # to preserve integer dtype if possible (GH 4045).
-        if np.all(time_deltas % time_delta == np.timedelta64(0, delta_units)):
+        if np.all(time_deltas % time_delta == np.timedelta64(0, "ns")):
             num = time_deltas // time_delta
         else:
             num = time_deltas / time_delta
