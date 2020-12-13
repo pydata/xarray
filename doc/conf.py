@@ -418,6 +418,7 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
 }
 
 
