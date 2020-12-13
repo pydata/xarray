@@ -479,7 +479,7 @@ def test_decoded_cf_datetime_array_2d():
     assert_array_equal(np.asarray(result), expected)
 
 
-PANDAS_FREQUENCIES_TO_ENCODING_UNITS = {
+FREQUENCIES_TO_ENCODING_UNITS = {
     "N": "nanoseconds",
     "U": "microseconds",
     "L": "milliseconds",
@@ -490,9 +490,7 @@ PANDAS_FREQUENCIES_TO_ENCODING_UNITS = {
 }
 
 
-@pytest.mark.parametrize(
-    ("freq", "units"), PANDAS_FREQUENCIES_TO_ENCODING_UNITS.items()
-)
+@pytest.mark.parametrize(("freq", "units"), FREQUENCIES_TO_ENCODING_UNITS.items())
 def test_infer_datetime_units(freq, units):
     dates = pd.date_range("2000", periods=2, freq=freq)
     expected = f"{units} since 2000-01-01 00:00:00"
@@ -972,45 +970,25 @@ def test_decode_ambiguous_time_warns(calendar):
     np.testing.assert_array_equal(result, expected)
 
 
-ENCODING_UNITS = [
-    "days",
-    "hours",
-    "minutes",
-    "seconds",
-    "milliseconds",
-    "microseconds",
-    "nanoseconds",
-]
-NUMPY_FREQUENCIES = [
-    np.timedelta64(1, "D"),
-    np.timedelta64(1, "h"),
-    np.timedelta64(1, "m"),
-    np.timedelta64(1, "s"),
-    np.timedelta64(1, "ms"),
-    np.timedelta64(1, "us"),
-    np.timedelta64(1, "ns"),
-]
-
-
-@pytest.mark.parametrize("encoding_units", ENCODING_UNITS)
-@pytest.mark.parametrize("data_freq", NUMPY_FREQUENCIES, ids=lambda x: f"{x!r}")
-def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, data_freq):
-    times = pd.date_range("2000", periods=3, freq=pd.to_timedelta(data_freq))
+@pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
+@pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
+def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq):
+    times = pd.date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
     encoded, _, _ = coding.times.encode_cf_datetime(times, units)
 
     numpy_timeunit = coding.times._netcdf_to_numpy_timeunit(encoding_units)
     encoding_units_as_timedelta = np.timedelta64(1, numpy_timeunit)
-    if data_freq >= encoding_units_as_timedelta:
+    if pd.to_timedelta(1, freq) >= encoding_units_as_timedelta:
         assert encoded.dtype == np.int64
     else:
         assert encoded.dtype == np.float64
 
 
-@pytest.mark.parametrize("freq", ["N", "U", "L", "S", "T", "H", "D"])
+@pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 def test_encode_decode_roundtrip(freq):
-    # See GH #4045. Prior to #4684 this test would fail for frequencies of "S",
-    # "L", "U", and "N".
+    # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
+    # "S", "L", "U", and "N".
     initial_time = pd.date_range("1678-01-01", periods=1)
     times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)

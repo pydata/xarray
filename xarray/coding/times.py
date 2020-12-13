@@ -163,12 +163,12 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
-    # (GH #2002).
+    # (GH 2002).
     if flat_num_dates.dtype.kind == "i":
         flat_num_dates = flat_num_dates.astype(np.int64)
 
     # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
-    # works much faster when dealing with integers (GH #1399).
+    # works much faster when dealing with integers (GH 1399).
     flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
         np.int64
     )
@@ -263,6 +263,11 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
+    # Note that the modulus operator was only implemented for np.timedelta64
+    # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
+    # supported is greater than or equal to this we will no longer need to cast
+    # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
+    # modulus operator works for TimedeltaIndex objects.
     unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
     for time_unit in [
         "days",
@@ -274,7 +279,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
         "nanoseconds",
     ]:
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
-        unit_delta = pd.to_timedelta(delta_ns, "ns")
+        unit_delta = np.timedelta64(delta_ns, "ns")
         if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
             return time_unit
     return "seconds"
@@ -439,7 +444,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         time_deltas = dates_as_index - ref_date
 
         # Use floor division if time_delta evenly divides all differences
-        # to preserve integer dtype if possible.
+        # to preserve integer dtype if possible (GH 4045).
         if np.all(time_deltas % time_delta == np.timedelta64(0, delta_units)):
             num = time_deltas // time_delta
         else:
