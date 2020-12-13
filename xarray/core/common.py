@@ -930,8 +930,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
-        core.rolling.DatasetCoarsen for Dataset.)
+        core.rolling.DataArrayCoarsen or core.rolling.DatasetCoarsen
+            A coarsen object (``DataArrayCoarsen`` for ``DataArray``,
+            ``DatasetCoarsen`` for ``Dataset``)
 
         Examples
         --------
