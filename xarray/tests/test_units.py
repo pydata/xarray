@@ -2239,7 +2239,7 @@ class TestDataArray:
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             "with_coords",
             "without_coords",
@@ -2276,7 +2276,7 @@ class TestDataArray:
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             pytest.param("with_coords"),
             pytest.param("without_coords"),
@@ -5134,7 +5134,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
