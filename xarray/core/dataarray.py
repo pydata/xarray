@@ -858,11 +858,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
@@ -883,11 +883,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
