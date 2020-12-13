@@ -4315,7 +4315,7 @@ class TestRasterio:
         # height (issue #2864)
 
         # https://github.com/mapbox/rasterio/1768
-        rasterio = pytest.importorskip("docutils", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
 
@@ -4345,7 +4345,7 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
         # https://github.com/mapbox/rasterio/1768
-        rasterio = pytest.importorskip("docutils", minversion="1.0.28")
+        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually
         with create_tmp_geotiff(crs=None) as (tmp_file, expected):
