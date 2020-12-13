@@ -274,8 +274,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     ]:
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
         unit_delta = np.timedelta64(delta_ns, "ns")
-        diffs = unique_timedeltas / unit_delta
-        if np.all(diffs == diffs.astype(int)):
+        if np.all(unique_timedeltas % unit_delta == np.timedelta64(0, "ns")):
             return time_unit
     return "seconds"
 
