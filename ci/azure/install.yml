@@ -7,7 +7,7 @@ steps:
 
 - bash: |
     conda install -y mamba -c conda-forge
-    source activate
+    source activate # required for numba on windows
     mamba env create -n xarray-tests --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
