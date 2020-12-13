@@ -1509,10 +1509,7 @@ class TestVariable:
             method("mean"),
             method("median"),
             method("min"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
+            method("prod"),
             method("std"),
             method("sum"),
             method("var"),
@@ -1520,6 +1517,9 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2333,10 +2333,7 @@ class TestDataArray:
                 ),
             ),
             function("min"),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            function("prod"),
             function("sum"),
             function("std"),
             function("var"),
@@ -2350,10 +2347,7 @@ class TestDataArray:
             method("mean"),
             method("median"),
             method("min"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            method("prod"),
             method("sum"),
             method("std"),
             method("var"),
@@ -2363,6 +2357,9 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -4004,10 +4001,7 @@ class TestDataset:
                 marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
             ),
             function("sum"),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
-            ),
+            function("prod"),
             function("std"),
             function("var"),
             function("cumsum"),
@@ -4021,10 +4015,7 @@ class TestDataset:
             method("mean"),
             method("median"),
             method("sum"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
-            ),
+            method("prod"),
             method("std"),
             method("var"),
             method("cumsum"),
@@ -4033,6 +4024,9 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
