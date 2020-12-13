@@ -160,7 +160,6 @@ def concat(
     See also
     --------
     merge
-    auto_combine
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
