@@ -167,6 +167,14 @@ def concat(
     >>> da = xr.DataArray(np.arange(6).reshape(2, 3),
     ...                   [("x", ["a", "b"]),
     ...                   ("y", [10, 20, 30])])
+    >>> da
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int32 10 20 30
+    
     >>> xr.concat([da.isel(y=slice(0, 1)),
     ...            da.isel(y=slice(1, None))],
     ...           dim="y")
