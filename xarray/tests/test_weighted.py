@@ -61,7 +61,7 @@ def test_weighted_lazy_resample(time_chunks, resample_spec):
         return ds.weighted(ds.weights).mean("time")
 
     # example dataset
-    t = xr.cftime_range(start="2000", periods=1000, freq="1AS")
+    t = xr.cftime_range(start="2000", periods=20, freq="1AS")
     weights = xr.DataArray(np.random.rand(len(t)), dims=["time"], coords={"time": t})
     data = xr.DataArray(
         np.random.rand(len(t)), dims=["time"], coords={"time": t, "weights": weights}
