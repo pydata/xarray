@@ -12,4 +12,3 @@ dependencies:
   - numpy=1.15
   - pandas=0.25
   - setuptools=38.4
-  - typing_extensions # see https://github.com/python/importlib_metadata/issues/270
