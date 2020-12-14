@@ -31,7 +31,6 @@ def test_weighted_weights_nan_raises(as_dataset, weights):
         data.weighted(DataArray(weights))
 
 
-@requires_cftime
 @requires_dask
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
@@ -50,6 +49,7 @@ def test_weighted_weights_nan_raises_dask(as_dataset, weights):
         weighted.sum().load()
 
 
+@requires_cftime
 @requires_dask
 @pytest.mark.parametrize("time_chunks", (1, 5))
 @pytest.mark.parametrize("resample_spec", ("1AS", "5AS", "10AS"))
