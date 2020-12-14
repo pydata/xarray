@@ -116,6 +116,10 @@ xarray:
 
 .. literalinclude:: examples/_code/accessor_example.py
 
+In general, the only restriction on the accessor class is that the ``__init__`` method
+must have a single parameter: the ``Dataset`` or ``DataArray`` object it is supposed
+to work on.
+
 This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
 
@@ -173,9 +177,9 @@ for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
 
 To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
-easier, you can use `sphinx-ext-autosummary`_.
+easier, you can use `sphinx-autosummary-accessors`_.
 
-.. _sphinx-ext-autosummary: https://sphinx-autosummary-accessors.readthedocs.io/
+.. _sphinx-autosummary-accessors: https://sphinx-autosummary-accessors.readthedocs.io/
 
 .. _zarr_encoding:
 
