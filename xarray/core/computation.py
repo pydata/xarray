@@ -28,7 +28,7 @@ import numpy as np
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
-from .options import OPTIONS, _get_keep_attrs
+from .options import OPTIONS
 from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
@@ -1575,8 +1575,6 @@ def where(cond, x, y):
     numpy.where : corresponding numpy function
     Dataset.where, DataArray.where : equivalent methods
     """
-    keep_attrs = _get_keep_attrs(default=False)
-
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
         duck_array_ops.where,
@@ -1586,7 +1584,7 @@ def where(cond, x, y):
         join="exact",
         dataset_join="exact",
         dask="allowed",
-        keep_attrs=keep_attrs,
+        keep_attrs=True,
     )
 
 
