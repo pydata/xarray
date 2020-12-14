@@ -365,7 +365,7 @@ def test_dataarray_property(prop):
         (do("sel", x=[0, 1, 2]), True),
         (do("shift"), True),
         (do("sortby", "x", ascending=False), True),
-        (do("stack", z=["x", "y"], True),
+        (do("stack", z=["x", "y"]), True),
         (do("transpose"), True),
         # TODO
         # set_index
