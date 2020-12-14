@@ -174,7 +174,7 @@ def concat(
     Coordinates:
       * x        (x) <U1 'a' 'b'
       * y        (y) int32 10 20 30
-    
+
     >>> xr.concat([da.isel(y=slice(0, 1)),
     ...            da.isel(y=slice(1, None))],
     ...           dim="y")
