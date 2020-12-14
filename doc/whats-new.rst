@@ -22,7 +22,8 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- keep attrs for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 New Features
 ~~~~~~~~~~~~
