@@ -177,24 +177,24 @@ def concat(
 
     >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
     <xarray.DataArray (x: 2, y: 3)>
-    array([[-0.99838282, -0.71384379, -0.27952494],
-           [-0.38083294,  0.23861607, -0.32333683]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
     Coordinates:
       * x        (x) <U1 'a' 'b'
       * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
     <xarray.DataArray (x: 2, y: 3)>
-    array([[-1.23581607, -1.00288945,  0.56989523],
-           [-1.03495318,  0.38050723, -0.58316651]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
     Coordinates:
       * x        (x) object 'a' 'b'
       * y        (y) int32 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
     <xarray.DataArray (new_dim: 2, y: 3)>
-    array([[-1.23581607, -1.00288945,  0.56989523],
-           [-1.03495318,  0.38050723, -0.58316651]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
     Coordinates:
         x        (new_dim) <U1 'a' 'b'
       * y        (y) int32 10 20 30
@@ -202,8 +202,8 @@ def concat(
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
     <xarray.DataArray (new_dim: 2, y: 3)>
-    array([[-1.23581607, -1.00288945,  0.56989523],
-           [-1.03495318,  0.38050723, -0.58316651]])
+    array([[0, 1, 2],
+           [3, 4, 5]])
     Coordinates:
         x        (new_dim) <U1 'a' 'b'
       * y        (y) int32 10 20 30
