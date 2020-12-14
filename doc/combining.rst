@@ -29,8 +29,10 @@ that dimension:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])])
-    da.isel(y=slice(0, 1)) # same as da[:, :1]
+    da = xr.DataArray(
+        np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+    )
+    da.isel(y=slice(0, 1))  # same as da[:, :1]
     # This resembles how you would use np.concatenate:
     xr.concat([da[:, :1], da[:, 1:]], dim="y")
     # For more friendly pandas-like indexing you can use:
