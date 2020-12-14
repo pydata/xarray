@@ -15,10 +15,10 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.{0.16.3}:
+.. _whats-new.0.16.3:
 
-v{0.16.3} (unreleased)
-----------------------
+v0.16.3 (unreleased)
+--------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -35,7 +35,10 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- add information about requirements for accessor classes (:issue:`2788`, :pull:`4657`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- start a list of external I/O integrating with ``xarray`` (:issue:`683`, :pull:`4566`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
