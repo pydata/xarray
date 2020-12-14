@@ -2417,10 +2417,7 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(
-                operator.eq,
-                id="equal",
-            ),
+            pytest.param(operator.eq, id="equal"),
         ),
     )
     @pytest.mark.parametrize(
