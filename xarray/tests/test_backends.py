@@ -3961,60 +3961,51 @@ class TestRasterio:
                 assert len(rioda.attrs["transform"]) == 6
                 np.testing.assert_array_equal(rioda.attrs["nodatavals"], [-9765.0])
 
+    # rasterio throws a Warning, which is expected since we test rasterio's defaults
+    @pytest.mark.filterwarnings("ignore:Dataset has no geotransform")
     def test_notransform(self):
         # regression test for https://github.com/pydata/xarray/issues/1686
-        import warnings
 
         import rasterio
 
         # Create a geotiff file
-        with warnings.catch_warnings():
-            # rasterio throws a NotGeoreferencedWarning here, which is
-            # expected since we test rasterio's defaults in this case.
-            warnings.filterwarnings(
-                "ignore",
-                category=UserWarning,
-                message="Dataset has no geotransform set",
-            )
-            with create_tmp_file(suffix=".tif") as tmp_file:
-                # data
-                nx, ny, nz = 4, 3, 3
-                data = np.arange(nx * ny * nz, dtype=rasterio.float32).reshape(
-                    nz, ny, nx
-                )
-                with rasterio.open(
-                    tmp_file,
-                    "w",
-                    driver="GTiff",
-                    height=ny,
-                    width=nx,
-                    count=nz,
-                    dtype=rasterio.float32,
-                ) as s:
-                    s.descriptions = ("nx", "ny", "nz")
-                    s.units = ("cm", "m", "km")
-                    s.write(data)
+        with create_tmp_file(suffix=".tif") as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx * ny * nz, dtype=rasterio.float32).reshape(nz, ny, nx)
+            with rasterio.open(
+                tmp_file,
+                "w",
+                driver="GTiff",
+                height=ny,
+                width=nx,
+                count=nz,
+                dtype=rasterio.float32,
+            ) as s:
+                s.descriptions = ("nx", "ny", "nz")
+                s.units = ("cm", "m", "km")
+                s.write(data)
 
-                # Tests
-                expected = DataArray(
-                    data,
-                    dims=("band", "y", "x"),
-                    coords={
-                        "band": [1, 2, 3],
-                        "y": [0.5, 1.5, 2.5],
-                        "x": [0.5, 1.5, 2.5, 3.5],
-                    },
-                )
-                with xr.open_rasterio(tmp_file) as rioda:
-                    assert_allclose(rioda, expected)
-                    assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
-                    assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
-                    assert rioda.attrs["descriptions"] == ("nx", "ny", "nz")
-                    assert rioda.attrs["units"] == ("cm", "m", "km")
-                    assert isinstance(rioda.attrs["res"], tuple)
-                    assert isinstance(rioda.attrs["is_tiled"], np.uint8)
-                    assert isinstance(rioda.attrs["transform"], tuple)
-                    assert len(rioda.attrs["transform"]) == 6
+            # Tests
+            expected = DataArray(
+                data,
+                dims=("band", "y", "x"),
+                coords={
+                    "band": [1, 2, 3],
+                    "y": [0.5, 1.5, 2.5],
+                    "x": [0.5, 1.5, 2.5, 3.5],
+                },
+            )
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
+                assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
+                assert rioda.attrs["descriptions"] == ("nx", "ny", "nz")
+                assert rioda.attrs["units"] == ("cm", "m", "km")
+                assert isinstance(rioda.attrs["res"], tuple)
+                assert isinstance(rioda.attrs["is_tiled"], np.uint8)
+                assert isinstance(rioda.attrs["transform"], tuple)
+                assert len(rioda.attrs["transform"]) == 6
 
     def test_indexing(self):
         with create_tmp_geotiff(
@@ -4313,7 +4304,9 @@ class TestRasterio:
     def test_rasterio_vrt_with_transform_and_size(self):
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
-        import rasterio
+
+        # https://github.com/mapbox/rasterio/1768
+        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
 
@@ -4341,7 +4334,9 @@ class TestRasterio:
 
     def test_rasterio_vrt_with_src_crs(self):
         # Test open_rasterio() support of WarpedVRT with specified src_crs
-        import rasterio
+
+        # https://github.com/mapbox/rasterio/1768
+        rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually
         with create_tmp_geotiff(crs=None) as (tmp_file, expected):
