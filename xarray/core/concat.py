@@ -173,7 +173,7 @@ def concat(
            [3, 4, 5]])
     Coordinates:
       * x        (x) <U1 'a' 'b'
-      * y        (y) int32 10 20 30
+      * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
     <xarray.DataArray (x: 2, y: 3)>
