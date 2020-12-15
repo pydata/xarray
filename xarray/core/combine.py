@@ -541,7 +541,7 @@ def vars_as_keys(ds):
     return tuple(sorted(ds))
 
 
-def all_unnamed_data_arrays(data_objects):
+def _all_unnamed_data_arrays(data_objects):
     for data_obj in data_objects:
         if not isinstance(data_obj, DataArray) or data_obj.name is not None:
             return False
@@ -762,7 +762,7 @@ def combine_by_coords(
 
     # If a set of unnamed data arrays is provided, these arrays are assumed to belong
     # to the same variable and should be combined.
-    if all_unnamed_data_arrays(data_objects):
+    if _all_unnamed_data_arrays(data_objects):
         datasets = [Dataset({"_": data_array}) for data_array in data_objects]
     else:
         datasets = data_objects
