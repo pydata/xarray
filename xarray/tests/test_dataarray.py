@@ -1170,6 +1170,14 @@ class TestDataArray:
         assert data.loc[True] == 0
         assert data.loc[False] == 1
 
+    def test_loc_dim_name_collision_with_sel_params(self):
+        da = xr.DataArray(
+            [[0, 0], [1, 1]],
+            dims=["dim1", "method"],
+            coords={"dim1": ["x", "y"], "method": ["a", "b"]},
+        )
+        assert da.loc[dict(dim1=["x", "y"], method=["a"])] == [[0], [1]]
+
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
