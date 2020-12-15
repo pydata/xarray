@@ -197,7 +197,7 @@ def concat(
            [3, 4, 5]])
     Coordinates:
         x        (new_dim) <U1 'a' 'b'
-      * y        (y) int32 10 20 30
+      * y        (y) int64 10 20 30
     Dimensions without coordinates: new_dim
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
