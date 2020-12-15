@@ -763,7 +763,7 @@ def combine_by_coords(
     # If a set of unnamed data arrays is provided, these arrays are assumed to belong
     # to the same variable and should be combined.
     if all_unnamed_data_arrays(data_objects):
-        datasets = [Dataset({'_': data_array}) for data_array in data_objects]
+        datasets = [Dataset({"_": data_array}) for data_array in data_objects]
     else:
         datasets = data_objects
 

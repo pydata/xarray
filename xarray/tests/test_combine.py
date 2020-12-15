@@ -679,7 +679,7 @@ class TestCombineAuto:
     def test_combine_coords_mixed_datasets_arrays(self):
         objs = [
             DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
-            Dataset({"x": [2, 3]})
+            Dataset({"x": [2, 3]}),
         ]
         with raises_regex(ValueError, "without providing an explicit name"):
             combine_by_coords(objs)

@@ -5940,7 +5940,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> # Create an example dataset:
-        ...
         >>> import numpy as np
         >>> import pandas as pd
         >>> import xarray as xr
