@@ -1176,7 +1176,9 @@ class TestDataArray:
             dims=["dim1", "method"],
             coords={"dim1": ["x", "y"], "method": ["a", "b"]},
         )
-        assert da.loc[dict(dim1=["x", "y"], method=["a"])] == [[0], [1]]
+        np.testing.assert_array_equal(
+            da.loc[dict(dim1=["x", "y"], method=["a"])], [[0], [1]]
+        )
 
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
