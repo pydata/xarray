@@ -206,7 +206,7 @@ def concat(
            [3, 4, 5]])
     Coordinates:
         x        (new_dim) <U1 'a' 'b'
-      * y        (y) int32 10 20 30
+      * y        (y) int64 10 20 30
       * new_dim  (new_dim) int64 -90 -100
     """
     # TODO: add ignore_index arguments copied from pandas.concat
