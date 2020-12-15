@@ -32,6 +32,8 @@ Bug fixes
 ~~~~~~~~~
 
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Documentation
 ~~~~~~~~~~~~~
