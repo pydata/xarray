@@ -6,8 +6,9 @@ steps:
 - template: add-conda-to-path.yml
 
 - bash: |
-    conda update -y conda
-    conda env create -n xarray-tests --file ${{ parameters.env_file }}
+    conda install -y mamba -c conda-forge
+    source activate # required for mamba on windows
+    mamba env create -n xarray-tests --file ${{ parameters.env_file }}
   displayName: Install conda dependencies
 
 # TODO: add sparse back in, once Numba works with the development version of
