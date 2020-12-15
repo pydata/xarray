@@ -189,7 +189,7 @@ def concat(
            [3, 4, 5]])
     Coordinates:
       * x        (x) object 'a' 'b'
-      * y        (y) int32 10 20 30
+      * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
     <xarray.DataArray (new_dim: 2, y: 3)>
