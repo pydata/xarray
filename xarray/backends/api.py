@@ -157,7 +157,9 @@ def _get_default_engine(path, allow_remote=False):
 
 
 def _autodetect_engine(filename_or_obj):
-    if isinstance(filename_or_obj, str):
+    if isinstance(filename_or_obj, AbstractDataStore):
+        engine = "store"
+    elif isinstance(filename_or_obj, str):
         engine = _get_default_engine(filename_or_obj, allow_remote=True)
     else:
         engine = _get_engine_from_magic_number(filename_or_obj)
@@ -436,11 +438,10 @@ def open_dataset(
     open_mfdataset
     """
     if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-        kwargs = locals().copy()
-        from . import apiv2, plugins
+        kwargs = locals()
+        from . import apiv2
 
-        if engine in plugins.list_engines():
-            return apiv2.open_dataset(**kwargs)
+        return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:
         warnings.warn(
