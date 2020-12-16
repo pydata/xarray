@@ -7,15 +7,14 @@ from .plugins import BackendEntrypoint
 def open_backend_dataset_store(
     store,
     *,
-    mask_and_scale=None,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
+    mask_and_scale=True,
+    decode_times=True,
+    concat_characters=True,
+    decode_coords=True,
     drop_variables=None,
     use_cftime=None,
     decode_timedelta=None,
 ):
-
     with close_on_error(store):
         vars, attrs = store.load()
         file_obj = store
