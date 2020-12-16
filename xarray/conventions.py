@@ -62,6 +62,15 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
     if array.size == 0:
         return np.dtype(float)
 
+    native_dtypes = set(map(lambda x: type(x), array.flatten()))
+    if len(native_dtypes) > 1:
+        raise ValueError(
+            "unable to infer dtype on variable {!r}; object array "
+            "contains mixed native types: {}".format(
+                name, ",".join(map(lambda x: x.__name__, native_dtypes))
+            )
+        )
+
     element = array[(0,) * array.ndim]
     # We use the base types to avoid subclasses of bytes and str (which might
     # not play nice with e.g. hdf5 datatypes), such as those from numpy
