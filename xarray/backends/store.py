@@ -40,15 +40,4 @@ def open_backend_dataset_store(
     return ds
 
 
-store_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_store,
-    open_dataset_parameters=(
-        "mask_and_scale",
-        "decode_times",
-        "concat_characters",
-        "decode_coords",
-        "drop_variables",
-        "use_cftime",
-        "decode_timedelta",
-    ),
-)
+store_backend = BackendEntrypoint(open_dataset=open_backend_dataset_store)
