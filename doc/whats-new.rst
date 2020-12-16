@@ -30,6 +30,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`).
+By `Julius Busecke <https://github.com/jbusecke>`_.
 
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 
