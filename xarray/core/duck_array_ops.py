@@ -158,7 +158,7 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def astype(data, **kwargs):
+def astype(data, dtype, **kwargs):
     try:
         import sparse
     except ImportError:
@@ -177,7 +177,7 @@ def astype(data, **kwargs):
         )
         kwargs.pop("casting")
 
-    return data.astype(**kwargs)
+    return data.astype(dtype, **kwargs)
 
 
 def asarray(data, xp=np):
