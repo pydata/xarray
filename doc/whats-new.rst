@@ -36,9 +36,13 @@ Bug fixes
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
+- Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_
 
 Documentation
 ~~~~~~~~~~~~~
+- add information about requirements for accessor classes (:issue:`2788`, :pull:`4657`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - start a list of external I/O integrating with ``xarray`` (:issue:`683`, :pull:`4566`).
   By `Justus Magin <https://github.com/keewis>`_.
 

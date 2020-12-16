@@ -2,6 +2,7 @@ name: xarray-docs
 channels:
   # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
+  - nodefaults
 dependencies:
   - python=3.8
   - bottleneck
