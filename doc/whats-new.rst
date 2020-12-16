@@ -32,6 +32,8 @@ Bug fixes
 ~~~~~~~~~
 
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_
 
 Documentation
 ~~~~~~~~~~~~~
