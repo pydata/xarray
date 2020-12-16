@@ -22,6 +22,11 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- As a result of :pull:`4684` the default units encoding for
+  datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
+  always be set such that ``int64`` values can be used.  In the past, no units
+  finer than "seconds" were chosen, which would sometimes mean that ``float64``
+  values were required, which would lead to inaccurate I/O round-trips.
 
 
 New Features
