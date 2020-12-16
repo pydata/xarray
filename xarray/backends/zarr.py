@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from .. import coding, conventions
@@ -667,6 +669,9 @@ def open_backend_dataset_zarr(
     consolidate_on_close=False,
     chunk_store=None,
 ):
+    # zarr doesn't support PathLike objects yet. zarr-python#601
+    if isinstance(filename_or_obj, os.PathLike):
+        filename_or_obj = os.fspath(filename_or_obj)
 
     store = ZarrStore.open_group(
         filename_or_obj,
