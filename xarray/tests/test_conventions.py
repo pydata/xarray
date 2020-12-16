@@ -497,7 +497,7 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
 def test_infer_dtype_error_on_mixed_types():
     data = np.array([["x", 1], ["y", 2]], dtype="object")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="unable to infer dtype on variable"):
         conventions._infer_dtype(data, "test")
 
 
