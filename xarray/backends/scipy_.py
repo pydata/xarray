@@ -9,6 +9,8 @@ from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
+from .plugins import BackendEntrypoint
+from .store import open_backend_dataset_store
 
 
 def _decode_string(s):
@@ -218,3 +220,39 @@ class ScipyDataStore(WritableCFDataStore):
 
     def close(self):
         self._manager.close()
+
+
+def open_backend_dataset_scipy(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    mode="r",
+    format=None,
+    group=None,
+    mmap=None,
+    lock=None,
+):
+
+    store = ScipyDataStore(
+        filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
+    )
+
+    ds = open_backend_dataset_store(
+        store,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
+    )
+    return ds
+
+
+scipy_backend = BackendEntrypoint(open_dataset=open_backend_dataset_scipy)
