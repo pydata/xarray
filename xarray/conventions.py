@@ -65,7 +65,7 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
         raise ValueError(
             "unable to infer dtype on variable {!r}; object array "
             "contains mixed native types: {}".format(
-                name, ", ".join(x.__name__ for x in native_dtypes))
+                name, ", ".join(x.__name__ for x in native_dtypes)
             )
         )
 
