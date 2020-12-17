@@ -377,10 +377,12 @@ def open_dataset(
         "netcdf4".
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
@@ -437,7 +439,7 @@ def open_dataset(
         kwargs = locals().copy()
         from . import apiv2, plugins
 
-        if engine in plugins.ENGINES:
+        if engine in plugins.list_engines():
             return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:
@@ -536,7 +538,7 @@ def open_dataset(
                 k: _maybe_chunk(
                     k,
                     v,
-                    _get_chunk(k, v, chunks),
+                    _get_chunk(v, chunks),
                     overwrite_encoded_chunks=overwrite_encoded_chunks,
                 )
                 for k, v in ds.variables.items()

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# TODO: add sparse back in, once Numba works with the development version of
+# NumPy again: https://github.com/pydata/xarray/issues/4146
+
 conda uninstall -y --force \
     numpy \
     scipy \
@@ -36,4 +39,5 @@ python -m pip install \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck
+    git+https://github.com/pydata/bottleneck # \
+    # git+https://github.com/pydata/sparse
