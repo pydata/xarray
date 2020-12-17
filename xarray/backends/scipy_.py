@@ -2,16 +2,15 @@ from io import BytesIO
 
 import numpy as np
 
-from .. import conventions
-from ..core.dataset import Dataset
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict, close_on_error
+from ..core.utils import Frozen, FrozenDict
 from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
 from .plugins import BackendEntrypoint
+from .store import open_backend_dataset_store
 
 
 def _decode_string(s):
@@ -243,28 +242,16 @@ def open_backend_dataset_scipy(
         filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
     )
 
-    with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
-
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
-
+    ds = open_backend_dataset_store(
+        store,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
+    )
     return ds
 
 
