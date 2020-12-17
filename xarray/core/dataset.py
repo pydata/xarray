@@ -5940,9 +5940,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> # Create an example dataset:
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
