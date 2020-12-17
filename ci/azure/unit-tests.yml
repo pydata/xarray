@@ -11,7 +11,7 @@ steps:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
 - bash: |
     source activate xarray-tests
-    $(environment_variables) pytest \
+    $(environment_variables) pytest -n 4 \
     --junitxml=junit/test-results.xml \
     --cov=xarray \
     --cov-report=xml \

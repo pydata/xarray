@@ -49,7 +49,14 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Speed up of the continuous integration tests on azure.
 
+  - Switched to mamba and use matplotlib-base for a faster installation of all dependencies (:pull:`4672`).
+  - Use ``pytest.mark.skip`` instead of ``pytest.mark.xfail`` for some tests that can currently not
+    succeed (:pull:`4685`).
+  - Run the tests in parallel using pytest-xdist (:pull:`4694`).
+
+  By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
