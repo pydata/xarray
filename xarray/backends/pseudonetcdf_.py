@@ -144,7 +144,6 @@ open_dataset_parameters = (
     "decode_timedelta",
     "mode",
     "lock",
-    "**format_kwargs",
 )
 pseudonetcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_pseudonetcdf,
