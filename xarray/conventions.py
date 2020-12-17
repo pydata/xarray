@@ -62,7 +62,7 @@ def _infer_dtype(array, name: T_Name = None) -> np.dtype:
     if array.size == 0:
         return np.dtype(float)
 
-    native_dtypes = set(map(lambda x: type(x), array.flatten()))
+    native_dtypes = set(np.vectorize(type, otypes=[object])(a.ravel()))
     if len(native_dtypes) > 1 and native_dtypes != {bytes, str}:
         raise ValueError(
             "unable to infer dtype on variable {!r}; object array "
