@@ -132,7 +132,8 @@ def open_backend_dataset_pseudonetcdf(
 
     return ds
 
-
+# *args and **kwargs are not allowed in backend open_dataset kwargs, unless the
+# open_dataset_parameters are explicity defined like this:
 open_dataset_parameters = (
     "filename_or_obj",
     "mask_and_scale",
