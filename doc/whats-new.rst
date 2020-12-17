@@ -31,7 +31,14 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
+  the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
+  (:issue:`4644`, :pull:`4683`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
+- Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -168,8 +175,8 @@ Internal Changes
 - Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
   and ``pd.Index.intersection`` as they will stop working as set operations in the future
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
-  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Ensure all figures are closed properly in plot tests (:pull:`4600`).
   By `Yash Saboo <https://github.com/yashsaboo>`_, `Nirupam K N
   <https://github.com/Nirupamkn>`_ and `Mathias Hauser
