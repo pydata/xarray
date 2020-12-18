@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 import numpy as np
 
 from .. import coding, conventions
@@ -283,6 +286,10 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
     ):
         import zarr
+
+        # zarr doesn't support pathlib.Path objects yet. zarr-python#601
+        if isinstance(store, pathlib.Path):
+            store = os.fspath(store)
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if chunk_store:
