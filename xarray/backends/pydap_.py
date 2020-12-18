@@ -2,7 +2,7 @@ import numpy as np
 
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, is_dict_like
+from ..core.utils import Frozen, FrozenDict, is_dict_like, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, robust_getitem
 from .plugins import BackendEntrypoint
@@ -94,6 +94,10 @@ class PydapDataStore(AbstractDataStore):
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
+
+
+def can_open_pydap(store_spec):
+    return isinstance(store_spec, str) and is_remote_uri(store_spec)
 
 
 def open_backend_dataset_pydap(
