@@ -1,4 +1,5 @@
 import os
+import pathlib
 import warnings
 from glob import glob
 from io import BytesIO
@@ -159,7 +160,7 @@ def _get_default_engine(path, allow_remote=False):
 def _autodetect_engine(filename_or_obj):
     if isinstance(filename_or_obj, AbstractDataStore):
         engine = "store"
-    elif isinstance(filename_or_obj, str):
+    elif isinstance(filename_or_obj, (str, pathlib.Path)):
         engine = _get_default_engine(filename_or_obj, allow_remote=True)
     else:
         engine = _get_engine_from_magic_number(filename_or_obj)
