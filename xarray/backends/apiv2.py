@@ -7,7 +7,6 @@ from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
-    _normalize_path,
     _protect_dataset_variables_inplace,
 )
 
