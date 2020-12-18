@@ -1,7 +1,12 @@
 from .. import conventions
 from ..core.dataset import Dataset
 from ..core.utils import close_on_error
+from .common import AbstractDataStore
 from .plugins import BackendEntrypoint
+
+
+def guess_can_open_store(store_spec):
+    return isinstance(store_spec, AbstractDataStore)
 
 
 def open_backend_dataset_store(
@@ -40,4 +45,6 @@ def open_backend_dataset_store(
     return ds
 
 
-store_backend = BackendEntrypoint(open_dataset=open_backend_dataset_store)
+store_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_store, guess_can_open=guess_can_open_store
+)

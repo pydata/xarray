@@ -1,4 +1,6 @@
 import functools
+import io
+import os
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -325,6 +327,29 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+def guess_can_open_h5netcdf(store_spec):
+    # check byte header to determine file type
+    if isinstance(store_spec, bytes) or isinstance(store_spec, io.IOBase):
+        if isinstance(store_spec, bytes):
+            magic_number = store_spec[:8]
+        else:
+            if store_spec.tell() != 0:
+                raise ValueError(
+                    "file-like object read/write pointer not at zero "
+                    "please close and reopen, or use a context manager"
+                )
+            magic_number = store_spec.read(8)
+            store_spec.seek(0)
+
+        return magic_number.startswith(b"\211HDF\r\n\032\n")
+
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
 def open_backend_dataset_h5netcdf(
     filename_or_obj,
     *,
@@ -364,4 +389,6 @@ def open_backend_dataset_h5netcdf(
     return ds
 
 
-h5netcdf_backend = BackendEntrypoint(open_dataset=open_backend_dataset_h5netcdf)
+h5netcdf_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_h5netcdf, guess_can_open=guess_can_open_h5netcdf
+)

@@ -1,4 +1,5 @@
-from io import BytesIO
+import io
+import os
 
 import numpy as np
 
@@ -78,7 +79,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
 
     if isinstance(filename, bytes) and filename.startswith(b"CDF"):
         # it's a NetCDF3 bytestring
-        filename = BytesIO(filename)
+        filename = io.BytesIO(filename)
 
     try:
         return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
@@ -222,6 +223,29 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
+def guess_can_open_scipy(store_spec):
+    # check byte header to determine file type
+    if isinstance(store_spec, bytes) or isinstance(store_spec, io.IOBase):
+        if isinstance(store_spec, bytes):
+            magic_number = store_spec[:8]
+        else:
+            if store_spec.tell() != 0:
+                raise ValueError(
+                    "file-like object read/write pointer not at zero "
+                    "please close and reopen, or use a context manager"
+                )
+            magic_number = store_spec.read(8)
+            store_spec.seek(0)
+
+        return magic_number.startswith(b"CDF")
+
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf", ".gz"}
+
+
 def open_backend_dataset_scipy(
     filename_or_obj,
     mask_and_scale=True,
@@ -255,4 +279,6 @@ def open_backend_dataset_scipy(
     return ds
 
 
-scipy_backend = BackendEntrypoint(open_dataset=open_backend_dataset_scipy)
+scipy_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
+)
