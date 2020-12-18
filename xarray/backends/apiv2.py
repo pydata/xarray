@@ -245,8 +245,6 @@ def open_dataset(
     if backend_kwargs is None:
         backend_kwargs = {}
 
-    filename_or_obj = _normalize_path(filename_or_obj)
-
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
