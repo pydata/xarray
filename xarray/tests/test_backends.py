@@ -2623,7 +2623,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "not the signature of any supported file"):
+        with raises_regex(ValueError, "cannot guess the engine"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
