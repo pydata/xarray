@@ -287,6 +287,10 @@ class ZarrStore(AbstractWritableDataStore):
     ):
         import zarr
 
+        # zarr doesn't support pathlib.Path objects yet. zarr-python#601
+        if isinstance(store, pathlib.Path):
+            store = os.fspath(store)
+
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -671,9 +675,6 @@ def open_backend_dataset_zarr(
     consolidate_on_close=False,
     chunk_store=None,
 ):
-    # zarr doesn't support pathlib.Path objects yet. zarr-python#601
-    if isinstance(filename_or_obj, pathlib.Path):
-        filename_or_obj = os.fspath(filename_or_obj)
 
     store = ZarrStore.open_group(
         filename_or_obj,
