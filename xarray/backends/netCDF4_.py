@@ -1,5 +1,7 @@
 import functools
 import operator
+import os
+import pathlib
 from contextlib import suppress
 
 import numpy as np
@@ -335,11 +337,12 @@ class NetCDF4DataStore(WritableCFDataStore):
     ):
         import netCDF4
 
-        if not isinstance(filename, str):
+        if not isinstance(filename, (str, pathlib.Path)):
             raise ValueError(
                 "can only read bytes or file-like objects "
                 "with engine='scipy' or 'h5netcdf'"
             )
+        filename = os.fspath(filename)
 
         if format is None:
             format = "NETCDF4"
