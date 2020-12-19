@@ -31,7 +31,7 @@ def format_log_message(path):
     with open(path) as f:
         data = extract_short_test_summary_info(line.rstrip() for line in f)
     message = textwrap.dedent(
-        f"""\
+        """\
         <details><summary>{summary}</summary>
 
         ```
@@ -40,7 +40,7 @@ def format_log_message(path):
 
         </details>
         """
-    )
+    ).format(summary=summary, data=data)
 
     return message
 
