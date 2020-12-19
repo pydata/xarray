@@ -157,7 +157,9 @@ def _get_default_engine(path, allow_remote=False):
 
 
 def _autodetect_engine(filename_or_obj):
-    if isinstance(filename_or_obj, str):
+    if isinstance(filename_or_obj, AbstractDataStore):
+        engine = "store"
+    elif isinstance(filename_or_obj, str):
         engine = _get_default_engine(filename_or_obj, allow_remote=True)
     else:
         engine = _get_engine_from_magic_number(filename_or_obj)
@@ -377,10 +379,12 @@ def open_dataset(
         "netcdf4".
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
     lock : False or lock-like, optional
         Resource lock to use when reading data from disk. Only relevant when
         using dask or another form of parallelism. By default, appropriate
@@ -434,11 +438,10 @@ def open_dataset(
     open_mfdataset
     """
     if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-        kwargs = locals().copy()
-        from . import apiv2, plugins
+        kwargs = locals()
+        from . import apiv2
 
-        if engine in plugins.ENGINES:
-            return apiv2.open_dataset(**kwargs)
+        return apiv2.open_dataset(**kwargs)
 
     if autoclose is not None:
         warnings.warn(
@@ -536,7 +539,7 @@ def open_dataset(
                 k: _maybe_chunk(
                     k,
                     v,
-                    _get_chunk(k, v, chunks),
+                    _get_chunk(v, chunks),
                     overwrite_encoded_chunks=overwrite_encoded_chunks,
                 )
                 for k, v in ds.variables.items()

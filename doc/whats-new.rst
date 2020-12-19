@@ -15,10 +15,10 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.{0.16.3}:
+.. _whats-new.0.16.3:
 
-v{0.16.3} (unreleased)
-----------------------
+v0.16.3 (unreleased)
+--------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -31,17 +31,34 @@ New Features
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 - :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`).
   By `Augustus Ijams <https://github.com/aijams>`_.
+- :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
+  the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
+  (:issue:`4644`, :pull:`4683`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
+- Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_
 
 Documentation
 ~~~~~~~~~~~~~
-
+- add information about requirements for accessor classes (:issue:`2788`, :pull:`4657`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- start a list of external I/O integrating with ``xarray`` (:issue:`683`, :pull:`4566`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Speed up of the continuous integration tests on azure.
 
+  - Switched to mamba and use matplotlib-base for a faster installation of all dependencies (:pull:`4672`).
+  - Use ``pytest.mark.skip`` instead of ``pytest.mark.xfail`` for some tests that can currently not
+    succeed (:pull:`4685`).
+  - Run the tests in parallel using pytest-xdist (:pull:`4694`).
+
+  By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
@@ -167,8 +184,8 @@ Internal Changes
 - Replace the internal use of ``pd.Index.__or__`` and ``pd.Index.__and__`` with ``pd.Index.union``
   and ``pd.Index.intersection`` as they will stop working as set operations in the future
   (:issue:`4565`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`). 
-  By `Anderson Banihirwe <https://github.com/andersy005>`_. 
+- Add GitHub action for running nightly tests against upstream dependencies (:pull:`4583`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Ensure all figures are closed properly in plot tests (:pull:`4600`).
   By `Yash Saboo <https://github.com/yashsaboo>`_, `Nirupam K N
   <https://github.com/Nirupamkn>`_ and `Mathias Hauser
