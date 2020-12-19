@@ -33,7 +33,6 @@ Bug fixes
 
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
-- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`).
 - :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
   By `Augustus Ijams <https://github.com/aijams>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
