@@ -33,14 +33,14 @@ def format_log_message(path):
     message = (
         textwrap.dedent(
             """\
-        <details><summary>{summary}</summary>
+            <details><summary>{summary}</summary>
 
-        ```
-        {data}
-        ```
+            ```
+            {data}
+            ```
 
-        </details>
-        """
+            </details>
+            """
         )
         .rstrip()
         .format(summary=summary, data=data)
