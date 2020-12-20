@@ -27,7 +27,7 @@ from ..core.combine import (
 )
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri, read_magic_number
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 
@@ -120,17 +120,7 @@ def _get_default_engine_netcdf():
 
 
 def _get_engine_from_magic_number(filename_or_obj):
-    # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:8]
-    else:
-        if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "file-like object read/write pointer not at zero "
-                "please close and reopen, or use a context manager"
-            )
-        magic_number = filename_or_obj.read(8)
-        filename_or_obj.seek(0)
+    magic_number = read_magic_number(filename_or_obj)
 
     if magic_number.startswith(b"CDF"):
         engine = "scipy"

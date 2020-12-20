@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, read_magic_number
 from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
@@ -224,20 +224,10 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 def guess_can_open_scipy(store_spec):
-    # check byte header to determine file type
-    if isinstance(store_spec, bytes) or isinstance(store_spec, io.IOBase):
-        if isinstance(store_spec, bytes):
-            magic_number = store_spec[:8]
-        else:
-            if store_spec.tell() != 0:
-                raise ValueError(
-                    "file-like object read/write pointer not at zero "
-                    "please close and reopen, or use a context manager"
-                )
-            magic_number = store_spec.read(8)
-            store_spec.seek(0)
-
-        return magic_number.startswith(b"CDF")
+    try:
+        return read_magic_number(store_spec).startswith(b"CDF")
+    except TypeError:
+        pass
 
     try:
         _, ext = os.path.splitext(store_spec)
