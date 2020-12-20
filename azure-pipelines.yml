@@ -54,7 +54,7 @@ jobs:
       py37:
         conda_env: py37-windows
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - template: ci/azure/unit-tests.yml
 

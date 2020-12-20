@@ -1,6 +1,7 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # MINIMUM VERSIONS POLICY: see doc/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
@@ -25,7 +26,7 @@ dependencies:
   - iris=2.2
   - isort
   - lxml=4.4  # Optional dep of pydap
-  - matplotlib=3.1
+  - matplotlib-base=3.1
   - mypy=0.782  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
@@ -40,6 +41,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
+  - pytest-xdist
   - rasterio=1.0
   - scipy=1.3
   - seaborn=0.9

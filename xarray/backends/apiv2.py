@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
@@ -29,38 +30,24 @@ def _chunk_ds(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if engine != "zarr":
-        from dask.base import tokenize
+    from dask.base import tokenize
 
-        mtime = _get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
 
-    else:
-
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
-
-        if chunks is None:
-            return backend_ds
-
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(backend_ds.dims, chunks)
-
-        variables = {}
-        for k, v in backend_ds.variables.items():
-            var_chunks = _get_chunk(v, chunks)
-            variables[k] = _maybe_chunk(
-                k,
-                v,
-                var_chunks,
-                overwrite_encoded_chunks=overwrite_encoded_chunks,
-            )
-        ds = backend_ds._replace(variables)
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        var_chunks = _get_chunk(var, chunks)
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            var_chunks,
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
+    ds = backend_ds._replace(variables)
     return ds
 
 
@@ -103,13 +90,13 @@ def _dataset_from_backend_dataset(
     return ds
 
 
-def _resolve_decoders_kwargs(decode_cf, engine, **decoders):
-    signature = plugins.ENGINES[engine]["signature"]
-    if decode_cf is False:
-        for d in decoders:
-            if d in signature:
-                decoders[d] = False
-    return {k: v for k, v in decoders.items() if v is not None}
+def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
+    for d in list(decoders):
+        if decode_cf is False and d in open_backend_dataset_parameters:
+            decoders[d] = False
+        if decoders[d] is None:
+            decoders.pop(d)
+    return decoders
 
 
 def open_dataset(
@@ -126,6 +113,7 @@ def open_dataset(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
+    autoclose=None,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -240,6 +228,16 @@ def open_dataset(
     --------
     open_mfdataset
     """
+    if autoclose is not None:
+        warnings.warn(
+            "The autoclose argument is no longer used by "
+            "xarray.open_dataset() and is now ignored; it will be removed in "
+            "a future version of xarray. If necessary, you can control the "
+            "maximum number of simultaneous open files with "
+            "xarray.set_options(file_cache_maxsize=...).",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     if cache is None:
         cache = chunks is None
@@ -252,9 +250,12 @@ def open_dataset(
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
 
+    engines = plugins.list_engines()
+    backend = _get_backend_cls(engine, engines=engines)
+
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        engine=engine,
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -265,11 +266,7 @@ def open_dataset(
 
     backend_kwargs = backend_kwargs.copy()
     overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
-
-    open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
-        "open_dataset"
-    ]
-    backend_ds = open_backend_dataset(
+    backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
