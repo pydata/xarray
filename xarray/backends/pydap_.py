@@ -96,7 +96,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
-def can_open_pydap(store_spec):
+def guess_can_open_pydap(store_spec):
     return isinstance(store_spec, str) and is_remote_uri(store_spec)
 
 
@@ -130,4 +130,6 @@ def open_backend_dataset_pydap(
     return ds
 
 
-pydap_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pydap)
+pydap_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_pydap, guess_can_open=guess_can_open_pydap
+)
