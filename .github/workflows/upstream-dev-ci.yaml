@@ -43,7 +43,11 @@ jobs:
           mamba env update -f ci/requirements/py38.yml
           bash ci/install-upstream-wheels.sh
           conda list
+      - name: import xarray
+        run: |
+          python -c 'import xarray'
       - name: Run Tests
+        if: success()
         id: status
         run: |
           set -euo pipefail
@@ -53,6 +57,7 @@ jobs:
       - name: Upload artifacts
         if: |
           failure()
+          && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v2
