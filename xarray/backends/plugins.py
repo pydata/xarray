@@ -88,9 +88,9 @@ def guess_engine(store_spec):
         if engine in engines and engines[engine].guess_can_open(store_spec):
             return engine
 
-    for engine, beckend in engines.items():
+    for engine, backend in engines.items():
         try:
-            if beckend.guess_can_open and beckend.guess_can_open(store_spec):
+            if backend.guess_can_open and backend.guess_can_open(store_spec):
                 return engine
         except Exception:
             logging.exception(f"{engine!r} fails while guessing")
