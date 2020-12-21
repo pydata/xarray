@@ -22,7 +22,7 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- xarray no longer supports python 3.6 (:issue:`4688`, :pull:``)
+- xarray no longer supports python 3.6 (:issue:`4688`, :pull:`4720`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 New Features
