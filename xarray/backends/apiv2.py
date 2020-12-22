@@ -7,7 +7,6 @@ from . import plugins
 from .api import (
     _autodetect_engine,
     _get_backend_cls,
-    _normalize_path,
     _protect_dataset_variables_inplace,
 )
 
@@ -244,8 +243,6 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
-
-    filename_or_obj = _normalize_path(filename_or_obj)
 
     if engine is None:
         engine = _autodetect_engine(filename_or_obj)
