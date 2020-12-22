@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from ..core import indexing
@@ -73,6 +75,14 @@ class CfGribDataStore(AbstractDataStore):
         return encoding
 
 
+def guess_can_open_cfgrib(store_spec):
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".grib", ".grib2", ".grb", ".grb2"}
+
+
 def open_backend_dataset_cfgrib(
     filename_or_obj,
     *,
@@ -117,4 +127,6 @@ def open_backend_dataset_cfgrib(
     return ds
 
 
-cfgrib_backend = BackendEntrypoint(open_dataset=open_backend_dataset_cfgrib)
+cfgrib_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_cfgrib, guess_can_open=guess_can_open_cfgrib
+)

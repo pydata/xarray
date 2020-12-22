@@ -505,6 +505,16 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+def guess_can_open_netcdf4(store_spec):
+    if isinstance(store_spec, str) and is_remote_uri(store_spec):
+        return True
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
 def open_backend_dataset_netcdf4(
     filename_or_obj,
     mask_and_scale=True,
@@ -550,4 +560,6 @@ def open_backend_dataset_netcdf4(
     return ds
 
 
-netcdf4_backend = BackendEntrypoint(open_dataset=open_backend_dataset_netcdf4)
+netcdf4_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_netcdf4, guess_can_open=guess_can_open_netcdf4
+)

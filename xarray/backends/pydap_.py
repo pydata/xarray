@@ -2,7 +2,7 @@ import numpy as np
 
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like
+from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, robust_getitem
 from .plugins import BackendEntrypoint
@@ -96,6 +96,10 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
+def guess_can_open_pydap(store_spec):
+    return isinstance(store_spec, str) and is_remote_uri(store_spec)
+
+
 def open_backend_dataset_pydap(
     filename_or_obj,
     mask_and_scale=True,
@@ -127,4 +131,6 @@ def open_backend_dataset_pydap(
         return ds
 
 
-pydap_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pydap)
+pydap_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_pydap, guess_can_open=guess_can_open_pydap
+)
