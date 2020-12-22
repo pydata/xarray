@@ -1,6 +1,5 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from ..core.utils import close_on_error
 from .common import AbstractDataStore
 from .plugins import BackendEntrypoint
 
