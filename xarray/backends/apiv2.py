@@ -4,7 +4,7 @@ import warnings
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .api import _get_backend_cls, _normalize_path, _protect_dataset_variables_inplace
+from .api import _get_backend_cls, _protect_dataset_variables_inplace
 
 
 def _get_mtime(filename_or_obj):
@@ -239,8 +239,6 @@ def open_dataset(
 
     if backend_kwargs is None:
         backend_kwargs = {}
-
-    filename_or_obj = _normalize_path(filename_or_obj)
 
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
