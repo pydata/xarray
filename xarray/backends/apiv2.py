@@ -1,10 +1,20 @@
 import os
 import warnings
 
+from ..core import indexing
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .api import _get_backend_cls, _protect_dataset_variables_inplace
+
+
+def _protect_dataset_variables_inplace(dataset, cache):
+    for name, variable in dataset.variables.items():
+        if name not in variable.dims:
+            # no need to protect IndexVariable objects
+            data = indexing.CopyOnWriteArray(variable._data)
+            if cache:
+                data = indexing.MemoryCachedArray(data)
+            variable.data = data
 
 
 def _get_mtime(filename_or_obj):
@@ -243,8 +253,7 @@ def open_dataset(
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
-    engines = plugins.list_engines()
-    backend = _get_backend_cls(engine, engines=engines)
+    backend = plugins.get_backend(engine)
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
