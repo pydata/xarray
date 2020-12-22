@@ -96,3 +96,13 @@ def guess_engine(store_spec):
             logging.exception(f"{engine!r} fails while guessing")
 
     raise ValueError("cannot guess the engine, try passing one explicitly")
+
+
+def get_backend(engine):
+    """Select open_dataset method based on current engine"""
+    engines = list_engines()
+    if engine not in engines:
+        raise ValueError(
+            f"unrecognized engine {engine} must be one of: {list(engines)}"
+        )
+    return engines[engine]
