@@ -368,6 +368,9 @@ def _check_chunks_compatibility(var, chunks, chunk_spec):
 
         if isinstance(chunks_dim, int):
             chunks_dim = (chunks_dim,)
+        else:
+            chunks_dim = chunks_dim[:-1]
+
         if any(s % chunk_spec_dim for s in chunks_dim):
             warnings.warn(
                 f"Specified Dask chunks {chunks[dim]} would separate "
