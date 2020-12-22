@@ -204,7 +204,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, DataArray):
         raise TypeError("Pass in da.data if da is a DataArray")
 
-    if isinstance(data, Variable)):
+    if isinstance(data, Variable):
         return data.data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
