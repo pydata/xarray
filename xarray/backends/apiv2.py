@@ -247,8 +247,8 @@ def open_dataset(
     if cache is None:
         cache = chunks is None
 
-    if backend_kwargs is None:
-        backend_kwargs = {}
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
 
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
@@ -266,14 +266,12 @@ def open_dataset(
         decode_coords=decode_coords,
     )
 
-    backend_kwargs = backend_kwargs.copy()
-    overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
-        **backend_kwargs,
-        **{k: v for k, v in kwargs.items() if v is not None},
+        **kwargs,
     )
     ds = _dataset_from_backend_dataset(
         backend_ds,
@@ -284,7 +282,6 @@ def open_dataset(
         overwrite_encoded_chunks,
         drop_variables=drop_variables,
         **decoders,
-        **backend_kwargs,
         **kwargs,
     )
 
