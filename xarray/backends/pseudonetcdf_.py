@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
@@ -107,16 +107,17 @@ def open_backend_dataset_pseudonetcdf(
         filename_or_obj, lock=lock, mode=mode, **format_kwargs
     )
 
-    ds = open_backend_dataset_store(
-        store,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
-        drop_variables=drop_variables,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
-    )
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
     return ds
 
 
