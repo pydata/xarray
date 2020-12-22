@@ -422,7 +422,7 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
-        for label in pd.unique(data["hue"].values.flatten()):
+        for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
