@@ -2623,7 +2623,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "not the signature of any supported file"):
+        with raises_regex(ValueError, "cannot guess the engine"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
@@ -2636,7 +2636,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     def test_open_twice(self):
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with raises_regex(ValueError, "read/write pointer not at zero"):
+        with raises_regex(ValueError, "read/write pointer not at the start"):
             with create_tmp_file() as tmp_file:
                 expected.to_netcdf(tmp_file, engine="h5netcdf")
                 with open(tmp_file, "rb") as f:
@@ -2669,7 +2669,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     open_dataset(f, engine="scipy")
 
                 f.seek(8)
-                with raises_regex(ValueError, "read/write pointer not at zero"):
+                with raises_regex(ValueError, "read/write pointer not at the start"):
                     open_dataset(f)
 
 
