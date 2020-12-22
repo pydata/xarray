@@ -291,7 +291,7 @@ def _dsplot(plotfunc):
             allargs = locals().copy()
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             allargs["data"] = ds
-            # TODO dcherian: why do I need to remove kwargs?
+            # remove kwargs to avoid passing the information twice
             for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
 
@@ -422,7 +422,7 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
-        for label in np.unique(data["hue"].values):
+        for label in pd.unique(data["hue"].values.flatten()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
