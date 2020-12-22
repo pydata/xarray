@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict, read_magic_number
+from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
@@ -255,17 +255,17 @@ def open_backend_dataset_scipy(
     store = ScipyDataStore(
         filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
     )
-
-    ds = open_backend_dataset_store(
-        store,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
-        drop_variables=drop_variables,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
-    )
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
     return ds
 
 

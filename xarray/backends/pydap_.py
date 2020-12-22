@@ -2,7 +2,7 @@ import numpy as np
 
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, is_dict_like, is_remote_uri
+from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, robust_getitem
 from .plugins import BackendEntrypoint
@@ -117,17 +117,18 @@ def open_backend_dataset_pydap(
         session=session,
     )
 
-    ds = open_backend_dataset_store(
-        store,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
-        drop_variables=drop_variables,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
-    )
-    return ds
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+        return ds
 
 
 pydap_backend = BackendEntrypoint(
