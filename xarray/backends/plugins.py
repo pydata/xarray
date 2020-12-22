@@ -5,7 +5,6 @@ from functools import lru_cache
 
 import pkg_resources
 
-
 class BackendEntrypoint:
     __slots__ = ("open_dataset", "open_dataset_parameters")
 
@@ -71,8 +70,22 @@ def set_missing_parameters(engines):
 
 @lru_cache(maxsize=1)
 def list_engines():
+    from .. import backends
+
+    backend_entrypoints = dict(
+        zarr=backends.zarr.zarr_backend,
+        h5netcdf=backends.h5netcdf_.h5netcdf_backend,
+        cfgrib=backends.cfgrib_.cfgrib_backend,
+        scipy=backends.scipy_.scipy_backend,
+        pynio=backends.pynio_.pynio_backend,
+        pseudonetcdf=backends.pseudonetcdf_.pseudonetcdf_backend,
+        netcdf4=backends.netCDF4_.netcdf4_backend,
+        store=backends.store.store_backend,
+    )
+
     entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    backend_entrypoints = remove_duplicates(entrypoints)
+    external_backend_entrypoints = remove_duplicates(entrypoints)
+    backend_entrypoints.update(external_backend_entrypoints)
     engines = create_engines_dict(backend_entrypoints)
     set_missing_parameters(engines)
     return engines
