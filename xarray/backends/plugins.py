@@ -1,18 +1,34 @@
+import functools
 import inspect
 import itertools
 import logging
+import typing as T
 import warnings
-from functools import lru_cache
 
 import pkg_resources
 
-class BackendEntrypoint:
-    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
+from .cfgrib_ import cfgrib_backend
+from .common import BackendEntrypoint
+from .h5netcdf_ import h5netcdf_backend
+from .netCDF4_ import netcdf4_backend
+from .pseudonetcdf_ import pseudonetcdf_backend
+from .pydap_ import pydap_backend
+from .pynio_ import pynio_backend
+from .scipy_ import scipy_backend
+from .store import store_backend
+from .zarr import zarr_backend
 
-    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
-        self.open_dataset = open_dataset
-        self.open_dataset_parameters = open_dataset_parameters
-        self.guess_can_open = guess_can_open
+BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
+    "store": store_backend,
+    "netcdf4": netcdf4_backend,
+    "h5netcdf": h5netcdf_backend,
+    "scipy": scipy_backend,
+    "pseudonetcdf": pseudonetcdf_backend,
+    "zarr": zarr_backend,
+    "cfgrib": cfgrib_backend,
+    "pydap": pydap_backend,
+    "pynio": pynio_backend,
+}
 
 
 def remove_duplicates(backend_entrypoints):
@@ -70,27 +86,19 @@ def set_missing_parameters(engines):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-@lru_cache(maxsize=1)
-def list_engines():
-    from .. import backends
-
-    backend_entrypoints = dict(
-        zarr=backends.zarr.zarr_backend,
-        h5netcdf=backends.h5netcdf_.h5netcdf_backend,
-        cfgrib=backends.cfgrib_.cfgrib_backend,
-        scipy=backends.scipy_.scipy_backend,
-        pynio=backends.pynio_.pynio_backend,
-        pseudonetcdf=backends.pseudonetcdf_.pseudonetcdf_backend,
-        netcdf4=backends.netCDF4_.netcdf4_backend,
-        store=backends.store.store_backend,
-    )
-
-    entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    external_backend_entrypoints = remove_duplicates(entrypoints)
+def build_engines(entrypoints):
+    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
+    pkg_entrypoints = remove_duplicates(entrypoints)
+    external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
-    engines = create_engines_dict(backend_entrypoints)
-    set_missing_parameters(engines)
-    return engines
+    set_missing_parameters(backend_entrypoints)
+    return backend_entrypoints
+
+
+@functools.lru_cache(maxsize=1)
+def list_engines():
+    entrypoints = pkg_resources.iter_entry_points("xarray.backends")
+    return build_engines(entrypoints)
 
 
 def guess_engine(store_spec):
