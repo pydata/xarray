@@ -1,5 +1,4 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -914,9 +913,7 @@ def open_mfdataset(
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
-    open_kwargs = dict(
-        engine=engine, chunks=chunks or {}, lock=lock, **kwargs
-    )
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock, **kwargs)
 
     if parallel:
         import dask
