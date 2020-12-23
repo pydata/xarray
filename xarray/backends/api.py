@@ -746,7 +746,6 @@ def open_mfdataset(
     data_vars="all",
     coords="different",
     combine="by_coords",
-    autoclose=None,
     parallel=False,
     join="outer",
     attrs_file=None,
