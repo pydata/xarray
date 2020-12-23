@@ -1697,7 +1697,6 @@ class ZarrBase(CFEncodedBase):
                         assert v._in_memory == (k in actual.dims)
             assert len(record) == 0
 
-
     @requires_dask
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
