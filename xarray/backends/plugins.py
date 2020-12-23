@@ -1,5 +1,6 @@
 import inspect
 import itertools
+import logging
 import warnings
 from functools import lru_cache
 
@@ -7,11 +8,12 @@ import pkg_resources
 
 
 class BackendEntrypoint:
-    __slots__ = ("open_dataset", "open_dataset_parameters")
+    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
 
-    def __init__(self, open_dataset, open_dataset_parameters=None):
+    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters
+        self.guess_can_open = guess_can_open
 
 
 def remove_duplicates(backend_entrypoints):
@@ -76,3 +78,31 @@ def list_engines():
     engines = create_engines_dict(backend_entrypoints)
     set_missing_parameters(engines)
     return engines
+
+
+def guess_engine(store_spec):
+    engines = list_engines()
+
+    # use the pre-defined selection order for netCDF files
+    for engine in ["netcdf4", "h5netcdf", "scipy"]:
+        if engine in engines and engines[engine].guess_can_open(store_spec):
+            return engine
+
+    for engine, backend in engines.items():
+        try:
+            if backend.guess_can_open and backend.guess_can_open(store_spec):
+                return engine
+        except Exception:
+            logging.exception(f"{engine!r} fails while guessing")
+
+    raise ValueError("cannot guess the engine, try passing one explicitly")
+
+
+def get_backend(engine):
+    """Select open_dataset method based on current engine"""
+    engines = list_engines()
+    if engine not in engines:
+        raise ValueError(
+            f"unrecognized engine {engine} must be one of: {list(engines)}"
+        )
+    return engines[engine]

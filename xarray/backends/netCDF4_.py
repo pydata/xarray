@@ -9,7 +9,7 @@ import numpy as np
 from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
     BackendArray,
@@ -505,6 +505,16 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
+def guess_can_open_netcdf4(store_spec):
+    if isinstance(store_spec, str) and is_remote_uri(store_spec):
+        return True
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
 def open_backend_dataset_netcdf4(
     filename_or_obj,
     mask_and_scale=True,
@@ -536,17 +546,20 @@ def open_backend_dataset_netcdf4(
         autoclose=autoclose,
     )
 
-    ds = open_backend_dataset_store(
-        store,
-        mask_and_scale=mask_and_scale,
-        decode_times=decode_times,
-        concat_characters=concat_characters,
-        decode_coords=decode_coords,
-        drop_variables=drop_variables,
-        use_cftime=use_cftime,
-        decode_timedelta=decode_timedelta,
-    )
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
     return ds
 
 
-netcdf4_backend = BackendEntrypoint(open_dataset=open_backend_dataset_netcdf4)
+netcdf4_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_netcdf4, guess_can_open=guess_can_open_netcdf4
+)
