@@ -101,3 +101,31 @@ jobs:
       - name: Run doctests
         run: |
           python -m pytest --doctest-modules xarray --ignore xarray/tests
+
+  min-version-policy:
+    name: Minimum Version Policy
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          auto-update-conda: false
+
+      - name: minimum versions policy
+        run: |
+          mamba install -y pyyaml
+          python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
