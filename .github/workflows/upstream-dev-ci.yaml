@@ -1,4 +1,4 @@
-name: CI
+name: CI Upstream
 on:
   push:
     branches:
@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up conda environment
         run: |
-          mamba env update -f ci/requirements/py38.yml
+          mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
           conda list
       - name: import xarray
