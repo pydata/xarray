@@ -42,8 +42,9 @@ jobs:
           if [[ ${{ matrix.os }} == windows* ]] ;
           then 
             mamba env update -f ci/requirements/environment-windows.yml
-          fi 
-          mamba env update -f ci/requirements/environment.yml
+          else
+            mamba env update -f ci/requirements/environment.yml
+          fi
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
