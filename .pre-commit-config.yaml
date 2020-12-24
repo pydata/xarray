@@ -22,6 +22,7 @@ repos:
     rev: v0.790  # Must match ci/requirements/*.yml
     hooks:
       - id: mypy
+        exclude: "properties|asv_bench"
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade
   #   rev: v1.22.1
