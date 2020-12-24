@@ -1,8 +1,8 @@
 xarray: N-D labeled arrays and datasets
 =======================================
 
-.. image:: https://dev.azure.com/xarray/xarray/_apis/build/status/pydata.xarray?branchName=master
-   :target: https://dev.azure.com/xarray/xarray/_build/latest?definitionId=1&branchName=master
+.. image:: https://github.com/pydata/xarray/workflows/CI/badge.svg?branch=master
+   :target: https://github.com/pydata/xarray/actions?query=workflow%3ACI
 .. image:: https://codecov.io/gh/pydata/xarray/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
