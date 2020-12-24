@@ -25,6 +25,7 @@ jobs:
             "py36-min-all-deps",
             "py36-min-nep18",
             "py38-all-but-dask",
+            "py38-backend-api-v2",
           ]
     steps:
       - name: Cancel previous runs
@@ -41,9 +42,14 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
+          python-version: 3.8
 
       - name: Install conda dependencies
         run: |
+          if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
+          then 
+            mamba env update -f ci/requirements/environment.yml
+          fi 
           mamba env update -f ci/requirements/${{ matrix.env }}.yml
 
       - name: Install xarray

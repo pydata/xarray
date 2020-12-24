@@ -37,13 +37,12 @@ jobs:
           auto-update-conda: false
           python-version: ${{ matrix.python-version }}
 
-      - name: Install conda dependencies (windows)
-        if: startsWith(matrix.os, 'windows')
+      - name: Install conda dependencies
         run: |
-          mamba env update -f ci/requirements/environment-windows.yml
-      - name: Install conda dependencies (linux or macos)
-        if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
-        run: |
+          if [[ ${{ matrix.os }} == windows* ]] ;
+          then 
+            mamba env update -f ci/requirements/environment-windows.yml
+          fi 
           mamba env update -f ci/requirements/environment.yml
       - name: Install xarray
         run: |
