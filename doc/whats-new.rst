@@ -22,7 +22,8 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_
 
 New Features
 ~~~~~~~~~~~~
