@@ -33,7 +33,7 @@ def remove_duplicates(backend_entrypoints):
             selected_module_name = matches[0].module_name
             all_module_names = [e.module_name for e in matches]
             warnings.warn(
-                f"\nFound {matches_len} entrypoints for the engine name {name}:"
+                f"Found {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
                 RuntimeWarning,
             )

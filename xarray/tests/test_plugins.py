@@ -30,6 +30,7 @@ def dummy_duplicated_entrypoints():
     return eps
 
 
+@pytest.mark.filterwarnings("ignore:Found")
 def test_remove_duplicates(dummy_duplicated_entrypoints):
     entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
     assert len(entrypoints) == 2
