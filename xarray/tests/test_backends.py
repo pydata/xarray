@@ -3607,9 +3607,6 @@ class TestPseudoNetCDFFormat:
         """
         Open a CAMx file and test data variables
         """
-        ictfile = open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
-        )
         stdattr = {
             "fill_value": -9999.0,
             "missing_value": -9999,
@@ -3687,17 +3684,20 @@ class TestPseudoNetCDFFormat:
             },
         }
         chkfile = Dataset.from_dict(input)
-        assert_identical(ictfile, chkfile)
+        with open_example_dataset(
+            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
+        ) as ictfile:
+            assert_identical(ictfile, chkfile)
 
     def test_ict_format_write(self):
         fmtkw = {"format": "ffi1001"}
-        expected = open_example_dataset(
+        with open_example_dataset(
             "example.ict", engine="pseudonetcdf", backend_kwargs=fmtkw
-        )
-        with self.roundtrip(
-            expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
-        ) as actual:
-            assert_identical(expected, actual)
+        ) as expected:
+            with self.roundtrip(
+                expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
+            ) as actual:
+                assert_identical(expected, actual)
 
     def test_uamiv_format_read(self):
         """
