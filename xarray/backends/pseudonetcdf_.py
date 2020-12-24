@@ -3,10 +3,9 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .plugins import BackendEntrypoint
 from .store import open_backend_dataset_store
 
 # psuedonetcdf can invoke netCDF libraries internally

@@ -6,11 +6,10 @@ import numpy as np
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, WritableCFDataStore
+from .common import BackendArray, BackendEntrypoint, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .plugins import BackendEntrypoint
 from .store import open_backend_dataset_store
 
 

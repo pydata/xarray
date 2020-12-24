@@ -13,6 +13,7 @@ from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
     BackendArray,
+    BackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
     robust_getitem,
@@ -20,7 +21,6 @@ from .common import (
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
-from .plugins import BackendEntrypoint
 from .store import open_backend_dataset_store
 
 # This lookup table maps from dtype.byteorder to a readable endian

@@ -340,3 +340,12 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {k: self.encode_variable(v) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
+
+
+class BackendEntrypoint:
+    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
+
+    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
+        self.open_dataset = open_dataset
+        self.open_dataset_parameters = open_dataset_parameters
+        self.guess_can_open = guess_can_open

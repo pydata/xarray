@@ -8,8 +8,12 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
-from .plugins import BackendEntrypoint
+from .common import (
+    AbstractWritableDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    _encode_variable_name,
+)
 from .store import open_backend_dataset_store
 
 # need some special secret attributes to tell us the dimensions

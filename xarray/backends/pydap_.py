@@ -4,8 +4,7 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, robust_getitem
-from .plugins import BackendEntrypoint
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint, robust_getitem
 from .store import open_backend_dataset_store
 
 
