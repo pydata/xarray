@@ -1,4 +1,4 @@
-name: CI
+name: CI Additional
 on:
   push:
     branches:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -18,8 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.6", "3.7", "3.8"]
+        os: ["ubuntu-latest"]
+        env:
+          [
+            "py36-bare-minimum",
+            "py36-min-all-deps",
+            "py36-min-nep18",
+            "py38-all-but-dask",
+          ]
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.6.0
@@ -33,11 +39,10 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: ${{ matrix.python-version }}
 
       - name: Install conda dependencies
         run: |
-          mamba env update -f ci/requirements/environment.yml
+          mamba env update -f ci/requirements/${{ matrix.env }}.yml
 
       - name: Install xarray
         run: |
@@ -54,11 +59,4 @@ jobs:
              --cov=xarray \
              --cov-report=xml
 
-      - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          env_vars: OS,PYTHON
-          name: codecov-umbrella
-          fail_ci_if_error: false
+
