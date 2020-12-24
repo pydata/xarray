@@ -1,5 +1,11 @@
 name: CI
 on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger the workflow run manually
@@ -8,7 +14,9 @@ jobs:
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    if: github.repository == 'pydata/xarray'
+    if: |
+      contains(github.event.head_commit.message, 'test-upstream')
+      || (github.repository == 'pydata/xarray' && github.event_name != 'pull_request')
     defaults:
       run:
         shell: bash -l {0}
