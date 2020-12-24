@@ -8,7 +8,7 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
-from .common import WritableCFDataStore, find_root_and_group
+from .common import BackendEntrypoint, WritableCFDataStore, find_root_and_group
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
@@ -18,7 +18,6 @@ from .netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
-from .plugins import BackendEntrypoint
 from .store import open_backend_dataset_store
 
 
