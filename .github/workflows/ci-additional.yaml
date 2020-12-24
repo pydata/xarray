@@ -26,6 +26,7 @@ jobs:
             "py36-min-nep18",
             "py38-all-but-dask",
             "py38-backend-api-v2",
+            "py38-flaky",
           ]
     steps:
       - name: Cancel previous runs
@@ -44,13 +45,25 @@ jobs:
           auto-update-conda: false
           python-version: 3.8
 
-      - name: Install conda dependencies
+      - name: Set environment variables
         run: |
           if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
           then 
-            mamba env update -f ci/requirements/environment.yml
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            echo "XARRAY_BACKEND_API=v2" >> $GITHUB_ENV
           fi 
-          mamba env update -f ci/requirements/${{ matrix.env }}.yml
+
+          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          then 
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+          fi 
+
+          echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+
+      - name: Install conda dependencies
+        run: |
+          mamba env update -f $CONDA_ENV_FILE
 
       - name: Install xarray
         run: |
@@ -68,7 +81,8 @@ jobs:
         run: |
           python -m pytest -n 4 \
              --cov=xarray \
-             --cov-report=xml
+             --cov-report=xml \
+             $PYTEST_EXTRA_FLAGS
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
