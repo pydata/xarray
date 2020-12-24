@@ -55,10 +55,11 @@ jobs:
           conda info -a 
           conda list
           python xarray/util/print_versions.py
+      - name: Import xarray
+        run: |
+          python -OO -c "import xarray"
       - name: Run tests
         run: |
           python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml
-
-

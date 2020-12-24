@@ -41,7 +41,7 @@ jobs:
         if: startsWith(matrix.os, 'windows')
         run: |
           mamba env update -f ci/requirements/environment-windows.yml
-      - name: Install conda dependencies
+      - name: Install conda dependencies (linux or macos)
         if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
         run: |
           mamba env update -f ci/requirements/environment.yml
@@ -54,6 +54,9 @@ jobs:
           conda info -a 
           conda list
           python xarray/util/print_versions.py
+      - name: Import xarray
+        run: |
+          python -OO -c "import xarray"
       - name: Run tests
         run: |
           python -m pytest -n 4 \
