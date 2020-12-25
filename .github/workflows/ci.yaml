@@ -45,6 +45,9 @@ jobs:
           else
             mamba env update -f ci/requirements/environment.yml
           fi
+          echo "OS_NAME=${{ matrix.os }}" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
+
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
@@ -68,6 +71,6 @@ jobs:
         with:
           file: ./coverage.xml
           flags: unittests
-          env_vars: OS,PYTHON
+          env_vars: OS_NAME,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false

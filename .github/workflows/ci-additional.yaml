@@ -83,6 +83,14 @@ jobs:
              --cov=xarray \
              --cov-report=xml \
              $PYTEST_EXTRA_FLAGS
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          flags: unittests,${{ matrix.env }}
+          name: codecov-umbrella
+          fail_ci_if_error: false
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
