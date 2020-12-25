@@ -1,7 +1,6 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from .common import AbstractDataStore
-from .plugins import BackendEntrypoint
+from .common import AbstractDataStore, BackendEntrypoint
 
 
 def guess_can_open_store(store_spec):

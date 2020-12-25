@@ -1454,14 +1454,6 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
-    def test_autoclose_future_warning(self):
-        data = create_test_data()
-        with create_tmp_file() as tmp_file:
-            self.save(data, tmp_file)
-            with pytest.warns(FutureWarning):
-                with self.open(tmp_file, autoclose=True) as actual:
-                    assert_identical(data, actual)
-
 
 @requires_netCDF4
 class TestNetCDF4AlreadyOpen:
@@ -1676,7 +1668,7 @@ class ZarrBase(CFEncodedBase):
 
     @requires_dask
     def test_warning_on_bad_chunks(self):
-        original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 5})
+        original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 3})
 
         bad_chunks = (2, {"dim2": (3, 3, 2, 1)})
         for chunks in bad_chunks:
@@ -1687,7 +1679,7 @@ class ZarrBase(CFEncodedBase):
                         # only index variables should be in memory
                         assert v._in_memory == (k in actual.dims)
 
-        good_chunks = ({"dim2": 3}, {"dim3": 10})
+        good_chunks = ({"dim2": 3}, {"dim3": (6, 4)}, {})
         for chunks in good_chunks:
             kwargs = {"chunks": chunks}
             with pytest.warns(None) as record:
@@ -4838,8 +4830,10 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        ) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
 
 
 @requires_zarr
@@ -4847,6 +4841,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
+@pytest.mark.filterwarnings("ignore:Specified Dask chunks")
 def test_chunking_consintency(chunks, tmp_path):
     encoded_chunks = {}
     dask_arr = da.from_array(
@@ -4866,8 +4861,10 @@ def test_chunking_consintency(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with xr.open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        ) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
 
-        actual = xr.open_dataset(tmp_path / "test.nc", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with xr.open_dataset(tmp_path / "test.nc", chunks=chunks) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
