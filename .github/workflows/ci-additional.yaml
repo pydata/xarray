@@ -54,13 +54,10 @@ jobs:
           fi
       - name: Cache conda
         uses: actions/cache@v2
-        env:
-          # Increase this value to reset cache if the environment file has changed
-          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key:
-            ${{ runner.os }}-conda-${{ matrix.env }}-${{ env.CACHE_NUMBER }}-${{
+            ${{ runner.os }}-conda-${{ matrix.env }}-${{
             hashFiles('ci/requirements/**.yml') }}
 
       - uses: conda-incubator/setup-miniconda@v2
