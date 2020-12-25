@@ -49,7 +49,7 @@ jobs:
           path: ~/conda_pkgs_dir
           key:
             ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{ env.CACHE_NUMBER }}-${{
-            hashFiles(${{ env.CONDA_ENV_FILE }}) }}
+            hashFiles('ci/requirements/**.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
