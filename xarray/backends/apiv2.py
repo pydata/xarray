@@ -1,5 +1,4 @@
 import os
-import warnings
 
 from ..core import indexing
 from ..core.dataset import _get_chunk, _maybe_chunk
@@ -124,7 +123,6 @@ def open_dataset(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
-    autoclose=None,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -239,16 +237,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
 
     if cache is None:
         cache = chunks is None
