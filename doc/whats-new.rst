@@ -22,7 +22,17 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- xarray no longer supports python 3.6 (:issue:`4688`, :pull:`4720`)
+- xarray no longer supports python 3.6
+
+  The minimum versions of some other dependencies were changed:
+  ============ ====== ====
+  Package      Old    New
+  ============ ====== ====
+  Python       3.6    3.7
+  setuptools   38.4   40.4
+  ============ ====== ====
+
+  (:issue:`4688`, :pull:`4720`)
   By `Justus Magin <https://github.com/keewis>`_.
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_
