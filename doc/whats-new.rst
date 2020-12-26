@@ -24,6 +24,8 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6 (:issue:`4688`, :pull:`4720`)
   By `Justus Magin <https://github.com/keewis>`_.
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_
 
 New Features
 ~~~~~~~~~~~~
