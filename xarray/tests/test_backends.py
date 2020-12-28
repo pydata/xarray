@@ -3586,7 +3586,7 @@ class TestCfGrib:
         with open_example_dataset("example.grib", engine="cfgrib") as ds:
             res = ds.isel(latitude=[0, 2], longitude=[0, 1, 2])
             assert res.dims == expected
-            assert res["t"].min() == 231.
+            assert res["t"].min() == 231.0
 
 
 @requires_pseudonetcdf
