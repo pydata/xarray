@@ -779,11 +779,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
@@ -951,11 +951,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
