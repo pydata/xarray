@@ -518,7 +518,6 @@ def combine_nested(
     --------
     concat
     merge
-    auto_combine
     """
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
