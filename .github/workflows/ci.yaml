@@ -9,9 +9,9 @@ on:
   workflow_dispatch: # allows you to trigger manually
 
 jobs:
-  test:
-    name: ${{ runner.os }} py${{ matrix.python-version }}
+  test: 
     runs-on: ${{ matrix.os }}
+    name: ${{ runner.os }} py${{ matrix.python-version }}
     defaults:
       run:
         shell: bash -l {0}
@@ -37,7 +37,6 @@ jobs:
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             
           fi
-          echo "OS_NAME=${{ runner.os }}" >> $GITHUB_ENV
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Cache conda
@@ -84,6 +83,6 @@ jobs:
         with:
           file: ./coverage.xml
           flags: unittests
-          env_vars: OS_NAME,PYTHON_VERSION
+          env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false

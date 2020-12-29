@@ -10,8 +10,8 @@ on:
 
 jobs:
   test:
-    name: ${{ runner.os }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
+    name: ${{ runner.os }} ${{ matrix.env }}
     defaults:
       run:
         shell: bash -l {0}
@@ -98,6 +98,7 @@ jobs:
         with:
           file: ./coverage.xml
           flags: unittests,${{ matrix.env }}
+          env_vars: RUNNER_OS
           name: codecov-umbrella
           fail_ci_if_error: false
   doctest:
