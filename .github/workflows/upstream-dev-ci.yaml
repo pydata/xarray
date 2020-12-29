@@ -62,6 +62,7 @@ jobs:
         if: |
           failure()
           && steps.status.outcome == 'failure'
+          && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v2
         with:
@@ -74,6 +75,7 @@ jobs:
     needs: upstream-dev
     if: |
       always()
+      && github.event_name == 'schedule'
       && github.repository == 'pydata/xarray'
       && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
