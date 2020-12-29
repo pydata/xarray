@@ -160,7 +160,6 @@ def concat(
     See also
     --------
     merge
-    auto_combine
 
     Examples
     --------
