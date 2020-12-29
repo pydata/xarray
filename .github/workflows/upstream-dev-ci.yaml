@@ -18,7 +18,7 @@ jobs:
       github.repository == 'pydata/xarray'
       && (
         (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
-        ||contains(github.event.head_commit.message, 'test-upstream')
+        || contains(github.event.head_commit.message, 'test-upstream')
       )
     defaults:
       run:
