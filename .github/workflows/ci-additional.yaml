@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.os }} ${{ matrix.env }}
+    name: ${{ runner.os }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:

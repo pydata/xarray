@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ runner.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -37,7 +37,7 @@ jobs:
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             
           fi
-          echo "OS_NAME=${{ matrix.os }}" >> $GITHUB_ENV
+          echo "OS_NAME=${{ runner.os }}" >> $GITHUB_ENV
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Cache conda
