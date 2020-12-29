@@ -2962,6 +2962,17 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
             return x, new_x
 
+        validated_indexers = {
+            k: _validate_interp_indexer(maybe_variable(obj, k), v)
+            for k, v in indexers.items()
+        }
+
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
         variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
@@ -2969,9 +2980,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
             if var.dtype.kind in "uifc":
                 var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
+                    k: v for k, v in validated_indexers.items() if k in var.dims
                 }
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif all(d not in indexers for d in var.dims):

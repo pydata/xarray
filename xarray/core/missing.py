@@ -617,10 +617,6 @@ def interp(var, indexes_coords, method, **kwargs):
     for indexes_coords in decompose_interp(indexes_coords):
         var = result
 
-        # simple speed up for the local interpolation
-        if method in ["linear", "nearest"]:
-            var, indexes_coords = _localize(var, indexes_coords)
-
         # target dimensions
         dims = list(indexes_coords)
         x, new_x = zip(*[indexes_coords[d] for d in dims])
