@@ -1320,7 +1320,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         needed_dims = set(variable.dims)
 
         coords: Dict[Hashable, Variable] = {}
-        for k in self.coords:
+        for k in self._coord_names:
             if set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
 
