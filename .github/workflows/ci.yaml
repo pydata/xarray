@@ -10,7 +10,7 @@ on:
 
 jobs:
   test: 
-    name: ${{ env.RUNNER_OS }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
