@@ -370,28 +370,45 @@ class Variable(
             )
         self._data = data
 
-    def astype(self, dtype, casting="unsafe", copy=True, keep_attrs=True):
+    def astype(
+        self: VariableType,
+        dtype,
+        *,
+        order=None,
+        casting=None,
+        subok=None,
+        copy=None,
+        keep_attrs=True,
+    ) -> VariableType:
         """
         Copy of the Variable object, with data cast to a specified type.
 
         Parameters
         ----------
         dtype : str or dtype
-             Typecode or data-type to which the array is cast.
+            Typecode or data-type to which the array is cast.
+        order : {'C', 'F', 'A', 'K'}, optional
+            Controls the memory layout order of the result. ‘C’ means C order,
+            ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
+            Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
+            the order the array elements appear in memory as possible.
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
-             Controls what kind of data casting may occur. Defaults to 'unsafe'
-             for backwards compatibility.
+            Controls what kind of data casting may occur.
 
-             * 'no' means the data types should not be cast at all.
-             * 'equiv' means only byte-order changes are allowed.
-             * 'safe' means only casts which can preserve values are allowed.
-             * 'same_kind' means only safe casts or casts within a kind,
-                 like float64 to float32, are allowed.
-             * 'unsafe' means any data conversions may be done.
+            * 'no' means the data types should not be cast at all.
+            * 'equiv' means only byte-order changes are allowed.
+            * 'safe' means only casts which can preserve values are allowed.
+            * 'same_kind' means only safe casts or casts within a kind,
+              like float64 to float32, are allowed.
+            * 'unsafe' means any data conversions may be done.
+
+        subok : bool, optional
+            If True, then sub-classes will be passed-through, otherwise the
+            returned array will be forced to be a base-class array.
         copy : bool, optional
-             By default, astype always returns a newly allocated array. If this
-             is set to False and the `dtype` requirement is satisfied, the input
-             array is returned instead of a copy.
+            By default, astype always returns a newly allocated array. If this
+            is set to False and the `dtype` requirement is satisfied, the input
+            array is returned instead of a copy.
         keep_attrs : bool, optional
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.
@@ -401,17 +418,30 @@ class Variable(
         out : same as object
             New object with data cast to the specified type.
 
+        Notes
+        -----
+        The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
+        through to the ``astype`` method of the underlying array when a value
+        different than ``None`` is supplied.
+        Make sure to only supply these arguments if the underlying array class
+        supports them.
+
         See also
         --------
-        np.ndarray.astype
+        numpy.ndarray.astype
         dask.array.Array.astype
+        sparse.COO.astype
         """
         from .computation import apply_ufunc
+
+        kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
         return apply_ufunc(
             duck_array_ops.astype,
             self,
-            kwargs=dict(dtype=dtype, casting=casting, copy=copy),
+            dtype,
+            kwargs=kwargs,
             keep_attrs=keep_attrs,
             dask="allowed",
         )
@@ -986,7 +1016,7 @@ class Variable(
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1016,11 +1046,16 @@ class Variable(
         import dask
         import dask.array as da
 
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
+
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
-
-        if chunks is None:
-            chunks = self.chunks or self.shape
 
         data = self._data
         if is_duck_dask_array(data):
@@ -2087,6 +2122,74 @@ class Variable(
 
         return variable.data.reshape(shape), tuple(axes)
 
+    def isnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is a missing value.
+
+        Returns
+        -------
+        isnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.isnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.isnull()
+        <xarray.Variable (x: 3)>
+        array([False,  True, False])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
+    def notnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is not a missing value.
+
+        Returns
+        -------
+        notnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.notnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.notnull()
+        <xarray.Variable (x: 3)>
+        array([ True, False,  True])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
     @property
     def real(self):
         return type(self)(self.dims, self.data.real, self._attrs)
@@ -2368,7 +2471,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 

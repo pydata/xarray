@@ -85,7 +85,6 @@ from .utils import (
     Default,
     Frozen,
     SortedKeysDict,
-    _check_inplace,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
@@ -359,10 +358,66 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
+def _check_chunks_compatibility(var, chunks, preferred_chunks):
+    for dim in var.dims:
+        if dim not in chunks or (dim not in preferred_chunks):
+            continue
+
+        preferred_chunks_dim = preferred_chunks.get(dim)
+        chunks_dim = chunks.get(dim)
+
+        if isinstance(chunks_dim, int):
+            chunks_dim = (chunks_dim,)
+        else:
+            chunks_dim = chunks_dim[:-1]
+
+        if any(s % preferred_chunks_dim for s in chunks_dim):
+            warnings.warn(
+                f"Specified Dask chunks {chunks[dim]} would separate "
+                f"on disks chunk shape {preferred_chunks[dim]} for dimension {dim}. "
+                "This could degrade performance. "
+                "Consider rechunking after loading instead.",
+                stacklevel=2,
+            )
+
+
+def _get_chunk(var, chunks):
+    # chunks need to be explicity computed to take correctly into accout
+    # backend preferred chunking
+    import dask.array as da
+
+    if isinstance(var, IndexVariable):
+        return {}
+
+    if isinstance(chunks, int) or (chunks == "auto"):
+        chunks = dict.fromkeys(var.dims, chunks)
+
+    preferred_chunks = var.encoding.get("preferred_chunks", {})
+    preferred_chunks_list = [
+        preferred_chunks.get(dim, shape) for dim, shape in zip(var.dims, var.shape)
+    ]
+
+    chunks_list = [
+        chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
+    ]
+
+    output_chunks_list = da.core.normalize_chunks(
+        chunks_list,
+        shape=var.shape,
+        dtype=var.dtype,
+        previous_chunks=preferred_chunks_list,
+    )
+
+    output_chunks = dict(zip(var.dims, output_chunks_list))
+    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
+
+    return output_chunks
+
+
 def _maybe_chunk(
     name,
     var,
-    chunks=None,
+    chunks,
     token=None,
     lock=None,
     name_prefix="xarray-",
@@ -456,15 +511,124 @@ class _LocIndexer:
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """A multi-dimensional, in memory, array database.
 
-    A dataset resembles an in-memory representation of a NetCDF file, and
-    consists of variables, coordinates and attributes which together form a
-    self describing dataset.
+    A dataset resembles an in-memory representation of a NetCDF file,
+    and consists of variables, coordinates and attributes which
+    together form a self describing dataset.
 
-    Dataset implements the mapping interface with keys given by variable names
-    and values given by DataArray objects for each variable name.
+    Dataset implements the mapping interface with keys given by variable
+    names and values given by DataArray objects for each variable name.
 
-    One dimensional variables with name equal to their dimension are index
-    coordinates used for label based indexing.
+    One dimensional variables with name equal to their dimension are
+    index coordinates used for label based indexing.
+
+    To load data from a file or file-like object, use the `open_dataset`
+    function.
+
+    Parameters
+    ----------
+    data_vars : dict-like, optional
+        A mapping from variable names to :py:class:`~xarray.DataArray`
+        objects, :py:class:`~xarray.Variable` objects or to tuples of
+        the form ``(dims, data[, attrs])`` which can be used as
+        arguments to create a new ``Variable``. Each dimension must
+        have the same length in all variables in which it appears.
+
+        The following notations are accepted:
+
+        - mapping {var name: DataArray}
+        - mapping {var name: Variable}
+        - mapping {var name: (dimension name, array-like)}
+        - mapping {var name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (it will be automatically moved to coords, see below)
+
+        Each dimension must have the same length in all variables in
+        which it appears.
+    coords : dict-like, optional
+        Another mapping in similar form as the `data_vars` argument,
+        except the each item is saved on the dataset as a "coordinate".
+        These variables have an associated meaning: they describe
+        constant/fixed/independent quantities, unlike the
+        varying/measured/dependent quantities that belong in
+        `variables`. Coordinates values may be given by 1-dimensional
+        arrays or scalars, in which case `dims` do not need to be
+        supplied: 1D arrays will be assumed to give index values along
+        the dimension with the same name.
+
+        The following notations are accepted:
+
+        - mapping {coord name: DataArray}
+        - mapping {coord name: Variable}
+        - mapping {coord name: (dimension name, array-like)}
+        - mapping {coord name: (tuple of dimension names, array-like)}
+        - mapping {dimension name: array-like}
+          (the dimension name is implicitly set to be the same as the
+          coord name)
+
+        The last notation implies that the coord name is the same as
+        the dimension name.
+
+    attrs : dict-like, optional
+        Global attributes to save on this dataset.
+
+    Examples
+    --------
+    Create data:
+
+    >>> np.random.seed(0)
+    >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
+    >>> precipitation = 10 * np.random.rand(2, 2, 3)
+    >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
+    >>> lat = [[42.25, 42.21], [42.63, 42.59]]
+    >>> time = pd.date_range("2014-09-06", periods=3)
+    >>> reference_time = pd.Timestamp("2014-09-05")
+
+    Initialize a dataset with multiple dimensions:
+
+    >>> ds = xr.Dataset(
+    ...     data_vars=dict(
+    ...         temperature=(["x", "y", "time"], temperature),
+    ...         precipitation=(["x", "y", "time"], precipitation),
+    ...     ),
+    ...     coords=dict(
+    ...         lon=(["x", "y"], lon),
+    ...         lat=(["x", "y"], lat),
+    ...         time=time,
+    ...         reference_time=reference_time,
+    ...     ),
+    ...     attrs=dict(description="Weather related data."),
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:         (time: 3, x: 2, y: 2)
+    Coordinates:
+        lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+        lat             (x, y) float64 42.25 42.21 42.63 42.59
+      * time            (time) datetime64[ns] 2014-09-06 2014-09-07 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Dimensions without coordinates: x, y
+    Data variables:
+        temperature     (x, y, time) float64 29.11 18.2 22.83 ... 18.28 16.15 26.63
+        precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
+    Attributes:
+        description:  Weather related data.
+
+    Find out where the coldest temperature was and what values the
+    other variables had:
+
+    >>> ds.isel(ds.temperature.argmin(...))
+    <xarray.Dataset>
+    Dimensions:         ()
+    Coordinates:
+        lon             float64 -99.32
+        lat             float64 42.21
+        time            datetime64[ns] 2014-09-08
+        reference_time  datetime64[ns] 2014-09-05
+    Data variables:
+        temperature     float64 7.182
+        precipitation   float64 8.326
+    Attributes:
+        description:  Weather related data.
     """
 
     _attrs: Optional[Dict[Hashable, Any]]
@@ -501,56 +665,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
     ):
-        """To load data from a file or file-like object, use the `open_dataset`
-        function.
-
-        Parameters
-        ----------
-        data_vars : dict-like, optional
-            A mapping from variable names to :py:class:`~xarray.DataArray`
-            objects, :py:class:`~xarray.Variable` objects or to tuples of the
-            form ``(dims, data[, attrs])`` which can be used as arguments to
-            create a new ``Variable``. Each dimension must have the same length
-            in all variables in which it appears.
-
-            The following notations are accepted:
-
-            - mapping {var name: DataArray}
-            - mapping {var name: Variable}
-            - mapping {var name: (dimension name, array-like)}
-            - mapping {var name: (tuple of dimension names, array-like)}
-            - mapping {dimension name: array-like}
-              (it will be automatically moved to coords, see below)
-
-            Each dimension must have the same length in all variables in which
-            it appears.
-        coords : dict-like, optional
-            Another mapping in similar form as the `data_vars` argument,
-            except the each item is saved on the dataset as a "coordinate".
-            These variables have an associated meaning: they describe
-            constant/fixed/independent quantities, unlike the
-            varying/measured/dependent quantities that belong in `variables`.
-            Coordinates values may be given by 1-dimensional arrays or scalars,
-            in which case `dims` do not need to be supplied: 1D arrays will be
-            assumed to give index values along the dimension with the same
-            name.
-
-            The following notations are accepted:
-
-            - mapping {coord name: DataArray}
-            - mapping {coord name: Variable}
-            - mapping {coord name: (dimension name, array-like)}
-            - mapping {coord name: (tuple of dimension names, array-like)}
-            - mapping {dimension name: array-like}
-              (the dimension name is implicitly set to be the same as the coord name)
-
-            The last notation implies that the coord name is the same as the
-            dimension name.
-
-        attrs : dict-like, optional
-            Global attributes to save on this dataset.
-        """
-
         # TODO(shoyer): expose indexes as a public argument in __init__
 
         if data_vars is None:
@@ -665,11 +779,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
@@ -837,11 +951,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1417,9 +1531,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Dictionary of DataArray objects corresponding to data variables"""
         return DataVariables(self)
 
-    def set_coords(
-        self, names: "Union[Hashable, Iterable[Hashable]]", inplace: bool = None
-    ) -> "Dataset":
+    def set_coords(self, names: "Union[Hashable, Iterable[Hashable]]") -> "Dataset":
         """Given names of one or more variables, set them as coordinates
 
         Parameters
@@ -1439,7 +1551,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # DataFrame.set_index?
         # nb. check in self._variables, not self.data_vars to insure that the
         # operation is idempotent
-        _check_inplace(inplace)
         if isinstance(names, str) or not isinstance(names, Iterable):
             names = [names]
         else:
@@ -1453,7 +1564,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         names: "Union[Hashable, Iterable[Hashable], None]" = None,
         drop: bool = False,
-        inplace: bool = None,
     ) -> "Dataset":
         """Given names of coordinates, reset them to become variables
 
@@ -1470,7 +1580,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        _check_inplace(inplace)
         if names is None:
             names = self._coord_names - set(self.dims)
         else:
@@ -1606,6 +1715,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compute: bool = True,
         consolidated: bool = False,
         append_dim: Hashable = None,
+        region: Mapping[str, slice] = None,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
@@ -1628,7 +1738,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             internally set to ``"a"``. Otherwise, ``mode`` will default to
             `w-` if not set.
         synchronizer : object, optional
-            Array synchronizer
+            Zarr array synchronizer.
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
         encoding : dict, optional
@@ -1636,14 +1746,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
         compute: bool, optional
-            If True compute immediately, otherwise return a
-            ``dask.delayed.Delayed`` object that can be computed later.
+            If True write array data immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed to write
+            array data later. Metadata is always updated eagerly.
         consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing.
+            after writing metadata.
         append_dim: hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
+        region: dict, optional
+            Optional mapping from dimension names to integer slices along
+            dataset dimensions to indicate the region of existing zarr array(s)
+            in which to write this dataset's data. For example,
+            ``{'x': slice(0, 1000), 'y': slice(10000, 11000)}`` would indicate
+            that values should be written to the region ``0:1000`` along ``x``
+            and ``10000:11000`` along ``y``.
+
+            Two restrictions apply to the use of ``region``:
+
+            - If ``region`` is set, _all_ variables in a dataset must have at
+              least one dimension in common with the region. Other variables
+              should be written in a separate call to ``to_zarr()``.
+            - Dimensions cannot be included in both ``region`` and
+              ``append_dim`` at the same time. To create empty arrays to fill
+              in with ``region``, use a separate call to ``to_zarr()`` with
+              ``compute=False``. See "Appending to existing Zarr stores" in
+              the reference documentation for full details.
 
         References
         ----------
@@ -1658,24 +1787,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
         """
+        from ..backends.api import to_zarr
+
         if encoding is None:
             encoding = {}
-        if (mode == "a") or (append_dim is not None):
-            if mode is None:
-                mode = "a"
-            elif mode != "a":
-                raise ValueError(
-                    "append_dim was set along with mode='{}', either set "
-                    "mode='a' or don't set it.".format(mode)
-                )
-        elif mode is None:
-            mode = "w-"
-        if mode not in ["w", "w-", "a"]:
-            # TODO: figure out how to handle 'r+'
-            raise ValueError(
-                "The only supported options for mode are 'w', 'w-' and 'a'."
-            )
-        from ..backends.api import to_zarr
 
         return to_zarr(
             self,
@@ -1688,6 +1803,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             compute=compute,
             consolidated=consolidated,
             append_dim=append_dim,
+            region=region,
         )
 
     def __repr__(self) -> str:
@@ -1753,11 +1869,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None,
             Number,
             str,
             Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
-        ] = None,
+        ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
@@ -1789,17 +1904,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         chunked : xarray.Dataset
         """
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
 
         if isinstance(chunks, (Number, str)):
             chunks = dict.fromkeys(self.dims, chunks)
 
-        if chunks is not None:
-            bad_dims = chunks.keys() - self.dims.keys()
-            if bad_dims:
-                raise ValueError(
-                    "some chunks keys are not dimensions on this "
-                    "object: %s" % bad_dims
-                )
+        bad_dims = chunks.keys() - self.dims.keys()
+        if bad_dims:
+            raise ValueError(
+                "some chunks keys are not dimensions on this " "object: %s" % bad_dims
+            )
 
         variables = {
             k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
@@ -2645,6 +2765,80 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={
+        ...         "a": ("x", [5, 7, 4]),
+        ...         "b": (
+        ...             ("x", "y"),
+        ...             [[1, 4, 2, 9], [2, 7, 6, np.nan], [6, np.nan, 5, 8]],
+        ...         ),
+        ...     },
+        ...     coords={"x": [0, 1, 2], "y": [10, 12, 14, 16]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 3, y: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2
+          * y        (y) int64 10 12 14 16
+        Data variables:
+            a        (x) int64 5 7 4
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 6.0 nan 6.0 nan 5.0 8.0
+
+        1D interpolation with the default method (linear):
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75])
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 1.0 4.0 2.0 nan 1.75 6.25 ... nan 5.0 nan 5.25 nan
+
+        1D interpolation with a different method:
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], method="nearest")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 0.0 0.75 1.25 1.75
+        Data variables:
+            a        (x) float64 5.0 7.0 7.0 4.0
+            b        (x, y) float64 1.0 4.0 2.0 9.0 2.0 7.0 ... 6.0 nan 6.0 nan 5.0 8.0
+
+        1D extrapolation:
+
+        >>> ds.interp(
+        ...     x=[1, 1.5, 2.5, 3.5],
+        ...     method="linear",
+        ...     kwargs={"fill_value": "extrapolate"},
+        ... )
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+          * y        (y) int64 10 12 14 16
+          * x        (x) float64 1.0 1.5 2.5 3.5
+        Data variables:
+            a        (x) float64 7.0 5.5 2.5 -0.5
+            b        (x, y) float64 2.0 7.0 6.0 nan 4.0 nan ... 4.5 nan 12.0 nan 3.5 nan
+
+        2D interpolation:
+
+        >>> ds.interp(x=[0, 0.75, 1.25, 1.75], y=[11, 13, 15], method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 3)
+        Coordinates:
+          * x        (x) float64 0.0 0.75 1.25 1.75
+          * y        (y) int64 11 13 15
+        Data variables:
+            a        (x) float64 5.0 6.5 6.25 4.75
+            b        (x, y) float64 2.5 3.0 nan 4.0 5.625 nan nan nan nan nan nan nan
         """
         from . import missing
 
@@ -2834,7 +3028,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def rename(
         self,
         name_dict: Mapping[Hashable, Hashable] = None,
-        inplace: bool = None,
         **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
@@ -2860,7 +3053,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.rename_dims
         DataArray.rename
         """
-        _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, "rename")
         for k in name_dict.keys():
             if k not in self and k not in self.dims:
@@ -2958,9 +3150,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
-    def swap_dims(
-        self, dims_dict: Mapping[Hashable, Hashable], inplace: bool = None
-    ) -> "Dataset":
+    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "Dataset":
         """Returns a new object with swapped dimensions.
 
         Parameters
@@ -3019,7 +3209,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
-        _check_inplace(inplace)
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
@@ -3194,7 +3383,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
-        inplace: bool = None,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> "Dataset":
         """Set Dataset (multi-)indexes using one or more existing coordinates
@@ -3249,7 +3437,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dataset.reset_index
         Dataset.swap_dims
         """
-        _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
         variables, coord_names = merge_indexes(
             indexes, self._variables, self._coord_names, append=append
@@ -3260,7 +3447,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-        inplace: bool = None,
     ) -> "Dataset":
         """Reset the specified index(es) or multi-index level(s).
 
@@ -3282,7 +3468,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         Dataset.set_index
         """
-        _check_inplace(inplace)
         variables, coord_names = split_indexes(
             dims_or_levels,
             self._variables,
@@ -3295,7 +3480,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def reorder_levels(
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
-        inplace: bool = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "Dataset":
         """Rearrange index levels using input order.
@@ -3316,7 +3500,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
-        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = dict(self.indexes)
@@ -3619,7 +3802,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result._unstack_once(dim, fill_value, sparse)
         return result
 
-    def update(self, other: "CoercibleMapping", inplace: bool = None) -> "Dataset":
+    def update(self, other: "CoercibleMapping") -> "Dataset":
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -3645,14 +3828,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        _check_inplace(inplace)
         merge_result = dataset_update_method(self, other)
         return self._replace(inplace=True, **merge_result._asdict())
 
     def merge(
         self,
         other: Union["CoercibleMapping", "DataArray"],
-        inplace: bool = None,
         overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
         compat: str = "no_conflicts",
         join: str = "outer",
@@ -3708,7 +3889,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         MergeError
             If any variables conflict (see ``compat``).
         """
-        _check_inplace(inplace)
         other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
             self,
@@ -4180,6 +4360,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         numpy.interp
         scipy.interpolate
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": ("x", [np.nan, 2, 3, np.nan, 0]),
+        ...         "B": ("x", [3, 4, np.nan, 1, 7]),
+        ...         "C": ("x", [np.nan, np.nan, np.nan, 5, 0]),
+        ...         "D": ("x", [np.nan, 3, np.nan, -1, 4]),
+        ...     },
+        ...     coords={"x": [0, 1, 2, 3, 4]},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 nan 0.0
+            B        (x) float64 3.0 4.0 nan 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 nan -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 nan 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 nan nan nan 5.0 0.0
+            D        (x) float64 nan 3.0 1.0 -1.0 4.0
+
+        >>> ds.interpolate_na(dim="x", method="linear", fill_value="extrapolate")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+        Data variables:
+            A        (x) float64 1.0 2.0 3.0 1.5 0.0
+            B        (x) float64 3.0 4.0 2.5 1.0 7.0
+            C        (x) float64 20.0 15.0 10.0 5.0 0.0
+            D        (x) float64 5.0 3.0 1.0 -1.0 4.0
         """
         from .missing import _apply_over_vars_with_dim, interp_na
 
@@ -5730,9 +5954,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Examples
         --------
         >>> # Create an example dataset:
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
@@ -5910,6 +6131,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ...     gb = da.groupby(groupby_type)
         ...     clim = gb.mean(dim="time")
         ...     return gb - clim
+        ...
         >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
         >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
         >>> np.random.seed(123)

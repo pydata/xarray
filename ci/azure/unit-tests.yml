@@ -11,11 +11,16 @@ steps:
 # https://github.com/microsoft/azure-pipelines-tasks/issues/9302
 - bash: |
     source activate xarray-tests
-    $(environment_variables) pytest \
+    $(environment_variables) pytest -n 4 \
     --junitxml=junit/test-results.xml \
     --cov=xarray \
     --cov-report=xml \
-    $(pytest_extra_flags) || [ "$ALLOW_FAILURE" = "true" ]
+    $(pytest_extra_flags) \
+    || ( \
+      [ "$ALLOW_FAILURE" = "true" ] \
+      && echo "##vso[task.logissue type=warning]Allowed CI failure!!" \
+      && echo "##vso[task.complete result=SucceededWithIssues]" \
+    )
   displayName: Run tests
 
 - bash: |

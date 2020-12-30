@@ -5,7 +5,7 @@ Xarray related projects
 
 Below is a list of existing open source projects that build
 functionality upon xarray. See also section :ref:`internals` for more
-details on how to build xarray extensions. We also maintain the 
+details on how to build xarray extensions. We also maintain the
 `xarray-contrib <https://github.com/xarray-contrib>`_ GitHub organization
 as a place to curate projects that build upon xarray.
 
@@ -42,7 +42,7 @@ Geosciences
 - `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
-- `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
+- `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
 - `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
@@ -82,6 +82,7 @@ Visualization
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.
+- `xtrude <https://github.com/davidbrochart/xtrude>`_: An xarray extension for 3D terrain visualization based on pydeck.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~

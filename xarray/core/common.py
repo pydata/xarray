@@ -823,18 +823,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : bool or mapping, default: False
             Set the labels at the center of the window.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
 
         Returns
         -------
-        Rolling object (core.rolling.DataArrayRolling for DataArray,
-        core.rolling.DatasetRolling for Dataset.)
+        core.rolling.DataArrayRolling or core.rolling.DatasetRolling
+            A rolling object (``DataArrayRolling`` for ``DataArray``,
+            ``DatasetRolling`` for ``Dataset``)
 
         Examples
         --------
@@ -875,8 +872,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(
@@ -947,8 +942,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
-        core.rolling.DatasetCoarsen for Dataset.)
+        core.rolling.DataArrayCoarsen or core.rolling.DatasetCoarsen
+            A coarsen object (``DataArrayCoarsen`` for ``DataArray``,
+            ``DatasetCoarsen`` for ``Dataset``)
 
         Examples
         --------
@@ -1176,8 +1172,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        cond : DataArray or Dataset
+        cond : DataArray, Dataset, or callable
             Locations at which to preserve this object's values. dtype must be `bool`.
+            If a callable, it must expect this object as its only parameter.
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations filled with NA.
@@ -1285,6 +1282,78 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self._file_obj.close()
         self._file_obj = None
 
+    def isnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is a missing value.
+
+        Returns
+        -------
+        isnull : DataArray or Dataset
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.isnull
+
+        Examples
+        --------
+        >>> array = xr.DataArray([1, np.nan, 3], dims="x")
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([ 1., nan,  3.])
+        Dimensions without coordinates: x
+        >>> array.isnull()
+        <xarray.DataArray (x: 3)>
+        array([False,  True, False])
+        Dimensions without coordinates: x
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
+    def notnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is not a missing value.
+
+        Returns
+        -------
+        notnull : DataArray or Dataset
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.notnull
+
+        Examples
+        --------
+        >>> array = xr.DataArray([1, np.nan, 3], dims="x")
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([ 1., nan,  3.])
+        Dimensions without coordinates: x
+        >>> array.notnull()
+        <xarray.DataArray (x: 3)>
+        array([ True, False,  True])
+        Dimensions without coordinates: x
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
     def isin(self, test_elements):
         """Tests each value in the array for whether it is in test elements.
 
@@ -1336,7 +1405,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             dask="allowed",
         )
 
-    def astype(self, dtype, casting="unsafe", copy=True, keep_attrs=True):
+    def astype(
+        self: T,
+        dtype,
+        *,
+        order=None,
+        casting=None,
+        subok=None,
+        copy=None,
+        keep_attrs=True,
+    ) -> T:
         """
         Copy of the xarray object, with data cast to a specified type.
         Leaves coordinate dtype unchanged.
@@ -1345,16 +1423,24 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
+        order : {'C', 'F', 'A', 'K'}, optional
+            Controls the memory layout order of the result. ‘C’ means C order,
+            ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
+            Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
+            the order the array elements appear in memory as possible.
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
-            Controls what kind of data casting may occur. Defaults to 'unsafe'
-            for backwards compatibility.
+            Controls what kind of data casting may occur.
 
             * 'no' means the data types should not be cast at all.
             * 'equiv' means only byte-order changes are allowed.
             * 'safe' means only casts which can preserve values are allowed.
             * 'same_kind' means only safe casts or casts within a kind,
-                like float64 to float32, are allowed.
+              like float64 to float32, are allowed.
             * 'unsafe' means any data conversions may be done.
+
+        subok : bool, optional
+            If True, then sub-classes will be passed-through, otherwise the
+            returned array will be forced to be a base-class array.
         copy : bool, optional
             By default, astype always returns a newly allocated array. If this
             is set to False and the `dtype` requirement is satisfied, the input
@@ -1368,17 +1454,30 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         out : same as object
             New object with data cast to the specified type.
 
+        Notes
+        -----
+        The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
+        through to the ``astype`` method of the underlying array when a value
+        different than ``None`` is supplied.
+        Make sure to only supply these arguments if the underlying array class
+        supports them.
+
         See also
         --------
-        np.ndarray.astype
+        numpy.ndarray.astype
         dask.array.Array.astype
+        sparse.COO.astype
         """
         from .computation import apply_ufunc
+
+        kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
         return apply_ufunc(
             duck_array_ops.astype,
             self,
-            kwargs=dict(dtype=dtype, casting=casting, copy=copy),
+            dtype,
+            kwargs=kwargs,
             keep_attrs=keep_attrs,
             dask="allowed",
         )

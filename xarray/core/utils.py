@@ -2,6 +2,7 @@
 """
 import contextlib
 import functools
+import io
 import itertools
 import os.path
 import re
@@ -34,14 +35,6 @@ import pandas as pd
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
-
-
-def _check_inplace(inplace: Optional[bool]) -> None:
-    if inplace is not None:
-        raise TypeError(
-            "The `inplace` argument has been removed from xarray. "
-            "You can achieve an identical effect with python's standard assignment."
-        )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -133,7 +126,7 @@ def multiindex_from_product_levels(
 
 
 def maybe_wrap_array(original, new_array):
-    """Wrap a transformed array with __array_wrap__ is it can be done safely.
+    """Wrap a transformed array with __array_wrap__ if it can be done safely.
 
     This lets us treat arbitrary functions that take and return ndarray objects
     like ufuncs, as long as they return an array with the same shape.
@@ -463,7 +456,8 @@ class SortedKeysDict(MutableMapping[K, V]):
         del self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(sorted(self.mapping))
+        # see #4571 for the reason of the type ignore
+        return iter(sorted(self.mapping))  # type: ignore
 
     def __len__(self) -> int:
         return len(self.mapping)
@@ -608,6 +602,23 @@ def close_on_error(f):
 
 def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^https?\://", path))
+
+
+def read_magic_number(filename_or_obj, count=8):
+    # check byte header to determine file type
+    if isinstance(filename_or_obj, bytes):
+        magic_number = filename_or_obj[:count]
+    elif isinstance(filename_or_obj, io.IOBase):
+        if filename_or_obj.tell() != 0:
+            raise ValueError(
+                "file-like object read/write pointer not at the start of the file, "
+                "please close and reopen, or use a context manager"
+            )
+        magic_number = filename_or_obj.read(count)
+        filename_or_obj.seek(0)
+    else:
+        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+    return magic_number
 
 
 def is_grib_path(path: str) -> bool:

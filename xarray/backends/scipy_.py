@@ -1,14 +1,16 @@
-from io import BytesIO
+import io
+import os
 
 import numpy as np
 
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, WritableCFDataStore
+from .common import BackendArray, BackendEntrypoint, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
+from .store import open_backend_dataset_store
 
 
 def _decode_string(s):
@@ -76,7 +78,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
 
     if isinstance(filename, bytes) and filename.startswith(b"CDF"):
         # it's a NetCDF3 bytestring
-        filename = BytesIO(filename)
+        filename = io.BytesIO(filename)
 
     try:
         return scipy.io.netcdf_file(filename, mode=mode, mmap=mmap, version=version)
@@ -218,3 +220,54 @@ class ScipyDataStore(WritableCFDataStore):
 
     def close(self):
         self._manager.close()
+
+
+def guess_can_open_scipy(store_spec):
+    try:
+        return read_magic_number(store_spec).startswith(b"CDF")
+    except TypeError:
+        pass
+
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".nc", ".nc4", ".cdf", ".gz"}
+
+
+def open_backend_dataset_scipy(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    mode="r",
+    format=None,
+    group=None,
+    mmap=None,
+    lock=None,
+):
+
+    store = ScipyDataStore(
+        filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
+    )
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+    return ds
+
+
+scipy_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
+)

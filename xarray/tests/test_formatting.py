@@ -87,6 +87,9 @@ class TestFormatting:
             (b"foo", "b'foo'"),
             (1, "1"),
             (1.0, "1.0"),
+            (np.float16(1.1234), "1.123"),
+            (np.float32(1.0111111), "1.011"),
+            (np.float64(22.222222), "22.22"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
