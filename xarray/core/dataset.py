@@ -58,7 +58,6 @@ from .common import (
 )
 from .coordinates import (
     DatasetCoordinates,
-    LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
 )
@@ -84,6 +83,7 @@ from .pycompat import is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
+    HybridMappingProxy,
     SortedKeysDict,
     _default,
     decode_numpy_dict_values,
@@ -1340,19 +1340,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self.copy(deep=True)
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return self._item_sources + [self.attrs]
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from self._item_sources
+        yield self.attrs
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion"""
-        return [
-            self.data_vars,
-            self.coords,
-            {d: self[d] for d in self.dims},
-            LevelCoordinatesSource(self),
-        ]
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-completion"""
+        yield self.data_vars
+        yield self.coords
+
+        # virtual coordinates
+        yield HybridMappingProxy(keys=self.dims, mapping=self)
+
+        # uses empty {} -- everything here can already be found in self.coords.
+        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether

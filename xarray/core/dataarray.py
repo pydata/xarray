@@ -46,7 +46,6 @@ from .alignment import (
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates,
-    LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
 )
@@ -56,7 +55,13 @@ from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
-from .utils import Default, ReprObject, _default, either_dict_or_kwargs
+from .utils import (
+    Default,
+    HybridMappingProxy,
+    ReprObject,
+    _default,
+    either_dict_or_kwargs,
+)
 from .variable import (
     IndexVariable,
     Variable,
@@ -721,18 +726,20 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return self._item_sources + [self.attrs]
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from self._item_sources
+        yield self.attrs
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion"""
-        return [
-            self.coords,
-            {d: self.coords[d] for d in self.dims},
-            LevelCoordinatesSource(self),
-        ]
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-completion"""
+        yield self.coords
+
+        # virtual coordinates
+        # uses empty {} -- everything here can already be found in self.coords.
+        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
