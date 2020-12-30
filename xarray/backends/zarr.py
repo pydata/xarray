@@ -1,14 +1,20 @@
-import warnings
+import os
+import pathlib
 
 import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
-from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
+from .common import (
+    AbstractWritableDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    _encode_variable_name,
+)
+from .store import open_backend_dataset_store
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -261,12 +267,13 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "append_dim",
         "ds",
+        "_append_dim",
         "_consolidate_on_close",
         "_group",
         "_read_only",
         "_synchronizer",
+        "_write_region",
     )
 
     @classmethod
@@ -279,8 +286,14 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        append_dim=None,
+        write_region=None,
     ):
         import zarr
+
+        # zarr doesn't support pathlib.Path objects yet. zarr-python#601
+        if isinstance(store, pathlib.Path):
+            store = os.fspath(store)
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if chunk_store:
@@ -291,15 +304,18 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close)
+        return cls(zarr_group, consolidate_on_close, append_dim, write_region)
 
-    def __init__(self, zarr_group, consolidate_on_close=False):
+    def __init__(
+        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
+    ):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
         self._consolidate_on_close = consolidate_on_close
-        self.append_dim = None
+        self._append_dim = append_dim
+        self._write_region = write_region
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -307,6 +323,7 @@ class ZarrStore(AbstractWritableDataStore):
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
@@ -362,53 +379,6 @@ class ZarrStore(AbstractWritableDataStore):
     def encode_attribute(self, a):
         return encode_zarr_attr_value(a)
 
-    @staticmethod
-    def get_chunk(name, var, chunks):
-        chunk_spec = dict(zip(var.dims, var.encoding.get("chunks")))
-
-        # Coordinate labels aren't chunked
-        if var.ndim == 1 and var.dims[0] == name:
-            return chunk_spec
-
-        if chunks == "auto":
-            return chunk_spec
-
-        for dim in var.dims:
-            if dim in chunks:
-                spec = chunks[dim]
-                if isinstance(spec, int):
-                    spec = (spec,)
-                if isinstance(spec, (tuple, list)) and chunk_spec[dim]:
-                    if any(s % chunk_spec[dim] for s in spec):
-                        warnings.warn(
-                            "Specified Dask chunks %r would "
-                            "separate Zarr chunk shape %r for "
-                            "dimension %r. This significantly "
-                            "degrades performance. Consider "
-                            "rechunking after loading instead."
-                            % (chunks[dim], chunk_spec[dim], dim),
-                            stacklevel=2,
-                        )
-                chunk_spec[dim] = chunks[dim]
-        return chunk_spec
-
-    @classmethod
-    def maybe_chunk(cls, name, var, chunks, overwrite_encoded_chunks):
-        chunk_spec = cls.get_chunk(name, var, chunks)
-
-        if (var.ndim > 0) and (chunk_spec is not None):
-            from dask.base import tokenize
-
-            # does this cause any data to be read?
-            token2 = tokenize(name, var._data, chunks)
-            name2 = f"xarray-{name}-{token2}"
-            var = var.chunk(chunk_spec, name=name2, lock=None)
-            if overwrite_encoded_chunks and var.chunks is not None:
-                var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
-            return var
-        else:
-            return var
-
     def store(
         self,
         variables,
@@ -439,6 +409,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
+        import zarr
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -460,11 +431,14 @@ class ZarrStore(AbstractWritableDataStore):
             variables_with_encoding, _ = self.encode(variables_with_encoding, {})
             variables_encoded.update(variables_with_encoding)
 
-        self.set_attributes(attributes)
-        self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+        if self._write_region is None:
+            self.set_attributes(attributes)
+            self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
+        if self._consolidate_on_close:
+            zarr.consolidate_metadata(self.ds.store)
 
     def sync(self):
         pass
@@ -499,22 +473,9 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if self.append_dim is not None and self.append_dim in dims:
-                # resize existing variable
+            if name in self.ds:
+                # existing variable
                 zarr_array = self.ds[name]
-                append_axis = dims.index(self.append_dim)
-
-                new_region = [slice(None)] * len(dims)
-                new_region[append_axis] = slice(zarr_array.shape[append_axis], None)
-                region = tuple(new_region)
-
-                new_shape = list(zarr_array.shape)
-                new_shape[append_axis] += v.shape[append_axis]
-                zarr_array.resize(new_shape)
-            elif name in self.ds:
-                # override existing variable
-                zarr_array = self.ds[name]
-                region = None
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -532,15 +493,27 @@ class ZarrStore(AbstractWritableDataStore):
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)
-                region = None
 
-            writer.add(v.data, zarr_array, region=region)
+            write_region = self._write_region if self._write_region is not None else {}
+            write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
+
+            if self._append_dim is not None and self._append_dim in dims:
+                # resize existing variable
+                append_axis = dims.index(self._append_dim)
+                assert write_region[self._append_dim] == slice(None)
+                write_region[self._append_dim] = slice(
+                    zarr_array.shape[append_axis], None
+                )
+
+                new_shape = list(zarr_array.shape)
+                new_shape[append_axis] += v.shape[append_axis]
+                zarr_array.resize(new_shape)
+
+            region = tuple(write_region[dim] for dim in dims)
+            writer.add(v.data, zarr_array, region)
 
     def close(self):
-        if self._consolidate_on_close:
-            import zarr
-
-            zarr.consolidate_metadata(self.ds.store)
+        pass
 
 
 def open_zarr(
@@ -651,6 +624,14 @@ def open_zarr(
     """
     from .api import open_dataset
 
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+
+            chunks = {}
+        except ImportError:
+            chunks = None
+
     if kwargs:
         raise TypeError(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
@@ -684,7 +665,6 @@ def open_zarr(
 
 def open_backend_dataset_zarr(
     filename_or_obj,
-    decode_cf=True,
     mask_and_scale=True,
     decode_times=None,
     concat_characters=None,
@@ -700,13 +680,6 @@ def open_backend_dataset_zarr(
     chunk_store=None,
 ):
 
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
-
     store = ZarrStore.open_group(
         filename_or_obj,
         group=group,
@@ -718,13 +691,8 @@ def open_backend_dataset_zarr(
     )
 
     with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
+        ds = open_backend_dataset_store(
+            store,
             mask_and_scale=mask_and_scale,
             decode_times=decode_times,
             concat_characters=concat_characters,
@@ -733,10 +701,7 @@ def open_backend_dataset_zarr(
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
-
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
-
     return ds
+
+
+zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)

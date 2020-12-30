@@ -916,7 +916,7 @@ def test_cftimeindex_calendar_property(calendar, expected):
     assert index.calendar == expected
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 @pytest.mark.parametrize(
     ("calendar", "expected"),
     [
@@ -936,7 +936,7 @@ def test_cftimeindex_calendar_repr(calendar, expected):
     assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 @pytest.mark.parametrize("periods", [2, 40])
 def test_cftimeindex_periods_repr(periods):
     """Test that cftimeindex has periods property in repr."""
@@ -945,7 +945,17 @@ def test_cftimeindex_periods_repr(periods):
     assert f" length={periods}" in repr_str
 
 
-@requires_cftime
+@requires_cftime_1_1_0
+@pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
+@pytest.mark.parametrize("freq", ["D", "H"])
+def test_cftimeindex_freq_in_repr(freq, calendar):
+    """Test that cftimeindex has frequency property in repr."""
+    index = xr.cftime_range(start="2000", periods=3, freq=freq, calendar=calendar)
+    repr_str = index.__repr__()
+    assert f", freq='{freq}'" in repr_str
+
+
+@requires_cftime_1_1_0
 @pytest.mark.parametrize(
     "periods,expected",
     [
@@ -953,14 +963,14 @@ def test_cftimeindex_periods_repr(periods):
             2,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian')""",
+            dtype='object', length=2, calendar='gregorian', freq=None)""",
         ),
         (
             4,
             """\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00],
-            dtype='object', length=4, calendar='gregorian')""",
+            dtype='object', length=4, calendar='gregorian', freq='D')""",
         ),
         (
             101,
@@ -974,18 +984,18 @@ CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
              2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
              2000-04-10 00:00:00],
-            dtype='object', length=101, calendar='gregorian')""",
+            dtype='object', length=101, calendar='gregorian', freq='D')""",
         ),
     ],
 )
 def test_cftimeindex_repr_formatting(periods, expected):
     """Test that cftimeindex.__repr__ is formatted similar to pd.Index.__repr__."""
-    index = xr.cftime_range(start="2000", periods=periods)
+    index = xr.cftime_range(start="2000", periods=periods, freq="D")
     expected = dedent(expected)
     assert expected == repr(index)
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 @pytest.mark.parametrize("display_width", [40, 80, 100])
 @pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
 def test_cftimeindex_repr_formatting_width(periods, display_width):
@@ -1003,7 +1013,7 @@ def test_cftimeindex_repr_formatting_width(periods, display_width):
                 assert s[:len_intro_str] == " " * len_intro_str
 
 
-@requires_cftime
+@requires_cftime_1_1_0
 @pytest.mark.parametrize("periods", [22, 50, 100])
 def test_cftimeindex_repr_101_shorter(periods):
     index_101 = xr.cftime_range(start="2000", periods=101)

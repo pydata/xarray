@@ -2,6 +2,7 @@ name: xarray-docs
 channels:
   # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
+  - nodefaults
 dependencies:
   - python=3.8
   - bottleneck
@@ -22,7 +23,7 @@ dependencies:
   - rasterio>=1.1
   - seaborn
   - setuptools
-  - sphinx=3.2
+  - sphinx=3.3
   - sphinx_rtd_theme>=0.4
   - sphinx-autosummary-accessors
   - zarr>=2.4
