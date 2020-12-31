@@ -1597,8 +1597,6 @@ class Variable(
         new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
-        # missing_values = np.prod(new_shape) > np.prod(self.shape)
-
         if fill_value is dtypes.NA:
             fill_value = dtypes.get_fill_value(self.dtype)
 

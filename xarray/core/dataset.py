@@ -3713,7 +3713,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for name, var in self.variables.items():
             if name != dim:
                 if dim in var.dims:
-                    # new_dims = dict(zip(new_dim_names, new_dim_sizes))
                     if isinstance(fill_value, Mapping):
                         fill_value_ = fill_value[name]
                     else:
@@ -3832,7 +3831,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            if sparse:
+            # FIXME: remove
+            import sparse as sparse_
+
+            if sparse or any(
+                isinstance(v.data, sparse_.COO) for v in self.variables.values()
+            ):
                 result = result._unstack_once(dim, fill_value, sparse)
             else:
                 result = result._unstack_once_fast(dim, fill_value, sparse)
