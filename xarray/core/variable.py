@@ -10,6 +10,7 @@ from typing import (
     Any,
     Dict,
     Hashable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -1487,7 +1488,7 @@ class Variable(
         )
         return expanded_var.transpose(*dims)
 
-    def _stack_once(self, dims, new_dim):
+    def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
             raise ValueError("invalid existing dimensions: %s" % dims)
 
@@ -1543,7 +1544,9 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once(self, dims, old_dim):
+    def _unstack_once(
+        self, dims: Mapping[Hashable, int], old_dim: Hashable
+    ) -> "Variable":
         new_dim_names = tuple(dims.keys())
         new_dim_sizes = tuple(dims.values())
 
@@ -1571,6 +1574,42 @@ class Variable(
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
+
+    def _unstack_once_fast(
+        self,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        fill_value=dtypes.NA,
+    ) -> "Variable":
+        """
+        Unstacks this variable given an index to unstack and the name of the
+        dimension to which the index refers.
+        """
+
+        reordered = self.transpose(..., dim)
+
+        new_dim_sizes = [lev.size for lev in index.levels]
+        new_dim_names = index.names
+        indexer = index.codes
+
+        # Potentially we could replace `len(other_dims)` with just `-1`
+        other_dims = [d for d in self.dims if d != dim]
+        new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
+        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+
+        # missing_values = np.prod(new_shape) > np.prod(self.shape)
+
+        if fill_value is dtypes.NA:
+            fill_value = dtypes.get_fill_value(self.dtype)
+
+        data = np.full(new_shape, fill_value)
+
+        # Indexer is a list of lists of locations. Each list is the locations
+        # on the new dimension. This is robust to the data being sparse; in that
+        # case the destinations will be NaN / zero.
+        data[(..., *indexer)] = reordered
+
+        return self._replace(dims=new_dims, data=data)
 
     def unstack(self, dimensions=None, **dimensions_kwargs):
         """

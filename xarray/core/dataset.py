@@ -3702,7 +3702,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
+    def _unstack_once_fast(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
+        # FIXME: pass sparse through
+        index = self.get_index(dim)
+        index = remove_unused_levels_categories(index)
+
+        variables: Dict[Hashable, Variable] = {}
+        indexes = {k: v for k, v in self.indexes.items() if k != dim}
+
+        for name, var in self.variables.items():
+            if name != dim:
+                if dim in var.dims:
+                    # new_dims = dict(zip(new_dim_names, new_dim_sizes))
+                    if isinstance(fill_value, Mapping):
+                        fill_value_ = fill_value[name]
+                    else:
+                        fill_value_ = fill_value
+
+                    variables[name] = var._unstack_once_fast(
+                        index=index, dim=dim, fill_value=fill_value_
+                    )
+                else:
+                    variables[name] = var
+
+        for name, lev in zip(index.names, index.levels):
+            variables[name] = IndexVariable(name, lev)
+            indexes[name] = lev
+
+        coord_names = set(self._coord_names) - {dim} | set(index.names)
+
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def _unstack_once(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3799,7 +3832,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim, fill_value, sparse)
+            if sparse:
+                result = result._unstack_once(dim, fill_value, sparse)
+            else:
+                result = result._unstack_once_fast(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
@@ -4895,6 +4931,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             for name, values in arrays:
                 self[name] = (dims, values)
             return
+
+        # NB: similar, more general logic, now exists in
+        # variable.unstack_once_fast; we could consider combining them at some
+        # point.
 
         shape = tuple(lev.size for lev in idx.levels)
         indexer = tuple(idx.codes)
