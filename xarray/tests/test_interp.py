@@ -816,7 +816,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 
                 assert_identical(actual, expected)
 
-                # all the combinations are usualy not necessary
+                # all the combinations are usually not necessary
                 break
             break
         break
