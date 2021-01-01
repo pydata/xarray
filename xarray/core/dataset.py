@@ -4,6 +4,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from distutils.version import LooseVersion
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -3846,6 +3847,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     for v in self.variables.values()
                 )
                 or sparse
+                # numpy full_like only added `shape` in 1.17
+                or LooseVersion(np.__version__) < LooseVersion("1.17")
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
