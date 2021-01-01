@@ -80,7 +80,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
+from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
     Default,
     Frozen,
@@ -3702,8 +3702,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once_fast(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
-        # FIXME: pass sparse through
+    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
 
@@ -3718,7 +3717,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     else:
                         fill_value_ = fill_value
 
-                    variables[name] = var._unstack_once_fast(
+                    variables[name] = var._unstack_once(
                         index=index, dim=dim, fill_value=fill_value_
                     )
                 else:
@@ -3734,7 +3733,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def _unstack_once(self, dim: Hashable, fill_value, sparse: bool) -> "Dataset":
+    def _unstack_full_reindex(
+        self, dim: Hashable, fill_value, sparse: bool
+    ) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3831,15 +3832,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            # FIXME: remove
-            import sparse as sparse_
 
-            if sparse or any(
-                isinstance(v.data, sparse_.COO) for v in self.variables.values()
+            if (
+                # Dask arrays don't support assignment by index, which the fast unstack
+                # function requires.
+                # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
+                any(is_duck_dask_array(v.data) for v in self.variables.values())
+                # Sparse doesn't currently support (though we could special-case
+                # it)
+                # https://github.com/pydata/sparse/issues/422
+                or any(
+                    isinstance(v.data, sparse_array_type)
+                    for v in self.variables.values()
+                )
+                or sparse
             ):
-                result = result._unstack_once(dim, fill_value, sparse)
+                result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
-                result = result._unstack_once_fast(dim, fill_value, sparse)
+                result = result._unstack_once(dim, fill_value)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
@@ -4937,7 +4947,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return
 
         # NB: similar, more general logic, now exists in
-        # variable.unstack_once_fast; we could consider combining them at some
+        # variable.unstack_once; we could consider combining them at some
         # point.
 
         shape = tuple(lev.size for lev in idx.levels)
