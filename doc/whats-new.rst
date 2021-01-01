@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -27,6 +27,10 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 100x faster in our benchmark.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Bug fixes
