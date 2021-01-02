@@ -152,8 +152,13 @@ We'll now kick off a two-step process:
 .. code-block:: sh
 
    # Create and activate the build environment
-   # This is for Linux and MacOS. On Windows, use py37-windows.yml instead.
-   conda env create -f ci/requirements/py37.yml
+   conda create -c conda-forge -n xarray-tests python=3.8
+   
+   # This is for Linux and MacOS
+   conda env update -f ci/requirements/environment.yml
+
+   # On windows, use environment-windows.yml instead
+   conda env update -f ci/requirements/environment-windows.yml
 
    conda activate xarray-tests
 
