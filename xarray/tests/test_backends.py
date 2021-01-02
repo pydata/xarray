@@ -3575,6 +3575,19 @@ class TestCfGrib:
             assert list(ds.data_vars) == ["t"]
             assert ds["t"].min() == 231.0
 
+    def test_read_outer(self):
+        expected = {
+            "number": 2,
+            "time": 3,
+            "isobaricInhPa": 2,
+            "latitude": 2,
+            "longitude": 3,
+        }
+        with open_example_dataset("example.grib", engine="cfgrib") as ds:
+            res = ds.isel(latitude=[0, 2], longitude=[0, 1, 2])
+            assert res.dims == expected
+            assert res["t"].min() == 231.0
+
 
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings("ignore:IOAPI_ISPH is assumed to be 6370000")
