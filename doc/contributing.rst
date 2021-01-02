@@ -368,22 +368,7 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 - `mypy <http://mypy-lang.org/>`_ for static type checking on `type hints
   <https://docs.python.org/3/library/typing.html>`_
 
-``pip``::
-
-   pip install black flake8 isort mypy blackdoc
-
-and then run from the root of the xarray repository::
-
-   isort .
-   black -t py36 .
-   blackdoc -t py36 .
-   flake8
-   mypy .
-
-to auto-format your code. Additionally, many editors have plugins that will
-apply ``black`` as you edit files.
-
-Optionally, you may wish to setup `pre-commit hooks <https://pre-commit.com/>`_
+We highly recommend that you setup `pre-commit hooks <https://pre-commit.com/>`_
 to automatically run all the above tools every time you make a git commit. This
 can be done by installing ``pre-commit``::
 
@@ -862,8 +847,7 @@ PR checklist
 
 - **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://xarray.pydata.org/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
-    - Run ``black .`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
-    - Run ``flake8`` in the root directory. If this fails, it will log an error message.
+    - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 
 - **Push your code and** `create a PR on GitHub <https://help.github.com/en/articles/creating-a-pull-request>`_.
 - **Use a helpful title for your pull request** by summarizing the main contributions rather than using the latest commit message. If the PR addresses an `issue <https://github.com/pydata/xarray/issues>`_, please `reference it <https://help.github.com/en/articles/autolinked-references-and-urls>`_.
