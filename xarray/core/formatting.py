@@ -371,8 +371,7 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
         max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
-        size = len(mapping)
-        if size > max_rows:
+        if len(mapping) > max_rows:
             first_rows = max_rows // 2 + max_rows % 2
             last_rows = max_rows // 2
             items = [*mapping.items()]
@@ -384,7 +383,6 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     else:
         summary += [EMPTY_REPR]
     return "\n".join(summary)
-
 
 
 data_vars_repr = functools.partial(
