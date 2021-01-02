@@ -1,6 +1,7 @@
 import warnings
 
 DISPLAY_WIDTH = "display_width"
+DISPLAY_MAX_ROWS = "display_max_rows"
 ARITHMETIC_JOIN = "arithmetic_join"
 ENABLE_CFTIMEINDEX = "enable_cftimeindex"
 FILE_CACHE_MAXSIZE = "file_cache_maxsize"
@@ -13,6 +14,7 @@ DISPLAY_STYLE = "display_style"
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
+    DISPLAY_MAX_ROWS: 24,
     ARITHMETIC_JOIN: "inner",
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
