@@ -35,3 +35,10 @@ try:
     cupy_array_type = (cupy.ndarray,)
 except ImportError:  # pragma: no cover
     cupy_array_type = ()
+
+try:
+    import pint
+
+    pint_array_type = (pint.Quantity,)
+except ImportError:  # pragma: no cover
+    pint_array_type = ()
