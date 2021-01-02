@@ -435,40 +435,6 @@ def FrozenDict(*args, **kwargs) -> Frozen:
     return Frozen(dict(*args, **kwargs))
 
 
-class SortedKeysDict(MutableMapping[K, V]):
-    """An wrapper for dictionary-like objects that always iterates over its
-    items in sorted order by key but is otherwise equivalent to the underlying
-    mapping.
-    """
-
-    __slots__ = ("mapping",)
-
-    def __init__(self, mapping: MutableMapping[K, V] = None):
-        self.mapping = {} if mapping is None else mapping
-
-    def __getitem__(self, key: K) -> V:
-        return self.mapping[key]
-
-    def __setitem__(self, key: K, value: V) -> None:
-        self.mapping[key] = value
-
-    def __delitem__(self, key: K) -> None:
-        del self.mapping[key]
-
-    def __iter__(self) -> Iterator[K]:
-        # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore
-
-    def __len__(self) -> int:
-        return len(self.mapping)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self.mapping
-
-    def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
-
-
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 

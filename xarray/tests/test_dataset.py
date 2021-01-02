@@ -563,7 +563,7 @@ class TestDataset:
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
-        assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
+        assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping.mapping) is dict
 
         assert list(ds) == list(ds.data_vars)

@@ -84,7 +84,6 @@ from .pycompat import is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
-    SortedKeysDict,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
@@ -749,7 +748,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
         properties.
         """
-        return Frozen(SortedKeysDict(self._dims))
+        return Frozen(self._dims)
 
     @property
     def sizes(self) -> Mapping[Hashable, int]:
@@ -1864,7 +1863,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "This can be fixed by calling unify_chunks()."
                         )
                     chunks[dim] = c
-        return Frozen(SortedKeysDict(chunks))
+        return Frozen(chunks)
 
     def chunk(
         self,

@@ -172,12 +172,6 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
-
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
