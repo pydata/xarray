@@ -3,9 +3,8 @@ import pickle
 import pytest
 
 import xarray as xr
-from . import assert_identical
 
-from . import raises_regex
+from . import assert_identical, raises_regex
 
 
 @xr.register_dataset_accessor("example_accessor")
