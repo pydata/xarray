@@ -1,13 +1,20 @@
+import os
+import pathlib
+
 import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
-from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
-from .plugins import BackendEntrypoint
+from .common import (
+    AbstractWritableDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    _encode_variable_name,
+)
+from .store import open_backend_dataset_store
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -284,6 +291,10 @@ class ZarrStore(AbstractWritableDataStore):
     ):
         import zarr
 
+        # zarr doesn't support pathlib.Path objects yet. zarr-python#601
+        if isinstance(store, pathlib.Path):
+            store = os.fspath(store)
+
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -312,6 +323,7 @@ class ZarrStore(AbstractWritableDataStore):
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
@@ -679,13 +691,8 @@ def open_backend_dataset_zarr(
     )
 
     with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
+        ds = open_backend_dataset_store(
+            store,
             mask_and_scale=mask_and_scale,
             decode_times=decode_times,
             concat_characters=concat_characters,
@@ -694,12 +701,6 @@ def open_backend_dataset_zarr(
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
-
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
-
     return ds
 
 

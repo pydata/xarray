@@ -2,9 +2,10 @@ import numpy as np
 
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, is_dict_like
+from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, robust_getitem
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint, robust_getitem
+from .store import open_backend_dataset_store
 
 
 class PydapArrayWrapper(BackendArray):
@@ -92,3 +93,43 @@ class PydapDataStore(AbstractDataStore):
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
+
+
+def guess_can_open_pydap(store_spec):
+    return isinstance(store_spec, str) and is_remote_uri(store_spec)
+
+
+def open_backend_dataset_pydap(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    session=None,
+):
+
+    store = PydapDataStore.open(
+        filename_or_obj,
+        session=session,
+    )
+
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+        return ds
+
+
+pydap_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_pydap, guess_can_open=guess_can_open_pydap
+)

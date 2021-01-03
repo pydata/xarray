@@ -1,5 +1,4 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -27,7 +26,7 @@ from ..core.combine import (
 )
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri, read_magic_number
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 
@@ -120,17 +119,7 @@ def _get_default_engine_netcdf():
 
 
 def _get_engine_from_magic_number(filename_or_obj):
-    # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:8]
-    else:
-        if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "file-like object read/write pointer not at zero "
-                "please close and reopen, or use a context manager"
-            )
-        magic_number = filename_or_obj.read(8)
-        filename_or_obj.seek(0)
+    magic_number = read_magic_number(filename_or_obj)
 
     if magic_number.startswith(b"CDF"):
         engine = "scipy"
@@ -138,13 +127,14 @@ def _get_engine_from_magic_number(filename_or_obj):
         engine = "h5netcdf"
     else:
         raise ValueError(
+            "cannot guess the engine, "
             f"{magic_number} is not the signature of any supported file format "
             "did you mean to pass a string for a path instead?"
         )
     return engine
 
 
-def _get_default_engine(path, allow_remote=False):
+def _get_default_engine(path: str, allow_remote: bool = False):
     if allow_remote and is_remote_uri(path):
         engine = _get_default_engine_remote_uri()
     elif is_grib_path(path):
@@ -157,8 +147,10 @@ def _get_default_engine(path, allow_remote=False):
 
 
 def _autodetect_engine(filename_or_obj):
-    if isinstance(filename_or_obj, str):
-        engine = _get_default_engine(filename_or_obj, allow_remote=True)
+    if isinstance(filename_or_obj, AbstractDataStore):
+        engine = "store"
+    elif isinstance(filename_or_obj, (str, Path)):
+        engine = _get_default_engine(str(filename_or_obj), allow_remote=True)
     else:
         engine = _get_engine_from_magic_number(filename_or_obj)
     return engine
@@ -318,7 +310,6 @@ def open_dataset(
     decode_cf=True,
     mask_and_scale=None,
     decode_times=True,
-    autoclose=None,
     concat_characters=True,
     decode_coords=True,
     engine=None,
@@ -358,10 +349,6 @@ def open_dataset(
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -436,22 +423,10 @@ def open_dataset(
     open_mfdataset
     """
     if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-        kwargs = locals().copy()
-        from . import apiv2, plugins
+        kwargs = {k: v for k, v in locals().items() if v is not None}
+        from . import apiv2
 
-        if engine in plugins.list_engines():
-            return apiv2.open_dataset(**kwargs)
-
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
+        return apiv2.open_dataset(**kwargs)
 
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
@@ -590,7 +565,6 @@ def open_dataarray(
     decode_cf=True,
     mask_and_scale=None,
     decode_times=True,
-    autoclose=None,
     concat_characters=True,
     decode_coords=True,
     engine=None,
@@ -706,7 +680,6 @@ def open_dataarray(
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
-        autoclose=autoclose,
         concat_characters=concat_characters,
         decode_coords=decode_coords,
         engine=engine,
@@ -764,7 +737,6 @@ def open_mfdataset(
     data_vars="all",
     coords="different",
     combine="by_coords",
-    autoclose=None,
     parallel=False,
     join="outer",
     attrs_file=None,
@@ -931,9 +903,7 @@ def open_mfdataset(
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
-    open_kwargs = dict(
-        engine=engine, chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
-    )
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock, **kwargs)
 
     if parallel:
         import dask

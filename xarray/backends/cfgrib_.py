@@ -1,13 +1,13 @@
+import os
+
 import numpy as np
 
-from .. import conventions
 from ..core import indexing
-from ..core.dataset import Dataset
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint
 from .locks import SerializableLock, ensure_lock
-from .plugins import BackendEntrypoint
+from .store import open_backend_dataset_store
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -24,7 +24,7 @@ class CfGribArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
         )
 
     def _getitem(self, key):
@@ -74,6 +74,14 @@ class CfGribDataStore(AbstractDataStore):
         return encoding
 
 
+def guess_can_open_cfgrib(store_spec):
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+    return ext in {".grib", ".grib2", ".grb", ".grb2"}
+
+
 def open_backend_dataset_cfgrib(
     filename_or_obj,
     *,
@@ -105,13 +113,8 @@ def open_backend_dataset_cfgrib(
     )
 
     with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
+        ds = open_backend_dataset_store(
+            store,
             mask_and_scale=mask_and_scale,
             decode_times=decode_times,
             concat_characters=concat_characters,
@@ -120,13 +123,9 @@ def open_backend_dataset_cfgrib(
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
-
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
-
     return ds
 
 
-cfgrib_backend = BackendEntrypoint(open_dataset=open_backend_dataset_cfgrib)
+cfgrib_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_cfgrib, guess_can_open=guess_can_open_cfgrib
+)

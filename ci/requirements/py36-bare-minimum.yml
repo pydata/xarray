@@ -9,6 +9,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
+  - pytest-xdist
   - numpy=1.15
   - pandas=0.25
   - setuptools=38.4

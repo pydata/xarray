@@ -27,6 +27,8 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_
 
 
 New Features
@@ -50,6 +52,8 @@ Bug fixes
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_
+- Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
+  By `Alessandro Amici <https://github.com/alexamici>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -57,10 +61,20 @@ Documentation
   By `Justus Magin <https://github.com/keewis>`_.
 - start a list of external I/O integrating with ``xarray`` (:issue:`683`, :pull:`4566`).
   By `Justus Magin <https://github.com/keewis>`_.
+- add concat examples and improve combining documentation (:issue:`4620`, :pull:`4645`).
+  By `Ray Bell <https://github.com/raybellwaves>`_ and
+  `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Speed up of the continuous integration tests on azure.
 
+  - Switched to mamba and use matplotlib-base for a faster installation of all dependencies (:pull:`4672`).
+  - Use ``pytest.mark.skip`` instead of ``pytest.mark.xfail`` for some tests that can currently not
+    succeed (:pull:`4685`).
+  - Run the tests in parallel using pytest-xdist (:pull:`4694`).
+
+  By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
@@ -115,7 +129,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix bug where reference times without padded years (e.g. ``since 1-1-1``) would lose their units when
-  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  being passed by ``encode_cf_datetime`` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
   about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
   it is assumed that the first digit is the years, they are padded appropriately (to e.g. ``since 0001-1-1``)
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
@@ -319,8 +333,10 @@ Internal Changes
 
   All are up from 6 months (:issue:`4295`)
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
-  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
+- Use :py:func:`dask.array.apply_gufunc <dask.array.gufunc.apply_gufunc>` instead of
+  :py:func:`dask.array.blockwise` in :py:func:`xarray.apply_ufunc` when using
+  ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Align ``mypy`` versions to ``0.782`` across ``requirements`` and
   ``.pre-commit-config.yml`` files. (:pull:`4390`)
   By `Maximilian Roos <https://github.com/max-sixty>`_

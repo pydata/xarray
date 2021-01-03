@@ -1148,24 +1148,24 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
-    ddof: int, optional
+    ddof : int, optional
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
     Returns
     -------
-    covariance: DataArray
+    covariance : DataArray
 
     See also
     --------
-    pandas.Series.cov: corresponding pandas function
-    xr.corr: respective function to calculate correlation
+    pandas.Series.cov : corresponding pandas function
+    xarray.corr: respective function to calculate correlation
 
     Examples
     --------
@@ -1229,11 +1229,11 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
-    dim: str, optional
+    dim : str, optional
         The dimension along which the correlation will be computed
 
     Returns
@@ -1242,8 +1242,8 @@ def corr(da_a, da_b, dim=None):
 
     See also
     --------
-    pandas.Series.corr: corresponding pandas function
-    xr.cov: underlying covariance function
+    pandas.Series.corr : corresponding pandas function
+    xarray.cov : underlying covariance function
 
     Examples
     --------
