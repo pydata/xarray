@@ -3849,6 +3849,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 or sparse
                 # numpy full_like only added `shape` in 1.17
                 or LooseVersion(np.__version__) < LooseVersion("1.17")
+                # Until https://github.com/pydata/xarray/pull/4751 is resolved,
+                # we check explicitly whether it's a numpy array. Once that is
+                # resolved, explicitly exclude pint arrays.
+                # # pint doesn't implement `np.full_like` in a way that's
+                # # currently compatible.
+                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
+                # # or any(
+                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
+                # # )
+                or any(
+                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
+                )
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
