@@ -885,7 +885,7 @@ class TestDataset:
     def test_equals_and_identical(self):
         data = create_test_data(seed=42)
         assert data.equals(data)
-        assert_identical(data, data)
+        assert data.identical(data)
 
         data2 = create_test_data(seed=42)
         data2.attrs["foobar"] = "baz"
@@ -897,7 +897,7 @@ class TestDataset:
 
         data = create_test_data(seed=42).rename({"var1": None})
         assert data.equals(data)
-        assert_identical(data, data)
+        assert data.identical(data)
 
         data2 = data.reset_coords()
         assert not data2.equals(data)
@@ -2127,7 +2127,8 @@ class TestDataset:
     def test_align_non_unique(self):
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
         x1, x2 = align(x, x)
-        assert_identical(x1, x) and x2.identical(x)
+        assert_identical(x1, x)
+        assert_identical(x2, x)
 
         y = Dataset({"bar": ("x", [6, 7]), "x": [0, 1]})
         with raises_regex(ValueError, "cannot reindex or align"):

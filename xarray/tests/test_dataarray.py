@@ -430,7 +430,7 @@ class TestDataArray:
         expected = orig
         actual = orig.copy()
         assert expected.equals(actual)
-        assert_identical(expected, actual)
+        assert expected.identical(actual)
 
         actual = expected.rename("baz")
         assert expected.equals(actual)
@@ -458,7 +458,7 @@ class TestDataArray:
         actual[0] = np.nan
         expected = actual.copy()
         assert expected.equals(actual)
-        assert_identical(expected, actual)
+        assert expected.identical(actual)
 
         actual[:] = np.nan
         assert not expected.equals(actual)
