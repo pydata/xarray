@@ -35,6 +35,7 @@ def _positive_integer(value):
 
 _VALIDATORS = {
     DISPLAY_WIDTH: _positive_integer,
+    DISPLAY_MAX_ROWS: _positive_integer,
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
