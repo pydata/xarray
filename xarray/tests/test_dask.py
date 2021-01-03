@@ -703,7 +703,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert a.values.tolist() == [1, 2]
         assert not a._in_memory
 
-    def test_from_daskva_riable(self):
+    def test_from_dask_variable(self):
         # Test array creation from Variable with dask backend.
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
