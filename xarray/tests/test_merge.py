@@ -4,7 +4,7 @@ import pytest
 import xarray as xr
 from xarray.core import dtypes, merge
 from xarray.core.merge import MergeError
-from xarray.testing import assert_identical
+from xarray.testing import assert_equal, assert_identical
 
 from . import raises_regex
 from .test_dataset import create_test_data
@@ -183,7 +183,7 @@ class TestMergeFunction:
         del data2["var3"]
 
         actual = xr.merge([data1, data2], compat="no_conflicts")
-        assert data.equals(actual)
+        assert_equal(data, actual)
 
     def test_merge_no_conflicts_preserve_attrs(self):
         data = xr.Dataset({"x": ([], 0, {"foo": "bar"})})
