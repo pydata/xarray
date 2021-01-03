@@ -30,7 +30,7 @@ dask = pytest.importorskip("dask")
 def assert_identical(a, b):
     if hasattr(a, "identical"):
         msg = f"not identical:\n{a!r}\n{b!r}"
-        assert a.identical(b), msg
+        assert_identical(a, b), msg
     else:
         assert_array_equal(a, b)
 
@@ -1306,7 +1306,7 @@ def test_dot(use_dask):
     # for only a single array is passed without dims argument, just return
     # as is
     actual = xr.dot(da_a)
-    assert da_a.identical(actual)
+    assert_identical(da_a, actual)
 
     # test for variable
     actual = xr.dot(da_a.variable, da_b.variable)

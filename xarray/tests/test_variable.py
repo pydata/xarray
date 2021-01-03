@@ -406,7 +406,7 @@ class VariableSubclassobjects:
         for v, _ in self.example_1d_objects():
             v2 = v.copy()
             assert v.equals(v2)
-            assert v.identical(v2)
+            assert_identical(v, v2)
             assert v.no_conflicts(v2)
             assert v[0].equals(v2[0])
             assert v[0].identical(v2[0])
@@ -972,7 +972,7 @@ class TestVariable(VariableSubclassobjects):
         v1 = Variable(("dim1", "dim2"), data=d, attrs={"att1": 3, "att2": [1, 2, 3]})
         v2 = Variable(("dim1", "dim2"), data=d, attrs={"att1": 3, "att2": [1, 2, 3]})
         assert v1.equals(v2)
-        assert v1.identical(v2)
+        assert_identical(v1, v2)
 
         v3 = Variable(("dim1", "dim3"), data=d)
         assert not v1.equals(v3)
@@ -1392,7 +1392,7 @@ class TestVariable(VariableSubclassobjects):
         ]:
             variable = Variable([], value)
             actual = variable.transpose()
-            assert actual.identical(variable)
+            assert_identical(actual, variable)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1445,7 +1445,7 @@ class TestVariable(VariableSubclassobjects):
         for i in range(3):
             exp_values[i] = ("a", 1)
         expected = Variable(["x"], exp_values)
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
     def test_stack(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]], {"foo": "bar"})
@@ -2075,12 +2075,12 @@ class TestIndexVariable(VariableSubclassobjects):
         coords = [IndexVariable("t", periods[:5]), IndexVariable("t", periods[5:])]
         expected = IndexVariable("t", periods)
         actual = IndexVariable.concat(coords, dim="t")
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
         positions = [list(range(5)), list(range(5, 10))]
         actual = IndexVariable.concat(coords, dim="t", positions=positions)
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
     def test_concat_multiindex(self):
@@ -2088,7 +2088,7 @@ class TestIndexVariable(VariableSubclassobjects):
         coords = [IndexVariable("x", idx[:2]), IndexVariable("x", idx[2:])]
         expected = IndexVariable("x", idx)
         actual = IndexVariable.concat(coords, dim="x")
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
 
     def test_coordinate_alias(self):

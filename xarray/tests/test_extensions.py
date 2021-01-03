@@ -3,6 +3,7 @@ import pickle
 import pytest
 
 import xarray as xr
+from xarray.testing import assert_identical
 
 from . import raises_regex
 
@@ -61,20 +62,20 @@ class TestAccessor:
     def test_pickle_dataset(self):
         ds = xr.Dataset()
         ds_restored = pickle.loads(pickle.dumps(ds))
-        assert ds.identical(ds_restored)
+        assert_identical(ds, ds_restored)
 
         # state save on the accessor is restored
         assert ds.example_accessor is ds.example_accessor
         ds.example_accessor.value = "foo"
         ds_restored = pickle.loads(pickle.dumps(ds))
-        assert ds.identical(ds_restored)
+        assert_identical(ds, ds_restored)
         assert ds_restored.example_accessor.value == "foo"
 
     def test_pickle_dataarray(self):
         array = xr.Dataset()
         assert array.example_accessor is array.example_accessor
         array_restored = pickle.loads(pickle.dumps(array))
-        assert array.identical(array_restored)
+        assert_identical(array, array_restored)
 
     def test_broken_accessor(self):
         # regression test for GH933
