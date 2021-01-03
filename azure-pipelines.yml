@@ -75,7 +75,7 @@ jobs:
   - task: UsePythonVersion@0
   - bash: python -m pip install black
     displayName: Install black
-  - bash: black --check .
+  - bash: black --diff --check .
     displayName: black formatting check
 
 - job: Doctests
