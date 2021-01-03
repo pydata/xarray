@@ -2783,17 +2783,19 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return from_iris(cube)
 
-    def _all_compat(self, other: "DataArray", compat_str: str) -> bool:
+    def _all_compat(
+        self, other: "DataArray", compat_str: str, check_dtype: bool = False
+    ) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
 
         def compat(x, y):
-            return getattr(x.variable, compat_str)(y.variable)
+            return getattr(x.variable, compat_str)(y.variable, check_dtype=check_dtype)
 
         return utils.dict_equiv(self.coords, other.coords, compat=compat) and compat(
             self, other
         )
 
-    def broadcast_equals(self, other: "DataArray") -> bool:
+    def broadcast_equals(self, other: "DataArray", check_dtype: bool = False) -> bool:
         """Two DataArrays are broadcast equal if they are equal after
         broadcasting them against each other such that they have the same
         dimensions.
@@ -2804,11 +2806,11 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.identical
         """
         try:
-            return self._all_compat(other, "broadcast_equals")
+            return self._all_compat(other, "broadcast_equals", check_dtype=check_dtype)
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other: "DataArray") -> bool:
+    def equals(self, other: "DataArray", check_dtype: bool = False) -> bool:
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
 
@@ -2824,11 +2826,11 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.identical
         """
         try:
-            return self._all_compat(other, "equals")
+            return self._all_compat(other, "equals", check_dtype=check_dtype)
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other: "DataArray") -> bool:
+    def identical(self, other: "DataArray", check_dtype: bool = False) -> bool:
         """Like equals, but also checks the array name and attributes, and
         attributes on all coordinates.
 
@@ -2838,7 +2840,9 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.equals
         """
         try:
-            return self.name == other.name and self._all_compat(other, "identical")
+            return self.name == other.name and self._all_compat(
+                other, "identical", check_dtype=check_dtype
+            )
         except (TypeError, AttributeError):
             return False
 

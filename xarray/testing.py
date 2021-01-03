@@ -38,7 +38,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
         return duck_array_ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, check_dtype=True):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -62,14 +62,18 @@ def assert_equal(a, b):
     __tracebackhide__ = True
     assert type(a) == type(b)
     if isinstance(a, (Variable, DataArray)):
-        assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
+        assert a.equals(b, check_dtype=check_dtype), formatting.diff_array_repr(
+            a, b, "equals", check_dtype=check_dtype
+        )
     elif isinstance(a, Dataset):
-        assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
+        assert a.equals(b, check_dtype=check_dtype), formatting.diff_dataset_repr(
+            a, b, "equals", check_dtype=check_dtype
+        )
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, check_dtype=True):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -89,12 +93,18 @@ def assert_identical(a, b):
     __tracebackhide__ = True
     assert type(a) == type(b)
     if isinstance(a, Variable):
-        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
+        assert a.identical(b, check_dtype=check_dtype), formatting.diff_array_repr(
+            a, b, "identical", check_dtype=check_dtype
+        )
     elif isinstance(a, DataArray):
         assert a.name == b.name
-        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-    elif isinstance(a, (Dataset, Variable)):
-        assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
+        assert a.identical(b, check_dtype=check_dtype), formatting.diff_array_repr(
+            a, b, "identical", check_dtype=check_dtype
+        )
+    elif isinstance(a, Dataset):
+        assert a.identical(b, check_dtype=check_dtype), formatting.diff_dataset_repr(
+            a, b, "identical", check_dtype=check_dtype
+        )
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 

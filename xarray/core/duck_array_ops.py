@@ -201,10 +201,11 @@ def as_shared_dtype(scalars_or_arrays):
     return [x.astype(out_type, copy=False) for x in arrays]
 
 
-def lazy_array_equiv(arr1, arr2):
+def lazy_array_equiv(arr1, arr2, check_dtype=False):
     """Like array_equal, but doesn't actually compare values.
     Returns True when arr1, arr2 identical or their dask tokens are equal.
     Returns False when shapes are not equal.
+    Returns False if dtype does not match and check_dtype is True.
     Returns None when equality cannot determined: one or both of arr1, arr2 are numpy arrays;
     or their dask tokens are not equal
     """
@@ -212,6 +213,8 @@ def lazy_array_equiv(arr1, arr2):
         return True
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
+    if check_dtype and arr1.dtype != arr2.dtype:
+        return False
     if arr1.shape != arr2.shape:
         return False
     if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
@@ -237,11 +240,11 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
         return lazy_equiv
 
 
-def array_equiv(arr1, arr2):
+def array_equiv(arr1, arr2, check_dtype=False):
     """Like np.array_equal, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
-    lazy_equiv = lazy_array_equiv(arr1, arr2)
+    lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype)
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
@@ -251,13 +254,13 @@ def array_equiv(arr1, arr2):
         return lazy_equiv
 
 
-def array_notnull_equiv(arr1, arr2):
+def array_notnull_equiv(arr1, arr2, check_dtype=False):
     """Like np.array_equal, but also allows values to be NaN in either or both
     arrays
     """
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
-    lazy_equiv = lazy_array_equiv(arr1, arr2)
+    lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype=check_dtype)
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")

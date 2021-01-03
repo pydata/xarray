@@ -1762,7 +1762,7 @@ class Variable(
 
         return cls(dims, data, attrs, encoding)
 
-    def equals(self, other, equiv=duck_array_ops.array_equiv):
+    def equals(self, other, equiv=duck_array_ops.array_equiv, check_dtype=False):
         """True if two Variables have the same dimensions and values;
         otherwise False.
 
@@ -1775,12 +1775,15 @@ class Variable(
         other = getattr(other, "variable", other)
         try:
             return self.dims == other.dims and (
-                self._data is other._data or equiv(self.data, other.data)
+                self._data is other._data
+                or equiv(self.data, other.data, check_dtype=check_dtype)
             )
         except (TypeError, AttributeError):
             return False
 
-    def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):
+    def broadcast_equals(
+        self, other, equiv=duck_array_ops.array_equiv, check_dtype=False
+    ):
         """True if two Variables have the values after being broadcast against
         each other; otherwise False.
 
@@ -1791,25 +1794,27 @@ class Variable(
             self, other = broadcast_variables(self, other)
         except (ValueError, AttributeError):
             return False
-        return self.equals(other, equiv=equiv)
+        return self.equals(other, equiv=equiv, check_dtype=check_dtype)
 
-    def identical(self, other, equiv=duck_array_ops.array_equiv):
+    def identical(self, other, equiv=duck_array_ops.array_equiv, check_dtype=False):
         """Like equals, but also checks attributes."""
         try:
             return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
-                other, equiv=equiv
+                other, equiv=equiv, check_dtype=check_dtype
             )
         except (TypeError, AttributeError):
             return False
 
-    def no_conflicts(self, other, equiv=duck_array_ops.array_notnull_equiv):
+    def no_conflicts(
+        self, other, equiv=duck_array_ops.array_notnull_equiv, check_dtype=False
+    ):
         """True if the intersection of two Variable's non-null data is
         equal; otherwise false.
 
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        return self.broadcast_equals(other, equiv=equiv)
+        return self.broadcast_equals(other, equiv=equiv, check_dtype=check_dtype)
 
     def quantile(
         self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
@@ -2568,19 +2573,25 @@ class IndexVariable(Variable):
                 )
         return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
 
-    def equals(self, other, equiv=None):
+    def equals(self, other, equiv=None, check_dtype=False):
         # if equiv is specified, super up
         if equiv is not None:
-            return super().equals(other, equiv)
+            return super().equals(other, equiv, check_dtype=check_dtype)
 
         # otherwise use the native index equals, rather than looking at _data
         other = getattr(other, "variable", other)
         try:
-            return self.dims == other.dims and self._data_equals(other)
+            return self.dims == other.dims and self._data_equals(
+                other, check_dtype=check_dtype
+            )
         except (TypeError, AttributeError):
             return False
 
-    def _data_equals(self, other):
+    def _data_equals(self, other, check_dtype=False):
+
+        if check_dtype and self.dtype != other.dtype:
+            return False
+
         return self.to_index().equals(other.to_index())
 
     def to_index_variable(self):
