@@ -81,7 +81,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, pint_array_type, sparse_array_type
+from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
     Default,
     Frozen,
@@ -3849,12 +3849,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 or sparse
                 # numpy full_like only added `shape` in 1.17
                 or LooseVersion(np.__version__) < LooseVersion("1.17")
-                # pint doesn't implement `np.full_like` in a way that's
-                # currently compatible.
-                # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                or any(
-                    isinstance(v.data, pint_array_type) for v in self.variables.values()
-                )
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
