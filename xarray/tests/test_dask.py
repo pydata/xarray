@@ -703,7 +703,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert a.values.tolist() == [1, 2]
         assert not a._in_memory
 
-    def test_from_dask_variable(self):
+    def test_from_daskva_riable(self):
         # Test array creation from Variable with dask backend.
         # This is used e.g. in broadcast()
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
@@ -737,7 +737,9 @@ class TestToDaskDataFrame:
 
         ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
 
-        expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
+        expected_pd = pd.DataFrame(
+            {"a": x.compute(), "b": y}, index=pd.Index(t, name="t")
+        )
 
         # test if 1-D index is correctly set up
         expected = dd.from_pandas(expected_pd, chunksize=4)
@@ -768,7 +770,7 @@ class TestToDaskDataFrame:
         exp_index = pd.MultiIndex.from_arrays(
             [[0, 0, 0, 1, 1, 1], ["a", "b", "c", "a", "b", "c"]], names=["x", "y"]
         )
-        expected = pd.DataFrame({"w": w.reshape(-1)}, index=exp_index)
+        expected = pd.DataFrame({"w": w.compute().reshape(-1)}, index=exp_index)
         # so for now, reset the index
         expected = expected.reset_index(drop=False)
         actual = ds.to_dask_dataframe(set_index=False)
@@ -796,7 +798,7 @@ class TestToDaskDataFrame:
 
         ds = Dataset({"a": ("t", x), "t": ("t", t)})
 
-        expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
+        expected_pd = pd.DataFrame({"a": x.compute()}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)
         actual = ds.to_dask_dataframe(set_index=True)
         assert isinstance(actual, dd.DataFrame)
