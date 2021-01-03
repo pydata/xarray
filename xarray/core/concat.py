@@ -125,8 +125,10 @@ def concat(
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
     join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
         (excluding dim) in objects
@@ -158,7 +160,53 @@ def concat(
     See also
     --------
     merge
-    auto_combine
+
+    Examples
+    --------
+    >>> da = xr.DataArray(
+    ...     np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+    ... )
+    >>> da
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) object 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
+    <xarray.DataArray (new_dim: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+    Dimensions without coordinates: new_dim
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
+    <xarray.DataArray (new_dim: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+      * new_dim  (new_dim) int64 -90 -100
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
@@ -347,7 +395,11 @@ def _parse_datasets(
         all_coord_names.update(ds.coords)
         data_vars.update(ds.data_vars)
 
-        for dim in set(ds.dims) - dims:
+        # preserves ordering of dimensions
+        for dim in ds.dims:
+            if dim in dims:
+                continue
+
             if dim not in dim_coords:
                 dim_coords[dim] = ds.coords[dim].variable
         dims = dims | set(ds.dims)
@@ -374,8 +426,8 @@ def _dataset_concat(
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
-    datasets = align(
-        *datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value
+    datasets = list(
+        align(*datasets, join=join, copy=False, exclude=[dim], fill_value=fill_value)
     )
 
     dim_coords, dims_sizes, coord_names, data_names = _parse_datasets(datasets)
@@ -457,6 +509,9 @@ def _dataset_concat(
             combined = concat_vars(vars, dim, positions)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
+        elif k in result_vars:
+            # preserves original variable order
+            result_vars[k] = result_vars.pop(k)
 
     result = Dataset(result_vars, attrs=result_attrs)
     absent_coord_names = coord_names - set(result.variables)

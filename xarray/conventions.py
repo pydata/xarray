@@ -8,7 +8,7 @@ from .coding import strings, times, variables
 from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
-from .core.pycompat import dask_array_type
+from .core.pycompat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -24,10 +24,11 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> x.dtype
     dtype('>i2')
 
-    >>> NativeEndianArray(x).dtype
+    >>> NativeEndiannessArray(x).dtype
     dtype('int16')
 
-    >>> NativeEndianArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> NativeEndiannessArray(x)[indexer].dtype
     dtype('int16')
     """
 
@@ -53,12 +54,13 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
 
     >>> x.dtype
-    dtype('>i2')
+    dtype('int8')
 
     >>> BoolTypeArray(x).dtype
     dtype('bool')
 
-    >>> BoolTypeArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> BoolTypeArray(x)[indexer].dtype
     dtype('bool')
     """
 
@@ -178,7 +180,7 @@ def ensure_dtype_not_object(var, name=None):
     if var.dtype.kind == "O":
         dims, data, attrs, encoding = _var_as_tuple(var)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             warnings.warn(
                 "variable {} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
@@ -351,7 +353,7 @@ def decode_cf_variable(
         del attributes["dtype"]
         data = BoolTypeArray(data)
 
-    if not isinstance(data, dask_array_type):
+    if not is_duck_dask_array(data):
         data = indexing.LazilyOuterIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding)

@@ -2,6 +2,7 @@
 """
 import contextlib
 import functools
+import io
 import itertools
 import os.path
 import re
@@ -34,14 +35,6 @@ import pandas as pd
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
-
-
-def _check_inplace(inplace: Optional[bool]) -> None:
-    if inplace is not None:
-        raise TypeError(
-            "The `inplace` argument has been removed from xarray. "
-            "You can achieve an identical effect with python's standard assignment."
-        )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -133,7 +126,7 @@ def multiindex_from_product_levels(
 
 
 def maybe_wrap_array(original, new_array):
-    """Wrap a transformed array with __array_wrap__ is it can be done safely.
+    """Wrap a transformed array with __array_wrap__ if it can be done safely.
 
     This lets us treat arbitrary functions that take and return ndarray objects
     like ufuncs, as long as they return an array with the same shape.
@@ -247,9 +240,15 @@ def is_list_like(value: Any) -> bool:
     return isinstance(value, list) or isinstance(value, tuple)
 
 
-def is_array_like(value: Any) -> bool:
+def is_duck_array(value: Any) -> bool:
+    if isinstance(value, np.ndarray):
+        return True
     return (
-        hasattr(value, "ndim") and hasattr(value, "shape") and hasattr(value, "dtype")
+        hasattr(value, "ndim")
+        and hasattr(value, "shape")
+        and hasattr(value, "dtype")
+        and hasattr(value, "__array_function__")
+        and hasattr(value, "__array_ufunc__")
     )
 
 
@@ -304,16 +303,14 @@ def is_valid_numpy_dtype(dtype: Any) -> bool:
 
 
 def to_0d_object_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object.
-    """
+    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
     result = np.empty((), dtype=object)
     result[()] = value
     return result
 
 
 def to_0d_array(value: Any) -> np.ndarray:
-    """Given a value, wrap it in a 0-D numpy.ndarray.
-    """
+    """Given a value, wrap it in a 0-D numpy.ndarray."""
     if np.isscalar(value) or (isinstance(value, np.ndarray) and value.ndim == 0):
         return np.array(value)
     else:
@@ -459,7 +456,8 @@ class SortedKeysDict(MutableMapping[K, V]):
         del self.mapping[key]
 
     def __iter__(self) -> Iterator[K]:
-        return iter(sorted(self.mapping))
+        # see #4571 for the reason of the type ignore
+        return iter(sorted(self.mapping))  # type: ignore
 
     def __len__(self) -> int:
         return len(self.mapping)
@@ -566,8 +564,7 @@ class NDArrayMixin(NdimSizeLenMixin):
 
 
 class ReprObject:
-    """Object that prints as the given value, for use with sentinel values.
-    """
+    """Object that prints as the given value, for use with sentinel values."""
 
     __slots__ = ("_value",)
 
@@ -607,6 +604,23 @@ def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^https?\://", path))
 
 
+def read_magic_number(filename_or_obj, count=8):
+    # check byte header to determine file type
+    if isinstance(filename_or_obj, bytes):
+        magic_number = filename_or_obj[:count]
+    elif isinstance(filename_or_obj, io.IOBase):
+        if filename_or_obj.tell() != 0:
+            raise ValueError(
+                "file-like object read/write pointer not at the start of the file, "
+                "please close and reopen, or use a context manager"
+            )
+        magic_number = filename_or_obj.read(count)
+        filename_or_obj.seek(0)
+    else:
+        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+    return magic_number
+
+
 def is_grib_path(path: str) -> bool:
     _, ext = os.path.splitext(path)
     return ext in [".grib", ".grb", ".grib2", ".grb2"]
@@ -628,8 +642,7 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
 
 
 def hashable(v: Any) -> bool:
-    """Determine whether `v` can be hashed.
-    """
+    """Determine whether `v` can be hashed."""
     try:
         hash(v)
     except TypeError:
@@ -665,8 +678,7 @@ def ensure_us_time_resolution(val):
 
 
 class HiddenKeyDict(MutableMapping[K, V]):
-    """Acts like a normal dictionary, but hides certain keys.
-    """
+    """Acts like a normal dictionary, but hides certain keys."""
 
     __slots__ = ("_data", "_hidden_keys")
 
@@ -728,7 +740,7 @@ def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
-    """ Get an new dimension name based on new_dim, that is not used in dims.
+    """Get an new dimension name based on new_dim, that is not used in dims.
     If the same name exists, we add an underscore(s) in the head.
 
     Example1:
@@ -750,7 +762,7 @@ def drop_dims_from_indexers(
     dims: Union[list, Mapping[Hashable, int]],
     missing_dims: str,
 ) -> Mapping[Hashable, Any]:
-    """ Depending on the setting of missing_dims, drop any dimensions from indexers that
+    """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
 
     Parameters
@@ -794,7 +806,7 @@ def drop_dims_from_indexers(
 
 
 class UncachedAccessor:
-    """ Acts like a property, but on both classes and class instances
+    """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
     inspect classes for which property returns itself and not the

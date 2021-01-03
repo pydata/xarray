@@ -2,6 +2,7 @@ name: xarray-docs
 channels:
   # Don't change to pkgs/main, as it causes random timeouts in readthedocs
   - conda-forge
+  - nodefaults
 dependencies:
   - python=3.8
   - bottleneck
@@ -13,22 +14,21 @@ dependencies:
   - ipython
   - iris>=2.3
   - jupyter_client
-  - matplotlib-base=3.3.0
+  - matplotlib-base
   - nbsphinx
   - netcdf4>=1.5
   - numba
   - numpy>=1.17
-  # FIXME https://github.com/pydata/xarray/issues/4287
-  # - pandas>=1.0
-  - pandas=1.0
+  - pandas>=1.0
   - rasterio>=1.1
   - seaborn
   - setuptools
-  - sphinx=3.2
+  - sphinx=3.3
   - sphinx_rtd_theme>=0.4
   - sphinx-autosummary-accessors
   - zarr>=2.4
   - pip
   - pip:
+      - scanpydoc
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..

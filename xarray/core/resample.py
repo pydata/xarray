@@ -253,8 +253,7 @@ ops.inject_binary_ops(DataArrayResample)
 
 
 class DatasetResample(DatasetGroupBy, Resample):
-    """DatasetGroupBy object specialized to resampling a specified dimension
-    """
+    """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
 
@@ -271,7 +270,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
-        resampling  and concatenate them together into a new Dataset.
+        resampling and concatenate them together into a new Dataset.
 
         `func` is called like `func(ds, *args, **kwargs)` for each dataset `ds`
         in this group.

@@ -1,9 +1,8 @@
 try:
     import dask
     import dask.array
+    from dask.array.utils import meta_from_array
     from dask.highlevelgraph import HighLevelGraph
-
-    from .dask_array_compat import meta_from_array
 
 except ImportError:
     pass
@@ -124,8 +123,7 @@ def make_meta(obj):
 def infer_template(
     func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
 ) -> T_DSorDA:
-    """Infer return object by running the function on meta objects.
-    """
+    """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
     try:
@@ -234,6 +232,7 @@ def map_blocks(
     ...     gb = da.groupby(groupby_type)
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
+    ...
     >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
     >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
     >>> np.random.seed(123)
@@ -257,14 +256,16 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> array.map_blocks(
-    ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array,
+    ...     calculate_anomaly,
+    ...     kwargs={"groupby_type": "time.year"},
+    ...     template=array,
     ... )  # doctest: +ELLIPSIS
     <xarray.DataArray (time: 24)>
     dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
       * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
-     """
+    """
 
     def _wrapper(
         func: Callable,

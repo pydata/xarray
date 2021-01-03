@@ -62,7 +62,13 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-        return getattr(obj, self.meth)(*self.args, **self.kwargs)
+
+        # cannot pass np.sum when using pytest-xdist
+        kwargs = self.kwargs.copy()
+        if "func" in self.kwargs:
+            kwargs["func"] = getattr(np, kwargs["func"])
+
+        return getattr(obj, self.meth)(*self.args, **kwargs)
 
     def __repr__(self):
         return f"obj.{self.meth}(*{self.args}, **{self.kwargs})"
@@ -94,7 +100,7 @@ def test_variable_property(prop):
         (do("any"), False),
         (do("astype", dtype=int), True),
         (do("clip", min=0, max=1), True),
-        (do("coarsen", windows={"x": 2}, func=np.sum), True),
+        (do("coarsen", windows={"x": 2}, func="sum"), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
@@ -191,7 +197,7 @@ def test_variable_property(prop):
             marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
-            do("reduce", func=np.sum, dim="x"),
+            do("reduce", func="sum", dim="x"),
             True,
             marks=xfail(reason="Coercion to dense"),
         ),
@@ -359,7 +365,7 @@ def test_dataarray_property(prop):
         (do("sel", x=[0, 1, 2]), True),
         (do("shift"), True),
         (do("sortby", "x", ascending=False), True),
-        (do("stack", z={"x", "y"}), True),
+        (do("stack", z=["x", "y"]), True),
         (do("transpose"), True),
         # TODO
         # set_index
@@ -450,7 +456,7 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
         (do("notnull"), True),
-        (do("pipe", np.sum, axis=1), True),
+        (do("pipe", func="sum", axis=1), True),
         (do("prod"), False),
         param(
             do("quantile", q=0.5),
@@ -463,7 +469,7 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
-            do("reduce", np.sum, dim="x"),
+            do("reduce", func="sum", dim="x"),
             False,
             marks=xfail(reason="Coercion to dense"),
         ),

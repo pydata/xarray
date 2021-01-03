@@ -20,11 +20,15 @@ jobs:
         conda_env: py37
       py38:
         conda_env: py38
+      py38-backend-api-v2:
+        conda_env: py38
+        environment_variables: XARRAY_BACKEND_API=v2
       py38-all-but-dask:
         conda_env: py38-all-but-dask
       py38-upstream-dev:
         conda_env: py38
         upstream_dev: true
+        allow_failure: true
       py38-flaky:
         conda_env: py38
         pytest_extra_flags: --run-flaky --run-network-tests
@@ -50,7 +54,7 @@ jobs:
       py37:
         conda_env: py37-windows
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - template: ci/azure/unit-tests.yml
 
@@ -73,6 +77,18 @@ jobs:
     displayName: Install black
   - bash: black --check .
     displayName: black formatting check
+
+- job: Doctests
+  variables:
+    conda_env: py38
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+    - template: ci/azure/install.yml
+    - bash: |
+        source activate xarray-tests
+        python -m pytest --doctest-modules xarray --ignore xarray/tests
+      displayName: Run doctests
 
 - job: TypeChecking
   variables:

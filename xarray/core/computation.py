@@ -29,7 +29,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_coordinates_without_align
 from .options import OPTIONS
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -40,6 +40,14 @@ if TYPE_CHECKING:
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
+
+
+def _first_of_type(args, kind):
+    """ Return either first object of type 'kind' or raise if not found. """
+    for arg in args:
+        if isinstance(arg, kind):
+            return arg
+    raise ValueError("This should be unreachable.")
 
 
 class _UFuncSignature:
@@ -120,7 +128,9 @@ class _UFuncSignature:
 
     def __repr__(self):
         return "{}({!r}, {!r})".format(
-            type(self).__name__, list(self.input_core_dims), list(self.output_core_dims)
+            type(self).__name__,
+            list(self.input_core_dims),
+            list(self.output_core_dims),
         )
 
     def __str__(self):
@@ -128,11 +138,13 @@ class _UFuncSignature:
         rhs = ",".join("({})".format(",".join(dims)) for dims in self.output_core_dims)
         return f"{lhs}->{rhs}"
 
-    def to_gufunc_string(self):
+    def to_gufunc_string(self, exclude_dims=frozenset()):
         """Create an equivalent signature string for a NumPy gufunc.
 
         Unlike __str__, handles dimensions that don't map to Python
         identifiers.
+
+        Also creates unique names for input_core_dims contained in exclude_dims.
         """
         input_core_dims = [
             [self.dims_map[dim] for dim in core_dims]
@@ -142,6 +154,25 @@ class _UFuncSignature:
             [self.dims_map[dim] for dim in core_dims]
             for core_dims in self.output_core_dims
         ]
+
+        # enumerate input_core_dims contained in exclude_dims to make them unique
+        if exclude_dims:
+
+            exclude_dims = [self.dims_map[dim] for dim in exclude_dims]
+
+            counter = Counter()
+
+            def _enumerate(dim):
+                if dim in exclude_dims:
+                    n = counter[dim]
+                    counter.update([dim])
+                    dim = f"{dim}_{n}"
+                return dim
+
+            input_core_dims = [
+                [_enumerate(dim) for dim in arg] for arg in input_core_dims
+            ]
+
         alt_signature = type(self)(input_core_dims, output_core_dims)
         return str(alt_signature)
 
@@ -229,8 +260,9 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs and hasattr(args[0], "name"):
-        name = args[0].name
+    if keep_attrs:
+        first_obj = _first_of_type(args, DataArray)
+        name = first_obj.name
     else:
         name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
@@ -246,6 +278,14 @@ def apply_dataarray_vfunc(
     else:
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
+
+    if keep_attrs:
+        if isinstance(out, tuple):
+            for da in out:
+                # This is adding attrs in place
+                da._copy_attrs_from(first_obj)
+        else:
+            out._copy_attrs_from(first_obj)
 
     return out
 
@@ -367,14 +407,15 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
-
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
             "dataset_fill_value argument."
         )
+
+    if keep_attrs:
+        first_obj = _first_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
@@ -394,9 +435,11 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs and isinstance(first_obj, Dataset):
+    if keep_attrs:
         if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+            for ds in out:
+                # This is adding attrs in place
+                ds._copy_attrs_from(first_obj)
         else:
             out._copy_attrs_from(first_obj)
     return out
@@ -545,10 +588,12 @@ def broadcast_compat_data(
     return data
 
 
-def _vectorize(func, signature, output_dtypes):
+def _vectorize(func, signature, output_dtypes, exclude_dims):
     if signature.all_core_dims:
         func = np.vectorize(
-            func, otypes=output_dtypes, signature=signature.to_gufunc_string()
+            func,
+            otypes=output_dtypes,
+            signature=signature.to_gufunc_string(exclude_dims),
         )
     else:
         func = np.vectorize(func, otypes=output_dtypes)
@@ -567,9 +612,10 @@ def apply_variable_ufunc(
     keep_attrs=False,
     dask_gufunc_kwargs=None,
 ):
-    """Apply a ndarray level function over Variable and/or ndarray objects.
-    """
+    """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
+
+    first_obj = _first_of_type(args, Variable)
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
@@ -586,7 +632,7 @@ def apply_variable_ufunc(
         for arg, core_dims in zip(args, signature.input_core_dims)
     ]
 
-    if any(isinstance(array, dask_array_type) for array in input_data):
+    if any(is_duck_dask_array(array) for array in input_data):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -600,6 +646,28 @@ def apply_variable_ufunc(
 
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
+            else:
+                dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
+
+            allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
+            if allow_rechunk is None:
+                for n, (data, core_dims) in enumerate(
+                    zip(input_data, signature.input_core_dims)
+                ):
+                    if is_duck_dask_array(data):
+                        # core dimensions cannot span multiple chunks
+                        for axis, dim in enumerate(core_dims, start=-len(core_dims)):
+                            if len(data.chunks[axis]) != 1:
+                                raise ValueError(
+                                    f"dimension {dim} on {n}th function argument to "
+                                    "apply_ufunc with dask='parallelized' consists of "
+                                    "multiple chunks, but is also a core dimension. To "
+                                    "fix, either rechunk into a single dask array chunk along "
+                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
+                                    "but beware that this may significantly increase memory usage."
+                                )
+                dask_gufunc_kwargs["allow_rechunk"] = True
 
             output_sizes = dask_gufunc_kwargs.pop("output_sizes", {})
             if output_sizes:
@@ -623,7 +691,7 @@ def apply_variable_ufunc(
 
                 res = da.apply_gufunc(
                     numpy_func,
-                    signature.to_gufunc_string(),
+                    signature.to_gufunc_string(exclude_dims),
                     *arrays,
                     vectorize=vectorize,
                     output_dtypes=output_dtypes,
@@ -649,7 +717,9 @@ def apply_variable_ufunc(
             )
     else:
         if vectorize:
-            func = _vectorize(func, signature, output_dtypes=output_dtypes)
+            func = _vectorize(
+                func, signature, output_dtypes=output_dtypes, exclude_dims=exclude_dims
+            )
 
     result_data = func(*input_data)
 
@@ -688,8 +758,8 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs and isinstance(args[0], Variable):
-            var.attrs.update(args[0].attrs)
+        if keep_attrs:
+            var.attrs.update(first_obj.attrs)
         output.append(var)
 
     if signature.num_outputs == 1:
@@ -700,7 +770,7 @@ def apply_variable_ufunc(
 
 def apply_array_ufunc(func, *args, dask="forbidden"):
     """Apply a ndarray level function over ndarray objects."""
-    if any(isinstance(arg, dask_array_type) for arg in args):
+    if any(is_duck_dask_array(arg) for arg in args):
         if dask == "forbidden":
             raise ValueError(
                 "apply_ufunc encountered a dask array on an "
@@ -861,6 +931,7 @@ def apply_ufunc(
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
     ...     return xr.apply_ufunc(func, a, b)
+    ...
 
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,
@@ -868,7 +939,7 @@ def apply_ufunc(
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
     >>> magnitude(array, -array)
     <xarray.DataArray (x: 3)>
-    array([1.414214, 2.828427, 4.242641])
+    array([1.41421356, 2.82842712, 4.24264069])
     Coordinates:
       * x        (x) float64 0.1 0.2 0.3
 
@@ -987,6 +1058,8 @@ def apply_ufunc(
     if dask == "parallelized":
         if dask_gufunc_kwargs is None:
             dask_gufunc_kwargs = {}
+        else:
+            dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
         # todo: remove warnings after deprecation cycle
         if meta is not None:
             warnings.warn(
@@ -1075,27 +1148,28 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
-    ddof: int, optional
+    ddof : int, optional
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
     Returns
     -------
-    covariance: DataArray
+    covariance : DataArray
 
     See also
     --------
-    pandas.Series.cov: corresponding pandas function
-    xr.corr: respective function to calculate correlation
+    pandas.Series.cov : corresponding pandas function
+    xarray.corr: respective function to calculate correlation
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1133,7 +1207,7 @@ def cov(da_a, da_b, dim=None, ddof=1):
     array(-3.53055556)
     >>> xr.cov(da_a, da_b, dim="time")
     <xarray.DataArray (space: 3)>
-    array([ 0.2, -0.5,  1.69333333])
+    array([ 0.2       , -0.5       ,  1.69333333])
     Coordinates:
       * space    (space) <U2 'IA' 'IL' 'IN'
     """
@@ -1155,11 +1229,11 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
-    dim: str, optional
+    dim : str, optional
         The dimension along which the correlation will be computed
 
     Returns
@@ -1168,11 +1242,12 @@ def corr(da_a, da_b, dim=None):
 
     See also
     --------
-    pandas.Series.corr: corresponding pandas function
-    xr.cov: underlying covariance function
+    pandas.Series.corr : corresponding pandas function
+    xarray.cov : underlying covariance function
 
     Examples
     --------
+    >>> from xarray import DataArray
     >>> da_a = DataArray(
     ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),
     ...     dims=("space", "time"),
@@ -1250,7 +1325,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     # N.B. `skipna=False` is required or there is a bug when computing
     # auto-covariance. E.g. Try xr.cov(da,da) for
     # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=False) / (valid_count)
+    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
+        valid_count
+    )
 
     if method == "cov":
         return cov
@@ -1302,8 +1379,10 @@ def dot(*arrays, dims=None, **kwargs):
     <xarray.DataArray (a: 3, b: 2, c: 2)>
     array([[[ 0,  1],
             [ 2,  3]],
+    <BLANKLINE>
            [[ 4,  5],
             [ 6,  7]],
+    <BLANKLINE>
            [[ 8,  9],
             [10, 11]]])
     Dimensions without coordinates: a, b, c
@@ -1447,13 +1526,13 @@ def where(cond, x, y):
     <xarray.DataArray 'sst' (lat: 10)>
     array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> xr.where(x < 0.5, x, x * 100)
     <xarray.DataArray 'sst' (lat: 10)>
     array([ 0. ,  0.1,  0.2,  0.3,  0.4, 50. , 60. , 70. , 80. , 90. ])
     Coordinates:
-    * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
+      * lat      (lat) int64 0 1 2 3 4 5 6 7 8 9
 
     >>> y = xr.DataArray(
     ...     0.1 * np.arange(9).reshape(3, 3),
@@ -1467,8 +1546,8 @@ def where(cond, x, y):
            [0.3, 0.4, 0.5],
            [0.6, 0.7, 0.8]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> xr.where(y.lat < 1, y, -1)
     <xarray.DataArray (lat: 3, lon: 3)>
@@ -1476,8 +1555,8 @@ def where(cond, x, y):
            [-1. , -1. , -1. ],
            [-1. , -1. , -1. ]])
     Coordinates:
-    * lat      (lat) int64 0 1 2
-    * lon      (lon) int64 10 11 12
+      * lat      (lat) int64 0 1 2
+      * lon      (lon) int64 10 11 12
 
     >>> cond = xr.DataArray([True, False], dims=["x"])
     >>> x = xr.DataArray([1, 2], dims=["y"])
@@ -1576,7 +1655,7 @@ def _calc_idxminmax(
     indx = func(array, dim=dim, axis=None, keep_attrs=keep_attrs, skipna=skipna)
 
     # Handle dask arrays.
-    if isinstance(array.data, dask_array_type):
+    if is_duck_dask_array(array.data):
         import dask.array
 
         chunks = dict(zip(array.dims, array.chunks))

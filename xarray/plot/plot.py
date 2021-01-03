@@ -357,7 +357,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
-        raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
+        raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
 
     if ds is not None:
         if drawstyle is None:
@@ -461,6 +461,15 @@ class _PlotMethods:
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
+
+
+def override_signature(f):
+    def wrapper(func):
+        func.__wrapped__ = f
+
+        return func
+
+    return wrapper
 
 
 def _plot2d(plotfunc):
@@ -572,6 +581,16 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
         darray,
@@ -857,7 +876,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
-            "imshow requires 1D coordinates, try using " "pcolormesh or contour(f)"
+            "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
     # Centering the pixels- Assumes uniform spacing
