@@ -402,12 +402,12 @@ def indexes_repr(indexes):
 
 
 def dim_summary(obj):
-    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
+    elements = [f"{k}: {v}" for k, v in sorted(obj.sizes.items())]
     return ", ".join(elements)
 
 
 def unindexed_dims_repr(dims, coords):
-    unindexed_dims = [d for d in dims if d not in coords]
+    unindexed_dims = sorted([d for d in dims if d not in coords])
     if unindexed_dims:
         dims_str = ", ".join(f"{d}" for d in unindexed_dims)
         return "Dimensions without coordinates: " + dims_str
