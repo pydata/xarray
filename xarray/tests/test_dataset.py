@@ -70,9 +70,9 @@ def create_test_data(seed=None):
     _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
 
     obj = Dataset()
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
     obj["dim3"] = ("dim3", list("abcdefghij"))
+    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {"foo": "variable"})
@@ -557,7 +557,6 @@ class TestDataset:
     def test_properties(self):
         ds = create_test_data()
         assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert list(ds.dims) == sorted(ds.dims)
         assert ds.sizes == ds.dims
 
         # These exact types aren't public API, but this makes sure we don't
