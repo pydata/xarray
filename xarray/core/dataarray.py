@@ -1881,7 +1881,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.set_index
         """
         coords, _ = split_indexes(
-            dims_or_levels, self._coords, set(), self._level_coords, drop=drop
+            dims_or_levels, self._coords, [], self._level_coords, drop=drop
         )
         return self._replace(coords=coords)
 

@@ -10,7 +10,6 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
-    Set,
     Tuple,
     Union,
 )
@@ -331,7 +330,7 @@ def merge_coordinates_without_align(
 
 def determine_coords(
     list_of_mappings: Iterable["DatasetLike"],
-) -> Tuple[Set[Hashable], Set[Hashable]]:
+) -> Tuple[List[Hashable], List[Hashable]]:
     """Given a list of dicts with xarray object values, identify coordinates.
 
     Parameters
@@ -341,30 +340,32 @@ def determine_coords(
 
     Returns
     -------
-    coord_names : set of variable names
-    noncoord_names : set of variable names
-        All variable found in the input should appear in either the set of
+    coord_names : list of variable names
+    noncoord_names : list of variable names
+        All variable found in the input should appear in either the list of
         coordinate or non-coordinate names.
     """
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    coord_names: Set[Hashable] = set()
-    noncoord_names: Set[Hashable] = set()
+    coord_names: List[Hashable] = []
+    noncoord_names: List[Hashable] = []
 
     for mapping in list_of_mappings:
         if isinstance(mapping, Dataset):
-            coord_names.update(mapping.coords)
-            noncoord_names.update(mapping.data_vars)
+            coord_names += [x for x in mapping.coords if x not in coord_names]
+            noncoord_names += [x for x in mapping.data_vars if x not in noncoord_names]
         else:
             for name, var in mapping.items():
                 if isinstance(var, DataArray):
-                    coords = set(var._coords)  # use private API for speed
+                    coords = list(var._coords)  # use private API for speed
                     # explicitly overwritten variables should take precedence
-                    coords.discard(name)
-                    coord_names.update(coords)
+                    coords = [c for c in coords if c != name]
+                    coord_names += [x for x in coords if x not in coord_names]
 
-    return coord_names, noncoord_names
+    # TODO: remove sorted if possible
+    # Ignore types as Hashable not guaranteed to be sortable
+    return sorted(coord_names), noncoord_names  # type: ignore
 
 
 def coerce_pandas_values(objects: Iterable["CoercibleMapping"]) -> List["DatasetLike"]:
@@ -528,7 +529,7 @@ def merge_attrs(variable_attrs, combine_attrs):
 
 class _MergeResult(NamedTuple):
     variables: Dict[Hashable, Variable]
-    coord_names: Set[Hashable]
+    coord_names: List[Hashable]
     dims: Dict[Hashable, int]
     indexes: Dict[Hashable, pd.Index]
     attrs: Dict[Hashable, Any]
@@ -571,8 +572,8 @@ def merge_core(
     -------
     variables : dict
         Dictionary of Variable objects.
-    coord_names : set
-        Set of coordinate names.
+    coord_names : list
+        List of coordinate names.
     dims : dict
         Dictionary mapping from dimension names to sizes.
     attrs : dict
@@ -602,11 +603,11 @@ def merge_core(
     coord_names, noncoord_names = determine_coords(coerced)
     if explicit_coords is not None:
         assert_valid_explicit_coords(variables, dims, explicit_coords)
-        coord_names.update(explicit_coords)
+        coord_names += [c for c in explicit_coords if c not in coord_names]
     for dim, size in dims.items():
-        if dim in variables:
-            coord_names.add(dim)
-    ambiguous_coords = coord_names.intersection(noncoord_names)
+        if dim in variables and dim not in coord_names:
+            coord_names.append(dim)
+    ambiguous_coords = [c for c in coord_names if c in noncoord_names]
     if ambiguous_coords:
         raise MergeError(
             "unable to determine if these variables should be "
@@ -622,7 +623,9 @@ def merge_core(
         combine_attrs,
     )
 
-    return _MergeResult(variables, coord_names, dims, out_indexes, attrs)
+    # TODO: remove sorted if possible
+    # Ignore types as Hashable not guaranteed to be sortable
+    return _MergeResult(variables, sorted(coord_names), dims, out_indexes, attrs)  # type: ignore
 
 
 def merge(

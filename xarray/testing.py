@@ -291,8 +291,8 @@ def _assert_dataset_invariants(ds: Dataset):
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)
 
-    assert isinstance(ds._coord_names, set), ds._coord_names
-    assert ds._coord_names <= ds._variables.keys(), (
+    assert isinstance(ds._coord_names, list), ds._coord_names
+    assert set(ds._coord_names) <= ds._variables.keys(), (
         ds._coord_names,
         set(ds._variables),
     )

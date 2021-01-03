@@ -5,9 +5,9 @@ from typing import (
     Dict,
     Hashable,
     Iterator,
+    List,
     Mapping,
     Sequence,
-    Set,
     Tuple,
     Union,
     cast,
@@ -40,7 +40,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         self.update({key: value})
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> List[Hashable]:
         raise NotImplementedError()
 
     @property
@@ -195,7 +195,7 @@ class DatasetCoordinates(Coordinates):
         self._data = dataset
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> List[Hashable]:
         return self._data._coord_names
 
     @property
@@ -229,13 +229,17 @@ class DatasetCoordinates(Coordinates):
 
         # check for inconsistent state *before* modifying anything in-place
         dims = calculate_dimensions(variables)
-        new_coord_names = set(coords)
-        for dim, size in dims.items():
-            if dim in variables:
-                new_coord_names.add(dim)
+        new_coord_names = list(coords)
+        for dim, _ in dims.items():
+            if dim in variables and dim not in new_coord_names:
+                new_coord_names.append(dim)
 
         self._data._variables = variables
-        self._data._coord_names.update(new_coord_names)
+        self._data._coord_names += [
+            x for x in new_coord_names if x not in self._data._coord_names
+        ]
+        # TODO: remove `sort` if possible
+        self._data._coord_names.sort()
         self._data._dims = dims
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
@@ -276,8 +280,8 @@ class DataArrayCoordinates(Coordinates):
         return self._data.dims
 
     @property
-    def _names(self) -> Set[Hashable]:
-        return set(self._data._coords)
+    def _names(self) -> List[Hashable]:
+        return list(sorted(self._data._coords))
 
     def __getitem__(self, key: Hashable) -> "DataArray":
         return self._data._getitem_coord(key)
