@@ -464,7 +464,7 @@ def test_large_array_repr_length():
 
 @pytest.mark.parametrize(
     "display_max_rows, n_vars, n_attr",
-    [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30),],
+    [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
 )
 def test__mapping_repr(display_max_rows, n_vars, n_attr):
     long_name = "long_name"
