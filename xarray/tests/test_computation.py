@@ -30,7 +30,7 @@ dask = pytest.importorskip("dask")
 def assert_identical(a, b):
     if hasattr(a, "identical"):
         msg = f"not identical:\n{a!r}\n{b!r}"
-        assert_identical(a, b), msg
+        assert_identical(a, b)
     else:
         assert_array_equal(a, b)
 
