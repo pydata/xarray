@@ -480,13 +480,13 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
     ds = xr.Dataset(data_vars)
     ds.attrs = attrs
 
-    xr.set_options(display_max_rows=display_max_rows)
+    with xr.set_options(display_max_rows=display_max_rows):
 
-    # Parse the data_vars print and show only data_vars rows:
-    summary = formatting.data_vars_repr(ds.data_vars).split("\n")
-    summary = [v for v in summary if long_name in v]
+        # Parse the data_vars print and show only data_vars rows:
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
 
-    # The length should be less than or equal to display_max_rows:
-    len_summary = len(summary)
-    data_vars_print_size = min(display_max_rows, len_summary)
-    assert len_summary == data_vars_print_size
+        # The length should be less than or equal to display_max_rows:
+        len_summary = len(summary)
+        data_vars_print_size = min(display_max_rows, len_summary)
+        assert len_summary == data_vars_print_size
