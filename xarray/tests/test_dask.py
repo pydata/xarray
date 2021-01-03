@@ -123,7 +123,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         assert v.equals(v)
         assert isinstance(v.data, da.Array)
-        assert_identical(v, v)
+        assert v.identical(v)
         assert isinstance(v.data, da.Array)
 
     def test_transpose(self):
