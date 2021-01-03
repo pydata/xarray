@@ -1,6 +1,4 @@
 import os
-import pathlib
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -151,7 +149,7 @@ def _get_default_engine(path: str, allow_remote: bool = False):
 def _autodetect_engine(filename_or_obj):
     if isinstance(filename_or_obj, AbstractDataStore):
         engine = "store"
-    elif isinstance(filename_or_obj, (str, pathlib.Path)):
+    elif isinstance(filename_or_obj, (str, Path)):
         engine = _get_default_engine(str(filename_or_obj), allow_remote=True)
     else:
         engine = _get_engine_from_magic_number(filename_or_obj)
@@ -312,7 +310,6 @@ def open_dataset(
     decode_cf=True,
     mask_and_scale=None,
     decode_times=True,
-    autoclose=None,
     concat_characters=True,
     decode_coords=True,
     engine=None,
@@ -352,10 +349,6 @@ def open_dataset(
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -434,17 +427,6 @@ def open_dataset(
         from . import apiv2
 
         return apiv2.open_dataset(**kwargs)
-
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
-        )
 
     if mask_and_scale is None:
         mask_and_scale = not engine == "pseudonetcdf"
@@ -583,7 +565,6 @@ def open_dataarray(
     decode_cf=True,
     mask_and_scale=None,
     decode_times=True,
-    autoclose=None,
     concat_characters=True,
     decode_coords=True,
     engine=None,
@@ -699,7 +680,6 @@ def open_dataarray(
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
-        autoclose=autoclose,
         concat_characters=concat_characters,
         decode_coords=decode_coords,
         engine=engine,
@@ -757,7 +737,6 @@ def open_mfdataset(
     data_vars="all",
     coords="different",
     combine="by_coords",
-    autoclose=None,
     parallel=False,
     join="outer",
     attrs_file=None,
@@ -924,9 +903,7 @@ def open_mfdataset(
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
-    open_kwargs = dict(
-        engine=engine, chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
-    )
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock, **kwargs)
 
     if parallel:
         import dask

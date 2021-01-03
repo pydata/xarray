@@ -375,8 +375,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            # need to ensure dtype=int64 in case range is empty on Python 2
-            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
+            return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
@@ -817,8 +816,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Rolling object (core.rolling.DataArrayRolling for DataArray,
-        core.rolling.DatasetRolling for Dataset.)
+        core.rolling.DataArrayRolling or core.rolling.DatasetRolling
+            A rolling object (``DataArrayRolling`` for ``DataArray``,
+            ``DatasetRolling`` for ``Dataset``)
 
         Examples
         --------
@@ -929,8 +929,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Returns
         -------
-        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
-        core.rolling.DatasetCoarsen for Dataset.)
+        core.rolling.DataArrayCoarsen or core.rolling.DatasetCoarsen
+            A coarsen object (``DataArrayCoarsen`` for ``DataArray``,
+            ``DatasetCoarsen`` for ``Dataset``)
 
         Examples
         --------

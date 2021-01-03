@@ -5,9 +5,8 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint
 from .locks import SerializableLock, ensure_lock
-from .plugins import BackendEntrypoint
 from .store import open_backend_dataset_store
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
@@ -25,7 +24,7 @@ class CfGribArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
         )
 
     def _getitem(self, key):

@@ -22,7 +22,8 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_
 
 New Features
 ~~~~~~~~~~~~
@@ -39,6 +40,8 @@ Bug fixes
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_
+- Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
+  By `Alessandro Amici <https://github.com/alexamici>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -114,7 +117,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Fix bug where reference times without padded years (e.g. ``since 1-1-1``) would lose their units when
-  being passed by :py:func:`encode_cf_datetime` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
+  being passed by ``encode_cf_datetime`` (:issue:`4422`, :pull:`4506`). Such units are ambiguous
   about which digit represents the years (is it YMD or DMY?). Now, if such formatting is encountered,
   it is assumed that the first digit is the years, they are padded appropriately (to e.g. ``since 0001-1-1``)
   and a warning that this assumption is being made is issued. Previously, without ``cftime``, such times
@@ -318,8 +321,10 @@ Internal Changes
 
   All are up from 6 months (:issue:`4295`)
   `Guido Imperiale <https://github.com/crusaderky>`_.
-- Use :py:func:`dask.array.apply_gufunc` instead of :py:func:`dask.array.blockwise` in
-  :py:func:`xarray.apply_ufunc` when using ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
+- Use :py:func:`dask.array.apply_gufunc <dask.array.gufunc.apply_gufunc>` instead of
+  :py:func:`dask.array.blockwise` in :py:func:`xarray.apply_ufunc` when using
+  ``dask='parallelized'``. (:pull:`4060`, :pull:`4391`, :pull:`4392`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Align ``mypy`` versions to ``0.782`` across ``requirements`` and
   ``.pre-commit-config.yml`` files. (:pull:`4390`)
   By `Maximilian Roos <https://github.com/max-sixty>`_
