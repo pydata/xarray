@@ -370,10 +370,11 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
         max_rows = OPTIONS["display_max_rows"]
+    summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
-        summary = [f"{title} ({min(max_rows, len_mapping)}/{len_mapping}):"]
         if len_mapping > max_rows:
+            summary = [f"{title} ({min(max_rows, len_mapping)}/{len_mapping}):"]
             first_rows = max_rows // 2 + max_rows % 2
             items = list(mapping.items())
             summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
@@ -384,7 +385,6 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
         else:
             summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
-        summary = [f"{title}:"]
         summary += [EMPTY_REPR]
     return "\n".join(summary)
 
