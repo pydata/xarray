@@ -31,7 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-      github.repository == 'pydata/xarray'
+      always()
+      && github.repository == 'pydata/xarray'
       && (
         (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
         || needs.detect-ci-trigger.outputs.triggered == 'true'
