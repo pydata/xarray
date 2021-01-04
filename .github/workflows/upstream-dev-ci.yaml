@@ -11,14 +11,29 @@ on:
   workflow_dispatch: # allows you to trigger the workflow run manually
 
 jobs:
+  detect-ci-trigger:
+    name: detect upstream-dev ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+        triggered: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
+    steps:
+      - name: check commit message
+        id: detect_trigger
+        run: |
+          git log -n 1 --pretty=format:%s | grep -q "\[test-upstream\]" \
+          && echo '::set-output name=CI_TRIGGERED::true' \
+          || echo '::set-output name=CI_TRIGGERED::false'
+          
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
+    needs: detect-ci-trigger
     if: |
       github.repository == 'pydata/xarray'
       && (
         (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
-        || contains(github.event.head_commit.message, 'test-upstream')
+        || needs.detect-ci-trigger.outputs.triggered == 'true'
       )
     defaults:
       run:
