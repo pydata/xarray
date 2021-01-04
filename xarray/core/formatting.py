@@ -365,12 +365,23 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None):
+def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
+    if max_rows is None:
+        max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
-        summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
+        if len(mapping) > max_rows:
+            first_rows = max_rows // 2 + max_rows % 2
+            items = list(mapping.items())
+            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            if max_rows > 1:
+                last_rows = max_rows // 2
+                summary += [pretty_print("    ...", col_width) + " ..."]
+                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+        else:
+            summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
         summary += [EMPTY_REPR]
     return "\n".join(summary)
