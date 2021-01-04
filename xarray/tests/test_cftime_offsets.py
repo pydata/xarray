@@ -190,7 +190,7 @@ def test_to_offset_offset_input(offset):
         ("U", Microsecond(n=1)),
         ("2U", Microsecond(n=2)),
         ("us", Microsecond(n=1)),
-        ("2us", Microsecond(n=2))
+        ("2us", Microsecond(n=2)),
     ],
     ids=_id_func,
 )
@@ -377,7 +377,7 @@ _MUL_TESTS = [
     (Minute(), Minute(n=3)),
     (Second(), Second(n=3)),
     (Millisecond(), Millisecond(n=3)),
-    (Microsecond(), Microsecond(n=3))
+    (Microsecond(), Microsecond(n=3)),
 ]
 
 
@@ -406,7 +406,7 @@ def test_rmul(offset, expected):
         (Minute(), Minute(n=-1)),
         (Second(), Second(n=-1)),
         (Millisecond(), Millisecond(n=-1)),
-        (Microsecond(), Microsecond(n=-1))
+        (Microsecond(), Microsecond(n=-1)),
     ],
     ids=_id_func,
 )
@@ -420,7 +420,7 @@ _ADD_TESTS = [
     (Minute(n=2), (1, 1, 1, 0, 2)),
     (Second(n=2), (1, 1, 1, 0, 0, 2)),
     (Millisecond(n=2), (1, 1, 1, 0, 0, 0, 2000)),
-    (Microsecond(n=2), (1, 1, 1, 0, 0, 0, 2))
+    (Microsecond(n=2), (1, 1, 1, 0, 0, 0, 2)),
 ]
 
 
@@ -450,7 +450,7 @@ def test_radd_sub_monthly(offset, expected_date_args, calendar):
         (Minute(n=2), (1, 1, 2, 23, 58)),
         (Second(n=2), (1, 1, 2, 23, 59, 58)),
         (Millisecond(n=2), (1, 1, 2, 23, 59, 59, 998000)),
-        (Microsecond(n=2), (1, 1, 2, 23, 59, 59, 999998))
+        (Microsecond(n=2), (1, 1, 2, 23, 59, 59, 999998)),
     ],
     ids=_id_func,
 )
@@ -827,7 +827,7 @@ def test_add_quarter_end_onOffset(
         ((1, 1, 1), Minute(), True),
         ((1, 1, 1), Second(), True),
         ((1, 1, 1), Millisecond(), True),
-        ((1, 1, 1), Microsecond(), True)
+        ((1, 1, 1), Microsecond(), True),
     ],
     ids=_id_func,
 )

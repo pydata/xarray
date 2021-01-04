@@ -6,7 +6,15 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray import DataArray, Dataset, Variable, cftime_range, coding, conventions, decode_cf
+from xarray import (
+    DataArray,
+    Dataset,
+    Variable,
+    cftime_range,
+    coding,
+    conventions,
+    decode_cf,
+)
 from xarray.coding.times import (
     cftime_to_nptime,
     decode_cf_datetime,
@@ -18,7 +26,14 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
-from . import arm_xfail, assert_array_equal, has_cftime, has_cftime_1_2_0, requires_cftime, requires_dask
+from . import (
+    arm_xfail,
+    assert_array_equal,
+    has_cftime,
+    has_cftime_1_2_0,
+    requires_cftime,
+    requires_dask,
+)
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",

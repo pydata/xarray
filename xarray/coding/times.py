@@ -225,9 +225,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 if calendar in _STANDARD_CALENDARS:
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
-        dates = _decode_datetime_with_cftime(
-            flat_num_dates, units, calendar
-        )
+        dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
