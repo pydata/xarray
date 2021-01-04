@@ -20,14 +20,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-         fetch-depth: 5
-         ref: ${{ github.ref }}
+         fetch-depth: 2
+      - name: determine the commit ref
+        id: determine_commit_ref
+        run: |
+          if [ ${{ github.event_name }} == 'pull_request' ]]; then
+            echo '::set-output name=REF::HEAD^2'
+          else
+            echo '::set-output name=REF::HEAD'
+          fi
       - name: show the commit message
-        run: git log -n 1 --pretty=format:%s
+        run: git log -n 1 --pretty=format:%s ${{ steps.determine_commit_ref.outputs.REF }}
       - name: check commit message
         id: detect_trigger
         run: |
-          git log -n 2 --pretty=format:%s | grep -q "\[test-upstream\]" \
+          git log -n 1 --pretty=format:%s ${{ steps.determine_commit_ref.outputs.REF }} \
+          | grep -q "\[test-upstream\]" \
           && echo '::set-output name=CI_TRIGGERED::true' \
           || echo '::set-output name=CI_TRIGGERED::false'
       - name: show detected status
