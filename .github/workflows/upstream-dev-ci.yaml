@@ -18,6 +18,7 @@ jobs:
     outputs:
         triggered: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
     steps:
+      - uses: actions/checkout@v2
       - name: check commit message
         id: detect_trigger
         run: |
