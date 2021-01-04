@@ -537,7 +537,7 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(
-    a_mapping, b_mapping, compat, title, summarizer, col_width=None, **kwargs
+    a_mapping, b_mapping, compat, title, summarizer, col_width=None, check_dtype=False
 ):
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
@@ -559,11 +559,13 @@ def _diff_mapping_repr(
             # compare xarray variable
             if not callable(compat):
                 compatible = getattr(a_mapping[k].variable, compat)(
-                    b_mapping[k].variable, **kwargs
+                    b_mapping[k].variable, check_dtype=check_dtype
                 )
             else:
                 compatible = compat(
-                    a_mapping[k].variable, b_mapping[k].variable, **kwargs
+                    a_mapping[k].variable,
+                    b_mapping[k].variable,
+                    check_dtype=check_dtype,
                 )
             is_variable = True
         except AttributeError:
@@ -596,7 +598,7 @@ def _diff_mapping_repr(
 
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
-    maybe_dtype = " (values and/ or dtype)" if "check_dtype" in kwargs else ""
+    maybe_dtype = " (values and/ or dtype)" if check_dtype else ""
     if diff_items:
         summary += [f"Differing {title.lower()}{maybe_dtype}:"] + diff_items
 
@@ -633,7 +635,7 @@ def _compat_to_str(compat):
         return compat
 
 
-def diff_array_repr(a, b, compat, **kwargs):
+def diff_array_repr(a, b, compat, check_dtype=False):
     # used for DataArray, Variable and IndexVariable
     summary = [
         "Left and right {} objects are not {}".format(
@@ -647,9 +649,9 @@ def diff_array_repr(a, b, compat, **kwargs):
     else:
         equiv = array_equiv
 
-    maybe_dtype = " or dtype" if "check_dtype" in kwargs else ""
+    maybe_dtype = " or dtype" if check_dtype else ""
 
-    if not equiv(a.data, b.data, **kwargs):
+    if not equiv(a.data, b.data, check_dtype=check_dtype):
         temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
@@ -660,7 +662,9 @@ def diff_array_repr(a, b, compat, **kwargs):
     if hasattr(a, "coords"):
         col_width = _calculate_col_width(set(a.coords) | set(b.coords))
         summary.append(
-            diff_coords_repr(a.coords, b.coords, compat, col_width=col_width, **kwargs)
+            diff_coords_repr(
+                a.coords, b.coords, compat, col_width=col_width, check_dtype=check_dtype
+            )
         )
 
     if compat == "identical":
@@ -669,7 +673,7 @@ def diff_array_repr(a, b, compat, **kwargs):
     return "\n".join(summary)
 
 
-def diff_dataset_repr(a, b, compat, **kwargs):
+def diff_dataset_repr(a, b, compat, check_dtype=False):
     summary = [
         "Left and right {} objects are not {}".format(
             type(a).__name__, _compat_to_str(compat)
@@ -682,11 +686,17 @@ def diff_dataset_repr(a, b, compat, **kwargs):
 
     summary.append(diff_dim_summary(a, b))
     summary.append(
-        diff_coords_repr(a.coords, b.coords, compat, col_width=col_width, **kwargs)
+        diff_coords_repr(
+            a.coords, b.coords, compat, col_width=col_width, check_dtype=check_dtype
+        )
     )
     summary.append(
         diff_data_vars_repr(
-            a.data_vars, b.data_vars, compat, col_width=col_width, **kwargs
+            a.data_vars,
+            b.data_vars,
+            compat,
+            col_width=col_width,
+            check_dtype=check_dtype,
         )
     )
 
