@@ -22,6 +22,8 @@ jobs:
         with:
          fetch-depth: 5
          ref: ${{ github.ref }}
+      - name: show the commit message
+        run: git log -n 1 --pretty=format:%s
       - name: check commit message
         id: detect_trigger
         run: |
@@ -30,8 +32,7 @@ jobs:
           || echo '::set-output name=CI_TRIGGERED::false'
       - name: show detected status
         run: |
-          git log -n 3 --pretty=format:%s
-          echo ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
+          echo "detected trigger: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}"
           
   upstream-dev:
     name: upstream-dev
