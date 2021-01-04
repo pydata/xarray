@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-         fetch-depth: 0
+         ref: 'refs/pull/${{ github.event.number }}/merge'
       - run: git log -n 4 --pretty=format:%s
       - name: check commit message
         id: detect_trigger
