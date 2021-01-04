@@ -19,7 +19,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .indexing import get_indexer_nd
-from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str_type
+from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
@@ -321,7 +321,7 @@ def align(
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
                 # make sure str coords are not cast to object
-                index = maybe_coerce_to_str_type(index, all_coords[dim])
+                index = maybe_coerce_to_str(index, all_coords[dim])
                 joined_indexes[dim] = index
             else:
                 index = all_coords[dim][0]

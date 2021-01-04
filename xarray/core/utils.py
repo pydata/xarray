@@ -79,7 +79,7 @@ def maybe_cast_to_coords_dtype(label, coords_dtype):
     return label
 
 
-def maybe_coerce_to_str_type(index, original_coords):
+def maybe_coerce_to_str(index, original_coords):
     """maybe coerce a pandas Index back to a nunpy array of type str
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
