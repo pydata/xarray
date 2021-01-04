@@ -20,18 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-         fetch-depth: 10
+         fetch-depth: 5
          ref: ${{ github.ref }}
-      - run: git log -n 4 --pretty=format:%s
       - name: check commit message
         id: detect_trigger
         run: |
-          git log -n 1 --pretty=format:%s | grep -q "\[test-upstream\]" \
+          git log -n 2 --pretty=format:%s | grep -q "\[test-upstream\]" \
           && echo '::set-output name=CI_TRIGGERED::true' \
           || echo '::set-output name=CI_TRIGGERED::false'
       - name: show detected status
         run: |
-          git log -n 2 --pretty=format:%s
+          git log -n 3 --pretty=format:%s
           echo ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
           
   upstream-dev:
