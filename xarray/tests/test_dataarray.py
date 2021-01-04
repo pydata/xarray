@@ -89,7 +89,7 @@ class TestDataArray:
             array([0, 1, 2, 3])
             Coordinates:
               * x        (x) MultiIndex
-              - level_1  (x) object 'a' 'a' 'b' 'b'
+              - level_1  (x) <U1 'a' 'a' 'b' 'b'
               - level_2  (x) int64 1 2 1 2"""
         )
         assert expected == repr(self.mda)

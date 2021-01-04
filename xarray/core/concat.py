@@ -187,7 +187,7 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) object 'a' 'b'
+      * x        (x) <U1 'a' 'b'
       * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")

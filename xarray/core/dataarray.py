@@ -1318,8 +1318,8 @@ class DataArray(AbstractArray, DataWithCoords):
                [ 2.2408932 ,  1.86755799, -0.97727788],
                [        nan,         nan,         nan]])
         Coordinates:
-          * x        (x) object 'a' 'b' 'c'
-          * y        (y) object 'a' 'b' 'c'
+          * x        (x) <U1 'a' 'b' 'c'
+          * y        (y) <U1 'a' 'b' 'c'
         """
         if exclude is None:
             exclude = set()
