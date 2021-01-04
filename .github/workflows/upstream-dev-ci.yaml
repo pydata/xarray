@@ -20,8 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-         fetch-depth: 2
-      - run: git checkout HEAD^
+         fetch-depth: 0
+      - run: git log -n 4 --pretty=format:%s
       - name: check commit message
         id: detect_trigger
         run: |
