@@ -27,7 +27,7 @@ jobs:
           || echo '::set-output name=CI_TRIGGERED::false'
       - name: show detected status
         run: |
-          git log -n 1 --pretty=format:%s
+          git log -n 2 --pretty=format:%s
           echo ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
           
   upstream-dev:
