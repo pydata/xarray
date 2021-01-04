@@ -19,6 +19,9 @@ jobs:
       triggered: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
     steps:
       - uses: actions/checkout@v2
+        with:
+         fetch-depth: 2
+      - run: git checkout HEAD^
       - name: check commit message
         id: detect_trigger
         run: |
