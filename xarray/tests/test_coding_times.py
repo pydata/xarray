@@ -30,7 +30,7 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_cftime,
-    has_cftime_1_2_0,
+    has_cftime_1_2_1,
     requires_cftime,
     requires_dask,
 )
@@ -1010,8 +1010,8 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq, date
 def test_encode_decode_roundtrip(freq, date_range):
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
     # "S", "L", "U", and "N".
-    if not has_cftime_1_2_0 and date_range == cftime_range:
-        pytest.skip("Exact roundtripping requires cftime 1.2.0.")
+    if not has_cftime_1_2_1 and date_range == cftime_range:
+        pytest.skip("Exact roundtripping requires cftime 1.2.1.")
     if freq == "N" and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     initial_time = date_range("1678-01-01", periods=1)
