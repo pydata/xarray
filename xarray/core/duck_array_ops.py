@@ -226,12 +226,12 @@ def lazy_array_equiv(arr1, arr2, check_dtype=False):
     return None
 
 
-def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
+def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8, check_dtype=False):
     """Like np.allclose, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
 
-    lazy_equiv = lazy_array_equiv(arr1, arr2)
+    lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype=check_dtype)
     if lazy_equiv is None:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
