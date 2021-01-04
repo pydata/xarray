@@ -24,7 +24,7 @@ jobs:
       - name: determine the commit ref
         id: determine_commit_ref
         run: |
-          if [ ${{ github.event_name }} == 'pull_request' ]]; then
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             echo '::set-output name=REF::HEAD^2'
           else
             echo '::set-output name=REF::HEAD'
