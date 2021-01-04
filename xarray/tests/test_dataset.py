@@ -2127,7 +2127,8 @@ class TestDataset:
     def test_align_non_unique(self):
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
         x1, x2 = align(x, x)
-        assert x1.identical(x) and x2.identical(x)
+        assert_identical(x1, x)
+        assert_identical(x2, x)
 
         y = Dataset({"bar": ("x", [6, 7]), "x": [0, 1]})
         with raises_regex(ValueError, "cannot reindex or align"):

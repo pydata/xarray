@@ -651,7 +651,7 @@ class TestSparseDataArrayAndDataset:
         assert_equal(expected, stacked)
 
         roundtripped = stacked.unstack()
-        assert arr.identical(roundtripped)
+        assert_identical(arr, roundtripped)
 
     @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_ufuncs(self):
