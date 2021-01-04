@@ -33,7 +33,13 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
-
+- Xarray now leverages updates as of cftime version 1.2.0 which enable exact I/O 
+  rountripping of ``cftime.datetime`` objects (:pull:`XXXX`).  
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
+  millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies 
+  for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`XXXX`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~

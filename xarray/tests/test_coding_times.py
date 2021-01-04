@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray import DataArray, Dataset, Variable, coding, conventions, decode_cf
+from xarray import DataArray, Dataset, Variable, cftime_range, coding, conventions, decode_cf
 from xarray.coding.times import (
     cftime_to_nptime,
     decode_cf_datetime,
@@ -18,7 +18,7 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
-from . import arm_xfail, assert_array_equal, has_cftime, requires_cftime, requires_dask
+from . import arm_xfail, assert_array_equal, has_cftime, has_cftime_1_2_0, requires_cftime, requires_dask
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -972,8 +972,13 @@ def test_decode_ambiguous_time_warns(calendar):
 
 @pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq):
-    times = pd.date_range("2000", periods=3, freq=freq)
+@pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
+def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq, date_range):
+    if not has_cftime and date_range == cftime_range:
+        pytest.skip("Test requires cftime.")
+    if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
+        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
+    times = date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
     encoded, _, _ = coding.times.encode_cf_datetime(times, units)
 
@@ -986,12 +991,18 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq):
 
 
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-def test_encode_decode_roundtrip(freq):
+@pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
+def test_encode_decode_roundtrip(freq, date_range):
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
     # "S", "L", "U", and "N".
-    initial_time = pd.date_range("1678-01-01", periods=1)
-    times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
+    if not has_cftime_1_2_0 and date_range == cftime_range:
+        pytest.skip("Exact roundtripping requires cftime 1.2.0.")
+    if freq == "N" and date_range == cftime_range:
+        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
+    initial_time = date_range("1678-01-01", periods=1)
+    times = initial_time.append(date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    decoded = conventions.decode_cf_variable("time", encoded)
+    use_cftime = date_range == cftime_range
+    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=use_cftime)
     assert_equal(variable, decoded)
