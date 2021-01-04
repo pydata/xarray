@@ -375,8 +375,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            # need to ensure dtype=int64 in case range is empty on Python 2
-            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
+            return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
