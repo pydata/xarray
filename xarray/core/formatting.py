@@ -374,7 +374,7 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     if mapping:
         len_mapping = len(mapping)
         if len_mapping > max_rows:
-            summary = [f"{title} ({min(max_rows, len_mapping)}/{len_mapping}):"]
+            summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             items = list(mapping.items())
             summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
