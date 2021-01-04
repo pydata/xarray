@@ -442,6 +442,10 @@ class HybridMappingProxy(Mapping[K, V]):
     Can be used to construct a mapping object from another dict-like object without
     eagerly accessing its items or when a mapping object is expected but only
     iteration over keys is actually used.
+
+    Note: HybridMappingProxy does not validate consistency of the provided `keys`
+    and `mapping`. It is the caller's responsibility to ensure that they are
+    suitable for the task at hand.
     """
 
     __slots__ = ("_keys", "mapping")

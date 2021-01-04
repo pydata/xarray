@@ -1349,12 +1349,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
         yield self.data_vars
-        yield self.coords
+        yield HybridMappingProxy(keys=self._coord_names, mapping=self.coords)
 
         # virtual coordinates
         yield HybridMappingProxy(keys=self.dims, mapping=self)
 
-        # uses empty {} -- everything here can already be found in self.coords.
+        # uses empty dict -- everything here can already be found in self.coords.
         yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: object) -> bool:

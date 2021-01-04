@@ -734,10 +734,10 @@ class DataArray(AbstractArray, DataWithCoords):
     @property
     def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
         """Places to look-up items for key-completion"""
-        yield self.coords
+        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
 
         # virtual coordinates
-        # uses empty {} -- everything here can already be found in self.coords.
+        # uses empty dict -- everything here can already be found in self.coords.
         yield HybridMappingProxy(keys=self.dims, mapping={})
         yield HybridMappingProxy(keys=self._level_coords, mapping={})
 

@@ -61,6 +61,8 @@ Internal Changes
   - Run the tests in parallel using pytest-xdist (:pull:`4694`).
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
+- Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
+  in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
 
 .. _whats-new.0.16.2:
 
