@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
          fetch-depth: 10
-         ref: ${{ github.head_ref }}
+         ref: ${{ github.ref }}
       - run: git log -n 4 --pretty=format:%s
       - name: check commit message
         id: detect_trigger
