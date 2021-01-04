@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     outputs:
-        triggered: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
+      triggered: ${{ steps.detect_trigger.outputs.CI_TRIGGERED }}
     steps:
       - uses: actions/checkout@v2
       - name: check commit message
