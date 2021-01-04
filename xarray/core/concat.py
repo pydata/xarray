@@ -503,7 +503,7 @@ def _dataset_concat(
     for k in datasets[0].variables:
         if k in concat_over:
             try:
-                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+                vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
                 raise ValueError("%r is not present in all datasets." % k)
             combined = concat_vars(vars, dim, positions)

@@ -1949,6 +1949,16 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_reindex_str_dtype(self, dtype):
+        data = Dataset({"data": ("x", [1, 2]), "x": np.array(["a", "b"], dtype=dtype)})
+
+        actual = data.reindex(x=data.x)
+        expected = data
+
+        assert_identical(expected, actual)
+        assert actual.x.dtype == expected.x.dtype
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value):
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
@@ -2132,6 +2142,22 @@ class TestDataset:
         y = Dataset({"bar": ("x", [6, 7]), "x": [0, 1]})
         with raises_regex(ValueError, "cannot reindex or align"):
             align(x, y)
+
+    def test_align_str_dtype(self):
+
+        a = Dataset({"foo": ("x", [0, 1]), "x": ["a", "b"]})
+        b = Dataset({"foo": ("x", [1, 2]), "x": ["b", "c"]})
+
+        expected_a = Dataset({"foo": ("x", [0, 1, np.NaN]), "x": ["a", "b", "c"]})
+        expected_b = Dataset({"foo": ("x", [np.NaN, 1, 2]), "x": ["a", "b", "c"]})
+
+        actual_a, actual_b = xr.align(a, b, join="outer")
+
+        assert_identical(expected_a, actual_a)
+        assert expected_a.x.dtype == actual_a.x.dtype
+
+        assert_identical(expected_b, actual_b)
+        assert expected_b.x.dtype == actual_b.x.dtype
 
     def test_broadcast(self):
         ds = Dataset(
@@ -3418,6 +3444,14 @@ class TestDataset:
             {"foo": ("x", [1, 2, 3]), "bar": ("x", [np.nan, 2, 3])}, {"x": [0, 1, 2]}
         )
         assert_identical(ds, expected)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_setitem_str_dtype(self, dtype):
+
+        ds = xr.Dataset(coords={"x": np.array(["x", "y"], dtype=dtype)})
+        ds["foo"] = xr.DataArray(np.array([0, 0]), dims=["x"])
+
+        assert np.issubdtype(ds.x.dtype, dtype)
 
     def test_assign(self):
         ds = Dataset()

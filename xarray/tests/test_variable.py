@@ -2091,6 +2091,17 @@ class TestIndexVariable(VariableSubclassobjects):
         assert actual.identical(expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_concat_str_dtype(self, dtype):
+
+        a = IndexVariable("x", np.array(["a"], dtype=dtype))
+        b = IndexVariable("x", np.array(["b"], dtype=dtype))
+        expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
+
+        actual = IndexVariable.concat([a, b])
+        assert actual.identical(expected)
+        assert np.issubdtype(actual.dtype, dtype)
+
     def test_coordinate_alias(self):
         with pytest.warns(Warning, match="deprecated"):
             x = Coordinate("x", [1, 2, 3])
