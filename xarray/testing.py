@@ -27,18 +27,22 @@ def _decode_string_data(data):
     return data
 
 
-def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=True):
+def _data_allclose_or_equiv(
+    arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dtype=False
+):
     if any(arr.dtype.kind == "S" for arr in [arr1, arr2]) and decode_bytes:
         arr1 = _decode_string_data(arr1)
         arr2 = _decode_string_data(arr2)
     exact_dtypes = ["M", "m", "O", "S", "U"]
     if any(arr.dtype.kind in exact_dtypes for arr in [arr1, arr2]):
-        return duck_array_ops.array_equiv(arr1, arr2)
+        return duck_array_ops.array_equiv(arr1, arr2, check_dtype=check_dtype)
     else:
-        return duck_array_ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
+        return duck_array_ops.allclose_or_equiv(
+            arr1, arr2, rtol=rtol, atol=atol, check_dtype=check_dtype
+        )
 
 
-def assert_equal(a, b, check_dtype=True):
+def assert_equal(a, b, check_dtype=False):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -73,7 +77,7 @@ def assert_equal(a, b, check_dtype=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
-def assert_identical(a, b, check_dtype=True):
+def assert_identical(a, b, check_dtype=False):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -109,7 +113,7 @@ def assert_identical(a, b, check_dtype=True):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
+def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dtype=False):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal up to desired
@@ -138,7 +142,11 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     assert type(a) == type(b)
 
     equiv = functools.partial(
-        _data_allclose_or_equiv, rtol=rtol, atol=atol, decode_bytes=decode_bytes
+        _data_allclose_or_equiv,
+        rtol=rtol,
+        atol=atol,
+        decode_bytes=decode_bytes,
+        check_dtype=check_dtype,
     )
     equiv.__name__ = "allclose"
 
@@ -150,17 +158,23 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
     if isinstance(a, Variable):
         allclose = compat_variable(a, b)
-        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+        assert allclose, formatting.diff_array_repr(
+            a, b, compat=equiv, check_dtype=check_dtype
+        )
     elif isinstance(a, DataArray):
         allclose = utils.dict_equiv(
             a.coords, b.coords, compat=compat_variable
         ) and compat_variable(a.variable, b.variable)
-        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+        assert allclose, formatting.diff_array_repr(
+            a, b, compat=equiv, check_dtype=check_dtype
+        )
     elif isinstance(a, Dataset):
         allclose = a._coord_names == b._coord_names and utils.dict_equiv(
             a.variables, b.variables, compat=compat_variable
         )
-        assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+        assert allclose, formatting.diff_dataset_repr(
+            a, b, compat=equiv, check_dtype=check_dtype
+        )
     else:
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
