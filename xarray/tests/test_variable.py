@@ -1270,13 +1270,13 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(time=[]), v[[]])
         with raises_regex(
             ValueError,
-            r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0)
         with pytest.warns(
             UserWarning,
-            match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0, missing_dims="warn")

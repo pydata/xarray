@@ -55,6 +55,7 @@ Bug fixes
 - Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
   By `Alessandro Amici <https://github.com/alexamici>`_
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -76,6 +77,7 @@ Internal Changes
   - Run the tests in parallel using pytest-xdist (:pull:`4694`).
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
+
 - Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)`` 
   for clearer error messages.
   (:pull:`4752`);

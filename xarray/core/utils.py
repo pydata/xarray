@@ -744,28 +744,32 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+def infix_dims(
+    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+) -> Iterator:
     """
-    Resolves a supplied list containing an ellispsis representing other items, to
+    Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items
     """
     if ... in dims_supplied:
         if len(set(dims_all)) != len(dims_all):
             raise ValueError("Cannot use ellipsis with repeated dims")
-        if len([d for d in dims_supplied if d == ...]) > 1:
+        if list(dims_supplied).count(...) > 1:
             raise ValueError("More than one ellipsis supplied")
         other_dims = [d for d in dims_all if d not in dims_supplied]
-        for d in dims_supplied:
-            if d == ...:
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        for d in existing_dims:
+            if d is ...:
                 yield from other_dims
             else:
                 yield d
     else:
-        if set(dims_supplied) ^ set(dims_all):
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        if set(existing_dims) ^ set(dims_all):
             raise ValueError(
                 f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
             )
-        yield from dims_supplied
+        yield from existing_dims
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
@@ -805,7 +809,7 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             raise ValueError(
-                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
 
         return indexers
@@ -818,7 +822,7 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
         for key in invalid:
             indexers.pop(key)
@@ -827,6 +831,48 @@ def drop_dims_from_indexers(
 
     elif missing_dims == "ignore":
         return {key: val for key, val in indexers.items() if key in dims}
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+def drop_missing_dims(
+    supplied_dims: Collection, dims: Collection, missing_dims: str
+) -> Collection:
+    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
+    are not present in dims.
+
+    Parameters
+    ----------
+    supplied_dims : dict
+    dims : sequence
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        supplied_dims_set = set(val for val in supplied_dims if val is not ...)
+        invalid = supplied_dims_set - set(dims)
+        if invalid:
+            raise ValueError(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return supplied_dims
+
+    elif missing_dims == "warn":
+
+        invalid = set(supplied_dims) - set(dims)
+        if invalid:
+            warnings.warn(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return [val for val in supplied_dims if val in dims or val is ...]
+
+    elif missing_dims == "ignore":
+        return [val for val in supplied_dims if val in dims or val is ...]
 
     else:
         raise ValueError(
