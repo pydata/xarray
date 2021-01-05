@@ -54,6 +54,18 @@ def test_maybe_coerce_to_str(a, b, expected):
     assert expected.dtype == actual.dtype
 
 
+def test_maybe_coerce_to_str_minimal_str_dtype():
+
+    a = np.array(["a", "a_long_string"])
+    index = pd.Index(["a"])
+
+    actual = utils.maybe_coerce_to_str(index, [a])
+    expected = np.array("a")
+
+    assert_array_equal(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
 @requires_cftime
 def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
