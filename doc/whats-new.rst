@@ -22,8 +22,14 @@ v0.16.3 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- As a result of :pull:`4684` the default units encoding for
+  datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
+  always be set such that ``int64`` values can be used.  In the past, no units
+  finer than "seconds" were chosen, which would sometimes mean that ``float64``
+  values were required, which would lead to inaccurate I/O round-trips.
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_
+
 
 New Features
 ~~~~~~~~~~~~
@@ -34,12 +40,21 @@ Bug fixes
 
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- By default, when possible, xarray will now always use values of type ``int64`` when encoding
+  and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
+  precision and accuracy are maintained in the round-tripping process
+  (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard calendar
+  dates with time units of nanoseconds (:pull:`4400`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mark Harfouche <http://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_
+- Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
+  By `Alessandro Amici <https://github.com/alexamici>`_
+- Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -61,6 +76,11 @@ Internal Changes
   - Run the tests in parallel using pytest-xdist (:pull:`4694`).
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
+  
+- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)`` 
+  for clearer error messages.
+  (:pull:`4752`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.16.2:
 
