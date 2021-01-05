@@ -872,7 +872,11 @@ class CFEncodedBase(DatasetIOBase):
                     np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
                     {"standard_name": "standard_error"},
                 ),
-                det_lim=((), 0.1, {"standard_name": "detection_minimum"},),
+                det_lim=(
+                    (),
+                    0.1,
+                    {"standard_name": "detection_minimum"},
+                ),
             ),
             dict(
                 latitude=("latitude", [0, 1], {"units": "degrees_north"}),
