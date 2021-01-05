@@ -1,5 +1,13 @@
 # https://pre-commit.com/
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-docstring-first
+      - id: check-yaml
+      - id: double-quote-string-fixer
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
     rev: 5.7.0
