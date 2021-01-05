@@ -76,7 +76,7 @@ Internal Changes
   - Run the tests in parallel using pytest-xdist (:pull:`4694`).
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
-- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)`` 
+- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)``
   for clearer error messages.
   (:pull:`4752`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.

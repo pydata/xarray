@@ -153,7 +153,7 @@ We'll now kick off a two-step process:
 
    # Create and activate the build environment
    conda create -c conda-forge -n xarray-tests python=3.8
-   
+
    # This is for Linux and MacOS
    conda env update -f ci/requirements/environment.yml
 

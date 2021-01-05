@@ -40,12 +40,12 @@ jobs:
       - name: Set environment variables
         run: |
           if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
-          then 
+          then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "XARRAY_BACKEND_API=v2" >> $GITHUB_ENV
 
           elif [[ ${{ matrix.env }} == "py38-flaky" ]] ;
-          then 
+          then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Version info
         run: |
-          conda info -a 
+          conda info -a
           conda list
           python xarray/util/print_versions.py
       - name: Import xarray
@@ -133,7 +133,7 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |
-          conda info -a 
+          conda info -a
           conda list
           python xarray/util/print_versions.py
       - name: Run doctests
