@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 event_name="$1"
-keywords="$2"
+keyword="$2"
 
 echo "::group::extracting the commit message"
 echo "event name: $event_name"
@@ -19,14 +19,14 @@ else
 fi
 echo "::endgroup::"
 
-echo "::group::scanning for keywords"
-echo "searching for: '$keywords'"
-if echo "$commit_message" | grep -qF "$keywords"; then
+echo "::group::scanning for the keyword"
+echo "searching for: '$keyword'"
+if echo "$commit_message" | grep -qF "$keyword"; then
     result="true"
 else
     result="false"
 fi
-echo "keywords detected: $result"
+echo "keyword detected: $result"
 echo "::endgroup::"
 
 echo "::set-output name=COMMIT_MESSAGE::$commit_message"

@@ -1,16 +1,15 @@
 name: Detect CI Trigger
 description: |
-  Detect keywords used to control the CI in the subject line of a commit message
+  Detect a keyword used to control the CI in the subject line of a commit message.
 inputs:
-  keywords:
+  keyword:
     description: |
-      The keywords to detect. Currently, only a single keyword is supported.
+      The keyword to detect.
     required: true
 outputs:
   trigger-found:
     description: |
-      true if any of the keywords has been found in the subject line of the commit
-      message
+      true if the keyword has been found in the subject line of the commit message
     value: ${{ steps.detect-trigger.outputs.CI_TRIGGERED }}
 runs:
   using: "composite"
@@ -18,13 +17,13 @@ runs:
     - name: detect trigger
       id: detect-trigger
       run: |
-        bash $GITHUB_ACTION_PATH/script.sh ${{ github.event_name }} ${{ inputs.keywords }}
+        bash $GITHUB_ACTION_PATH/script.sh ${{ github.event_name }} ${{ inputs.keyword }}
       shell: bash
     - name: show detection result
       run: |
         echo "::group::final summary"
         echo "commit message: ${{ steps.detect-trigger.outputs.COMMIT_MESSAGE }}"
-        echo "trigger keyword: ${{ inputs.keywords }}"
+        echo "trigger keyword: ${{ inputs.keyword }}"
         echo "trigger found: ${{ steps.detect-trigger.outputs.CI_TRIGGERED }}"
         echo "::endgroup::"
       shell: bash
