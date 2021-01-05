@@ -2,6 +2,14 @@
 event_name="$1"
 keyword="$2"
 
+echo "::group::fetch a sufficient number of commits"
+if [[ "$event_name" == "pull_request" ]]; then
+    git fetch --deepen=1 --no-tags 2>&1
+else
+    echo "nothing to do."
+fi
+echo "::endgroup::"
+
 echo "::group::extracting the commit message"
 echo "event name: $event_name"
 if [[ "$event_name" == "pull_request" ]]; then
