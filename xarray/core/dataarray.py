@@ -1197,53 +1197,32 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> ds = xr.tutorial.open_dataset("air_temperature")
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (lat: 25, lon: 53, time: 2920)
-        Coordinates:
-          * lat      (lat) float32 75.0 72.5 70.0 67.5 65.0 ... 25.0 22.5 20.0 17.5 15.0
-          * lon      (lon) float32 200.0 202.5 205.0 207.5 ... 322.5 325.0 327.5 330.0
-          * time     (time) datetime64[ns] 2013-01-01 ... 2014-12-31T18:00:00
-        Data variables:
-            air      (time, lat, lon) float32 ...
-        Attributes:
-            Conventions:  COARDS
-            title:        4x daily NMC reanalysis (1948)
-            description:  Data is from NMC initialized reanalysis\n(4x/day).  These a...
-            platform:     Model
-            references:   http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanaly...
-
-        >>> tgt_lat = xr.DataArray(np.linspace(40, 45, num=6), dims="points")
-        >>> tgt_lon = xr.DataArray(np.linspace(200, 205, num=6), dims="points")
-        >>> da = ds['air'].sel(lon=tgt_lon, lat=tgt_lat, method='nearest')
+        >>> da = xr.DataArray(
+                np.arange(25).reshape(5, 5),
+                coords={"x": np.arange(5), "y": np.arange(5)},
+                dims=("x", "y")
+            )
         >>> da
-        <xarray.DataArray 'air' (time: 2920, points: 6)>
-        array([[284.6    , 284.6    , 283.19998, 283.19998, 280.19998, 280.19998],
-               [283.29   , 283.29   , 282.79   , 282.79   , 280.79   , 280.79   ],
-               [282.     , 282.     , 280.79   , 280.79   , 280.     , 280.     ],
-               ...,
-               [282.49   , 282.49   , 281.29   , 281.29   , 280.49   , 280.49   ],
-               [282.09   , 282.09   , 280.38998, 280.38998, 279.49   , 279.49   ],
-               [282.09   , 282.09   , 280.59   , 280.59   , 279.19   , 279.19   ]],
-              dtype=float32)
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
         Coordinates:
-            lat      (points) float32 40.0 40.0 42.5 42.5 45.0 45.0
-            lon      (points) float32 200.0 200.0 202.5 202.5 205.0 205.0
-          * time     (time) datetime64[ns] 2013-01-01 ... 2014-12-31T18:00:00
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method='nearest')
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
         Dimensions without coordinates: points
-        Attributes:
-            long_name:     4xDaily Air temperature at sigma level 995
-            units:         degK
-            precision:     2
-            GRIB_id:       11
-            GRIB_name:     TMP
-            var_desc:      Air temperature
-            dataset:       NMC Reanalysis
-            level_desc:    Surface
-            statistic:     Individual Obs
-            parent_stat:   Other
-            actual_range:  [185.16 322.1 ]
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
