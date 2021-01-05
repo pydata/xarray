@@ -1101,15 +1101,15 @@ class DataArray(AbstractArray, DataWithCoords):
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-		Dimensions without coordinates: x, y
+                Dimensions without coordinates: x, y
 
         >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
         >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
         >>> da = da.isel(x=tgt_x, y=tgt_y)
         >>> da
         <xarray.DataArray (points: 5)>
-		array([ 0,  6, 12, 18, 24])
-		Dimensions without coordinates: points
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
