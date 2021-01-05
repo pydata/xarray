@@ -2276,6 +2276,17 @@ class TestDatasetScatterPlots(PlotTestCase):
         lines = ds2.plot.scatter(x="A", y="B", hue="hue")
         assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
 
+    def test_legend_labels_facetgrid(self):
+        ds2 = self.ds.copy()
+        ds2["hue"] = ["d", "a", "c", "b"]
+        g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col")
+        legend_labels = tuple(t.get_text() for t in g.figlegend.texts)
+        attached_labels = [
+            tuple(m.get_label() for m in mappables_per_ax)
+            for mappables_per_ax in g._mappables
+        ]
+        assert list(set(attached_labels)) == [legend_labels]
+
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
         assert len(sc.figure.axes) == 2
