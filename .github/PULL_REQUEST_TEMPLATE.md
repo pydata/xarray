@@ -7,4 +7,4 @@
 - [ ] New functions/methods are listed in `api.rst`
 
 
-<sub>By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior by adding a `[test-upstream]` tag in the body of the git commit or the commit’s title.</sub>
+<sub>By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior by adding a `[test-upstream]` tag in the git commit’s title.</sub>
