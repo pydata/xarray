@@ -5,3 +5,6 @@
 - [ ] Passes `isort . && black . && mypy . && flake8`
 - [ ] User visible changes (including notable bug fixes) are documented in `whats-new.rst`
 - [ ] New functions/methods are listed in `api.rst`
+
+
+<sub>By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior by adding a `[test-upstream]` tag in the body of the git commit or the commit’s title.</sub>

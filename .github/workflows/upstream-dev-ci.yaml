@@ -22,7 +22,7 @@ jobs:
       - uses: ./.github/actions/detect-ci-trigger
         id: detect-trigger
         with:
-          keyword: "test-upstream"
+          keyword: "[test-upstream]"
              
   upstream-dev:
     name: upstream-dev
