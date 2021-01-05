@@ -209,14 +209,14 @@ class AttrAccessMixin:
             )
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return []
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from ()
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-autocompletion"""
-        return []
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-autocompletion"""
+        yield from ()
 
     def __getattr__(self, name: str) -> Any:
         if name not in {"__dict__", "__setstate__"}:
@@ -272,26 +272,26 @@ class AttrAccessMixin:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [
+        extra_attrs = set(
             item
-            for sublist in self._attr_sources
-            for item in sublist
+            for source in self._attr_sources
+            for item in source
             if isinstance(item, str)
-        ]
-        return sorted(set(dir(type(self)) + extra_attrs))
+        )
+        return sorted(set(dir(type(self))) | extra_attrs)
 
     def _ipython_key_completions_(self) -> List[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
-        item_lists = [
+        items = set(
             item
-            for sublist in self._item_sources
-            for item in sublist
+            for source in self._item_sources
+            for item in source
             if isinstance(item, str)
-        ]
-        return list(set(item_lists))
+        )
+        return list(items)
 
 
 def get_squeeze_dims(
