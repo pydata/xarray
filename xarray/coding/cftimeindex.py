@@ -91,22 +91,25 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
 
 _BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
 _EXTENDED_PATTERN = build_pattern()
-_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN]
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601(datetime_string):
+def parse_iso8601_like(datetime_string):
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
-    raise ValueError("no ISO-8601 match for string: %s" % datetime_string)
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
     import cftime
 
     default = date_type(1, 1, 1)
-    result = parse_iso8601(timestr)
+    result = parse_iso8601_like(timestr)
     replace = {}
 
     for attr in ["year", "month", "day", "hour", "minute", "second"]:
@@ -258,6 +261,7 @@ def format_attrs(index, separator=", "):
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
     }
+    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
@@ -272,7 +276,7 @@ class CFTimeIndex(pd.Index):
     ----------
     data : array or CFTimeIndex
         Sequence of cftime.datetime objects to use in index
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
 
     See Also
@@ -520,9 +524,11 @@ class CFTimeIndex(pd.Index):
         --------
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
-        CFTimeIndex([2000-01-31 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-31 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         >>> index.shift(1, "M")
-        CFTimeIndex([2000-02-29 00:00:00], dtype='object')
+        CFTimeIndex([2000-02-29 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         """
         from .cftime_offsets import to_offset
 
@@ -608,7 +614,8 @@ class CFTimeIndex(pd.Index):
         >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
-        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
+                    dtype='object', length=2, calendar='gregorian', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
@@ -677,6 +684,13 @@ class CFTimeIndex(pd.Index):
 
         return infer_calendar_name(self)
 
+    @property
+    def freq(self):
+        """The frequency used by the dates in the index."""
+        from .frequencies import infer_freq
+
+        return infer_freq(self)
+
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
         from .cftime_offsets import CFTIME_TICKS, to_offset
@@ -695,7 +709,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -712,7 +726,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -729,7 +743,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_

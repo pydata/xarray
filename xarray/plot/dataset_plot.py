@@ -38,7 +38,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
         if not hue_is_numeric and (hue_style == "continuous"):
             raise ValueError(
-                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
             )
 
         if add_guide is None or add_guide is True:
@@ -54,9 +54,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         add_colorbar = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError(
-            "hue_style must be either None, 'discrete' " "or 'continuous'."
-        )
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
@@ -131,7 +129,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, " "or Normalize object."
+        err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
@@ -170,14 +168,14 @@ def _dsplot(plotfunc):
     ----------
 
     ds : Dataset
-    x, y : string
+    x, y : str
         Variable names for x, y axis.
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
         Can be either 'discrete' (legend) or 'continuous' (color bar).
-    markersize: str, optional (scatter only)
-        Variably by which to vary size of scattered points
+    markersize: str, optional
+        scatter only. Variable by which to vary size of scattered points.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
     add_guide: bool, optional
@@ -185,13 +183,13 @@ def _dsplot(plotfunc):
             - for "discrete", build a legend.
               This is the default for non-numeric `hue` variables.
             - for "continuous",  build a colorbar
-    row : string, optional
+    row : str, optional
         If passed, make row faceted plots on this dimension name
-    col : string, optional
+    col : str, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes, optional
+    ax : matplotlib axes object, optional
         If None, uses the current axis. Not applicable when using facets.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
@@ -205,21 +203,23 @@ def _dsplot(plotfunc):
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg
         must be None.
-    vmin, vmax : floats, optional
+    vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
         setting one of these values will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : matplotlib colormap name or object, optional
-        The mapping from data values to color space. If not provided, this
-        will be either be ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
-        color palette. If ``cmap`` is seaborn color palette and the plot type
-        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
-    colors : discrete colors to plot, optional
+    cmap : str or colormap, optional
+        The mapping from data values to color space. Either a
+        matplotlib colormap name or object. If not provided, this will
+        be either ``viridis`` (if the function infers a sequential
+        dataset) or ``RdBu_r`` (if the function infers a diverging
+        dataset).  When `Seaborn` is installed, ``cmap`` may also be a
+        `seaborn` color palette. If ``cmap`` is seaborn color palette
+        and the plot type is not ``contour`` or ``contourf``, ``levels``
+        must also be specified.
+    colors : color-like or list of color-like, optional
         A single color or a list of colors. If the plot type is not ``contour``
         or ``contourf``, the ``levels`` argument is required.
     center : float, optional
@@ -229,7 +229,7 @@ def _dsplot(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
@@ -337,11 +337,7 @@ def _dsplot(plotfunc):
             ax.set_ylabel(meta_data.get("ylabel"))
 
         if meta_data["add_legend"]:
-            ax.legend(
-                handles=primitive,
-                labels=list(meta_data["hue"].values),
-                title=meta_data.get("hue_label", None),
-            )
+            ax.legend(handles=primitive, title=meta_data.get("hue_label", None))
         if meta_data["add_colorbar"]:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if "label" not in cbar_kwargs:

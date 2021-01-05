@@ -26,6 +26,7 @@ from .variables import (
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 
 _NS_PER_TIME_DELTA = {
+    "ns": 1,
     "us": int(1e3),
     "ms": int(1e6),
     "s": int(1e9),
@@ -35,7 +36,15 @@ _NS_PER_TIME_DELTA = {
 }
 
 TIME_UNITS = frozenset(
-    ["days", "hours", "minutes", "seconds", "milliseconds", "microseconds"]
+    [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
 )
 
 
@@ -44,6 +53,7 @@ def _netcdf_to_numpy_timeunit(units):
     if not units.endswith("s"):
         units = "%ss" % units
     return {
+        "nanoseconds": "ns",
         "microseconds": "us",
         "milliseconds": "ms",
         "seconds": "s",
@@ -53,14 +63,50 @@ def _netcdf_to_numpy_timeunit(units):
     }[units]
 
 
+def _ensure_padded_year(ref_date):
+    # Reference dates without a padded year (e.g. since 1-1-1 or since 2-3-4)
+    # are ambiguous (is it YMD or DMY?). This can lead to some very odd
+    # behaviour e.g. pandas (via dateutil) passes '1-1-1 00:00:0.0' as
+    # '2001-01-01 00:00:00' (because it assumes a) DMY and b) that year 1 is
+    # shorthand for 2001 (like 02 would be shorthand for year 2002)).
+
+    # Here we ensure that there is always a four-digit year, with the
+    # assumption being that year comes first if we get something ambiguous.
+    matches_year = re.match(r".*\d{4}.*", ref_date)
+    if matches_year:
+        # all good, return
+        return ref_date
+
+    # No four-digit strings, assume the first digits are the year and pad
+    # appropriately
+    matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+    ref_year, everything_else = [s for s in matches_start_digits.groups()]
+    ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
+
+    warning_msg = (
+        f"Ambiguous reference date string: {ref_date}. The first value is "
+        "assumed to be the year hence will be padded with zeros to remove "
+        f"the ambiguity (the padded reference date string is: {ref_date_padded}). "
+        "To remove this message, remove the ambiguity by padding your reference "
+        "date strings with zeros."
+    )
+    warnings.warn(warning_msg, SerializationWarning)
+
+    return ref_date_padded
+
+
 def _unpack_netcdf_time_units(units):
     # CF datetime units follow the format: "UNIT since DATE"
     # this parses out the unit and date allowing for extraneous
-    # whitespace.
-    matches = re.match("(.+) since (.+)", units)
+    # whitespace. It also ensures that the year is padded with zeros
+    # so it will be correctly understood by pandas (via dateutil).
+    matches = re.match(r"(.+) since (.+)", units)
     if not matches:
-        raise ValueError("invalid time units: %s" % units)
+        raise ValueError(f"invalid time units: {units}")
+
     delta_units, ref_date = [s.strip() for s in matches.groups()]
+    ref_date = _ensure_padded_year(ref_date)
+
     return delta_units, ref_date
 
 
@@ -115,21 +161,22 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
         # strings, in which case we fall back to using cftime
         raise OutOfBoundsDatetime
 
-    # fixes: https://github.com/pydata/pandas/issues/14068
-    # these lines check if the the lowest or the highest value in dates
-    # cause an OutOfBoundsDatetime (Overflow) error
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+    # To avoid integer overflow when converting to nanosecond units for integer
+    # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
+    # (GH 2002).
+    if flat_num_dates.dtype.kind == "i":
+        flat_num_dates = flat_num_dates.astype(np.int64)
 
-    # Cast input dates to integers of nanoseconds because `pd.to_datetime`
-    # works much faster when dealing with integers
-    # make _NS_PER_TIME_DELTA an array to ensure type upcasting
-    flat_num_dates_ns_int = (
-        flat_num_dates.astype(np.float64) * _NS_PER_TIME_DELTA[delta]
-    ).astype(np.int64)
+    # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
+    # works much faster when dealing with integers (GH 1399).
+    flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
+        np.int64
+    )
 
+    # Use pd.to_timedelta to safely cast integer values to timedeltas,
+    # and add those to a Timestamp to safely produce a DatetimeIndex.  This
+    # ensures that we do not encounter integer overflow at any point in the
+    # process without raising OutOfBoundsDatetime.
     return (pd.to_timedelta(flat_num_dates_ns_int, "ns") + ref_date).values
 
 
@@ -216,11 +263,24 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
-    for time_unit in ["days", "hours", "minutes", "seconds"]:
+    # Note that the modulus operator was only implemented for np.timedelta64
+    # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
+    # supported is greater than or equal to this we will no longer need to cast
+    # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
+    # modulus operator works for TimedeltaIndex objects.
+    unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
+    for time_unit in [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]:
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
         unit_delta = np.timedelta64(delta_ns, "ns")
-        diffs = unique_timedeltas / unit_delta
-        if np.all(diffs == diffs.astype(int)):
+        if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
             return time_unit
     return "seconds"
 
@@ -380,7 +440,15 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
         # an OverflowError is raised if the ref_date is too far away from
         # dates to be encoded (GH 2272).
-        num = (pd.DatetimeIndex(dates.ravel()) - ref_date) / time_delta
+        dates_as_index = pd.DatetimeIndex(dates.ravel())
+        time_deltas = dates_as_index - ref_date
+
+        # Use floor division if time_delta evenly divides all differences
+        # to preserve integer dtype if possible (GH 4045).
+        if np.all(time_deltas % time_delta == np.timedelta64(0, "ns")):
+            num = time_deltas // time_delta
+        else:
+            num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError):

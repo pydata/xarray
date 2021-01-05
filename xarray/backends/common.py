@@ -6,7 +6,7 @@ import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.utils import FrozenDict, NdimSizeLenMixin
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -134,7 +134,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if isinstance(source, dask_array_type):
+        if is_duck_dask_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
@@ -340,3 +340,12 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {k: self.encode_variable(v) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
+
+
+class BackendEntrypoint:
+    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
+
+    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
+        self.open_dataset = open_dataset
+        self.open_dataset_parameters = open_dataset_parameters
+        self.guess_can_open = guess_can_open

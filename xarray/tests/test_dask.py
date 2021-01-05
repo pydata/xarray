@@ -23,7 +23,9 @@ from . import (
     assert_equal,
     assert_frame_equal,
     assert_identical,
+    raise_if_dask_computes,
     raises_regex,
+    requires_pint_0_15,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -33,30 +35,6 @@ da = pytest.importorskip("dask.array")
 dd = pytest.importorskip("dask.dataframe")
 
 ON_WINDOWS = sys.platform == "win32"
-
-
-class CountingScheduler:
-    """ Simple dask scheduler counting the number of computes.
-
-    Reference: https://stackoverflow.com/questions/53289286/ """
-
-    def __init__(self, max_computes=0):
-        self.total_computes = 0
-        self.max_computes = max_computes
-
-    def __call__(self, dsk, keys, **kwargs):
-        self.total_computes += 1
-        if self.total_computes > self.max_computes:
-            raise RuntimeError(
-                "Too many computes. Total: %d > max: %d."
-                % (self.total_computes, self.max_computes)
-            )
-        return dask.get(dsk, keys, **kwargs)
-
-
-def raise_if_dask_computes(max_computes=0):
-    scheduler = CountingScheduler(max_computes)
-    return dask.config.set(scheduler=scheduler)
 
 
 def test_raise_if_dask_computes():
@@ -291,6 +269,22 @@ class TestVariable(DaskTestCase):
 
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
+
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    def test_tokenize_duck_dask_array(self):
+        import pint
+
+        unit_registry = pint.UnitRegistry()
+
+        q = unit_registry.Quantity(self.data, "meter")
+        variable = xr.Variable(("x", "y"), q)
+
+        token = dask.base.tokenize(variable)
+        post_op = variable + 5 * unit_registry.meter
+
+        assert dask.base.tokenize(variable) != dask.base.tokenize(post_op)
+        # Immutability check
+        assert dask.base.tokenize(variable) == token
 
 
 class TestDataArrayAndDataset(DaskTestCase):
@@ -715,15 +709,35 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
+    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    def test_tokenize_duck_dask_array(self):
+        import pint
+
+        unit_registry = pint.UnitRegistry()
+
+        q = unit_registry.Quantity(self.data, unit_registry.meter)
+        data_array = xr.DataArray(
+            data=q, coords={"x": range(4)}, dims=("x", "y"), name="foo"
+        )
+
+        token = dask.base.tokenize(data_array)
+        post_op = data_array + 5 * unit_registry.meter
+
+        assert dask.base.tokenize(data_array) != dask.base.tokenize(post_op)
+        # Immutability check
+        assert dask.base.tokenize(data_array) == token
+
 
 class TestToDaskDataFrame:
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
-        x = da.from_array(np.random.randn(10), chunks=4)
+        x = np.random.randn(10)
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        ds = Dataset(
+            {"a": ("t", da.from_array(x, chunks=4)), "b": ("t", y), "t": ("t", t)}
+        )
 
         expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -746,8 +760,8 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
-        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
-        ds = Dataset({"w": (("x", "y"), w)})
+        w = np.random.randn(2, 3)
+        ds = Dataset({"w": (("x", "y"), da.from_array(w, chunks=(1, 2)))})
         ds["x"] = ("x", np.array([0, 1], np.int64))
         ds["y"] = ("y", list("abc"))
 
@@ -779,10 +793,15 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_coordinates(self):
         # Test if coordinate is also a dask array
-        x = da.from_array(np.random.randn(10), chunks=4)
-        t = da.from_array(np.arange(10) * 2, chunks=4)
+        x = np.random.randn(10)
+        t = np.arange(10) * 2
 
-        ds = Dataset({"a": ("t", x), "t": ("t", t)})
+        ds = Dataset(
+            {
+                "a": ("t", da.from_array(x, chunks=4)),
+                "t": ("t", da.from_array(t, chunks=4)),
+            }
+        )
 
         expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)
@@ -1572,3 +1591,11 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(map_da._from_temp_dataset(map_da._to_temp_dataset()), map_da)
         assert_equal(map_da.astype(map_da.dtype), map_da)
         assert_equal(map_da.transpose("y", "x", transpose_coords=False).cxy, map_da.cxy)
+
+
+def test_optimize():
+    # https://github.com/pydata/xarray/issues/3698
+    a = dask.array.ones((10, 4), chunks=(5, 2))
+    arr = xr.DataArray(a).chunk(5)
+    (arr2,) = dask.optimize(arr)
+    arr2.compute()

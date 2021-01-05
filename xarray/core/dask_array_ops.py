@@ -4,8 +4,7 @@ from . import dtypes, nputils
 
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
-    """Wrapper to apply bottleneck moving window funcs on dask arrays
-    """
+    """Wrapper to apply bottleneck moving window funcs on dask arrays"""
     import dask.array as da
 
     dtype, fill_value = dtypes.maybe_promote(a.dtype)
@@ -19,8 +18,8 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     # Create overlap array.
     ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
     # apply rolling func
-    out = ag.map_blocks(
-        moving_func, window, min_count=min_count, axis=axis, dtype=a.dtype
+    out = da.map_blocks(
+        moving_func, ag, window, min_count=min_count, axis=axis, dtype=a.dtype
     )
     # trim array
     result = da.overlap.trim_internal(out, depth)
@@ -28,8 +27,7 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
 
 
 def rolling_window(a, axis, window, center, fill_value):
-    """Dask's equivalence to np.utils.rolling_window
-    """
+    """Dask's equivalence to np.utils.rolling_window"""
     import dask.array as da
 
     if not hasattr(axis, "__len__"):
@@ -97,8 +95,14 @@ def rolling_window(a, axis, window, center, fill_value):
 
     chunks = list(a.chunks) + window
     new_axis = [a.ndim + i for i in range(len(axis))]
-    out = ag.map_blocks(
-        func, dtype=a.dtype, new_axis=new_axis, chunks=chunks, window=window, axis=axis
+    out = da.map_blocks(
+        func,
+        ag,
+        dtype=a.dtype,
+        new_axis=new_axis,
+        chunks=chunks,
+        window=window,
+        axis=axis,
     )
 
     # crop boundary.
@@ -131,5 +135,7 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
             coeffs = coeffs.reshape(coeffs.shape[0])
             residuals = residuals.reshape(residuals.shape[0])
     else:
+        # Residuals here are (1, 1) but should be (K,) as rhs is (N, K)
+        # See issue dask/dask#6516
         coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
     return coeffs, residuals

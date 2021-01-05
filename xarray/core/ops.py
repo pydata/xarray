@@ -42,8 +42,7 @@ NUM_BINARY_OPS = [
 NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ["astype", "argsort", "clip", "conj", "conjugate"]
-PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
+NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
@@ -114,7 +113,7 @@ skipna : bool, optional
     implemented (object, datetime64 or timedelta64)."""
 
 _MINCOUNT_DOCSTRING = """
-min_count : int, default None
+min_count : int, default: None
     The required number of valid values to perform the operation.
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
@@ -140,22 +139,22 @@ def fillna(data, other, join="left", dataset_join="left"):
 
     Parameters
     ----------
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {"outer", "inner", "left", "right"}, optional
         Method for joining the indexes of the passed objects along each
         dimension
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': raise `ValueError` instead of aligning when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {"outer", "inner", "left", "right"}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
-        - 'outer': take variables from both Dataset objects
-        - 'inner': take only overlapped variables
-        - 'left': take only variables from the first object
-        - 'right': take only variables from the last object
+        - "outer": take variables from both Dataset objects
+        - "inner": take only overlapped variables
+        - "left": take only variables from the first object
+        - "right": take only variables from the last object
     """
     from .computation import apply_ufunc
 
@@ -333,10 +332,6 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
-
-    for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
-        setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
     setattr(cls, "round", cls._unary_op(f))

@@ -52,6 +52,7 @@
    core.rolling.DatasetCoarsen.var
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
+   core.rolling.DatasetCoarsen.keep_attrs
    core.rolling.DatasetCoarsen.obj
    core.rolling.DatasetCoarsen.side
    core.rolling.DatasetCoarsen.trim_excess
@@ -104,6 +105,8 @@
    core.resample.DatasetResample.dims
    core.resample.DatasetResample.groups
 
+   core.rolling.DatasetRolling.argmax
+   core.rolling.DatasetRolling.argmin
    core.rolling.DatasetRolling.count
    core.rolling.DatasetRolling.max
    core.rolling.DatasetRolling.mean
@@ -115,10 +118,14 @@
    core.rolling.DatasetRolling.var
    core.rolling.DatasetRolling.center
    core.rolling.DatasetRolling.dim
+   core.rolling.DatasetRolling.keep_attrs
    core.rolling.DatasetRolling.min_periods
    core.rolling.DatasetRolling.obj
    core.rolling.DatasetRolling.rollings
    core.rolling.DatasetRolling.window
+
+   core.weighted.DatasetWeighted.obj
+   core.weighted.DatasetWeighted.weights
 
    core.rolling_exp.RollingExp.mean
 
@@ -188,6 +195,7 @@
    core.rolling.DataArrayCoarsen.var
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
+   core.rolling.DataArrayCoarsen.keep_attrs
    core.rolling.DataArrayCoarsen.obj
    core.rolling.DataArrayCoarsen.side
    core.rolling.DataArrayCoarsen.trim_excess
@@ -238,6 +246,8 @@
    core.resample.DataArrayResample.dims
    core.resample.DataArrayResample.groups
 
+   core.rolling.DataArrayRolling.argmax
+   core.rolling.DataArrayRolling.argmin
    core.rolling.DataArrayRolling.count
    core.rolling.DataArrayRolling.max
    core.rolling.DataArrayRolling.mean
@@ -249,10 +259,14 @@
    core.rolling.DataArrayRolling.var
    core.rolling.DataArrayRolling.center
    core.rolling.DataArrayRolling.dim
+   core.rolling.DataArrayRolling.keep_attrs
    core.rolling.DataArrayRolling.min_periods
    core.rolling.DataArrayRolling.obj
    core.rolling.DataArrayRolling.window
    core.rolling.DataArrayRolling.window_labels
+
+   core.weighted.DataArrayWeighted.obj
+   core.weighted.DataArrayWeighted.weights
 
    DataArray.argsort
    DataArray.clip
@@ -277,6 +291,14 @@
    core.accessor_dt.DatetimeAccessor.days_in_month
    core.accessor_dt.DatetimeAccessor.daysinmonth
    core.accessor_dt.DatetimeAccessor.hour
+   core.accessor_dt.DatetimeAccessor.is_leap_year
+   core.accessor_dt.DatetimeAccessor.is_month_end
+   core.accessor_dt.DatetimeAccessor.is_month_start
+   core.accessor_dt.DatetimeAccessor.is_quarter_end
+   core.accessor_dt.DatetimeAccessor.is_quarter_start
+   core.accessor_dt.DatetimeAccessor.is_year_end
+   core.accessor_dt.DatetimeAccessor.is_year_start
+   core.accessor_dt.DatetimeAccessor.isocalendar
    core.accessor_dt.DatetimeAccessor.microsecond
    core.accessor_dt.DatetimeAccessor.minute
    core.accessor_dt.DatetimeAccessor.month
@@ -290,6 +312,14 @@
    core.accessor_dt.DatetimeAccessor.weekday_name
    core.accessor_dt.DatetimeAccessor.weekofyear
    core.accessor_dt.DatetimeAccessor.year
+
+   core.accessor_dt.TimedeltaAccessor.ceil
+   core.accessor_dt.TimedeltaAccessor.floor
+   core.accessor_dt.TimedeltaAccessor.round
+   core.accessor_dt.TimedeltaAccessor.days
+   core.accessor_dt.TimedeltaAccessor.microseconds
+   core.accessor_dt.TimedeltaAccessor.nanoseconds
+   core.accessor_dt.TimedeltaAccessor.seconds
 
    core.accessor_str.StringAccessor.capitalize
    core.accessor_str.StringAccessor.center
@@ -365,6 +395,7 @@
    Variable.min
    Variable.no_conflicts
    Variable.notnull
+   Variable.pad
    Variable.prod
    Variable.quantile
    Variable.rank
@@ -407,6 +438,8 @@
 
    IndexVariable.all
    IndexVariable.any
+   IndexVariable.argmax
+   IndexVariable.argmin
    IndexVariable.argsort
    IndexVariable.astype
    IndexVariable.broadcast_equals
@@ -436,6 +469,7 @@
    IndexVariable.min
    IndexVariable.no_conflicts
    IndexVariable.notnull
+   IndexVariable.pad
    IndexVariable.prod
    IndexVariable.quantile
    IndexVariable.rank
@@ -538,6 +572,16 @@
    ufuncs.tanh
    ufuncs.trunc
 
+   plot.plot
+   plot.line
+   plot.step
+   plot.hist
+   plot.contour
+   plot.contourf
+   plot.imshow
+   plot.pcolormesh
+   plot.scatter
+
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles
    plot.FacetGrid.set_ticks
@@ -547,11 +591,16 @@
    CFTimeIndex.any
    CFTimeIndex.append
    CFTimeIndex.argsort
+   CFTimeIndex.argmax
+   CFTimeIndex.argmin
    CFTimeIndex.asof
    CFTimeIndex.asof_locs
    CFTimeIndex.astype
+   CFTimeIndex.calendar
+   CFTimeIndex.ceil
    CFTimeIndex.contains
    CFTimeIndex.copy
+   CFTimeIndex.days_in_month
    CFTimeIndex.delete
    CFTimeIndex.difference
    CFTimeIndex.drop
@@ -562,6 +611,7 @@
    CFTimeIndex.equals
    CFTimeIndex.factorize
    CFTimeIndex.fillna
+   CFTimeIndex.floor
    CFTimeIndex.format
    CFTimeIndex.get_indexer
    CFTimeIndex.get_indexer_for
@@ -602,6 +652,7 @@
    CFTimeIndex.reindex
    CFTimeIndex.rename
    CFTimeIndex.repeat
+   CFTimeIndex.round
    CFTimeIndex.searchsorted
    CFTimeIndex.set_names
    CFTimeIndex.set_value
@@ -638,6 +689,7 @@
    CFTimeIndex.dayofyear
    CFTimeIndex.dtype
    CFTimeIndex.empty
+   CFTimeIndex.freq
    CFTimeIndex.has_duplicates
    CFTimeIndex.hasnans
    CFTimeIndex.hour
@@ -688,15 +740,20 @@
    backends.NetCDF4DataStore.is_remote
    backends.NetCDF4DataStore.lock
 
+   backends.H5NetCDFStore.autoclose
    backends.H5NetCDFStore.close
    backends.H5NetCDFStore.encode
    backends.H5NetCDFStore.encode_attribute
    backends.H5NetCDFStore.encode_variable
+   backends.H5NetCDFStore.format
    backends.H5NetCDFStore.get_attrs
    backends.H5NetCDFStore.get_dimensions
    backends.H5NetCDFStore.get_encoding
    backends.H5NetCDFStore.get_variables
+   backends.H5NetCDFStore.is_remote
    backends.H5NetCDFStore.load
+   backends.H5NetCDFStore.lock
+   backends.H5NetCDFStore.open
    backends.H5NetCDFStore.open_store_variable
    backends.H5NetCDFStore.prepare_variable
    backends.H5NetCDFStore.set_attribute
