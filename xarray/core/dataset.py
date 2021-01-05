@@ -358,20 +358,23 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _check_chunks_compatibility(var, chunks, chunk_spec):
+def _check_chunks_compatibility(var, chunks, preferred_chunks):
     for dim in var.dims:
-        if dim not in chunks or (dim not in chunk_spec):
+        if dim not in chunks or (dim not in preferred_chunks):
             continue
 
-        chunk_spec_dim = chunk_spec.get(dim)
+        preferred_chunks_dim = preferred_chunks.get(dim)
         chunks_dim = chunks.get(dim)
 
         if isinstance(chunks_dim, int):
             chunks_dim = (chunks_dim,)
-        if any(s % chunk_spec_dim for s in chunks_dim):
+        else:
+            chunks_dim = chunks_dim[:-1]
+
+        if any(s % preferred_chunks_dim for s in chunks_dim):
             warnings.warn(
                 f"Specified Dask chunks {chunks[dim]} would separate "
-                f"on disks chunk shape {chunk_spec[dim]} for dimension {dim}. "
+                f"on disks chunk shape {preferred_chunks[dim]} for dimension {dim}. "
                 "This could degrade performance. "
                 "Consider rechunking after loading instead.",
                 stacklevel=2,
@@ -776,11 +779,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
@@ -948,11 +951,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1317,8 +1320,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         needed_dims = set(variable.dims)
 
         coords: Dict[Hashable, Variable] = {}
-        for k in self.coords:
-            if set(self.variables[k].dims) <= needed_dims:
+        # preserve ordering
+        for k in self._variables:
+            if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
 
         if self._indexes is None:

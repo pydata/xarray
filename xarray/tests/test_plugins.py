@@ -3,7 +3,7 @@ from unittest import mock
 import pkg_resources
 import pytest
 
-from xarray.backends import plugins
+from xarray.backends import common, plugins
 
 
 def dummy_open_dataset_args(filename_or_obj, *args):
@@ -18,6 +18,9 @@ def dummy_open_dataset(filename_or_obj, *, decoder):
     pass
 
 
+dummy_cfgrib = common.BackendEntrypoint(dummy_open_dataset)
+
+
 @pytest.fixture
 def dummy_duplicated_entrypoints():
     specs = [
@@ -30,8 +33,10 @@ def dummy_duplicated_entrypoints():
     return eps
 
 
+@pytest.mark.filterwarnings("ignore:Found")
 def test_remove_duplicates(dummy_duplicated_entrypoints):
-    entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
+    with pytest.warns(RuntimeWarning):
+        entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
     assert len(entrypoints) == 2
 
 
@@ -60,8 +65,8 @@ def test_create_engines_dict():
 
 
 def test_set_missing_parameters():
-    backend_1 = plugins.BackendEntrypoint(dummy_open_dataset)
-    backend_2 = plugins.BackendEntrypoint(dummy_open_dataset, ("filename_or_obj",))
+    backend_1 = common.BackendEntrypoint(dummy_open_dataset)
+    backend_2 = common.BackendEntrypoint(dummy_open_dataset, ("filename_or_obj",))
     engines = {"engine_1": backend_1, "engine_2": backend_2}
     plugins.set_missing_parameters(engines)
 
@@ -74,16 +79,16 @@ def test_set_missing_parameters():
 
 def test_set_missing_parameters_raise_error():
 
-    backend = plugins.BackendEntrypoint(dummy_open_dataset_args)
+    backend = common.BackendEntrypoint(dummy_open_dataset_args)
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
-    backend = plugins.BackendEntrypoint(
+    backend = common.BackendEntrypoint(
         dummy_open_dataset_args, ("filename_or_obj", "decoder")
     )
     plugins.set_missing_parameters({"engine": backend})
 
-    backend = plugins.BackendEntrypoint(dummy_open_dataset_kwargs)
+    backend = common.BackendEntrypoint(dummy_open_dataset_kwargs)
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
@@ -91,3 +96,16 @@ def test_set_missing_parameters_raise_error():
         dummy_open_dataset_kwargs, ("filename_or_obj", "decoder")
     )
     plugins.set_missing_parameters({"engine": backend})
+
+
+@mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=dummy_cfgrib))
+def test_build_engines():
+    dummy_cfgrib_pkg_entrypoint = pkg_resources.EntryPoint.parse(
+        "cfgrib = xarray.tests.test_plugins:backend_1"
+    )
+    backend_entrypoints = plugins.build_engines([dummy_cfgrib_pkg_entrypoint])
+    assert backend_entrypoints["cfgrib"] is dummy_cfgrib
+    assert backend_entrypoints["cfgrib"].open_dataset_parameters == (
+        "filename_or_obj",
+        "decoder",
+    )

@@ -1,17 +1,34 @@
+import functools
 import inspect
 import itertools
+import logging
+import typing as T
 import warnings
-from functools import lru_cache
 
 import pkg_resources
 
+from .cfgrib_ import cfgrib_backend
+from .common import BackendEntrypoint
+from .h5netcdf_ import h5netcdf_backend
+from .netCDF4_ import netcdf4_backend
+from .pseudonetcdf_ import pseudonetcdf_backend
+from .pydap_ import pydap_backend
+from .pynio_ import pynio_backend
+from .scipy_ import scipy_backend
+from .store import store_backend
+from .zarr import zarr_backend
 
-class BackendEntrypoint:
-    __slots__ = ("open_dataset", "open_dataset_parameters")
-
-    def __init__(self, open_dataset, open_dataset_parameters=None):
-        self.open_dataset = open_dataset
-        self.open_dataset_parameters = open_dataset_parameters
+BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
+    "store": store_backend,
+    "netcdf4": netcdf4_backend,
+    "h5netcdf": h5netcdf_backend,
+    "scipy": scipy_backend,
+    "pseudonetcdf": pseudonetcdf_backend,
+    "zarr": zarr_backend,
+    "cfgrib": cfgrib_backend,
+    "pydap": pydap_backend,
+    "pynio": pynio_backend,
+}
 
 
 def remove_duplicates(backend_entrypoints):
@@ -31,7 +48,7 @@ def remove_duplicates(backend_entrypoints):
             selected_module_name = matches[0].module_name
             all_module_names = [e.module_name for e in matches]
             warnings.warn(
-                f"\nFound {matches_len} entrypoints for the engine name {name}:"
+                f"Found {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
                 RuntimeWarning,
             )
@@ -69,10 +86,44 @@ def set_missing_parameters(engines):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-@lru_cache(maxsize=1)
+def build_engines(entrypoints):
+    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
+    pkg_entrypoints = remove_duplicates(entrypoints)
+    external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
+    backend_entrypoints.update(external_backend_entrypoints)
+    set_missing_parameters(backend_entrypoints)
+    return backend_entrypoints
+
+
+@functools.lru_cache(maxsize=1)
 def list_engines():
     entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    backend_entrypoints = remove_duplicates(entrypoints)
-    engines = create_engines_dict(backend_entrypoints)
-    set_missing_parameters(engines)
-    return engines
+    return build_engines(entrypoints)
+
+
+def guess_engine(store_spec):
+    engines = list_engines()
+
+    # use the pre-defined selection order for netCDF files
+    for engine in ["netcdf4", "h5netcdf", "scipy"]:
+        if engine in engines and engines[engine].guess_can_open(store_spec):
+            return engine
+
+    for engine, backend in engines.items():
+        try:
+            if backend.guess_can_open and backend.guess_can_open(store_spec):
+                return engine
+        except Exception:
+            logging.exception(f"{engine!r} fails while guessing")
+
+    raise ValueError("cannot guess the engine, try passing one explicitly")
+
+
+def get_backend(engine):
+    """Select open_dataset method based on current engine"""
+    engines = list_engines()
+    if engine not in engines:
+        raise ValueError(
+            f"unrecognized engine {engine} must be one of: {list(engines)}"
+        )
+    return engines[engine]
