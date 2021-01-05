@@ -2113,7 +2113,12 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
+    def transpose(
+        self,
+        *dims: Hashable,
+        transpose_coords: bool = True,
+        missing_dims: str = "raise",
+    ) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -2123,6 +2128,12 @@ class DataArray(AbstractArray, DataWithCoords):
             dimensions to this order.
         transpose_coords : bool, default: True
             If True, also transpose the coordinates of this DataArray.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -2141,7 +2152,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims))
+            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}
