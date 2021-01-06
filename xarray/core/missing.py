@@ -733,7 +733,7 @@ def interp_func(var, x, new_x, method, kwargs):
 
         # if usefull, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
-        
+
         # scipy.interpolate.interp1d always forces to float.
         # Use the same check for blockwise as well:
         if not issubclass(var.dtype.type, np.inexact):
