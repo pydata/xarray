@@ -9,7 +9,6 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - coveralls
   - dask
   - distributed
   - h5netcdf
