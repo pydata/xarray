@@ -11,10 +11,30 @@ on:
   workflow_dispatch: # allows you to trigger the workflow run manually
 
 jobs:
+  detect-ci-trigger:
+    name: detect upstream-dev ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/detect-ci-trigger
+        id: detect-trigger
+        with:
+          keyword: "[test-upstream]"
+             
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    if: github.repository == 'pydata/xarray'
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
+        || needs.detect-ci-trigger.outputs.triggered == 'true'
+      )
     defaults:
       run:
         shell: bash -l {0}
