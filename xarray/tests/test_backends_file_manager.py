@@ -202,6 +202,8 @@ def test_file_manager_read(tmpdir, file_cache):
     manager.close()
 
 
+# __init__ fails, thus, __del__ fails -> ignore the warning
+@pytest.mark.filterwarnings("ignore:Exception ignored in")
 def test_file_manager_invalid_kwargs():
     with pytest.raises(TypeError):
         CachingFileManager(open, "dummy", mode="w", invalid=True)
