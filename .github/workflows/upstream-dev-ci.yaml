@@ -23,7 +23,7 @@ jobs:
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
-             
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
