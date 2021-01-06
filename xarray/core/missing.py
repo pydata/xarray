@@ -742,7 +742,7 @@ def interp_func(var, x, new_x, method, kwargs):
             interp_kwargs=kwargs,
             localize=localize,
             concatenate=True,
-            dtype=var.dtype,
+            dtype=float,  # scipy.interpolate.interp1d always forces to float.
             new_axes=new_axes,
         )
 
