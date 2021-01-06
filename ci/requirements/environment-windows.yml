@@ -6,7 +6,7 @@ dependencies:
   - bottleneck
   - cartopy
   # - cdms2  # Not available on Windows
-  # - cfgrib  # Causes Python interpreter crash on Windows
+  - cfgrib
   - cftime
   - coveralls
   - dask
