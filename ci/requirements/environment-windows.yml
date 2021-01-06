@@ -16,7 +16,6 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
@@ -26,6 +25,7 @@ dependencies:
   - pandas
   - pint
   - pip
+  - pre-commit
   - pseudonetcdf
   - pydap
   # - pynio  # Not available on Windows

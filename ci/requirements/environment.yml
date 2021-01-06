@@ -17,7 +17,6 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
@@ -27,6 +26,7 @@ dependencies:
   - pandas
   - pint
   - pip=20.2
+  - pre-commit
   - pseudonetcdf
   - pydap
   # - pynio: not compatible with netCDF4>1.5.3; only tested in py36-bare-minimum

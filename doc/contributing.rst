@@ -370,11 +370,7 @@ xarray uses several tools to ensure a consistent code format throughout the proj
 
 We highly recommend that you setup `pre-commit hooks <https://pre-commit.com/>`_
 to automatically run all the above tools every time you make a git commit. This
-can be done by installing ``pre-commit``::
-
-   pip install pre-commit
-
-and then running::
+can be done by running::
 
    pre-commit install
 
