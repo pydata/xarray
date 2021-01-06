@@ -392,12 +392,8 @@ Testing With Continuous Integration
 -----------------------------------
 
 The *xarray* test suite runs automatically the
-`Azure Pipelines <https://azure.microsoft.com/en-us/services/devops/pipelines//>`__,
-continuous integration service, once your pull request is submitted. However,
-if you wish to run the test suite on a branch prior to submitting the pull
-request, then Azure Pipelines
-`needs to be configured <https://docs.microsoft.com/en-us/azure/devops/pipelines/>`_
-for your GitHub repository.
+`GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`__,
+continuous integration service, once your pull request is submitted.
 
 A pull-request will be considered for merging when you have an all 'green' build. If any
 tests are failing, then you will get a red 'X', where you can click through to see the
