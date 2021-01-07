@@ -202,11 +202,6 @@ def test_file_manager_read(tmpdir, file_cache):
     manager.close()
 
 
-def test_file_manager_invalid_kwargs():
-    with pytest.raises(TypeError):
-        CachingFileManager(open, "dummy", mode="w", invalid=True)
-
-
 def test_file_manager_acquire_context(tmpdir, file_cache):
     path = str(tmpdir.join("testing.txt"))
 

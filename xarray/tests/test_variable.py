@@ -835,6 +835,9 @@ class VariableSubclassobjects:
         ],
     )
     @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
     def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
