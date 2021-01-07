@@ -31,7 +31,7 @@ BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
 }
 
 BACKEND_DEPENDENCIES = {
-    "netcdf4": "netcdf4",
+    "netcdf4": "netCDF4",
     "h5netcdf": "h5netcdf",
     "scipy": "scipy",
     "pseudonetcdf": "PseudoNetCDF",
@@ -98,15 +98,13 @@ def set_missing_parameters(engines):
 
 
 def internal_available_entrypoints():
-    backend_entrypoints = {}
+    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
     for entrypoint in BACKEND_ENTRYPOINTS:
         if entrypoint != "store":
             try:
                 __import__(BACKEND_DEPENDENCIES[entrypoint])
             except ImportError:
-                pass
-            else:
-                backend_entrypoints[entrypoint] = BACKEND_ENTRYPOINTS[entrypoint]
+                backend_entrypoints.pop(entrypoint)
     return backend_entrypoints
 
 
