@@ -4,4 +4,4 @@
 
 numpy >= 1.15
 pandas >= 0.25
-setuptools >= 38.4
+setuptools >= 40.4
