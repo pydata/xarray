@@ -8,14 +8,12 @@ jobs:
 - job: Linux
   strategy:
     matrix:
-      py36-bare-minimum:
-        conda_env: py36-bare-minimum
-      py36-min-all-deps:
-        conda_env: py36-min-all-deps
-      py36-min-nep18:
-        conda_env: py36-min-nep18
-      py36:
-        conda_env: py36
+      py37-bare-minimum:
+        conda_env: py37-bare-minimum
+      py37-min-all-deps:
+        conda_env: py37-min-all-deps
+      py37-min-nep18:
+        conda_env: py37-min-nep18
       py37:
         conda_env: py37
       py38:
@@ -121,6 +119,6 @@ jobs:
   - template: ci/azure/add-conda-to-path.yml
   - bash: |
       conda install -y pyyaml
-      python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
-      python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
+      python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
+      python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
     displayName: minimum versions policy
