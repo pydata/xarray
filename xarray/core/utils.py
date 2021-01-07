@@ -9,7 +9,6 @@ import re
 import warnings
 from enum import Enum
 from typing import (
-    AbstractSet,
     Any,
     Callable,
     Collection,
@@ -509,17 +508,14 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: AbstractSet[T] = None):
+    def __init__(self, values: Iterable[T] = None):
         self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believe that
-            # we're altering the type of self in place (see signature of
-            # MutableSet.__ior__)
-            self |= values  # type: ignore
+            self.update(values)
 
     # Required methods for MutableSet
 
-    def __contains__(self, value: object) -> bool:
+    def __contains__(self, value: Hashable) -> bool:
         return value in self._d
 
     def __iter__(self) -> Iterator[T]:
@@ -536,9 +532,9 @@ class OrderedSet(MutableSet[T]):
 
     # Additional methods
 
-    def update(self, values: AbstractSet[T]) -> None:
-        # See comment on __init__ re. type checking
-        self |= values  # type: ignore
+    def update(self, values: Iterable[T]) -> None:
+        for v in values:
+            self._d[v] = None
 
     def __repr__(self) -> str:
         return "{}({!r})".format(type(self).__name__, list(self))
