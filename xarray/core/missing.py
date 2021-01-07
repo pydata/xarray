@@ -438,7 +438,7 @@ def bfill(arr, dim=None, limit=None):
 
 
 def _import_interpolant(interpolant, method):
-    """Import scipy.interpolant and handle if it doesn't exist."""
+    """Import interpolant from scipy.interpolate."""
     try:
         from scipy import interpolate
 
