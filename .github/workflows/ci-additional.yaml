@@ -165,5 +165,5 @@ jobs:
       - name: minimum versions policy
         run: |
           mamba install -y pyyaml
-          python ci/min_deps_check.py ci/requirements/py36-bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/py36-min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
