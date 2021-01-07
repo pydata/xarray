@@ -73,7 +73,7 @@ Extend xarray capabilities
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
-- `xskillscore <https://github.com/raybellwaves/xskillscore>`_: Metrics for verifying forecasts.
+- `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
