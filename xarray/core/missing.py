@@ -651,7 +651,7 @@ def interp(var, indexes_coords, method, **kwargs):
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*tuple(out_dims))
+        result = result.transpose(*out_dims)
     return result
 
 
