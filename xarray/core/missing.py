@@ -443,8 +443,8 @@ def _import_interpolant(interpolant, method):
         from scipy import interpolate
 
         return getattr(interpolate, interpolant)
-    except ImportError:
-        raise ImportError(f"Interpolation with method {method} requires scipy")
+    except ImportError as e:
+        raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
 def _get_interpolator(method, vectorizeable_only=False, **kwargs):
