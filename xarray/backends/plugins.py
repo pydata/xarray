@@ -38,7 +38,7 @@ BACKEND_DEPENDENCIES = {
     "zarr": "zarr",
     "cfgrib": "cfgrib",
     "pydap": "pydap",
-    "pynio": "Nio"
+    "pynio": "Nio",
 }
 
 
@@ -127,6 +127,10 @@ def guess_engine(store_spec):
     engines = list_engines()
 
     # use the pre-defined selection order for netCDF files
+    for engine in ["netcdf4", "h5netcdf", "scipy"]:
+        if engine in engines and engines[engine].guess_can_open(store_spec):
+            return engine
+
     for engine, backend in engines.items():
         try:
             if backend.guess_can_open and backend.guess_can_open(store_spec):
