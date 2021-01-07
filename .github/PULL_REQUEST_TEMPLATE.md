@@ -17,5 +17,5 @@
     <li>
     For documentation-only commits, you can skip the CI per commit by adding a `[skip-ci]` tag to the first line of the commit message
     </li>
-  </li>
+  </ul>
 </sub>
