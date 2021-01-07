@@ -21,9 +21,9 @@ jobs:
         os: ["ubuntu-latest"]
         env:
           [
-            "py36-bare-minimum",
-            "py36-min-all-deps",
-            "py36-min-nep18",
+            "py37-bare-minimum",
+            "py37-min-all-deps",
+            "py37-min-nep18",
             "py38-all-but-dask",
             "py38-backend-api-v2",
             "py38-flaky",
