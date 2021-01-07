@@ -9,9 +9,23 @@ on:
   workflow_dispatch: # allows you to trigger manually
 
 jobs:
+  detect-ci-trigger:
+    name: detect upstream-dev ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/detect-ci-trigger
+        id: detect-trigger
+        with:
+          keyword: "[skip-ci]"
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
