@@ -10,7 +10,7 @@ on:
 
 jobs:
   detect-ci-trigger:
-    name: detect upstream-dev ci trigger
+    name: detect ci trigger
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     outputs:
