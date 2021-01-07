@@ -515,7 +515,7 @@ class OrderedSet(MutableSet[T]):
 
     # Required methods for MutableSet
 
-    def __contains__(self, value: Any) -> bool:
+    def __contains__(self, value: Hashable) -> bool:
         return value in self._d
 
     def __iter__(self) -> Iterator[T]:
