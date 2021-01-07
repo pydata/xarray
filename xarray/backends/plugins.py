@@ -30,6 +30,17 @@ BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
     "pynio": pynio_backend,
 }
 
+BACKEND_DEPENDENCIES = {
+    "netcdf4": "netcdf4",
+    "h5netcdf": "h5netcdf",
+    "scipy": "scipy",
+    "pseudonetcdf": "PseudoNetCDF",
+    "zarr": "zarr",
+    "cfgrib": "cfgrib",
+    "pydap": "pydap",
+    "pynio": "Nio"
+}
+
 
 def remove_duplicates(backend_entrypoints):
 
@@ -86,8 +97,21 @@ def set_missing_parameters(engines):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
+def internal_available_entrypoints():
+    backend_entrypoints = {}
+    for entrypoint in BACKEND_ENTRYPOINTS:
+        if entrypoint != "store":
+            try:
+                __import__(BACKEND_DEPENDENCIES[entrypoint])
+            except ImportError:
+                pass
+            else:
+                backend_entrypoints[entrypoint] = BACKEND_ENTRYPOINTS[entrypoint]
+    return backend_entrypoints
+
+
 def build_engines(entrypoints):
-    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
+    backend_entrypoints = internal_available_entrypoints()
     pkg_entrypoints = remove_duplicates(entrypoints)
     external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
@@ -105,10 +129,6 @@ def guess_engine(store_spec):
     engines = list_engines()
 
     # use the pre-defined selection order for netCDF files
-    for engine in ["netcdf4", "h5netcdf", "scipy"]:
-        if engine in engines and engines[engine].guess_can_open(store_spec):
-            return engine
-
     for engine, backend in engines.items():
         try:
             if backend.guess_can_open and backend.guess_can_open(store_spec):
