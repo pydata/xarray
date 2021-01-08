@@ -2661,7 +2661,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     open_dataset(f, engine="scipy")
 
                 f.seek(8)
-                with raises_regex(ValueError, "read/write pointer not at the start"):
+                with raises_regex(ValueError, "cannot guess the engine"):
                     open_dataset(f)
 
 
