@@ -104,20 +104,19 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
                 f"{entry.name}: version != filename version: {version} vs {filename_version}"
             )
 
-        time = datetime.fromtimestamp(entry.timestamp)
+        time = datetime.fromtimestamp(entry.timestamp) if entry.timestamp != 0 else None
         major, minor = map(int, version.split(".")[:2])
 
         return (major, minor), time
 
-    records = sorted(
-        metadata(entry)
-        for entry in conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
-    )
+    raw_data = conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
+    records = sorted([metadata(entry) for entry in raw_data], key=lambda x: x[0])
 
-    out = {
-        version: min(time for _, time in group)
+    release_dates = {
+        version: [time for _, time in group if time is not None]
         for version, group in itertools.groupby(records, key=lambda x: x[0])
     }
+    out = {version: min(dates) for version, dates in release_dates.items() if dates}
 
     # Hardcoded fix to work around incorrect dates in conda
     if pkg == "python":
