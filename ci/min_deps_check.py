@@ -94,15 +94,7 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
     """
 
     def metadata(entry):
-        name = entry.name
-        filename = entry.fn
         version = entry.version
-        filename_version = filename[len(name) :].split("-")[1]
-
-        if version != filename_version:
-            raise RuntimeError(
-                f"{entry.name}: version != filename version: {version} vs {filename_version}"
-            )
 
         time = datetime.fromtimestamp(entry.timestamp) if entry.timestamp != 0 else None
         major, minor = map(int, version.split(".")[:2])
