@@ -797,13 +797,13 @@ class TestDataArray:
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
         with raises_regex(
             ValueError,
-            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0)
         with pytest.warns(
             UserWarning,
-            match=r"dimensions {'not_a_dim'} do not exist. "
+            match=r"Dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0, missing_dims="warn")
@@ -2244,8 +2244,20 @@ class TestDataArray:
         actual = da.transpose("z", ..., "x", transpose_coords=True)
         assert_equal(expected, actual)
 
+        # same as previous but with a missing dimension
+        actual = da.transpose(
+            "z", "y", "x", "not_a_dim", transpose_coords=True, missing_dims="ignore"
+        )
+        assert_equal(expected, actual)
+
         with pytest.raises(ValueError):
             da.transpose("x", "y")
+
+        with pytest.raises(ValueError):
+            da.transpose("not_a_dim", "z", "x", ...)
+
+        with pytest.warns(UserWarning):
+            da.transpose("not_a_dim", "y", "x", ..., missing_dims="warn")
 
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
@@ -6260,7 +6272,6 @@ def da_dask(seed=123):
 
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da):
-
     expected = DataArray(
         np.asarray([[0, 0, 0], [1, 0, 0]]),
         dims=list("yx"),
@@ -6310,7 +6321,6 @@ def test_coarsen_keep_attrs():
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
-
     rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
 
@@ -6485,7 +6495,6 @@ def test_rolling_construct(center, window):
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
 def test_rolling_reduce(da, center, min_periods, window, name):
-
     if min_periods is not None and window < min_periods:
         min_periods = window
 
@@ -6524,7 +6533,6 @@ def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
 
 
 def test_rolling_count_correct():
-
     da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
     kwargs = [
@@ -6612,7 +6620,6 @@ def test_ndrolling_construct(center, fill_value):
     ],
 )
 def test_rolling_keep_attrs(funcname, argument):
-
     attrs_da = {"da_attr": "test"}
 
     data = np.linspace(10, 15, 100)
@@ -6656,7 +6663,6 @@ def test_rolling_keep_attrs(funcname, argument):
 
 
 def test_rolling_keep_attrs_deprecated():
-
     attrs_da = {"da_attr": "test"}
 
     data = np.linspace(10, 15, 100)
@@ -6990,7 +6996,6 @@ def test_rolling_exp(da, dim, window_type, window):
 
 @requires_numbagg
 def test_rolling_exp_keep_attrs(da):
-
     attrs = {"attrs": "da"}
     da.attrs = attrs
 
