@@ -96,17 +96,17 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
     def metadata(entry):
         version = entry.version
 
-        time = datetime.fromtimestamp(entry.timestamp) if entry.timestamp != 0 else None
+        time = datetime.fromtimestamp(entry.timestamp)
         major, minor = map(int, version.split(".")[:2])
 
         return (major, minor), time
 
     raw_data = conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
-    records = sorted([metadata(entry) for entry in raw_data], key=lambda x: x[0])
+    data = sorted(metadata(entry) for entry in raw_data if entry.timestamp != 0)
 
     release_dates = {
         version: [time for _, time in group if time is not None]
-        for version, group in itertools.groupby(records, key=lambda x: x[0])
+        for version, group in itertools.groupby(data, key=lambda x: x[0])
     }
     out = {version: min(dates) for version, dates in release_dates.items() if dates}
 
