@@ -85,7 +85,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Import xarray
         run: |
-          python -OO -c "import xarray"
+          python -c "import xarray"
       - name: Run tests
         run: |
           python -m pytest -n 4 \
