@@ -36,7 +36,6 @@ from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
-    dask_dataframe_type,
     integer_types,
     is_duck_dask_array,
 )
@@ -199,9 +198,6 @@ def as_compatible_data(data, fastpath=False):
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
-
-    if isinstance(data, dask_dataframe_type):
-        return data.to_dask_array(lengths=True)
 
     if isinstance(data, Variable):
         return data.data

@@ -398,22 +398,9 @@ class DataArray(AbstractArray, DataWithCoords):
             if attrs is None and not isinstance(data, PANDAS_TYPES):
                 attrs = getattr(data, "attrs", None)
 
-            def compute_delayed_tuple_elements(tuple_):
-                tuple_ = tuple(
-                    [
-                        elem.compute() if hasattr(elem, "compute") else elem
-                        for elem in tuple_
-                    ]
-                )
-
-                return tuple_
-
-            shape = compute_delayed_tuple_elements(data.shape)
-            coords = compute_delayed_tuple_elements(coords)
-
             data = _check_data_shape(data, coords, dims)
             data = as_compatible_data(data)
-            coords, dims = _infer_coords_and_dims(shape, coords, dims)
+            coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
             indexes = dict(
                 _extract_indexes_from_coords(coords)

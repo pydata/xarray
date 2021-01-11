@@ -21,13 +21,6 @@ except ImportError:  # pragma: no cover
     is_dask_collection = lambda _: False
 
 try:
-    from dask.dataframe.core import DataFrame as ddf
-
-    dask_dataframe_type = (ddf,)
-except ImportError:
-    dask_dataframe_type = ()
-
-try:
     # solely for isinstance checks
     import sparse
 
