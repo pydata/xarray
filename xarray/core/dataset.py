@@ -4977,6 +4977,42 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         return obj
 
+    @classmethod
+    def from_dask_dataframe(cls, dataframe):
+        if not dataframe.columns.is_unique:
+            raise ValueError("cannot convert DataFrame with non-unique columns")
+
+        idx = remove_unused_levels_categories(dataframe.index.compute())
+
+        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
+            raise ValueError(
+                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
+            )
+
+        # Cast to a NumPy array first, in case the Series is a pandas Extension
+        # array (which doesn't have a valid NumPy dtype)
+        # TODO: allow users to control how this casting happens, e.g., by
+        # forwarding arguments to pandas.Series.to_numpy?
+        arrays = [(k, v.to_dask_array(lengths=True)) for k, v in dataframe.items()]
+
+        obj = cls()
+
+        if isinstance(idx, pd.MultiIndex):
+            dims = tuple(
+                name if name is not None else "level_%i" % n
+                for n, name in enumerate(idx.names)
+            )
+            for dim, lev in zip(dims, idx.levels):
+                obj[dim] = (dim, lev)
+        else:
+            index_name = idx.name if idx.name is not None else "index"
+            dims = (index_name,)
+            obj[index_name] = (dims, idx)
+
+        obj._set_numpy_data_from_dataframe(idx, arrays, dims)
+
+        return obj
+
     def to_dask_dataframe(self, dim_order=None, set_index=False):
         """
         Convert this dataset into a dask.dataframe.DataFrame.

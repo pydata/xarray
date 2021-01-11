@@ -2813,6 +2813,29 @@ class DataArray(AbstractArray, DataWithCoords):
         result.name = series.name
         return result
 
+    @classmethod
+    def from_dask_series(cls, series, sparse: bool = False) -> "DataArray":
+        """Convert a pandas.Series into an xarray.DataArray.
+
+        If the series's index is a MultiIndex, it will be expanded into a
+        tensor product of one-dimensional coordinates (filling in missing
+        values with NaN). Thus this operation should be the inverse of the
+        `to_series` method.
+
+        If sparse=True, creates a sparse array instead of a dense NumPy array.
+        Requires the pydata/sparse package.
+
+        See also
+        --------
+        xarray.Dataset.from_dataframe
+        """
+        temp_name = "__temporary_name"
+        df = series.to_frame(name=temp_name)
+        ds = Dataset.from_dask_dataframe(df)
+        result = ds[temp_name]
+        result.name = series.name
+        return result
+
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable"""
         from ..convert import to_cdms2
