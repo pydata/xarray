@@ -59,4 +59,3 @@ How do I ...
      - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
    * - make a mask that is ``True`` where an object contains any of the values in a array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
-

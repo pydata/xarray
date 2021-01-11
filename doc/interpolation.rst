@@ -68,7 +68,7 @@ by specifying the time periods required.
 
 Interpolation of data indexed by a :py:class:`~xarray.CFTimeIndex` is also
 allowed.  See :ref:`CFTimeIndex` for examples.
-    
+
 .. note::
 
   Currently, our interpolation only works for regular grids.

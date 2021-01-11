@@ -153,7 +153,7 @@ Visualizing your datasets is quick and convenient:
     data.plot()
 
 Note the automatic labeling with names and units. Our effort in adding metadata attributes has paid off! Many aspects of these figures are customizable: see :ref:`plotting`.
-    
+
 pandas
 ------
 

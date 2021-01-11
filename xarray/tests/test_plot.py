@@ -2240,7 +2240,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py36-bare-minimum
+        # Can't move this to pytest.mark.parametrize because py37-bare-minimum
         # doesn't have matplotlib.
         for hue_style, map_type in (
             ("discrete", list),

@@ -1,4 +1,4 @@
-name: CI
+name: CI Upstream
 on:
   push:
     branches:
@@ -23,7 +23,7 @@ jobs:
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
-             
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
@@ -60,7 +60,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up conda environment
         run: |
-          mamba env update -f ci/requirements/py38.yml
+          mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
           conda list
       - name: import xarray
@@ -148,8 +148,8 @@ jobs:
             }
             const result = await github.graphql(query, variables)
 
-            // If no issue is open, create a new issue, 
-            // else update the body of the existing issue. 
+            // If no issue is open, create a new issue,
+            // else update the body of the existing issue.
             if (result.repository.issues.edges.length === 0) {
                 github.issues.create({
                     owner: variables.owner,

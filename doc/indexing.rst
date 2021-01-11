@@ -548,7 +548,7 @@ you can supply a :py:class:`~xarray.DataArray` with a coordinate,
         x=xr.DataArray([0, 1, 6], dims="z", coords={"z": ["a", "b", "c"]}),
         y=xr.DataArray([0, 1, 0], dims="z"),
     )
-    
+
 Analogously, label-based pointwise-indexing is also possible by the ``.sel``
 method:
 

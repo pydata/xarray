@@ -3,37 +3,32 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.7
-  - black
   - boto3
   - bottleneck
   - cartopy
   - cdms2
   - cfgrib
   - cftime
-  - coveralls
   - dask
   - distributed
-  - flake8
   - h5netcdf
   - h5py=2
   - hdf5
   - hypothesis
   - iris
-  - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
-  - mypy=0.790  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
   - numpy
   - pandas
   - pint
-  - pip
+  - pip=20.2
+  - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py36-bare-minimum
+  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
