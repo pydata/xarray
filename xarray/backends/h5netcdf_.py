@@ -1,4 +1,5 @@
 import functools
+import importlib
 import io
 import os
 from distutils.version import LooseVersion
@@ -8,7 +9,12 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
-from .common import BackendEntrypoint, WritableCFDataStore, find_root_and_group
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    BackendEntrypoint,
+    WritableCFDataStore,
+    find_root_and_group,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
@@ -375,3 +381,7 @@ def open_backend_dataset_h5netcdf(
 h5netcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_h5netcdf, guess_can_open=guess_can_open_h5netcdf
 )
+
+
+if importlib.util.find_spec("h5netcdf"):
+    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend

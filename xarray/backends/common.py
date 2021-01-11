@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+import typing as T
 
 import numpy as np
 
@@ -349,3 +350,6 @@ class BackendEntrypoint:
         self.open_dataset = open_dataset
         self.open_dataset_parameters = open_dataset_parameters
         self.guess_can_open = guess_can_open
+
+
+BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {}

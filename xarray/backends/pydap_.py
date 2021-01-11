@@ -1,10 +1,18 @@
+import importlib
+
 import numpy as np
 
 from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, BackendEntrypoint, robust_getitem
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    robust_getitem,
+)
 from .store import open_backend_dataset_store
 
 
@@ -133,3 +141,7 @@ def open_backend_dataset_pydap(
 pydap_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_pydap, guess_can_open=guess_can_open_pydap
 )
+
+
+if importlib.util.find_spec("pydap"):
+    BACKEND_ENTRYPOINTS["pydap"] = pydap_backend

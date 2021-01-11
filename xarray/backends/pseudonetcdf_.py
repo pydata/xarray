@@ -1,9 +1,16 @@
+import importlib
+
 import numpy as np
 
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, BackendEntrypoint
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+)
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
 from .store import open_backend_dataset_store
@@ -138,3 +145,7 @@ pseudonetcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_pseudonetcdf,
     open_dataset_parameters=open_dataset_parameters,
 )
+
+
+if importlib.util.find_spec("PseudoNetCDF"):
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend

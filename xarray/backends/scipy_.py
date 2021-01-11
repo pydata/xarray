@@ -1,3 +1,4 @@
+import importlib
 import io
 import os
 
@@ -6,7 +7,12 @@ import numpy as np
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, BackendEntrypoint, WritableCFDataStore
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    BackendArray,
+    BackendEntrypoint,
+    WritableCFDataStore,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
@@ -271,3 +277,7 @@ def open_backend_dataset_scipy(
 scipy_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
 )
+
+
+if importlib.util.find_spec("scipy"):
+    BACKEND_ENTRYPOINTS["scipy"] = scipy_backend

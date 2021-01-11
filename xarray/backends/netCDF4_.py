@@ -1,4 +1,5 @@
 import functools
+import importlib
 import operator
 import os
 import pathlib
@@ -12,6 +13,7 @@ from ..core import indexing
 from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
@@ -563,3 +565,7 @@ def open_backend_dataset_netcdf4(
 netcdf4_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_netcdf4, guess_can_open=guess_can_open_netcdf4
 )
+
+
+if importlib.util.find_spec("netCDF4"):
+    BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend

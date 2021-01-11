@@ -2,44 +2,11 @@ import functools
 import inspect
 import itertools
 import logging
-import typing as T
 import warnings
 
 import pkg_resources
 
-from .cfgrib_ import cfgrib_backend
-from .common import BackendEntrypoint
-from .h5netcdf_ import h5netcdf_backend
-from .netCDF4_ import netcdf4_backend
-from .pseudonetcdf_ import pseudonetcdf_backend
-from .pydap_ import pydap_backend
-from .pynio_ import pynio_backend
-from .scipy_ import scipy_backend
-from .store import store_backend
-from .zarr import zarr_backend
-
-BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
-    "store": store_backend,
-    "netcdf4": netcdf4_backend,
-    "h5netcdf": h5netcdf_backend,
-    "scipy": scipy_backend,
-    "pseudonetcdf": pseudonetcdf_backend,
-    "zarr": zarr_backend,
-    "cfgrib": cfgrib_backend,
-    "pydap": pydap_backend,
-    "pynio": pynio_backend,
-}
-
-BACKEND_DEPENDENCIES = {
-    "netcdf4": "netCDF4",
-    "h5netcdf": "h5netcdf",
-    "scipy": "scipy",
-    "pseudonetcdf": "PseudoNetCDF",
-    "zarr": "zarr",
-    "cfgrib": "cfgrib",
-    "pydap": "pydap",
-    "pynio": "Nio",
-}
+from .common import BACKEND_ENTRYPOINTS
 
 
 def remove_duplicates(backend_entrypoints):
@@ -97,19 +64,8 @@ def set_missing_parameters(engines):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def internal_available_entrypoints():
-    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
-    for entrypoint in BACKEND_ENTRYPOINTS:
-        if entrypoint != "store":
-            try:
-                __import__(BACKEND_DEPENDENCIES[entrypoint])
-            except ImportError:
-                backend_entrypoints.pop(entrypoint)
-    return backend_entrypoints
-
-
 def build_engines(entrypoints):
-    backend_entrypoints = internal_available_entrypoints()
+    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
     pkg_entrypoints = remove_duplicates(entrypoints)
     external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)

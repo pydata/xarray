@@ -1,3 +1,4 @@
+import importlib
 import os
 import pathlib
 
@@ -9,6 +10,7 @@ from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
@@ -705,3 +707,7 @@ def open_backend_dataset_zarr(
 
 
 zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
+
+
+if importlib.util.find_spec("zarr"):
+    BACKEND_ENTRYPOINTS["zarr"] = zarr_backend

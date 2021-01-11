@@ -1,3 +1,4 @@
+import importlib
 import os
 
 import numpy as np
@@ -5,7 +6,12 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, BackendEntrypoint
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+)
 from .locks import SerializableLock, ensure_lock
 from .store import open_backend_dataset_store
 
@@ -129,3 +135,7 @@ def open_backend_dataset_cfgrib(
 cfgrib_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_cfgrib, guess_can_open=guess_can_open_cfgrib
 )
+
+
+if importlib.util.find_spec("cfgrib"):
+    BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
