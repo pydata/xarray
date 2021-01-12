@@ -2371,8 +2371,12 @@ class TestDataset:
             data.drop(DataArray(["a", "b", "c"]), dim="x", errors="ignore")
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, "does not have coordinate labels"):
-            data.drop_sel(y=1)
+        actual = data.drop_sel(y=[1])
+        expected = data.isel(y=[0, 2])
+        assert_identical(expected, actual)
+
+        with raises_regex(KeyError, "not found in axis"):
+            data.drop_sel(x=0)
 
     def test_drop_labels_by_keyword(self):
         data = Dataset(
@@ -2409,6 +2413,27 @@ class TestDataset:
         warnings.filterwarnings("ignore", r"\W*drop")
         with pytest.raises(ValueError):
             data.drop(dim="x", x="a")
+
+    def test_drop_labels_by_position(self):
+        data = Dataset(
+            {"A": (["x", "y"], np.random.randn(2, 6)), "x": ["a", "b"], "y": range(6)}
+        )
+        # Basic functionality.
+        assert len(data.coords["x"]) == 2
+
+        ds2 = data.drop_isel(x=0)
+        ds3 = data.drop_isel(x=[0])
+        ds4 = data.drop_isel(x=[0, 1])
+        ds5 = data.drop_isel(x=[0, 1], y=range(0, 6, 2))
+
+        assert_array_equal(ds2.coords["x"], ["b"])
+        assert_array_equal(ds3.coords["x"], ["b"])
+        assert ds4.coords["x"].size == 0
+        assert ds5.coords["x"].size == 0
+        assert_array_equal(ds5.coords["y"], [1, 3, 5])
+
+        with pytest.raises(KeyError):
+            data.drop_isel(z=1)
 
     def test_drop_dims(self):
         data = xr.Dataset(

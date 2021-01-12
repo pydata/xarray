@@ -4053,10 +4053,65 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels_for_dim = [labels_for_dim]
             labels_for_dim = np.asarray(labels_for_dim)
             try:
-                index = self.indexes[dim]
+                index = self.get_index(dim)
             except KeyError:
                 raise ValueError("dimension %r does not have coordinate labels" % dim)
             new_index = index.drop(labels_for_dim, errors=errors)
+            ds = ds.loc[{dim: new_index}]
+        return ds
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this dataset.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : Dataset
+
+        Raises
+        ------
+        IndexError
+
+        Examples
+        --------
+        >>> data = np.random.randn(2, 3)
+        >>> labels = ["a", "b", "c"]
+        >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds.drop_isel(y=[0, 2])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 0.4002 1.868
+        >>> ds.drop_isel(y=1)
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) float64 1.764 0.9787 2.241 -0.9773
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop")
+
+        ds = self
+        for dim, pos_for_dim in indexers.items():
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
+            if utils.is_scalar(pos_for_dim):
+                pos_for_dim = [pos_for_dim]
+            pos_for_dim = np.asarray(pos_for_dim).tolist()
+            index = self.get_index(dim)
+            new_index = index.delete(pos_for_dim)
             ds = ds.loc[{dim: new_index}]
         return ds
 
