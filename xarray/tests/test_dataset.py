@@ -1024,14 +1024,14 @@ class TestDataset:
             data.isel(not_a_dim=slice(0, 2))
         with raises_regex(
             ValueError,
-            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of "
             r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
         ):
             data.isel(not_a_dim=slice(0, 2))
         with pytest.warns(
             UserWarning,
-            match=r"dimensions {'not_a_dim'} do not exist. "
+            match=r"Dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of "
             r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
         ):
@@ -2127,7 +2127,8 @@ class TestDataset:
     def test_align_non_unique(self):
         x = Dataset({"foo": ("x", [3, 4, 5]), "x": [0, 0, 1]})
         x1, x2 = align(x, x)
-        assert x1.identical(x) and x2.identical(x)
+        assert_identical(x1, x)
+        assert_identical(x2, x)
 
         y = Dataset({"bar": ("x", [6, 7]), "x": [0, 1]})
         with raises_regex(ValueError, "cannot reindex or align"):
@@ -2889,10 +2890,6 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        with pytest.raises(TypeError):
-            ds.set_index(x=mindex.names, inplace=True)
-            assert_identical(ds, expected)
-
         # ensure set_index with no existing index and a single data var given
         # doesn't return multi-index
         ds = Dataset(data_vars={"x_var": ("x", [0, 1, 2])})
@@ -2914,9 +2911,6 @@ class TestDataset:
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
 
-        with pytest.raises(TypeError):
-            ds.reset_index("x", inplace=True)
-
     def test_reset_index_keep_attrs(self):
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
@@ -2932,9 +2926,6 @@ class TestDataset:
 
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
-
-        with pytest.raises(TypeError):
-            ds.reorder_levels(x=["level_2", "level_1"], inplace=True)
 
         ds = Dataset({}, coords={"x": [1, 2]})
         with raises_regex(ValueError, "has no MultiIndex"):
@@ -3132,9 +3123,6 @@ class TestDataset:
         actual_result = actual.update(data)
         assert actual_result is actual
         assert_identical(expected, actual)
-
-        with pytest.raises(TypeError):
-            actual = data.update(data, inplace=False)
 
         other = Dataset(attrs={"new": "attr"})
         actual = data.copy()

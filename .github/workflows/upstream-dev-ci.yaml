@@ -1,4 +1,4 @@
-name: CI
+name: CI Upstream
 on:
   push:
     branches:
@@ -11,10 +11,30 @@ on:
   workflow_dispatch: # allows you to trigger the workflow run manually
 
 jobs:
+  detect-ci-trigger:
+    name: detect upstream-dev ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/detect-ci-trigger
+        id: detect-trigger
+        with:
+          keyword: "[test-upstream]"
+
   upstream-dev:
     name: upstream-dev
     runs-on: ubuntu-latest
-    if: github.repository == 'pydata/xarray'
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
+        || needs.detect-ci-trigger.outputs.triggered == 'true'
+      )
     defaults:
       run:
         shell: bash -l {0}
@@ -40,10 +60,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up conda environment
         run: |
-          mamba env update -f ci/requirements/py38.yml
+          mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
           conda list
+      - name: import xarray
+        run: |
+          python -c 'import xarray'
       - name: Run Tests
+        if: success()
         id: status
         run: |
           set -euo pipefail
@@ -53,6 +77,7 @@ jobs:
       - name: Upload artifacts
         if: |
           failure()
+          && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v2
@@ -123,8 +148,8 @@ jobs:
             }
             const result = await github.graphql(query, variables)
 
-            // If no issue is open, create a new issue, 
-            // else update the body of the existing issue. 
+            // If no issue is open, create a new issue,
+            // else update the body of the existing issue.
             if (result.repository.issues.edges.length === 0) {
                 github.issues.create({
                     owner: variables.owner,

@@ -1,23 +1,34 @@
 import os
 
+from ..core import indexing
 from ..core.dataset import _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .api import (
-    _autodetect_engine,
-    _get_backend_cls,
-    _normalize_path,
-    _protect_dataset_variables_inplace,
-)
+
+
+def _protect_dataset_variables_inplace(dataset, cache):
+    for name, variable in dataset.variables.items():
+        if name not in variable.dims:
+            # no need to protect IndexVariable objects
+            data = indexing.CopyOnWriteArray(variable._data)
+            if cache:
+                data = indexing.MemoryCachedArray(data)
+            variable.data = data
 
 
 def _get_mtime(filename_or_obj):
     # if passed an actual file path, augment the token with
     # the file modification time
-    if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+    mtime = None
+
+    try:
+        path = os.fspath(filename_or_obj)
+    except TypeError:
+        path = None
+
+    if path and not is_remote_uri(path):
         mtime = os.path.getmtime(filename_or_obj)
-    else:
-        mtime = None
+
     return mtime
 
 
@@ -29,38 +40,24 @@ def _chunk_ds(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if engine != "zarr":
-        from dask.base import tokenize
+    from dask.base import tokenize
 
-        mtime = _get_mtime(filename_or_obj)
-        token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-        name_prefix = "open_dataset-%s" % token
-        ds = backend_ds.chunk(chunks, name_prefix=name_prefix, token=token)
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
 
-    else:
-
-        if chunks == "auto":
-            try:
-                import dask.array  # noqa
-            except ImportError:
-                chunks = None
-
-        if chunks is None:
-            return backend_ds
-
-        if isinstance(chunks, int):
-            chunks = dict.fromkeys(backend_ds.dims, chunks)
-
-        variables = {}
-        for k, v in backend_ds.variables.items():
-            var_chunks = _get_chunk(v, chunks)
-            variables[k] = _maybe_chunk(
-                k,
-                v,
-                var_chunks,
-                overwrite_encoded_chunks=overwrite_encoded_chunks,
-            )
-        ds = backend_ds._replace(variables)
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        var_chunks = _get_chunk(var, chunks)
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            var_chunks,
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
+    ds = backend_ds._replace(variables)
     return ds
 
 
@@ -103,13 +100,13 @@ def _dataset_from_backend_dataset(
     return ds
 
 
-def _resolve_decoders_kwargs(decode_cf, engine, **decoders):
-    signature = plugins.ENGINES[engine]["signature"]
-    if decode_cf is False:
-        for d in decoders:
-            if d in signature:
-                decoders[d] = False
-    return {k: v for k, v in decoders.items() if v is not None}
+def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
+    for d in list(decoders):
+        if decode_cf is False and d in open_backend_dataset_parameters:
+            decoders[d] = False
+        if decoders[d] is None:
+            decoders.pop(d)
+    return decoders
 
 
 def open_dataset(
@@ -244,17 +241,17 @@ def open_dataset(
     if cache is None:
         cache = chunks is None
 
-    if backend_kwargs is None:
-        backend_kwargs = {}
-
-    filename_or_obj = _normalize_path(filename_or_obj)
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
 
     if engine is None:
-        engine = _autodetect_engine(filename_or_obj)
+        engine = plugins.guess_engine(filename_or_obj)
+
+    backend = plugins.get_backend(engine)
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
-        engine=engine,
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
         decode_timedelta=decode_timedelta,
@@ -263,18 +260,12 @@ def open_dataset(
         decode_coords=decode_coords,
     )
 
-    backend_kwargs = backend_kwargs.copy()
-    overwrite_encoded_chunks = backend_kwargs.pop("overwrite_encoded_chunks", None)
-
-    open_backend_dataset = _get_backend_cls(engine, engines=plugins.ENGINES)[
-        "open_dataset"
-    ]
-    backend_ds = open_backend_dataset(
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+    backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
         **decoders,
-        **backend_kwargs,
-        **{k: v for k, v in kwargs.items() if v is not None},
+        **kwargs,
     )
     ds = _dataset_from_backend_dataset(
         backend_ds,
@@ -285,7 +276,6 @@ def open_dataset(
         overwrite_encoded_chunks,
         drop_variables=drop_variables,
         **decoders,
-        **backend_kwargs,
         **kwargs,
     )
 

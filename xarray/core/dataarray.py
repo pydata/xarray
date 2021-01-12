@@ -46,7 +46,6 @@ from .alignment import (
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates,
-    LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
 )
@@ -56,7 +55,13 @@ from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
-from .utils import Default, ReprObject, _check_inplace, _default, either_dict_or_kwargs
+from .utils import (
+    Default,
+    HybridMappingProxy,
+    ReprObject,
+    _default,
+    either_dict_or_kwargs,
+)
 from .variable import (
     IndexVariable,
     Variable,
@@ -196,7 +201,7 @@ class _LocIndexer:
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
-        return self.data_array.sel(**key)
+        return self.data_array.sel(key)
 
     def __setitem__(self, key, value) -> None:
         if not utils.is_dict_like(key):
@@ -721,18 +726,20 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return self._item_sources + [self.attrs]
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from self._item_sources
+        yield self.attrs
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion"""
-        return [
-            self.coords,
-            {d: self.coords[d] for d in self.dims},
-            LevelCoordinatesSource(self),
-        ]
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-completion"""
+        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
+
+        # virtual coordinates
+        # uses empty dict -- everything here can already be found in self.coords.
+        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
@@ -778,7 +785,6 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         names: Union[Iterable[Hashable], Hashable, None] = None,
         drop: bool = False,
-        inplace: bool = None,
     ) -> Union[None, "DataArray", Dataset]:
         """Given names of coordinates, reset them to become variables.
 
@@ -795,7 +801,6 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         Dataset, or DataArray if ``drop == True``
         """
-        _check_inplace(inplace)
         if names is None:
             names = set(self.coords) - set(self.dims)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
@@ -858,11 +863,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
@@ -883,11 +888,11 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments passed on to ``dask.array.compute``.
+            Additional keyword arguments passed on to ``dask.compute``.
 
         See Also
         --------
-        dask.array.compute
+        dask.compute
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
@@ -1010,12 +1015,11 @@ class DataArray(AbstractArray, DataWithCoords):
     def chunk(
         self,
         chunks: Union[
-            None,
             Number,
             Tuple[Number, ...],
             Tuple[Tuple[Number, ...], ...],
             Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
-        ] = None,
+        ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
@@ -1804,7 +1808,6 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
-        inplace: bool = None,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> Optional["DataArray"]:
         """Set DataArray (multi-)indexes using one or more existing
@@ -1855,16 +1858,13 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        ds = self._to_temp_dataset().set_index(
-            indexes, append=append, inplace=inplace, **indexes_kwargs
-        )
+        ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
 
     def reset_index(
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-        inplace: bool = None,
     ) -> Optional["DataArray"]:
         """Reset the specified index(es) or multi-index level(s).
 
@@ -1887,7 +1887,6 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.set_index
         """
-        _check_inplace(inplace)
         coords, _ = split_indexes(
             dims_or_levels, self._coords, set(), self._level_coords, drop=drop
         )
@@ -1896,7 +1895,6 @@ class DataArray(AbstractArray, DataWithCoords):
     def reorder_levels(
         self,
         dim_order: Mapping[Hashable, Sequence[int]] = None,
-        inplace: bool = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "DataArray":
         """Rearrange index levels using input order.
@@ -1917,7 +1915,6 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
-        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         replace_coords = {}
         for dim, order in dim_order.items():
@@ -2123,7 +2120,12 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
+    def transpose(
+        self,
+        *dims: Hashable,
+        transpose_coords: bool = True,
+        missing_dims: str = "raise",
+    ) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -2133,6 +2135,12 @@ class DataArray(AbstractArray, DataWithCoords):
             dimensions to this order.
         transpose_coords : bool, default: True
             If True, also transpose the coordinates of this DataArray.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -2151,7 +2159,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims))
+            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}
@@ -3004,10 +3012,10 @@ class DataArray(AbstractArray, DataWithCoords):
         difference : same type as caller
             The n-th order finite difference of this object.
 
-        .. note::
-
-            `n` matches numpy's behavior and is different from pandas' first
-            argument named `periods`.
+        Notes
+        -----
+        `n` matches numpy's behavior and is different from pandas' first argument named
+        `periods`.
 
 
         Examples
