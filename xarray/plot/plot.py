@@ -107,10 +107,7 @@ def _infer_line_data(darray, x, y, hue):
         huelabel = label_from_attrs(darray[huename])
         hueplt = darray[huename]
 
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
-
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    return xplt, yplt, hueplt, huelabel
 
 
 def plot(
@@ -292,12 +289,14 @@ def line(
         assert "args" not in kwargs
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
+    xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, xlabel, ylabel, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, xlabel, ylabel, kwargs
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, kwargs
     )
+    xlabel = label_from_attrs(xplt, extra=x_suffix)
+    ylabel = label_from_attrs(yplt, extra=y_suffix)
 
     _ensure_plottable(xplt_val, yplt_val)
 
