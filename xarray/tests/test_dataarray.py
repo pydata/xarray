@@ -2966,8 +2966,10 @@ class TestDataArray:
         # Our use of `loffset` may change if we align our API with pandas' changes.
         # ref https://github.com/pydata/xarray/pull/4537
         actual = array.resample(time="24H", loffset="-12H").mean()
-        expected = array.to_series().resample("24H").mean().index + to_offset("-12H")
-        assert_index_equal(actual, expected)
+        expected_ = array.to_series().resample("24H").mean()
+        expected_.index += to_offset("-12H")
+        expected = DataArray.from_series(expected_)
+        assert_identical(actual, expected)
 
         with raises_regex(ValueError, "index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
