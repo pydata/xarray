@@ -71,6 +71,8 @@ Bug fixes
   (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_. 
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -93,7 +95,7 @@ Internal Changes
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
 
-- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)`` 
+- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)``
   for clearer error messages.
   (:pull:`4752`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
