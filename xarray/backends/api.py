@@ -887,7 +887,7 @@ def open_mfdataset(
                     paths
                 )
             )
-        paths = sorted(glob(paths))
+        paths = sorted(glob(_normalize_path(paths)))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
