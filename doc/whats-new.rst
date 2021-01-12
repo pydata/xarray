@@ -70,6 +70,8 @@ Bug fixes
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix regression when decoding a variable with a ``scale_factor`` and ``add_offset`` given
+  as a list with length one (:issue:`4631`) by `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
