@@ -68,6 +68,9 @@ Bug fixes
   By `Alessandro Amici <https://github.com/alexamici>`_
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Expand user directory paths (for instance ``~/`` on unix) in
+  :py:func:`open_mfdataset` (:issue:`4783`, :pull:`4795`).
+  By `Julien Seguinot <https://github.com/juseg>`_.
 
 Documentation
 ~~~~~~~~~~~~~
