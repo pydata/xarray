@@ -592,6 +592,22 @@ class TestPlot(PlotTestCase):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
+    def test_labels_with_units_with_interval(self):
+        """Test line plot with intervals and a units attribute."""
+        bins = [-1, 0, 1, 2]
+        arr = (
+            self.darray.groupby_bins("dim_0", bins)
+            .mean(...)
+            .rename({"dim_0_bins": "x"})
+        )
+        arr.x.attrs["units"] = "m"
+
+        (mappable,) = arr.plot()
+        actual = mappable.figure.gca().get_xlabel()
+
+        expected = "x_center [m]"
+        assert actual == expected
+
 
 class TestPlot1D(PlotTestCase):
     @pytest.fixture(autouse=True)
