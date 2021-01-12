@@ -6,8 +6,8 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.6 or later)
-- setuptools (38.4 or later)
+- Python (3.7 or later)
+- setuptools (40.4 or later)
 - `numpy <http://www.numpy.org/>`__ (1.15 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
 
@@ -100,7 +100,7 @@ dependencies:
 
 - **Python:** 42 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **setuptools:** 42 months (but no older than 38.4)
+- **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **dask and dask.distributed:** 12 months (but no older than 2.9)
@@ -118,9 +118,9 @@ at the moment of publishing the xarray release is guaranteed to work.
 You can see the actual minimum tested versions:
 
 - `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-nep18.yml>`_
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-nep18.yml>`_
 - `For everything else
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-all-deps.yml>`_
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-all-deps.yml>`_
 
 .. _installation-instructions:
 
