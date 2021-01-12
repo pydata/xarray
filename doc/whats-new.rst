@@ -66,9 +66,9 @@ Bug fixes
   By `Anderson Banihirwe <https://github.com/andersy005>`_
 - Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
   By `Alessandro Amici <https://github.com/alexamici>`_
-- Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations, 
-  e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype 
-  (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_. 
+- Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations,
+  e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype
+  (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
