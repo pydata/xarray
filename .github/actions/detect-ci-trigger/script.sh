@@ -3,6 +3,7 @@ event_name="$1"
 keyword="$2"
 
 echo "::group::fetch a sufficient number of commits"
+git log -n 5 2>&1
 if [[ "$event_name" == "pull_request" ]]; then
     git fetch --deepen=1 --no-tags 2>&1
 else
