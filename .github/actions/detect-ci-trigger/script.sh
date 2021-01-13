@@ -5,7 +5,9 @@ keyword="$2"
 echo "::group::fetch a sufficient number of commits"
 git log -n 5 2>&1
 if [[ "$event_name" == "pull_request" ]]; then
-    git fetch --deepen=1 --no-tags 2>&1
+    ref=$(git log -1 --format='%H')
+    git -c protocol.version=2 fetch --deepen=2 --no-tags origin $ref 2>&1
+    git checkout FETCH_HEAD
 else
     echo "nothing to do."
 fi
