@@ -503,12 +503,14 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
-def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+def _resolve_intervals_1dplot(xval, yval, kwargs):
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
     points which double the length.
     """
+    x_suffix = ""
+    y_suffix = ""
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
@@ -534,13 +536,13 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, [pd.Interval]):
             xval = _interval_to_mid_points(xval)
-            xlabel += "_center"
+            x_suffix = "_center"
         if _valid_other_type(yval, [pd.Interval]):
             yval = _interval_to_mid_points(yval)
-            ylabel += "_center"
+            y_suffix = "_center"
 
     # return converted arguments
-    return xval, yval, xlabel, ylabel, kwargs
+    return xval, yval, x_suffix, y_suffix, kwargs
 
 
 def _resolve_intervals_2dplot(val, func_name):

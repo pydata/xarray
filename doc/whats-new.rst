@@ -70,6 +70,8 @@ Bug fixes
   By `Alessandro Amici <https://github.com/alexamici>`_
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
