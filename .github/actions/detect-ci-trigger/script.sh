@@ -3,16 +3,17 @@ event_name="$1"
 keyword="$2"
 
 echo "::group::fetch a sufficient number of commits"
-git log -n 5 2>&1
-if [[ "$event_name" == "pull_request" ]]; then
-    ref=$(git log -1 --format='%H')
-    git -c protocol.version=2 fetch --deepen=2 --no-tags --prune --progress -q origin $ref 2>&1
-    git log FETCH_HEAD
-    git checkout FETCH_HEAD
-else
-    echo "nothing to do."
-fi
-git log -n 5 2>&1
+echo "skipped"
+# git log -n 5 2>&1
+# if [[ "$event_name" == "pull_request" ]]; then
+#     ref=$(git log -1 --format='%H')
+#     git -c protocol.version=2 fetch --deepen=2 --no-tags --prune --progress -q origin $ref 2>&1
+#     git log FETCH_HEAD
+#     git checkout FETCH_HEAD
+# else
+#     echo "nothing to do."
+# fi
+# git log -n 5 2>&1
 echo "::endgroup::"
 
 echo "::group::extracting the commit message"
