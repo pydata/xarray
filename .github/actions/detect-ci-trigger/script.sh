@@ -9,6 +9,7 @@ if [[ "$event_name" == "pull_request" ]]; then
 else
     echo "nothing to do."
 fi
+git log -n 5 2>&1
 echo "::endgroup::"
 
 echo "::group::extracting the commit message"
