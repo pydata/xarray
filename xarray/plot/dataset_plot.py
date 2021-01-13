@@ -422,6 +422,9 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
         for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
