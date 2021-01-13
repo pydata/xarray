@@ -1091,9 +1091,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Examples
         --------
         >>> da = xr.DataArray(
-                np.arange(25).reshape(5, 5),
-                dims=("x", "y")
-            )
+        ...     np.arange(25).reshape(5, 5),
+        ...     dims=("x", "y")
+        ... )
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
