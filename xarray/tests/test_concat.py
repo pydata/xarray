@@ -376,6 +376,30 @@ class TestConcatDataset:
         actual = concat(datasets, dim="t", fill_value=fill_value)
         assert_identical(actual, expected)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": [0, 1],
+                "x2": np.array(["a", "b"], dtype=dtype),
+            }
+        )
+        da2 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": np.array([1, 2]),
+                "x2": np.array(["c", "d"], dtype=dtype),
+            }
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
+
 
 class TestConcatDataArray:
     def test_concat(self):
@@ -524,6 +548,26 @@ class TestConcatDataArray:
         for combine_attrs in expected:
             actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
             assert_identical(actual, expected[combine_attrs])
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": [0, 1], "x2": np.array(["a", "b"], dtype=dtype)},
+        )
+        da2 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": np.array([1, 2]), "x2": np.array(["c", "d"], dtype=dtype)},
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
 
 
 @pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))
