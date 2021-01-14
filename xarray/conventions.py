@@ -597,7 +597,8 @@ def decode_cf(
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
     )
-    ds = Dataset(vars, attrs=attrs, close=close)
+    ds = Dataset(vars, attrs=attrs)
+    ds.set_close(close)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
     ds.encoding = encoding
 

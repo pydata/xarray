@@ -377,7 +377,6 @@ class DataArray(AbstractArray, DataWithCoords):
         # internal parameters
         indexes: Dict[Hashable, pd.Index] = None,
         fastpath: bool = False,
-        close: Optional[Callable[[], None]] = None,
     ):
         if fastpath:
             variable = data
@@ -423,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # public interface.
         self._indexes = indexes
 
-        self._close = close
+        self._close = None
 
     def _replace(
         self,
@@ -442,8 +441,9 @@ class DataArray(AbstractArray, DataWithCoords):
         if close is _default:
             close = self._close
         replaced = type(self)(
-            variable, coords, name=name, fastpath=True, indexes=indexes, close=close
+            variable, coords, name=name, fastpath=True, indexes=indexes
         )
+        replaced.set_close(close)
         return replaced
 
     def _replace_maybe_drop_dims(

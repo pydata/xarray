@@ -331,7 +331,9 @@ def get_squeeze_dims(
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    __slots__ = ()
+    _close: Optional[Callable[[], None]]
+
+    __slots__ = ("_close",)
 
     _rolling_exp_cls = RollingExp
 
@@ -1264,9 +1266,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
+    def set_close(self, close: Optional[Callable[[], None]]) -> None:
+        self._close = close
+
     def close(self: Any) -> None:
         """Close any files linked to this object"""
-        self._close: Optional[Callable[[], None]]
         if self._close is not None:
             self._close()
         self._close = None

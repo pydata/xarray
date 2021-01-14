@@ -350,8 +350,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         dims=("band", "y", "x"),
         coords=coords,
         attrs=attrs,
-        close=manager.close,
     )
+    result.set_close(manager.close)
 
     if chunks is not None:
         from dask.base import tokenize

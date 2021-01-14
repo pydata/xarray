@@ -665,7 +665,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
-        close: Optional[Callable[[], None]] = None,
     ):
         # TODO(shoyer): expose indexes as a public argument in __init__
 
@@ -689,7 +688,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
-        self._close = close
+        self._close = None
         self._encoding = None
         self._variables = variables
         self._coord_names = coord_names
@@ -1343,8 +1342,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             name=name,
             indexes=indexes,
             fastpath=True,
-            close=self._close,
         )
+        da.set_close(self._close)
         return da
 
     def __copy__(self) -> "Dataset":
@@ -4808,8 +4807,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             attrs=self.attrs,
             name=name,
             indexes=indexes,
-            close=self._close,
         )
+        da.set_close(self._close)
         return da
 
     def _normalize_dim_order(
