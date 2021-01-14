@@ -636,6 +636,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _variables: Dict[Hashable, Variable]
 
@@ -645,7 +646,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         "_coord_names",
         "_dims",
         "_encoding",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_variables",
         "__weakref__",
@@ -664,6 +665,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
         attrs: Mapping[Hashable, Any] = None,
+        close: Optional[Callable[[], None]] = None,
     ):
         # TODO(shoyer): expose indexes as a public argument in __init__
 
@@ -687,7 +689,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
-        self._file_obj = None
+        self._close = close
         self._encoding = None
         self._variables = variables
         self._coord_names = coord_names
@@ -703,7 +705,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if decoder:
             variables, attributes = decoder(variables, attributes)
         obj = cls(variables, attrs=attributes)
-        obj._file_obj = store
+        obj._close = store.close
         return obj
 
     @property
@@ -876,7 +878,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
+            self._close,
         )
         return self._dask_postcompute, args
 
@@ -896,7 +898,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
+            self._close,
         )
         return self._dask_postpersist, args
 
@@ -1007,7 +1009,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         attrs=None,
         indexes=None,
         encoding=None,
-        file_obj=None,
+        close=None,
     ):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
@@ -1020,7 +1022,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._dims = dims
         obj._indexes = indexes
         obj._attrs = attrs
-        obj._file_obj = file_obj
+        obj._close = close
         obj._encoding = encoding
         return obj
 
@@ -2122,7 +2124,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             attrs=self._attrs,
             indexes=indexes,
             encoding=self._encoding,
-            file_obj=self._file_obj,
+            close=self._close,
         )
 
     def _isel_fancy(
