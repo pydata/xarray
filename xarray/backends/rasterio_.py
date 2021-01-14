@@ -345,12 +345,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if cache and chunks is None:
         data = indexing.MemoryCachedArray(data)
 
-    result = DataArray(
-        data=data,
-        dims=("band", "y", "x"),
-        coords=coords,
-        attrs=attrs,
-    )
+    result = DataArray(data=data, dims=("band", "y", "x"), coords=coords, attrs=attrs)
     result.set_close(manager.close)
 
     if chunks is not None:
