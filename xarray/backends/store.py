@@ -33,9 +33,8 @@ def open_backend_dataset_store(
         decode_timedelta=decode_timedelta,
     )
 
-    ds = Dataset(vars, attrs=attrs)
+    ds = Dataset(vars, attrs=attrs, close=store.close)
     ds = ds.set_coords(coord_names.intersection(vars))
-    ds._close = store.close
     ds.encoding = encoding
 
     return ds

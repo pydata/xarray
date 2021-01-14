@@ -1035,6 +1035,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes: Union[Dict[Any, pd.Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
+        close: Optional[Callable[[], None]] = _default,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
 
@@ -1057,6 +1058,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 self._indexes = indexes
             if encoding is not _default:
                 self._encoding = encoding
+            if close is not _default:
+                self._close = close
             obj = self
         else:
             if variables is None:
@@ -1071,8 +1074,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 indexes = copy.copy(self._indexes)
             if encoding is _default:
                 encoding = copy.copy(self._encoding)
+            if close is _default:
+                close = self._close
             obj = self._construct_direct(
-                variables, coord_names, dims, attrs, indexes, encoding
+                variables, coord_names, dims, attrs, indexes, encoding, close
             )
         return obj
 
@@ -1332,7 +1337,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             indexes = {k: v for k, v in self._indexes.items() if k in coords}
 
-        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
+        return DataArray(
+            variable,
+            coords,
+            name=name,
+            indexes=indexes,
+            fastpath=True,
+            close=self._close,
+        )
 
     def __copy__(self) -> "Dataset":
         return self.copy(deep=False)
@@ -4789,7 +4801,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims = (dim,) + broadcast_vars[0].dims
 
         return DataArray(
-            data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
+            data,
+            coords,
+            dims,
+            attrs=self.attrs,
+            name=name,
+            indexes=indexes,
+            close=self._close,
         )
 
     def _normalize_dim_order(

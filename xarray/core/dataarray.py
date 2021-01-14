@@ -431,6 +431,7 @@ class DataArray(AbstractArray, DataWithCoords):
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
+        close: Optional[Callable[[], None]] = _default,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -438,7 +439,11 @@ class DataArray(AbstractArray, DataWithCoords):
             coords = self._coords
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
+        if close is _default:
+            close = self._close
+        return type(self)(
+            variable, coords, name=name, fastpath=True, indexes=indexes, close=close
+        )
 
     def _replace_maybe_drop_dims(
         self, variable: Variable, name: Union[Hashable, None, Default] = _default
@@ -494,7 +499,8 @@ class DataArray(AbstractArray, DataWithCoords):
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
         indexes = dataset._indexes
-        return self._replace(variable, coords, name, indexes=indexes)
+        close = dataset._close
+        return self._replace(variable, coords, name, indexes=indexes, close=close)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
         """ splits dataarray along dimension 'dim' """
@@ -538,7 +544,10 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
+        close = self._close
+        dataset = Dataset._construct_direct(
+            variables, coord_names, indexes=indexes, close=close
+        )
         return dataset
 
     def to_dataset(
