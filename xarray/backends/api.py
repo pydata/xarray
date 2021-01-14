@@ -712,17 +712,6 @@ def open_dataarray(
     return data_array
 
 
-class _MultiFileCloser:
-    __slots__ = ("closers",)
-
-    def __init__(self, closers):
-        self.closers = closers
-
-    def __call__(self):
-        for dataset_close in self.closers:
-            dataset_close()
-
-
 def open_mfdataset(
     paths,
     chunks=None,
@@ -960,7 +949,11 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined._close = _MultiFileCloser(closers)
+    def multi_file_closer():
+        for closer in closers:
+            closer()
+
+    combined._close = multi_file_closer
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:

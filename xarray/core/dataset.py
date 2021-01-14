@@ -1336,13 +1336,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             indexes = {k: v for k, v in self._indexes.items() if k in coords}
 
-        da = DataArray(
-            variable,
-            coords,
-            name=name,
-            indexes=indexes,
-            fastpath=True,
-        )
+        da = DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
         da.set_close(self._close)
         return da
 
@@ -4800,14 +4794,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = (dim,) + broadcast_vars[0].dims
 
-        da = DataArray(
-            data,
-            coords,
-            dims,
-            attrs=self.attrs,
-            name=name,
-            indexes=indexes,
-        )
+        da = DataArray(data, coords, dims, attrs=self.attrs, name=name, indexes=indexes)
         da.set_close(self._close)
         return da
 
