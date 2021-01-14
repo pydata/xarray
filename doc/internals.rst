@@ -239,7 +239,7 @@ How to add a new backend
 Adding a new backend for read support to Xarray is easy, and you don't need to integrate your code in Xarray.
 All you need to do is to:
 
-- Implement a function that returns an ``xarry.Dataset``
+- Implement a function that returns an instance :py:class:``Dataset``
 
 - Create a `BackendEntrypoint`` instance with your function as input.
 
@@ -249,9 +249,7 @@ All you need to do is to:
 it's a container of attributes and functions to be implemented by the backend:
 
 - ``open_dataset``
-
 - [``open_dataset_parameters``]
-
 - [``guess_can_open``]
 
 While ``open_dataset`` is mandatory, ``open_dataset_parameters`` and ``guess_can_open`` are optional.
@@ -292,7 +290,7 @@ They will be grouped together and passed to the backend as keyword arguments.
 
 ```BackendEntrypoint`.open_dataset`` output shall be an instance of Xarray :py:class:`Dataset`
 that implements an additional method ``close``, used by Xarray to ensure that the related files are closed.
-If don't want to support the lazy loading and writing, then your work is almost done.
+If don't want to support the lazy loading, then the :py:class:`Dataset` shall contain numpy.arrays and your work is almost done.
 
 BackendEntrypoint.open_dataset_parameters
 +++++++++++++++++++++++++++++++++++++++++
@@ -306,6 +304,8 @@ raise an error.
 
 BackendEntrypoint.guess_can_open
 +++++++++++++++++++++++++++++++++++++++++
+
+
 
 How to support Lazy Loading
 +++++++++++++++++++++++++++
@@ -322,3 +322,10 @@ Decoders
 
 How to register a backend
 +++++++++++++++++++++++++
+Define in your setup.py (or setup.cfg) an new entrypoint with:
+
+- group: ``xarray.backend``
+- name: the name to be passed to :py:func:`open_dataset` as `engine``.`
+- object reference: the reference to the instance of ``BackendEntrypoint``
+
+See https://packaging.python.org/specifications/entry-points/#data-model for more information.
