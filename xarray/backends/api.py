@@ -1386,10 +1386,11 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, Path):
-        store = str(store)
-    if isinstance(chunk_store, Path):
-        chunk_store = str(store)
+
+    # expand str and Path arguments
+    store = _normalize_path(store)
+    chunk_store = _normalize_path(chunk_store)
+
     if encoding is None:
         encoding = {}
 
@@ -1418,9 +1419,6 @@ def to_zarr(
             "Instead, set consolidated=True when writing to zarr with "
             "compute=False before writing data."
         )
-
-    if isinstance(store, Path):
-        store = str(store)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

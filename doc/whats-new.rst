@@ -73,11 +73,11 @@ Bug fixes
   (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
-- Expand user directory paths (for instance ``~/`` on unix) in
-  :py:func:`open_mfdataset` (:issue:`4783`, :pull:`4795`).
-  By `Julien Seguinot <https://github.com/juseg>`_.
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
+  :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
+  By `Julien Seguinot <https://github.com/juseg>`_.
 
 Documentation
 ~~~~~~~~~~~~~
