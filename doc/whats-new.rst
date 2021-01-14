@@ -34,7 +34,7 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 - Significantly higher ``unstack`` performance on numpy-backed arrays which
-  contain missing values; 100x faster in our benchmark.
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
