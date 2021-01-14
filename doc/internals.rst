@@ -306,19 +306,9 @@ BackendEntrypoint.guess_can_open
 +++++++++++++++++++++++++++++++++++++++++
 
 
-
 How to support Lazy Loading
 +++++++++++++++++++++++++++
 
-Decoders
-++++++++
-- strings.CharacterArrayCoder()
-- strings.EncodedStringCoder()
-- variables.UnsignedIntegerCoder()
-- variables.CFMaskCoder()
-- variables.CFScaleOffsetCoder()
-- times.CFTimedeltaCoder()
-- times.CFDatetimeCoder(use_cftime=use_cftime)
 
 How to register a backend
 +++++++++++++++++++++++++
@@ -329,3 +319,23 @@ Define in your setup.py (or setup.cfg) an new entrypoint with:
 - object reference: the reference to the instance of ``BackendEntrypoint``
 
 See https://packaging.python.org/specifications/entry-points/#data-model for more information.
+
+Decoders
+++++++++
+
+The decoders implement the specific operations to transform data on-disk representation
+to Xarray representation.
+
+Example of decode-time...
+
+Xarray uses internally a set of decoders needed to transform netCDF4 on disk data into a :py:class:`Dataset` following
+Xarray standards.
+
+- strings.CharacterArrayCoder()
+- strings.EncodedStringCoder()
+- variables.UnsignedIntegerCoder()
+- variables.CFMaskCoder()
+- variables.CFScaleOffsetCoder()
+- times.CFTimedeltaCoder()
+- times.CFDatetimeCoder(use_cftime=use_cftime)
+
