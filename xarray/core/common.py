@@ -11,6 +11,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    Optional,
     Tuple,
     TypeVar,
     Union,
@@ -1265,6 +1266,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def close(self: Any) -> None:
         """Close any files linked to this object"""
+        self._close: Optional[Callable[[], None]]
         if self._close is not None:
             self._close()
         self._close = None
