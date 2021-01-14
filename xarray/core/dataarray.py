@@ -431,7 +431,7 @@ class DataArray(AbstractArray, DataWithCoords):
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
-        close: Optional[Callable[[], None]] = _default,
+        close: Union[Callable[[], None], None, Default] = _default,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable

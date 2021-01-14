@@ -1035,7 +1035,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes: Union[Dict[Any, pd.Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
-        close: Optional[Callable[[], None]] = _default,
+        close: Union[Callable[[], None], None, Default] = _default,
     ) -> "Dataset":
         """Fastpath constructor for internal use.
 
