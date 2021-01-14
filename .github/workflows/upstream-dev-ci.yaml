@@ -64,7 +64,11 @@ jobs:
         run: |
           mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
+      - name: Version info
+        run: |
+          conda info -a
           conda list
+          python xarray/util/print_versions.py
       - name: import xarray
         run: |
           python -c 'import xarray'
