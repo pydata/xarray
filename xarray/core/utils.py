@@ -9,7 +9,6 @@ import re
 import warnings
 from enum import Enum
 from typing import (
-    AbstractSet,
     Any,
     Callable,
     Collection,
@@ -31,6 +30,8 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+
+from . import dtypes
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -75,6 +76,23 @@ def maybe_cast_to_coords_dtype(label, coords_dtype):
     if coords_dtype.kind == "f" and not isinstance(label, slice):
         label = np.asarray(label, dtype=coords_dtype)
     return label
+
+
+def maybe_coerce_to_str(index, original_coords):
+    """maybe coerce a pandas Index back to a nunpy array of type str
+
+    pd.Index uses object-dtype to store str - try to avoid this for coords
+    """
+
+    try:
+        result_type = dtypes.result_type(*original_coords)
+    except TypeError:
+        pass
+    else:
+        if result_type.kind in "SU":
+            index = np.asarray(index, dtype=result_type.type)
+
+    return index
 
 
 def safe_cast_to_index(array: Any) -> pd.Index:
@@ -509,17 +527,14 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: AbstractSet[T] = None):
+    def __init__(self, values: Iterable[T] = None):
         self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believe that
-            # we're altering the type of self in place (see signature of
-            # MutableSet.__ior__)
-            self |= values  # type: ignore
+            self.update(values)
 
     # Required methods for MutableSet
 
-    def __contains__(self, value: object) -> bool:
+    def __contains__(self, value: Hashable) -> bool:
         return value in self._d
 
     def __iter__(self) -> Iterator[T]:
@@ -536,9 +551,9 @@ class OrderedSet(MutableSet[T]):
 
     # Additional methods
 
-    def update(self, values: AbstractSet[T]) -> None:
-        # See comment on __init__ re. type checking
-        self |= values  # type: ignore
+    def update(self, values: Iterable[T]) -> None:
+        for v in values:
+            self._d[v] = None
 
     def __repr__(self) -> str:
         return "{}({!r})".format(type(self).__name__, list(self))
@@ -640,6 +655,7 @@ def read_magic_number(filename_or_obj, count=8):
     elif isinstance(filename_or_obj, io.IOBase):
         if filename_or_obj.tell() != 0:
             raise ValueError(
+                "cannot guess the engine, "
                 "file-like object read/write pointer not at the start of the file, "
                 "please close and reopen, or use a context manager"
             )

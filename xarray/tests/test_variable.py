@@ -835,6 +835,9 @@ class VariableSubclassobjects:
         ],
     )
     @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
     def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
@@ -2090,6 +2093,17 @@ class TestIndexVariable(VariableSubclassobjects):
         actual = IndexVariable.concat(coords, dim="x")
         assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_concat_str_dtype(self, dtype):
+
+        a = IndexVariable("x", np.array(["a"], dtype=dtype))
+        b = IndexVariable("x", np.array(["b"], dtype=dtype))
+        expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
+
+        actual = IndexVariable.concat([a, b])
+        assert actual.identical(expected)
+        assert np.issubdtype(actual.dtype, dtype)
 
     def test_coordinate_alias(self):
         with pytest.warns(Warning, match="deprecated"):
