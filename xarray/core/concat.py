@@ -160,7 +160,6 @@ def concat(
     See also
     --------
     merge
-    auto_combine
 
     Examples
     --------
@@ -188,7 +187,7 @@ def concat(
     array([[0, 1, 2],
            [3, 4, 5]])
     Coordinates:
-      * x        (x) object 'a' 'b'
+      * x        (x) <U1 'a' 'b'
       * y        (y) int64 10 20 30
 
     >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
@@ -504,7 +503,7 @@ def _dataset_concat(
     for k in datasets[0].variables:
         if k in concat_over:
             try:
-                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+                vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
                 raise ValueError("%r is not present in all datasets." % k)
             combined = concat_vars(vars, dim, positions)
