@@ -1266,8 +1266,18 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def set_close(self, close: Optional[Callable[[], None]]) -> None:
-        self._close = close
+    def set_close(self, close_store: Optional[Callable[[], None]]) -> None:
+        """Register the function that releases all resources used by the data store.
+
+        This method is mostly intended for backend developers and it is rarely
+        needed by regular end-users.
+
+        Parameters
+        ----------
+        close_store : callable
+            A callable that releases all resources used by the data store.
+        """
+        self._close = close_store
 
     def close(self: Any) -> None:
         """Close any files linked to this object"""
