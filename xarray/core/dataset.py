@@ -1337,7 +1337,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             indexes = {k: v for k, v in self._indexes.items() if k in coords}
 
-        return DataArray(
+        da = DataArray(
             variable,
             coords,
             name=name,
@@ -1345,6 +1345,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             fastpath=True,
             close=self._close,
         )
+        return da
 
     def __copy__(self) -> "Dataset":
         return self.copy(deep=False)
@@ -4800,7 +4801,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = (dim,) + broadcast_vars[0].dims
 
-        return DataArray(
+        da = DataArray(
             data,
             coords,
             dims,
@@ -4809,6 +4810,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             indexes=indexes,
             close=self._close,
         )
+        return da
 
     def _normalize_dim_order(
         self, dim_order: List[Hashable] = None

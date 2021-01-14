@@ -441,9 +441,10 @@ class DataArray(AbstractArray, DataWithCoords):
             name = self.name
         if close is _default:
             close = self._close
-        return type(self)(
+        replaced = type(self)(
             variable, coords, name=name, fastpath=True, indexes=indexes, close=close
         )
+        return replaced
 
     def _replace_maybe_drop_dims(
         self, variable: Variable, name: Union[Hashable, None, Default] = _default
