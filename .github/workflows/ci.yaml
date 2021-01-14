@@ -17,6 +17,8 @@ jobs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
       - uses: ./.github/actions/detect-ci-trigger
         id: detect-trigger
         with:
