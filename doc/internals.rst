@@ -231,3 +231,94 @@ re-open it directly with Zarr:
     zgroup = zarr.open("rasm.zarr")
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)
+
+
+How to add a new backend
+------------------------
+
+Adding a new backend for read support to Xarray is easy, and you don't need to integrate your code in Xarray.
+All you need to do is to:
+
+- Implement a function that returns an ``xarry.Dataset``
+
+- Create a `BackendEntrypoint`` instance with your function as input.
+
+- Declare such instance as external plugin in your setup.py.
+
+``BackendEntrypoint` class is the main interface with Xarray,
+it's a container of attributes and functions to be implemented by the backend:
+
+- ``open_dataset``
+
+- [``open_dataset_parameters``]
+
+- [``guess_can_open``]
+
+While ``open_dataset`` is mandatory, ``open_dataset_parameters`` and ``guess_can_open`` are optional.
+
+
+BackendEntrypoint.open_dataset
+++++++++++++++++++++++++++++++
+
+**Inputs**
+
+``BackendEntrypoint.open_dataset`` function shall take in input one argument, ``filename`` and one keyword argument ``drop_variables``:
+
+- ``filename`` may be a string containg a relative path, or the an instance of ``pathlib.Path``.
+- ``drop_variables`` may be `None` or a iterable containing the variables names to be dropped in reading the data.
+
+It may also take in input a set of keyword arguments, that will be passed from Xarray :py:func:`open_dataset`
+directly to the backend ``BackendEntrypoint.open_dataset``.
+Currently in Xarray :py:func:`open_dataset` there are two group of arguments will be passed to the backend.
+The first one are the **decoders**, explicity defined in Xarray :py:func:`open_dataset` signature:
+
+- ``mask_and_scale=None``
+- ``decode_times=None``
+- ``decode_timedelta=None``
+- ``use_cftime=None``
+- ``concat_characters=None``
+- ``decode_coords=None``
+
+They will be passed to the backend only if the user will pass explicity a value different from `None`.
+These parameters can be enabled/disabled by by the User, setting the keyword ``decode_cf`` managed by Xarray.
+The backend can implement these specific decoders keywords arguments,
+and it is desiderable if this makes sense for the specific backend. For more details see **decoders** sub-section.
+
+
+The second one can be passed by the user in a dictionary inside ``backend_kwargs`` or explicity as keyword arguments ``**kwargs``.
+They will be grouped together and passed to the backend as keyword arguments.
+
+**Output**
+
+```BackendEntrypoint`.open_dataset`` output shall be an instance of Xarray :py:class:`Dataset`
+that implements an additional method ``close``, used by Xarray to ensure that the related files are closed.
+If don't want to support the lazy loading and writing, then your work is almost done.
+
+BackendEntrypoint.open_dataset_parameters
++++++++++++++++++++++++++++++++++++++++++
+``open_dataset_parameters``is the list of ``BackendEntrypoint.open_dataset`` parameters.
+It is needed to enable/disable the decoders supported by the backend when the User set explicity ``decode_cf``. For this
+reason all the decoders supported by the backend must be explicity declared in the signature.
+``open_dataset_parameters`` it is no mandatory and if it is not provided xarray will inspect the signature of
+``BackendEntrypoint.open_dataset` and it will create ``open_dataset_parameters``.
+However, the signature inspection will not support `**kwargs` and `*args` are in the signature and in this case it will
+raise an error.
+
+BackendEntrypoint.guess_can_open
++++++++++++++++++++++++++++++++++++++++++
+
+How to support Lazy Loading
++++++++++++++++++++++++++++
+
+Decoders
+++++++++
+- strings.CharacterArrayCoder()
+- strings.EncodedStringCoder()
+- variables.UnsignedIntegerCoder()
+- variables.CFMaskCoder()
+- variables.CFScaleOffsetCoder()
+- times.CFTimedeltaCoder()
+- times.CFDatetimeCoder(use_cftime=use_cftime)
+
+How to register a backend
++++++++++++++++++++++++++
