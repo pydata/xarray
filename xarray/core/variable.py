@@ -119,9 +119,10 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         if isinstance(obj[1], DataArray):
-            raise TypeError("Using a DataArray object to construct a variable"
-                            " is ambiguous, please extract the data using the"
-                            " .data property")
+            raise TypeError(
+                "Using a DataArray object to construct a variable is "
+                "ambiguous, please extract the data using the .data property"
+            )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
