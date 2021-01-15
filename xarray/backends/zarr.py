@@ -712,4 +712,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = zarr_backend
+    BACKEND_ENTRYPOINTS["zarr"] = zarr_backend

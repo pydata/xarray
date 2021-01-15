@@ -570,4 +570,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = netcdf4_backend
+    BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend

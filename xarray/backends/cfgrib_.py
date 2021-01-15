@@ -140,4 +140,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = cfgrib_backend
+    BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend

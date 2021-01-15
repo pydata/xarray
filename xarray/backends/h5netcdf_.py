@@ -384,4 +384,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = h5netcdf_backend
+    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend

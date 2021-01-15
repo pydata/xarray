@@ -151,4 +151,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = pseudonetcdf_backend
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend

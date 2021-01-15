@@ -145,4 +145,4 @@ try:
 except ModuleNotFoundError:
     pass
 else:
-    BACKEND_ENTRYPOINTS["pynio"] = pydap_backend
+    BACKEND_ENTRYPOINTS["pydap"] = pydap_backend
