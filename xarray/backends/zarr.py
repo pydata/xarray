@@ -11,7 +11,7 @@ from ..core.variable import Variable
 from .common import (
     AbstractWritableDataStore,
     BackendArray,
-    BackendEntrypoint,
+    AbstractBackendEntrypoint,
     _encode_variable_name,
 )
 from .store import open_backend_dataset_store
@@ -663,45 +663,45 @@ def open_zarr(
     return ds
 
 
-def open_backend_dataset_zarr(
-    filename_or_obj,
-    mask_and_scale=True,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    group=None,
-    mode="r",
-    synchronizer=None,
-    consolidated=False,
-    consolidate_on_close=False,
-    chunk_store=None,
-):
+class ZarrBackendEntrypoint(AbstractBackendEntrypoint):
 
-    store = ZarrStore.open_group(
-        filename_or_obj,
-        group=group,
-        mode=mode,
-        synchronizer=synchronizer,
-        consolidated=consolidated,
-        consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_store,
-    )
 
-    with close_on_error(store):
-        ds = open_backend_dataset_store(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+    def open_backend_dataset_zarr(
+            self,
+            filename_or_obj,
+            mask_and_scale=True,
+            decode_times=None,
+            concat_characters=None,
+            decode_coords=None,
+            drop_variables=None,
+            use_cftime=None,
+            decode_timedelta=None,
+            group=None,
+            mode="r",
+            synchronizer=None,
+            consolidated=False,
+            consolidate_on_close=False,
+            chunk_store=None,
+    ):
+        store = ZarrStore.open_group(
+            filename_or_obj,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=consolidate_on_close,
+            chunk_store=chunk_store,
         )
-    return ds
 
-
-zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
+        with close_on_error(store):
+            ds = open_backend_dataset_store(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds

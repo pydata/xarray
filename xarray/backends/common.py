@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -342,10 +343,19 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class BackendEntrypoint:
+class AbstractBackendEntrypoint(ABC):
     __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
 
-    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
-        self.open_dataset = open_dataset
-        self.open_dataset_parameters = open_dataset_parameters
-        self.guess_can_open = guess_can_open
+
+    open_dataset_parameters = None
+
+
+    @abstractmethod
+    def open_dataset(self):
+        pass
+
+
+    @abstractmethod
+    def guess_can_open(self, store_spec):
+        pass
+

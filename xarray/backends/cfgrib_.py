@@ -5,7 +5,7 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, BackendEntrypoint
+from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
 from .locks import SerializableLock, ensure_lock
 from .store import open_backend_dataset_store
 
@@ -74,58 +74,55 @@ class CfGribDataStore(AbstractDataStore):
         return encoding
 
 
-def guess_can_open_cfgrib(store_spec):
-    try:
-        _, ext = os.path.splitext(store_spec)
-    except TypeError:
-        return False
-    return ext in {".grib", ".grib2", ".grb", ".grb2"}
+class CfgribfBackendEntrypoint(AbstractBackendEntrypoint):
 
+    def guess_can_open_cfgrib(store_spec):
+        try:
+            _, ext = os.path.splitext(store_spec)
+        except TypeError:
+            return False
+        return ext in {".grib", ".grib2", ".grb", ".grb2"}
 
-def open_backend_dataset_cfgrib(
-    filename_or_obj,
-    *,
-    mask_and_scale=True,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    lock=None,
-    indexpath="{path}.{short_hash}.idx",
-    filter_by_keys={},
-    read_keys=[],
-    encode_cf=("parameter", "time", "geography", "vertical"),
-    squeeze=True,
-    time_dims=("time", "step"),
-):
+    def open_backend_dataset_cfgrib(
+            filename_or_obj,
+            *,
+            mask_and_scale=True,
+            decode_times=None,
+            concat_characters=None,
+            decode_coords=None,
+            drop_variables=None,
+            use_cftime=None,
+            decode_timedelta=None,
+            lock=None,
+            indexpath="{path}.{short_hash}.idx",
+            filter_by_keys={},
+            read_keys=[],
+            encode_cf=("parameter", "time", "geography", "vertical"),
+            squeeze=True,
+            time_dims=("time", "step"),
+    ):
 
-    store = CfGribDataStore(
-        filename_or_obj,
-        indexpath=indexpath,
-        filter_by_keys=filter_by_keys,
-        read_keys=read_keys,
-        encode_cf=encode_cf,
-        squeeze=squeeze,
-        time_dims=time_dims,
-        lock=lock,
-    )
-
-    with close_on_error(store):
-        ds = open_backend_dataset_store(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+        store = CfGribDataStore(
+            filename_or_obj,
+            indexpath=indexpath,
+            filter_by_keys=filter_by_keys,
+            read_keys=read_keys,
+            encode_cf=encode_cf,
+            squeeze=squeeze,
+            time_dims=time_dims,
+            lock=lock,
         )
-    return ds
 
+        with close_on_error(store):
+            ds = open_backend_dataset_store(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
 
-cfgrib_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_cfgrib, guess_can_open=guess_can_open_cfgrib
-)

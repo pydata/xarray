@@ -13,7 +13,7 @@ from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
     BackendArray,
-    BackendEntrypoint,
+    AbstractBackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
     robust_getitem,
@@ -505,61 +505,57 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def guess_can_open_netcdf4(store_spec):
-    if isinstance(store_spec, str) and is_remote_uri(store_spec):
-        return True
-    try:
-        _, ext = os.path.splitext(store_spec)
-    except TypeError:
-        return False
-    return ext in {".nc", ".nc4", ".cdf"}
+class NetCDF4BackendEntrypoint(AbstractBackendEntrypoint):
 
+    def guess_can_open_netcdf4(store_spec):
+        if isinstance(store_spec, str) and is_remote_uri(store_spec):
+            return True
+        try:
+            _, ext = os.path.splitext(store_spec)
+        except TypeError:
+            return False
+        return ext in {".nc", ".nc4", ".cdf"}
 
-def open_backend_dataset_netcdf4(
-    filename_or_obj,
-    mask_and_scale=True,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    group=None,
-    mode="r",
-    format="NETCDF4",
-    clobber=True,
-    diskless=False,
-    persist=False,
-    lock=None,
-    autoclose=False,
-):
+    def open_backend_dataset_netcdf4(
+            filename_or_obj,
+            mask_and_scale=True,
+            decode_times=None,
+            concat_characters=None,
+            decode_coords=None,
+            drop_variables=None,
+            use_cftime=None,
+            decode_timedelta=None,
+            group=None,
+            mode="r",
+            format="NETCDF4",
+            clobber=True,
+            diskless=False,
+            persist=False,
+            lock=None,
+            autoclose=False,
+    ):
 
-    store = NetCDF4DataStore.open(
-        filename_or_obj,
-        mode=mode,
-        format=format,
-        group=group,
-        clobber=clobber,
-        diskless=diskless,
-        persist=persist,
-        lock=lock,
-        autoclose=autoclose,
-    )
-
-    with close_on_error(store):
-        ds = open_backend_dataset_store(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            mode=mode,
+            format=format,
+            group=group,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
         )
-    return ds
 
-
-netcdf4_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_netcdf4, guess_can_open=guess_can_open_netcdf4
-)
+        with close_on_error(store):
+            ds = open_backend_dataset_store(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
