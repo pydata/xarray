@@ -1269,13 +1269,16 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     def set_close(self, close_store: Optional[Callable[[], None]]) -> None:
         """Register the function that releases all resources used by the data store.
 
-        This method is mostly intended for backend developers and it is rarely
-        needed by regular end-users.
+        This method controls how xarray cleans up resources associated
+        with this object when the .close() method is called. It is mostly
+        intended for backend developers and it is rarely needed by regular
+        end-users.
 
         Parameters
         ----------
         close_store : callable
-            A callable that releases all resources used by the data store.
+            A callable that when called like ``close_store()`` releases
+            all resources used by the data store.
         """
         self._close = close_store
 
