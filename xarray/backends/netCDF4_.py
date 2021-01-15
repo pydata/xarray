@@ -1,5 +1,5 @@
 import functools
-import importlib
+import importlib.util
 import operator
 import os
 import pathlib

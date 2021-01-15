@@ -1,5 +1,5 @@
 import functools
-import importlib
+import importlib.util
 import io
 import os
 from distutils.version import LooseVersion
