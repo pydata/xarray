@@ -704,7 +704,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if decoder:
             variables, attributes = decoder(variables, attributes)
         obj = cls(variables, attrs=attributes)
-        obj._close = store.close
+        obj.set_close(store.close)
         return obj
 
     @property
