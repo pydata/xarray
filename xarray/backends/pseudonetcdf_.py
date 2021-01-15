@@ -148,7 +148,7 @@ pseudonetcdf_backend = BackendEntrypoint(
 
 try:
     import PseudoNetCDF
+
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend

@@ -128,7 +128,7 @@ pynio_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pynio)
 
 try:
     import Nio
+
+    BACKEND_ENTRYPOINTS["pynio"] = pynio_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["pynio"] = pynio_backend

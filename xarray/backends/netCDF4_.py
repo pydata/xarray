@@ -567,7 +567,7 @@ netcdf4_backend = BackendEntrypoint(
 
 try:
     import netCDF4
+
+    BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend

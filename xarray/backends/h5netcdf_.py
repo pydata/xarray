@@ -381,7 +381,7 @@ h5netcdf_backend = BackendEntrypoint(
 
 try:
     import h5netcdf
+
+    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend

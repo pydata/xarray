@@ -142,7 +142,7 @@ pydap_backend = BackendEntrypoint(
 
 try:
     import pydap.client
+
+    BACKEND_ENTRYPOINTS["pydap"] = pydap_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["pydap"] = pydap_backend

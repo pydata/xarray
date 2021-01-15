@@ -137,7 +137,7 @@ cfgrib_backend = BackendEntrypoint(
 
 try:
     import cfgrib
+
+    BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
 except ModuleNotFoundError:
     pass
-else:
-    BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
