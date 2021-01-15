@@ -1266,7 +1266,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def set_close(self, close_store: Optional[Callable[[], None]]) -> None:
+    def set_close(self, close: Optional[Callable[[], None]]) -> None:
         """Register the function that releases all resources used by the data store.
 
         This method controls how xarray cleans up resources associated
@@ -1276,11 +1276,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        close_store : callable
-            A callable that when called like ``close_store()`` releases
+        close : callable
+            A callable that when called like ``close()`` releases
             all resources used by the data store.
         """
-        self._close = close_store
+        self._close = close
 
     def close(self: Any) -> None:
         """Close any files linked to this object"""
