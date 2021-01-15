@@ -103,6 +103,8 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
+  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 
 .. _whats-new.0.16.2:
 
