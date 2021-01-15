@@ -5,57 +5,23 @@ Useful for:
 * building tutorials in the documentation.
 
 """
+import os
 import pathlib
-import shutil
-import tempfile
-from contextlib import contextmanager, suppress
 
 import numpy as np
-import requests
 
 from .backends.api import open_dataset as _open_dataset
 from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 
-_default_cache_dir = pathlib.Path.home() / ".xarray_tutorial_data"
-
-
-# based on https://stackoverflow.com/a/29491523
-@contextmanager
-def open_atomic(path, mode=None):
-    folder = path.parent
-    prefix = f".{path.name}"
-
-    try:
-        f = tempfile.NamedTemporaryFile(dir=folder, prefix=prefix, delete=False)
-        temporary_path = pathlib.Path(f.name)
-
-        yield f
-
-        temporary_path.rename(path)
-    except Exception:
-        # switch to path.unlink(missing_ok=True) for Python 3.8+
-        with suppress(FileNotFoundError):
-            temporary_path.unlink()
-        raise
-
-
-def download_to(url, path):
-    # based on https://stackoverflow.com/a/39217788
-    with open_atomic(path, mode="wb") as f:
-        with requests.get(url, stream=True) as r:
-            if r.status_code != requests.codes.ok:
-                raise OSError(f"download failed: {r.reason}")
-
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f)
+_default_cache_dir_name = "xarray_tutorial_data"
 
 
 def open_rasterio(
     name,
     cache=True,
-    cache_dir=_default_cache_dir,
+    cache_dir=None,
     github_url="https://github.com/mapbox/rasterio",
     branch="master",
     **kws,
@@ -88,45 +54,43 @@ def open_rasterio(
     xarray.tutorial.open_dataset
 
     """
-    if isinstance(cache_dir, str):
-        cache_dir = pathlib.Path(cache_dir)
+    try:
+        import pooch
+    except ImportError:
+        raise ImportError("using the tutorial data requires pooch")
 
-    if not cache_dir.is_dir():
-        cache_dir.mkdir()
+    if isinstance(cache_dir, pathlib.Path):
+        cache_dir = os.fspath(cache_dir)
+    elif cache_dir is None:
+        cache_dir = pooch.os_cache(_default_cache_dir_name)
 
+    # process the name
     default_extension = ".tif"
-
-    if cache:
-        path = cache_dir / name
-        # need to always do that, otherwise we might close the
-        # path using the context manager
-        cache_dir = pathlib.Path(cache_dir)
-    else:
-        cache_dir = tempfile.TemporaryDirectory()
-        path = pathlib.Path(cache_dir.name) / name
-
+    path = pathlib.Path(name)
     if not path.suffix:
         path = path.with_suffix(default_extension)
     elif path.suffix == ".byte":
         path = path.with_name(name + default_extension)
 
-    if cache and path.is_file():
-        return _open_rasterio(path, **kws)
+    # retrieve the file
+    filepath = pooch.retrieve(
+        url=f"{github_url}/raw/{branch}/tests/data/{path.name}",
+        known_hash=None,
+        path=cache_dir,
+    )
+    ds = _open_rasterio(filepath, **kws)
+    if not cache:
+        ds = ds.load()
+        pathlib.Path(filepath).unlink()
 
-    url = f"{github_url}/raw/{branch}/tests/data/{path.name}"
-    # if path points to a file in a temporary directory (cache_dir
-    # is a TemporaryDirectory object), make sure it is deleted
-    # afterwards
-    with cache_dir:
-        download_to(url, path)
-        return _open_rasterio(path, **kws)
+    return ds
 
 
 # idea borrowed from Seaborn
 def open_dataset(
     name,
     cache=True,
-    cache_dir=_default_cache_dir,
+    cache_dir=None,
     github_url="https://github.com/pydata/xarray-data",
     branch="master",
     **kws,
@@ -159,39 +123,34 @@ def open_dataset(
     xarray.tutorial.open_rasterio
 
     """
-    if isinstance(cache_dir, str):
-        cache_dir = pathlib.Path(cache_dir)
+    try:
+        import pooch
+    except ImportError:
+        raise ImportError("using the tutorial data requires pooch")
 
-    def construct_url(full_name):
-        return f"{github_url}/raw/{branch}/{full_name}"
+    if isinstance(cache_dir, pathlib.Path):
+        cache_dir = os.fspath(cache_dir)
+    elif cache_dir is None:
+        cache_dir = pooch.os_cache(_default_cache_dir_name)
 
-    if not cache_dir.is_dir():
-        cache_dir.mkdir()
-
+    # process the name
     default_extension = ".nc"
-
-    if cache:
-        path = cache_dir / name
-        # need to always do that, otherwise we might close the
-        # path using the context manager
-        cache_dir = pathlib.Path(cache_dir)
-    else:
-        cache_dir = tempfile.TemporaryDirectory()
-        path = pathlib.Path(cache_dir.name) / name
-
+    path = pathlib.Path(name)
     if not path.suffix:
         path = path.with_suffix(default_extension)
 
-    if cache and path.is_file():
-        return _open_dataset(path, **kws)
+    # retrieve the file
+    filepath = pooch.retrieve(
+        url=f"{github_url}/raw/{branch}/{path.name}",
+        known_hash=None,
+        path=cache_dir,
+    )
+    ds = _open_dataset(filepath, **kws)
+    if not cache:
+        ds = ds.load()
+        pathlib.Path(filepath).unlink()
 
-    # if path points to a file in a temporary directory (cache_dir
-    # is a TemporaryDirectory object), make sure it is deleted
-    # afterwards
-    with cache_dir:
-        download_to(construct_url(path.name), path)
-
-        return _open_dataset(path, **kws)
+    return ds
 
 
 def load_dataset(*args, **kwargs):
