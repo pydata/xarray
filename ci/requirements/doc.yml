@@ -20,6 +20,7 @@ dependencies:
   - numba
   - numpy>=1.17
   - pandas>=1.0
+  - pooch
   - rasterio>=1.1
   - seaborn
   - setuptools
