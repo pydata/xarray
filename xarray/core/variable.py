@@ -202,7 +202,7 @@ def as_compatible_data(data, fastpath=False):
         return _maybe_wrap_data(data)
 
     if isinstance(data, DataArray):
-        raise TypeError("Pass in da.data if da is a DataArray")
+        raise TypeError("Using a DataArray object to construct a variable is ambiguous, please extract the data using the .data property")
 
     if isinstance(data, Variable):
         return data.data
