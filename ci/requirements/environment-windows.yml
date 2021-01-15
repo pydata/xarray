@@ -33,7 +33,6 @@ dependencies:
   - pytest-env
   - pytest-xdist
   - rasterio
-  - requests
   - scipy
   - seaborn
   - setuptools
