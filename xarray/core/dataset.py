@@ -4787,9 +4787,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         dims = (dim,) + broadcast_vars[0].dims
 
-        da = DataArray(data, coords, dims, attrs=self.attrs, name=name, indexes=indexes)
-        da.set_close(self._close)
-        return da
+        return DataArray(
+            data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
+        )
 
     def _normalize_dim_order(
         self, dim_order: List[Hashable] = None
