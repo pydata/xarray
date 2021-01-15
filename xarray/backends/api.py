@@ -522,6 +522,7 @@ def open_dataset(
 
         else:
             ds2 = ds
+        ds2.set_close(ds._close)
         return ds2
 
     filename_or_obj = _normalize_path(filename_or_obj)
@@ -699,6 +700,8 @@ def open_dataarray(
         )
     else:
         (data_array,) = dataset.data_vars.values()
+
+    data_array.set_close(dataset._close)
 
     # Reset names if they were changed during saving
     # to ensure that we can 'roundtrip' perfectly

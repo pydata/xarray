@@ -346,7 +346,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         data = indexing.MemoryCachedArray(data)
 
     result = DataArray(data=data, dims=("band", "y", "x"), coords=coords, attrs=attrs)
-    result.set_close(manager.close)
 
     if chunks is not None:
         from dask.base import tokenize
@@ -360,5 +359,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         token = tokenize(filename, mtime, chunks)
         name_prefix = "open_rasterio-%s" % token
         result = result.chunk(chunks, name_prefix=name_prefix, token=token)
+
+    # Make the file closeable
+    result.set_close(manager.close)
 
     return result

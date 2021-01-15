@@ -34,8 +34,8 @@ def open_backend_dataset_store(
     )
 
     ds = Dataset(vars, attrs=attrs)
-    ds.set_close(store.close)
     ds = ds.set_coords(coord_names.intersection(vars))
+    ds.set_close(store.close)
     ds.encoding = encoding
 
     return ds
