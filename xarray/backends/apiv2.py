@@ -262,10 +262,7 @@ def open_dataset(
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
     backend_ds = backend.open_dataset(
-        filename_or_obj,
-        drop_variables=drop_variables,
-        **decoders,
-        **kwargs,
+        filename_or_obj, drop_variables=drop_variables, **decoders, **kwargs,
     )
     ds = _dataset_from_backend_dataset(
         backend_ds,

@@ -1,4 +1,3 @@
-import importlib.util
 import os
 import pathlib
 
@@ -291,7 +290,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
     ):
-        import zarr
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, pathlib.Path):
@@ -709,5 +707,9 @@ def open_backend_dataset_zarr(
 zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
 
 
-if importlib.util.find_spec("zarr"):
-    BACKEND_ENTRYPOINTS["zarr"] = zarr_backend
+try:
+    import zarr
+except ImportError:
+    pass
+else:
+    BACKEND_ENTRYPOINTS["pynio"] = zarr_backend

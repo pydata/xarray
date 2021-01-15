@@ -1,5 +1,3 @@
-import importlib.util
-
 import numpy as np
 
 from ..core import indexing
@@ -52,7 +50,7 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
-        import Nio
+        # import Nio
 
         if lock is None:
             lock = PYNIO_LOCK
@@ -128,5 +126,9 @@ def open_backend_dataset_pynio(
 pynio_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pynio)
 
 
-if importlib.util.find_spec("Nio"):
+try:
+    import Nio
+except ImportError:
+    pass
+else:
     BACKEND_ENTRYPOINTS["pynio"] = pynio_backend

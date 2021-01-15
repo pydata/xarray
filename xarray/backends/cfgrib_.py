@@ -1,4 +1,3 @@
-import importlib.util
 import os
 
 import numpy as np
@@ -44,7 +43,6 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
-        import cfgrib
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -137,5 +135,9 @@ cfgrib_backend = BackendEntrypoint(
 )
 
 
-if importlib.util.find_spec("cfgrib"):
-    BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
+try:
+    import cfgrib
+except ImportError:
+    pass
+else:
+    BACKEND_ENTRYPOINTS["pynio"] = cfgrib_backend

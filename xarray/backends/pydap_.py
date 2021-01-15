@@ -1,5 +1,3 @@
-import importlib.util
-
 import numpy as np
 
 from ..core import indexing
@@ -82,7 +80,6 @@ class PydapDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, url, session=None):
-        import pydap.client
 
         ds = pydap.client.open_url(url, session=session)
         return cls(ds)
@@ -143,5 +140,9 @@ pydap_backend = BackendEntrypoint(
 )
 
 
-if importlib.util.find_spec("pydap"):
-    BACKEND_ENTRYPOINTS["pydap"] = pydap_backend
+try:
+    import pydap.client
+except ImportError:
+    pass
+else:
+    BACKEND_ENTRYPOINTS["pynio"] = pydap_backend

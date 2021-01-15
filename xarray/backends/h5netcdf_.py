@@ -1,5 +1,4 @@
 import functools
-import importlib.util
 import io
 import os
 from distutils.version import LooseVersion
@@ -91,8 +90,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
 
-        import h5netcdf
-
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
                 root, group = find_root_and_group(manager)
@@ -128,7 +125,6 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
     ):
-        import h5netcdf
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -383,5 +379,9 @@ h5netcdf_backend = BackendEntrypoint(
 )
 
 
-if importlib.util.find_spec("h5netcdf"):
-    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend
+try:
+    import h5netcdf
+except ImportError:
+    pass
+else:
+    BACKEND_ENTRYPOINTS["pynio"] = h5netcdf_backend

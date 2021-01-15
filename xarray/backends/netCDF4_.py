@@ -1,5 +1,4 @@
 import functools
-import importlib.util
 import operator
 import os
 import pathlib
@@ -300,7 +299,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -567,5 +565,9 @@ netcdf4_backend = BackendEntrypoint(
 )
 
 
-if importlib.util.find_spec("netCDF4"):
-    BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend
+try:
+    import netCDF4
+except ImportError:
+    pass
+else:
+    BACKEND_ENTRYPOINTS["pynio"] = netcdf4_backend
