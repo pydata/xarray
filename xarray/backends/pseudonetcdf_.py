@@ -148,7 +148,7 @@ pseudonetcdf_backend = BackendEntrypoint(
 
 try:
     import PseudoNetCDF
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = pseudonetcdf_backend

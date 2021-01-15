@@ -142,7 +142,7 @@ pydap_backend = BackendEntrypoint(
 
 try:
     import pydap.client
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = pydap_backend

@@ -381,7 +381,7 @@ h5netcdf_backend = BackendEntrypoint(
 
 try:
     import h5netcdf
-except ImportError:
+except c:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = h5netcdf_backend

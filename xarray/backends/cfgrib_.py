@@ -137,7 +137,7 @@ cfgrib_backend = BackendEntrypoint(
 
 try:
     import cfgrib
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = cfgrib_backend

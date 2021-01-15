@@ -567,7 +567,7 @@ netcdf4_backend = BackendEntrypoint(
 
 try:
     import netCDF4
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = netcdf4_backend

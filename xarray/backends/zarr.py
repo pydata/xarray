@@ -709,7 +709,7 @@ zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
 
 try:
     import zarr
-except ImportError:
+except ModuleNotFoundError:
     pass
 else:
     BACKEND_ENTRYPOINTS["pynio"] = zarr_backend
