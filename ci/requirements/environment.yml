@@ -25,6 +25,7 @@ dependencies:
   - pandas
   - pint
   - pip=20.2
+  - pooch
   - pre-commit
   - pseudonetcdf
   - pydap
