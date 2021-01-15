@@ -43,6 +43,9 @@ Bug fixes
   is now ignored when not applicable, i.e. when ``skipna=False`` or when ``skipna=None``
   and the dtype does not have a missing value (:issue:`4352`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- Raise error when trying to typecast a tuple containing a :py:class:`DataArray`.
+  User now prompted to first call `.data` on it (:issue:`4483`).
+  By `Chun Ho Chow <https://github.com/chunhochow>
 
 Documentation
 ~~~~~~~~~~~~~
