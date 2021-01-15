@@ -1331,9 +1331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             indexes = {k: v for k, v in self._indexes.items() if k in coords}
 
-        da = DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
-        da.set_close(self._close)
-        return da
+        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def __copy__(self) -> "Dataset":
         return self.copy(deep=False)
