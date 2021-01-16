@@ -3,6 +3,7 @@ from contextlib import suppress
 from html import escape
 from textwrap import dedent
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -29,6 +30,10 @@ from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
+
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
 
 
 C = TypeVar("C")
@@ -769,7 +774,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             },
         )
 
-    def weighted(self, weights):
+    def weighted(self, weights: "DataArray"):
         """
         Weighted operations.
 
