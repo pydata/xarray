@@ -909,7 +909,7 @@ class CFEncodedBase(DatasetIOBase):
         original.coords["longitude"].encoding.update(
             dict(grid_mapping="latlon", bounds="longitude_bnds")
         )
-        original.coords["ln_p"].encoding.update({"formula_terms": "p0: P0 lev: ln_p"})
+        original.coords["ln_p"].encoding.update({"formula_terms": "p0: P0 lev : ln_p"})
         return original
 
     def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self):
@@ -924,11 +924,8 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataset_roundtrip(self):
         original = self._create_cf_dataset()
-        with pytest.warns(
-            UserWarning, match=" moved from data_vars to coords\nbased on "
-        ):
-            with self.roundtrip(original) as actual:
-                assert_identical(actual, original)
+        with self.roundtrip(original) as actual:
+            assert_identical(actual, original)
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(self):
         original = self._create_cf_dataset()

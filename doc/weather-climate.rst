@@ -28,6 +28,9 @@ coordinates:
 - `cell_measures`
 - `formula_terms`
 
+This decoding is controlled by the `decode_coords` kwarg to
+:py:func:`open_dataset` and :py:func:`open_mfdataset`.
+
 The CF attribute `ancillary_variables` was not included in the list
 due to the variables listed there being associated primarily with the
 variable with the attribute, rather than with the dimensions.

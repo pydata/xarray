@@ -29,16 +29,19 @@ Breaking changes
   values were required, which would lead to inaccurate I/O round-trips.
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_
+- Variables referred to in attributes like `bounds` and `grid_mapping`
+  are now automatically set as coordinate variables. These attributes
+  are moved to :py:attr:`DataArray.encoding` from
+  :py:attr:`DataArray.attrs`. This behaviour is controlled by the
+  `decode_coords` kwarg to :py:func:`open_dataset` and
+  :py:func:`open_mfdataset`.  The precise list of variables is in
+  :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 
 
 New Features
 ~~~~~~~~~~~~
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_
-- Decode more CF attributes on file read (put the referenced variables
-  into 'coords' instead of 'data_vars') and encode on write (write
-  attributes corresponding to encoding values). The list of variables
-  is in :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 
 Bug fixes
 ~~~~~~~~~

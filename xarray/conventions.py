@@ -531,33 +531,30 @@ def decode_cf_variables(
             for attr_name in CF_RELATED_DATA:
                 if attr_name in var_attrs:
                     attr_val = var_attrs[attr_name]
-                    var_names = attr_val.split()
-                    if attr_name in CF_RELATED_DATA_NEEDS_PARSING:
-                        var_names = [
-                            name
-                            for name in var_names
-                            if not name.endswith(":") and not name == k
+                    if attr_name not in CF_RELATED_DATA_NEEDS_PARSING:
+                        var_names = attr_val.split()
+                    else:
+                        roles_and_names = [
+                            role_or_name
+                            for part in attr_val.split(":")
+                            for role_or_name in part.split()
                         ]
-                    if all(k in variables for k in var_names):
+                        if len(roles_and_names) % 2 == 1:
+                            warnings.warn(
+                                f"Attribute {attr_name:s} malformed", stacklevel=5
+                            )
+                        var_names = roles_and_names[1::2]
+                    if all(var_name in variables for var_name in var_names):
                         new_vars[k].encoding[attr_name] = attr_val
                         coord_names.update(var_names)
-                        # Warn that some things will be coords rather
-                        # than data_vars.
-                        warnings.warn(
-                            "Variable(s) {0!s} moved from data_vars to coords\n"
-                            "based on {1:s} attribute".format(var_names, attr_name),
-                            stacklevel=5,
-                        )
                     else:
+                        referenced_vars_not_in_variables = [
+                            proj_name
+                            for proj_name in var_names
+                            if proj_name not in variables
+                        ]
                         warnings.warn(
-                            "Variable(s) referenced in {0:s} not in variables: {1!s}".format(
-                                attr_name,
-                                [
-                                    proj_name
-                                    for proj_name in var_names
-                                    if proj_name not in variables
-                                ],
-                            ),
+                            f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
                             stacklevel=5,
                         )
                     del var_attrs[attr_name]
@@ -596,8 +593,8 @@ def decode_cf(
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool, optional
-        Use the 'coordinates' attribute on variable (or the dataset itself) to
-        identify coordinates.
+        Use the 'coordinates', 'grid_mapping', and 'bounds' attributes
+        on variables (or the dataset itself) to identify coordinates.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
