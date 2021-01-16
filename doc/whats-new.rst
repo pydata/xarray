@@ -82,7 +82,7 @@ Bug fixes
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Raise error when trying to typecast a tuple containing a :py:class:`DataArray`.
   User now prompted to first call `.data` on it (:issue:`4483`).
-  By `Chun Ho Chow <https://github.com/chunhochow>
+  By `Chun Ho Chow <https://github.com/chunhochow>`_.
 
 Documentation
 ~~~~~~~~~~~~~
