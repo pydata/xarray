@@ -190,7 +190,7 @@ def test_interpolate_vectorize(use_dask):
             "w": xdest["w"],
             "z2": xdest["z2"],
             "y": da["y"],
-            "x": (("z", "w"), xdest),
+            "x": (("z", "w"), xdest.data),
             "x2": (("z", "w"), func(da["x2"], "x", xdest)),
         },
     )

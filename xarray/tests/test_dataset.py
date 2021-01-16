@@ -4920,7 +4920,7 @@ class TestDataset:
         # Coordinates involved in the reduction should be removed
         actual = ds.mean(keepdims=True)
         expected = Dataset(
-            {"a": (["x", "y"], np.mean(ds.a, keepdims=True))}, coords={"c": ds.c}
+            {"a": (["x", "y"], np.mean(ds.a, keepdims=True).data)}, coords={"c": ds.c}
         )
         assert_identical(expected, actual)
 
