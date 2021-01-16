@@ -48,6 +48,7 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
+    maybe_coerce_to_str,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -2527,6 +2528,9 @@ class IndexVariable(Variable):
             if positions is not None:
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
+
+        # keep as str if possible as pandas.Index uses object (converts to numpy array)
+        data = maybe_coerce_to_str(data, variables)
 
         attrs = dict(first_var.attrs)
         if not shortcut:

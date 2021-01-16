@@ -64,12 +64,22 @@ Bug fixes
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_
+- Fix the legend created by :py:meth:`Dataset.plot.scatter` (:issue:`4641`, :pull:`4723`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
   By `Alessandro Amici <https://github.com/alexamici>`_
+- Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations,
+  e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype
+  (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_.
 - Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Fix regression when decoding a variable with a ``scale_factor`` and ``add_offset`` given
+  as a list of length one (:issue:`4631`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
+  :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
+  By `Julien Seguinot <https://github.com/juseg>`_.
 
 Documentation
 ~~~~~~~~~~~~~

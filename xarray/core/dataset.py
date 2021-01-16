@@ -2565,7 +2565,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) <U7 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
             temperature  (station) float64 10.98 nan 12.06 nan
             pressure     (station) float64 211.8 nan 218.8 nan
@@ -2576,7 +2576,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) <U7 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
             temperature  (station) float64 10.98 0.0 12.06 0.0
             pressure     (station) float64 211.8 0.0 218.8 0.0
@@ -2589,7 +2589,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:      (station: 4)
         Coordinates:
-          * station      (station) object 'boston' 'austin' 'seattle' 'lincoln'
+          * station      (station) <U7 'boston' 'austin' 'seattle' 'lincoln'
         Data variables:
             temperature  (station) float64 10.98 0.0 12.06 0.0
             pressure     (station) float64 211.8 100.0 218.8 100.0

@@ -8,7 +8,7 @@ import xarray as xr
 from xarray.coding import variables
 from xarray.conventions import decode_cf_variable, encode_cf_variable
 
-from . import assert_equal, assert_identical, requires_dask
+from . import assert_allclose, assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -105,3 +105,15 @@ def test_scaling_converts_to_float32(dtype):
     roundtripped = coder.decode(encoded)
     assert_identical(original, roundtripped)
     assert roundtripped.dtype == np.float32
+
+
+@pytest.mark.parametrize("scale_factor", (10, [10]))
+@pytest.mark.parametrize("add_offset", (0.1, [0.1]))
+def test_scaling_offset_as_list(scale_factor, add_offset):
+    # test for #4631
+    encoding = dict(scale_factor=scale_factor, add_offset=add_offset)
+    original = xr.Variable(("x",), np.arange(10.0), encoding=encoding)
+    coder = variables.CFScaleOffsetCoder()
+    encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert_allclose(original, roundtripped)
