@@ -80,6 +80,9 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
+- Raise error when trying to typecast a tuple containing a :py:class:`DataArray`.
+  User now prompted to first call `.data` on it (:issue:`4483`).
+  By `Chun Ho Chow <https://github.com/chunhochow>
 
 Documentation
 ~~~~~~~~~~~~~
@@ -181,9 +184,6 @@ Bug fixes
   is now ignored when not applicable, i.e. when ``skipna=False`` or when ``skipna=None``
   and the dtype does not have a missing value (:issue:`4352`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Raise error when trying to typecast a tuple containing a :py:class:`DataArray`.
-  User now prompted to first call `.data` on it (:issue:`4483`).
-  By `Chun Ho Chow <https://github.com/chunhochow>
 - :py:func:`combine_by_coords` now raises an informative error when passing coordinates
   with differing calendars (:issue:`4495`). By `Mathias Hauser <https://github.com/mathause>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` now also keep the attributes and names of of (wrapped)
