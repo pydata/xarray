@@ -158,7 +158,7 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def astype(data, **kwargs):
+def astype(data, dtype, **kwargs):
     try:
         import sparse
     except ImportError:
@@ -177,7 +177,7 @@ def astype(data, **kwargs):
         )
         kwargs.pop("casting")
 
-    return data.astype(**kwargs)
+    return data.astype(dtype, **kwargs)
 
 
 def asarray(data, xp=np):
@@ -230,7 +230,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
     lazy_equiv = lazy_array_equiv(arr1, arr2)
     if lazy_equiv is None:
-        return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
+            return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
     else:
         return lazy_equiv
 
@@ -330,7 +332,9 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
-            return func(values, axis=axis, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "All-NaN slice encountered")
+                return func(values, axis=axis, **kwargs)
         except AttributeError:
             if not is_duck_dask_array(values):
                 raise

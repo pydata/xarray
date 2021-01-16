@@ -269,6 +269,10 @@ class CFScaleOffsetCoder(VariableCoder):
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
             dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            if np.ndim(scale_factor) > 0:
+                scale_factor = np.asarray(scale_factor).item()
+            if np.ndim(add_offset) > 0:
+                add_offset = np.asarray(add_offset).item()
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,

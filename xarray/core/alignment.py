@@ -2,26 +2,39 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, utils
 from .indexing import get_indexer_nd
-from .utils import is_dict_like, is_full_slice
+from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
+
+    DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
 
 def _get_joiner(join):
     if join == "outer":
-        return functools.partial(functools.reduce, operator.or_)
+        return functools.partial(functools.reduce, pd.Index.union)
     elif join == "inner":
-        return functools.partial(functools.reduce, operator.and_)
+        return functools.partial(functools.reduce, pd.Index.intersection)
     elif join == "left":
         return operator.itemgetter(0)
     elif join == "right":
@@ -59,13 +72,13 @@ def _override_indexes(objects, all_indexes, exclude):
 
 
 def align(
-    *objects,
+    *objects: "DataAlignable",
     join="inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-):
+) -> Tuple["DataAlignable", ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -265,10 +278,12 @@ def align(
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
+    all_coords = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)
     for obj in objects:
         for dim in obj.dims:
             if dim not in exclude:
+                all_coords[dim].append(obj.coords[dim])
                 try:
                     index = obj.indexes[dim]
                 except KeyError:
@@ -293,7 +308,7 @@ def align(
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = index
+                joined_indexes[dim] = indexes[dim]
         else:
             if (
                 any(
@@ -305,9 +320,11 @@ def align(
                 if join == "exact":
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
+                # make sure str coords are not cast to object
+                index = maybe_coerce_to_str(index, all_coords[dim])
                 joined_indexes[dim] = index
             else:
-                index = matching_indexes[0]
+                index = all_coords[dim][0]
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
@@ -337,7 +354,9 @@ def align(
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
         else:
-            new_obj = obj.reindex(copy=copy, fill_value=fill_value, **valid_indexers)
+            new_obj = obj.reindex(
+                copy=copy, fill_value=fill_value, indexers=valid_indexers
+            )
         new_obj.encoding = obj.encoding
         result.append(new_obj)
 
@@ -568,7 +587,7 @@ def reindex_variables(
             args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
-        reindexed[dim] = IndexVariable((dim,), target, *args)
+        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:

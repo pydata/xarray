@@ -111,8 +111,11 @@ html_context = {
 
 autodoc_typehints = "none"
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
 napoleon_use_param = False
-napoleon_use_rtype = True
+napoleon_use_rtype = False
 napoleon_preprocess_types = True
 napoleon_type_aliases = {
     # general terms
@@ -415,6 +418,8 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
 }
 
 

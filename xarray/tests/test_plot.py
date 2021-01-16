@@ -55,7 +55,7 @@ def figure_context(*args, **kwargs):
         plt.close("all")
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def test_all_figures_closed():
     """meta-test to ensure all figures are closed at the end of a test
 
@@ -313,12 +313,13 @@ class TestPlot(PlotTestCase):
             coords={"lat": (("y", "x"), lat), "lon": (("y", "x"), lon)},
         )
 
-        hdl = da.plot.line(x="lon", hue="x")
-        assert len(hdl) == 5
+        with figure_context():
+            hdl = da.plot.line(x="lon", hue="x")
+            assert len(hdl) == 5
 
-        plt.clf()
-        hdl = da.plot.line(x="lon", hue="y")
-        assert len(hdl) == 4
+        with figure_context():
+            hdl = da.plot.line(x="lon", hue="y")
+            assert len(hdl) == 4
 
         with pytest.raises(ValueError, match="For 2D inputs, hue must be a dimension"):
             da.plot.line(x="lon", hue="lat")
@@ -591,6 +592,20 @@ class TestPlot(PlotTestCase):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
+    @pytest.mark.parametrize("dim", ("x", "y"))
+    def test_labels_with_units_with_interval(self, dim):
+        """Test line plot with intervals and a units attribute."""
+        bins = [-1, 0, 1, 2]
+        arr = self.darray.groupby_bins("dim_0", bins).mean(...)
+        arr.dim_0_bins.attrs["units"] = "m"
+
+        (mappable,) = arr.plot(**{dim: "dim_0_bins"})
+        ax = mappable.figure.gca()
+        actual = getattr(ax, f"get_{dim}label")()
+
+        expected = "dim_0_bins_center [m]"
+        assert actual == expected
+
 
 class TestPlot1D(PlotTestCase):
     @pytest.fixture(autouse=True)
@@ -670,11 +685,13 @@ class TestPlotStep(PlotTestCase):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_step(self):
-        self.darray[0, 0].plot.step()
+        hdl = self.darray[0, 0].plot.step()
+        assert "steps" in hdl[0].get_drawstyle()
 
-    @pytest.mark.parametrize("ds", ["pre", "post", "mid"])
-    def test_step_with_drawstyle(self, ds):
-        self.darray[0, 0].plot.step(drawstyle=ds)
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_step_with_where(self, where):
+        hdl = self.darray[0, 0].plot.step(where=where)
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
 
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
@@ -959,6 +976,9 @@ class TestDiscreteColorMap:
         self.darray = DataArray(distance, list(zip(("y", "x"), (y, x))))
         self.data_min = distance.min()
         self.data_max = distance.max()
+        yield
+        # Remove all matplotlib figures
+        plt.close("all")
 
     @pytest.mark.slow
     def test_recover_from_seaborn_jet_exception(self):
@@ -1754,14 +1774,15 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
     def test_origin_overrides_xyincrease(self):
         da = DataArray(easy_array((3, 2)), coords=[[-2, 0, 2], [-1, 1]])
-        da.plot.imshow(origin="upper")
-        assert plt.xlim()[0] < 0
-        assert plt.ylim()[1] < 0
+        with figure_context():
+            da.plot.imshow(origin="upper")
+            assert plt.xlim()[0] < 0
+            assert plt.ylim()[1] < 0
 
-        plt.clf()
-        da.plot.imshow(origin="lower")
-        assert plt.xlim()[0] < 0
-        assert plt.ylim()[0] < 0
+        with figure_context():
+            da.plot.imshow(origin="lower")
+            assert plt.xlim()[0] < 0
+            assert plt.ylim()[0] < 0
 
 
 class TestFacetGrid(PlotTestCase):
@@ -2233,7 +2254,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py36-bare-minimum
+        # Can't move this to pytest.mark.parametrize because py37-bare-minimum
         # doesn't have matplotlib.
         for hue_style, map_type in (
             ("discrete", list),
@@ -2268,6 +2289,17 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = ["a", "a", "b", "b"]
         lines = ds2.plot.scatter(x="A", y="B", hue="hue")
         assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
+
+    def test_legend_labels_facetgrid(self):
+        ds2 = self.ds.copy()
+        ds2["hue"] = ["d", "a", "c", "b"]
+        g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col")
+        legend_labels = tuple(t.get_text() for t in g.figlegend.texts)
+        attached_labels = [
+            tuple(m.get_label() for m in mappables_per_ax)
+            for mappables_per_ax in g._mappables
+        ]
+        assert list(set(attached_labels)) == [legend_labels]
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
@@ -2356,60 +2388,60 @@ class TestAxesKwargs:
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xincrease", [True, False])
     def test_xincrease_kwarg(self, da, xincrease):
-        plt.clf()
-        da.plot(xincrease=xincrease)
-        assert plt.gca().xaxis_inverted() == (not xincrease)
+        with figure_context():
+            da.plot(xincrease=xincrease)
+            assert plt.gca().xaxis_inverted() == (not xincrease)
 
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("yincrease", [True, False])
     def test_yincrease_kwarg(self, da, yincrease):
-        plt.clf()
-        da.plot(yincrease=yincrease)
-        assert plt.gca().yaxis_inverted() == (not yincrease)
+        with figure_context():
+            da.plot(yincrease=yincrease)
+            assert plt.gca().yaxis_inverted() == (not yincrease)
 
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xscale", ["linear", "log", "logit", "symlog"])
     def test_xscale_kwarg(self, da, xscale):
-        plt.clf()
-        da.plot(xscale=xscale)
-        assert plt.gca().get_xscale() == xscale
+        with figure_context():
+            da.plot(xscale=xscale)
+            assert plt.gca().get_xscale() == xscale
 
     @pytest.mark.parametrize(
         "da", [DataArray(easy_array((10,))), DataArray(easy_array((10, 3)))]
     )
     @pytest.mark.parametrize("yscale", ["linear", "log", "logit", "symlog"])
     def test_yscale_kwarg(self, da, yscale):
-        plt.clf()
-        da.plot(yscale=yscale)
-        assert plt.gca().get_yscale() == yscale
+        with figure_context():
+            da.plot(yscale=yscale)
+            assert plt.gca().get_yscale() == yscale
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_xlim_kwarg(self, da):
-        plt.clf()
-        expected = (0.0, 1000.0)
-        da.plot(xlim=[0, 1000])
-        assert plt.gca().get_xlim() == expected
+        with figure_context():
+            expected = (0.0, 1000.0)
+            da.plot(xlim=[0, 1000])
+            assert plt.gca().get_xlim() == expected
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_ylim_kwarg(self, da):
-        plt.clf()
-        da.plot(ylim=[0, 1000])
-        expected = (0.0, 1000.0)
-        assert plt.gca().get_ylim() == expected
+        with figure_context():
+            da.plot(ylim=[0, 1000])
+            expected = (0.0, 1000.0)
+            assert plt.gca().get_ylim() == expected
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_xticks_kwarg(self, da):
-        plt.clf()
-        da.plot(xticks=np.arange(5))
-        expected = np.arange(5).tolist()
-        assert_array_equal(plt.gca().get_xticks(), expected)
+        with figure_context():
+            da.plot(xticks=np.arange(5))
+            expected = np.arange(5).tolist()
+            assert_array_equal(plt.gca().get_xticks(), expected)
 
     @pytest.mark.parametrize("da", test_da_list)
     def test_yticks_kwarg(self, da):
-        plt.clf()
-        da.plot(yticks=np.arange(5))
-        expected = np.arange(5)
-        assert_array_equal(plt.gca().get_yticks(), expected)
+        with figure_context():
+            da.plot(yticks=np.arange(5))
+            expected = np.arange(5)
+            assert_array_equal(plt.gca().get_yticks(), expected)
 
 
 @requires_matplotlib
@@ -2424,8 +2456,10 @@ def test_plot_transposed_nondim_coord(plotfunc):
         dims=["s", "x"],
         coords={"x": x, "s": s, "z": (("s", "x"), z), "zt": (("x", "s"), z.T)},
     )
-    getattr(da.plot, plotfunc)(x="x", y="zt")
-    getattr(da.plot, plotfunc)(x="zt", y="x")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="x", y="zt")
+    with figure_context():
+        getattr(da.plot, plotfunc)(x="zt", y="x")
 
 
 @requires_matplotlib

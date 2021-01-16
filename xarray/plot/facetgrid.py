@@ -131,7 +131,7 @@ class FacetGrid:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row " "were passed")
+                warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
         elif not row and col:
@@ -306,9 +306,11 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+        xplt, yplt, hueplt, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
         )
+        xlabel = label_from_attrs(xplt)
+        ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
         self._hue_label = huelabel

@@ -38,7 +38,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
         if not hue_is_numeric and (hue_style == "continuous"):
             raise ValueError(
-                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
             )
 
         if add_guide is None or add_guide is True:
@@ -54,9 +54,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
         add_colorbar = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError(
-            "hue_style must be either None, 'discrete' " "or 'continuous'."
-        )
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
@@ -131,7 +129,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, " "or Normalize object."
+        err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
@@ -293,7 +291,7 @@ def _dsplot(plotfunc):
             allargs = locals().copy()
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             allargs["data"] = ds
-            # TODO dcherian: why do I need to remove kwargs?
+            # remove kwargs to avoid passing the information twice
             for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
 
@@ -424,7 +422,10 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
-        for label in np.unique(data["hue"].values):
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
+        for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
