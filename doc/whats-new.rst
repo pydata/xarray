@@ -29,7 +29,7 @@ Breaking changes
   values were required, which would lead to inaccurate I/O round-trips.
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_
-- Variables referred to in attributes like `bounds` and `grid_mapping`
+- Variables referred to in attributes like ``bounds`` and ``grid_mapping``
   are now automatically set as coordinate variables. These attributes
   are moved to :py:attr:`DataArray.encoding` from
   :py:attr:`DataArray.attrs`. This behaviour is controlled by the
