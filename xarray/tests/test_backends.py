@@ -922,7 +922,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert "latlon" not in ds["variable"].attrs["coordinates"]
                 assert "coordinates" not in ds.attrs
 
-    def test_grid_mapping_and_bounds_are_coordinates_after_dataset_roundtrip(self):
+    def test_coordinate_variables_after_dataset_roundtrip(self):
         original = self._create_cf_dataset()
         with self.roundtrip(original) as actual:
             assert_identical(actual, original)
