@@ -1,8 +1,8 @@
 import functools
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
