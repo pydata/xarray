@@ -2,6 +2,7 @@ import functools
 
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -449,4 +450,49 @@ def scatter(ds, x, y, ax, **kwargs):
             data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
         )
 
+    return primitive
+
+
+@_dsplot
+def line(ds, x, y, ax, **kwargs):
+    """
+    Line plot Dataset data variables against each other.
+
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    """
+    if "add_colorbar" in kwargs or "add_legend" in kwargs:
+        raise ValueError(
+            "Dataset.plot.line does not accept "
+            "'add_colorbar' or 'add_legend'. "
+            "Use 'add_guide' instead."
+        )
+
+    cmap_params = kwargs.pop("cmap_params")
+    hue = kwargs.pop("hue")
+    kwargs.pop("hue_style")
+    markersize = kwargs.pop("markersize", None)
+    size_norm = kwargs.pop("size_norm", None)
+    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+
+    # Transpose the data to same shape:
+    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
+
+    # Number of lines to plot, hopefully it's always the last axis it splits on:
+    len_lines = data["x"].shape[-1]
+
+    # ax.plot doesn't allow multiple colors, workaround it by setting the default
+    # colors to follow the colormap instead:
+    cmap = mpl.pyplot.get_cmap(cmap_params["cmap"], len_lines)
+    ax.set_prop_cycle(mpl.cycler(color=cmap(np.arange(len_lines))))
+
+    # Plot data:
+    ax.plot(data["x"], data["y"], **kwargs)
+
+    # ax.plot doesn't return a mappable that fig.colorbar can parse. Create
+    # one and return that one instead:
+    norm = mpl.colors.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
+    primitive = mpl.pyplot.cm.ScalarMappable(cmap=cmap, norm=norm)
+
+    # TODO: Should really be the line2d returned from ax.plot.
+    # Return primitive, mappable instead?
     return primitive
