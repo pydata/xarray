@@ -594,7 +594,7 @@ def decode_cf(
         np.datetime64.
     decode_coords : bool, optional
         Use the 'coordinates', 'grid_mapping', and 'bounds' attributes
-        on variables (or the dataset itself) to identify coordinates.
+        on variables (or the dataset itself) to identify coordinate variables.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
