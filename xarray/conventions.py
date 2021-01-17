@@ -593,7 +593,7 @@ def decode_cf(
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool, optional
-        Use the 'coordinates', 'grid_mapping', and 'bounds' attributes
+        Use the 'coordinates', 'grid_mapping', 'bounds' and other attributes
         on variables (or the dataset itself) to identify coordinate variables.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
