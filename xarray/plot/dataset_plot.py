@@ -469,6 +469,7 @@ def line(ds, x, y, ax, **kwargs):
         )
 
     cmap_params = kwargs.pop("cmap_params")
+    print(cmap_params)
     hue = kwargs.pop("hue")
     kwargs.pop("hue_style")
     markersize = kwargs.pop("markersize", None)
@@ -478,21 +479,25 @@ def line(ds, x, y, ax, **kwargs):
     # Transpose the data to same shape:
     data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
 
-    # Number of lines to plot, hopefully it's always the last axis it splits on:
-    len_lines = data["x"].shape[-1]
+    if hue is not None:
+        # Number of lines to plot, hopefully it's always the last axis it splits on:
+        len_lines = data["x"].shape[-1]
 
-    # ax.plot doesn't allow multiple colors, workaround it by setting the default
-    # colors to follow the colormap instead:
-    cmap = plt.get_cmap(cmap_params["cmap"], len_lines)
-    ax.set_prop_cycle(plt.cycler(color=cmap(np.arange(len_lines))))
+        # ax.plot doesn't allow multiple colors, workaround it by setting the default
+        # colors to follow the colormap instead:
+        cmap = plt.get_cmap(cmap_params["cmap"], len_lines)
+        ax.set_prop_cycle(plt.cycler(color=cmap(np.arange(len_lines))))
 
-    # Plot data:
-    ax.plot(data["x"], data["y"], **kwargs)
+        # Plot data:
+        ax.plot(data["x"], data["y"], **kwargs)
 
-    # ax.plot doesn't return a mappable that fig.colorbar can parse. Create
-    # one and return that one instead:
-    norm = plt.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
-    primitive = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        # ax.plot doesn't return a mappable that fig.colorbar can parse. Create
+        # one and return that one instead:
+        norm = plt.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
+        primitive = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    else:
+        # Plot data:
+        primitive = ax.plot(data["x"], data["y"], **kwargs)
 
     # TODO: Should really be the line2d returned from ax.plot.
     # Return primitive, mappable instead?
