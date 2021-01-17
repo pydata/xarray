@@ -1,6 +1,5 @@
 import functools
 
-import matplotlib as mpl
 import numpy as np
 import pandas as pd
 
@@ -460,6 +459,8 @@ def line(ds, x, y, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
     """
+    import matplotlib.pyplot as plt
+
     if "add_colorbar" in kwargs or "add_legend" in kwargs:
         raise ValueError(
             "Dataset.plot.line does not accept "
@@ -482,16 +483,16 @@ def line(ds, x, y, ax, **kwargs):
 
     # ax.plot doesn't allow multiple colors, workaround it by setting the default
     # colors to follow the colormap instead:
-    cmap = mpl.pyplot.get_cmap(cmap_params["cmap"], len_lines)
-    ax.set_prop_cycle(mpl.cycler(color=cmap(np.arange(len_lines))))
+    cmap = plt.get_cmap(cmap_params["cmap"], len_lines)
+    ax.set_prop_cycle(plt.cycler(color=cmap(np.arange(len_lines))))
 
     # Plot data:
     ax.plot(data["x"], data["y"], **kwargs)
 
     # ax.plot doesn't return a mappable that fig.colorbar can parse. Create
     # one and return that one instead:
-    norm = mpl.colors.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
-    primitive = mpl.pyplot.cm.ScalarMappable(cmap=cmap, norm=norm)
+    norm = plt.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
+    primitive = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 
     # TODO: Should really be the line2d returned from ax.plot.
     # Return primitive, mappable instead?
