@@ -3040,6 +3040,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 indexes[name] = indexvar.to_index()
                 coord_names.add(name)
 
+        # rename_dims was called to rename an indexed dimension
+        # the new renamed dimension is unindexed
+        # So we need to remove the old variable form indexes
+        # and convert to a base variable
+        for name in dims_dict:
+            if name in indexes:
+                variables[name] = variables[name].to_base_variable()
+                del indexes[name]
+
         return variables, coord_names, dims, indexes
 
     def rename(
