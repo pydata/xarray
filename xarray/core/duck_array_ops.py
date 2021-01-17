@@ -213,9 +213,10 @@ def lazy_array_equiv(arr1, arr2, check_dtype=False):
         return True
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
-    if check_dtype and arr1.dtype != arr2.dtype:
-        return False
     if arr1.shape != arr2.shape:
+        return False
+    # NOTE: "is False" needed -> should not return on None
+    if check_dtype and same_dtype(arr1, arr2, lazy=True) is False:
         return False
     if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
         # GH3068, GH4221
@@ -226,6 +227,23 @@ def lazy_array_equiv(arr1, arr2, check_dtype=False):
     return None
 
 
+def same_dtype(arr1, arr2, lazy):
+
+    # object dask arrays can change dtype -> need to compute them
+    if arr1.dtype == object and is_duck_dask_array(arr1):
+        if lazy:
+            return None
+        # arr.compute() can return a scalar -> wrap in an array
+        arr1 = asarray(arr1.compute())
+
+    if arr2.dtype == object and is_duck_dask_array(arr2):
+        if lazy:
+            return None
+        arr2 = asarray(arr2.compute())
+
+    return arr1.dtype == arr2.dtype
+
+
 def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8, check_dtype=False):
     """Like np.allclose, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
@@ -233,6 +251,8 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8, check_dtype=False):
 
     lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype=check_dtype)
     if lazy_equiv is None:
+        if check_dtype and not same_dtype(arr1, arr2, lazy=False):
+            return False
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
             return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
@@ -244,8 +264,10 @@ def array_equiv(arr1, arr2, check_dtype=False):
     """Like np.array_equal, but also allows values to be NaN in both arrays"""
     arr1 = asarray(arr1)
     arr2 = asarray(arr2)
-    lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype)
+    lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype=check_dtype)
     if lazy_equiv is None:
+        if check_dtype and not same_dtype(arr1, arr2, lazy=False):
+            return False
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | (isnull(arr1) & isnull(arr2))
@@ -262,6 +284,8 @@ def array_notnull_equiv(arr1, arr2, check_dtype=False):
     arr2 = asarray(arr2)
     lazy_equiv = lazy_array_equiv(arr1, arr2, check_dtype=check_dtype)
     if lazy_equiv is None:
+        if check_dtype and not same_dtype(arr1, arr2, lazy=False):
+            return False
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", "In the future, 'NAT == x'")
             flag_array = (arr1 == arr2) | isnull(arr1) | isnull(arr2)
