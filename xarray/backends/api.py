@@ -355,8 +355,8 @@ def open_dataset(
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
     decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+        Use the 'coordinates', 'grid_mapping', 'bounds' and other attributes
+        on variables (or the dataset itself) to identify coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
@@ -614,8 +614,8 @@ def open_dataarray(
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
     decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+        Use the 'coordinates', 'grid_mapping', 'bounds' and other attributes
+        on variables (or the dataset itself) to identify coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
         Engine to use when reading files. If not provided, the default engine

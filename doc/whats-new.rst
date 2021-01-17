@@ -33,8 +33,8 @@ Breaking changes
   are now automatically set as coordinate variables. These attributes
   are moved to :py:attr:`DataArray.encoding` from
   :py:attr:`DataArray.attrs`. This behaviour is controlled by the
-  `decode_coords` kwarg to :py:func:`open_dataset` and
-  :py:func:`open_mfdataset`.  The precise list of variables is in
+  ``decode_coords`` kwarg to :py:func:`open_dataset` and
+  :py:func:`open_mfdataset`.  The full list of decoded attributes is in
   :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 
 
