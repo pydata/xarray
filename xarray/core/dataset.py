@@ -3033,11 +3033,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # GH4107
         for name in set(self.dims):
             if name in variables:
-                indexvar = variables.pop(name).to_index_variable()
-                variables[name] = indexvar
+                variables[name] = variables[name].to_index_variable()
                 if indexes is None:
                     indexes = dict()
-                indexes[name] = indexvar.to_index()
+                indexes[name] = variables[name].to_index()
                 coord_names.add(name)
 
         # rename_dims was called to rename an indexed dimension
