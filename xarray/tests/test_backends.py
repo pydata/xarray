@@ -948,7 +948,7 @@ class CFEncodedBase(DatasetIOBase):
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
-    def test_grid_mapping_and_bounds_are_coordinates_after_iris_roundtrip(self):
+    def test_coordinate_variables_after_iris_roundtrip(self):
         original = self._create_cf_dataset()
         iris_cube = original["variable"].to_iris()
         actual = DataArray.from_iris(iris_cube)
