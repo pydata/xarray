@@ -120,7 +120,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         if isinstance(obj[1], DataArray):
-            raise TypeError(
+            raise DeprecationWarning(  # TODO: change into TypeError
                 "Using a DataArray object to construct a variable is "
                 "ambiguous, please extract the data using the .data property"
             )
