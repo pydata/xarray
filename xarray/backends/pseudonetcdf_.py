@@ -45,6 +45,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
+        from PseudoNetCDF import pncopen
 
         keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
@@ -54,9 +55,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         if lock is None:
             lock = PNETCDF_LOCK
 
-        manager = CachingFileManager(
-            PseudoNetCDF.pncopen, filename, lock=lock, **keywords
-        )
+        manager = CachingFileManager(pncopen, filename, lock=lock, **keywords)
         return cls(manager, lock)
 
     def __init__(self, manager, lock=None):
@@ -147,7 +146,7 @@ pseudonetcdf_backend = BackendEntrypoint(
 
 
 try:
-    import PseudoNetCDF
+    import PseudoNetCDF  # noqa: F401
 
     BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend
 except ModuleNotFoundError:

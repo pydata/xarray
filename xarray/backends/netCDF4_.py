@@ -299,6 +299,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
+        import netCDF4  # noqa: F811
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -335,7 +336,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4
+        import netCDF4  # noqa: F811
 
         if isinstance(filename, pathlib.Path):
             filename = os.fspath(filename)
@@ -566,7 +567,7 @@ netcdf4_backend = BackendEntrypoint(
 
 
 try:
-    import netCDF4
+    import netCDF4  # noqa: F401
 
     BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend
 except ModuleNotFoundError:

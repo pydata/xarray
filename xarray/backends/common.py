@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-import typing as T
+from typing import Dict
 
 import numpy as np
 
@@ -352,4 +352,4 @@ class BackendEntrypoint:
         self.guess_can_open = guess_can_open
 
 
-BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {}
+BACKEND_ENTRYPOINTS: Dict[str, BackendEntrypoint] = {}

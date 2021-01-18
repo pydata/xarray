@@ -80,6 +80,7 @@ class PydapDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, url, session=None):
+        import pydap.client  # noqa F811
 
         ds = pydap.client.open_url(url, session=session)
         return cls(ds)
@@ -141,7 +142,7 @@ pydap_backend = BackendEntrypoint(
 
 
 try:
-    import pydap.client
+    import pydap.client  # noqa F401
 
     BACKEND_ENTRYPOINTS["pydap"] = pydap_backend
 except ModuleNotFoundError:

@@ -290,6 +290,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
     ):
+        import zarr  # noqa: F811
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, pathlib.Path):
@@ -409,7 +410,7 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        import zarr
+        import zarr  # noqa: F811
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -708,7 +709,7 @@ zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
 
 
 try:
-    import zarr
+    import zarr  # noqa: F401
 
     BACKEND_ENTRYPOINTS["zarr"] = zarr_backend
 except ModuleNotFoundError:

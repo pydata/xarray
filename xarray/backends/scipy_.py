@@ -66,6 +66,8 @@ class ScipyArrayWrapper(BackendArray):
 def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
 
+    import scipy.io  # noqa: F811
+
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
@@ -277,7 +279,7 @@ scipy_backend = BackendEntrypoint(
 
 
 try:
-    import scipy.io
+    import scipy.io  # noqa: F401
 
     BACKEND_ENTRYPOINTS["scipy"] = scipy_backend
 except ModuleNotFoundError:

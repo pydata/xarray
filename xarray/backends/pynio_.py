@@ -50,7 +50,7 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
-        # import Nio
+        import Nio  # noqa: F811
 
         if lock is None:
             lock = PYNIO_LOCK
@@ -127,7 +127,7 @@ pynio_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pynio)
 
 
 try:
-    import Nio
+    import Nio  # noqa: F401
 
     BACKEND_ENTRYPOINTS["pynio"] = pynio_backend
 except ModuleNotFoundError:
