@@ -2423,13 +2423,11 @@ class TestDataset:
 
         actual = data.drop_isel(x=0)
         expected = data.drop_sel(x="a")
-        assert_array_equal(actual.coords["x"], ["b"])
         assert_identical(expected, actual)
 
         actual = data.drop_isel(x=[0])
         expected = data.drop_sel(x=["a"])
         assert_identical(expected, actual)
-        assert_array_equal(actual.coords["x"], ["b"])
 
         actual = data.drop_isel(x=[0, 1])
         expected = data.drop_sel(x=["a", "b"])
@@ -2440,7 +2438,6 @@ class TestDataset:
         expected = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
         assert_identical(expected, actual)
         assert actual.coords["x"].size == 0
-        assert_array_equal(actual.coords["y"], [1, 3, 5])
 
         with pytest.raises(KeyError):
             data.drop_isel(z=1)

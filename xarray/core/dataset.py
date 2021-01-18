@@ -4112,6 +4112,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop")
 
         ds = self
+        dimension_index = {}
         for dim, pos_for_dim in indexers.items():
             # Don't cast to set, as it would harm performance when labels
             # is a large numpy array
@@ -4120,7 +4121,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             pos_for_dim = np.asarray(pos_for_dim)
             index = self.get_index(dim)
             new_index = index.delete(pos_for_dim)
-            ds = ds.loc[{dim: new_index}]
+            dimension_index[dim] = new_index
+        ds = ds.loc[dimension_index]
         return ds
 
     def drop_dims(
