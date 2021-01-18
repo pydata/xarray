@@ -344,6 +344,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
@@ -351,7 +352,7 @@ class DataArray(AbstractArray, DataWithCoords):
     __slots__ = (
         "_cache",
         "_coords",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_name",
         "_variable",
@@ -421,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # public interface.
         self._indexes = indexes
 
-        self._file_obj = None
+        self._close = None
 
     def _replace(
         self,

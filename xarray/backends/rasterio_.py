@@ -361,6 +361,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 
     # Make the file closeable
-    result._file_obj = manager
+    result.set_close(manager.close)
 
     return result
