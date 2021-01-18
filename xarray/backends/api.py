@@ -882,11 +882,13 @@ def open_mfdataset(
     if isinstance(paths, str):
         if is_remote_uri(paths):
             from fsspec.core import get_fs_token_paths
+
             # get_fs_token_paths also allows arguments embedded in URLs
             fs, _, _ = get_fs_token_paths(
-                paths, mode='rb',
+                paths,
+                mode="rb",
                 storage_options=kwargs.get("backend_kwargs", {}).get("storage_options"),
-                expand=False
+                expand=False,
             )
             paths = fs.glob(fs._strip_protocol(paths))
             paths = [fs.get_mapper(path) for path in paths]
