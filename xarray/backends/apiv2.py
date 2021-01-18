@@ -90,7 +90,7 @@ def _dataset_from_backend_dataset(
             **extra_tokens,
         )
 
-    ds._file_obj = backend_ds._file_obj
+    ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
