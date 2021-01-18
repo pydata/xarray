@@ -3,6 +3,7 @@ import pathlib
 
 import numpy as np
 
+from xarray.tests import LooseVersion
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
@@ -300,8 +301,11 @@ class ZarrStore(AbstractWritableDataStore):
             mode=mode,
             synchronizer=synchronizer,
             path=group,
-            storage_options=storage_options,
         )
+        if LooseVersion(zarr.__version__) >= "2.5.0":
+            open_kwargs["storage_options"] = storage_options
+        elif storage_options:
+            raise ValueError("Storage options only compatible with zarr>=2.5.0")
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
 
@@ -688,7 +692,6 @@ def open_backend_dataset_zarr(
     chunk_store=None,
     storage_options=None,
 ):
-
     store = ZarrStore.open_group(
         filename_or_obj,
         group=group,
