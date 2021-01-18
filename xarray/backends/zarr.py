@@ -286,6 +286,7 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None,
         append_dim=None,
         write_region=None,
     ):
@@ -295,7 +296,8 @@ class ZarrStore(AbstractWritableDataStore):
         if isinstance(store, pathlib.Path):
             store = os.fspath(store)
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group,
+                           storage_options=storage_options)
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
 
@@ -530,6 +532,7 @@ def open_zarr(
     consolidated=False,
     overwrite_encoded_chunks=False,
     chunk_store=None,
+    storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
     **kwargs,
@@ -642,6 +645,7 @@ def open_zarr(
         "consolidated": consolidated,
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
+        "storage_options": storage_options
     }
 
     ds = open_dataset(

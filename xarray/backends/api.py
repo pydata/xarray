@@ -881,13 +881,17 @@ def open_mfdataset(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths):
-            raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
-                )
+            from fsspec.core import get_fs_token_paths
+            # get_fs_token_paths also allows arguments embedded in URLs
+            fs, _, _ = get_fs_token_paths(
+                paths, mode='rb',
+                storage_options=kwargs.get("backend_kwargs", {}).get("storage_options"),
+                expand=False
             )
-        paths = sorted(glob(_normalize_path(paths)))
+            paths = fs.glob(fs._strip_protocol(paths))
+            paths = [fs.get_mapper(path) for path in paths]
+        else:
+            paths = sorted(glob(_normalize_path(paths)))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 

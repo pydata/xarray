@@ -645,7 +645,12 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r"^https?\://", path))
+    """Finds URLs of the form protocol:// or protocol::
+
+    This also matches for http[s]://, which were the only remote URLs
+    supported in <=v0.16.2.
+    """
+    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
 def read_magic_number(filename_or_obj, count=8):
