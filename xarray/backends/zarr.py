@@ -686,6 +686,7 @@ def open_backend_dataset_zarr(
     consolidated=False,
     consolidate_on_close=False,
     chunk_store=None,
+    storage_options=None,
 ):
 
     store = ZarrStore.open_group(
@@ -696,6 +697,7 @@ def open_backend_dataset_zarr(
         consolidated=consolidated,
         consolidate_on_close=consolidate_on_close,
         chunk_store=chunk_store,
+        storage_options=storage_options,
     )
 
     with close_on_error(store):
