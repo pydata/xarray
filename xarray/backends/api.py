@@ -522,7 +522,7 @@ def open_dataset(
 
         else:
             ds2 = ds
-        ds2._file_obj = ds._file_obj
+        ds2.set_close(ds._close)
         return ds2
 
     filename_or_obj = _normalize_path(filename_or_obj)
@@ -701,7 +701,7 @@ def open_dataarray(
     else:
         (data_array,) = dataset.data_vars.values()
 
-    data_array._file_obj = dataset._file_obj
+    data_array.set_close(dataset._close)
 
     # Reset names if they were changed during saving
     # to ensure that we can 'roundtrip' perfectly
@@ -713,17 +713,6 @@ def open_dataarray(
         data_array.name = None
 
     return data_array
-
-
-class _MultiFileCloser:
-    __slots__ = ("file_objs",)
-
-    def __init__(self, file_objs):
-        self.file_objs = file_objs
-
-    def close(self):
-        for f in self.file_objs:
-            f.close()
 
 
 def open_mfdataset(
@@ -924,14 +913,14 @@ def open_mfdataset(
         getattr_ = getattr
 
     datasets = [open_(p, **open_kwargs) for p in paths]
-    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
     if parallel:
         # calling compute here will return the datasets/file_objs lists,
         # the underlying datasets will still be stored as dask arrays
-        datasets, file_objs = dask.compute(datasets, file_objs)
+        datasets, closers = dask.compute(datasets, closers)
 
     # Combine all datasets, closing them in case of a ValueError
     try:
@@ -969,7 +958,11 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined._file_obj = _MultiFileCloser(file_objs)
+    def multi_file_closer():
+        for closer in closers:
+            closer()
+
+    combined.set_close(multi_file_closer)
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
