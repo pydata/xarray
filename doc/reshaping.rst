@@ -7,25 +7,26 @@ Reshaping and reorganizing data
 These methods allow you to reorganize
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 Reordering dimensions
 ---------------------
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
-on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An 
+on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
 ellipsis (`...`) can be use to represent all other dimensions:
 
 .. ipython:: python
 
-    ds = xr.Dataset({'foo': (('x', 'y', 'z'), [[[42]]]), 'bar': (('y', 'z'), [[24]])})
-    ds.transpose('y', 'z', 'x')
-    ds.transpose(..., 'x')  # equivalent
+    ds = xr.Dataset({"foo": (("x", "y", "z"), [[[42]]]), "bar": (("y", "z"), [[24]])})
+    ds.transpose("y", "z", "x")
+    ds.transpose(..., "x")  # equivalent
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
@@ -37,7 +38,7 @@ use :py:meth:`~xarray.DataArray.expand_dims`
 
 .. ipython:: python
 
-    expanded  = ds.expand_dims('w')
+    expanded = ds.expand_dims("w")
     expanded
 
 This method attaches a new dimension with size 1 to all data variables.
@@ -48,7 +49,7 @@ use :py:meth:`~xarray.DataArray.squeeze`
 
 .. ipython:: python
 
-    expanded.squeeze('w')
+    expanded.squeeze("w")
 
 Converting between datasets and arrays
 --------------------------------------
@@ -69,14 +70,14 @@ To convert back from a DataArray to a Dataset, use
 
 .. ipython:: python
 
-    arr.to_dataset(dim='variable')
+    arr.to_dataset(dim="variable")
 
 The broadcasting behavior of ``to_array`` means that the resulting array
 includes the union of data variable dimensions:
 
 .. ipython:: python
 
-    ds2 = xr.Dataset({'a': 0, 'b': ('x', [3, 4, 5])})
+    ds2 = xr.Dataset({"a": 0, "b": ("x", [3, 4, 5])})
 
     # the input dataset has 4 elements
     ds2
@@ -90,7 +91,7 @@ If you use ``to_dataset`` without supplying the ``dim`` argument, the DataArray 
 
 .. ipython:: python
 
-    arr.to_dataset(name='combined')
+    arr.to_dataset(name="combined")
 
 .. _reshape.stack:
 
@@ -103,11 +104,12 @@ implemented :py:meth:`~xarray.DataArray.stack` and
 
 .. ipython:: python
 
-    array = xr.DataArray(np.random.randn(2, 3),
-                         coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
-    stacked = array.stack(z=('x', 'y'))
+    array = xr.DataArray(
+        np.random.randn(2, 3), coords=[("x", ["a", "b"]), ("y", [0, 1, 2])]
+    )
+    stacked = array.stack(z=("x", "y"))
     stacked
-    stacked.unstack('z')
+    stacked.unstack("z")
 
 As elsewhere in xarray, an ellipsis (`...`) can be used to represent all unlisted dimensions:
 
@@ -128,15 +130,15 @@ possible levels. Missing levels are filled in with ``NaN`` in the resulting obje
 
     stacked2 = stacked[::2]
     stacked2
-    stacked2.unstack('z')
+    stacked2.unstack("z")
 
 However, xarray's ``stack`` has an important difference from pandas: unlike
 pandas, it does not automatically drop missing values. Compare:
 
 .. ipython:: python
 
-    array = xr.DataArray([[np.nan, 1], [2, 3]], dims=['x', 'y'])
-    array.stack(z=('x', 'y'))
+    array = xr.DataArray([[np.nan, 1], [2, 3]], dims=["x", "y"])
+    array.stack(z=("x", "y"))
     array.to_pandas().stack()
 
 We departed from pandas's behavior here because predictable shapes for new
@@ -166,16 +168,15 @@ like this:
 
 .. ipython:: python
 
-        data = xr.Dataset(
-            data_vars={'a': (('x', 'y'), [[0, 1, 2], [3, 4, 5]]),
-                      'b': ('x', [6, 7])},
-            coords={'y': ['u', 'v', 'w']}
-        )
-        data
-        stacked = data.to_stacked_array("z", sample_dims=['x'])
-        stacked
-        unstacked = stacked.to_unstacked_dataset("z")
-        unstacked
+    data = xr.Dataset(
+        data_vars={"a": (("x", "y"), [[0, 1, 2], [3, 4, 5]]), "b": ("x", [6, 7])},
+        coords={"y": ["u", "v", "w"]},
+    )
+    data
+    stacked = data.to_stacked_array("z", sample_dims=["x"])
+    stacked
+    unstacked = stacked.to_unstacked_dataset("z")
+    unstacked
 
 In this example, ``stacked`` is a two dimensional array that we can easily pass to a scikit-learn or another generic
 numerical method.
@@ -202,19 +203,23 @@ coordinates using :py:meth:`~xarray.DataArray.set_index`:
 
 .. ipython:: python
 
-     da = xr.DataArray(np.random.rand(4),
-                       coords={'band': ('x', ['a', 'a', 'b', 'b']),
-                               'wavenumber': ('x', np.linspace(200, 400, 4))},
-                       dims='x')
-     da
-     mda = da.set_index(x=['band', 'wavenumber'])
-     mda
+    da = xr.DataArray(
+        np.random.rand(4),
+        coords={
+            "band": ("x", ["a", "a", "b", "b"]),
+            "wavenumber": ("x", np.linspace(200, 400, 4)),
+        },
+        dims="x",
+    )
+    da
+    mda = da.set_index(x=["band", "wavenumber"])
+    mda
 
 These coordinates can now be used for indexing, e.g.,
 
 .. ipython:: python
 
-     mda.sel(band='a')
+    mda.sel(band="a")
 
 Conversely, you can use :py:meth:`~xarray.DataArray.reset_index`
 to extract multi-index levels as coordinates (this is mainly useful
@@ -222,27 +227,27 @@ for serialization):
 
 .. ipython:: python
 
-     mda.reset_index('x')
+    mda.reset_index("x")
 
 :py:meth:`~xarray.DataArray.reorder_levels` allows changing the order
 of multi-index levels:
 
 .. ipython:: python
 
-     mda.reorder_levels(x=['wavenumber', 'band'])
+    mda.reorder_levels(x=["wavenumber", "band"])
 
 As of xarray v0.9 coordinate labels for each dimension are optional.
-You can also  use ``.set_index`` / ``.reset_index`` to add / remove
+You can also use ``.set_index`` / ``.reset_index`` to add / remove
 labels for one or several dimensions:
 
 .. ipython:: python
 
-    array = xr.DataArray([1, 2, 3], dims='x')
+    array = xr.DataArray([1, 2, 3], dims="x")
     array
-    array['c'] = ('x', ['a', 'b', 'c'])
-    array.set_index(x='c')
-    array = array.set_index(x='c')
-    array = array.reset_index('x', drop=True)
+    array["c"] = ("x", ["a", "b", "c"])
+    array.set_index(x="c")
+    array = array.set_index(x="c")
+    array = array.reset_index("x", drop=True)
 
 .. _reshape.shift_and_roll:
 
@@ -254,9 +259,9 @@ To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` an
 
 .. ipython:: python
 
-	array = xr.DataArray([1, 2, 3, 4], dims='x')
-	array.shift(x=2)
-	array.roll(x=2, roll_coords=True)
+    array = xr.DataArray([1, 2, 3, 4], dims="x")
+    array.shift(x=2)
+    array.roll(x=2, roll_coords=True)
 
 .. _reshape.sort:
 
@@ -269,17 +274,18 @@ One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
 
 .. ipython:: python
 
-  ds = xr.Dataset({'A': (('x', 'y'), [[1, 2], [3, 4]]),
-                   'B': (('x', 'y'), [[5, 6], [7, 8]])},
-                  coords={'x': ['b', 'a'], 'y': [1, 0]})
-  dax = xr.DataArray([100, 99], [('x', [0, 1])])
-  day = xr.DataArray([90, 80], [('y', [0, 1])])
-  ds.sortby([day, dax])
+    ds = xr.Dataset(
+        {"A": (("x", "y"), [[1, 2], [3, 4]]), "B": (("x", "y"), [[5, 6], [7, 8]])},
+        coords={"x": ["b", "a"], "y": [1, 0]},
+    )
+    dax = xr.DataArray([100, 99], [("x", [0, 1])])
+    day = xr.DataArray([90, 80], [("y", [0, 1])])
+    ds.sortby([day, dax])
 
 As a shortcut, you can refer to existing coordinates by name:
 
 .. ipython:: python
 
-  ds.sortby('x')
-  ds.sortby(['y', 'x'])
-  ds.sortby(['y', 'x'], ascending=False)
+    ds.sortby("x")
+    ds.sortby(["y", "x"])
+    ds.sortby(["y", "x"], ascending=False)

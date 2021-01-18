@@ -214,9 +214,10 @@ class DatasetCoordinates(Coordinates):
         return cast("DataArray", self._data[key])
 
     def to_dataset(self) -> "Dataset":
-        """Convert these coordinates into a new Dataset
-        """
-        return self._data._copy_listed(self._names)
+        """Convert these coordinates into a new Dataset"""
+
+        names = [name for name in self._data._variables if name in self._names]
+        return self._data._copy_listed(names)
 
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
@@ -322,29 +323,6 @@ class DataArrayCoordinates(Coordinates):
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython. """
         return self._data._ipython_key_completions_()
-
-
-class LevelCoordinatesSource(Mapping[Hashable, Any]):
-    """Iterator for MultiIndex level coordinates.
-
-    Used for attribute style lookup with AttrAccessMixin. Not returned directly
-    by any public methods.
-    """
-
-    __slots__ = ("_data",)
-
-    def __init__(self, data_object: "Union[DataArray, Dataset]"):
-        self._data = data_object
-
-    def __getitem__(self, key):
-        # not necessary -- everything here can already be found in coords.
-        raise KeyError()
-
-    def __iter__(self) -> Iterator[Hashable]:
-        return iter(self._data._level_coords)
-
-    def __len__(self) -> int:
-        return len(self._data._level_coords)
 
 
 def assert_coordinate_consistent(

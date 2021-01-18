@@ -26,11 +26,12 @@ Split
 Let's create a simple example dataset:
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 .. ipython:: python
@@ -47,20 +48,20 @@ use a DataArray directly), we get back a ``GroupBy`` object:
 
 .. ipython:: python
 
-    ds.groupby('letters')
+    ds.groupby("letters")
 
 This object works very similarly to a pandas GroupBy object. You can view
 the group indices with the ``groups`` attribute:
 
 .. ipython:: python
 
-    ds.groupby('letters').groups
+    ds.groupby("letters").groups
 
 You can also iterate over groups in ``(label, group)`` pairs:
 
 .. ipython:: python
 
-    list(ds.groupby('letters'))
+    list(ds.groupby("letters"))
 
 Just like in pandas, creating a GroupBy object is cheap: it does not actually
 split the data until you access particular values.
@@ -75,8 +76,8 @@ a customized coordinate, but xarray facilitates this via the
 
 .. ipython:: python
 
-    x_bins = [0,25,50]
-    ds.groupby_bins('x', x_bins).groups
+    x_bins = [0, 25, 50]
+    ds.groupby_bins("x", x_bins).groups
 
 The binning is implemented via :func:`pandas.cut`, whose documentation details how
 the bins are assigned. As seen in the example above, by default, the bins are
@@ -86,8 +87,8 @@ choose `float` labels which identify the bin centers:
 
 .. ipython:: python
 
-    x_bin_labels = [12.5,37.5]
-    ds.groupby_bins('x', x_bins, labels=x_bin_labels).groups
+    x_bin_labels = [12.5, 37.5]
+    ds.groupby_bins("x", x_bins, labels=x_bin_labels).groups
 
 
 Apply
@@ -102,7 +103,8 @@ concatenated back together along the group axis:
     def standardize(x):
         return (x - x.mean()) / x.std()
 
-    arr.groupby('letters').map(standardize)
+
+    arr.groupby("letters").map(standardize)
 
 GroupBy objects also have a :py:meth:`~xarray.core.groupby.DatasetGroupBy.reduce` method and
 methods like :py:meth:`~xarray.core.groupby.DatasetGroupBy.mean` as shortcuts for applying an
@@ -110,19 +112,19 @@ aggregation function:
 
 .. ipython:: python
 
-    arr.groupby('letters').mean(dim='x')
+    arr.groupby("letters").mean(dim="x")
 
 Using a groupby is thus also a convenient shortcut for aggregating over all
 dimensions *other than* the provided one:
 
 .. ipython:: python
 
-    ds.groupby('x').std(...)
+    ds.groupby("x").std(...)
 
 .. note::
 
     We use an ellipsis (`...`) here to indicate we want to reduce over all
-    other dimensions  
+    other dimensions
 
 
 First and last
@@ -134,7 +136,7 @@ values for group along the grouped dimension:
 
 .. ipython:: python
 
-    ds.groupby('letters').first(...)
+    ds.groupby("letters").first(...)
 
 By default, they skip missing values (control this with ``skipna``).
 
@@ -149,9 +151,9 @@ coordinates. For example:
 
 .. ipython:: python
 
-    alt = arr.groupby('letters').mean(...)
+    alt = arr.groupby("letters").mean(...)
     alt
-    ds.groupby('letters') - alt
+    ds.groupby("letters") - alt
 
 This last line is roughly equivalent to the following::
 
@@ -169,11 +171,11 @@ the ``squeeze`` parameter:
 
 .. ipython:: python
 
-    next(iter(arr.groupby('x')))
+    next(iter(arr.groupby("x")))
 
 .. ipython:: python
 
-    next(iter(arr.groupby('x', squeeze=False)))
+    next(iter(arr.groupby("x", squeeze=False)))
 
 Although xarray will attempt to automatically
 :py:attr:`~xarray.DataArray.transpose` dimensions back into their original order
@@ -197,13 +199,17 @@ __ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimen
 
 .. ipython:: python
 
-    da = xr.DataArray([[0,1],[2,3]],
-        coords={'lon': (['ny','nx'], [[30,40],[40,50]] ),
-                'lat': (['ny','nx'], [[10,10],[20,20]] ),},
-        dims=['ny','nx'])
+    da = xr.DataArray(
+        [[0, 1], [2, 3]],
+        coords={
+            "lon": (["ny", "nx"], [[30, 40], [40, 50]]),
+            "lat": (["ny", "nx"], [[10, 10], [20, 20]]),
+        },
+        dims=["ny", "nx"],
+    )
     da
-    da.groupby('lon').sum(...)
-    da.groupby('lon').map(lambda x: x - x.mean(), shortcut=False)
+    da.groupby("lon").sum(...)
+    da.groupby("lon").map(lambda x: x - x.mean(), shortcut=False)
 
 Because multidimensional groups have the ability to generate a very large
 number of bins, coarse-binning via :py:meth:`~xarray.Dataset.groupby_bins`
@@ -211,13 +217,13 @@ may be desirable:
 
 .. ipython:: python
 
-    da.groupby_bins('lon', [0,45,50]).sum()
+    da.groupby_bins("lon", [0, 45, 50]).sum()
 
 These methods group by `lon` values. It is also possible to groupby each
-cell in a grid, regardless of value, by stacking multiple dimensions, 
+cell in a grid, regardless of value, by stacking multiple dimensions,
 applying your function, and then unstacking the result:
 
 .. ipython:: python
 
-   stacked = da.stack(gridcell=['ny', 'nx'])
-   stacked.groupby('gridcell').sum(...).unstack('gridcell')
+    stacked = da.stack(gridcell=["ny", "nx"])
+    stacked.groupby("gridcell").sum(...).unstack("gridcell")

@@ -1,3 +1,6 @@
+import warnings
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 
@@ -6,12 +9,11 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
 
 
 def _season_from_months(months):
-    """Compute season (DJF, MAM, JJA, SON) from month ordinal
-    """
+    """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
     # TODO: Move "season" accessor upstream into pandas
     seasons = np.array(["DJF", "MAM", "JJA", "SON"])
     months = np.asarray(months)
@@ -41,6 +43,10 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "isocalendar":
+        # isocalendar returns iso- year, week, and weekday -> reshape
+        field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
+        return field_values.T.reshape(3, *values.shape)
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -70,10 +76,18 @@ def _get_date_field(values, name, dtype):
     else:
         access_method = _access_through_cftimeindex
 
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
-        return map_blocks(access_method, values, name, dtype=dtype)
+        new_axis = chunks = None
+        # isocalendar adds adds an axis
+        if name == "isocalendar":
+            chunks = (3,) + values.chunksize
+            new_axis = 0
+
+        return map_blocks(
+            access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
+        )
     else:
         return access_method(values, name)
 
@@ -104,9 +118,10 @@ def _round_field(values, name, freq):
     ----------
     values : np.ndarray or dask.array-like
         Array-like container of datetime-like values
-    name : str (ceil, floor, round)
+    name : {"ceil", "floor", "round"}
         Name of rounding function
-    freq : a freq string indicating the rounding resolution
+    freq : str
+        a freq string indicating the rounding resolution
 
     Returns
     -------
@@ -114,7 +129,7 @@ def _round_field(values, name, freq):
         Array-like of datetime fields accessed for each element in values
 
     """
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
@@ -151,7 +166,7 @@ def _strftime(values, date_format):
         access_method = _strftime_through_series
     else:
         access_method = _strftime_through_cftimeindex
-    if isinstance(values, dask_array_type):
+    if is_duck_dask_array(values):
         from dask.array import map_blocks
 
         return map_blocks(access_method, values, date_format)
@@ -190,8 +205,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------
@@ -207,8 +222,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------
@@ -223,8 +238,8 @@ class Properties:
 
         Parameters
         ----------
-        freq : a freq string indicating the rounding resolution
-            e.g. 'D' for daily resolution
+        freq : str
+            a freq string indicating the rounding resolution e.g. "D" for daily resolution
 
         Returns
         -------
@@ -240,12 +255,6 @@ class DatetimeAccessor(Properties):
     Fields can be accessed through the `.dt` attribute
     for applicable DataArrays.
 
-    Notes
-    ------
-    Note that these fields are not calendar-aware; if your datetimes are encoded
-    with a non-Gregorian calendar (e.g. a 360-day calendar) using cftime,
-    then some fields like `dayofyear` may not be accurate.
-
     Examples
     ---------
     >>> import xarray as xr
@@ -255,30 +264,30 @@ class DatetimeAccessor(Properties):
     >>> ts
     <xarray.DataArray (time: 10)>
     array(['2000-01-01T00:00:00.000000000', '2000-01-02T00:00:00.000000000',
-        '2000-01-03T00:00:00.000000000', '2000-01-04T00:00:00.000000000',
-        '2000-01-05T00:00:00.000000000', '2000-01-06T00:00:00.000000000',
-        '2000-01-07T00:00:00.000000000', '2000-01-08T00:00:00.000000000',
-        '2000-01-09T00:00:00.000000000', '2000-01-10T00:00:00.000000000'],
-        dtype='datetime64[ns]')
+           '2000-01-03T00:00:00.000000000', '2000-01-04T00:00:00.000000000',
+           '2000-01-05T00:00:00.000000000', '2000-01-06T00:00:00.000000000',
+           '2000-01-07T00:00:00.000000000', '2000-01-08T00:00:00.000000000',
+           '2000-01-09T00:00:00.000000000', '2000-01-10T00:00:00.000000000'],
+          dtype='datetime64[ns]')
     Coordinates:
-    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
-    >>> ts.dt
-    <xarray.core.accessor_dt.DatetimeAccessor object at 0x118b54d68>
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+    >>> ts.dt  # doctest: +ELLIPSIS
+    <xarray.core.accessor_dt.DatetimeAccessor object at 0x...>
     >>> ts.dt.dayofyear
     <xarray.DataArray 'dayofyear' (time: 10)>
     array([ 1,  2,  3,  4,  5,  6,  7,  8,  9, 10])
     Coordinates:
-    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
     >>> ts.dt.quarter
     <xarray.DataArray 'quarter' (time: 10)>
     array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     Coordinates:
-    * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-10
 
     """
 
     def strftime(self, date_format):
-        '''
+        """
         Return an array of formatted strings specified by date_format, which
         supports the same string format as the python standard library. Details
         of the string format can be found in `python string format doc
@@ -296,13 +305,12 @@ class DatetimeAccessor(Properties):
 
         Examples
         --------
+        >>> import datetime
         >>> rng = xr.Dataset({"time": datetime.datetime(2000, 1, 1)})
         >>> rng["time"].dt.strftime("%B %d, %Y, %r")
         <xarray.DataArray 'strftime' ()>
         array('January 01, 2000, 12:00:00 AM', dtype=object)
         """
-
-        '''
         obj_type = type(self._obj)
 
         result = _strftime(self._obj.data, date_format)
@@ -310,6 +318,33 @@ class DatetimeAccessor(Properties):
         return obj_type(
             result, name="strftime", coords=self._obj.coords, dims=self._obj.dims
         )
+
+    def isocalendar(self):
+        """Dataset containing ISO year, week number, and weekday.
+
+        Note
+        ----
+        The iso year and weekday differ from the nominal year and weekday.
+        """
+
+        from .dataset import Dataset
+
+        if not is_np_datetime_like(self._obj.data.dtype):
+            raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            raise AttributeError("'isocalendar' not available in pandas < 1.1.0")
+
+        values = _get_date_field(self._obj.data, "isocalendar", np.int64)
+
+        obj_type = type(self._obj)
+        data_vars = {}
+        for i, name in enumerate(["year", "week", "weekday"]):
+            data_vars[name] = obj_type(
+                values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
+            )
+
+        return Dataset(data_vars)
 
     year = Properties._tslib_field_accessor(
         "year", "The year of the datetime", np.int64
@@ -333,9 +368,26 @@ class DatetimeAccessor(Properties):
     nanosecond = Properties._tslib_field_accessor(
         "nanosecond", "The nanoseconds of the datetime", np.int64
     )
-    weekofyear = Properties._tslib_field_accessor(
-        "weekofyear", "The week ordinal of the year", np.int64
-    )
+
+    @property
+    def weekofyear(self):
+        "The week ordinal of the year"
+
+        warnings.warn(
+            "dt.weekofyear and dt.week have been deprecated. Please use "
+            "dt.isocalendar().week instead.",
+            FutureWarning,
+        )
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            weekofyear = Properties._tslib_field_accessor(
+                "weekofyear", "The week ordinal of the year", np.int64
+            ).fget(self)
+        else:
+            weekofyear = self.isocalendar().week
+
+        return weekofyear
+
     week = weekofyear
     dayofweek = Properties._tslib_field_accessor(
         "dayofweek", "The day of the week with Monday=0, Sunday=6", np.int64
@@ -404,32 +456,32 @@ class TimedeltaAccessor(Properties):
     >>> ts
     <xarray.DataArray (time: 20)>
     array([ 86400000000000, 108000000000000, 129600000000000, 151200000000000,
-        172800000000000, 194400000000000, 216000000000000, 237600000000000,
-        259200000000000, 280800000000000, 302400000000000, 324000000000000,
-        345600000000000, 367200000000000, 388800000000000, 410400000000000,
-        432000000000000, 453600000000000, 475200000000000, 496800000000000],
-        dtype='timedelta64[ns]')
+           172800000000000, 194400000000000, 216000000000000, 237600000000000,
+           259200000000000, 280800000000000, 302400000000000, 324000000000000,
+           345600000000000, 367200000000000, 388800000000000, 410400000000000,
+           432000000000000, 453600000000000, 475200000000000, 496800000000000],
+          dtype='timedelta64[ns]')
     Coordinates:
-    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
-    >>> ts.dt
-    <xarray.core.accessor_dt.TimedeltaAccessor object at 0x109a27d68>
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+    >>> ts.dt  # doctest: +ELLIPSIS
+    <xarray.core.accessor_dt.TimedeltaAccessor object at 0x...>
     >>> ts.dt.days
     <xarray.DataArray 'days' (time: 20)>
     array([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
     Coordinates:
-    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.microseconds
     <xarray.DataArray 'microseconds' (time: 20)>
     array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     Coordinates:
-    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     >>> ts.dt.seconds
     <xarray.DataArray 'seconds' (time: 20)>
     array([    0, 21600, 43200, 64800,     0, 21600, 43200, 64800,     0,
-        21600, 43200, 64800,     0, 21600, 43200, 64800,     0, 21600,
-        43200, 64800])
+           21600, 43200, 64800,     0, 21600, 43200, 64800,     0, 21600,
+           43200, 64800])
     Coordinates:
-    * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
+      * time     (time) timedelta64[ns] 1 days 00:00:00 ... 5 days 18:00:00
     """
 
     days = Properties._tslib_field_accessor(

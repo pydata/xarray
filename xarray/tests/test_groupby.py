@@ -447,8 +447,7 @@ def test_groupby_drops_nans():
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
-    with pytest.warns(RuntimeWarning):  # mean of empty slice
-        expected = ds.mean("time").where(ds.id.notnull())
+    expected = ds.mean("time").where(ds.id.notnull())
     assert_identical(actual, expected)
 
     # NaN in non-dimensional coordinate
@@ -536,6 +535,18 @@ def test_groupby_bins_timeseries():
         coords={"time_bins": pd.cut(time_bins, time_bins).categories},
     ).to_dataset(name="val")
     assert_identical(actual, expected)
+
+
+def test_groupby_none_group_name():
+    # GH158
+    # xarray should not fail if a DataArray's name attribute is None
+
+    data = np.arange(10) + 10
+    da = xr.DataArray(data)  # da.name = None
+    key = xr.DataArray(np.floor_divide(data, 2))
+
+    mean = da.groupby(key).mean()
+    assert "group" in mean.dims
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

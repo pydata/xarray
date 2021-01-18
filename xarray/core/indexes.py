@@ -9,7 +9,7 @@ from .utils import is_scalar
 from .variable import Variable
 
 
-def remove_unused_levels_categories(index, dataframe=None):
+def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
     """
@@ -25,14 +25,15 @@ def remove_unused_levels_categories(index, dataframe=None):
                 else:
                     level = level[index.codes[i]]
                 levels.append(level)
+            # TODO: calling from_array() reorders MultiIndex levels. It would
+            # be best to avoid this, if possible, e.g., by using
+            # MultiIndex.remove_unused_levels() (which does not reorder) on the
+            # part of the MultiIndex that is not categorical, or by fixing this
+            # upstream in pandas.
             index = pd.MultiIndex.from_arrays(levels, names=index.names)
     elif isinstance(index, pd.CategoricalIndex):
         index = index.remove_unused_categories()
-
-    if dataframe is None:
-        return index
-    dataframe = dataframe.set_index(index)
-    return dataframe.index, dataframe
+    return index
 
 
 class Indexes(collections.abc.Mapping):
@@ -99,7 +100,7 @@ def isel_variable_and_index(
 
     if len(variable.dims) > 1:
         raise NotImplementedError(
-            "indexing multi-dimensional variable with indexes is not " "supported yet"
+            "indexing multi-dimensional variable with indexes is not supported yet"
         )
 
     new_variable = variable.isel(indexers)
@@ -129,8 +130,7 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
 def propagate_indexes(
     indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
 ) -> Optional[Dict[Hashable, pd.Index]]:
-    """ Creates new indexes dict from existing dict optionally excluding some dimensions.
-    """
+    """Creates new indexes dict from existing dict optionally excluding some dimensions."""
     if exclude is None:
         exclude = ()
 

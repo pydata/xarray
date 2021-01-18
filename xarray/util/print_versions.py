@@ -78,7 +78,7 @@ def netcdf_and_hdf5_versions():
 
 
 def show_versions(file=sys.stdout):
-    """ print the versions of xarray and its dependencies
+    """print the versions of xarray and its dependencies
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ def show_versions(file=sys.stdout):
         ("sphinx", lambda mod: mod.__version__),
     ]
 
-    deps_blob = list()
+    deps_blob = []
     for (modname, ver_f) in deps:
         try:
             if modname in sys.modules:

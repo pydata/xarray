@@ -268,7 +268,7 @@ def _determine_cmap_params(
             cmap = OPTIONS["cmap_sequential"]
 
     # Handle discrete levels
-    if levels is not None and norm is None:
+    if levels is not None:
         if is_scalar(levels):
             if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
@@ -290,6 +290,12 @@ def _determine_cmap_params(
     if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
+
+    # vmin & vmax needs to be None if norm is passed
+    # TODO: always return a norm with vmin and vmax
+    if norm is not None:
+        vmin = None
+        vmax = None
 
     return dict(
         vmin=vmin, vmax=vmax, cmap=cmap, extend=extend, levels=levels, norm=norm
@@ -360,7 +366,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
-    assert x is None or x != y
+    if (x is not None) and (x == y):
+        raise ValueError("x and y cannot be equal.")
+
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
@@ -369,27 +377,53 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError("DataArray must be 2d")
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims and y not in darray.coords:
-            raise ValueError("y must be a dimension name if x is not supplied")
+        _assert_valid_xy(darray, y, "y")
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims and x not in darray.coords:
-            raise ValueError("x must be a dimension name if y is not supplied")
+        _assert_valid_xy(darray, x, "x")
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
-    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
-        raise ValueError("x and y must be coordinate variables")
+    else:
+        _assert_valid_xy(darray, x, "x")
+        _assert_valid_xy(darray, y, "y")
+
+        if (
+            all(k in darray._level_coords for k in (x, y))
+            and darray._level_coords[x] == darray._level_coords[y]
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
+
     return x, y
 
 
-def get_axis(figsize, size, aspect, ax):
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
+def _assert_valid_xy(darray, xy, name):
+    """
+    make sure x and y passed to plotting functions are valid
+    """
+
+    # MultiIndex cannot be plotted; no point in allowing them here
+    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
+
+    valid_xy = (
+        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    ) - multiindex
+
+    if xy not in valid_xy:
+        valid_xy_str = "', '".join(sorted(valid_xy))
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
+
+
+def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
@@ -402,15 +436,18 @@ def get_axis(figsize, size, aspect, ax):
     elif aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
+    if kwargs and ax is not None:
+        raise ValueError("cannot use subplot_kws with existing ax")
+
     if ax is None:
-        ax = plt.gca()
+        ax = plt.gca(**kwargs)
 
     return ax
 
 
 def label_from_attrs(da, extra=""):
-    """ Makes informative labels if variable metadata (attrs) follows
-        CF conventions. """
+    """Makes informative labels if variable metadata (attrs) follows
+    CF conventions."""
 
     if da.attrs.get("long_name"):
         name = da.attrs["long_name"]
@@ -466,26 +503,32 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
-def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+def _resolve_intervals_1dplot(xval, yval, kwargs):
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
     points which double the length.
     """
+    x_suffix = ""
+    y_suffix = ""
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
+        remove_drawstyle = False
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
             raise TypeError("Can't step plot intervals against intervals.")
         if _valid_other_type(xval, [pd.Interval]):
             xval, yval = _interval_to_double_bound_points(xval, yval)
+            remove_drawstyle = True
         if _valid_other_type(yval, [pd.Interval]):
             yval, xval = _interval_to_double_bound_points(yval, xval)
+            remove_drawstyle = True
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["drawstyle"]
+        if remove_drawstyle:
+            del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:
@@ -493,13 +536,13 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, [pd.Interval]):
             xval = _interval_to_mid_points(xval)
-            xlabel += "_center"
+            x_suffix = "_center"
         if _valid_other_type(yval, [pd.Interval]):
             yval = _interval_to_mid_points(yval)
-            ylabel += "_center"
+            y_suffix = "_center"
 
     # return converted arguments
-    return xval, yval, xlabel, ylabel, kwargs
+    return xval, yval, x_suffix, y_suffix, kwargs
 
 
 def _resolve_intervals_2dplot(val, func_name):
@@ -588,6 +631,10 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
+
+    # dont pass extend as kwarg if it is in the mappable
+    if hasattr(primitive, "extend"):
+        cbar_kwargs.pop("extend")
 
     fig = ax.get_figure()
     cbar = fig.colorbar(primitive, **cbar_kwargs)

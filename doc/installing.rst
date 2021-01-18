@@ -6,8 +6,8 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.6 or later)
-- setuptools
+- Python (3.7 or later)
+- setuptools (40.4 or later)
 - `numpy <http://www.numpy.org/>`__ (1.15 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
 
@@ -15,6 +15,12 @@ Required dependencies
 
 Optional dependencies
 ---------------------
+
+.. note::
+
+  If you are using pip to install xarray, optional dependencies can be installed by
+  specifying *extras*. :ref:`installation-instructions` for both pip and conda
+  are given below.
 
 For netCDF and IO
 ~~~~~~~~~~~~~~~~~
@@ -25,8 +31,9 @@ For netCDF and IO
 - `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
-- `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
-  geoscience specific file formats. Note that pynio is not available for Windows.
+- `PyNIO <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
+  geoscience specific file formats. Note that PyNIO is not available for Windows and
+  that the PyNIO backend may be moved outside of xarray in the future.
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
@@ -93,16 +100,16 @@ dependencies:
 
 - **Python:** 42 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
+- **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **pandas:** 12 months
-- **scipy:** 12 months
+- **dask and dask.distributed:** 12 months (but no older than 2.9)
 - **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
   matured. This extends to dask when used in conjunction with any of these libraries.
   numpy >=1.17.
-- **all other libraries:** 6 months
+- **all other libraries:** 12 months
 
 The above should be interpreted as *the minor version (X.Y) initially published no more
 than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available
@@ -111,10 +118,11 @@ at the moment of publishing the xarray release is guaranteed to work.
 You can see the actual minimum tested versions:
 
 - `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-nep18.yml>`_
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-nep18.yml>`_
 - `For everything else
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py36-min-all-deps.yml>`_
+  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-all-deps.yml>`_
 
+.. _installation-instructions:
 
 Instructions
 ------------
@@ -137,6 +145,26 @@ If you don't use conda, be sure you have the required dependencies (numpy and
 pandas) installed first. Then, install xarray with pip::
 
     $ pip install xarray
+
+We also maintain other dependency sets for different subsets of functionality::
+
+    $ pip install "xarray[io]"        # Install optional dependencies for handling I/O
+    $ pip install "xarray[accel]"     # Install optional dependencies for accelerating xarray
+    $ pip install "xarray[parallel]"  # Install optional dependencies for dask arrays
+    $ pip install "xarray[viz]"       # Install optional dependencies for visualization
+    $ pip install "xarray[complete]"  # Install all the above
+
+The above commands should install most of the `optional dependencies`_. However,
+some packages which are either not listed on PyPI or require extra
+installation steps are excluded. To know which dependencies would be
+installed, take a look at the ``[options.extras_require]`` section in
+``setup.cfg``:
+
+.. literalinclude:: ../setup.cfg
+   :language: ini
+   :start-at: [options.extras_require]
+   :end-before: [options.package_data]
+
 
 Testing
 -------

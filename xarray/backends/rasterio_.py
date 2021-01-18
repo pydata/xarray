@@ -50,7 +50,7 @@ class RasterioArrayWrapper(BackendArray):
         return self._shape
 
     def _get_indexer(self, key):
-        """ Get indexer for rasterio array.
+        """Get indexer for rasterio array.
 
         Parameter
         ---------
@@ -221,14 +221,17 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         vrt = filename
         filename = vrt.src_dataset.name
         vrt_params = dict(
+            src_crs=vrt.src_crs.to_string(),
             crs=vrt.crs.to_string(),
             resampling=vrt.resampling,
+            tolerance=vrt.tolerance,
             src_nodata=vrt.src_nodata,
             nodata=vrt.nodata,
-            tolerance=vrt.tolerance,
-            transform=vrt.transform,
             width=vrt.width,
             height=vrt.height,
+            src_transform=vrt.src_transform,
+            transform=vrt.transform,
+            dtype=vrt.working_dtype,
             warp_extras=vrt.warp_extras,
         )
 

@@ -14,6 +14,7 @@ import pandas as pd
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -29,19 +30,17 @@ from .utils import (
 
 
 def _infer_line_data(darray, x, y, hue):
-    error_msg = "must be either None or one of ({:s})".format(
-        ", ".join([repr(dd) for dd in darray.dims])
-    )
+
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError("x " + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError("y " + error_msg)
-
     if x is not None and y is not None:
-        raise ValueError("You cannot specify both x and y kwargs" "for line plots.")
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        _assert_valid_xy(darray, x, "x")
+
+    if y is not None:
+        _assert_valid_xy(darray, y, "y")
 
     if ndims == 1:
         huename = None
@@ -63,7 +62,7 @@ def _infer_line_data(darray, x, y, hue):
 
     else:
         if x is None and y is None and hue is None:
-            raise ValueError("For 2D inputs, please" "specify either hue, x or y.")
+            raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
@@ -108,10 +107,7 @@ def _infer_line_data(darray, x, y, hue):
         huelabel = label_from_attrs(darray[huename])
         hueplt = darray[huename]
 
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
-
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    return xplt, yplt, hueplt, huelabel
 
 
 def plot(
@@ -142,22 +138,21 @@ def plot(
     Parameters
     ----------
     darray : DataArray
-    row : string, optional
+    row : str, optional
         If passed, make row faceted plots on this dimension name
-    col : string, optional
+    col : str, optional
         If passed, make column faceted plots on this dimension name
-    hue : string, optional
+    hue : str, optional
         If passed, make faceted line plots with hue on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes, optional
+    ax : matplotlib.axes.Axes, optional
         If None, uses the current axis. Not applicable when using facets.
-    rtol : number, optional
+    rtol : float, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots.
     **kwargs : optional
         Additional keyword arguments to matplotlib
 
@@ -178,10 +173,10 @@ def plot(
 
     if ndims in [1, 2]:
         if row or col:
+            kwargs["subplot_kws"] = subplot_kws
             kwargs["row"] = row
             kwargs["col"] = col
             kwargs["col_wrap"] = col_wrap
-            kwargs["subplot_kws"] = subplot_kws
         if ndims == 1:
             plotfunc = line
             kwargs["hue"] = hue
@@ -191,6 +186,7 @@ def plot(
                 kwargs["hue"] = hue
             else:
                 plotfunc = pcolormesh
+                kwargs["subplot_kws"] = subplot_kws
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -252,7 +248,7 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Dimensions or coordinates for x, y axis.
+        Dimension, coordinate or MultiIndex level for x, y axis.
         Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
@@ -266,9 +262,9 @@ def line(
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_legend : boolean, optional
+    add_legend : bool, optional
         Add legend with y axis coordinates (2D inputs only).
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
     """
     # Handle facetgrids first
@@ -293,12 +289,14 @@ def line(
         assert "args" not in kwargs
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, hue_label = _infer_line_data(darray, x, y, hue)
+    xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, xlabel, ylabel, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, xlabel, ylabel, kwargs
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, kwargs
     )
+    xlabel = label_from_attrs(xplt, extra=x_suffix)
+    ylabel = label_from_attrs(yplt, extra=y_suffix)
 
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -338,27 +336,27 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
 
     Parameters
     ----------
-    where : {'pre', 'post', 'mid'}, optional, default 'pre'
+    where : {"pre", "post", "mid"}, default: "pre"
         Define where the steps should be placed:
 
-        - 'pre': The y value is continued constantly to the left from
+        - "pre": The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - 'post': The y value is continued constantly to the right from
+        - "post": The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - 'mid': Steps occur half-way between the *x* positions.
+        - "mid": Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
 
-    ``*args``, ``**kwargs`` : optional
+    *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """
     if where not in {"pre", "post", "mid"}:
-        raise ValueError("'where' argument to step must be " "'pre', 'post' or 'mid'")
+        raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
 
     if ds is not None:
         if drawstyle is None:
@@ -408,7 +406,7 @@ def hist(
     size : scalar, optional
         If provided, create a new figure for the plot with the given size.
         Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib axes object, optional
+    ax : matplotlib.axes.Axes, optional
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
@@ -446,6 +444,11 @@ class _PlotMethods:
     def __call__(self, **kwargs):
         return plot(self._da, **kwargs)
 
+    # we can't use functools.wraps here since that also modifies the name / qualname
+    __doc__ = __call__.__doc__ = plot.__doc__
+    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__annotations__ = plot.__annotations__
+
     @functools.wraps(hist)
     def hist(self, ax=None, **kwargs):
         return hist(self._da, ax=ax, **kwargs)
@@ -457,6 +460,15 @@ class _PlotMethods:
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
+
+
+def override_signature(f):
+    def wrapper(func):
+        func.__wrapped__ = f
+
+        return func
+
+    return wrapper
 
 
 def _plot2d(plotfunc):
@@ -490,7 +502,7 @@ def _plot2d(plotfunc):
         If passed, make row faceted plots on this dimension name
     col : string, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
     xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
         Specifies scaling for the x- and y-axes respectively
@@ -502,9 +514,9 @@ def _plot2d(plotfunc):
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_colorbar : Boolean, optional
+    add_colorbar : bool, optional
         Adds colorbar to axis
-    add_labels : Boolean, optional
+    add_labels : bool, optional
         Use xarray metadata to label axes
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg
@@ -533,7 +545,7 @@ def _plot2d(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
@@ -549,8 +561,8 @@ def _plot2d(plotfunc):
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for 2D and FacetGrid plots.
     cbar_ax : matplotlib Axes, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
@@ -568,6 +580,16 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
         darray,
@@ -716,11 +738,12 @@ def _plot2d(plotfunc):
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
-            raise ValueError(
-                "plt.imshow's `aspect` kwarg is not available " "in xarray"
-            )
+            raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
 
-        ax = get_axis(figsize, size, aspect, ax)
+        if subplot_kws is None:
+            subplot_kws = dict()
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
         primitive = plotfunc(
             xplt,
             yplt,
@@ -746,7 +769,7 @@ def _plot2d(plotfunc):
         elif cbar_ax is not None or cbar_kwargs:
             # inform the user about keywords which aren't used
             raise ValueError(
-                "cbar_ax and cbar_kwargs can't be used with " "add_colorbar=False."
+                "cbar_ax and cbar_kwargs can't be used with add_colorbar=False."
             )
 
         # origin kwarg overrides yincrease
@@ -852,7 +875,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
-            "imshow requires 1D coordinates, try using " "pcolormesh or contour(f)"
+            "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
     # Centering the pixels- Assumes uniform spacing

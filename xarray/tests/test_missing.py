@@ -365,8 +365,23 @@ def test_interpolate_dask():
 def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
-    with raises_regex(ValueError, "dask='parallelized' consists of multiple"):
+    # this checks for ValueError in dask.array.apply_gufunc
+    with raises_regex(ValueError, "consists of multiple chunks"):
         da.interpolate_na("time")
+
+
+@requires_dask
+@requires_scipy
+@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+def test_interpolate_dask_expected_dtype(dtype, method):
+    da = xr.DataArray(
+        data=np.array([0, 1], dtype=dtype),
+        dims=["time"],
+        coords=dict(time=np.array([0, 1])),
+    ).chunk(dict(time=2))
+    da = da.interp(time=np.array([0, 0.5, 1, 2]), method=method)
+
+    assert da.dtype == da.compute().dtype
 
 
 @requires_bottleneck
@@ -532,6 +547,18 @@ def test_get_clean_interp_index_potential_overflow():
         coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
     )
     get_clean_interp_index(da, "time")
+
+
+@pytest.mark.parametrize("index", ([0, 2, 1], [0, 1, 1]))
+def test_get_clean_interp_index_strict(index):
+    da = xr.DataArray([0, 1, 2], dims=("x",), coords={"x": index})
+
+    with pytest.raises(ValueError):
+        get_clean_interp_index(da, "x")
+
+    clean = get_clean_interp_index(da, "x", strict=False)
+    np.testing.assert_array_equal(index, clean)
+    assert clean.dtype == np.float64
 
 
 @pytest.fixture

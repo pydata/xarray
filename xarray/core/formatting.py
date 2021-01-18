@@ -3,7 +3,7 @@
 import contextlib
 import functools
 from datetime import datetime, timedelta
-from itertools import zip_longest
+from itertools import chain, zip_longest
 from typing import Hashable
 
 import numpy as np
@@ -13,6 +13,7 @@ from pandas.errors import OutOfBoundsDatetime
 from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import dask_array_type, sparse_array_type
+from .utils import is_duck_array
 
 
 def pretty_print(x, numchars: int):
@@ -140,7 +141,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
-    elif isinstance(x, (float, np.float)):
+    elif np.issubdtype(type(x), np.floating):
         return f"{x:.4}"
     else:
         return str(x)
@@ -261,6 +262,8 @@ def inline_variable_array_repr(var, max_width):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -298,12 +301,10 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
     return "\n".join(
-        [
-            summarize_variable(
-                lname, coord.get_level_variable(lname), col_width, marker=marker
-            )
-            for lname in coord.level_names
-        ]
+        summarize_variable(
+            lname, coord.get_level_variable(lname), col_width, marker=marker
+        )
+        for lname in coord.level_names
     )
 
 
@@ -364,12 +365,25 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None):
+def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
+    if max_rows is None:
+        max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
-        summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
+        len_mapping = len(mapping)
+        if len_mapping > max_rows:
+            summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
+            first_rows = max_rows // 2 + max_rows % 2
+            items = list(mapping.items())
+            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            if max_rows > 1:
+                last_rows = max_rows // 2
+                summary += [pretty_print("    ...", col_width) + " ..."]
+                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+        else:
+            summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
         summary += [EMPTY_REPR]
     return "\n".join(summary)
@@ -424,6 +438,17 @@ def set_numpy_options(*args, **kwargs):
         np.set_printoptions(**original)
 
 
+def limit_lines(string: str, *, limit: int):
+    """
+    If the string is more lines than the limit,
+    this returns the middle lines replaced by an ellipsis
+    """
+    lines = string.splitlines()
+    if len(lines) > limit:
+        string = "\n".join(chain(lines[: limit // 2], ["..."], lines[-limit // 2 :]))
+    return string
+
+
 def short_numpy_repr(array):
     array = np.asarray(array)
 
@@ -446,10 +471,8 @@ def short_data_repr(array):
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
         return short_numpy_repr(array)
-    elif hasattr(internal_data, "__array_function__") or isinstance(
-        internal_data, dask_array_type
-    ):
-        return repr(array.data)
+    elif is_duck_array(internal_data):
+        return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
         return short_numpy_repr(array)
     else:
@@ -516,13 +539,6 @@ def diff_dim_summary(a, b):
 
 
 def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
-    def is_array_like(value):
-        return (
-            hasattr(value, "ndim")
-            and hasattr(value, "shape")
-            and hasattr(value, "dtype")
-        )
-
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
@@ -541,11 +557,14 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     for k in a_keys & b_keys:
         try:
             # compare xarray variable
-            compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            if not callable(compat):
+                compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            else:
+                compatible = compat(a_mapping[k], b_mapping[k])
             is_variable = True
         except AttributeError:
             # compare attribute value
-            if is_array_like(a_mapping[k]) or is_array_like(b_mapping[k]):
+            if is_duck_array(a_mapping[k]) or is_duck_array(b_mapping[k]):
                 compatible = array_equiv(a_mapping[k], b_mapping[k])
             else:
                 compatible = a_mapping[k] == b_mapping[k]
@@ -562,7 +581,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
 
                 for m in (a_mapping, b_mapping):
                     attr_s = "\n".join(
-                        [summarize_attr(ak, av) for ak, av in m[k].attrs.items()]
+                        summarize_attr(ak, av) for ak, av in m[k].attrs.items()
                     )
                     attrs_summary.append(attr_s)
 
@@ -574,7 +593,7 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
             diff_items += [ab_side + s[1:] for ab_side, s in zip(("L", "R"), temp)]
 
     if diff_items:
-        summary += ["Differing {}:".format(title.lower())] + diff_items
+        summary += [f"Differing {title.lower()}:"] + diff_items
 
     summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
     summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")
@@ -598,8 +617,13 @@ diff_attrs_repr = functools.partial(
 
 
 def _compat_to_str(compat):
+    if callable(compat):
+        compat = compat.__name__
+
     if compat == "equals":
         return "equal"
+    elif compat == "allclose":
+        return "close"
     else:
         return compat
 
@@ -613,8 +637,12 @@ def diff_array_repr(a, b, compat):
     ]
 
     summary.append(diff_dim_summary(a, b))
+    if callable(compat):
+        equiv = compat
+    else:
+        equiv = array_equiv
 
-    if not array_equiv(a.data, b.data):
+    if not equiv(a.data, b.data):
         temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr

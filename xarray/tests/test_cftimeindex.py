@@ -1,4 +1,5 @@
 from datetime import timedelta
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from xarray.coding.cftimeindex import (
     _parse_iso8601_with_reso,
     _parsed_string_to_bounds,
     assert_all_valid_date_type,
-    parse_iso8601,
+    parse_iso8601_like,
 )
 from xarray.tests import assert_array_equal, assert_identical
 
@@ -29,7 +30,7 @@ def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=No
     )
 
 
-ISO8601_STRING_TESTS = {
+ISO8601_LIKE_STRING_TESTS = {
     "year": ("1999", date_dict(year="1999")),
     "month": ("199901", date_dict(year="1999", month="01")),
     "month-dash": ("1999-01", date_dict(year="1999", month="01")),
@@ -40,12 +41,20 @@ ISO8601_STRING_TESTS = {
         "1999-01-01T12",
         date_dict(year="1999", month="01", day="01", hour="12"),
     ),
+    "hour-space-separator": (
+        "1999-01-01 12",
+        date_dict(year="1999", month="01", day="01", hour="12"),
+    ),
     "minute": (
         "19990101T1234",
         date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
     ),
     "minute-dash": (
         "1999-01-01T12:34",
+        date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
+    ),
+    "minute-space-separator": (
+        "1999-01-01 12:34",
         date_dict(year="1999", month="01", day="01", hour="12", minute="34"),
     ),
     "second": (
@@ -60,21 +69,27 @@ ISO8601_STRING_TESTS = {
             year="1999", month="01", day="01", hour="12", minute="34", second="56"
         ),
     ),
+    "second-space-separator": (
+        "1999-01-01 12:34:56",
+        date_dict(
+            year="1999", month="01", day="01", hour="12", minute="34", second="56"
+        ),
+    ),
 }
 
 
 @pytest.mark.parametrize(
     ("string", "expected"),
-    list(ISO8601_STRING_TESTS.values()),
-    ids=list(ISO8601_STRING_TESTS.keys()),
+    list(ISO8601_LIKE_STRING_TESTS.values()),
+    ids=list(ISO8601_LIKE_STRING_TESTS.keys()),
 )
-def test_parse_iso8601(string, expected):
-    result = parse_iso8601(string)
+def test_parse_iso8601_like(string, expected):
+    result = parse_iso8601_like(string)
     assert result == expected
 
     with pytest.raises(ValueError):
-        parse_iso8601(string + "3")
-        parse_iso8601(string + ".3")
+        parse_iso8601_like(string + "3")
+        parse_iso8601_like(string + ".3")
 
 
 _CFTIME_CALENDARS = [
@@ -885,6 +900,130 @@ def test_cftimeindex_shift_invalid_freq():
 
 
 @requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_property(calendar, expected):
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    assert index.calendar == expected
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize(
+    ("calendar", "expected"),
+    [
+        ("noleap", "noleap"),
+        ("365_day", "noleap"),
+        ("360_day", "360_day"),
+        ("julian", "julian"),
+        ("gregorian", "gregorian"),
+        ("proleptic_gregorian", "proleptic_gregorian"),
+    ],
+)
+def test_cftimeindex_calendar_repr(calendar, expected):
+    """Test that cftimeindex has calendar property in repr."""
+    index = xr.cftime_range(start="2000", periods=3, calendar=calendar)
+    repr_str = index.__repr__()
+    assert f" calendar='{expected}'" in repr_str
+    assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize("periods", [2, 40])
+def test_cftimeindex_periods_repr(periods):
+    """Test that cftimeindex has periods property in repr."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    repr_str = index.__repr__()
+    assert f" length={periods}" in repr_str
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
+@pytest.mark.parametrize("freq", ["D", "H"])
+def test_cftimeindex_freq_in_repr(freq, calendar):
+    """Test that cftimeindex has frequency property in repr."""
+    index = xr.cftime_range(start="2000", periods=3, freq=freq, calendar=calendar)
+    repr_str = index.__repr__()
+    assert f", freq='{freq}'" in repr_str
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize(
+    "periods,expected",
+    [
+        (
+            2,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
+            dtype='object', length=2, calendar='gregorian', freq=None)""",
+        ),
+        (
+            4,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
+             2000-01-04 00:00:00],
+            dtype='object', length=4, calendar='gregorian', freq='D')""",
+        ),
+        (
+            101,
+            """\
+CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
+             2000-01-04 00:00:00, 2000-01-05 00:00:00, 2000-01-06 00:00:00,
+             2000-01-07 00:00:00, 2000-01-08 00:00:00, 2000-01-09 00:00:00,
+             2000-01-10 00:00:00,
+             ...
+             2000-04-01 00:00:00, 2000-04-02 00:00:00, 2000-04-03 00:00:00,
+             2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
+             2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
+             2000-04-10 00:00:00],
+            dtype='object', length=101, calendar='gregorian', freq='D')""",
+        ),
+    ],
+)
+def test_cftimeindex_repr_formatting(periods, expected):
+    """Test that cftimeindex.__repr__ is formatted similar to pd.Index.__repr__."""
+    index = xr.cftime_range(start="2000", periods=periods, freq="D")
+    expected = dedent(expected)
+    assert expected == repr(index)
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize("display_width", [40, 80, 100])
+@pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
+def test_cftimeindex_repr_formatting_width(periods, display_width):
+    """Test that cftimeindex is sensitive to OPTIONS['display_width']."""
+    index = xr.cftime_range(start="2000", periods=periods)
+    len_intro_str = len("CFTimeIndex(")
+    with xr.set_options(display_width=display_width):
+        repr_str = index.__repr__()
+        splitted = repr_str.split("\n")
+        for i, s in enumerate(splitted):
+            # check that lines not longer than OPTIONS['display_width']
+            assert len(s) <= display_width, f"{len(s)} {s} {display_width}"
+            if i > 0:
+                # check for initial spaces
+                assert s[:len_intro_str] == " " * len_intro_str
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize("periods", [22, 50, 100])
+def test_cftimeindex_repr_101_shorter(periods):
+    index_101 = xr.cftime_range(start="2000", periods=101)
+    index_periods = xr.cftime_range(start="2000", periods=periods)
+    index_101_repr_str = index_101.__repr__()
+    index_periods_repr_str = index_periods.__repr__()
+    assert len(index_101_repr_str) < len(index_periods_repr_str)
+
+
+@requires_cftime
 def test_parse_array_of_cftime_strings():
     from cftime import DatetimeNoLeap
 
@@ -1046,3 +1185,73 @@ def test_asi8_distant_date():
     result = index.asi8
     expected = np.array([1000000 * 86400 * 400 * 8000 + 12345 * 1000000 + 123456])
     np.testing.assert_array_equal(result, expected)
+
+
+@requires_cftime_1_1_0
+def test_infer_freq_valid_types():
+    cf_indx = xr.cftime_range("2000-01-01", periods=3, freq="D")
+    assert xr.infer_freq(cf_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(cf_indx)) == "D"
+
+    pd_indx = pd.date_range("2000-01-01", periods=3, freq="D")
+    assert xr.infer_freq(pd_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_indx)) == "D"
+
+    pd_td_indx = pd.timedelta_range(start="1D", periods=3, freq="D")
+    assert xr.infer_freq(pd_td_indx) == "D"
+    assert xr.infer_freq(xr.DataArray(pd_td_indx)) == "D"
+
+
+@requires_cftime_1_1_0
+def test_infer_freq_invalid_inputs():
+    # Non-datetime DataArray
+    with pytest.raises(ValueError, match="must contain datetime-like objects"):
+        xr.infer_freq(xr.DataArray([0, 1, 2]))
+
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="MS")
+    # 2D DataArray
+    with pytest.raises(ValueError, match="must be 1D"):
+        xr.infer_freq(xr.DataArray([indx, indx]))
+
+    # CFTimeIndex too short
+    with pytest.raises(ValueError, match="Need at least 3 dates to infer frequency"):
+        xr.infer_freq(indx[:2])
+
+    # Non-monotonic input
+    assert xr.infer_freq(indx[np.array([0, 2, 1, 3])]) is None
+
+    # Non-unique input
+    assert xr.infer_freq(indx[np.array([0, 1, 1, 2])]) is None
+
+    # No unique frequency (here 1st step is MS, second is 2MS)
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+
+    # Same, but for QS
+    indx = xr.cftime_range("1990-02-03", periods=4, freq="QS")
+    assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
+
+
+@requires_cftime_1_1_0
+@pytest.mark.parametrize(
+    "freq",
+    [
+        "300AS-JAN",
+        "A-DEC",
+        "AS-JUL",
+        "2AS-FEB",
+        "Q-NOV",
+        "3QS-DEC",
+        "MS",
+        "4M",
+        "7D",
+        "D",
+        "30H",
+        "5T",
+        "40S",
+    ],
+)
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_infer_freq(freq, calendar):
+    indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
+    out = xr.infer_freq(indx)
+    assert out == freq

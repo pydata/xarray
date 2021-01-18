@@ -11,7 +11,12 @@ import pandas as pd
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
-from .pycompat import dask_array_type, integer_types, sparse_array_type
+from .pycompat import (
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+    sparse_array_type,
+)
 from .utils import is_dict_like, maybe_cast_to_coords_dtype
 
 
@@ -50,8 +55,8 @@ def _expand_slice(slice_, size):
 
 
 def _sanitize_slice_element(x):
-    from .variable import Variable
     from .dataarray import DataArray
+    from .variable import Variable
 
     if isinstance(x, (Variable, DataArray)):
         x = x.values
@@ -62,11 +67,6 @@ def _sanitize_slice_element(x):
                 f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
             )
         x = x[()]
-
-    if isinstance(x, np.timedelta64):
-        # pandas does not support indexing with np.timedelta64 yet:
-        # https://github.com/pandas-dev/pandas/issues/20393
-        x = pd.Timedelta(x)
 
     return x
 
@@ -116,7 +116,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     if isinstance(label, slice):
         if method is not None or tolerance is not None:
             raise NotImplementedError(
-                "cannot use ``method`` argument if any indexers are " "slice objects"
+                "cannot use ``method`` argument if any indexers are slice objects"
             )
         indexer = index.slice_indexer(
             _sanitize_slice_element(label.start),
@@ -173,8 +173,10 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             else _asarray_tuplesafe(label)
         )
         if label.ndim == 0:
+            # see https://github.com/pydata/xarray/pull/4292 for details
+            label_value = label[()] if label.dtype.kind in "mM" else label.item()
             if isinstance(index, pd.MultiIndex):
-                indexer, new_index = index.get_loc_level(label.item(), level=0)
+                indexer, new_index = index.get_loc_level(label_value, level=0)
             elif isinstance(index, pd.CategoricalIndex):
                 if method is not None:
                     raise ValueError(
@@ -184,11 +186,9 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                     raise ValueError(
                         "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
                     )
-                indexer = index.get_loc(label.item())
+                indexer = index.get_loc(label_value)
             else:
-                indexer = index.get_loc(
-                    label.item(), method=method, tolerance=tolerance
-                )
+                indexer = index.get_loc(label_value, method=method, tolerance=tolerance)
         elif label.dtype.kind == "b":
             indexer = label
         else:
@@ -275,25 +275,38 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     return pos_indexers, new_indexes
 
 
+def _normalize_slice(sl, size):
+    """Ensure that given slice only contains positive start and stop values
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
+    return slice(*sl.indices(size))
+
+
 def slice_slice(old_slice, applied_slice, size):
     """Given a slice and the size of the dimension to which it will be applied,
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
     """
-    step = (old_slice.step or 1) * (applied_slice.step or 1)
+    old_slice = _normalize_slice(old_slice, size)
 
-    # For now, use the hack of turning old_slice into an ndarray to reconstruct
-    # the slice start and stop. This is not entirely ideal, but it is still
-    # definitely better than leaving the indexer as an array.
-    items = _expand_slice(old_slice, size)[applied_slice]
-    if len(items) > 0:
-        start = items[0]
-        stop = items[-1] + int(np.sign(step))
-        if stop < 0:
-            stop = None
-    else:
-        start = 0
-        stop = 0
+    size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
+    if size_after_old_slice == 0:
+        # nothing left after applying first slice
+        return slice(0)
+
+    applied_slice = _normalize_slice(applied_slice, size_after_old_slice)
+
+    start = old_slice.start + applied_slice.start * old_slice.step
+    if start < 0:
+        # nothing left after applying second slice
+        # (can only happen for old_slice.step < 0, e.g. [10::-1], [20:])
+        return slice(0)
+
+    stop = old_slice.start + applied_slice.stop * old_slice.step
+    if stop < 0:
+        stop = None
+
+    step = old_slice.step * applied_slice.step
+
     return slice(start, stop, step)
 
 
@@ -464,8 +477,7 @@ class VectorizedIndexer(ExplicitIndexer):
 
 
 class ExplicitlyIndexed:
-    """Mixin to mark support for Indexer subclasses in indexing.
-    """
+    """Mixin to mark support for Indexer subclasses in indexing."""
 
     __slots__ = ()
 
@@ -502,8 +514,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make basic and outer indexing lazy.
-    """
+    """Wrap an array to make basic and outer indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -579,8 +590,7 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
 
 
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make vectorized indexing lazy.
-    """
+    """Wrap an array to make vectorized indexing lazy."""
 
     __slots__ = ("array", "key")
 
@@ -661,6 +671,12 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def __setitem__(self, key, value):
         self._ensure_copied()
         self.array[key] = value
+
+    def __deepcopy__(self, memo):
+        # CopyOnWriteArray is used to wrap backend array objects, which might
+        # point to files on disk, so we can't rely on the default deepcopy
+        # implementation.
+        return type(self)(self.array)
 
 
 class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
@@ -767,7 +783,7 @@ def _outer_to_numpy_indexer(key, shape):
 
 
 def _combine_indexers(old_key, shape, new_key):
-    """ Combine two indexers.
+    """Combine two indexers.
 
     Parameters
     ----------
@@ -852,7 +868,7 @@ def decompose_indexer(
 
 
 def _decompose_slice(key, size):
-    """ convert a slice to successive two slices. The first slice always has
+    """convert a slice to successive two slices. The first slice always has
     a positive step.
     """
     start, stop, step = key.indices(size)
@@ -897,10 +913,14 @@ def _decompose_vectorized_indexer(
     Even if the backend array only supports outer indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
-    >>> backend_indexer = OuterIndexer([0, 1, 3], [2, 3])
-    >>> array = array[backend_indexer]  # load subslice of the array
-    >>> np_indexer = VectorizedIndexer([0, 2, 1], [0, 1, 0])
-    >>> array[np_indexer]  # vectorized indexing for on-memory np.ndarray.
+    >>> array = np.arange(36).reshape(6, 6)
+    >>> backend_indexer = OuterIndexer((np.array([0, 1, 3]), np.array([2, 3])))
+    >>> # load subslice of the array
+    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    >>> np_indexer = VectorizedIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
+    >>> # vectorized indexing for on-memory np.ndarray.
+    ... NumpyIndexingAdapter(array)[np_indexer]
+    array([ 2, 21,  8])
     """
     assert isinstance(indexer, VectorizedIndexer)
 
@@ -975,10 +995,16 @@ def _decompose_outer_indexer(
     Even if the backend array only supports basic indexing, it is more
     efficient to load a subslice of the array than loading the entire array,
 
-    >>> backend_indexer = BasicIndexer(slice(0, 3), slice(2, 3))
-    >>> array = array[backend_indexer]  # load subslice of the array
-    >>> np_indexer = OuterIndexer([0, 2, 1], [0, 1, 0])
-    >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
+    >>> array = np.arange(36).reshape(6, 6)
+    >>> backend_indexer = BasicIndexer((slice(0, 3), slice(2, 4)))
+    >>> # load subslice of the array
+    ... array = NumpyIndexingAdapter(array)[backend_indexer]
+    >>> np_indexer = OuterIndexer((np.array([0, 2, 1]), np.array([0, 1, 0])))
+    >>> # outer indexing for on-memory np.ndarray.
+    ... NumpyIndexingAdapter(array)[np_indexer]
+    array([[ 2,  3,  2],
+           [14, 15, 14],
+           [ 8,  9,  8]])
     """
     if indexing_support == IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
@@ -1111,7 +1137,7 @@ def _masked_result_drop_slice(key, data=None):
     new_keys = []
     for k in key:
         if isinstance(k, np.ndarray):
-            if isinstance(data, dask_array_type):
+            if is_duck_dask_array(data):
                 new_keys.append(_dask_array_with_chunks_hint(k, chunks_hint))
             elif isinstance(data, sparse_array_type):
                 import sparse
@@ -1308,7 +1334,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array",)
 
     def __init__(self, array):
-        """ This adapter is created in Variable.__getitem__ in
+        """This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
         """
         self.array = array
@@ -1363,8 +1389,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing.
-    """
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
 

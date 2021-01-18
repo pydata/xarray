@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
 
+from . import duck_array_ops
 from .computation import dot
 from .options import _get_keep_attrs
+from .pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
     from .dataarray import DataArray, Dataset
@@ -72,11 +74,11 @@ class Weighted:
     def __init__(self, obj: "DataArray", weights: "DataArray") -> None:
         ...
 
-    @overload  # noqa: F811
-    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:  # noqa: F811
+    @overload
+    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:
         ...
 
-    def __init__(self, obj, weights):  # noqa: F811
+    def __init__(self, obj, weights):
         """
         Create a Weighted object
 
@@ -100,11 +102,24 @@ class Weighted:
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
 
-        if weights.isnull().any():
-            raise ValueError(
-                "`weights` cannot contain missing values. "
-                "Missing values can be replaced by `weights.fillna(0)`."
+        def _weight_check(w):
+            # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
+            if duck_array_ops.isnull(w).any():
+                raise ValueError(
+                    "`weights` cannot contain missing values. "
+                    "Missing values can be replaced by `weights.fillna(0)`."
+                )
+            return w
+
+        if is_duck_dask_array(weights.data):
+            # assign to copy - else the check is not triggered
+            weights = weights.copy(
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),
+                deep=False,
             )
+
+        else:
+            _weight_check(weights.data)
 
         self.obj = obj
         self.weights = weights
@@ -118,7 +133,7 @@ class Weighted:
     ) -> "DataArray":
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
-            for internal use only
+        for internal use only
         """
 
         # need to infer dims as we use `dot`
@@ -142,7 +157,14 @@ class Weighted:
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
 
-        sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
+        # bool -> int, because ``xr.dot([True, True], [True, True])`` -> True
+        # (and not 2); GH4074
+        if self.weights.dtype == bool:
+            sum_of_weights = self._reduce(
+                mask, self.weights.astype(int), dim=dim, skipna=False
+            )
+        else:
+            sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
 
         # 0-weights are not valid
         valid_weights = sum_of_weights != 0.0

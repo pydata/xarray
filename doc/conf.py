@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -20,12 +19,10 @@ import subprocess
 import sys
 from contextlib import suppress
 
-# make sure the source version is preferred (#3567)
-root = pathlib.Path(__file__).absolute().parent.parent
-os.environ["PYTHONPATH"] = str(root)
-sys.path.insert(0, str(root))
+import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
-import xarray  # isort:skip
+import xarray
 
 allowed_failures = set()
 
@@ -39,7 +36,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
 with suppress(ImportError):
     import matplotlib
@@ -47,14 +44,14 @@ with suppress(ImportError):
     matplotlib.use("Agg")
 
 try:
-    import rasterio
+    import rasterio  # noqa: F401
 except ImportError:
     allowed_failures.update(
         ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
     )
 
 try:
-    import cartopy
+    import cartopy  # noqa: F401
 except ImportError:
     allowed_failures.update(
         [
@@ -79,10 +76,11 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "numpydoc",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
+    "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -102,16 +100,78 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
+
 autodoc_typehints = "none"
 
-napoleon_use_param = True
-napoleon_use_rtype = True
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
+napoleon_use_param = False
+napoleon_use_rtype = False
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "iterable": ":term:`iterable`",
+    "callable": ":py:func:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
+    # stdlib type aliases
+    "MutableMapping": "~collections.abc.MutableMapping",
+    "sys.stdout": ":obj:`sys.stdout`",
+    "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
+    # matplotlib terms
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # objects without namespace
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
+    "ndarray": "~numpy.ndarray",
+    "MaskedArray": "~numpy.ma.MaskedArray",
+    "dtype": "~numpy.dtype",
+    "ComplexWarning": "~numpy.ComplexWarning",
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
+    "Categorical": "~pandas.Categorical",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
+}
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The suffix of source filenames.
 source_suffix = ".rst"
@@ -270,21 +330,21 @@ htmlhelp_basename = "xarraydoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
-}
+# latex_elements = {
+#     # The paper size ('letterpaper' or 'a4paper').
+#     # 'papersize': 'letterpaper',
+#     # The font size ('10pt', '11pt' or '12pt').
+#     # 'pointsize': '10pt',
+#     # Additional stuff for the LaTeX preamble.
+#     # 'preamble': '',
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
-]
+# latex_documents = [
+#     ("index", "xarray.tex", "xarray Documentation", "xarray Developers", "manual")
+# ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -311,7 +371,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
+# man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -322,17 +382,17 @@ man_pages = [("index", "xarray", "xarray Documentation", ["xarray Developers"], 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [
-    (
-        "index",
-        "xarray",
-        "xarray Documentation",
-        "xarray Developers",
-        "xarray",
-        "N-D labeled arrays and datasets in Python.",
-        "Miscellaneous",
-    )
-]
+# texinfo_documents = [
+#     (
+#         "index",
+#         "xarray",
+#         "xarray Documentation",
+#         "xarray Developers",
+#         "xarray",
+#         "N-D labeled arrays and datasets in Python.",
+#         "Miscellaneous",
+#     )
+# ]
 
 # Documents to append as an appendix to all manuals.
 # texinfo_appendices = []
@@ -352,10 +412,20 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "iris": ("https://scitools.org.uk/iris/docs/latest", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
 }
+
+
+def escape_underscores(string):
+    return string.replace("_", r"\_")
+
+
+def setup(app):
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores

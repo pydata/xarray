@@ -131,7 +131,7 @@ class FacetGrid:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row " "were passed")
+                warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
         elif not row and col:
@@ -306,9 +306,11 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+        xplt, yplt, hueplt, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
         )
+        xlabel = label_from_attrs(xplt)
+        ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
         self._hue_label = huelabel
@@ -410,11 +412,13 @@ class FacetGrid:
         self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar
-        """
+        """Draw a colorbar"""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)
+        # dont pass extend as kwarg if it is in the mappable
+        if hasattr(self._mappables[-1], "extend"):
+            kwargs.pop("extend", None)
         if "label" not in kwargs:
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
