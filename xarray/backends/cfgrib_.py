@@ -43,6 +43,7 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
+        import cfgrib  # noqa: F811
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -136,7 +137,7 @@ cfgrib_backend = BackendEntrypoint(
 
 
 try:
-    import cfgrib
+    import cfgrib  # noqa: F401
 
     BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
 except ModuleNotFoundError:
