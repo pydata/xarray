@@ -42,6 +42,13 @@ Breaking changes
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_
 
+Deprecations
+~~~~~~~~~~~~
+
+- ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
+  favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
+  For now using ``dim`` issues a ``FutureWarning``. By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 New Features
 ~~~~~~~~~~~~
@@ -434,12 +441,6 @@ Breaking changes
 - The ``DataArray`` and ``Variable`` HTML reprs now expand the data section by
   default (:issue:`4176`)
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- New deprecations (behavior will be changed in xarray 0.17):
-  - ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
-    favour of a ``coord`` arg, for consistency with :py:meth:`Dataset.integrate`.
-    For now using ``dim`` issues a ``FutureWarning``.
-    By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 New Features
 ~~~~~~~~~~~~
