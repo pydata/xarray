@@ -344,18 +344,12 @@ class WritableCFDataStore(AbstractWritableDataStore):
 
 
 class AbstractBackendEntrypoint(ABC):
-    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
-
-
     open_dataset_parameters = None
-
 
     @abstractmethod
     def open_dataset(self):
         pass
 
-
-    @abstractmethod
     def guess_can_open(self, store_spec):
-        pass
+        return False
 

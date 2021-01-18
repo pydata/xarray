@@ -6,7 +6,7 @@ from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
@@ -105,7 +105,8 @@ class PseudoNetCDFBackendEntrypoint(AbstractBackendEntrypoint):
         "lock",
     )
 
-    def open_backend_dataset_pseudonetcdf(
+    def open_dataset(
+            self,
             filename_or_obj,
             mask_and_scale=False,
             decode_times=None,
@@ -122,8 +123,9 @@ class PseudoNetCDFBackendEntrypoint(AbstractBackendEntrypoint):
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )
 
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,

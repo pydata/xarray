@@ -7,27 +7,27 @@ import warnings
 
 import pkg_resources
 
-from .cfgrib_ import cfgrib_backend
-from .common import BackendEntrypoint
-from .h5netcdf_ import h5netcdf_backend
-from .netCDF4_ import netcdf4_backend
-from .pseudonetcdf_ import pseudonetcdf_backend
-from .pydap_ import pydap_backend
-from .pynio_ import pynio_backend
-from .scipy_ import scipy_backend
-from .store import store_backend
-from .zarr import zarr_backend
+from .cfgrib_ import CfgribfBackendEntrypoint
+from .common import AbstractBackendEntrypoint
+from .h5netcdf_ import H5netcdfBackendEntrypoint
+from .netCDF4_ import NetCDF4BackendEntrypoint
+from .pseudonetcdf_ import PseudoNetCDFBackendEntrypoint
+from .pydap_ import PydapBackendEntrypoint
+from .pynio_ import PynioBackendEntrypoint
+from .scipy_ import ScipyBackendEntrypoint
+from .store import StoreBackendEntrypoint
+from .zarr import ZarrBackendEntrypoint
 
-BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
-    "store": store_backend,
-    "netcdf4": netcdf4_backend,
-    "h5netcdf": h5netcdf_backend,
-    "scipy": scipy_backend,
-    "pseudonetcdf": pseudonetcdf_backend,
-    "zarr": zarr_backend,
-    "cfgrib": cfgrib_backend,
-    "pydap": pydap_backend,
-    "pynio": pynio_backend,
+BACKEND_ENTRYPOINTS: T.Dict[str, AbstractBackendEntrypoint] = {
+    "store": StoreBackendEntrypoint(),
+    "netcdf4": NetCDF4BackendEntrypoint(),
+    "h5netcdf": H5netcdfBackendEntrypoint(),
+    "scipy": ScipyBackendEntrypoint(),
+    "pseudonetcdf": PseudoNetCDFBackendEntrypoint(),
+    "zarr": ZarrBackendEntrypoint(),
+    "cfgrib": CfgribfBackendEntrypoint(),
+    "pydap": PydapBackendEntrypoint(),
+    "pynio": PynioBackendEntrypoint(),
 }
 
 

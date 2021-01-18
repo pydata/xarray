@@ -6,7 +6,7 @@ from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -87,7 +87,7 @@ class NioDataStore(AbstractDataStore):
 
 class PynioBackendEntrypoint(AbstractBackendEntrypoint):
 
-    def open_backend_dataset_pynio(
+    def open_dataset(
             filename_or_obj,
             mask_and_scale=True,
             decode_times=None,
@@ -105,8 +105,9 @@ class PynioBackendEntrypoint(AbstractBackendEntrypoint):
             lock=lock,
         )
 
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,

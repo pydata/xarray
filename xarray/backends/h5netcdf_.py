@@ -18,7 +18,7 @@ from .netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -321,7 +321,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
 class H5netcdfBackendEntrypoint(AbstractBackendEntrypoint):
 
-    def guess_can_open_h5netcdf(store_spec):
+    def guess_can_open(self, store_spec):
         try:
             return read_magic_number(store_spec).startswith(b"\211HDF\r\n\032\n")
         except TypeError:
@@ -334,7 +334,8 @@ class H5netcdfBackendEntrypoint(AbstractBackendEntrypoint):
 
         return ext in {".nc", ".nc4", ".cdf"}
 
-    def open_backend_dataset_h5netcdf(
+    def open_dataset(
+            self,
             filename_or_obj,
             *,
             mask_and_scale=True,
@@ -360,7 +361,9 @@ class H5netcdfBackendEntrypoint(AbstractBackendEntrypoint):
             phony_dims=phony_dims,
         )
 
-        ds = open_backend_dataset_store(
+        store_entrypoint = StoreBackendEntrypoint()
+
+        ds = store_entrypoint.open_dataset(
             store,
             mask_and_scale=mask_and_scale,
             decode_times=decode_times,

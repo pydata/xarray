@@ -10,7 +10,7 @@ from .common import BackendArray, AbstractBackendEntrypoint, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 
 def _decode_string(s):
@@ -225,7 +225,7 @@ class ScipyDataStore(WritableCFDataStore):
 
 class ScipyBackendEntrypoint(AbstractBackendEntrypoint):
 
-    def guess_can_open_scipy(self, store_spec):
+    def guess_can_open(self, store_spec):
         try:
             return read_magic_number(store_spec).startswith(b"CDF")
         except TypeError:
@@ -237,7 +237,7 @@ class ScipyBackendEntrypoint(AbstractBackendEntrypoint):
             return False
         return ext in {".nc", ".nc4", ".cdf", ".gz"}
 
-    def open_backend_dataset_scipy(
+    def open_dataset(
             self,
             filename_or_obj,
             mask_and_scale=True,
@@ -257,8 +257,10 @@ class ScipyBackendEntrypoint(AbstractBackendEntrypoint):
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )
+
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,

@@ -7,7 +7,7 @@ from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
 from .locks import SerializableLock, ensure_lock
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -76,14 +76,15 @@ class CfGribDataStore(AbstractDataStore):
 
 class CfgribfBackendEntrypoint(AbstractBackendEntrypoint):
 
-    def guess_can_open_cfgrib(store_spec):
+    def guess_can_open(self, store_spec):
         try:
             _, ext = os.path.splitext(store_spec)
         except TypeError:
             return False
         return ext in {".grib", ".grib2", ".grb", ".grb2"}
 
-    def open_backend_dataset_cfgrib(
+    def open_dataset(
+            self,
             filename_or_obj,
             *,
             mask_and_scale=True,
@@ -112,9 +113,9 @@ class CfgribfBackendEntrypoint(AbstractBackendEntrypoint):
             time_dims=time_dims,
             lock=lock,
         )
-
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,

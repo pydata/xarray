@@ -5,7 +5,7 @@ from ..core.pycompat import integer_types
 from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
 from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint, robust_getitem
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 
 class PydapArrayWrapper(BackendArray):
@@ -97,10 +97,11 @@ class PydapDataStore(AbstractDataStore):
 
 class PydapBackendEntrypoint(AbstractBackendEntrypoint):
 
-    def guess_can_open_pydap(store_spec):
+    def guess_can_open(self, store_spec):
         return isinstance(store_spec, str) and is_remote_uri(store_spec)
 
-    def open_backend_dataset_pydap(
+    def open_dataset(
+            self,
             filename_or_obj,
             mask_and_scale=True,
             decode_times=None,
@@ -116,8 +117,9 @@ class PydapBackendEntrypoint(AbstractBackendEntrypoint):
             session=session,
         )
 
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,

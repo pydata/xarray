@@ -14,7 +14,7 @@ from .common import (
     AbstractBackendEntrypoint,
     _encode_variable_name,
 )
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -666,7 +666,7 @@ def open_zarr(
 class ZarrBackendEntrypoint(AbstractBackendEntrypoint):
 
 
-    def open_backend_dataset_zarr(
+    def open_dataset(
             self,
             filename_or_obj,
             mask_and_scale=True,
@@ -693,8 +693,9 @@ class ZarrBackendEntrypoint(AbstractBackendEntrypoint):
             chunk_store=chunk_store,
         )
 
+        store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = open_backend_dataset_store(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,
