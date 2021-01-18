@@ -3042,7 +3042,12 @@ class TestDask(DatasetIOBase):
         with raises_regex(IOError, "no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
 
-        with raises_regex(ValueError, "wild-card"):
+    @requires_fsspec
+    def test_open_mfdataset_no_files(self):
+        pytest.importorskip("aiobotocore")
+
+        with raises_regex(OSError, "no files"):
+            # glob is attempted as of #4823, but finds no files
             open_mfdataset("http://some/remote/uri")
 
     def test_open_mfdataset_2d(self):
