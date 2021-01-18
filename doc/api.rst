@@ -308,6 +308,7 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.drop_sel
+   DataArray.drop_isel
    DataArray.head
    DataArray.tail
    DataArray.thin
