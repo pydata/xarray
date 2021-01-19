@@ -1,6 +1,6 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from .common import AbstractDataStore, BackendEntrypoint
+from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
 def guess_can_open_store(store_spec):
@@ -44,3 +44,6 @@ def open_backend_dataset_store(
 store_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_store, guess_can_open=guess_can_open_store
 )
+
+
+BACKEND_ENTRYPOINTS["store"] = store_backend
