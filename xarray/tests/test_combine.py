@@ -732,6 +732,17 @@ class TestCombineAuto:
                 objs, concat_dim="x", join="outer", combine_attrs="identical"
             )
 
+    def test_combine_nested_combine_attrs_drop_conflicts(self):
+        objs = [
+            Dataset({"x": [0], "y": [0]}, attrs={"a": 1, "b": 2, "c": 3}),
+            Dataset({"x": [1], "y": [1]}, attrs={"a": 1, "b": 0, "d": 3}),
+        ]
+        expected = Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "c": 3, "d": 3})
+        actual = combine_nested(
+            objs, concat_dim="x", join="outer", combine_attrs="drop_conflicts"
+        )
+        assert_identical(expected, actual)
+
     def test_infer_order_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
