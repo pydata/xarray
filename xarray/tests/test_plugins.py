@@ -92,7 +92,7 @@ def test_set_missing_parameters_raise_error():
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
-    backend = plugins.BackendEntrypoint(
+    backend = common.BackendEntrypoint(
         dummy_open_dataset_kwargs, ("filename_or_obj", "decoder")
     )
     plugins.set_missing_parameters({"engine": backend})
