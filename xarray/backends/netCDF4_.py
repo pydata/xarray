@@ -343,7 +343,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4  # noqa: F811
 
         if isinstance(filename, pathlib.Path):
             filename = os.fspath(filename)
