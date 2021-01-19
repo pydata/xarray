@@ -25,6 +25,13 @@ from .netCDF4_ import (
 )
 from .store import open_backend_dataset_store
 
+try:
+    import h5netcdf
+
+    has_h5netcdf = True
+except ModuleNotFoundError:
+    has_h5netcdf = False
+
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def get_array(self, needs_lock=True):
@@ -380,10 +387,5 @@ h5netcdf_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_h5netcdf, guess_can_open=guess_can_open_h5netcdf
 )
 
-
-try:
-    import h5netcdf  # noqa: F401
-
+if has_h5netcdf:
     BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend
-except ModuleNotFoundError:
-    pass

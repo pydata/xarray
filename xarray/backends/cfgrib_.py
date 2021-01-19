@@ -14,6 +14,14 @@ from .common import (
 from .locks import SerializableLock, ensure_lock
 from .store import open_backend_dataset_store
 
+try:
+    import cfgrib
+
+    has_cfgrib = True
+except ModuleNotFoundError:
+    has_cfgrib = False
+
+
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
 #       https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
@@ -43,7 +51,6 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
-        import cfgrib  # noqa: F811
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -136,9 +143,5 @@ cfgrib_backend = BackendEntrypoint(
 )
 
 
-try:
-    import cfgrib  # noqa: F401
-
+if has_cfgrib:
     BACKEND_ENTRYPOINTS["cfgrib"] = cfgrib_backend
-except ModuleNotFoundError:
-    pass

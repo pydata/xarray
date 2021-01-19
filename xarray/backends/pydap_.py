@@ -13,6 +13,13 @@ from .common import (
 )
 from .store import open_backend_dataset_store
 
+try:
+    import pydap.client
+
+    has_pydap = True
+except ModuleNotFoundError:
+    has_pydap = False
+
 
 class PydapArrayWrapper(BackendArray):
     def __init__(self, array):
@@ -80,7 +87,6 @@ class PydapDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, url, session=None):
-        import pydap.client  # noqa F811
 
         ds = pydap.client.open_url(url, session=session)
         return cls(ds)
@@ -141,9 +147,5 @@ pydap_backend = BackendEntrypoint(
 )
 
 
-try:
-    import pydap.client  # noqa F401
-
+if has_pydap:
     BACKEND_ENTRYPOINTS["pydap"] = pydap_backend
-except ModuleNotFoundError:
-    pass

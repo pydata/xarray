@@ -17,6 +17,14 @@ from .common import (
 )
 from .store import open_backend_dataset_store
 
+try:
+    import zarr
+
+    has_zarr = True
+except ModuleNotFoundError:
+    has_zarr = False
+
+
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
@@ -290,7 +298,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
     ):
-        import zarr  # noqa: F811
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, pathlib.Path):
@@ -410,7 +417,6 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        import zarr  # noqa: F811
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -708,9 +714,5 @@ def open_backend_dataset_zarr(
 zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
 
 
-try:
-    import zarr  # noqa: F401
-
+if has_zarr:
     BACKEND_ENTRYPOINTS["zarr"] = zarr_backend
-except ModuleNotFoundError:
-    pass

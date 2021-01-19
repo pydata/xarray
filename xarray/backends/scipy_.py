@@ -17,6 +17,13 @@ from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
 from .store import open_backend_dataset_store
 
+try:
+    import scipy.io
+
+    has_scipy = True
+except ModuleNotFoundError:
+    has_scipy = False
+
 
 def _decode_string(s):
     if isinstance(s, bytes):
@@ -65,8 +72,6 @@ class ScipyArrayWrapper(BackendArray):
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
-
-    import scipy.io  # noqa: F811
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
@@ -278,9 +283,5 @@ scipy_backend = BackendEntrypoint(
 )
 
 
-try:
-    import scipy.io  # noqa: F401
-
+if has_scipy:
     BACKEND_ENTRYPOINTS["scipy"] = scipy_backend
-except ModuleNotFoundError:
-    pass

@@ -24,6 +24,14 @@ from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_writ
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from .store import open_backend_dataset_store
 
+try:
+    import netCDF4
+
+    has_netcdf4 = True
+except ModuleNotFoundError:
+    has_netcdf4 = False
+
+
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
 _endian_lookup = {"=": "native", ">": "big", "<": "little", "|": "native"}
@@ -299,7 +307,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4  # noqa: F811
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -566,9 +573,5 @@ netcdf4_backend = BackendEntrypoint(
 )
 
 
-try:
-    import netCDF4  # noqa: F401
-
+if has_netcdf4:
     BACKEND_ENTRYPOINTS["netcdf4"] = netcdf4_backend
-except ModuleNotFoundError:
-    pass
