@@ -1,7 +1,5 @@
 import itertools
-import warnings
 from collections import Counter
-from textwrap import dedent
 
 import pandas as pd
 
@@ -95,7 +93,9 @@ def _infer_concat_order_from_coords(datasets):
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
                 series = first_items.to_series()
-                rank = series.rank(method="dense", ascending=ascending)
+                rank = series.rank(
+                    method="dense", ascending=ascending, numeric_only=False
+                )
                 order = rank.astype(int).values - 1
 
                 # Append positions along extra dimension to structure which
@@ -155,6 +155,7 @@ def _combine_nd(
     compat="no_conflicts",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -202,13 +203,21 @@ def _combine_nd(
             compat=compat,
             fill_value=fill_value,
             join=join,
+            combine_attrs=combine_attrs,
         )
     (combined_ds,) = combined_ids.values()
     return combined_ds
 
 
 def _combine_all_along_first_dim(
-    combined_ids, dim, data_vars, coords, compat, fill_value=dtypes.NA, join="outer"
+    combined_ids,
+    dim,
+    data_vars,
+    coords,
+    compat,
+    fill_value=dtypes.NA,
+    join="outer",
+    combine_attrs="drop",
 ):
 
     # Group into lines of datasets which must be combined along dim
@@ -223,7 +232,7 @@ def _combine_all_along_first_dim(
         combined_ids = dict(sorted(group))
         datasets = combined_ids.values()
         new_combined_ids[new_id] = _combine_1d(
-            datasets, dim, compat, data_vars, coords, fill_value, join
+            datasets, dim, compat, data_vars, coords, fill_value, join, combine_attrs
         )
     return new_combined_ids
 
@@ -236,6 +245,7 @@ def _combine_1d(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -252,6 +262,7 @@ def _combine_1d(
                 compat=compat,
                 fill_value=fill_value,
                 join=join,
+                combine_attrs=combine_attrs,
             )
         except ValueError as err:
             if "encountered unexpected variable" in str(err):
@@ -265,7 +276,13 @@ def _combine_1d(
             else:
                 raise
     else:
-        combined = merge(datasets, compat=compat, fill_value=fill_value, join=join)
+        combined = merge(
+            datasets,
+            compat=compat,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
 
     return combined
 
@@ -284,6 +301,7 @@ def _nested_combine(
     ids,
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
 
     if len(datasets) == 0:
@@ -311,6 +329,7 @@ def _nested_combine(
         coords=coords,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
     return combined
 
@@ -323,6 +342,7 @@ def combine_nested(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="drop",
 ):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -344,7 +364,7 @@ def combine_nested(
 
     Parameters
     ----------
-    datasets : list or nested list of xarray.Dataset objects.
+    datasets : list or nested list of Dataset
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.
@@ -357,39 +377,51 @@ def combine_nested(
         nested-list input along which to merge.
         Must be the same length as the depth of the list passed to
         ``datasets``.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", \
+              "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential merge conflicts:
 
-        - 'broadcast_equals': all values must be equal when variables are
+        - "broadcast_equals": all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
           same.
-        - 'no_conflicts': only values which are not null in both datasets
+        - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-        - 'override': skip comparing and pick variable from first dataset
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        - "override": skip comparing and pick variable from first dataset
+    data_vars : {"minimal", "different", "all" or list of str}, optional
         Details are in the documentation of concat
-    coords : {'minimal', 'different', 'all' or list of str}, optional
+    coords : {"minimal", "different", "all" or list of str}, optional
         Details are in the documentation of concat
-    fill_value : scalar, optional
-        Value to use for newly missing values
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
+    join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
+                    default: "drop"
+        String indicating how to combine attrs of the objects being merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -403,22 +435,48 @@ def combine_nested(
     into 4 parts, 2 each along both the x and y axes, requires organising the
     datasets into a doubly-nested list, e.g:
 
+    >>> x1y1 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
     >>> x1y1
     <xarray.Dataset>
-    Dimensions:         (x: 2, y: 2)
+    Dimensions:        (x: 2, y: 2)
     Dimensions without coordinates: x, y
     Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
+        temperature    (x, y) float64 1.764 0.4002 0.9787 2.241
+        precipitation  (x, y) float64 1.868 -0.9773 0.9501 -0.1514
+    >>> x1y2 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+    >>> x2y1 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+    >>> x2y2 = xr.Dataset(
+    ...     {
+    ...         "temperature": (("x", "y"), np.random.randn(2, 2)),
+    ...         "precipitation": (("x", "y"), np.random.randn(2, 2)),
+    ...     }
+    ... )
+
 
     >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
-    >>> combined = xr.combine_nested(ds_grid, concat_dim=['x', 'y'])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=["x", "y"])
+    >>> combined
     <xarray.Dataset>
-    Dimensions:         (x: 4, y: 4)
+    Dimensions:        (x: 4, y: 4)
     Dimensions without coordinates: x, y
     Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
+        temperature    (x, y) float64 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
+        precipitation  (x, y) float64 1.868 -0.9773 0.761 ... -0.7422 0.1549 0.3782
 
     ``manual_combine`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
@@ -426,34 +484,40 @@ def combine_nested(
     to ``concat_dim`` to specify the dimension of the nested list over which
     we wish to use ``merge`` instead of ``concat``:
 
+    >>> t1temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
     >>> t1temp
     <xarray.Dataset>
-    Dimensions:         (t: 5)
+    Dimensions:      (t: 5)
     Dimensions without coordinates: t
     Data variables:
-      temperature       (t) float64 11.04 23.57 20.77 ...
+        temperature  (t) float64 -0.8878 -1.981 -0.3479 0.1563 1.23
 
+    >>> t1precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
     >>> t1precip
     <xarray.Dataset>
-    Dimensions:         (t: 5)
+    Dimensions:        (t: 5)
     Dimensions without coordinates: t
     Data variables:
-      precipitation     (t) float64 5.904 2.453 3.404 ...
+        precipitation  (t) float64 1.202 -0.3873 -0.3023 -1.049 -1.42
+
+    >>> t2temp = xr.Dataset({"temperature": ("t", np.random.randn(5))})
+    >>> t2precip = xr.Dataset({"precipitation": ("t", np.random.randn(5))})
+
 
     >>> ds_grid = [[t1temp, t1precip], [t2temp, t2precip]]
-    >>> combined = xr.combine_nested(ds_grid, concat_dim=['t', None])
+    >>> combined = xr.combine_nested(ds_grid, concat_dim=["t", None])
+    >>> combined
     <xarray.Dataset>
-    Dimensions:         (t: 10)
+    Dimensions:        (t: 10)
     Dimensions without coordinates: t
     Data variables:
-      temperature       (t) float64 11.04 23.57 20.77 ...
-      precipitation     (t) float64 5.904 2.453 3.404 ...
+        temperature    (t) float64 -0.8878 -1.981 -0.3479 ... -0.5097 -0.4381 -1.253
+        precipitation  (t) float64 1.202 -0.3873 -0.3023 ... -0.2127 -0.8955 0.3869
 
     See also
     --------
     concat
     merge
-    auto_combine
     """
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
@@ -468,6 +532,7 @@ def combine_nested(
         ids=False,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
 
 
@@ -482,6 +547,7 @@ def combine_by_coords(
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
+    combine_attrs="no_conflicts",
 ):
     """
     Attempt to auto-magically combine the given datasets into one by using
@@ -511,52 +577,64 @@ def combine_by_coords(
     ----------
     datasets : sequence of xarray.Dataset
         Dataset objects to combine.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts', 'override'}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
-        - 'broadcast_equals': all values must be equal when variables are
+        - "broadcast_equals": all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
           same.
-        - 'no_conflicts': only values which are not null in both datasets
+        - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-        - 'override': skip comparing and pick variable from first dataset
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        - "override": skip comparing and pick variable from first dataset
+    data_vars : {"minimal", "different", "all" or list of str}, optional
         These data variables will be concatenated together:
 
-        * 'minimal': Only data variables in which the dimension already
+        * "minimal": Only data variables in which the dimension already
           appears are included.
-        * 'different': Data variables which are not equal (ignoring
+        * "different": Data variables which are not equal (ignoring
           attributes) across all datasets are also concatenated (as well as
           all for which dimension already appears). Beware: this option may
           load the data payload of data variables into memory if they are not
           already loaded.
-        * 'all': All data variables will be concatenated.
+        * "all": All data variables will be concatenated.
         * list of str: The listed data variables will be concatenated, in
-          addition to the 'minimal' data variables.
+          addition to the "minimal" data variables.
 
-        If objects are DataArrays, `data_vars` must be 'all'.
-    coords : {'minimal', 'different', 'all' or list of str}, optional
-        As per the 'data_vars' kwarg, but for coordinate variables.
-    fill_value : scalar, optional
-        Value to use for newly missing values. If None, raises a ValueError if
+        If objects are DataArrays, `data_vars` must be "all".
+    coords : {"minimal", "different", "all"} or list of str, optional
+        As per the "data_vars" kwarg, but for coordinate variables.
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes
         (excluding concat_dim) in objects
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
+                    default: "drop"
+        String indicating how to combine attrs of the objects being merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -604,71 +682,71 @@ def combine_by_coords(
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 0 1
-    * x              (x) int64 10 20 30
+      * y              (y) int64 0 1
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 2.543 13.93 9.436
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 0.4679 0.3115 0.945
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 8.473 12.92
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 0.3834 0.7917 0.5289
 
     >>> x2
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 2 3
-    * x              (x) int64 10 20 30
+      * y              (y) int64 2 3
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 9.341 0.1251 6.269 7.709 8.82 2.316
-        precipitation  (y, x) float64 0.1728 0.1178 0.03018 0.6509 0.06938 0.3792
+        temperature    (y, x) float64 11.36 18.51 1.421 1.743 0.4044 16.65
+        precipitation  (y, x) float64 0.7782 0.87 0.9786 0.7992 0.4615 0.7805
 
     >>> x3
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 2)
     Coordinates:
-    * y              (y) int64 2 3
-    * x              (x) int64 40 50 60
+      * y              (y) int64 2 3
+      * x              (x) int64 40 50 60
     Data variables:
-        temperature    (y, x) float64 2.789 2.446 6.551 12.46 2.22 15.96
-        precipitation  (y, x) float64 0.4804 0.1902 0.2457 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 2.365 12.8 2.867 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.2646 0.7742 0.4562 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30
-    * y              (y) int64 0 1 2 3
+      * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 7.709 8.82 2.316
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6509 0.06938 0.3792
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 1.743 0.4044 16.65
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.7992 0.4615 0.7805
 
     >>> xr.combine_by_coords([x3, x1])
     <xarray.Dataset>
     Dimensions:        (x: 6, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30 40 50 60
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 0 1 2 3
     Data variables:
-        temperature    (y, x) float64 1.654 10.63 7.015 nan ... nan 12.46 2.22 15.96
-        precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
-    >>> xr.combine_by_coords([x3, x1], join='override')
+    >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
     Dimensions:        (x: 3, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30
+      * y              (y) int64 0 1 2 3
     Data variables:
-    temperature    (y, x) float64 1.654 10.63 7.015 2.543 ... 12.46 2.22 15.96
-    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
     <xarray.Dataset>
     Dimensions:        (x: 6, y: 4)
     Coordinates:
-    * x              (x) int64 10 20 30 40 50 60
-    * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
+      * y              (y) int64 0 1 2 3
     Data variables:
-    temperature    (y, x) float64 1.654 10.63 7.015 nan ... 12.46 2.22 15.96
-    precipitation  (y, x) float64 0.2136 0.9974 0.7603 ... 0.6125 0.4654 0.5953
+        temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
+        precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
 
     # Group by data vars
@@ -700,6 +778,7 @@ def combine_by_coords(
             compat=compat,
             fill_value=fill_value,
             join=join,
+            combine_attrs=combine_attrs,
         )
 
         # Check the overall coordinates are monotonically increasing
@@ -717,273 +796,5 @@ def combine_by_coords(
         compat=compat,
         fill_value=fill_value,
         join=join,
+        combine_attrs=combine_attrs,
     )
-
-
-# Everything beyond here is only needed until the deprecation cycle in #2616
-# is completed
-
-
-_CONCAT_DIM_DEFAULT = "__infer_concat_dim__"
-
-
-def auto_combine(
-    datasets,
-    concat_dim="_not_supplied",
-    compat="no_conflicts",
-    data_vars="all",
-    coords="different",
-    fill_value=dtypes.NA,
-    join="outer",
-    from_openmfds=False,
-):
-    """
-    Attempt to auto-magically combine the given datasets into one.
-
-    This entire function is deprecated in favour of ``combine_nested`` and
-    ``combine_by_coords``.
-
-    This method attempts to combine a list of datasets into a single entity by
-    inspecting metadata and using a combination of concat and merge.
-    It does not concatenate along more than one dimension or sort data under
-    any circumstances. It does align coordinates, but different variables on
-    datasets can cause it to fail under some scenarios. In complex cases, you
-    may need to clean up your data and use ``concat``/``merge`` explicitly.
-    ``auto_combine`` works well if you have N years of data and M data
-    variables, and each combination of a distinct time period and set of data
-    variables is saved its own dataset.
-
-    Parameters
-    ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to merge.
-    concat_dim : str or DataArray or Index, optional
-        Dimension along which to concatenate variables, as used by
-        :py:func:`xarray.concat`. You only need to provide this argument if
-        the dimension along which you want to concatenate is not a dimension
-        in the original datasets, e.g., if you want to stack a collection of
-        2D arrays along a third dimension.
-        By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dim=None`` explicitly to disable
-        concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-             'no_conflicts', 'override'}, optional
-        String indicating how to compare variables of the same name for
-        potential conflicts:
-
-        - 'broadcast_equals': all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
-          same.
-        - 'no_conflicts': only values which are not null in both datasets
-          must be equal. The returned dataset then contains the combination
-          of all non-null values.
-        - 'override': skip comparing and pick variable from first dataset
-    data_vars : {'minimal', 'different', 'all' or list of str}, optional
-        Details are in the documentation of concat
-    coords : {'minimal', 'different', 'all' o list of str}, optional
-        Details are in the documentation of concat
-    fill_value : scalar, optional
-        Value to use for newly missing values
-    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
-        String indicating how to combine differing indexes
-        (excluding concat_dim) in objects
-
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
-          aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
-          those of the first object with that dimension. Indexes for the same
-          dimension must have the same size in all objects.
-
-    Returns
-    -------
-    combined : xarray.Dataset
-
-    See also
-    --------
-    concat
-    Dataset.merge
-    """
-
-    if not from_openmfds:
-        basic_msg = dedent(
-            """\
-        In xarray version 0.15 `auto_combine` will be deprecated. See
-        http://xarray.pydata.org/en/stable/combining.html#combining-multi"""
-        )
-        warnings.warn(basic_msg, FutureWarning, stacklevel=2)
-
-    if concat_dim == "_not_supplied":
-        concat_dim = _CONCAT_DIM_DEFAULT
-        message = ""
-    else:
-        message = dedent(
-            """\
-        Also `open_mfdataset` will no longer accept a `concat_dim` argument.
-        To get equivalent behaviour from now on please use the new
-        `combine_nested` function instead (or the `combine='nested'` option to
-        `open_mfdataset`)."""
-        )
-
-    if _dimension_coords_exist(datasets):
-        message += dedent(
-            """\
-        The datasets supplied have global dimension coordinates. You may want
-        to use the new `combine_by_coords` function (or the
-        `combine='by_coords'` option to `open_mfdataset`) to order the datasets
-        before concatenation. Alternatively, to continue concatenating based
-        on the order the datasets are supplied in future, please use the new
-        `combine_nested` function (or the `combine='nested'` option to
-        open_mfdataset)."""
-        )
-    else:
-        message += dedent(
-            """\
-        The datasets supplied do not have global dimension coordinates. In
-        future, to continue concatenating without supplying dimension
-        coordinates, please use the new `combine_nested` function (or the
-        `combine='nested'` option to open_mfdataset."""
-        )
-
-    if _requires_concat_and_merge(datasets):
-        manual_dims = [concat_dim].append(None)
-        message += dedent(
-            """\
-        The datasets supplied require both concatenation and merging. From
-        xarray version 0.15 this will operation will require either using the
-        new `combine_nested` function (or the `combine='nested'` option to
-        open_mfdataset), with a nested list structure such that you can combine
-        along the dimensions {}. Alternatively if your datasets have global
-        dimension coordinates then you can use the new `combine_by_coords`
-        function.""".format(
-                manual_dims
-            )
-        )
-
-    warnings.warn(message, FutureWarning, stacklevel=2)
-
-    return _old_auto_combine(
-        datasets,
-        concat_dim=concat_dim,
-        compat=compat,
-        data_vars=data_vars,
-        coords=coords,
-        fill_value=fill_value,
-        join=join,
-    )
-
-
-def _dimension_coords_exist(datasets):
-    """
-    Check if the datasets have consistent global dimension coordinates
-    which would in future be used by `auto_combine` for concatenation ordering.
-    """
-
-    # Group by data vars
-    sorted_datasets = sorted(datasets, key=vars_as_keys)
-    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
-
-    # Simulates performing the multidimensional combine on each group of data
-    # variables before merging back together
-    try:
-        for vars, datasets_with_same_vars in grouped_by_vars:
-            _infer_concat_order_from_coords(list(datasets_with_same_vars))
-        return True
-    except ValueError:
-        # ValueError means datasets don't have global dimension coordinates
-        # Or something else went wrong in trying to determine them
-        return False
-
-
-def _requires_concat_and_merge(datasets):
-    """
-    Check if the datasets require the use of both xarray.concat and
-    xarray.merge, which in future might require the user to use
-    `manual_combine` instead.
-    """
-    # Group by data vars
-    sorted_datasets = sorted(datasets, key=vars_as_keys)
-    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
-
-    return len(list(grouped_by_vars)) > 1
-
-
-def _old_auto_combine(
-    datasets,
-    concat_dim=_CONCAT_DIM_DEFAULT,
-    compat="no_conflicts",
-    data_vars="all",
-    coords="different",
-    fill_value=dtypes.NA,
-    join="outer",
-):
-    if concat_dim is not None:
-        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-
-        sorted_datasets = sorted(datasets, key=vars_as_keys)
-        grouped = itertools.groupby(sorted_datasets, key=vars_as_keys)
-
-        concatenated = [
-            _auto_concat(
-                list(datasets),
-                dim=dim,
-                data_vars=data_vars,
-                coords=coords,
-                compat=compat,
-                fill_value=fill_value,
-                join=join,
-            )
-            for vars, datasets in grouped
-        ]
-    else:
-        concatenated = datasets
-    merged = merge(concatenated, compat=compat, fill_value=fill_value, join=join)
-    return merged
-
-
-def _auto_concat(
-    datasets,
-    dim=None,
-    data_vars="all",
-    coords="different",
-    fill_value=dtypes.NA,
-    join="outer",
-    compat="no_conflicts",
-):
-    if len(datasets) == 1 and dim is None:
-        # There is nothing more to combine, so kick out early.
-        return datasets[0]
-    else:
-        if dim is None:
-            ds0 = datasets[0]
-            ds1 = datasets[1]
-            concat_dims = set(ds0.dims)
-            if ds0.dims != ds1.dims:
-                dim_tuples = set(ds0.dims.items()) - set(ds1.dims.items())
-                concat_dims = {i for i, _ in dim_tuples}
-            if len(concat_dims) > 1:
-                concat_dims = {d for d in concat_dims if not ds0[d].equals(ds1[d])}
-            if len(concat_dims) > 1:
-                raise ValueError(
-                    "too many different dimensions to " "concatenate: %s" % concat_dims
-                )
-            elif len(concat_dims) == 0:
-                raise ValueError(
-                    "cannot infer dimension to concatenate: "
-                    "supply the ``concat_dim`` argument "
-                    "explicitly"
-                )
-            (dim,) = concat_dims
-        return concat(
-            datasets,
-            dim=dim,
-            data_vars=data_vars,
-            coords=coords,
-            fill_value=fill_value,
-            compat=compat,
-        )

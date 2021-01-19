@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 
 
@@ -35,15 +35,13 @@ class VariableCoder:
     def encode(
         self, variable: Variable, name: Hashable = None
     ) -> Variable:  # pragma: no cover
-        """Convert an encoded variable to a decoded variable
-        """
+        """Convert an encoded variable to a decoded variable"""
         raise NotImplementedError()
 
     def decode(
         self, variable: Variable, name: Hashable = None
     ) -> Variable:  # pragma: no cover
-        """Convert an decoded variable to a encoded variable
-        """
+        """Convert an decoded variable to a encoded variable"""
         raise NotImplementedError()
 
 
@@ -56,7 +54,7 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """
 
     def __init__(self, array, func, dtype):
-        assert not isinstance(array, dask_array_type)
+        assert not is_duck_dask_array(array)
         self.array = indexing.as_indexable(array)
         self.func = func
         self._dtype = dtype
@@ -93,8 +91,10 @@ def lazy_elemwise_func(array, func, dtype):
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if isinstance(array, dask_array_type):
-        return array.map_blocks(func, dtype=dtype)
+    if is_duck_dask_array(array):
+        import dask.array as da
+
+        return da.map_blocks(func, array, dtype=dtype)
     else:
         return _ElementwiseFunctionArray(array, func, dtype)
 
@@ -148,6 +148,7 @@ class CFMaskCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
+        dtype = np.dtype(encoding.get("dtype", data.dtype))
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
@@ -162,14 +163,14 @@ class CFMaskCoder(VariableCoder):
 
         if fv is not None:
             # Ensure _FillValue is cast to same dtype as data's
-            encoding["_FillValue"] = data.dtype.type(fv)
+            encoding["_FillValue"] = dtype.type(fv)
             fill_value = pop_to(encoding, attrs, "_FillValue", name=name)
             if not pd.isnull(fill_value):
                 data = duck_array_ops.fillna(data, fill_value)
 
         if mv is not None:
             # Ensure missing_value is cast to same dtype as data's
-            encoding["missing_value"] = data.dtype.type(mv)
+            encoding["missing_value"] = dtype.type(mv)
             fill_value = pop_to(encoding, attrs, "missing_value", name=name)
             if not pd.isnull(fill_value) and fv is None:
                 data = duck_array_ops.fillna(data, fill_value)
@@ -268,6 +269,10 @@ class CFScaleOffsetCoder(VariableCoder):
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
             dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            if np.ndim(scale_factor) > 0:
+                scale_factor = np.asarray(scale_factor).item()
+            if np.ndim(add_offset) > 0:
+                add_offset = np.asarray(add_offset).item()
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,

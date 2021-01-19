@@ -219,6 +219,13 @@ Current core developers
 -  Fabien Maussion
 -  Keisuke Fujii
 -  Maximilian Roos
+-  Deepak Cherian
+-  Spencer Clark
+-  Tom Nicholas
+-  Guido Imperiale
+-  Justus Magin
+-  Mathias Hauser
+-  Anderson Banihirwe
 
 NumFOCUS
 ~~~~~~~~

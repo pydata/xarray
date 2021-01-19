@@ -1,12 +1,13 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   # MINIMUM VERSIONS POLICY: see doc/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
   # doc/installing.rst and setup.py.
-  - python=3.6
+  - python=3.7
   - black
   - boto3=1.9
   - bottleneck=1.2
@@ -15,23 +16,24 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.0
   - coveralls
-  - dask=1.2
-  - distributed=1.27
+  - dask=2.9
+  - distributed=2.9
   - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
   - hdf5=1.10
   - hypothesis
   - iris=2.2
+  - isort
   - lxml=4.4  # Optional dep of pydap
-  - matplotlib=3.1
-  - mypy=0.730  # Must match .pre-commit-config.yaml
+  - matplotlib-base=3.1
+  - mypy=0.782  # Must match .pre-commit-config.yaml
   - nc-time-axis=1.2
   - netcdf4=1.4
-  - numba=0.44
-  - numpy=1.14
-  - pandas=0.24
-  # - pint  # See py36-min-nep18.yml
+  - numba=0.46
+  - numpy=1.15
+  - pandas=0.25
+  # - pint  # See py37-min-nep18.yml
   - pip
   - pseudonetcdf=3.0
   - pydap=3.2
@@ -39,10 +41,12 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
+  - pytest-xdist
   - rasterio=1.0
-  - scipy=1.0  # Policy allows for 1.2, but scipy>=1.1 breaks numpy=1.14
+  - scipy=1.3
   - seaborn=0.9
-  # - sparse  # See py36-min-nep18.yml
+  - setuptools=40.4
+  # - sparse  # See py37-min-nep18.yml
   - toolz=0.10
   - zarr=2.3
   - pip:

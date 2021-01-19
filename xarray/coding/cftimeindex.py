@@ -49,7 +49,14 @@ import pandas as pd
 
 from xarray.core.utils import is_scalar
 
+from ..core.common import _contains_cftime_datetimes
+from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
+
+# constants for cftimeindex.repr
+CFTIME_REPR_LENGTH = 19
+ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
+REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
 def named(name, pattern):
@@ -84,22 +91,25 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
 
 _BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
 _EXTENDED_PATTERN = build_pattern()
-_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN]
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601(datetime_string):
+def parse_iso8601_like(datetime_string):
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
-    raise ValueError("no ISO-8601 match for string: %s" % datetime_string)
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
     import cftime
 
     default = date_type(1, 1, 1)
-    result = parse_iso8601(timestr)
+    result = parse_iso8601_like(timestr)
     replace = {}
 
     for attr in ["year", "month", "day", "hour", "minute", "second"]:
@@ -214,6 +224,49 @@ def assert_all_valid_date_type(data):
             )
 
 
+def format_row(times, indent=0, separator=", ", row_end=",\n"):
+    """Format a single row from format_times."""
+    return indent * " " + separator.join(map(str, times)) + row_end
+
+
+def format_times(
+    index,
+    max_width,
+    offset,
+    separator=", ",
+    first_row_offset=0,
+    intermediate_row_end=",\n",
+    last_row_end="",
+):
+    """Format values of cftimeindex as pd.Index."""
+    n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
+    n_rows = int(np.ceil(len(index) / n_per_row))
+
+    representation = ""
+    for row in range(n_rows):
+        indent = first_row_offset if row == 0 else offset
+        row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
+        times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
+        representation = representation + format_row(
+            times_for_row, indent=indent, separator=separator, row_end=row_end
+        )
+
+    return representation
+
+
+def format_attrs(index, separator=", "):
+    """Format attributes of CFTimeIndex for __repr__."""
+    attrs = {
+        "dtype": f"'{index.dtype}'",
+        "length": f"{len(index)}",
+        "calendar": f"'{index.calendar}'",
+    }
+    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
+    attrs_str = [f"{k}={v}" for k, v in attrs.items()]
+    attrs_str = f"{separator}".join(attrs_str)
+    return attrs_str
+
+
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
@@ -223,7 +276,7 @@ class CFTimeIndex(pd.Index):
     ----------
     data : array or CFTimeIndex
         Sequence of cftime.datetime objects to use in index
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
 
     See Also
@@ -242,6 +295,9 @@ class CFTimeIndex(pd.Index):
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    days_in_month = _field_accessor(
+        "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
+    )
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
@@ -252,7 +308,48 @@ class CFTimeIndex(pd.Index):
         result = object.__new__(cls)
         result._data = np.array(data, dtype="O")
         result.name = name
+        result._cache = {}
         return result
+
+    def __repr__(self):
+        """
+        Return a string representation for this object.
+        """
+        klass_name = type(self).__name__
+        display_width = OPTIONS["display_width"]
+        offset = len(klass_name) + 2
+
+        if len(self) <= ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS:
+            datastr = format_times(
+                self.values, display_width, offset=offset, first_row_offset=0
+            )
+        else:
+            front_str = format_times(
+                self.values[:REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END],
+                display_width,
+                offset=offset,
+                first_row_offset=0,
+                last_row_end=",",
+            )
+            end_str = format_times(
+                self.values[-REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END:],
+                display_width,
+                offset=offset,
+                first_row_offset=offset,
+            )
+            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+
+        attrs_str = format_attrs(self)
+        # oneliner only if smaller than display_width
+        full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
+        if len(full_repr_str) <= display_width:
+            return full_repr_str
+        else:
+            # if attrs_str too long, one per line
+            if len(attrs_str) >= display_width - offset:
+                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
+            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+            return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
@@ -268,29 +365,32 @@ class CFTimeIndex(pd.Index):
         >>> from cftime import DatetimeNoLeap
         >>> import pandas as pd
         >>> import xarray as xr
-        >>> da = xr.DataArray([1, 2],
-                              coords=[[DatetimeNoLeap(2001, 1, 1),
-                                       DatetimeNoLeap(2001, 2, 1)]],
-                              dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray (time: 1)>
         array([1])
         Coordinates:
           * time     (time) object 2001-01-01 00:00:00
-        >>> da = xr.DataArray([1, 2],
-                              coords=[[pd.Timestamp(2001, 1, 1),
-                                       pd.Timestamp(2001, 2, 1)]],
-                              dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[pd.Timestamp(2001, 1, 1), pd.Timestamp(2001, 2, 1)]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray ()>
         array(1)
         Coordinates:
             time     datetime64[ns] 2001-01-01
-        >>> da = xr.DataArray([1, 2],
-                              coords=[[pd.Timestamp(2001, 1, 1, 1),
-                                       pd.Timestamp(2001, 2, 1)]],
-                              dims=['time'])
-        >>> da.sel(time='2001-01-01')
+        >>> da = xr.DataArray(
+        ...     [1, 2],
+        ...     coords=[[pd.Timestamp(2001, 1, 1, 1), pd.Timestamp(2001, 2, 1)]],
+        ...     dims=["time"],
+        ... )
+        >>> da.sel(time="2001-01-01")
         <xarray.DataArray (time: 1)>
         array([1])
         Coordinates:
@@ -325,6 +425,32 @@ class CFTimeIndex(pd.Index):
         except KeyError:
             raise KeyError(key)
         return loc
+
+    def _get_nearest_indexer(self, target, limit, tolerance):
+        """Adapted from pandas.Index._get_nearest_indexer"""
+        left_indexer = self.get_indexer(target, "pad", limit=limit)
+        right_indexer = self.get_indexer(target, "backfill", limit=limit)
+        left_distances = abs(self.values[left_indexer] - target.values)
+        right_distances = abs(self.values[right_indexer] - target.values)
+
+        if self.is_monotonic_increasing:
+            condition = (left_distances < right_distances) | (right_indexer == -1)
+        else:
+            condition = (left_distances <= right_distances) | (right_indexer == -1)
+        indexer = np.where(condition, left_indexer, right_indexer)
+
+        if tolerance is not None:
+            indexer = self._filter_indexer_tolerance(target, indexer, tolerance)
+        return indexer
+
+    def _filter_indexer_tolerance(self, target, indexer, tolerance):
+        """Adapted from pandas.Index._filter_indexer_tolerance"""
+        if isinstance(target, pd.Index):
+            distance = abs(self.values[indexer] - target.values)
+        else:
+            distance = abs(self.values[indexer] - target)
+        indexer = np.where(distance <= tolerance, indexer, -1)
+        return indexer
 
     def get_loc(self, key, method=None, tolerance=None):
         """Adapted from pandas.tseries.index.DatetimeIndex.get_loc"""
@@ -396,11 +522,13 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> index = xr.cftime_range('2000', periods=1, freq='M')
+        >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
-        CFTimeIndex([2000-01-31 00:00:00], dtype='object')
-        >>> index.shift(1, 'M')
-        CFTimeIndex([2000-02-29 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-31 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
+        >>> index.shift(1, "M")
+        CFTimeIndex([2000-02-29 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         """
         from .cftime_offsets import to_offset
 
@@ -427,17 +555,29 @@ class CFTimeIndex(pd.Index):
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        import cftime
-
-        if isinstance(other, (CFTimeIndex, cftime.datetime)):
-            return pd.TimedeltaIndex(np.array(self) - np.array(other))
+        if _contains_datetime_timedeltas(other):
+            return CFTimeIndex(np.array(self) - other)
         elif isinstance(other, pd.TimedeltaIndex):
             return CFTimeIndex(np.array(self) - other.to_pytimedelta())
+        elif _contains_cftime_datetimes(np.array(other)):
+            try:
+                return pd.TimedeltaIndex(np.array(self) - np.array(other))
+            except OverflowError:
+                raise ValueError(
+                    "The time difference exceeds the range of values "
+                    "that can be expressed at the nanosecond resolution."
+                )
         else:
-            return CFTimeIndex(np.array(self) - other)
+            return NotImplemented
 
     def __rsub__(self, other):
-        return pd.TimedeltaIndex(other - np.array(self))
+        try:
+            return pd.TimedeltaIndex(other - np.array(self))
+        except OverflowError:
+            raise ValueError(
+                "The time difference exceeds the range of values "
+                "that can be expressed at the nanosecond resolution."
+            )
 
     def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.
@@ -472,9 +612,10 @@ class CFTimeIndex(pd.Index):
         Examples
         --------
         >>> import xarray as xr
-        >>> times = xr.cftime_range('2000', periods=2, calendar='gregorian')
+        >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
-        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
+                    dtype='object', length=2, calendar='gregorian', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
@@ -511,15 +652,108 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> rng = xr.cftime_range(start='2000', periods=5, freq='2MS',
-        ...                       calendar='noleap')
-        >>> rng.strftime('%B %d, %Y, %r')
+        >>> rng = xr.cftime_range(
+        ...     start="2000", periods=5, freq="2MS", calendar="noleap"
+        ... )
+        >>> rng.strftime("%B %d, %Y, %r")
         Index(['January 01, 2000, 12:00:00 AM', 'March 01, 2000, 12:00:00 AM',
                'May 01, 2000, 12:00:00 AM', 'July 01, 2000, 12:00:00 AM',
                'September 01, 2000, 12:00:00 AM'],
               dtype='object')
         """
         return pd.Index([date.strftime(date_format) for date in self._data])
+
+    @property
+    def asi8(self):
+        """Convert to integers with units of microseconds since 1970-01-01."""
+        from ..core.resample_cftime import exact_cftime_datetime_difference
+
+        epoch = self.date_type(1970, 1, 1)
+        return np.array(
+            [
+                _total_microseconds(exact_cftime_datetime_difference(epoch, date))
+                for date in self.values
+            ],
+            dtype=np.int64,
+        )
+
+    @property
+    def calendar(self):
+        """The calendar used by the datetimes in the index."""
+        from .times import infer_calendar_name
+
+        return infer_calendar_name(self)
+
+    @property
+    def freq(self):
+        """The frequency used by the dates in the index."""
+        from .frequencies import infer_freq
+
+        return infer_freq(self)
+
+    def _round_via_method(self, freq, method):
+        """Round dates using a specified method."""
+        from .cftime_offsets import CFTIME_TICKS, to_offset
+
+        offset = to_offset(freq)
+        if not isinstance(offset, CFTIME_TICKS):
+            raise ValueError(f"{offset} is a non-fixed frequency")
+
+        unit = _total_microseconds(offset.as_timedelta())
+        values = self.asi8
+        rounded = method(values, unit)
+        return _cftimeindex_from_i8(rounded, self.date_type, self.name)
+
+    def floor(self, freq):
+        """Round dates down to fixed frequency.
+
+        Parameters
+        ----------
+        freq : str
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _floor_int)
+
+    def ceil(self, freq):
+        """Round dates up to fixed frequency.
+
+        Parameters
+        ----------
+        freq : str
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _ceil_int)
+
+    def round(self, freq):
+        """Round dates to a fixed frequency.
+
+        Parameters
+        ----------
+        freq : str
+            The frequency level to round the index to.  Must be a fixed
+            frequency like 'S' (second) not 'ME' (month end).  See `frequency
+            aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
+            for a list of possible values.
+
+        Returns
+        -------
+        CFTimeIndex
+        """
+        return self._round_via_method(freq, _round_to_nearest_half_even)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
@@ -547,3 +781,67 @@ def _parse_array_of_cftime_strings(strings, date_type):
     return np.array(
         [_parse_iso8601_without_reso(date_type, s) for s in strings.ravel()]
     ).reshape(strings.shape)
+
+
+def _contains_datetime_timedeltas(array):
+    """Check if an input array contains datetime.timedelta objects."""
+    array = np.atleast_1d(array)
+    return isinstance(array[0], timedelta)
+
+
+def _cftimeindex_from_i8(values, date_type, name):
+    """Construct a CFTimeIndex from an array of integers.
+
+    Parameters
+    ----------
+    values : np.array
+        Integers representing microseconds since 1970-01-01.
+    date_type : cftime.datetime
+        Type of date for the index.
+    name : str
+        Name of the index.
+
+    Returns
+    -------
+    CFTimeIndex
+    """
+    epoch = date_type(1970, 1, 1)
+    dates = np.array([epoch + timedelta(microseconds=int(value)) for value in values])
+    return CFTimeIndex(dates, name=name)
+
+
+def _total_microseconds(delta):
+    """Compute the total number of microseconds of a datetime.timedelta.
+
+    Parameters
+    ----------
+    delta : datetime.timedelta
+        Input timedelta.
+
+    Returns
+    -------
+    int
+    """
+    return delta / timedelta(microseconds=1)
+
+
+def _floor_int(values, unit):
+    """Copied from pandas."""
+    return values - np.remainder(values, unit)
+
+
+def _ceil_int(values, unit):
+    """Copied from pandas."""
+    return values + np.remainder(-values, unit)
+
+
+def _round_to_nearest_half_even(values, unit):
+    """Copied from pandas."""
+    if unit % 2:
+        return _ceil_int(values - unit // 2, unit)
+    quotient, remainder = np.divmod(values, unit)
+    mask = np.logical_or(
+        remainder > (unit // 2), np.logical_and(remainder == (unit // 2), quotient % 2)
+    )
+    quotient[mask] += 1
+    return quotient * unit

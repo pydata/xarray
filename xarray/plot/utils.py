@@ -21,26 +21,6 @@ except ImportError:
 ROBUST_PERCENTILE = 2.0
 
 
-def import_seaborn():
-    """import seaborn and handle deprecation of apionly module"""
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        try:
-            import seaborn.apionly as sns
-
-            if (
-                w
-                and issubclass(w[-1].category, UserWarning)
-                and ("seaborn.apionly module" in str(w[-1].message))
-            ):
-                raise ImportError
-        except ImportError:
-            import seaborn as sns
-        finally:
-            warnings.resetwarnings()
-    return sns
-
-
 _registered = False
 
 
@@ -98,6 +78,30 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     # copy the old cmap name, for easier testing
     new_cmap.name = getattr(cmap, "name", cmap)
 
+    # copy colors to use for bad, under, and over values in case they have been
+    # set to non-default values
+    try:
+        # matplotlib<3.2 only uses bad color for masked values
+        bad = cmap(np.ma.masked_invalid([np.nan]))[0]
+    except TypeError:
+        # cmap was a str or list rather than a color-map object, so there are
+        # no bad, under or over values to check or copy
+        pass
+    else:
+        under = cmap(-np.inf)
+        over = cmap(np.inf)
+
+        new_cmap.set_bad(bad)
+
+        # Only update under and over if they were explicitly changed by the user
+        # (i.e. are different from the lowest or highest values in cmap). Otherwise
+        # leave unchanged so new_cmap uses its default values (its own lowest and
+        # highest values).
+        if under != cmap(0):
+            new_cmap.set_under(under)
+        if over != cmap(cmap.N - 1):
+            new_cmap.set_over(over)
+
     return new_cmap, cnorm
 
 
@@ -119,7 +123,7 @@ def _color_palette(cmap, n_colors):
         except ValueError:
             # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
-                from seaborn.apionly import color_palette
+                from seaborn import color_palette
 
                 pal = color_palette(cmap, n_colors=n_colors)
             except (ValueError, ImportError):
@@ -149,6 +153,7 @@ def _determine_cmap_params(
     levels=None,
     filled=True,
     norm=None,
+    _is_facetgrid=False,
 ):
     """
     Use some heuristics to set good defaults for colorbar and range.
@@ -164,6 +169,9 @@ def _determine_cmap_params(
         Use depends on the type of the plotting function
     """
     import matplotlib as mpl
+
+    if isinstance(levels, Iterable):
+        levels = sorted(levels)
 
     calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
@@ -212,8 +220,13 @@ def _determine_cmap_params(
         vlim = abs(vmax - center)
 
     if possibly_divergent:
+        levels_are_divergent = (
+            isinstance(levels, Iterable) and levels[0] * levels[-1] < 0
+        )
         # kwargs not specific about divergent or not: infer defaults from data
-        divergent = ((vmin < 0) and (vmax > 0)) or not center_is_none
+        divergent = (
+            ((vmin < 0) and (vmax > 0)) or not center_is_none or levels_are_divergent
+        )
     else:
         divergent = False
 
@@ -233,18 +246,14 @@ def _determine_cmap_params(
             norm.vmin = vmin
         else:
             if not vmin_was_none and vmin != norm.vmin:
-                raise ValueError(
-                    "Cannot supply vmin and a norm" + " with a different vmin."
-                )
+                raise ValueError("Cannot supply vmin and a norm with a different vmin.")
             vmin = norm.vmin
 
         if norm.vmax is None:
             norm.vmax = vmax
         else:
             if not vmax_was_none and vmax != norm.vmax:
-                raise ValueError(
-                    "Cannot supply vmax and a norm" + " with a different vmax."
-                )
+                raise ValueError("Cannot supply vmax and a norm with a different vmax.")
             vmax = norm.vmax
 
     # if BoundaryNorm, then set levels
@@ -259,7 +268,7 @@ def _determine_cmap_params(
             cmap = OPTIONS["cmap_sequential"]
 
     # Handle discrete levels
-    if levels is not None and norm is None:
+    if levels is not None:
         if is_scalar(levels):
             if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
@@ -271,12 +280,22 @@ def _determine_cmap_params(
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
+    # GH3734
+    if vmin == vmax:
+        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
+
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
+
+    # vmin & vmax needs to be None if norm is passed
+    # TODO: always return a norm with vmin and vmax
+    if norm is not None:
+        vmin = None
+        vmax = None
 
     return dict(
         vmin=vmin, vmax=vmax, cmap=cmap, extend=extend, levels=levels, norm=norm
@@ -347,7 +366,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
     darray must be a 2 dimensional data array, or 3d for imshow only.
     """
-    assert x is None or x != y
+    if (x is not None) and (x == y):
+        raise ValueError("x and y cannot be equal.")
+
     if imshow and darray.ndim == 3:
         return _infer_xy_labels_3d(darray, x, y, rgb)
 
@@ -356,27 +377,53 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError("DataArray must be 2d")
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims and y not in darray.coords:
-            raise ValueError("y must be a dimension name if x is not supplied")
+        _assert_valid_xy(darray, y, "y")
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims and x not in darray.coords:
-            raise ValueError("x must be a dimension name if y is not supplied")
+        _assert_valid_xy(darray, x, "x")
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
-    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
-        raise ValueError("x and y must be coordinate variables")
+    else:
+        _assert_valid_xy(darray, x, "x")
+        _assert_valid_xy(darray, y, "y")
+
+        if (
+            all(k in darray._level_coords for k in (x, y))
+            and darray._level_coords[x] == darray._level_coords[y]
+        ):
+            raise ValueError("x and y cannot be levels of the same MultiIndex")
+
     return x, y
 
 
-def get_axis(figsize, size, aspect, ax):
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
+def _assert_valid_xy(darray, xy, name):
+    """
+    make sure x and y passed to plotting functions are valid
+    """
+
+    # MultiIndex cannot be plotted; no point in allowing them here
+    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
+
+    valid_xy = (
+        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    ) - multiindex
+
+    if xy not in valid_xy:
+        valid_xy_str = "', '".join(sorted(valid_xy))
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
+
+
+def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
@@ -389,15 +436,18 @@ def get_axis(figsize, size, aspect, ax):
     elif aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
+    if kwargs and ax is not None:
+        raise ValueError("cannot use subplot_kws with existing ax")
+
     if ax is None:
-        ax = plt.gca()
+        ax = plt.gca(**kwargs)
 
     return ax
 
 
 def label_from_attrs(da, extra=""):
-    """ Makes informative labels if variable metadata (attrs) follows
-        CF conventions. """
+    """Makes informative labels if variable metadata (attrs) follows
+    CF conventions."""
 
     if da.attrs.get("long_name"):
         name = da.attrs["long_name"]
@@ -453,6 +503,48 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
+def _resolve_intervals_1dplot(xval, yval, kwargs):
+    """
+    Helper function to replace the values of x and/or y coordinate arrays
+    containing pd.Interval with their mid-points or - for step plots - double
+    points which double the length.
+    """
+    x_suffix = ""
+    y_suffix = ""
+
+    # Is it a step plot? (see matplotlib.Axes.step)
+    if kwargs.get("drawstyle", "").startswith("steps-"):
+
+        remove_drawstyle = False
+        # Convert intervals to double points
+        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+            raise TypeError("Can't step plot intervals against intervals.")
+        if _valid_other_type(xval, [pd.Interval]):
+            xval, yval = _interval_to_double_bound_points(xval, yval)
+            remove_drawstyle = True
+        if _valid_other_type(yval, [pd.Interval]):
+            yval, xval = _interval_to_double_bound_points(yval, xval)
+            remove_drawstyle = True
+
+        # Remove steps-* to be sure that matplotlib is not confused
+        if remove_drawstyle:
+            del kwargs["drawstyle"]
+
+    # Is it another kind of plot?
+    else:
+
+        # Convert intervals to mid points and adjust labels
+        if _valid_other_type(xval, [pd.Interval]):
+            xval = _interval_to_mid_points(xval)
+            x_suffix = "_center"
+        if _valid_other_type(yval, [pd.Interval]):
+            yval = _interval_to_mid_points(yval)
+            y_suffix = "_center"
+
+    # return converted arguments
+    return xval, yval, x_suffix, y_suffix, kwargs
+
+
 def _resolve_intervals_2dplot(val, func_name):
     """
     Helper function to replace the values of a coordinate array containing
@@ -494,7 +586,7 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
     other_types = [datetime]
     try:
         import cftime
@@ -509,10 +601,10 @@ def _ensure_plottable(*args):
             or _valid_other_type(np.array(x), other_types)
         ):
             raise TypeError(
-                "Plotting requires coordinates to be numeric "
-                "or dates of type np.datetime64, "
+                "Plotting requires coordinates to be numeric, boolean, "
+                "or dates of type numpy.datetime64, "
                 "datetime.datetime, cftime.datetime or "
-                "pd.Interval."
+                f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
             _valid_other_type(np.array(x), cftime_datetime)
@@ -533,24 +625,25 @@ def _is_numeric(arr):
 
 
 def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
-    plt = import_matplotlib_pyplot()
+
     cbar_kwargs.setdefault("extend", cmap_params["extend"])
     if cbar_ax is None:
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
 
-    cbar = plt.colorbar(primitive, **cbar_kwargs)
+    # dont pass extend as kwarg if it is in the mappable
+    if hasattr(primitive, "extend"):
+        cbar_kwargs.pop("extend")
+
+    fig = ax.get_figure()
+    cbar = fig.colorbar(primitive, **cbar_kwargs)
 
     return cbar
 
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
-    # TODO: remove when min numpy version is bumped to 1.13
-    # There's a cyclic dependency via DataArray, so we can't import from
-    # xarray.ufuncs in global scope.
-    from xarray.ufuncs import maximum, minimum
 
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
@@ -579,9 +672,7 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype("f8") - vmin) / (vmax - vmin)).astype("f4")
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "xarray.ufuncs", PendingDeprecationWarning)
-        return minimum(maximum(darray, 0), 1)
+    return np.minimum(np.maximum(darray, 0), 1)
 
 
 def _update_axes(
@@ -693,6 +784,7 @@ def _process_cmap_cbar_kwargs(
     colors=None,
     cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
     levels=None,
+    _is_facetgrid=False,
     **kwargs,
 ):
     """
@@ -739,6 +831,12 @@ def _process_cmap_cbar_kwargs(
 
     cmap_args = getfullargspec(_determine_cmap_params).args
     cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-    cmap_params = _determine_cmap_params(**cmap_kwargs)
+    if not _is_facetgrid:
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+    else:
+        cmap_params = {
+            k: cmap_kwargs[k]
+            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+        }
 
     return cmap_params, cbar_kwargs

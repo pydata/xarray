@@ -8,7 +8,7 @@ from .coding import strings, times, variables
 from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
-from .core.pycompat import dask_array_type
+from .core.pycompat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -19,15 +19,16 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     big endian) into native endianness, so they can be used with Cython
     functions, such as those found in bottleneck and pandas.
 
-    >>> x = np.arange(5, dtype='>i2')
+    >>> x = np.arange(5, dtype=">i2")
 
     >>> x.dtype
     dtype('>i2')
 
-    >>> NativeEndianArray(x).dtype
+    >>> NativeEndiannessArray(x).dtype
     dtype('int16')
 
-    >>> NativeEndianArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> NativeEndiannessArray(x)[indexer].dtype
     dtype('int16')
     """
 
@@ -50,15 +51,16 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     This is useful for decoding boolean arrays from integer typed netCDF
     variables.
 
-    >>> x = np.array([1, 0, 1, 1, 0], dtype='i1')
+    >>> x = np.array([1, 0, 1, 1, 0], dtype="i1")
 
     >>> x.dtype
-    dtype('>i2')
+    dtype('int8')
 
     >>> BoolTypeArray(x).dtype
     dtype('bool')
 
-    >>> BoolTypeArray(x)[:].dtype
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> BoolTypeArray(x)[indexer].dtype
     dtype('bool')
     """
 
@@ -116,7 +118,7 @@ def maybe_default_fill_value(var):
 
 def maybe_encode_bools(var):
     if (
-        (var.dtype == np.bool)
+        (var.dtype == bool)
         and ("dtype" not in var.encoding)
         and ("dtype" not in var.attrs)
     ):
@@ -178,7 +180,7 @@ def ensure_dtype_not_object(var, name=None):
     if var.dtype.kind == "O":
         dims, data, attrs, encoding = _var_as_tuple(var)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             warnings.warn(
                 "variable {} has data in the form of a dask array with "
                 "dtype=object, which means it is being loaded into memory "
@@ -230,12 +232,12 @@ def encode_cf_variable(var, needs_copy=True, name=None):
 
     Parameters
     ----------
-    var : xarray.Variable
+    var : Variable
         A variable holding un-encoded data.
 
     Returns
     -------
-    out : xarray.Variable
+    out : Variable
         A variable which has been encoded as described above.
     """
     ensure_not_multiindex(var, name=name)
@@ -266,6 +268,7 @@ def decode_cf_variable(
     decode_endianness=True,
     stack_char_dim=True,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """
     Decodes a variable which may hold CF encoded information.
@@ -277,28 +280,28 @@ def decode_cf_variable(
 
     Parameters
     ----------
-    name: str
+    name : str
         Name of the variable. Used for better error messages.
     var : Variable
         A variable holding potentially CF encoded information.
     concat_characters : bool
         Should character arrays be concatenated to strings, for
-        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
-    mask_and_scale: bool
+        example: ["h", "e", "l", "l", "o"] -> "hello"
+    mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
         treat integer arrays as unsigned.
     decode_times : bool
-        Decode cf times ('hours since 2000-01-01') to np.datetime64.
+        Decode cf times ("hours since 2000-01-01") to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
     stack_char_dim : bool
         Whether to stack characters into bytes along the last dimension of this
         array. Passed as an argument because we need to look at the full
         dataset to figure out if this is appropriate.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
-        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
         ``np.datetime64[ns]`` objects; if this is not possible, decode times to
         ``cftime.datetime`` objects. If True, always decode times to
@@ -315,6 +318,9 @@ def decode_cf_variable(
     var = as_variable(var)
     original_dtype = var.dtype
 
+    if decode_timedelta is None:
+        decode_timedelta = decode_times
+
     if concat_characters:
         if stack_char_dim:
             var = strings.CharacterArrayCoder().decode(var, name=name)
@@ -328,12 +334,10 @@ def decode_cf_variable(
         ]:
             var = coder.decode(var, name=name)
 
+    if decode_timedelta:
+        var = times.CFTimedeltaCoder().decode(var, name=name)
     if decode_times:
-        for coder in [
-            times.CFTimedeltaCoder(),
-            times.CFDatetimeCoder(use_cftime=use_cftime),
-        ]:
-            var = coder.decode(var, name=name)
+        var = times.CFDatetimeCoder(use_cftime=use_cftime).decode(var, name=name)
 
     dimensions, data, attributes, encoding = variables.unpack_for_decoding(var)
     # TODO(shoyer): convert everything below to use coders
@@ -349,7 +353,7 @@ def decode_cf_variable(
         del attributes["dtype"]
         data = BoolTypeArray(data)
 
-    if not isinstance(data, dask_array_type):
+    if not is_duck_dask_array(data):
         data = indexing.LazilyOuterIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding)
@@ -442,6 +446,7 @@ def decode_cf_variables(
     decode_coords=True,
     drop_variables=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """
     Decode several CF encoded variables.
@@ -492,6 +497,7 @@ def decode_cf_variables(
             decode_times=decode_times,
             stack_char_dim=stack_char_dim,
             use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
         )
         if decode_coords:
             var_attrs = new_vars[k].attrs
@@ -518,6 +524,7 @@ def decode_cf(
     decode_coords=True,
     drop_variables=None,
     use_cftime=None,
+    decode_timedelta=None,
 ):
     """Decode the given Dataset or Datastore according to CF conventions into
     a new Dataset.
@@ -528,23 +535,23 @@ def decode_cf(
         Object to decode.
     concat_characters : bool, optional
         Should character arrays be concatenated to strings, for
-        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
-    mask_and_scale: bool, optional
+        example: ["h", "e", "l", "l", "o"] -> "hello"
+    mask_and_scale : bool, optional
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
     decode_times : bool, optional
-        Decode cf times (e.g., integers since 'hours since 2000-01-01') to
+        Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
     decode_coords : bool, optional
         Use the 'coordinates' attribute on variable (or the dataset itself) to
         identify coordinates.
-    drop_variables: string or iterable, optional
+    drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
-        (e.g. 'gregorian', 'proleptic_gregorian', 'standard', or not
+        (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
         ``np.datetime64[ns]`` objects; if this is not possible, decode times to
         ``cftime.datetime`` objects. If True, always decode times to
@@ -552,24 +559,29 @@ def decode_cf(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
 
     Returns
     -------
     decoded : Dataset
     """
-    from .core.dataset import Dataset
     from .backends.common import AbstractDataStore
+    from .core.dataset import Dataset
 
     if isinstance(obj, Dataset):
         vars = obj._variables
         attrs = obj.attrs
         extra_coords = set(obj.coords)
-        file_obj = obj._file_obj
+        close = obj._close
         encoding = obj.encoding
     elif isinstance(obj, AbstractDataStore):
         vars, attrs = obj.load()
         extra_coords = set()
-        file_obj = obj
+        close = obj.close
         encoding = obj.get_encoding()
     else:
         raise TypeError("can only decode Dataset or DataStore objects")
@@ -583,10 +595,11 @@ def decode_cf(
         decode_coords,
         drop_variables=drop_variables,
         use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
-    ds._file_obj = file_obj
+    ds.set_close(close)
     ds.encoding = encoding
 
     return ds
@@ -610,12 +623,12 @@ def cf_decoder(
         A dictionary mapping from attribute name to value
     concat_characters : bool
         Should character arrays be concatenated to strings, for
-        example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
+        example: ["h", "e", "l", "l", "o"] -> "hello"
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
     decode_times : bool
-        Decode cf times ('hours since 2000-01-01') to np.datetime64.
+        Decode cf times ("hours since 2000-01-01") to np.datetime64.
 
     Returns
     -------

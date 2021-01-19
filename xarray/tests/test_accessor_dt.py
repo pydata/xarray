@@ -1,3 +1,5 @@
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -6,13 +8,14 @@ import xarray as xr
 
 from . import (
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
+    assert_identical,
+    raise_if_dask_computes,
     raises_regex,
     requires_cftime,
     requires_dask,
 )
-
-from .test_dask import raise_if_dask_computes, assert_chunks_equal
 
 
 class TestDatetimeAccessor:
@@ -66,10 +69,48 @@ class TestDatetimeAccessor:
         ],
     )
     def test_field_access(self, field):
+
+        if LooseVersion(pd.__version__) >= "1.1.0" and field in ["week", "weekofyear"]:
+            data = self.times.isocalendar()["week"]
+        else:
+            data = getattr(self.times, field)
+
+        expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
+
+        if field in ["week", "weekofyear"]:
+            with pytest.warns(
+                FutureWarning, match="dt.weekofyear and dt.week have been deprecated"
+            ):
+                actual = getattr(self.data.time.dt, field)
+        else:
+            actual = getattr(self.data.time.dt, field)
+
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        "field, pandas_field",
+        [
+            ("year", "year"),
+            ("week", "week"),
+            ("weekday", "day"),
+        ],
+    )
+    def test_isocalendar(self, field, pandas_field):
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            with raises_regex(
+                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            ):
+                self.data.time.dt.isocalendar()[field]
+            return
+
+        # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
+        expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
         expected = xr.DataArray(
-            getattr(self.times, field), name=field, coords=[self.times], dims=["time"]
+            expected, name=field, coords=[self.times], dims=["time"]
         )
-        actual = getattr(self.data.time.dt, field)
+
+        actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
 
     def test_strftime(self):
@@ -80,10 +121,11 @@ class TestDatetimeAccessor:
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
-        nontime_data["time"].values = int_data
+        nontime_data = nontime_data.assign_coords(time=int_data)
         with raises_regex(TypeError, "dt"):
             nontime_data.time.dt
 
+    @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
     @requires_dask
     @pytest.mark.parametrize(
         "field",
@@ -123,6 +165,39 @@ class TestDatetimeAccessor:
 
         with raise_if_dask_computes():
             actual = getattr(dask_times_2d.dt, field)
+
+        assert isinstance(actual.data, da.Array)
+        assert_chunks_equal(actual, dask_times_2d)
+        assert_equal(actual.compute(), expected.compute())
+
+    @requires_dask
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "year",
+            "week",
+            "weekday",
+        ],
+    )
+    def test_isocalendar_dask(self, field):
+        import dask.array as da
+
+        if LooseVersion(pd.__version__) < "1.1.0":
+            with raises_regex(
+                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            ):
+                self.data.time.dt.isocalendar()[field]
+            return
+
+        expected = getattr(self.times_data.dt.isocalendar(), field)
+
+        dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
+        dask_times_2d = xr.DataArray(
+            dask_times_arr, coords=self.data.coords, dims=self.data.dims, name="data"
+        )
+
+        with raise_if_dask_computes():
+            actual = dask_times_2d.dt.isocalendar()[field]
 
         assert isinstance(actual.data, da.Array)
         assert_chunks_equal(actual, dask_times_2d)
@@ -213,7 +288,7 @@ class TestTimedeltaAccessor:
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
-        nontime_data["time"].values = int_data
+        nontime_data = nontime_data.assign_coords(time=int_data)
         with raises_regex(TypeError, "dt"):
             nontime_data.time.dt
 
@@ -347,6 +422,16 @@ def test_field_access(data, field):
 
 
 @requires_cftime
+def test_isocalendar_cftime(data):
+
+    with raises_regex(
+        AttributeError, "'CFTimeIndex' object has no attribute 'isocalendar'"
+    ):
+        data.time.dt.isocalendar()
+
+
+@requires_cftime
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cftime_strftime_access(data):
     """ compare cftime formatting against datetime formatting """
     date_format = "%Y%m%d%H"
@@ -436,3 +521,106 @@ def test_seasons(cftime_date_type):
     seasons = xr.DataArray(seasons)
 
     assert_array_equal(seasons.values, dates.dt.season.values)
+
+
+@pytest.fixture
+def cftime_rounding_dataarray(cftime_date_type):
+    return xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 1), cftime_date_type(1, 1, 1, 15)],
+            [cftime_date_type(1, 1, 1, 23), cftime_date_type(1, 1, 2, 1)],
+        ]
+    )
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_floor_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 1, 0)],
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 2, 0)],
+        ],
+        name="floor",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.floor(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.floor(freq)
+
+    assert_identical(result, expected)
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_ceil_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 2, 0)],
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 3, 0)],
+        ],
+        name="ceil",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.ceil(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.ceil(freq)
+
+    assert_identical(result, expected)
+
+
+@requires_cftime
+@requires_dask
+@pytest.mark.parametrize("use_dask", [False, True])
+def test_cftime_round_accessor(cftime_rounding_dataarray, cftime_date_type, use_dask):
+    import dask.array as da
+
+    freq = "D"
+    expected = xr.DataArray(
+        [
+            [cftime_date_type(1, 1, 1, 0), cftime_date_type(1, 1, 2, 0)],
+            [cftime_date_type(1, 1, 2, 0), cftime_date_type(1, 1, 2, 0)],
+        ],
+        name="round",
+    )
+
+    if use_dask:
+        chunks = {"dim_0": 1}
+        # Currently a compute is done to inspect a single value of the array
+        # if it is of object dtype to check if it is a cftime.datetime (if not
+        # we raise an error when using the dt accessor).
+        with raise_if_dask_computes(max_computes=1):
+            result = cftime_rounding_dataarray.chunk(chunks).dt.round(freq)
+        expected = expected.chunk(chunks)
+        assert isinstance(result.data, da.Array)
+        assert result.chunks == expected.chunks
+    else:
+        result = cftime_rounding_dataarray.dt.round(freq)
+
+    assert_identical(result, expected)

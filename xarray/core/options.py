@@ -1,26 +1,28 @@
 import warnings
 
-DISPLAY_WIDTH = "display_width"
 ARITHMETIC_JOIN = "arithmetic_join"
+CMAP_DIVERGENT = "cmap_divergent"
+CMAP_SEQUENTIAL = "cmap_sequential"
+DISPLAY_MAX_ROWS = "display_max_rows"
+DISPLAY_STYLE = "display_style"
+DISPLAY_WIDTH = "display_width"
 ENABLE_CFTIMEINDEX = "enable_cftimeindex"
 FILE_CACHE_MAXSIZE = "file_cache_maxsize"
-WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
-CMAP_SEQUENTIAL = "cmap_sequential"
-CMAP_DIVERGENT = "cmap_divergent"
 KEEP_ATTRS = "keep_attrs"
-DISPLAY_STYLE = "display_style"
+WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
 
 
 OPTIONS = {
-    DISPLAY_WIDTH: 80,
     ARITHMETIC_JOIN: "inner",
+    CMAP_DIVERGENT: "RdBu_r",
+    CMAP_SEQUENTIAL: "viridis",
+    DISPLAY_MAX_ROWS: 12,
+    DISPLAY_STYLE: "html",
+    DISPLAY_WIDTH: 80,
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
-    WARN_FOR_UNCLOSED_FILES: False,
-    CMAP_SEQUENTIAL: "viridis",
-    CMAP_DIVERGENT: "RdBu_r",
     KEEP_ATTRS: "default",
-    DISPLAY_STYLE: "text",
+    WARN_FOR_UNCLOSED_FILES: False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -32,13 +34,14 @@ def _positive_integer(value):
 
 
 _VALIDATORS = {
-    DISPLAY_WIDTH: _positive_integer,
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
+    DISPLAY_MAX_ROWS: _positive_integer,
+    DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
+    DISPLAY_WIDTH: _positive_integer,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
-    WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
+    WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
 }
 
 
@@ -57,8 +60,8 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
 
 
 _SETTERS = {
-    FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
     ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex,
+    FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
 }
 
 
@@ -71,7 +74,7 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of" " True, False or 'default'."
+            "The global option keep_attrs must be one of True, False or 'default'."
         )
 
 
@@ -108,19 +111,21 @@ class set_options:
 
     You can use ``set_options`` either as a context manager:
 
-    >>> ds = xr.Dataset({'x': np.arange(1000)})
+    >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
     ...     print(ds)
+    ...
     <xarray.Dataset>
     Dimensions:  (x: 1000)
     Coordinates:
-      * x        (x) int64 0 1 2 3 4 5 6 ...
+      * x        (x) int64 0 1 2 ... 998 999
     Data variables:
         *empty*
 
     Or to set global options:
 
-    >>> xr.set_options(display_width=80)
+    >>> xr.set_options(display_width=80)  # doctest: +ELLIPSIS
+    <xarray.core.options.set_options object at 0x...>
     """
 
     def __init__(self, **kwargs):
@@ -132,7 +137,15 @@ class set_options:
                     % (k, set(OPTIONS))
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                raise ValueError(f"option {k!r} given an invalid value: {v!r}")
+                if k == ARITHMETIC_JOIN:
+                    expected = f"Expected one of {_JOIN_OPTIONS!r}"
+                elif k == DISPLAY_STYLE:
+                    expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
+                else:
+                    expected = ""
+                raise ValueError(
+                    f"option {k!r} given an invalid value: {v!r}. " + expected
+                )
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 

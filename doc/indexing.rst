@@ -4,11 +4,12 @@ Indexing and selecting data
 ===========================
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 xarray offers extremely flexible indexing routines that combine the best
@@ -60,9 +61,13 @@ DataArray:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.random.rand(4, 3),
-                      [('time', pd.date_range('2000-01-01', periods=4)),
-                       ('space', ['IA', 'IL', 'IN'])])
+    da = xr.DataArray(
+        np.random.rand(4, 3),
+        [
+            ("time", pd.date_range("2000-01-01", periods=4)),
+            ("space", ["IA", "IL", "IN"]),
+        ],
+    )
     da[:2]
     da[0, 0]
     da[:, [2, 1]]
@@ -81,7 +86,7 @@ fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attri
 
 .. ipython:: python
 
-    da.loc['2000-01-01':'2000-01-02', 'IA']
+    da.loc["2000-01-01":"2000-01-02", "IA"]
 
 In this example, the selected is a subpart of the array
 in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
@@ -98,7 +103,7 @@ Setting values with label based indexing is also supported:
 
 .. ipython:: python
 
-    da.loc['2000-01-01', ['IL', 'IN']] = -10
+    da.loc["2000-01-01", ["IL", "IN"]] = -10
     da
 
 
@@ -117,7 +122,7 @@ use them explicitly to slice data. There are two ways to do this:
         da[dict(space=0, time=slice(None, 2))]
 
         # index by dimension coordinate labels
-        da.loc[dict(time=slice('2000-01-01', '2000-01-02'))]
+        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
 
 2. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
@@ -128,7 +133,7 @@ use them explicitly to slice data. There are two ways to do this:
         da.isel(space=0, time=slice(None, 2))
 
         # index by dimension coordinate labels
-        da.sel(time=slice('2000-01-01', '2000-01-02'))
+        da.sel(time=slice("2000-01-01", "2000-01-02"))
 
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
@@ -156,16 +161,16 @@ enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
 
 .. ipython:: python
 
-   da = xr.DataArray([1, 2, 3], [('x', [0, 1, 2])])
-   da.sel(x=[1.1, 1.9], method='nearest')
-   da.sel(x=0.1, method='backfill')
-   da.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
+    da = xr.DataArray([1, 2, 3], [("x", [0, 1, 2])])
+    da.sel(x=[1.1, 1.9], method="nearest")
+    da.sel(x=0.1, method="backfill")
+    da.reindex(x=[0.5, 1, 1.5, 2, 2.5], method="pad")
 
 Tolerance limits the maximum distance for valid matches with an inexact lookup:
 
 .. ipython:: python
 
-   da.reindex(x=[1.1, 1.5], method='nearest', tolerance=0.2)
+    da.reindex(x=[1.1, 1.5], method="nearest", tolerance=0.2)
 
 The method parameter is not yet supported if any of the arguments
 to ``.sel()`` is a ``slice`` object:
@@ -173,7 +178,7 @@ to ``.sel()`` is a ``slice`` object:
 .. ipython::
    :verbatim:
 
-   In [1]: da.sel(x=slice(1, 3), method='nearest')
+   In [1]: da.sel(x=slice(1, 3), method="nearest")
    NotImplementedError
 
 However, you don't need to use ``method`` to do inexact slicing. Slicing
@@ -182,15 +187,15 @@ labels are monotonic increasing:
 
 .. ipython:: python
 
-   da.sel(x=slice(0.9, 3.1))
+    da.sel(x=slice(0.9, 3.1))
 
 Indexing axes with monotonic decreasing labels also works, as long as the
 ``slice`` or ``.loc`` arguments are also decreasing:
 
 .. ipython:: python
 
-   reversed_da = da[::-1]
-   reversed_da.loc[3.1:0.9]
+    reversed_da = da[::-1]
+    reversed_da.loc[3.1:0.9]
 
 
 .. note::
@@ -227,7 +232,7 @@ arrays). However, you can do normal indexing with dimension names:
 .. ipython:: python
 
     ds[dict(space=[0], time=[0])]
-    ds.loc[dict(time='2000-01-01')]
+    ds.loc[dict(time="2000-01-01")]
 
 Using indexing to *assign* values to a subset of dataset (e.g.,
 ``ds[dict(space=0)] = 1``) is not yet supported.
@@ -240,7 +245,7 @@ index labels along a dimension dropped:
 
 .. ipython:: python
 
-    ds.drop_sel(space=['IN', 'IL'])
+    ds.drop_sel(space=["IN", "IL"])
 
 ``drop_sel`` is both a ``Dataset`` and ``DataArray`` method.
 
@@ -249,7 +254,7 @@ Any variables with these dimensions are also dropped:
 
 .. ipython:: python
 
-    ds.drop_dims('time')
+    ds.drop_dims("time")
 
 .. _masking with where:
 
@@ -263,7 +268,7 @@ xarray, use :py:meth:`~xarray.DataArray.where`:
 
 .. ipython:: python
 
-    da = xr.DataArray(np.arange(16).reshape(4, 4), dims=['x', 'y'])
+    da = xr.DataArray(np.arange(16).reshape(4, 4), dims=["x", "y"])
     da.where(da.x + da.y < 4)
 
 This is particularly useful for ragged indexing of multi-dimensional data,
@@ -296,7 +301,7 @@ multiple values, use :py:meth:`~xarray.DataArray.isin`:
 
 .. ipython:: python
 
-    da = xr.DataArray([1, 2, 3, 4, 5], dims=['x'])
+    da = xr.DataArray([1, 2, 3, 4, 5], dims=["x"])
     da.isin([2, 4])
 
 :py:meth:`~xarray.DataArray.isin` works particularly well with
@@ -305,7 +310,7 @@ already labels of an array:
 
 .. ipython:: python
 
-    lookup = xr.DataArray([-1, -2, -3, -4, -5], dims=['x'])
+    lookup = xr.DataArray([-1, -2, -3, -4, -5], dims=["x"])
     da.where(lookup.isin([-2, -4]), drop=True)
 
 However, some caution is in order: when done repeatedly, this type of indexing
@@ -328,14 +333,13 @@ MATLAB, or after using the :py:func:`numpy.ix_` helper:
 
 .. ipython:: python
 
-
     da = xr.DataArray(
         np.arange(12).reshape((3, 4)),
         dims=["x", "y"],
         coords={"x": [0, 1, 2], "y": ["a", "b", "c", "d"]},
     )
     da
-    da[[0, 1], [1, 1]]
+    da[[0, 2, 2], [1, 3]]
 
 For more flexibility, you can supply :py:meth:`~xarray.DataArray` objects
 as indexers.
@@ -344,8 +348,8 @@ dimensions:
 
 .. ipython:: python
 
-    ind_x = xr.DataArray([0, 1], dims=['x'])
-    ind_y = xr.DataArray([0, 1], dims=['y'])
+    ind_x = xr.DataArray([0, 1], dims=["x"])
+    ind_y = xr.DataArray([0, 1], dims=["y"])
     da[ind_x, ind_y]  # orthogonal indexing
     da[ind_x, ind_x]  # vectorized indexing
 
@@ -364,7 +368,7 @@ indexers' dimension:
 
 .. ipython:: python
 
-    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da[ind]
 
 Similar to how NumPy's `advanced indexing`_ works, vectorized
@@ -378,18 +382,18 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
 .. ipython:: python
 
-    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=["a", "b"])
     da.isel(y=ind)  # same as da[:, ind]
 
-    ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
+    ind = xr.DataArray([["a", "b"], ["b", "a"]], dims=["a", "b"])
     da.loc[:, ind]  # same as da.sel(y=ind)
 
 These methods may also be applied to ``Dataset`` objects
 
 .. ipython:: python
 
-    ds = da.to_dataset(name='bar')
-    ds.isel(x=xr.DataArray([0, 1, 2], dims=['points']))
+    ds = da.to_dataset(name="bar")
+    ds.isel(x=xr.DataArray([0, 1, 2], dims=["points"]))
 
 .. tip::
 
@@ -476,8 +480,8 @@ Like ``numpy.ndarray``, value assignment sometimes works differently from what o
 
 .. ipython:: python
 
-    da = xr.DataArray([0, 1, 2, 3], dims=['x'])
-    ind = xr.DataArray([0, 0, 0], dims=['x'])
+    da = xr.DataArray([0, 1, 2, 3], dims=["x"])
+    ind = xr.DataArray([0, 0, 0], dims=["x"])
     da[ind] -= 1
     da
 
@@ -511,7 +515,7 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
 
   .. ipython:: python
 
-      da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+      da = xr.DataArray([0, 1, 2, 3], dims=["x"])
       # DO NOT do this
       da.isel(x=[0, 1, 2])[1] = -1
       da
@@ -544,7 +548,7 @@ you can supply a :py:class:`~xarray.DataArray` with a coordinate,
         x=xr.DataArray([0, 1, 6], dims="z", coords={"z": ["a", "b", "c"]}),
         y=xr.DataArray([0, 1, 0], dims="z"),
     )
-    
+
 Analogously, label-based pointwise-indexing is also possible by the ``.sel``
 method:
 
@@ -581,15 +585,15 @@ To reindex a particular dimension, use :py:meth:`~xarray.DataArray.reindex`:
 
 .. ipython:: python
 
-    da.reindex(space=['IA', 'CA'])
+    da.reindex(space=["IA", "CA"])
 
 The :py:meth:`~xarray.DataArray.reindex_like` method is a useful shortcut.
 To demonstrate, we will make a subset DataArray with new values:
 
 .. ipython:: python
 
-    foo = da.rename('foo')
-    baz = (10 * da[:2, :2]).rename('baz')
+    foo = da.rename("foo")
+    baz = (10 * da[:2, :2]).rename("baz")
     baz
 
 Reindexing ``foo`` with ``baz`` selects out the first two values along each
@@ -611,8 +615,8 @@ The :py:func:`~xarray.align` function lets us perform more flexible database-lik
 
 .. ipython:: python
 
-    xr.align(foo, baz, join='inner')
-    xr.align(foo, baz, join='outer')
+    xr.align(foo, baz, join="inner")
+    xr.align(foo, baz, join="outer")
 
 Both ``reindex_like`` and ``align`` work interchangeably between
 :py:class:`~xarray.DataArray` and :py:class:`~xarray.Dataset` objects, and with any number of matching dimension names:
@@ -621,7 +625,7 @@ Both ``reindex_like`` and ``align`` work interchangeably between
 
     ds
     ds.reindex_like(baz)
-    other = xr.DataArray(['a', 'b', 'c'], dims='other')
+    other = xr.DataArray(["a", "b", "c"], dims="other")
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
 
@@ -636,7 +640,7 @@ integer-based indexing as a fallback for dimensions without a coordinate label:
 
 .. ipython:: python
 
-    da = xr.DataArray([1, 2, 3], dims='x')
+    da = xr.DataArray([1, 2, 3], dims="x")
     da.sel(x=[0, -1])
 
 Alignment between xarray objects where one or both do not have coordinate labels
@@ -675,9 +679,9 @@ labels:
 
 .. ipython:: python
 
-    da = xr.DataArray([1, 2, 3], dims='x')
+    da = xr.DataArray([1, 2, 3], dims="x")
     da
-    da.get_index('x')
+    da.get_index("x")
 
 
 .. _copies_vs_views:
@@ -721,7 +725,6 @@ pandas:
 
 .. ipython:: python
 
-
     midx = pd.MultiIndex.from_product([list("abc"), [0, 1]], names=("one", "two"))
     mda = xr.DataArray(np.random.rand(6, 3), [("x", midx), ("y", range(3))])
     mda
@@ -732,20 +735,20 @@ a slice of tuples:
 
 .. ipython:: python
 
-    mda.sel(x=[('a', 0), ('b', 1)])
+    mda.sel(x=[("a", 0), ("b", 1)])
 
 Additionally, xarray supports dictionaries:
 
 .. ipython:: python
 
-    mda.sel(x={'one': 'a', 'two': 0})
+    mda.sel(x={"one": "a", "two": 0})
 
 For convenience, ``sel`` also accepts multi-index levels directly
 as keyword arguments:
 
 .. ipython:: python
 
-    mda.sel(one='a', two=0)
+    mda.sel(one="a", two=0)
 
 Note that using ``sel`` it is not possible to mix a dimension
 indexer with level indexers for that dimension
@@ -757,7 +760,7 @@ multi-index is reduced to a single index.
 
 .. ipython:: python
 
-    mda.loc[{'one': 'a'}, ...]
+    mda.loc[{"one": "a"}, ...]
 
 Unlike pandas, xarray does not guess whether you provide index levels or
 dimensions when using ``loc`` in some ambiguous cases. For example, for

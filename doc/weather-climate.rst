@@ -4,7 +4,7 @@ Weather and climate data
 ========================
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import xarray as xr
 
@@ -56,11 +56,14 @@ coordinate with dates from a no-leap calendar and a
 
 .. ipython:: python
 
-   from itertools import product
-   from cftime import DatetimeNoLeap
-   dates = [DatetimeNoLeap(year, month, 1) for year, month in
-            product(range(1, 3), range(1, 13))]
-   da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
+    from itertools import product
+    from cftime import DatetimeNoLeap
+
+    dates = [
+        DatetimeNoLeap(year, month, 1)
+        for year, month in product(range(1, 3), range(1, 13))
+    ]
+    da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
 xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
 creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
@@ -68,86 +71,116 @@ instance, we can create the same dates and DataArray we created above using:
 
 .. ipython:: python
 
-   dates = xr.cftime_range(start='0001', periods=24, freq='MS', calendar='noleap')
-   da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
+    dates = xr.cftime_range(start="0001", periods=24, freq="MS", calendar="noleap")
+    da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
+
+Mirroring pandas' method with the same name, :py:meth:`~xarray.infer_freq` allows one to
+infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
+:py:class:`~xarray.DataArray` containing cftime objects. It also works transparently with
+``np.datetime64[ns]`` and ``np.timedelta64[ns]`` data.
+
+.. ipython:: python
+
+    xr.infer_freq(dates)
 
 With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
 the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
-:py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
+``dt`` accessor for a :py:class:`~xarray.DataArray`
 using the same formatting as the standard `datetime.strftime`_ convention .
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
 
 .. ipython:: python
 
-    dates.strftime('%c')
-    da['time'].dt.strftime('%Y%m%d')
+    dates.strftime("%c")
+    da["time"].dt.strftime("%Y%m%d")
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
-- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
-  datetime strings:
+- `Partial datetime string indexing`_:
 
 .. ipython:: python
 
-   da.sel(time='0001')
-   da.sel(time=slice('0001-05', '0002-02'))
+    da.sel(time="0001")
+    da.sel(time=slice("0001-05", "0002-02"))
+
+.. note::
+
+
+   For specifying full or partial datetime strings in cftime
+   indexing, xarray supports two versions of the `ISO 8601 standard`_, the
+   basic pattern (YYYYMMDDhhmmss) or the extended pattern
+   (YYYY-MM-DDThh:mm:ss), as well as the default cftime string format
+   (YYYY-MM-DD hh:mm:ss).  This is somewhat more restrictive than pandas;
+   in other words, some datetime strings that would be valid for a
+   :py:class:`pandas.DatetimeIndex` are not valid for an
+   :py:class:`~xarray.CFTimeIndex`.
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", and "dayofweek"):
+  "season", "dayofyear", "dayofweek", and "days_in_month"):
 
 .. ipython:: python
 
-   da.time.dt.year
-   da.time.dt.month
-   da.time.dt.season
-   da.time.dt.dayofyear
-   da.time.dt.dayofweek
+    da.time.dt.year
+    da.time.dt.month
+    da.time.dt.season
+    da.time.dt.dayofyear
+    da.time.dt.dayofweek
+    da.time.dt.days_in_month
+
+- Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
+
+.. ipython:: python
+
+    da.time.dt.ceil("3D")
+    da.time.dt.floor("5D")
+    da.time.dt.round("2D")
 
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
 
 .. ipython:: python
 
-   da.groupby('time.month').sum()
+    da.groupby("time.month").sum()
 
 - Interpolation using :py:class:`cftime.datetime` objects:
 
 .. ipython:: python
 
-   da.interp(time=[DatetimeNoLeap(1, 1, 15), DatetimeNoLeap(1, 2, 15)])
+    da.interp(time=[DatetimeNoLeap(1, 1, 15), DatetimeNoLeap(1, 2, 15)])
 
 - Interpolation using datetime strings:
 
 .. ipython:: python
 
-   da.interp(time=['0001-01-15', '0001-02-15'])
+    da.interp(time=["0001-01-15", "0001-02-15"])
 
 - Differentiation:
 
 .. ipython:: python
 
-   da.differentiate('time')
+    da.differentiate("time")
 
 - Serialization:
 
 .. ipython:: python
 
-   da.to_netcdf('example-no-leap.nc')
-   xr.open_dataset('example-no-leap.nc')
+    da.to_netcdf("example-no-leap.nc")
+    xr.open_dataset("example-no-leap.nc")
 
 .. ipython:: python
     :suppress:
 
     import os
-    os.remove('example-no-leap.nc')
+
+    os.remove("example-no-leap.nc")
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
 
 .. ipython:: python
 
-    da.resample(time='81T', closed='right', label='right', base=3).mean()
+    da.resample(time="81T", closed="right", label="right", base=3).mean()
 
 .. note::
 
@@ -159,13 +192,13 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    method:
 
    .. ipython:: python
-      :okwarning:
+       :okwarning:
 
-       modern_times = xr.cftime_range('2000', periods=24, freq='MS', calendar='noleap')
-       da = xr.DataArray(range(24), [('time', modern_times)])
+       modern_times = xr.cftime_range("2000", periods=24, freq="MS", calendar="noleap")
+       da = xr.DataArray(range(24), [("time", modern_times)])
        da
-       datetimeindex = da.indexes['time'].to_datetimeindex()
-       da['time'] = datetimeindex
+       datetimeindex = da.indexes["time"].to_datetimeindex()
+       da["time"] = datetimeindex
 
    However in this case one should use caution to only perform operations which
    do not depend on differences between dates (e.g. differentiation,
@@ -173,6 +206,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    and silent errors due to the difference in calendar types between the dates
    encoded in your data and the dates stored in memory.
 
-.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
-.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
-.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing
+.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
+.. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
+.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing
