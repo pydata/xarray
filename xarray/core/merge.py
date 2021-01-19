@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .utils import Frozen, compat_dict_union, dict_equiv
+from .utils import Frozen, compat_dict_intersection, compat_dict_union, dict_equiv
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
@@ -514,10 +514,13 @@ def merge_attrs(variable_attrs, combine_attrs):
                 )
         return result
     elif combine_attrs == "drop_conflicts":
-        result = dict(variable_attrs[0])
-        for attrs in variable_attrs[1:]:
+        result = {}
+        for attrs in variable_attrs:
+            result.update(
+                {key: value for key, value in attrs.items() if key not in result}
+            )
             try:
-                result = compat_dict_union(result, attrs)
+                result = compat_dict_intersection(result, attrs)
             except ValueError:
                 continue
         return result
