@@ -92,6 +92,13 @@ class TestMergeFunction:
                 {"a": 1, "b": 2},
                 False,
             ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2},
+                {"b": 1, "c": 3},
+                {"a": 1, "c": 3},
+                False,
+            ),
         ],
     )
     def test_merge_arrays_attrs(
@@ -115,31 +122,6 @@ class TestMergeFunction:
         ds3 = xr.merge([ds1, ds2], combine_attrs="override")
         ds3.attrs["x"] = 2
         assert ds1.x == 0
-
-    @pytest.mark.parametrize(
-        ["combine_attrs", "expected"],
-        (
-            pytest.param("drop", {}, id="drop"),
-            pytest.param("override", {"x": 0, "y": 1}, id="override"),
-            pytest.param("no_conflicts", None, id="no_conflicts"),
-            pytest.param("identical", None, id="identical"),
-            pytest.param("drop_conflicts", {"y": 1, "z": 2}, id="drop_conflicts"),
-        ),
-    )
-    def test_merge_attrs(self, combine_attrs, expected):
-        variable_attrs = (
-            {"x": 0, "y": 1},
-            {"x": 1, "y": 1},
-            {"y": 1, "z": 2},
-        )
-
-        if expected is None:
-            with pytest.raises(MergeError):
-                merge.merge_attrs(variable_attrs, combine_attrs)
-            return
-
-        actual = merge.merge_attrs(variable_attrs, combine_attrs)
-        assert actual == expected
 
     def test_merge_dicts_simple(self):
         actual = xr.merge([{"foo": 0}, {"bar": "one"}, {"baz": 3.5}])
