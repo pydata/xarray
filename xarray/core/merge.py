@@ -564,7 +564,8 @@ def merge_core(
         Compatibility checks to use when merging variables.
     join : {"outer", "inner", "left", "right"}, optional
         How to combine objects with different indexes.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, optional
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, optional
         How to combine attributes of objects
     priority_arg : int, optional
         Optional argument in `objects` that takes precedence over the others.
@@ -676,14 +677,16 @@ def merge(
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
         refer to its values.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                    default: "drop"
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "drop"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
         - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
