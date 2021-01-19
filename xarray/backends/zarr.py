@@ -1,9 +1,8 @@
 import os
 import pathlib
+from distutils.version import LooseVersion
 
 import numpy as np
-
-from distutils.version import LooseVersion
 
 from .. import coding, conventions
 from ..core import indexing
