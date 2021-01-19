@@ -513,6 +513,14 @@ def merge_attrs(variable_attrs, combine_attrs):
                     "the same. Merging %s with %s" % (str(result), str(attrs))
                 )
         return result
+    elif combine_attrs == "drop_conflicts":
+        result = dict(variable_attrs[0])
+        for attrs in variable_attrs[1:]:
+            try:
+                result = compat_dict_union(result, attrs)
+            except ValueError:
+                continue
+        return result
     elif combine_attrs == "identical":
         result = dict(variable_attrs[0])
         for attrs in variable_attrs[1:]:
