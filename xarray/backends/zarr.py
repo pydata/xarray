@@ -3,7 +3,7 @@ import pathlib
 
 import numpy as np
 
-from xarray.tests import LooseVersion
+from distutils.version import LooseVersion
 
 from .. import coding, conventions
 from ..core import indexing
