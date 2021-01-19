@@ -39,8 +39,8 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
-- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
 
 
 New Features
@@ -82,6 +82,7 @@ Bug fixes
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Convert to IndexVariable or Variable during renaming as appropriate. (:issue:`4107`, :issue:`4417`, :pull:`4108`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -110,6 +111,8 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
+  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 
 .. _whats-new.0.16.2:
 
