@@ -2818,6 +2818,12 @@ class DataArray(AbstractArray, DataWithCoords):
         broadcasting them against each other such that they have the same
         dimensions.
 
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of the data and the coords.
+
         See Also
         --------
         DataArray.equals
@@ -2838,6 +2844,12 @@ class DataArray(AbstractArray, DataWithCoords):
         This method is necessary because `v1 == v2` for ``DataArray``
         does element-wise comparisons (like numpy.ndarrays).
 
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of the data and the coords.
+
         See Also
         --------
         DataArray.broadcast_equals
@@ -2851,6 +2863,12 @@ class DataArray(AbstractArray, DataWithCoords):
     def identical(self, other: "DataArray", check_dtype: bool = False) -> bool:
         """Like equals, but also checks the array name and attributes, and
         attributes on all coordinates.
+
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of the data and the coords.
 
         See Also
         --------

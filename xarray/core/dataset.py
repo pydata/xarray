@@ -1470,6 +1470,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         the other dataset can still be broadcast equal if the the non-scalar
         variable is a constant.
 
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of all data variables and coords.
+
         See Also
         --------
         Dataset.equals
@@ -1490,6 +1496,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         This method is necessary because `v1 == v2` for ``Dataset``
         does element-wise comparisons (like numpy.ndarrays).
 
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of all data variables and coords.
+
         See Also
         --------
         Dataset.broadcast_equals
@@ -1503,6 +1515,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def identical(self, other: "Dataset", check_dtype: bool = False) -> bool:
         """Like equals, but also checks all dataset attributes and the
         attributes on all variables and coordinates.
+
+        Parameters
+        ----------
+        check_dtype : bool, default: False
+           Whether to check if the objects' dtypes are identical. Compares the
+           dtypes of all data variables and coords.
 
         See Also
         --------

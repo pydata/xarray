@@ -57,6 +57,9 @@ def assert_equal(a, b, check_dtype=False):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
+    check_dtype : bool, default: False
+       Whether to check if the objects' dtypes are identical. Compares the
+       dtypes of all data variables and coords.
 
     See also
     --------
@@ -89,6 +92,9 @@ def assert_identical(a, b, check_dtype=False):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
+    check_dtype : bool, default: False
+       Whether to check if the objects' dtypes are identical. Compares the
+       dtypes of all data variables and coords.
 
     See also
     --------
@@ -133,6 +139,9 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dtype
         Whether byte dtypes should be decoded to strings as UTF-8 or not.
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
+    check_dtype : bool, default: False
+       Whether to check if the objects' dtypes are identical. Compares the
+       dtypes of all data variables and coords.
 
     See also
     --------
