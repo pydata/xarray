@@ -53,9 +53,7 @@ def _var_as_tuple(var: Variable) -> T_VarTuple:
 
 
 def _infer_dtype(array, name: T_Name = None) -> np.dtype:
-    """Given an object array with no missing values, infer its dtype from its
-    first element
-    """
+    """Given an object array with no missing values, infer its dtype from all elements."""
     if array.dtype.kind != "O":
         raise TypeError("infer_type must be called on a dtype=object array")
 
