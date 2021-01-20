@@ -1,6 +1,6 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from .common import AbstractDataStore, BackendEntrypoint
+from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
 def guess_can_open_store(store_spec):
@@ -19,7 +19,6 @@ def open_backend_dataset_store(
     decode_timedelta=None,
 ):
     vars, attrs = store.load()
-    file_obj = store
     encoding = store.get_encoding()
 
     vars, attrs, coord_names = conventions.decode_cf_variables(
@@ -36,7 +35,7 @@ def open_backend_dataset_store(
 
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.intersection(vars))
-    ds._file_obj = file_obj
+    ds.set_close(store.close)
     ds.encoding = encoding
 
     return ds
@@ -45,3 +44,6 @@ def open_backend_dataset_store(
 store_backend = BackendEntrypoint(
     open_dataset=open_backend_dataset_store, guess_can_open=guess_can_open_store
 )
+
+
+BACKEND_ENTRYPOINTS["store"] = store_backend

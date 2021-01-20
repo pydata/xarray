@@ -2327,6 +2327,12 @@ class TestDataArray:
         with pytest.warns(DeprecationWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")
 
+    def test_drop_index_positions(self):
+        arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
+        actual = arr.drop_isel(y=[0, 1])
+        expected = arr[:, 2:]
+        assert_identical(actual, expected)
+
     def test_dropna(self):
         x = np.random.randn(4, 4)
         x[::2, 0] = np.nan
