@@ -338,6 +338,9 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
+        if (u is not None or v is not None) and plotfunc.__name__ != "quiver":
+            raise ValueError("u, v are only allowed for quiver plots.")
+
         primitive = plotfunc(
             ds=ds,
             x=x,

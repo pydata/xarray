@@ -2339,6 +2339,9 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_scatter(self, x, y, hue, markersize):
         self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
 
+        with raises_regex(ValueError, "u, v"):
+            self.ds.plot.scatter(x, y, u="col", v="row")
+
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
