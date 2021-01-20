@@ -1475,7 +1475,7 @@ class Common2dMixin:
         )
 
         # catch contour case
-        if hasattr(g, "cbar"):
+        if g.cbar is not None:
             assert get_colorbar_label(g.cbar) == "test_label"
 
     def test_facetgrid_no_cbar_ax(self):
@@ -2183,7 +2183,7 @@ class TestDatasetQuiverPlots(PlotTestCase):
 
         with raises_regex(ValueError, "hue_style"):
             self.ds.isel(row=0, col=0).plot.quiver(
-                x="x", y="y", u="u", hue_style="discrete"
+                x="x", y="y", u="u", v="v", hue="mag", hue_style="discrete"
             )
 
     def test_facetgrid(self):
