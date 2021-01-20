@@ -329,7 +329,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         try:
             return read_magic_number(store_spec).startswith(b"\211HDF\r\n\032\n")
@@ -344,21 +343,21 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         return ext in {".nc", ".nc4", ".cdf"}
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            *,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            format=None,
-            group=None,
-            lock=None,
-            invalid_netcdf=None,
-            phony_dims=None,
+        self,
+        filename_or_obj,
+        *,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        format=None,
+        group=None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
     ):
 
         store = H5NetCDFStore.open(

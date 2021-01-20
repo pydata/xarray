@@ -232,9 +232,7 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
-
 class ScipyBackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         try:
             return read_magic_number(store_spec).startswith(b"CDF")
@@ -248,20 +246,20 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         return ext in {".nc", ".nc4", ".cdf", ".gz"}
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            mode="r",
-            format=None,
-            group=None,
-            mmap=None,
-            lock=None,
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode="r",
+        format=None,
+        group=None,
+        mmap=None,
+        lock=None,
     ):
 
         store = ScipyDataStore(

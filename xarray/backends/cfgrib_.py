@@ -87,7 +87,6 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         try:
             _, ext = os.path.splitext(store_spec)
@@ -96,23 +95,23 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         return ext in {".grib", ".grib2", ".grb", ".grb2"}
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            *,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            lock=None,
-            indexpath="{path}.{short_hash}.idx",
-            filter_by_keys={},
-            read_keys=[],
-            encode_cf=("parameter", "time", "geography", "vertical"),
-            squeeze=True,
-            time_dims=("time", "step"),
+        self,
+        filename_or_obj,
+        *,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        lock=None,
+        indexpath="{path}.{short_hash}.idx",
+        filter_by_keys={},
+        read_keys=[],
+        encode_cf=("parameter", "time", "geography", "vertical"),
+        squeeze=True,
+        time_dims=("time", "step"),
     ):
 
         store = CfGribDataStore(
@@ -138,7 +137,6 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
 
 
 if has_cfgrib:

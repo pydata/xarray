@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from typing import Dict
+from typing import Dict, Tuple, Type, Union
 
 import numpy as np
 
@@ -343,8 +343,8 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class BackendEntrypoint():
-    open_dataset_parameters = None
+class BackendEntrypoint:
+    open_dataset_parameters: Union[Tuple, None] = None
 
     def open_dataset(self):
         pass
@@ -353,5 +353,4 @@ class BackendEntrypoint():
         return False
 
 
-
-BACKEND_ENTRYPOINTS: Dict[str, BackendEntrypoint] = {}
+BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}

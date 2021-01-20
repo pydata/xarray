@@ -118,18 +118,18 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
     )
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            mask_and_scale=False,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            mode=None,
-            lock=None,
-            **format_kwargs,
+        self,
+        filename_or_obj,
+        mask_and_scale=False,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode=None,
+        lock=None,
+        **format_kwargs,
     ):
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs

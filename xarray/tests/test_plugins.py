@@ -6,7 +6,6 @@ import pytest
 from xarray.backends import common, plugins
 
 
-
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
     def open_dataset(filename_or_obj, *args):
         pass
@@ -18,12 +17,12 @@ class DummyBackendEntrypointKwargs(common.BackendEntrypoint):
 
 
 class DummyBackendEntrypoint1(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder ):
+    def open_dataset(self, filename_or_obj, *, decoder):
         pass
 
 
 class DummyBackendEntrypoint2(common.BackendEntrypoint):
-    def open_dataset(self, filename_or_obj, *, decoder ):
+    def open_dataset(self, filename_or_obj, *, decoder):
         pass
 
 
@@ -103,9 +102,10 @@ def test_set_missing_parameters_raise_error():
         plugins.set_missing_parameters({"engine": backend})
 
 
-
-
-@mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=DummyBackendEntrypoint1))
+@mock.patch(
+    "pkg_resources.EntryPoint.load",
+    mock.MagicMock(return_value=DummyBackendEntrypoint1),
+)
 def test_build_engines():
     dummy_pkg_entrypoint = pkg_resources.EntryPoint.parse(
         "cfgrib = xarray.tests.test_plugins:backend_1"

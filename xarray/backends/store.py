@@ -4,7 +4,6 @@ from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         return isinstance(store_spec, AbstractDataStore)
 

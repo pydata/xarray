@@ -108,21 +108,20 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         return isinstance(store_spec, str) and is_remote_uri(store_spec)
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            session=None,
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        session=None,
     ):
         store = PydapDataStore.open(
             filename_or_obj,

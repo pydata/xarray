@@ -98,18 +98,17 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
-
     def open_dataset(
-            filename_or_obj,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            mode="r",
-            lock=None,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode="r",
+        lock=None,
     ):
         store = NioDataStore(
             filename_or_obj,

@@ -513,7 +513,6 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-
     def guess_can_open(self, store_spec):
         if isinstance(store_spec, str) and is_remote_uri(store_spec):
             return True
@@ -524,23 +523,23 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         return ext in {".nc", ".nc4", ".cdf"}
 
     def open_dataset(
-            self,
-            filename_or_obj,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            group=None,
-            mode="r",
-            format="NETCDF4",
-            clobber=True,
-            diskless=False,
-            persist=False,
-            lock=None,
-            autoclose=False,
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
     ):
 
         store = NetCDF4DataStore.open(

@@ -671,24 +671,22 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
-
-
     def open_dataset(
-            self,
-            filename_or_obj,
-            mask_and_scale=True,
-            decode_times=None,
-            concat_characters=None,
-            decode_coords=None,
-            drop_variables=None,
-            use_cftime=None,
-            decode_timedelta=None,
-            group=None,
-            mode="r",
-            synchronizer=None,
-            consolidated=False,
-            consolidate_on_close=False,
-            chunk_store=None,
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        synchronizer=None,
+        consolidated=False,
+        consolidate_on_close=False,
+        chunk_store=None,
     ):
         store = ZarrStore.open_group(
             filename_or_obj,
