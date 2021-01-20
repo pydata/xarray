@@ -636,6 +636,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _variables: Dict[Hashable, Variable]
 
@@ -645,7 +646,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         "_coord_names",
         "_dims",
         "_encoding",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_variables",
         "__weakref__",
@@ -687,7 +688,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
 
         self._attrs = dict(attrs) if attrs is not None else None
-        self._file_obj = None
+        self._close = None
         self._encoding = None
         self._variables = variables
         self._coord_names = coord_names
@@ -703,7 +704,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if decoder:
             variables, attributes = decoder(variables, attributes)
         obj = cls(variables, attrs=attributes)
-        obj._file_obj = store
+        obj.set_close(store.close)
         return obj
 
     @property
@@ -876,7 +877,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
+            self._close,
         )
         return self._dask_postcompute, args
 
@@ -896,7 +897,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._attrs,
             self._indexes,
             self._encoding,
-            self._file_obj,
+            self._close,
         )
         return self._dask_postpersist, args
 
@@ -1007,7 +1008,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         attrs=None,
         indexes=None,
         encoding=None,
-        file_obj=None,
+        close=None,
     ):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
@@ -1020,7 +1021,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         obj._dims = dims
         obj._indexes = indexes
         obj._attrs = attrs
-        obj._file_obj = file_obj
+        obj._close = close
         obj._encoding = encoding
         return obj
 
@@ -2122,7 +2123,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             attrs=self._attrs,
             indexes=indexes,
             encoding=self._encoding,
-            file_obj=self._file_obj,
+            close=self._close,
         )
 
     def _isel_fancy(
@@ -4020,9 +4021,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> data = np.random.randn(2, 3)
+        >>> data = np.arange(6).reshape(2, 3)
         >>> labels = ["a", "b", "c"]
         >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * y        (y) <U1 'a' 'b' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 1 2 3 4 5
         >>> ds.drop_sel(y=["a", "c"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
@@ -4030,7 +4039,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'b'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 0.4002 1.868
+            A        (x, y) int64 1 4
         >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
@@ -4038,12 +4047,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'a' 'c'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 1.764 0.9787 2.241 -0.9773
+            A        (x, y) int64 0 2 3 5
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop_sel")
 
         ds = self
         for dim, labels_for_dim in labels.items():
@@ -4053,11 +4062,76 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels_for_dim = [labels_for_dim]
             labels_for_dim = np.asarray(labels_for_dim)
             try:
-                index = self.indexes[dim]
+                index = self.get_index(dim)
             except KeyError:
                 raise ValueError("dimension %r does not have coordinate labels" % dim)
             new_index = index.drop(labels_for_dim, errors=errors)
             ds = ds.loc[{dim: new_index}]
+        return ds
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this Dataset.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : Dataset
+
+        Raises
+        ------
+        IndexError
+
+        Examples
+        --------
+        >>> data = np.arange(6).reshape(2, 3)
+        >>> labels = ["a", "b", "c"]
+        >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * y        (y) <U1 'a' 'b' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 1 2 3 4 5
+        >>> ds.drop_isel(y=[0, 2])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 1 4
+        >>> ds.drop_isel(y=1)
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 2 3 5
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
+
+        ds = self
+        dimension_index = {}
+        for dim, pos_for_dim in indexers.items():
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
+            if utils.is_scalar(pos_for_dim):
+                pos_for_dim = [pos_for_dim]
+            pos_for_dim = np.asarray(pos_for_dim)
+            index = self.get_index(dim)
+            new_index = index.delete(pos_for_dim)
+            dimension_index[dim] = new_index
+        ds = ds.loc[dimension_index]
         return ds
 
     def drop_dims(

@@ -12,6 +12,7 @@ from ..core import indexing
 from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     BackendArray,
     AbstractBackendEntrypoint,
     WritableCFDataStore,
@@ -22,6 +23,14 @@ from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 from .store import StoreBackendEntrypoint
+
+try:
+    import netCDF4
+
+    has_netcdf4 = True
+except ModuleNotFoundError:
+    has_netcdf4 = False
+
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -298,7 +307,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -335,7 +343,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4
 
         if isinstance(filename, pathlib.Path):
             filename = os.fspath(filename)
@@ -561,3 +568,7 @@ class NetCDF4BackendEntrypoint(AbstractBackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+
+if has_netcdf4:
+    BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint

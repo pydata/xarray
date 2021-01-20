@@ -8,7 +8,12 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
-from .common import AbstractBackendEntrypoint, WritableCFDataStore, find_root_and_group
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractBackendEntrypoint,
+    WritableCFDataStore,
+    find_root_and_group,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
@@ -19,6 +24,13 @@ from .netCDF4_ import (
     _nc4_require_group,
 )
 from .store import StoreBackendEntrypoint
+
+try:
+    import h5netcdf
+
+    has_h5netcdf = True
+except ModuleNotFoundError:
+    has_h5netcdf = False
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -85,8 +97,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
 
-        import h5netcdf
-
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
                 root, group = find_root_and_group(manager)
@@ -122,7 +132,6 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
     ):
-        import h5netcdf
 
         if isinstance(filename, bytes):
             raise ValueError(
@@ -375,3 +384,6 @@ class H5netcdfBackendEntrypoint(AbstractBackendEntrypoint):
         )
         return ds
 
+
+if has_h5netcdf:
+    BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint

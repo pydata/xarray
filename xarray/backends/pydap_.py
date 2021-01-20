@@ -4,8 +4,21 @@ from ..core import indexing
 from ..core.pycompat import integer_types
 from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint, robust_getitem
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    AbstractBackendEntrypoint,
+    robust_getitem,
+)
 from .store import StoreBackendEntrypoint
+
+try:
+    import pydap.client
+
+    has_pydap = True
+except ModuleNotFoundError:
+    has_pydap = False
 
 
 class PydapArrayWrapper(BackendArray):
@@ -74,7 +87,6 @@ class PydapDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, url, session=None):
-        import pydap.client
 
         ds = pydap.client.open_url(url, session=session)
         return cls(ds)
@@ -130,3 +142,7 @@ class PydapBackendEntrypoint(AbstractBackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
             return ds
+
+
+if has_pydap:
+    BACKEND_ENTRYPOINTS["pydap"] = AbstractBackendEntrypoint

@@ -5,9 +5,22 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    AbstractBackendEntrypoint,
+)
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
+
+try:
+    import cfgrib
+
+    has_cfgrib = True
+except ModuleNotFoundError:
+    has_cfgrib = False
+
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -38,7 +51,6 @@ class CfGribDataStore(AbstractDataStore):
     """
 
     def __init__(self, filename, lock=None, **backend_kwargs):
-        import cfgrib
 
         if lock is None:
             lock = ECCODES_LOCK
@@ -127,3 +139,7 @@ class CfgribfBackendEntrypoint(AbstractBackendEntrypoint):
             )
         return ds
 
+
+
+if has_cfgrib:
+    BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint

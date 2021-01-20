@@ -126,6 +126,7 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.drop_sel
+   Dataset.drop_isel
    Dataset.head
    Dataset.tail
    Dataset.thin
@@ -307,6 +308,7 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.drop_sel
+   DataArray.drop_isel
    DataArray.head
    DataArray.tail
    DataArray.thin

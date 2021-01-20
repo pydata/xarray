@@ -3,10 +3,23 @@ import numpy as np
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray, AbstractBackendEntrypoint
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    AbstractBackendEntrypoint,
+)
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
 from .store import StoreBackendEntrypoint
+
+try:
+    from PseudoNetCDF import pncopen
+
+    has_pseudonetcdf = True
+except ModuleNotFoundError:
+    has_pseudonetcdf = False
+
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
@@ -40,7 +53,6 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
-        from PseudoNetCDF import pncopen
 
         keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
@@ -136,3 +148,7 @@ class PseudoNetCDFBackendEntrypoint(AbstractBackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
+
+
+if has_pseudonetcdf:
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFDataStore

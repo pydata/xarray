@@ -2,33 +2,11 @@ import functools
 import inspect
 import itertools
 import logging
-import typing as T
 import warnings
 
 import pkg_resources
 
-from .cfgrib_ import CfgribfBackendEntrypoint
-from .common import AbstractBackendEntrypoint
-from .h5netcdf_ import H5netcdfBackendEntrypoint
-from .netCDF4_ import NetCDF4BackendEntrypoint
-from .pseudonetcdf_ import PseudoNetCDFBackendEntrypoint
-from .pydap_ import PydapBackendEntrypoint
-from .pynio_ import PynioBackendEntrypoint
-from .scipy_ import ScipyBackendEntrypoint
-from .store import StoreBackendEntrypoint
-from .zarr import ZarrBackendEntrypoint
-
-BACKEND_ENTRYPOINTS: T.Dict[str, AbstractBackendEntrypoint] = {
-    "store": StoreBackendEntrypoint(),
-    "netcdf4": NetCDF4BackendEntrypoint(),
-    "h5netcdf": H5netcdfBackendEntrypoint(),
-    "scipy": ScipyBackendEntrypoint(),
-    "pseudonetcdf": PseudoNetCDFBackendEntrypoint(),
-    "zarr": ZarrBackendEntrypoint(),
-    "cfgrib": CfgribfBackendEntrypoint(),
-    "pydap": PydapBackendEntrypoint(),
-    "pynio": PynioBackendEntrypoint(),
-}
+from .common import BACKEND_ENTRYPOINTS
 
 
 def remove_duplicates(backend_entrypoints):

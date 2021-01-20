@@ -6,11 +6,23 @@ import numpy as np
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
 from ..core.variable import Variable
-from .common import BackendArray, AbstractBackendEntrypoint, WritableCFDataStore
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    BackendArray,
+    AbstractBackendEntrypoint,
+    WritableCFDataStore,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
 from .store import StoreBackendEntrypoint
+
+try:
+    import scipy.io
+
+    has_scipy = True
+except ModuleNotFoundError:
+    has_scipy = False
 
 
 def _decode_string(s):
@@ -60,8 +72,6 @@ class ScipyArrayWrapper(BackendArray):
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
-
-    import scipy.io
 
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
@@ -272,3 +282,6 @@ class ScipyBackendEntrypoint(AbstractBackendEntrypoint):
             )
         return ds
 
+
+if has_scipy:
+    BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint

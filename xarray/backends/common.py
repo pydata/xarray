@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+from typing import Dict
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -353,3 +354,6 @@ class AbstractBackendEntrypoint(ABC):
     def guess_can_open(self, store_spec):
         return False
 
+
+
+BACKEND_ENTRYPOINTS: Dict[str, AbstractBackendEntrypoint] = {}

@@ -1,6 +1,6 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from .common import AbstractBackendEntrypoint, AbstractDataStore
+from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, AbstractBackendEntrypoint
 
 
 class StoreBackendEntrypoint(AbstractBackendEntrypoint):
@@ -21,7 +21,6 @@ class StoreBackendEntrypoint(AbstractBackendEntrypoint):
         decode_timedelta=None,
     ):
         vars, attrs = store.load()
-        file_obj = store
         encoding = store.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
@@ -38,7 +37,10 @@ class StoreBackendEntrypoint(AbstractBackendEntrypoint):
 
         ds = Dataset(vars, attrs=attrs)
         ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
+        ds.set_close(store.close)
         ds.encoding = encoding
 
         return ds
+
+
+BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint
