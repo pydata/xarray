@@ -2329,7 +2329,7 @@ class TestDataArray:
 
     def test_drop_index_positions(self):
         arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
-        actual = arr.drop_sel(y=[0, 1])
+        actual = arr.drop_isel(y=[0, 1])
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
