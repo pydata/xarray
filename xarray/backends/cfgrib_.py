@@ -9,7 +9,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
@@ -86,7 +86,7 @@ class CfGribDataStore(AbstractDataStore):
         return encoding
 
 
-class CfgribfBackendEntrypoint(AbstractBackendEntrypoint):
+class CfgribfBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         try:

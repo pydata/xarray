@@ -7,7 +7,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
@@ -100,7 +100,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         self._manager.close()
 
 
-class PseudoNetCDFBackendEntrypoint(AbstractBackendEntrypoint):
+class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
 
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicity defined like this:
@@ -151,4 +151,4 @@ class PseudoNetCDFBackendEntrypoint(AbstractBackendEntrypoint):
 
 
 if has_pseudonetcdf:
-    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFDataStore
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint

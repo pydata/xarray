@@ -14,7 +14,7 @@ from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
     robust_getitem,
@@ -512,7 +512,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-class NetCDF4BackendEntrypoint(AbstractBackendEntrypoint):
+class NetCDF4BackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         if isinstance(store_spec, str) and is_remote_uri(store_spec):

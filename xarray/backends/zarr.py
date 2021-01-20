@@ -12,7 +12,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
     _encode_variable_name,
 )
 from .store import StoreBackendEntrypoint
@@ -670,7 +670,7 @@ def open_zarr(
     return ds
 
 
-class ZarrBackendEntrypoint(AbstractBackendEntrypoint):
+class ZarrBackendEntrypoint(BackendEntrypoint):
 
 
     def open_dataset(

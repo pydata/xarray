@@ -8,7 +8,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
     robust_getitem,
 )
 from .store import StoreBackendEntrypoint
@@ -107,7 +107,7 @@ class PydapDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
 
-class PydapBackendEntrypoint(AbstractBackendEntrypoint):
+class PydapBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         return isinstance(store_spec, str) and is_remote_uri(store_spec)
@@ -145,4 +145,4 @@ class PydapBackendEntrypoint(AbstractBackendEntrypoint):
 
 
 if has_pydap:
-    BACKEND_ENTRYPOINTS["pydap"] = AbstractBackendEntrypoint
+    BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

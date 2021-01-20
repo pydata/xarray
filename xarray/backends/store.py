@@ -1,9 +1,9 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, AbstractBackendEntrypoint
+from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
-class StoreBackendEntrypoint(AbstractBackendEntrypoint):
+class StoreBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         return isinstance(store_spec, AbstractDataStore)

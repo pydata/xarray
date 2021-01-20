@@ -10,7 +10,7 @@ from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
 )
@@ -328,7 +328,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-class H5netcdfBackendEntrypoint(AbstractBackendEntrypoint):
+class H5netcdfBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         try:

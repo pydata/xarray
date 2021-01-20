@@ -9,7 +9,7 @@ from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
     WritableCFDataStore,
 )
 from .file_manager import CachingFileManager, DummyFileManager
@@ -233,7 +233,7 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 
-class ScipyBackendEntrypoint(AbstractBackendEntrypoint):
+class ScipyBackendEntrypoint(BackendEntrypoint):
 
     def guess_can_open(self, store_spec):
         try:

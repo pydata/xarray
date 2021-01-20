@@ -2,7 +2,6 @@ import logging
 import time
 import traceback
 from typing import Dict
-from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -344,10 +343,9 @@ class WritableCFDataStore(AbstractWritableDataStore):
         return variables, attributes
 
 
-class AbstractBackendEntrypoint(ABC):
+class BackendEntrypoint():
     open_dataset_parameters = None
 
-    @abstractmethod
     def open_dataset(self):
         pass
 
@@ -356,4 +354,4 @@ class AbstractBackendEntrypoint(ABC):
 
 
 
-BACKEND_ENTRYPOINTS: Dict[str, AbstractBackendEntrypoint] = {}
+BACKEND_ENTRYPOINTS: Dict[str, BackendEntrypoint] = {}

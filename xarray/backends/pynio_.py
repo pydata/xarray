@@ -7,7 +7,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     AbstractDataStore,
     BackendArray,
-    AbstractBackendEntrypoint,
+    BackendEntrypoint,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
@@ -97,7 +97,7 @@ class NioDataStore(AbstractDataStore):
         self._manager.close()
 
 
-class PynioBackendEntrypoint(AbstractBackendEntrypoint):
+class PynioBackendEntrypoint(BackendEntrypoint):
 
     def open_dataset(
             filename_or_obj,
