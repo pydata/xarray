@@ -4021,9 +4021,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> data = np.random.randn(2, 3)
+        >>> data = np.arange(6).reshape(2, 3)
         >>> labels = ["a", "b", "c"]
         >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * y        (y) <U1 'a' 'b' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 1 2 3 4 5
         >>> ds.drop_sel(y=["a", "c"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
@@ -4031,7 +4039,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'b'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 0.4002 1.868
+            A        (x, y) int64 1 4
         >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
@@ -4039,12 +4047,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'a' 'c'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 1.764 0.9787 2.241 -0.9773
+            A        (x, y) int64 0 2 3 5
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop_sel")
 
         ds = self
         for dim, labels_for_dim in labels.items():
@@ -4110,7 +4118,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             A        (x, y) int64 0 2 3 5
         """
 
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop")
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
 
         ds = self
         dimension_index = {}
