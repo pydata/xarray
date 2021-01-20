@@ -36,6 +36,7 @@ def remove_duplicates(backend_entrypoints):
 def detect_parameters(open_dataset):
     signature = inspect.signature(open_dataset)
     parameters = signature.parameters
+    parameters_list = []
     for name, param in parameters.items():
         if param.kind in (
             inspect.Parameter.VAR_KEYWORD,
@@ -45,7 +46,9 @@ def detect_parameters(open_dataset):
                 f"All the parameters in {open_dataset!r} signature should be explicit. "
                 "*args and **kwargs is not supported"
             )
-    return tuple(parameters)
+        if name != "self":
+            parameters_list.append(name)
+    return tuple(parameters_list)
 
 
 def create_engines_dict(backend_entrypoints):
@@ -70,9 +73,10 @@ def build_engines(entrypoints):
     external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
+    engines = {}
     for name, backend in backend_entrypoints.items():
-        backend_entrypoints[name] = backend()
-    return backend_entrypoints
+        engines[name] = backend()
+    return engines
 
 
 @functools.lru_cache(maxsize=1)
