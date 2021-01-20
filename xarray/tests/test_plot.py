@@ -2188,6 +2188,21 @@ class TestDatasetQuiverPlots(PlotTestCase):
             )
             for handle in fg._mappables:
                 assert isinstance(handle, mpl.quiver.Quiver)
+            assert "uunits" in fg.quiverkey.text.get_text()
+
+        with figure_context():
+            fg = self.ds.plot.quiver(
+                x="x",
+                y="y",
+                u="u",
+                v="v",
+                row="row",
+                col="col",
+                scale=1,
+                hue="mag",
+                add_guide=False,
+            )
+            assert fg.quiverkey is None
         with raises_regex(ValueError, "Please provide scale"):
             self.ds.plot.quiver(x="x", y="y", u="u", v="v", row="row", col="col")
 

@@ -196,7 +196,11 @@ class FacetGrid:
         self.axes = axes
         self.row_names = row_names
         self.col_names = col_names
+
+        # guides
         self.figlegend = None
+        self.quiverkey = None
+        self.cbar = None
 
         # Next the private variables
         self._single_group = single_group
