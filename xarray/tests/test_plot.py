@@ -2181,6 +2181,11 @@ class TestDatasetQuiverPlots(PlotTestCase):
         with raises_regex(ValueError, "specify x, y, u, v"):
             self.ds.isel(row=0, col=0).plot.quiver(x="x", y="y", u="u")
 
+        with raises_regex(ValueError, "hue_style"):
+            self.ds.isel(row=0, col=0).plot.quiver(
+                x="x", y="y", u="u", hue_style="discrete"
+            )
+
     def test_facetgrid(self):
         with figure_context():
             fg = self.ds.plot.quiver(
