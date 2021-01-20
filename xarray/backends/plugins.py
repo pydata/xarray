@@ -57,8 +57,8 @@ def create_engines_dict(backend_entrypoints):
     return engines
 
 
-def set_missing_parameters(engines):
-    for name, backend in engines.items():
+def set_missing_parameters(backend_entrypoints):
+    for name, backend in backend_entrypoints.items():
         if backend.open_dataset_parameters is None:
             open_dataset = backend.open_dataset
             backend.open_dataset_parameters = detect_parameters(open_dataset)
@@ -70,6 +70,8 @@ def build_engines(entrypoints):
     external_backend_entrypoints = create_engines_dict(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
+    for name, backend in backend_entrypoints.items():
+        backend_entrypoints[name] = backend()
     return backend_entrypoints
 
 
