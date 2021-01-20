@@ -237,6 +237,7 @@ def open_dataset(
     --------
     open_mfdataset
     """
+
     if cache is None:
         cache = chunks is None
 
