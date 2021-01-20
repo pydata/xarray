@@ -768,6 +768,8 @@ For more advanced scatter plots, we recommend converting the relevant data varia
 Quiver
 ~~~~~~
 
+Visualizing vector fields using a quiver plot is easy.
+
 .. ipython:: python
     :okwarning:
 

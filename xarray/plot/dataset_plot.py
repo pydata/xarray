@@ -185,7 +185,7 @@ def _dsplot(plotfunc):
     ds : Dataset
     x, y : str
         Variable names for x, y axis.
-    u, v : string
+    u, v : str, optional
         Variable names for quiver plots
     hue: str, optional
         Variable by which to color scattered points
