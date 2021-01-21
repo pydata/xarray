@@ -1,7 +1,6 @@
-.. _weather-climate:
 
 Weather and climate data
-========================
+------------------------
 
 .. ipython:: python
     :suppress:
@@ -15,7 +14,7 @@ Weather and climate data
 .. _metpy_accessor:
 
 CF-compliant coordinate variables
----------------------------------
+=================================
 
 `MetPy`_ adds a	``metpy`` accessor that allows accessing coordinates with appropriate CF metadata using generic names ``x``, ``y``, ``vertical`` and ``time``. There is also a `cartopy_crs` attribute that provides projection information, parsed from the appropriate CF metadata, as a `Cartopy`_ projection object. See `their documentation`_ for more information.
 
@@ -26,7 +25,7 @@ CF-compliant coordinate variables
 .. _CFTimeIndex:
 
 Non-standard calendars and dates outside the Timestamp-valid range
-------------------------------------------------------------------
+==================================================================
 
 Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing

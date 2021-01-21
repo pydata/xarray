@@ -1,7 +1,7 @@
 .. currentmodule:: xarray
 
 Working with numpy-like arrays
-==============================
+------------------------------
 
 .. warning::
 
@@ -20,7 +20,7 @@ long as they satisfy certain conditions (see :ref:`internals.duck_arrays`).
 
 
 Missing features
-----------------
+================
 Most of the API does support :term:`duck array` objects, but there are a few areas where
 the code will still cast to ``numpy`` arrays:
 
@@ -58,7 +58,7 @@ the code will still cast to ``numpy`` arrays:
 
 
 Extensions using duck arrays
-----------------------------
+============================
 Here's a list of libraries extending ``xarray`` to make working with wrapped duck arrays
 easier:
 

@@ -1,7 +1,7 @@
 .. _interp:
 
 Interpolating data
-==================
+-------------------
 
 .. ipython:: python
     :suppress:
@@ -21,7 +21,7 @@ to our :ref:`indexing <indexing>`.
 
 
 Scalar and 1-dimensional interpolation
---------------------------------------
+=======================================
 
 Interpolating a :py:class:`~xarray.DataArray` works mostly like labeled
 indexing of a :py:class:`~xarray.DataArray`,
@@ -78,7 +78,7 @@ allowed.  See :ref:`CFTimeIndex` for examples.
 
 
 Multi-dimensional Interpolation
--------------------------------
+================================
 
 Like :py:meth:`~xarray.DataArray.sel`, :py:meth:`~xarray.DataArray.interp`
 accepts multiple coordinates. In this case, multidimensional interpolation
@@ -130,7 +130,7 @@ It is now possible to safely compute the difference ``other - interpolated``.
 
 
 Interpolation methods
----------------------
+=====================
 
 We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation and
 :py:func:`scipy.interpolate.interpn` for multi-dimensional interpolation.
@@ -169,7 +169,7 @@ Additional keyword arguments can be passed to scipy's functions.
 
 
 Advanced Interpolation
-----------------------
+======================
 
 :py:meth:`~xarray.DataArray.interp` accepts :py:class:`~xarray.DataArray`
 as similar to :py:meth:`~xarray.DataArray.sel`, which enables us more advanced interpolation.
@@ -179,7 +179,7 @@ For example, if you want to interpolate a two dimensional array along a particul
 you can pass two 1-dimensional :py:class:`~xarray.DataArray` s with
 a common dimension as new coordinate.
 
-.. image:: _static/advanced_selection_interpolation.svg
+.. image:: ../_static/advanced_selection_interpolation.svg
     :height: 200px
     :width: 400 px
     :alt: advanced indexing and interpolation
@@ -221,7 +221,7 @@ see :ref:`more advanced indexing <more_advanced_indexing>`.
 
 
 Interpolating arrays with NaN
------------------------------
+=============================
 
 Our :py:meth:`~xarray.DataArray.interp` works with arrays with NaN
 the same way that
@@ -268,7 +268,7 @@ see :ref:`Missing values <missing_values>`.
 
 
 Example
--------
+=======
 
 Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
 

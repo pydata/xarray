@@ -2,7 +2,7 @@
 .. _terminology:
 
 Terminology
-===========
+-----------
 
 *Xarray terminology differs slightly from CF, mathematical conventions, and
 pandas; so we've put together a glossary of its terms. Here,* ``arr`` *
@@ -79,7 +79,7 @@ complete examples, please consult the relevant documentation.*
         example, multidimensional coordinates are often used in geoscience
         datasets when :doc:`the data's physical coordinates (such as latitude
         and longitude) differ from their logical coordinates
-        <examples/multidimensional-coords>`. However, non-dimension coordinates
+        <../examples/multidimensional-coords>`. However, non-dimension coordinates
         are not indexed, and any operation on non-dimension coordinates that
         leverages indexing will fail. Printing ``arr.coords`` will print all of
         ``arr``'s coordinate names, with the corresponding dimension(s) in

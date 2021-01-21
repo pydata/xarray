@@ -1,9 +1,8 @@
 .. currentmodule:: xarray
 .. _pandas:
 
-===================
 Working with pandas
-===================
+-------------------
 
 One of the most important features of xarray is the ability to convert to and
 from :py:mod:`pandas` objects to interact with the rest of the PyData

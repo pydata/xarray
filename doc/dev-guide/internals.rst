@@ -114,7 +114,7 @@ To resolve this issue for more complex cases, xarray has the
 write a custom "geo" accessor implementing a geography specific extension to
 xarray:
 
-.. literalinclude:: examples/_code/accessor_example.py
+.. literalinclude:: ../examples/_code/accessor_example.py
 
 In general, the only restriction on the accessor class is that the ``__init__`` method
 must have a single parameter: the ``Dataset`` or ``DataArray`` object it is supposed

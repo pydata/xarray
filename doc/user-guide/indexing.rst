@@ -1,7 +1,6 @@
-.. _indexing:
 
 Indexing and selecting data
-===========================
+---------------------------
 
 .. ipython:: python
     :suppress:
@@ -53,7 +52,7 @@ See :ref:`vectorized_indexing` for the details.
 
 
 Positional indexing
--------------------
+===================
 
 Indexing a :py:class:`~xarray.DataArray` directly works (mostly) just like it
 does for numpy arrays, except that the returned object is always another
@@ -108,7 +107,7 @@ Setting values with label based indexing is also supported:
 
 
 Indexing with dimension names
------------------------------
+=============================
 
 With the dimension names, we do not have to rely on dimension order and can
 use them explicitly to slice data. There are two ways to do this:
@@ -151,7 +150,7 @@ __ http://legacy.python.org/dev/peps/pep-0472/
 .. _nearest neighbor lookups:
 
 Nearest neighbor lookups
-------------------------
+========================
 
 The label based selection methods :py:meth:`~xarray.Dataset.sel`,
 :py:meth:`~xarray.Dataset.reindex` and :py:meth:`~xarray.Dataset.reindex_like` all
@@ -207,7 +206,7 @@ Indexing axes with monotonic decreasing labels also works, as long as the
 
 
 Dataset indexing
-----------------
+================
 
 We can also use these methods to index all variables in a dataset
 simultaneously, returning a new dataset:
@@ -238,7 +237,7 @@ Using indexing to *assign* values to a subset of dataset (e.g.,
 ``ds[dict(space=0)] = 1``) is not yet supported.
 
 Dropping labels and dimensions
-------------------------------
+==============================
 
 The :py:meth:`~xarray.Dataset.drop_sel` method returns a new object with the listed
 index labels along a dimension dropped:
@@ -259,7 +258,7 @@ Any variables with these dimensions are also dropped:
 .. _masking with where:
 
 Masking with ``where``
-----------------------
+======================
 
 Indexing methods on xarray objects generally return a subset of the original data.
 However, it is sometimes useful to select an object with the same shape as the
@@ -293,7 +292,7 @@ elements that are fully masked:
 .. _selecting values with isin:
 
 Selecting values with ``isin``
-------------------------------
+===============================
 
 To check whether elements of an xarray object contain a single object, you can
 compare with the equality operator ``==`` (e.g., ``arr == 3``). To check
@@ -319,7 +318,7 @@ is significantly slower than using :py:meth:`~xarray.DataArray.sel`.
 .. _vectorized_indexing:
 
 Vectorized Indexing
--------------------
+====================
 
 Like numpy and pandas, xarray supports indexing many array elements at once in a
 `vectorized` manner.
@@ -413,7 +412,7 @@ These methods may also be applied to ``Dataset`` objects
 .. _assigning_values:
 
 Assigning values with indexing
-------------------------------
+==============================
 
 To select and assign values to a portion of a :py:meth:`~xarray.DataArray` you
 can use indexing with ``.loc`` :
@@ -524,7 +523,7 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
 .. _more_advanced_indexing:
 
 More advanced indexing
------------------------
+======================
 
 The use of :py:meth:`~xarray.DataArray` objects as indexers enables very
 flexible indexing. The following is an example of the pointwise indexing:
@@ -569,7 +568,7 @@ method:
 .. _align and reindex:
 
 Align and reindex
------------------
+=================
 
 xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 ``Dataset`` onto a new set of coordinates corresponding to dimensions. The
@@ -632,7 +631,7 @@ Both ``reindex_like`` and ``align`` work interchangeably between
 .. _indexing.missing_coordinates:
 
 Missing coordinate labels
--------------------------
+=========================
 
 Coordinate labels for each dimension are optional (as of xarray v0.9). Label
 based indexing with ``.sel`` and ``.loc`` uses standard positional,
@@ -654,7 +653,7 @@ Otherwise, it raises an informative error:
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension sizes: {2, 3}
 
 Underlying Indexes
-------------------
+==================
 
 xarray uses the :py:class:`pandas.Index` internally to perform indexing
 operations.  If you need to access the underlying indexes, they are available
@@ -687,7 +686,7 @@ labels:
 .. _copies_vs_views:
 
 Copies vs. Views
-----------------
+================
 
 Whether array indexing returns a view or a copy of the underlying
 data depends on the nature of the labels.
@@ -716,7 +715,7 @@ should still avoid assignment with chained indexing.
 .. _multi-level indexing:
 
 Multi-level indexing
---------------------
+====================
 
 Just like pandas, advanced indexing on multi-level indexes is possible with
 ``loc`` and ``sel``. You can slice a multi-index by providing multiple indexers,
@@ -774,7 +773,7 @@ above, ``mda.loc[{'one': 'a', 'two': 0}, :]`` or ``mda.loc[('a', 0), ...]``.
 .. _indexing.rules:
 
 Indexing rules
---------------
+==============
 
 Here we describe the full rules xarray uses for vectorized indexing. Note that
 this is for the purposes of explanation: for the sake of efficiency and to

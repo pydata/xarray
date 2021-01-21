@@ -160,7 +160,7 @@ installation steps are excluded. To know which dependencies would be
 installed, take a look at the ``[options.extras_require]`` section in
 ``setup.cfg``:
 
-.. literalinclude:: ../setup.cfg
+.. literalinclude:: ../../setup.cfg
    :language: ini
    :start-at: [options.extras_require]
    :end-before: [options.package_data]

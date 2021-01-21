@@ -4,20 +4,20 @@ Examples
 .. toctree::
     :maxdepth: 1
 
-    examples/weather-data
-    examples/monthly-means
-    examples/area_weighted_temperature
-    examples/multidimensional-coords
-    examples/visualization_gallery
-    examples/ROMS_ocean_model
-    examples/ERA5-GRIB-example
+    ../examples/weather-data
+    ../examples/monthly-means
+    ../examples/area_weighted_temperature
+    ../examples/multidimensional-coords
+    ../examples/visualization_gallery
+    ../examples/ROMS_ocean_model
+    ../examples/ERA5-GRIB-example
 
 Using apply_ufunc
 ------------------
 .. toctree::
     :maxdepth: 1
 
-    examples/apply_ufunc_vectorize_1d
+    ../examples/apply_ufunc_vectorize_1d
 
 External Examples
 -----------------

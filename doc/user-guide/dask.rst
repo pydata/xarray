@@ -1,9 +1,8 @@
 .. currentmodule:: xarray
-
 .. _dask:
 
 Parallel computing with Dask
-============================
+-----------------------------
 
 xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
 computations and streaming computation on datasets that don't fit into memory.
@@ -19,9 +18,9 @@ and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 .. _blog post introducing xarray and Dask: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 What is a Dask array?
----------------------
+=====================
 
-.. image:: _static/dask_array.png
+.. image:: ../_static/dask_array.png
    :width: 40 %
    :align: right
    :alt: A Dask array
@@ -45,7 +44,7 @@ Note that xarray only makes use of ``dask.array`` and ``dask.delayed``.
 .. _dask.io:
 
 Reading and writing data
-------------------------
+========================
 
 The usual way to create a ``Dataset`` filled with Dask arrays is to load the
 data from a netCDF file or files. You can do this by supplying a ``chunks``
@@ -156,7 +155,7 @@ Dask DataFrames do not support multi-indexes so the coordinate variables from th
     os.remove("manipulated-example-data.nc")
 
 Using Dask with xarray
-----------------------
+======================
 
 Nearly all existing xarray methods (including those for indexing, computation,
 concatenating and grouped operations) have been extended to work automatically
@@ -287,7 +286,7 @@ loaded into Dask or not:
 .. _dask.automatic-parallelization:
 
 Automatic parallelization with ``apply_ufunc`` and ``map_blocks``
------------------------------------------------------------------
+=================================================================
 
 Almost all of xarray's built-in operations work on Dask arrays. If you want to
 use a function that isn't wrapped by xarray, and have it applied in parallel on
@@ -512,7 +511,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 
 
 Chunking and performance
-------------------------
+========================
 
 The ``chunks`` parameter has critical performance implications when using Dask
 arrays. If your chunks are too small, queueing up operations will be extremely
@@ -535,7 +534,7 @@ larger chunksizes.
 
 
 Optimization Tips
------------------
+=================
 
 With analysis pipelines involving both spatial subsetting and temporal resampling, Dask performance can become very slow in certain cases. Here are some optimization tips we have found through experience:
 

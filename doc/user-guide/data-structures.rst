@@ -1,7 +1,7 @@
 .. _data structures:
 
 Data Structures
-===============
+---------------
 
 .. ipython:: python
     :suppress:
@@ -14,7 +14,7 @@ Data Structures
     np.set_printoptions(threshold=10)
 
 DataArray
----------
+=========
 
 :py:class:`xarray.DataArray` is xarray's implementation of a labeled,
 multi-dimensional array. It has several key properties:
@@ -219,7 +219,7 @@ Coordinates can also be set or removed by using the dictionary like syntax:
 For more details, see :ref:`coordinates` below.
 
 Dataset
--------
+=======
 
 :py:class:`xarray.Dataset` is xarray's multi-dimensional equivalent of a
 :py:class:`~pandas.DataFrame`. It is a dict-like
@@ -251,7 +251,7 @@ quantities that belong in data.
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
-.. image:: _static/dataset-diagram.png
+.. image:: ../_static/dataset-diagram.png
 
 In this example, it would be natural to call ``temperature`` and
 ``precipitation`` "data variables" and all the other arrays "coordinate
@@ -483,7 +483,7 @@ dimension and non-dimension variables:
 .. _coordinates:
 
 Coordinates
------------
+===========
 
 Coordinates are ancillary variables stored for ``DataArray`` and ``Dataset``
 objects in the ``coords`` attribute:

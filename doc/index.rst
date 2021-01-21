@@ -25,86 +25,15 @@ computing.
 Documentation
 -------------
 
-**Getting Started**
-
-* :doc:`why-xarray`
-* :doc:`faq`
-* :doc:`quick-overview`
-* :doc:`examples`
-* :doc:`installing`
-
 .. toctree::
    :maxdepth: 1
-   :hidden:
-   :caption: Getting Started
 
-   why-xarray
-   faq
-   quick-overview
-   examples
-   installing
+   Getting Started <getting-started-guide/index>
+   User Guide <user-guide/index>
+   API Reference <reference-guide/index>
+   Development <dev-guide/index>
+   Release Notes <whats-new.rst>
 
-**User Guide**
-
-* :doc:`terminology`
-* :doc:`data-structures`
-* :doc:`indexing`
-* :doc:`interpolation`
-* :doc:`computation`
-* :doc:`groupby`
-* :doc:`reshaping`
-* :doc:`combining`
-* :doc:`time-series`
-* :doc:`weather-climate`
-* :doc:`pandas`
-* :doc:`io`
-* :doc:`dask`
-* :doc:`plotting`
-* :doc:`duckarrays`
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: User Guide
-
-   terminology
-   data-structures
-   indexing
-   interpolation
-   computation
-   groupby
-   reshaping
-   combining
-   time-series
-   weather-climate
-   pandas
-   io
-   dask
-   plotting
-   duckarrays
-
-**Help & reference**
-
-* :doc:`whats-new`
-* :doc:`howdoi`
-* :doc:`api`
-* :doc:`internals`
-* :doc:`roadmap`
-* :doc:`contributing`
-* :doc:`related-projects`
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Help & reference
-
-   whats-new
-   howdoi
-   api
-   internals
-   roadmap
-   contributing
-   related-projects
 
 See also
 --------
