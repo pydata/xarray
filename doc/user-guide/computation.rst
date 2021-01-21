@@ -2,9 +2,8 @@
 
 .. _comput:
 
-###########
 Computation
-###########
+-----------
 
 The labels associated with :py:class:`~xarray.DataArray` and
 :py:class:`~xarray.Dataset` objects enables some powerful shortcuts for

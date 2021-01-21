@@ -2,10 +2,10 @@
 .. _plotting:
 
 Plotting
-========
+--------
 
 Introduction
-------------
+============
 
 Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
@@ -49,7 +49,7 @@ For more extensive plotting applications consider the following projects:
   tools.
 
 Imports
-~~~~~~~
+=======
 
 .. ipython:: python
     :suppress:
@@ -87,7 +87,7 @@ For these examples we'll use the North American air temperature dataset.
 
 
 DataArrays
-----------
+==========
 
 One Dimension
 ~~~~~~~~~~~~~
@@ -704,7 +704,7 @@ TODO: add an example of using the ``map`` method to plot dataset variables
 .. _plot-dataset:
 
 Datasets
---------
+========
 
 ``xarray`` has limited support for plotting Dataset variables against each other.
 Consider this dataset
@@ -766,7 +766,7 @@ For more advanced scatter plots, we recommend converting the relevant data varia
 .. _plot-maps:
 
 Maps
-----
+====
 
 To follow this section you'll need to have Cartopy installed and working.
 
@@ -808,7 +808,7 @@ by faceting are accessible in the object returned by ``plot``:
 
 
 Details
--------
+=======
 
 Ways to Use
 ~~~~~~~~~~~

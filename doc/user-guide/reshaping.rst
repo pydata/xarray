@@ -1,8 +1,6 @@
-.. _reshape:
 
-###############################
 Reshaping and reorganizing data
-###############################
+-------------------------------
 
 These methods allow you to reorganize
 
@@ -16,7 +14,7 @@ These methods allow you to reorganize
     np.random.seed(123456)
 
 Reordering dimensions
----------------------
+=====================
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
 on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
@@ -30,7 +28,7 @@ ellipsis (`...`) can be use to represent all other dimensions:
     ds.transpose()  # reverses all dimensions
 
 Expand and squeeze dimensions
------------------------------
+=============================
 
 To expand a :py:class:`~xarray.DataArray` or all
 variables on a :py:class:`~xarray.Dataset` along a new dimension,
@@ -52,7 +50,7 @@ use :py:meth:`~xarray.DataArray.squeeze`
     expanded.squeeze("w")
 
 Converting between datasets and arrays
---------------------------------------
+======================================
 
 To convert from a Dataset to a DataArray, use :py:meth:`~xarray.Dataset.to_array`:
 
@@ -96,7 +94,7 @@ If you use ``to_dataset`` without supplying the ``dim`` argument, the DataArray 
 .. _reshape.stack:
 
 Stack and unstack
------------------
+=================
 
 As part of xarray's nascent support for :py:class:`pandas.MultiIndex`, we have
 implemented :py:meth:`~xarray.DataArray.stack` and
@@ -192,7 +190,7 @@ numerical method.
 .. _reshape.set_index:
 
 Set and reset index
--------------------
+===================
 
 Complementary to stack / unstack, xarray's ``.set_index``, ``.reset_index`` and
 ``.reorder_levels`` allow easy manipulation of ``DataArray`` or ``Dataset``
@@ -252,7 +250,7 @@ labels for one or several dimensions:
 .. _reshape.shift_and_roll:
 
 Shift and roll
---------------
+===============
 
 To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` and
 :py:meth:`~xarray.Dataset.roll` methods:
@@ -266,7 +264,7 @@ To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` an
 .. _reshape.sort:
 
 Sort
-----
+====
 
 One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
 :py:meth:`~xarray.DataArray.sortby`.  The input can be an individual or list of

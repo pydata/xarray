@@ -1,8 +1,7 @@
 .. _time-series:
 
-================
 Time series data
-================
+-----------------
 
 A major use case for xarray is multi-dimensional time-series data.
 Accordingly, we've copied many of features that make working with time-series
@@ -19,7 +18,7 @@ core functionality.
     np.random.seed(123456)
 
 Creating datetime64 data
-------------------------
+========================
 
 xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
 represent datetime data, which offer vectorized (if sometimes buggy) operations
@@ -79,7 +78,7 @@ packaged with earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more
 information.
 
 Datetime indexing
------------------
+=================
 
 xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
@@ -106,7 +105,7 @@ For more details, read the pandas documentation.
 .. _dt_accessor:
 
 Datetime components
--------------------
+===================
 
 Similar `to pandas`_, the components of datetime objects contained in a
 given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
@@ -168,7 +167,7 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 .. _resampling:
 
 Resampling and grouped operations
----------------------------------
+=================================
 
 Datetime components couple particularly well with grouped operations (see
 :ref:`groupby`) for analyzing features that repeat over time. Here's how to
@@ -224,4 +223,4 @@ Data that has indices outside of the given ``tolerance`` are set to ``NaN``.
 
 
 For more examples of using grouped operations on a time dimension, see
-:doc:`examples/weather-data`.
+:doc:`../examples/weather-data`.

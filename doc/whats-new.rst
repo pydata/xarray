@@ -1,7 +1,7 @@
 .. currentmodule:: xarray
 
 What's New
-==========
+-----------
 
 .. ipython:: python
     :suppress:
@@ -18,7 +18,7 @@ What's New
 .. _whats-new.0.16.3:
 
 v0.16.3 (unreleased)
---------------------
+=====================
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -115,7 +115,7 @@ Internal Changes
 .. _whats-new.0.16.2:
 
 v0.16.2 (30 Nov 2020)
----------------------
+=====================
 
 This release brings the ability to write to limited regions of ``zarr`` files, open zarr files with :py:func:`open_dataset` and :py:func:`open_mfdataset`, increased support for propagating ``attrs`` using the ``keep_attrs`` flag, as well as numerous bugfixes and documentation improvements.
 
@@ -246,7 +246,7 @@ Internal Changes
 .. _whats-new.0.16.1:
 
 v0.16.1 (2020-09-20)
----------------------
+====================
 
 This patch release fixes an incompatibility with a recent pandas change, which
 was causing an issue indexing with a ``datetime64``. It also includes
@@ -299,7 +299,7 @@ New Features
   By `Aaron Spring <https://github.com/aaronspring>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
-  document the new method in :doc:`internals`. (:pull:`4248`).
+  document the new method in :doc:`dev-guide/internals`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow per-variable fill values in most functions. (:pull:`4237`).
   By `Justus Magin <https://github.com/keewis>`_.
@@ -393,7 +393,7 @@ Internal Changes
 .. _whats-new.0.16.0:
 
 v0.16.0 (2020-07-11)
----------------------
+====================
 
 This release adds `xarray.cov` & `xarray.corr` for covariance & correlation
 respectively; the `idxmax` & `idxmin` methods, the `polyfit` method &
@@ -588,7 +588,7 @@ Documentation
   parameter as required. (:issue:`1040`, :pull:`3909`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Updated :doc:`Calculating Seasonal Averages from Timeseries of Monthly Means
-  <examples/monthly-means>` example notebook to take advantage of the new
+  <../examples/monthly-means>` example notebook to take advantage of the new
   ``days_in_month`` accessor for :py:class:`xarray.CFTimeIndex`
   (:pull:`3935`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Updated the list of current core developers. (:issue:`3892`)
@@ -628,7 +628,7 @@ Internal Changes
 .. _whats-new.0.15.1:
 
 v0.15.1 (23 Mar 2020)
----------------------
+=====================
 
 This release brings many new features such as :py:meth:`Dataset.weighted` methods for weighted array
 reductions, a new jupyter repr by default, and the start of units integration with pint. There's also
@@ -764,7 +764,7 @@ Internal Changes
 
 
 v0.15.0 (30 Jan 2020)
----------------------
+======================
 
 This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
@@ -886,17 +886,17 @@ Documentation
 - Switch doc examples to use `nbsphinx <https://nbsphinx.readthedocs.io>`_ and replace
   ``sphinx_gallery`` scripts with Jupyter notebooks. (:pull:`3105`, :pull:`3106`, :pull:`3121`)
   By `Ryan Abernathey <https://github.com/rabernat>`_.
-- Added :doc:`example notebook <examples/ROMS_ocean_model>` demonstrating use of xarray with
+- Added :doc:`example notebook <../examples/ROMS_ocean_model>` demonstrating use of xarray with
   Regional Ocean Modeling System (ROMS) ocean hydrodynamic model output. (:pull:`3116`)
   By `Robert Hetland <https://github.com/hetland>`_.
-- Added :doc:`example notebook <examples/ERA5-GRIB-example>` demonstrating the visualization of
+- Added :doc:`example notebook <../examples/ERA5-GRIB-example>` demonstrating the visualization of
   ERA5 GRIB data. (:pull:`3199`)
   By `Zach Bruick <https://github.com/zbruick>`_ and
   `Stephan Siemen <https://github.com/StephanSiemen>`_.
 - Added examples for :py:meth:`DataArray.quantile`, :py:meth:`Dataset.quantile` and
   ``GroupBy.quantile``. (:pull:`3576`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Add new :doc:`example notebook <examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
+- Add new :doc:`example notebook <../examples/apply_ufunc_vectorize_1d>` example notebook demonstrating
   vectorization of a 1D function using :py:func:`apply_ufunc` , dask and numba.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added example for :py:func:`~xarray.map_blocks`. (:pull:`3667`)
@@ -924,7 +924,7 @@ Internal Changes
 .. _whats-new.0.14.1:
 
 v0.14.1 (19 Nov 2019)
----------------------
+=====================
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -1080,7 +1080,7 @@ Internal Changes
 .. _whats-new.0.14.0:
 
 v0.14.0 (14 Oct 2019)
----------------------
+=====================
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -1187,7 +1187,7 @@ Documentation
 .. _whats-new.0.13.0:
 
 v0.13.0 (17 Sep 2019)
----------------------
+=====================
 
 This release includes many exciting changes: wrapping of
 `NEP18 <https://www.numpy.org/neps/nep-0018-array-function-protocol.html>`_ compliant
@@ -1388,7 +1388,7 @@ Documentation
 .. _whats-new.0.12.3:
 
 v0.12.3 (10 July 2019)
-----------------------
+======================
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -1429,7 +1429,7 @@ Bug fixes
 .. _whats-new.0.12.2:
 
 v0.12.2 (29 June 2019)
-----------------------
+======================
 
 New functions/methods
 ~~~~~~~~~~~~~~~~~~~~~
@@ -1581,7 +1581,7 @@ Bug fixes
 .. _whats-new.0.12.1:
 
 v0.12.1 (4 April 2019)
-----------------------
+======================
 
 Enhancements
 ~~~~~~~~~~~~
@@ -1603,7 +1603,7 @@ Bug fixes
 .. _whats-new.0.12.0:
 
 v0.12.0 (15 March 2019)
------------------------
+=======================
 
 Highlights include:
 
@@ -1732,7 +1732,7 @@ Bug fixes
 .. _whats-new.0.11.3:
 
 v0.11.3 (26 January 2019)
--------------------------
+=========================
 
 Bug fixes
 ~~~~~~~~~
@@ -1749,7 +1749,7 @@ Bug fixes
 .. _whats-new.0.11.2:
 
 v0.11.2 (2 January 2019)
-------------------------
+========================
 
 Removes inadvertently introduced setup dependency on pytest-runner
 (:issue:`2641`). Otherwise, this release is exactly equivalent to 0.11.1.
@@ -1767,7 +1767,7 @@ Removes inadvertently introduced setup dependency on pytest-runner
 .. _whats-new.0.11.1:
 
 v0.11.1 (29 December 2018)
---------------------------
+==========================
 
 This minor release includes a number of enhancements and bug fixes, and two
 (slightly) breaking changes.
@@ -1846,7 +1846,7 @@ Bug fixes
 .. _whats-new.0.11.0:
 
 v0.11.0 (7 November 2018)
--------------------------
+=========================
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -2003,7 +2003,7 @@ Bug fixes
 .. _whats-new.0.10.9:
 
 v0.10.9 (21 September 2018)
----------------------------
+===========================
 
 This minor release contains a number of backwards compatible enhancements.
 
@@ -2117,7 +2117,7 @@ Bug fixes
 .. _whats-new.0.10.8:
 
 v0.10.8 (18 July 2018)
-----------------------
+======================
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -2171,7 +2171,7 @@ Bug fixes
 .. _whats-new.0.10.7:
 
 v0.10.7 (7 June 2018)
----------------------
+=====================
 
 Enhancements
 ~~~~~~~~~~~~
@@ -2200,7 +2200,7 @@ Bug fixes
 .. _whats-new.0.10.6:
 
 v0.10.6 (31 May 2018)
----------------------
+=====================
 
 The minor release includes a number of bug-fixes and backwards compatible
 enhancements.
@@ -2294,7 +2294,7 @@ Bug fixes
 .. _whats-new.0.10.4:
 
 v0.10.4 (16 May 2018)
-----------------------
+=====================
 
 The minor release includes a number of bug-fixes and backwards compatible
 enhancements. A highlight is ``CFTimeIndex``, which offers support for
@@ -2384,7 +2384,7 @@ Bug fixes
 .. _whats-new.0.10.3:
 
 v0.10.3 (13 April 2018)
-------------------------
+=======================
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
@@ -2426,7 +2426,7 @@ Bug fixes
 .. _whats-new.0.10.2:
 
 v0.10.2 (13 March 2018)
------------------------
+=======================
 
 The minor release includes a number of bug-fixes and enhancements, along with
 one possibly **backwards incompatible change**.
@@ -2505,7 +2505,7 @@ Bug fixes
 .. _whats-new.0.10.1:
 
 v0.10.1 (25 February 2018)
---------------------------
+==========================
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
@@ -2673,7 +2673,7 @@ Bug fixes
 .. _whats-new.0.10.0:
 
 v0.10.0 (20 November 2017)
---------------------------
+==========================
 
 This is a major release that includes bug fixes, new features and a few
 backwards incompatible changes. Highlights include:
@@ -3074,7 +3074,7 @@ Bug fixes after rc2
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
---------------------
+====================
 
 This release includes a number of backwards compatible enhancements and bug
 fixes.
@@ -3152,14 +3152,14 @@ Testing
 .. _whats-new.0.9.5:
 
 v0.9.5 (17 April, 2017)
------------------------
+========================
 
 Remove an inadvertently introduced print statement.
 
 .. _whats-new.0.9.3:
 
 v0.9.3 (16 April, 2017)
------------------------
+========================
 
 This minor release includes bug-fixes and backwards compatible enhancements.
 
@@ -3202,7 +3202,7 @@ Bug fixes
 .. _whats-new.0.9.2:
 
 v0.9.2 (2 April 2017)
----------------------
+=====================
 
 The minor release includes bug-fixes and backwards compatible enhancements.
 
@@ -3270,7 +3270,7 @@ Bug fixes
 .. _whats-new.0.9.1:
 
 v0.9.1 (30 January 2017)
-------------------------
+=========================
 
 Renamed the "Unindexed dimensions" section in the ``Dataset`` and
 ``DataArray`` repr (added in v0.9.0) to "Dimensions without coordinates"
@@ -3279,7 +3279,7 @@ Renamed the "Unindexed dimensions" section in the ``Dataset`` and
 .. _whats-new.0.9.0:
 
 v0.9.0 (25 January 2017)
-------------------------
+========================
 
 This major release includes five months worth of enhancements and bug fixes from
 24 contributors, including some significant changes that are not fully backwards
@@ -3573,7 +3573,7 @@ Performance improvements
 .. _whats-new.0.8.2:
 
 v0.8.2 (18 August 2016)
------------------------
+=======================
 
 This release includes a number of bug fixes and minor enhancements.
 
@@ -3626,7 +3626,7 @@ Bug fixes
 .. _whats-new.0.8.1:
 
 v0.8.1 (5 August 2016)
-----------------------
+======================
 
 Bug fixes
 ~~~~~~~~~
@@ -3637,7 +3637,7 @@ Bug fixes
 .. _whats-new.0.8.0:
 
 v0.8.0 (2 August 2016)
-----------------------
+======================
 
 This release includes four months of new features and bug fixes, including
 several breaking changes.
@@ -3757,7 +3757,7 @@ Bug fixes
 .. _whats-new.0.7.2:
 
 v0.7.2 (13 March 2016)
-----------------------
+======================
 
 This release includes two new, entirely backwards compatible features and
 several bug fixes.
@@ -3819,7 +3819,7 @@ Bug fixes
 .. _whats-new.0.7.1:
 
 v0.7.1 (16 February 2016)
--------------------------
+=========================
 
 This is a bug fix release that includes two small, backwards compatible enhancements.
 We recommend that all users upgrade.
@@ -3867,7 +3867,7 @@ The following individuals contributed to this release:
 .. _whats-new.0.7.0:
 
 v0.7.0 (21 January 2016)
-------------------------
+========================
 
 This major release includes redesign of :py:class:`~xarray.DataArray`
 internals, as well as new methods for reshaping, rolling and shifting
@@ -4066,7 +4066,7 @@ The following individuals contributed to this release:
 - femtotrader
 
 v0.6.1 (21 October 2015)
-------------------------
+========================
 
 This release contains a number of bug and compatibility fixes, as well
 as enhancements to plotting, indexing and writing files to disk.
@@ -4151,7 +4151,7 @@ The following individuals contributed to this release:
 - Scott Sinclair
 
 v0.6.0 (21 August 2015)
------------------------
+=======================
 
 This release includes numerous bug fixes and enhancements. Highlights
 include the introduction of a plotting module and the new Dataset and DataArray
@@ -4261,7 +4261,7 @@ Bug fixes
   netcdf4_classic formats (:issue:`526`).
 
 v0.5.2 (16 July 2015)
----------------------
+=====================
 
 This release contains bug fixes, several additional options for opening and
 saving netCDF files, and a backwards incompatible rewrite of the advanced
@@ -4317,7 +4317,7 @@ Bug fixes
   This allows conventions decoding to work properly on Python 3 (:issue:`451`).
 
 v0.5.1 (15 June 2015)
----------------------
+=====================
 
 This minor release fixes a few bugs and an inconsistency with pandas. It also
 adds the ``pipe`` method, copied from pandas.
@@ -4342,7 +4342,7 @@ Bug fixes
   bottleneck installed.
 
 v0.5 (1 June 2015)
-------------------
+==================
 
 Highlights
 ~~~~~~~~~~
@@ -4352,9 +4352,10 @@ computing (data that doesn't fit into memory) with dask_. This includes a new
 top-level function ``xray.open_mfdataset`` that makes it easy to open
 a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
-documentation section :doc:`dask`.
+documentation section :doc:`user-guide/dask`.
 
 .. _blog post introducing xray + dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
+
 
 Dask makes it possible to harness parallelism and manipulate gigantic datasets
 with xray. It is currently an optional dependency, but it may become required
@@ -4504,7 +4505,7 @@ Deprecations
   ``xray.Dataset.load``.
 
 v0.4.1 (18 March 2015)
-----------------------
+======================
 
 The release contains bug fixes and several new features. All changes should be
 fully backwards compatible.
@@ -4589,7 +4590,7 @@ Bug fixes
   ``ValueError: could not automatically determine time units``.
 
 v0.4 (2 March, 2015)
---------------------
+====================
 
 This is one of the biggest releases yet for xray: it includes some major
 changes that may break existing code, along with the usual collection of minor
@@ -4770,7 +4771,7 @@ project. For a preview of using Dask with weather data, read
 .. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
 
 v0.3.2 (23 December, 2014)
---------------------------
+==========================
 
 This release focused on bug-fixes, speedups and resolving some niggling
 inconsistencies.
@@ -4870,7 +4871,7 @@ hear them -- please add a note to any of the referenced GitHub issues.
 .. _CF Conventions: http://cfconventions.org/Data/cf-conventions/cf-conventions-1.6/build/cf-conventions.html
 
 v0.3.1 (22 October, 2014)
--------------------------
+=========================
 
 This is mostly a bug-fix release to make xray compatible with the latest
 release of pandas (v0.15).
@@ -4912,7 +4913,7 @@ Bug fixes
 - Order of dimensions preserved with ``DataArray.to_dataframe`` (:issue:`260`).
 
 v0.3 (21 September 2014)
-------------------------
+========================
 
 New features
 ~~~~~~~~~~~~
@@ -4950,7 +4951,7 @@ Deprecations
   ``xray.DataArray.reset_coords`` instead.
 
 v0.2 (14 August 2014)
----------------------
+=====================
 
 This is major release that includes some new features and quite a few bug
 fixes. Here are the highlights:
@@ -4971,7 +4972,7 @@ fixes. Here are the highlights:
   disk.
 
 v0.1.1 (20 May 2014)
---------------------
+=====================
 
 xray 0.1.1 is a bug-fix release that includes changes that should be almost
 entirely backwards compatible with v0.1:
@@ -4986,6 +4987,6 @@ Special thanks to new contributors Thomas Kluyver, Joe Hamman and Alistair
 Miles.
 
 v0.1 (2 May 2014)
------------------
+=================
 
 Initial release.
