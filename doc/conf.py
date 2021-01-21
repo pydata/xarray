@@ -107,6 +107,7 @@ html_context = {
     "github_user": "pydata",
     "github_repo": "xarray",
     "github_version": "master",
+    "doc_path": "doc",
 }
 
 autodoc_typehints = "none"
@@ -246,6 +247,7 @@ html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "github_url": "https://github.com/pydata/xarray",
     "twitter_url": "https://twitter.com/xarray_dev",
+    "use_edit_page_button": True,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
