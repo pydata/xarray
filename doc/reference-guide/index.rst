@@ -7,7 +7,7 @@ included in Xarray, describing what they are and what they do.
 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    api
    howdoi
