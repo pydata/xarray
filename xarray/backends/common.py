@@ -347,7 +347,7 @@ class BackendEntrypoint:
     open_dataset_parameters: Union[Tuple, None] = None
 
     def open_dataset(self):
-        pass
+        raise NotImplementedError
 
     def guess_can_open(self, store_spec):
         return False
