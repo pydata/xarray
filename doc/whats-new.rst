@@ -25,6 +25,7 @@ Breaking changes
 - xarray no longer supports python 3.6
 
   The minimum versions of some other dependencies were changed:
+
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
