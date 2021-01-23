@@ -116,6 +116,7 @@ class TestMergeFunction:
             expected.attrs = expected_attrs
             assert_identical(actual, expected)
 
+    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
     @pytest.mark.parametrize(
         "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
         [
