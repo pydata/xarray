@@ -94,9 +94,9 @@ class TestMergeFunction:
             ),
             (
                 "drop_conflicts",
-                {"a": 1, "b": 2},
-                {"b": 1, "c": 3},
-                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
                 False,
             ),
         ],
