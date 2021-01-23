@@ -481,7 +481,7 @@ class HybridMappingProxy(Mapping[K, V]):
     def __len__(self) -> int:
         return len(self._keys)
 
-      
+
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
