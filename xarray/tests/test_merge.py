@@ -133,11 +133,11 @@ class TestMergeFunction:
                 {"a": 1, "b": 2},
                 {"a": 4, "c": 3},
                 {"a": 1, "b": 2, "c": 3},
-                False,
+                True,
             ),
             ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
             ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
-            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
             (
                 "override",
                 {"a": 1, "b": 2},
