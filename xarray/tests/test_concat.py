@@ -281,18 +281,18 @@ class TestConcatDataset:
             assert_identical(actual, expected[combine_attrs])
 
         ds1 = Dataset(
-            {"a": ("x", [0], {"b": 41, "c": 43})},
+            {"a": ("x", [0], {"b": 1, "c": 43, "d": 44})},
             coords={"x": [0]},
-            attrs={"a": 41, "b": 42, "c": 43},
+            attrs={"b": 1, "c": 43, "d": 44},
         )
         ds2 = Dataset(
             {"a": ("x", [0], {"a": 41, "b": 42, "c": 43})},
             coords={"x": [1]},
-            attrs={"b": 41, "c": 43, "d": 44},
+            attrs={"a": 41, "b": 42, "c": 43},
         )
         actual = concat([ds1, ds2], dim="x", combine_attrs="drop_conflicts")
         expected = Dataset(
-            {"a": ("x", [0, 0], {"a": 41, "c": 43})},
+            {"a": ("x", [0, 0], {"a": 41, "c": 43, "d": 44})},
             coords={"x": [0, 1]},
             attrs={"a": 41, "c": 43, "d": 44},
         )
