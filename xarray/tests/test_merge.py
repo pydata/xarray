@@ -116,6 +116,63 @@ class TestMergeFunction:
             expected.attrs = expected_attrs
             assert_identical(actual, expected)
 
+    @pytest.mark.parametrize(
+        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, False),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_merge_arrays_attrs_variables(
+        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+    ):
+        data = create_test_data()
+        data1 = data.copy()
+        data1.var1.attrs = var1_attrs
+        data2 = data.copy()
+        data2.var1.attrs = var2_attrs
+
+        if expect_exception:
+            with raises_regex(MergeError, "combine_attrs"):
+                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+        else:
+            actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+            expected = data.copy()
+            expected.var1.attrs = expected_attrs
+
+            assert_identical(actual, expected)
+
     def test_merge_attrs_override_copy(self):
         ds1 = xr.Dataset(attrs={"x": 0})
         ds2 = xr.Dataset(attrs={"x": 1})
