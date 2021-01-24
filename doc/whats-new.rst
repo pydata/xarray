@@ -46,7 +46,10 @@ Breaking changes
 New Features
 ~~~~~~~~~~~~
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
+  in the form of kwargs as well as a dict, like most similar methods.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
