@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -45,6 +45,11 @@ Breaking changes
 
 New Features
 ~~~~~~~~~~~~
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
