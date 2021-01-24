@@ -3155,7 +3155,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
-    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "Dataset":
+    def swap_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+    ) -> "Dataset":
         """Returns a new object with swapped dimensions.
 
         Parameters
@@ -3163,6 +3165,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
+
+        **dim_kwargs : {existing_dim: new_dim, ...}, optional
+            The keyword arguments form of ``dims_dict``.
+            One of dims_dict or dims_kwargs must be provided.
 
         Returns
         -------
@@ -3214,6 +3220,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
+
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
