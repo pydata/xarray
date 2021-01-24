@@ -99,6 +99,13 @@ class TestMergeFunction:
                 {"a": 1, "c": 3, "d": 4},
                 False,
             ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": np.array([2]), "c": np.array([3])},
+                {"b": 1, "c": np.array([3]), "d": 4},
+                {"a": 1, "c": np.array([3]), "d": 4},
+                False,
+            ),
         ],
     )
     def test_merge_arrays_attrs(

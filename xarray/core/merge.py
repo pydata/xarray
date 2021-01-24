@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .utils import Frozen, compat_dict_union, dict_equiv
+from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
@@ -522,7 +522,7 @@ def merge_attrs(variable_attrs, combine_attrs):
             result = {
                 key: value
                 for key, value in result.items()
-                if attrs.get(key, value) == value
+                if equivalent(attrs.get(key, value), value)
             }
         return result
     elif combine_attrs == "identical":
