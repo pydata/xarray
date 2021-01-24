@@ -515,15 +515,21 @@ def merge_attrs(variable_attrs, combine_attrs):
         return result
     elif combine_attrs == "drop_conflicts":
         result = {}
+        dropped_keys = set()
         for attrs in variable_attrs:
             result.update(
-                {key: value for key, value in attrs.items() if key not in result}
+                {
+                    key: value
+                    for key, value in attrs.items()
+                    if key not in result and key not in dropped_keys
+                }
             )
             result = {
                 key: value
                 for key, value in result.items()
                 if equivalent(attrs.get(key, value), value)
             }
+            dropped_keys |= {key for key in attrs if key not in result}
         return result
     elif combine_attrs == "identical":
         result = dict(variable_attrs[0])
