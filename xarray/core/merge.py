@@ -527,7 +527,7 @@ def merge_attrs(variable_attrs, combine_attrs):
             result = {
                 key: value
                 for key, value in result.items()
-                if equivalent(attrs.get(key, value), value)
+                if key not in attrs or equivalent(attrs[key], value)
             }
             dropped_keys |= {key for key in attrs if key not in result}
         return result
