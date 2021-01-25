@@ -2747,6 +2747,13 @@ class TestDataset:
         actual = original.swap_dims({"x": "u"})
         assert_identical(expected, actual)
 
+        # as kwargs
+        expected = Dataset(
+            {"y": ("u", list("abc")), "z": 42}, coords={"x": ("u", [1, 2, 3])}
+        )
+        actual = original.swap_dims(x="u")
+        assert_identical(expected, actual)
+
         # handle multiindex case
         idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
         original = Dataset({"x": [1, 2, 3], "y": ("x", idx), "z": 42})
