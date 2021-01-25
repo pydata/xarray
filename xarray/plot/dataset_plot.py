@@ -291,7 +291,7 @@ def _dsplot(plotfunc):
             allargs = locals().copy()
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             allargs["data"] = ds
-            # TODO dcherian: why do I need to remove kwargs?
+            # remove kwargs to avoid passing the information twice
             for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
 
@@ -422,7 +422,10 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
-        for label in np.unique(data["hue"].values):
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
+        for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())

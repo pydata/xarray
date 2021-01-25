@@ -46,7 +46,6 @@ from .alignment import (
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates,
-    LevelCoordinatesSource,
     assert_coordinate_consistent,
     remap_label_indexers,
 )
@@ -56,7 +55,13 @@ from .indexes import Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
-from .utils import Default, ReprObject, _default, either_dict_or_kwargs
+from .utils import (
+    Default,
+    HybridMappingProxy,
+    ReprObject,
+    _default,
+    either_dict_or_kwargs,
+)
 from .variable import (
     IndexVariable,
     Variable,
@@ -339,6 +344,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
@@ -346,7 +352,7 @@ class DataArray(AbstractArray, DataWithCoords):
     __slots__ = (
         "_cache",
         "_coords",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_name",
         "_variable",
@@ -416,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # public interface.
         self._indexes = indexes
 
-        self._file_obj = None
+        self._close = None
 
     def _replace(
         self,
@@ -721,18 +727,20 @@ class DataArray(AbstractArray, DataWithCoords):
         del self.coords[key]
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return self._item_sources + [self.attrs]
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from self._item_sources
+        yield self.attrs
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-completion"""
-        return [
-            self.coords,
-            {d: self.coords[d] for d in self.dims},
-            LevelCoordinatesSource(self),
-        ]
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-completion"""
+        yield HybridMappingProxy(keys=self._coords, mapping=self.coords)
+
+        # virtual coordinates
+        # uses empty dict -- everything here can already be found in self.coords.
+        yield HybridMappingProxy(keys=self.dims, mapping={})
+        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data
@@ -1318,8 +1326,8 @@ class DataArray(AbstractArray, DataWithCoords):
                [ 2.2408932 ,  1.86755799, -0.97727788],
                [        nan,         nan,         nan]])
         Coordinates:
-          * x        (x) object 'a' 'b' 'c'
-          * y        (y) object 'a' 'b' 'c'
+          * x        (x) <U1 'a' 'b' 'c'
+          * y        (y) <U1 'a' 'b' 'c'
         """
         if exclude is None:
             exclude = set()
@@ -1691,7 +1699,9 @@ class DataArray(AbstractArray, DataWithCoords):
             new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
-    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "DataArray":
+    def swap_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+    ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -1699,6 +1709,10 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
+
+        **dim_kwargs : {dim: , ...}, optional
+            The keyword arguments form of ``dims_dict``.
+            One of dims_dict or dims_kwargs must be provided.
 
         Returns
         -------
@@ -1741,6 +1755,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.rename
         Dataset.swap_dims
         """
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
@@ -2113,7 +2128,12 @@ class DataArray(AbstractArray, DataWithCoords):
         # unstacked dataset
         return Dataset(data_dict)
 
-    def transpose(self, *dims: Hashable, transpose_coords: bool = True) -> "DataArray":
+    def transpose(
+        self,
+        *dims: Hashable,
+        transpose_coords: bool = True,
+        missing_dims: str = "raise",
+    ) -> "DataArray":
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -2123,6 +2143,12 @@ class DataArray(AbstractArray, DataWithCoords):
             dimensions to this order.
         transpose_coords : bool, default: True
             If True, also transpose the coordinates of this DataArray.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            DataArray:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -2141,7 +2167,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         if dims:
-            dims = tuple(utils.infix_dims(dims, self.dims))
+            dims = tuple(utils.infix_dims(dims, self.dims, missing_dims))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords: Dict[Hashable, Variable] = {}
@@ -2228,6 +2254,28 @@ class DataArray(AbstractArray, DataWithCoords):
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this DataArray.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : DataArray
+
+        Raises
+        ------
+        IndexError
+        """
+        dataset = self._to_temp_dataset()
+        dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
+        return self._from_temp_dataset(dataset)
 
     def dropna(
         self, dim: Hashable, how: str = "any", thresh: int = None

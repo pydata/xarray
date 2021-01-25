@@ -10,6 +10,7 @@ from typing import (
     Any,
     Dict,
     Hashable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -48,6 +49,7 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
+    maybe_coerce_to_str,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -1487,7 +1489,7 @@ class Variable(
         )
         return expanded_var.transpose(*dims)
 
-    def _stack_once(self, dims, new_dim):
+    def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
             raise ValueError("invalid existing dimensions: %s" % dims)
 
@@ -1543,7 +1545,15 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once(self, dims, old_dim):
+    def _unstack_once_full(
+        self, dims: Mapping[Hashable, int], old_dim: Hashable
+    ) -> "Variable":
+        """
+        Unstacks the variable without needing an index.
+
+        Unlike `_unstack_once`, this function requires the existing dimension to
+        contain the full product of the new dimensions.
+        """
         new_dim_names = tuple(dims.keys())
         new_dim_sizes = tuple(dims.values())
 
@@ -1572,12 +1582,63 @@ class Variable(
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
+    def _unstack_once(
+        self,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        fill_value=dtypes.NA,
+    ) -> "Variable":
+        """
+        Unstacks this variable given an index to unstack and the name of the
+        dimension to which the index refers.
+        """
+
+        reordered = self.transpose(..., dim)
+
+        new_dim_sizes = [lev.size for lev in index.levels]
+        new_dim_names = index.names
+        indexer = index.codes
+
+        # Potentially we could replace `len(other_dims)` with just `-1`
+        other_dims = [d for d in self.dims if d != dim]
+        new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
+        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+
+        if fill_value is dtypes.NA:
+            is_missing_values = np.prod(new_shape) > np.prod(self.shape)
+            if is_missing_values:
+                dtype, fill_value = dtypes.maybe_promote(self.dtype)
+            else:
+                dtype = self.dtype
+                fill_value = dtypes.get_fill_value(dtype)
+        else:
+            dtype = self.dtype
+
+        # Currently fails on sparse due to https://github.com/pydata/sparse/issues/422
+        data = np.full_like(
+            self.data,
+            fill_value=fill_value,
+            shape=new_shape,
+            dtype=dtype,
+        )
+
+        # Indexer is a list of lists of locations. Each list is the locations
+        # on the new dimension. This is robust to the data being sparse; in that
+        # case the destinations will be NaN / zero.
+        data[(..., *indexer)] = reordered
+
+        return self._replace(dims=new_dims, data=data)
+
     def unstack(self, dimensions=None, **dimensions_kwargs):
         """
         Unstack an existing dimension into multiple new dimensions.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
+
+        Note that unlike ``DataArray.unstack`` and ``Dataset.unstack``, this
+        method requires the existing dimension to contain the full product of
+        the new dimensions.
 
         Parameters
         ----------
@@ -1597,11 +1658,13 @@ class Variable(
         See also
         --------
         Variable.stack
+        DataArray.unstack
+        Dataset.unstack
         """
         dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "unstack")
         result = self
         for old_dim, dims in dimensions.items():
-            result = result._unstack_once(dims, old_dim)
+            result = result._unstack_once_full(dims, old_dim)
         return result
 
     def fillna(self, value):
@@ -2522,6 +2585,9 @@ class IndexVariable(Variable):
             if positions is not None:
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
+
+        # keep as str if possible as pandas.Index uses object (converts to numpy array)
+        data = maybe_coerce_to_str(data, variables)
 
         attrs = dict(first_var.attrs)
         if not shortcut:
