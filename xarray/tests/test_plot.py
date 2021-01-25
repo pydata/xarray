@@ -592,6 +592,20 @@ class TestPlot(PlotTestCase):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
+    @pytest.mark.parametrize("dim", ("x", "y"))
+    def test_labels_with_units_with_interval(self, dim):
+        """Test line plot with intervals and a units attribute."""
+        bins = [-1, 0, 1, 2]
+        arr = self.darray.groupby_bins("dim_0", bins).mean(...)
+        arr.dim_0_bins.attrs["units"] = "m"
+
+        (mappable,) = arr.plot(**{dim: "dim_0_bins"})
+        ax = mappable.figure.gca()
+        actual = getattr(ax, f"get_{dim}label")()
+
+        expected = "dim_0_bins_center [m]"
+        assert actual == expected
+
 
 class TestPlot1D(PlotTestCase):
     @pytest.fixture(autouse=True)
@@ -2240,7 +2254,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
     def test_facetgrid_hue_style(self):
-        # Can't move this to pytest.mark.parametrize because py36-bare-minimum
+        # Can't move this to pytest.mark.parametrize because py37-bare-minimum
         # doesn't have matplotlib.
         for hue_style, map_type in (
             ("discrete", list),
@@ -2275,6 +2289,17 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = ["a", "a", "b", "b"]
         lines = ds2.plot.scatter(x="A", y="B", hue="hue")
         assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
+
+    def test_legend_labels_facetgrid(self):
+        ds2 = self.ds.copy()
+        ds2["hue"] = ["d", "a", "c", "b"]
+        g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col")
+        legend_labels = tuple(t.get_text() for t in g.figlegend.texts)
+        attached_labels = [
+            tuple(m.get_label() for m in mappables_per_ax)
+            for mappables_per_ax in g._mappables
+        ]
+        assert list(set(attached_labels)) == [legend_labels]
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")

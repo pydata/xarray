@@ -2,33 +2,11 @@ import functools
 import inspect
 import itertools
 import logging
-import typing as T
 import warnings
 
 import pkg_resources
 
-from .cfgrib_ import cfgrib_backend
-from .common import BackendEntrypoint
-from .h5netcdf_ import h5netcdf_backend
-from .netCDF4_ import netcdf4_backend
-from .pseudonetcdf_ import pseudonetcdf_backend
-from .pydap_ import pydap_backend
-from .pynio_ import pynio_backend
-from .scipy_ import scipy_backend
-from .store import store_backend
-from .zarr import zarr_backend
-
-BACKEND_ENTRYPOINTS: T.Dict[str, BackendEntrypoint] = {
-    "store": store_backend,
-    "netcdf4": netcdf4_backend,
-    "h5netcdf": h5netcdf_backend,
-    "scipy": scipy_backend,
-    "pseudonetcdf": pseudonetcdf_backend,
-    "zarr": zarr_backend,
-    "cfgrib": cfgrib_backend,
-    "pydap": pydap_backend,
-    "pynio": pynio_backend,
-}
+from .common import BACKEND_ENTRYPOINTS
 
 
 def remove_duplicates(backend_entrypoints):
@@ -103,11 +81,6 @@ def list_engines():
 
 def guess_engine(store_spec):
     engines = list_engines()
-
-    # use the pre-defined selection order for netCDF files
-    for engine in ["netcdf4", "h5netcdf", "scipy"]:
-        if engine in engines and engines[engine].guess_can_open(store_spec):
-            return engine
 
     for engine, backend in engines.items():
         try:

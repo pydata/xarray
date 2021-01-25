@@ -17,31 +17,78 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_
+- xarray no longer supports python 3.6
+
+  The minimum versions of some other dependencies were changed:
+  ============ ====== ====
+  Package      Old    New
+  ============ ====== ====
+  Python       3.6    3.7
+  setuptools   38.4   40.4
+  ============ ====== ====
+
+  (:issue:`4688`, :pull:`4720`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- As a result of :pull:`4684` the default units encoding for
+  datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
+  always be set such that ``int64`` values can be used.  In the past, no units
+  finer than "seconds" were chosen, which would sometimes mean that ``float64``
+  values were required, which would lead to inaccurate I/O round-trips.
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
+
 
 New Features
 ~~~~~~~~~~~~
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
+  in the form of kwargs as well as a dict, like most similar methods.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
-
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- By default, when possible, xarray will now always use values of type ``int64`` when encoding
+  and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
+  precision and accuracy are maintained in the round-tripping process
+  (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard calendar
+  dates with time units of nanoseconds (:pull:`4400`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mark Harfouche <http://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_
+- Fix the legend created by :py:meth:`Dataset.plot.scatter` (:issue:`4641`, :pull:`4723`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
   By `Alessandro Amici <https://github.com/alexamici>`_
+- Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations,
+  e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype
+  (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Fix regression when decoding a variable with a ``scale_factor`` and ``add_offset`` given
+  as a list of length one (:issue:`4631`) by `Mathias Hauser <https://github.com/mathause>`_.
+- Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
+  :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
+  By `Julien Seguinot <https://github.com/juseg>`_.
+- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -63,6 +110,15 @@ Internal Changes
   - Run the tests in parallel using pytest-xdist (:pull:`4694`).
 
   By `Justus Magin <https://github.com/keewis>`_ and `Mathias Hauser <https://github.com/mathause>`_.
+
+- Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)``
+  for clearer error messages.
+  (:pull:`4752`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
+  in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
+  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 
 .. _whats-new.0.16.2:
 

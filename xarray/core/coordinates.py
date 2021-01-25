@@ -329,29 +329,6 @@ class DataArrayCoordinates(Coordinates):
         return self._data._ipython_key_completions_()
 
 
-class LevelCoordinatesSource(Mapping[Hashable, Any]):
-    """Iterator for MultiIndex level coordinates.
-
-    Used for attribute style lookup with AttrAccessMixin. Not returned directly
-    by any public methods.
-    """
-
-    __slots__ = ("_data",)
-
-    def __init__(self, data_object: "Union[DataArray, Dataset]"):
-        self._data = data_object
-
-    def __getitem__(self, key):
-        # not necessary -- everything here can already be found in coords.
-        raise KeyError()
-
-    def __iter__(self) -> Iterator[Hashable]:
-        return iter(self._data._level_coords)
-
-    def __len__(self) -> int:
-        return len(self._data._level_coords)
-
-
 def assert_coordinate_consistent(
     obj: Union["DataArray", "Dataset"], coords: Mapping[Hashable, Variable]
 ) -> None:

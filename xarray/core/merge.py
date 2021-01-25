@@ -933,9 +933,11 @@ def dataset_update_method(
                 if coord_names:
                     other[key] = value.drop_vars(coord_names)
 
+    # use ds.coords and not ds.indexes, else str coords are cast to object
+    indexes = {key: dataset.coords[key] for key in dataset.indexes.keys()}
     return merge_core(
         [dataset, other],
         priority_arg=1,
-        indexes=dataset.indexes,
+        indexes=indexes,
         combine_attrs="override",
     )
