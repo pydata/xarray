@@ -12,6 +12,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    Optional,
     Tuple,
     TypeVar,
     Union,
@@ -216,14 +217,14 @@ class AttrAccessMixin:
             )
 
     @property
-    def _attr_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for attribute-style access"""
-        return []
+    def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for attribute-style access"""
+        yield from ()
 
     @property
-    def _item_sources(self) -> List[Mapping[Hashable, Any]]:
-        """List of places to look-up items for key-autocompletion"""
-        return []
+    def _item_sources(self) -> Iterable[Mapping[Hashable, Any]]:
+        """Places to look-up items for key-autocompletion"""
+        yield from ()
 
     def __getattr__(self, name: str) -> Any:
         if name not in {"__dict__", "__setstate__"}:
@@ -279,26 +280,26 @@ class AttrAccessMixin:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [
+        extra_attrs = set(
             item
-            for sublist in self._attr_sources
-            for item in sublist
+            for source in self._attr_sources
+            for item in source
             if isinstance(item, str)
-        ]
-        return sorted(set(dir(type(self)) + extra_attrs))
+        )
+        return sorted(set(dir(type(self))) | extra_attrs)
 
     def _ipython_key_completions_(self) -> List[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
-        item_lists = [
+        items = set(
             item
-            for sublist in self._item_sources
-            for item in sublist
+            for source in self._item_sources
+            for item in source
             if isinstance(item, str)
-        ]
-        return list(set(item_lists))
+        )
+        return list(items)
 
 
 def get_squeeze_dims(
@@ -337,7 +338,9 @@ def get_squeeze_dims(
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    __slots__ = ()
+    _close: Optional[Callable[[], None]]
+
+    __slots__ = ("_close",)
 
     _rolling_exp_cls = RollingExp
 
@@ -382,8 +385,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            # need to ensure dtype=int64 in case range is empty on Python 2
-            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
+            return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
         self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
@@ -584,12 +586,15 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         >>> def adder(data, arg):
         ...     return data + arg
+        ...
 
         >>> def div(data, arg):
         ...     return data / arg
+        ...
 
         >>> def sub_mult(data, sub_arg, mult_arg):
         ...     return (data * mult_arg) - sub_arg
+        ...
 
         >>> x.pipe(adder, 2)
         <xarray.Dataset>
@@ -1276,11 +1281,27 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
+    def set_close(self, close: Optional[Callable[[], None]]) -> None:
+        """Register the function that releases any resources linked to this object.
+
+        This method controls how xarray cleans up resources associated
+        with this object when the ``.close()`` method is called. It is mostly
+        intended for backend developers and it is rarely needed by regular
+        end-users.
+
+        Parameters
+        ----------
+        close : callable
+            The function that when called like ``close()`` releases
+            any resources linked to this object.
+        """
+        self._close = close
+
     def close(self: Any) -> None:
-        """Close any files linked to this object"""
-        if self._file_obj is not None:
-            self._file_obj.close()
-        self._file_obj = None
+        """Release any resources linked to this object."""
+        if self._close is not None:
+            self._close()
+        self._close = None
 
     def isnull(self, keep_attrs: bool = None):
         """Test each value in the array for whether it is a missing value.
