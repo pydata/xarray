@@ -872,6 +872,7 @@ def dataset_merge_method(
     compat: str,
     join: str,
     fill_value: Any,
+    combine_attrs: str,
 ) -> _MergeResult:
     """Guts of the Dataset.merge method."""
     # we are locked into supporting overwrite_vars for the Dataset.merge
@@ -901,7 +902,12 @@ def dataset_merge_method(
         priority_arg = 2
 
     return merge_core(
-        objs, compat, join, priority_arg=priority_arg, fill_value=fill_value
+        objs,
+        compat,
+        join,
+        priority_arg=priority_arg,
+        fill_value=fill_value,
+        combine_attrs=combine_attrs,
     )
 
 
