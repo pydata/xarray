@@ -469,15 +469,18 @@ def line(ds, x, y, ax, **kwargs):
         )
 
     cmap_params = kwargs.pop("cmap_params")
-    print(cmap_params)
     hue = kwargs.pop("hue")
     kwargs.pop("hue_style")
-    markersize = kwargs.pop("markersize", None)
+    linewidth = kwargs.pop("markersize", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
 
     # Transpose the data to same shape:
-    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
+    data = _infer_scatter_data(ds, x, y, hue, linewidth, size_norm, size_mapping)
+
+    # Sort data so lines are connected correctly:
+    ind = np.argsort(data["x"], axis=0)
+    data["x"], data["y"] = data["x"][ind], data["y"][ind]
 
     if hue is not None:
         # Number of lines to plot, hopefully it's always the last axis it splits on:
@@ -495,6 +498,11 @@ def line(ds, x, y, ax, **kwargs):
         # one and return that one instead:
         norm = plt.Normalize(vmin=cmap_params["vmin"], vmax=cmap_params["vmax"])
         primitive = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    elif linewidth is not None:
+        ax.set_prop_cycle(plt.cycler(lw=data["sizes"][0] / 10))
+
+        # Plot data:
+        primitive = ax.plot(data["x"], data["y"], **kwargs)
     else:
         # Plot data:
         primitive = ax.plot(data["x"], data["y"], **kwargs)
