@@ -12,6 +12,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    Optional,
     Tuple,
     TypeVar,
     Union,
@@ -335,7 +336,9 @@ def get_squeeze_dims(
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    __slots__ = ()
+    _close: Optional[Callable[[], None]]
+
+    __slots__ = ("_close",)
 
     _rolling_exp_cls = RollingExp
 
@@ -1268,11 +1271,27 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
+    def set_close(self, close: Optional[Callable[[], None]]) -> None:
+        """Register the function that releases any resources linked to this object.
+
+        This method controls how xarray cleans up resources associated
+        with this object when the ``.close()`` method is called. It is mostly
+        intended for backend developers and it is rarely needed by regular
+        end-users.
+
+        Parameters
+        ----------
+        close : callable
+            The function that when called like ``close()`` releases
+            any resources linked to this object.
+        """
+        self._close = close
+
     def close(self: Any) -> None:
-        """Close any files linked to this object"""
-        if self._file_obj is not None:
-            self._file_obj.close()
-        self._file_obj = None
+        """Release any resources linked to this object."""
+        if self._close is not None:
+            self._close()
+        self._close = None
 
     def isnull(self, keep_attrs: bool = None):
         """Test each value in the array for whether it is a missing value.
