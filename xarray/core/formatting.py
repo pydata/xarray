@@ -300,9 +300,13 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
-    n_values = col_width // 4
-    indices = list(range(0, n_values)) + list(range(-n_values, 0))
-    subset = coord[indices]
+    if col_width < len(coord):
+        n_values = col_width // 4
+        indices = list(range(0, n_values)) + list(range(-n_values, 0))
+        subset = coord[indices]
+    else:
+        subset = coord
+
     return "\n".join(
         summarize_variable(
             lname, subset.get_level_variable(lname), col_width, marker=marker
