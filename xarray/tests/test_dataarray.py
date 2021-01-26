@@ -797,13 +797,13 @@ class TestDataArray:
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
         with raises_regex(
             ValueError,
-            r"dimensions {'not_a_dim'} do not exist. Expected "
+            r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0)
         with pytest.warns(
             UserWarning,
-            match=r"dimensions {'not_a_dim'} do not exist. "
+            match=r"Dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0, missing_dims="warn")
@@ -1170,6 +1170,16 @@ class TestDataArray:
         assert data.loc[True] == 0
         assert data.loc[False] == 1
 
+    def test_loc_dim_name_collision_with_sel_params(self):
+        da = xr.DataArray(
+            [[0, 0], [1, 1]],
+            dims=["dim1", "method"],
+            coords={"dim1": ["x", "y"], "method": ["a", "b"]},
+        )
+        np.testing.assert_array_equal(
+            da.loc[dict(dim1=["x", "y"], method=["a"])], [[0], [1]]
+        )
+
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
@@ -1405,8 +1415,6 @@ class TestDataArray:
         )
         assert_identical(actual, expected)
 
-        with pytest.raises(TypeError):
-            data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, "cannot be found"):
             data.reset_coords("foo", drop=True)
         with raises_regex(ValueError, "cannot be found"):
@@ -1486,8 +1494,8 @@ class TestDataArray:
         new1 = arr1.broadcast_like(arr2)
         new2 = arr2.broadcast_like(arr1)
 
-        assert orig1.identical(new1)
-        assert orig2.identical(new2)
+        assert_identical(orig1, new1)
+        assert_identical(orig2, new2)
 
         orig3 = DataArray(np.random.randn(5), [("x", range(5))])
         orig4 = DataArray(np.random.randn(6), [("y", range(6))])
@@ -1560,6 +1568,19 @@ class TestDataArray:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_reindex_str_dtype(self, dtype):
+
+        data = DataArray(
+            [1, 2], dims="x", coords={"x": np.array(["a", "b"], dtype=dtype)}
+        )
+
+        actual = data.reindex(x=data.x)
+        expected = data
+
+        assert_identical(expected, actual)
+        assert actual.dtype == expected.dtype
+
     def test_rename(self):
         renamed = self.dv.rename("bar")
         assert_identical(renamed.to_dataset(), self.ds.rename({"foo": "bar"}))
@@ -1612,6 +1633,16 @@ class TestDataArray:
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
+        # as kwargs
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
+        actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
         for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
             pd.testing.assert_index_equal(
@@ -1871,10 +1902,6 @@ class TestDataArray:
         obj = self.mda.reorder_levels(x=["level_2", "level_1"])
         assert_identical(obj, expected)
 
-        with pytest.raises(TypeError):
-            array = self.mda.copy()
-            array.reorder_levels(x=["level_2", "level_1"], inplace=True)
-
         array = DataArray([1, 2], dims="x")
         with pytest.raises(KeyError):
             array.reorder_levels(x=["level_1", "level_2"])
@@ -1913,6 +1940,26 @@ class TestDataArray:
         assert_array_equal(original, converted)
         assert np.issubdtype(original.dtype, np.integer)
         assert np.issubdtype(converted.dtype, np.floating)
+
+    def test_astype_order(self):
+        original = DataArray([[1, 2], [3, 4]])
+        converted = original.astype("d", order="F")
+        assert_equal(original, converted)
+        assert original.values.flags["C_CONTIGUOUS"]
+        assert converted.values.flags["F_CONTIGUOUS"]
+
+    def test_astype_subok(self):
+        class NdArraySubclass(np.ndarray):
+            pass
+
+        original = DataArray(NdArraySubclass(np.arange(3)))
+        converted_not_subok = original.astype("d", subok=False)
+        converted_subok = original.astype("d", subok=True)
+        if not isinstance(original.data, NdArraySubclass):
+            pytest.xfail("DataArray cannot be backed yet by a subclasses of np.ndarray")
+        assert isinstance(converted_not_subok.data, np.ndarray)
+        assert not isinstance(converted_not_subok.data, NdArraySubclass)
+        assert isinstance(converted_subok.data, NdArraySubclass)
 
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)
@@ -2207,8 +2254,20 @@ class TestDataArray:
         actual = da.transpose("z", ..., "x", transpose_coords=True)
         assert_equal(expected, actual)
 
+        # same as previous but with a missing dimension
+        actual = da.transpose(
+            "z", "y", "x", "not_a_dim", transpose_coords=True, missing_dims="ignore"
+        )
+        assert_equal(expected, actual)
+
         with pytest.raises(ValueError):
             da.transpose("x", "y")
+
+        with pytest.raises(ValueError):
+            da.transpose("not_a_dim", "z", "x", ...)
+
+        with pytest.warns(UserWarning):
+            da.transpose("not_a_dim", "y", "x", ..., missing_dims="warn")
 
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
@@ -2277,6 +2336,12 @@ class TestDataArray:
 
         with pytest.warns(DeprecationWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")
+
+    def test_drop_index_positions(self):
+        arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
+        actual = arr.drop_isel(y=[0, 1])
+        expected = arr[:, 2:]
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
@@ -3398,6 +3463,26 @@ class TestDataArray:
                 DataArray([1, 2, 3], dims=["x"]),
                 DataArray([1, 2], coords=[("x", [0, 1])]),
             )
+
+    def test_align_str_dtype(self):
+
+        a = DataArray([0, 1], dims=["x"], coords={"x": ["a", "b"]})
+        b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
+
+        expected_a = DataArray(
+            [0, 1, np.NaN], dims=["x"], coords={"x": ["a", "b", "c"]}
+        )
+        expected_b = DataArray(
+            [np.NaN, 1, 2], dims=["x"], coords={"x": ["a", "b", "c"]}
+        )
+
+        actual_a, actual_b = xr.align(a, b, join="outer")
+
+        assert_identical(expected_a, actual_a)
+        assert expected_a.x.dtype == actual_a.x.dtype
+
+        assert_identical(expected_b, actual_b)
+        assert expected_b.x.dtype == actual_b.x.dtype
 
     def test_broadcast_arrays(self):
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
@@ -6203,7 +6288,6 @@ def da_dask(seed=123):
 
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da):
-
     expected = DataArray(
         np.asarray([[0, 0, 0], [1, 0, 0]]),
         dims=list("yx"),
@@ -6253,7 +6337,6 @@ def test_coarsen_keep_attrs():
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
-
     rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
 
@@ -6428,7 +6511,6 @@ def test_rolling_construct(center, window):
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
 def test_rolling_reduce(da, center, min_periods, window, name):
-
     if min_periods is not None and window < min_periods:
         min_periods = window
 
@@ -6467,7 +6549,6 @@ def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
 
 
 def test_rolling_count_correct():
-
     da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
     kwargs = [
@@ -6555,7 +6636,6 @@ def test_ndrolling_construct(center, fill_value):
     ],
 )
 def test_rolling_keep_attrs(funcname, argument):
-
     attrs_da = {"da_attr": "test"}
 
     data = np.linspace(10, 15, 100)
@@ -6599,7 +6679,6 @@ def test_rolling_keep_attrs(funcname, argument):
 
 
 def test_rolling_keep_attrs_deprecated():
-
     attrs_da = {"da_attr": "test"}
 
     data = np.linspace(10, 15, 100)
@@ -6933,7 +7012,6 @@ def test_rolling_exp(da, dim, window_type, window):
 
 @requires_numbagg
 def test_rolling_exp_keep_attrs(da):
-
     attrs = {"attrs": "da"}
     da.attrs = attrs
 

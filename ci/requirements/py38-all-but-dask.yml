@@ -1,6 +1,7 @@
 name: xarray-tests
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python=3.8
   - black
@@ -18,7 +19,7 @@ dependencies:
   - hypothesis
   - isort
   - lxml    # Optional dep of pydap
-  - matplotlib
+  - matplotlib-base
   - mypy=0.790  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
@@ -29,10 +30,11 @@ dependencies:
   - pip
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py36-bare-minimum
+  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
+  - pytest-xdist
   - rasterio
   - scipy
   - seaborn

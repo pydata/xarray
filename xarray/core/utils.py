@@ -2,13 +2,13 @@
 """
 import contextlib
 import functools
+import io
 import itertools
 import os.path
 import re
 import warnings
 from enum import Enum
 from typing import (
-    AbstractSet,
     Any,
     Callable,
     Collection,
@@ -31,17 +31,11 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from . import dtypes
+
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
-
-
-def _check_inplace(inplace: Optional[bool]) -> None:
-    if inplace is not None:
-        raise TypeError(
-            "The `inplace` argument has been removed from xarray. "
-            "You can achieve an identical effect with python's standard assignment."
-        )
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -82,6 +76,23 @@ def maybe_cast_to_coords_dtype(label, coords_dtype):
     if coords_dtype.kind == "f" and not isinstance(label, slice):
         label = np.asarray(label, dtype=coords_dtype)
     return label
+
+
+def maybe_coerce_to_str(index, original_coords):
+    """maybe coerce a pandas Index back to a nunpy array of type str
+
+    pd.Index uses object-dtype to store str - try to avoid this for coords
+    """
+
+    try:
+        result_type = dtypes.result_type(*original_coords)
+    except TypeError:
+        pass
+    else:
+        if result_type.kind in "SU":
+            index = np.asarray(index, dtype=result_type.type)
+
+    return index
 
 
 def safe_cast_to_index(array: Any) -> pd.Index:
@@ -442,6 +453,35 @@ def FrozenDict(*args, **kwargs) -> Frozen:
     return Frozen(dict(*args, **kwargs))
 
 
+class HybridMappingProxy(Mapping[K, V]):
+    """Implements the Mapping interface. Uses the wrapped mapping for item lookup
+    and a separate wrapped keys collection for iteration.
+
+    Can be used to construct a mapping object from another dict-like object without
+    eagerly accessing its items or when a mapping object is expected but only
+    iteration over keys is actually used.
+
+    Note: HybridMappingProxy does not validate consistency of the provided `keys`
+    and `mapping`. It is the caller's responsibility to ensure that they are
+    suitable for the task at hand.
+    """
+
+    __slots__ = ("_keys", "mapping")
+
+    def __init__(self, keys: Collection[K], mapping: Mapping[K, V]):
+        self._keys = keys
+        self.mapping = mapping
+
+    def __getitem__(self, key: K) -> V:
+        return self.mapping[key]
+
+    def __iter__(self) -> Iterator[K]:
+        return iter(self._keys)
+
+    def __len__(self) -> int:
+        return len(self._keys)
+
+
 class SortedKeysDict(MutableMapping[K, V]):
     """An wrapper for dictionary-like objects that always iterates over its
     items in sorted order by key but is otherwise equivalent to the underlying
@@ -487,17 +527,14 @@ class OrderedSet(MutableSet[T]):
 
     __slots__ = ("_d",)
 
-    def __init__(self, values: AbstractSet[T] = None):
+    def __init__(self, values: Iterable[T] = None):
         self._d = {}
         if values is not None:
-            # Disable type checking - both mypy and PyCharm believe that
-            # we're altering the type of self in place (see signature of
-            # MutableSet.__ior__)
-            self |= values  # type: ignore
+            self.update(values)
 
     # Required methods for MutableSet
 
-    def __contains__(self, value: object) -> bool:
+    def __contains__(self, value: Hashable) -> bool:
         return value in self._d
 
     def __iter__(self) -> Iterator[T]:
@@ -514,9 +551,9 @@ class OrderedSet(MutableSet[T]):
 
     # Additional methods
 
-    def update(self, values: AbstractSet[T]) -> None:
-        # See comment on __init__ re. type checking
-        self |= values  # type: ignore
+    def update(self, values: Iterable[T]) -> None:
+        for v in values:
+            self._d[v] = None
 
     def __repr__(self) -> str:
         return "{}({!r})".format(type(self).__name__, list(self))
@@ -609,6 +646,24 @@ def close_on_error(f):
 
 def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^https?\://", path))
+
+
+def read_magic_number(filename_or_obj, count=8):
+    # check byte header to determine file type
+    if isinstance(filename_or_obj, bytes):
+        magic_number = filename_or_obj[:count]
+    elif isinstance(filename_or_obj, io.IOBase):
+        if filename_or_obj.tell() != 0:
+            raise ValueError(
+                "cannot guess the engine, "
+                "file-like object read/write pointer not at the start of the file, "
+                "please close and reopen, or use a context manager"
+            )
+        magic_number = filename_or_obj.read(count)
+        filename_or_obj.seek(0)
+    else:
+        raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+    return magic_number
 
 
 def is_grib_path(path: str) -> bool:
@@ -705,28 +760,32 @@ class HiddenKeyDict(MutableMapping[K, V]):
         return len(self._data) - num_hidden
 
 
-def infix_dims(dims_supplied: Collection, dims_all: Collection) -> Iterator:
+def infix_dims(
+    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+) -> Iterator:
     """
-    Resolves a supplied list containing an ellispsis representing other items, to
+    Resolves a supplied list containing an ellipsis representing other items, to
     a generator with the 'realized' list of all items
     """
     if ... in dims_supplied:
         if len(set(dims_all)) != len(dims_all):
             raise ValueError("Cannot use ellipsis with repeated dims")
-        if len([d for d in dims_supplied if d == ...]) > 1:
+        if list(dims_supplied).count(...) > 1:
             raise ValueError("More than one ellipsis supplied")
         other_dims = [d for d in dims_all if d not in dims_supplied]
-        for d in dims_supplied:
-            if d == ...:
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        for d in existing_dims:
+            if d is ...:
                 yield from other_dims
             else:
                 yield d
     else:
-        if set(dims_supplied) ^ set(dims_all):
+        existing_dims = drop_missing_dims(dims_supplied, dims_all, missing_dims)
+        if set(existing_dims) ^ set(dims_all):
             raise ValueError(
                 f"{dims_supplied} must be a permuted list of {dims_all}, unless `...` is included"
             )
-        yield from dims_supplied
+        yield from existing_dims
 
 
 def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
@@ -766,7 +825,7 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             raise ValueError(
-                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
 
         return indexers
@@ -779,7 +838,7 @@ def drop_dims_from_indexers(
         invalid = indexers.keys() - set(dims)
         if invalid:
             warnings.warn(
-                f"dimensions {invalid} do not exist. Expected one or more of {dims}"
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
             )
         for key in invalid:
             indexers.pop(key)
@@ -788,6 +847,48 @@ def drop_dims_from_indexers(
 
     elif missing_dims == "ignore":
         return {key: val for key, val in indexers.items() if key in dims}
+
+    else:
+        raise ValueError(
+            f"Unrecognised option {missing_dims} for missing_dims argument"
+        )
+
+
+def drop_missing_dims(
+    supplied_dims: Collection, dims: Collection, missing_dims: str
+) -> Collection:
+    """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
+    are not present in dims.
+
+    Parameters
+    ----------
+    supplied_dims : dict
+    dims : sequence
+    missing_dims : {"raise", "warn", "ignore"}
+    """
+
+    if missing_dims == "raise":
+        supplied_dims_set = set(val for val in supplied_dims if val is not ...)
+        invalid = supplied_dims_set - set(dims)
+        if invalid:
+            raise ValueError(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return supplied_dims
+
+    elif missing_dims == "warn":
+
+        invalid = set(supplied_dims) - set(dims)
+        if invalid:
+            warnings.warn(
+                f"Dimensions {invalid} do not exist. Expected one or more of {dims}"
+            )
+
+        return [val for val in supplied_dims if val in dims or val is ...]
+
+    elif missing_dims == "ignore":
+        return [val for val in supplied_dims if val in dims or val is ...]
 
     else:
         raise ValueError(

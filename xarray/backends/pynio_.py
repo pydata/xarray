@@ -1,11 +1,25 @@
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+)
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
+from .store import open_backend_dataset_store
+
+try:
+    import Nio
+
+    has_pynio = True
+except ModuleNotFoundError:
+    has_pynio = False
+
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -44,7 +58,6 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
-        import Nio
 
         if lock is None:
             lock = PYNIO_LOCK
@@ -82,3 +95,43 @@ class NioDataStore(AbstractDataStore):
 
     def close(self):
         self._manager.close()
+
+
+def open_backend_dataset_pynio(
+    filename_or_obj,
+    mask_and_scale=True,
+    decode_times=None,
+    concat_characters=None,
+    decode_coords=None,
+    drop_variables=None,
+    use_cftime=None,
+    decode_timedelta=None,
+    mode="r",
+    lock=None,
+):
+
+    store = NioDataStore(
+        filename_or_obj,
+        mode=mode,
+        lock=lock,
+    )
+
+    with close_on_error(store):
+        ds = open_backend_dataset_store(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+    return ds
+
+
+pynio_backend = BackendEntrypoint(open_dataset=open_backend_dataset_pynio)
+
+
+if has_pynio:
+    BACKEND_ENTRYPOINTS["pynio"] = pynio_backend

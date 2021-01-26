@@ -124,7 +124,7 @@ dimensions *other than* the provided one:
 .. note::
 
     We use an ellipsis (`...`) here to indicate we want to reduce over all
-    other dimensions  
+    other dimensions
 
 
 First and last
@@ -220,7 +220,7 @@ may be desirable:
     da.groupby_bins("lon", [0, 45, 50]).sum()
 
 These methods group by `lon` values. It is also possible to groupby each
-cell in a grid, regardless of value, by stacking multiple dimensions, 
+cell in a grid, regardless of value, by stacking multiple dimensions,
 applying your function, and then unstacking the result:
 
 .. ipython:: python

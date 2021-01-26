@@ -1,14 +1,19 @@
 import functools
+import io
+import os
 from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import conventions
 from ..core import indexing
-from ..core.dataset import Dataset
-from ..core.utils import FrozenDict, close_on_error, is_remote_uri
+from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
-from .common import WritableCFDataStore, find_root_and_group
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    BackendEntrypoint,
+    WritableCFDataStore,
+    find_root_and_group,
+)
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
@@ -18,6 +23,14 @@ from .netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from .store import open_backend_dataset_store
+
+try:
+    import h5netcdf
+
+    has_h5netcdf = True
+except ModuleNotFoundError:
+    has_h5netcdf = False
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -84,8 +97,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
 
-        import h5netcdf
-
         if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
             if group is None:
                 root, group = find_root_and_group(manager)
@@ -121,26 +132,18 @@ class H5NetCDFStore(WritableCFDataStore):
         invalid_netcdf=None,
         phony_dims=None,
     ):
-        import h5netcdf
 
         if isinstance(filename, bytes):
             raise ValueError(
                 "can't open netCDF4/HDF5 as bytes "
                 "try passing a path or file-like object"
             )
-        elif hasattr(filename, "tell"):
-            if filename.tell() != 0:
+        elif isinstance(filename, io.IOBase):
+            magic_number = read_magic_number(filename)
+            if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    "file-like object read/write pointer not at zero "
-                    "please close and reopen, or use a context manager"
+                    f"{magic_number} is not the signature of a valid netCDF file"
                 )
-            else:
-                magic_number = filename.read(8)
-                filename.seek(0)
-                if not magic_number.startswith(b"\211HDF\r\n\032\n"):
-                    raise ValueError(
-                        f"{magic_number} is not the signature of a valid netCDF file"
-                    )
 
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
@@ -325,7 +328,21 @@ class H5NetCDFStore(WritableCFDataStore):
         self._manager.close(**kwargs)
 
 
-def open_backend_dataset_h5necdf(
+def guess_can_open_h5netcdf(store_spec):
+    try:
+        return read_magic_number(store_spec).startswith(b"\211HDF\r\n\032\n")
+    except TypeError:
+        pass
+
+    try:
+        _, ext = os.path.splitext(store_spec)
+    except TypeError:
+        return False
+
+    return ext in {".nc", ".nc4", ".cdf"}
+
+
+def open_backend_dataset_h5netcdf(
     filename_or_obj,
     *,
     mask_and_scale=True,
@@ -351,26 +368,22 @@ def open_backend_dataset_h5necdf(
         phony_dims=phony_dims,
     )
 
-    with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
-
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
-
+    ds = open_backend_dataset_store(
+        store,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        concat_characters=concat_characters,
+        decode_coords=decode_coords,
+        drop_variables=drop_variables,
+        use_cftime=use_cftime,
+        decode_timedelta=decode_timedelta,
+    )
     return ds
+
+
+h5netcdf_backend = BackendEntrypoint(
+    open_dataset=open_backend_dataset_h5netcdf, guess_can_open=guess_can_open_h5netcdf
+)
+
+if has_h5netcdf:
+    BACKEND_ENTRYPOINTS["h5netcdf"] = h5netcdf_backend
