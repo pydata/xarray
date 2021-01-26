@@ -510,3 +510,34 @@ def line(ds, x, y, ax, **kwargs):
     # TODO: Should really be the line2d returned from ax.plot.
     # Return primitive, mappable instead?
     return primitive
+
+
+def _attach_to_plot_class(plotfunc):
+    @functools.wraps(plotfunc)
+    def plotmethod(self, *args, **kwargs):
+        plotfunc(self._ds, *args, **kwargs)
+
+    # Add to class _PlotMethods
+    setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
+
+
+@_attach_to_plot_class
+def line2(ds, x=None, y=None, ax=None, **kwargs):
+    """
+    Line plot Dataset data variables against each other.
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+
+    Parameters
+    ----------
+    something
+
+    """
+    from ..core.dataarray import DataArray
+
+    # Create a temporary datarray with the x-axis as a coordinate:
+    coords = dict(ds.indexes)
+    coords[x] = ds[x]
+    da = DataArray(ds[y], coords=coords)
+
+    # Plot
+    return da.plot.line(x=x, ax=ax, **kwargs)
