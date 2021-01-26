@@ -166,7 +166,7 @@ different approaches to handling metadata: Iris strictly interprets
 `CF conventions`_. Iris particularly shines at mapping, thanks to its
 integration with Cartopy_.
 
-.. _Iris: http://scitools.org.uk/iris/
+.. _Iris: https://scitools-iris.readthedocs.io/en/stable/
 .. _Cartopy: http://scitools.org.uk/cartopy/docs/latest/
 
 `UV-CDAT`__ is another Python library that implements in-memory netCDF-like
