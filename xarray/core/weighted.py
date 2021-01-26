@@ -5,9 +5,11 @@ from .computation import dot
 from .pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords  # noqa: F401
     from .dataarray import DataArray, Dataset
 
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
+T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
+
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -57,7 +59,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-class Weighted(Generic[T_DSorDA]):
+class Weighted(Generic[T_DataWithCoords]):
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -71,7 +73,7 @@ class Weighted(Generic[T_DSorDA]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_DSorDA, weights: "DataArray"):
+    def __init__(self, obj: T_DataWithCoords, weights: "DataArray"):
         """
         Create a Weighted object
 
@@ -114,7 +116,7 @@ class Weighted(Generic[T_DSorDA]):
         else:
             _weight_check(weights.data)
 
-        self.obj: T_DSorDA = obj
+        self.obj: T_DataWithCoords = obj
         self.weights: "DataArray" = weights
 
     @staticmethod
@@ -195,7 +197,7 @@ class Weighted(Generic[T_DSorDA]):
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
@@ -206,7 +208,7 @@ class Weighted(Generic[T_DSorDA]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
@@ -217,7 +219,7 @@ class Weighted(Generic[T_DSorDA]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
