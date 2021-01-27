@@ -882,8 +882,8 @@ def open_mfdataset(
                 storage_options=so,
                 expand=False,
             )
-            paths = fs.glob(fs._strip_protocol(paths))
             if engine == "zarr":
+                paths = fs.glob(fs._strip_protocol(paths))
                 paths = [fs.get_mapper(path) for path in paths]
             else:
                 if not paths.startswith("http"):
