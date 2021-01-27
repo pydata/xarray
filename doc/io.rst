@@ -901,8 +901,10 @@ key ``storage_options``, part of ``backend_kwargs``.
 
     ds_gcs = xr.open_dataset(
         "gcs://<bucket-name>/path.zarr",
-        backend_kwargs={"storage_options": {"project":  '<project-name>', "token": None}},
-        engine="zarr"
+        backend_kwargs={
+            "storage_options": {"project": "<project-name>", "token": None}
+        },
+        engine="zarr",
     )
 
 
@@ -915,8 +917,9 @@ instance and pass this, as follows:
 .. code:: python
 
     import gcsfs
-    fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
-    gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
+
+    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
+    gcsmap = gcsfs.mapping.GCSMap("<bucket-name>", gcs=fs, check=True, create=False)
     # write to the bucket
     ds.to_zarr(store=gcsmap)
     # read it back
