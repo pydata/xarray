@@ -1699,7 +1699,9 @@ class DataArray(AbstractArray, DataWithCoords):
             new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
-    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "DataArray":
+    def swap_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+    ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -1707,6 +1709,10 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
+
+        **dim_kwargs : {dim: , ...}, optional
+            The keyword arguments form of ``dims_dict``.
+            One of dims_dict or dims_kwargs must be provided.
 
         Returns
         -------
@@ -1749,6 +1755,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.rename
         Dataset.swap_dims
         """
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
@@ -2247,6 +2254,28 @@ class DataArray(AbstractArray, DataWithCoords):
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this DataArray.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : DataArray
+
+        Raises
+        ------
+        IndexError
+        """
+        dataset = self._to_temp_dataset()
+        dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
+        return self._from_temp_dataset(dataset)
 
     def dropna(
         self, dim: Hashable, how: str = "any", thresh: int = None

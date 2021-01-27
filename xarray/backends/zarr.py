@@ -10,12 +10,21 @@ from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     AbstractWritableDataStore,
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
 )
 from .store import open_backend_dataset_store
+
+try:
+    import zarr
+
+    has_zarr = True
+except ModuleNotFoundError:
+    has_zarr = False
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -291,7 +300,6 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
     ):
-        import zarr
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, pathlib.Path):
@@ -419,7 +427,6 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        import zarr
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -718,3 +725,7 @@ def open_backend_dataset_zarr(
 
 
 zarr_backend = BackendEntrypoint(open_dataset=open_backend_dataset_zarr)
+
+
+if has_zarr:
+    BACKEND_ENTRYPOINTS["zarr"] = zarr_backend

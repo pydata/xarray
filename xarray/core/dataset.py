@@ -4,6 +4,7 @@ import functools
 import sys
 import warnings
 from collections import defaultdict
+from distutils.version import LooseVersion
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -79,7 +80,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array
+from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
     Default,
     Frozen,
@@ -3155,7 +3156,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         )
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
-    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "Dataset":
+    def swap_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+    ) -> "Dataset":
         """Returns a new object with swapped dimensions.
 
         Parameters
@@ -3163,6 +3166,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
+
+        **dim_kwargs : {existing_dim: new_dim, ...}, optional
+            The keyword arguments form of ``dims_dict``.
+            One of dims_dict or dims_kwargs must be provided.
 
         Returns
         -------
@@ -3214,6 +3221,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         # TODO: deprecate this method in favor of a (less confusing)
         # rename_dims() method that only renames dimensions.
+
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError(
@@ -3707,7 +3716,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value, sparse) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
+        index = self.get_index(dim)
+        index = remove_unused_levels_categories(index)
+
+        variables: Dict[Hashable, Variable] = {}
+        indexes = {k: v for k, v in self.indexes.items() if k != dim}
+
+        for name, var in self.variables.items():
+            if name != dim:
+                if dim in var.dims:
+                    if isinstance(fill_value, Mapping):
+                        fill_value_ = fill_value[name]
+                    else:
+                        fill_value_ = fill_value
+
+                    variables[name] = var._unstack_once(
+                        index=index, dim=dim, fill_value=fill_value_
+                    )
+                else:
+                    variables[name] = var
+
+        for name, lev in zip(index.names, index.levels):
+            variables[name] = IndexVariable(name, lev)
+            indexes[name] = lev
+
+        coord_names = set(self._coord_names) - {dim} | set(index.names)
+
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def _unstack_full_reindex(
+        self, dim: Hashable, fill_value, sparse: bool
+    ) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -3804,7 +3846,38 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         result = self.copy(deep=False)
         for dim in dims:
-            result = result._unstack_once(dim, fill_value, sparse)
+
+            if (
+                # Dask arrays don't support assignment by index, which the fast unstack
+                # function requires.
+                # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
+                any(is_duck_dask_array(v.data) for v in self.variables.values())
+                # Sparse doesn't currently support (though we could special-case
+                # it)
+                # https://github.com/pydata/sparse/issues/422
+                or any(
+                    isinstance(v.data, sparse_array_type)
+                    for v in self.variables.values()
+                )
+                or sparse
+                # numpy full_like only added `shape` in 1.17
+                or LooseVersion(np.__version__) < LooseVersion("1.17")
+                # Until https://github.com/pydata/xarray/pull/4751 is resolved,
+                # we check explicitly whether it's a numpy array. Once that is
+                # resolved, explicitly exclude pint arrays.
+                # # pint doesn't implement `np.full_like` in a way that's
+                # # currently compatible.
+                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
+                # # or any(
+                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
+                # # )
+                or any(
+                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
+                )
+            ):
+                result = result._unstack_full_reindex(dim, fill_value, sparse)
+            else:
+                result = result._unstack_once(dim, fill_value)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
@@ -4021,9 +4094,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Examples
         --------
-        >>> data = np.random.randn(2, 3)
+        >>> data = np.arange(6).reshape(2, 3)
         >>> labels = ["a", "b", "c"]
         >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * y        (y) <U1 'a' 'b' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 1 2 3 4 5
         >>> ds.drop_sel(y=["a", "c"])
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 1)
@@ -4031,7 +4112,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'b'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 0.4002 1.868
+            A        (x, y) int64 1 4
         >>> ds.drop_sel(y="b")
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 2)
@@ -4039,12 +4120,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
           * y        (y) <U1 'a' 'c'
         Dimensions without coordinates: x
         Data variables:
-            A        (x, y) float64 1.764 0.9787 2.241 -0.9773
+            A        (x, y) int64 0 2 3 5
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
+        labels = either_dict_or_kwargs(labels, labels_kwargs, "drop_sel")
 
         ds = self
         for dim, labels_for_dim in labels.items():
@@ -4054,11 +4135,76 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 labels_for_dim = [labels_for_dim]
             labels_for_dim = np.asarray(labels_for_dim)
             try:
-                index = self.indexes[dim]
+                index = self.get_index(dim)
             except KeyError:
                 raise ValueError("dimension %r does not have coordinate labels" % dim)
             new_index = index.drop(labels_for_dim, errors=errors)
             ds = ds.loc[{dim: new_index}]
+        return ds
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this Dataset.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : Dataset
+
+        Raises
+        ------
+        IndexError
+
+        Examples
+        --------
+        >>> data = np.arange(6).reshape(2, 3)
+        >>> labels = ["a", "b", "c"]
+        >>> ds = xr.Dataset({"A": (["x", "y"], data), "y": labels})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 3)
+        Coordinates:
+          * y        (y) <U1 'a' 'b' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 1 2 3 4 5
+        >>> ds.drop_isel(y=[0, 2])
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 1)
+        Coordinates:
+          * y        (y) <U1 'b'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 1 4
+        >>> ds.drop_isel(y=1)
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * y        (y) <U1 'a' 'c'
+        Dimensions without coordinates: x
+        Data variables:
+            A        (x, y) int64 0 2 3 5
+        """
+
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "drop_isel")
+
+        ds = self
+        dimension_index = {}
+        for dim, pos_for_dim in indexers.items():
+            # Don't cast to set, as it would harm performance when labels
+            # is a large numpy array
+            if utils.is_scalar(pos_for_dim):
+                pos_for_dim = [pos_for_dim]
+            pos_for_dim = np.asarray(pos_for_dim)
+            index = self.get_index(dim)
+            new_index = index.delete(pos_for_dim)
+            dimension_index[dim] = new_index
+        ds = ds.loc[dimension_index]
         return ds
 
     def drop_dims(
@@ -4900,6 +5046,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             for name, values in arrays:
                 self[name] = (dims, values)
             return
+
+        # NB: similar, more general logic, now exists in
+        # variable.unstack_once; we could consider combining them at some
+        # point.
 
         shape = tuple(lev.size for lev in idx.levels)
         indexer = tuple(idx.codes)
