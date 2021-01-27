@@ -870,8 +870,8 @@ def open_mfdataset(
     """
     if isinstance(paths, str):
         if is_remote_uri(paths):
-            from fsspec.core import get_fs_token_paths
             from fsspec import open_files
+            from fsspec.core import get_fs_token_paths
 
             so = kwargs.get("backend_kwargs", {}).get("storage_options", {})
             # zarr requires mappers, other backends may work with file-like objects
