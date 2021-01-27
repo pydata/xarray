@@ -890,8 +890,29 @@ Cloud Storage Buckets
 
 It is possible to read and write xarray datasets directly from / to cloud
 storage buckets using zarr. This example uses the `gcsfs`_ package to provide
-a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
-pass to xarray::
+an interface to `Google Cloud Storage`_.
+
+From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
+automatically when reading, such that you can open a dataset in a single
+call. You should include any arguments to the storage backend as the
+key ``storage_options``, part of ``backend_kwargs``.
+
+.. code:: python
+
+    ds_gcs = xr.open_dataset(
+        "gcs://<bucket-name>/path.zarr",
+        backend_kwargs={"storage_options": {"project":  '<project-name>', "token": None}},
+        engine="zarr"
+    )
+
+
+This also works with ``open_mfdataset``, allowing you to pass a list of paths or
+a URL to be interpreted as a glob string.
+
+For older versions, and for writing, you must explicitly set up a ``MutableMapping``
+instance and pass this, as follows:
+
+.. code:: python
 
     import gcsfs
     fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
@@ -901,6 +922,9 @@ pass to xarray::
     # read it back
     ds_gcs = xr.open_zarr(gcsmap)
 
+(or use the utility function ``fsspec.get_mapper()``).
+
+.. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
 .. _Zarr: http://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/

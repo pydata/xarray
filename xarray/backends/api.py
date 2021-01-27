@@ -643,7 +643,9 @@ def open_dataarray(
     backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        allow user control of dataset processing. If using fsspec URLs,
+        include the key "storage_options" to pass arguments to the
+        storage layer.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
