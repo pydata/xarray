@@ -709,7 +709,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
-            storage_options=storage_options
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

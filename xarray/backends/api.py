@@ -889,6 +889,13 @@ def open_mfdataset(
             )
             paths = fs.glob(fs._strip_protocol(paths))  # finds directories
             paths = [fs.get_mapper(path) for path in paths]
+        elif is_remote_uri(paths):
+            raise ValueError(
+                "cannot do wild-card matching for paths that are remote URLs: "
+                "{!r}. Instead, supply paths as an explicit list of strings.".format(
+                    paths
+                )
+            )
         else:
             paths = sorted(glob(_normalize_path(paths)))
     else:
