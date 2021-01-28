@@ -871,26 +871,24 @@ def open_mfdataset(
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths):
-            from fsspec import open_files
-            from fsspec.core import get_fs_token_paths
+        if is_remote_uri(paths) and engine == "zarr":
+            try:
+                from fsspec.core import get_fs_token_paths
+            except ImportError as e:
+                raise ImportError(
+                    "The use of remote URLs for opening zarr requires the package fsspec"
+                ) from e
 
-            so = kwargs.get("backend_kwargs", {}).get("storage_options", {})
-            # zarr requires mappers, other backends may work with file-like objects
-            # get_fs_token_paths also allows arguments embedded in URLs
             fs, _, _ = get_fs_token_paths(
                 paths,
                 mode="rb",
-                storage_options=so,
+                storage_options=kwargs.get("backend_kwargs", {}).get(
+                    "storage_options", {}
+                ),
                 expand=False,
             )
-            if engine == "zarr":
-                paths = fs.glob(fs._strip_protocol(paths))
-                paths = [fs.get_mapper(path) for path in paths]
-            else:
-                if not paths.startswith("http"):
-                    # pass through HTTP unchanged for backward compatibility
-                    paths = open_files(paths, mode="rb", **so)
+            paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+            paths = [fs.get_mapper(path) for path in paths]
         else:
             paths = sorted(glob(_normalize_path(paths)))
     else:

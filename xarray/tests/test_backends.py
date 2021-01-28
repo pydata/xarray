@@ -3046,9 +3046,11 @@ class TestDask(DatasetIOBase):
     def test_open_mfdataset_no_files(self):
         pytest.importorskip("aiobotocore")
 
+        # glob is attempted as of #4823, but finds no files
         with raises_regex(OSError, "no files"):
-            # glob is attempted as of #4823, but finds no files
             open_mfdataset("http://some/remote/uri")
+        with raises_regex(OSError, "no files"):
+            open_mfdataset("http://some/remote/uri", engine="zarr")
 
     def test_open_mfdataset_2d(self):
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
