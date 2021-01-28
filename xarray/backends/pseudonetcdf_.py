@@ -11,7 +11,7 @@ from .common import (
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 try:
     from PseudoNetCDF import pncopen
@@ -100,57 +100,55 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         self._manager.close()
 
 
-def open_backend_dataset_pseudonetcdf(
-    filename_or_obj,
-    mask_and_scale=False,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    mode=None,
-    lock=None,
-    **format_kwargs,
-):
+class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
 
-    store = PseudoNetCDFDataStore.open(
-        filename_or_obj, lock=lock, mode=mode, **format_kwargs
+    # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
+    # unless the open_dataset_parameters are explicity defined like this:
+    open_dataset_parameters = (
+        "filename_or_obj",
+        "mask_and_scale",
+        "decode_times",
+        "concat_characters",
+        "decode_coords",
+        "drop_variables",
+        "use_cftime",
+        "decode_timedelta",
+        "mode",
+        "lock",
     )
 
-    with close_on_error(store):
-        ds = open_backend_dataset_store(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=False,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode=None,
+        lock=None,
+        **format_kwargs,
+    ):
+        store = PseudoNetCDFDataStore.open(
+            filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )
-    return ds
 
-
-# *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
-# unless the open_dataset_parameters are explicity defined like this:
-open_dataset_parameters = (
-    "filename_or_obj",
-    "mask_and_scale",
-    "decode_times",
-    "concat_characters",
-    "decode_coords",
-    "drop_variables",
-    "use_cftime",
-    "decode_timedelta",
-    "mode",
-    "lock",
-)
-pseudonetcdf_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_pseudonetcdf,
-    open_dataset_parameters=open_dataset_parameters,
-)
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
 
 
 if has_pseudonetcdf:
-    BACKEND_ENTRYPOINTS["pseudonetcdf"] = pseudonetcdf_backend
+    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint
