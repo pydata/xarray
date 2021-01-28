@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -39,14 +39,22 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
-- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
 
 
 New Features
 ~~~~~~~~~~~~
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
+  in the form of kwargs as well as a dict, like most similar methods.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -80,6 +88,7 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
+- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -108,6 +117,8 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
+  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 
 .. _whats-new.0.16.2:
 
