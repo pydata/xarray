@@ -1,6 +1,6 @@
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from functools import partial
 
@@ -34,6 +34,16 @@ _NS_PER_TIME_DELTA = {
     "h": int(1e9) * 60 * 60,
     "D": int(1e9) * 60 * 60 * 24,
 }
+
+_US_PER_TIME_DELTA = {
+    "microseconds": 1,
+    "milliseconds": 1_000,
+    "seconds": 1_000_000,
+    "minutes": 60 * 1_000_000,
+    "hours": 60 * 60 * 1_000_000,
+    "days": 24 * 60 * 60 * 1_000_000,
+}
+
 
 TIME_UNITS = frozenset(
     [
@@ -266,7 +276,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     # supported is greater than or equal to this we will no longer need to cast
     # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
     # modulus operator works for TimedeltaIndex objects.
-    unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
+    unique_deltas_as_index = unique_timedeltas #pd.TimedeltaIndex(unique_timedeltas)
     for time_unit in [
         "days",
         "hours",
@@ -279,6 +289,22 @@ def _infer_time_units_from_diff(unique_timedeltas):
         delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
         unit_delta = np.timedelta64(delta_ns, "ns")
         if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
+            return time_unit
+    return "seconds"
+
+
+def _infer_time_units_from_diff_datetime_timedelta(unique_timedeltas):
+    for time_unit in [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+    ]:
+        delta_us = _US_PER_TIME_DELTA[time_unit]
+        unit_delta = timedelta(microseconds=delta_us)
+        if np.all(unique_timedeltas % unit_delta == timedelta(microseconds=0)):
             return time_unit
     return "seconds"
 
@@ -308,10 +334,12 @@ def infer_datetime_units(dates):
         reference_date = format_cftime_datetime(reference_date)
     unique_timedeltas = np.unique(np.diff(dates))
     if unique_timedeltas.dtype == np.dtype("O"):
+        units = _infer_time_units_from_diff_datetime_timedelta(unique_timedeltas)
         # Convert to np.timedelta64 objects using pandas to work around a
         # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
-        unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
-    units = _infer_time_units_from_diff(unique_timedeltas)
+        # unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
+    else:
+        units = _infer_time_units_from_diff(unique_timedeltas)
     return f"{units} since {reference_date}"
 
 
@@ -452,7 +480,9 @@ def encode_cf_datetime(dates, units=None, calendar=None):
     except (OutOfBoundsDatetime, OverflowError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
 
+    print(num)
     num = cast_to_int_if_safe(num)
+    print(num)
     return (num, units, calendar)
 
 
