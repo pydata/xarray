@@ -344,6 +344,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
@@ -351,7 +352,7 @@ class DataArray(AbstractArray, DataWithCoords):
     __slots__ = (
         "_cache",
         "_coords",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_name",
         "_variable",
@@ -421,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # public interface.
         self._indexes = indexes
 
-        self._file_obj = None
+        self._close = None
 
     def _replace(
         self,
@@ -2246,6 +2247,28 @@ class DataArray(AbstractArray, DataWithCoords):
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this DataArray.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : DataArray
+
+        Raises
+        ------
+        IndexError
+        """
+        dataset = self._to_temp_dataset()
+        dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
+        return self._from_temp_dataset(dataset)
 
     def dropna(
         self, dim: Hashable, how: str = "any", thresh: int = None
