@@ -5891,10 +5891,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         coord: hashable, or a sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit: str, optional
-            Can be specify the unit if datetime coordinate is used. One of
-            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
-            'as'}
+        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}
+            Specify the unit if datetime coordinate is used.
 
         Returns
         -------
