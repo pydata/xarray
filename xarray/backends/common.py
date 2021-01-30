@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+from typing import Dict, Tuple, Type, Union
 
 import numpy as np
 
@@ -340,3 +341,16 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {k: self.encode_variable(v) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
+
+
+class BackendEntrypoint:
+    open_dataset_parameters: Union[Tuple, None] = None
+
+    def open_dataset(self):
+        raise NotImplementedError
+
+    def guess_can_open(self, store_spec):
+        return False
+
+
+BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}

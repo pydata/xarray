@@ -300,11 +300,18 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
+    if len(coord) > 100 and col_width < len(coord):
+        n_values = col_width
+        indices = list(range(0, n_values)) + list(range(-n_values, 0))
+        subset = coord[indices]
+    else:
+        subset = coord
+
     return "\n".join(
         summarize_variable(
-            lname, coord.get_level_variable(lname), col_width, marker=marker
+            lname, subset.get_level_variable(lname), col_width, marker=marker
         )
-        for lname in coord.level_names
+        for lname in subset.level_names
     )
 
 
@@ -365,12 +372,25 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None):
+def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
+    if max_rows is None:
+        max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
-        summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
+        len_mapping = len(mapping)
+        if len_mapping > max_rows:
+            summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
+            first_rows = max_rows // 2 + max_rows % 2
+            items = list(mapping.items())
+            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            if max_rows > 1:
+                last_rows = max_rows // 2
+                summary += [pretty_print("    ...", col_width) + " ..."]
+                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+        else:
+            summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
         summary += [EMPTY_REPR]
     return "\n".join(summary)

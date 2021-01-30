@@ -1454,14 +1454,6 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
-    def test_autoclose_future_warning(self):
-        data = create_test_data()
-        with create_tmp_file() as tmp_file:
-            self.save(data, tmp_file)
-            with pytest.warns(FutureWarning):
-                with self.open(tmp_file, autoclose=True) as actual:
-                    assert_identical(data, actual)
-
 
 @requires_netCDF4
 class TestNetCDF4AlreadyOpen:
@@ -1676,7 +1668,7 @@ class ZarrBase(CFEncodedBase):
 
     @requires_dask
     def test_warning_on_bad_chunks(self):
-        original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 5})
+        original = create_test_data().chunk({"dim1": 4, "dim2": 3, "dim3": 3})
 
         bad_chunks = (2, {"dim2": (3, 3, 2, 1)})
         for chunks in bad_chunks:
@@ -1687,7 +1679,7 @@ class ZarrBase(CFEncodedBase):
                         # only index variables should be in memory
                         assert v._in_memory == (k in actual.dims)
 
-        good_chunks = ({"dim2": 3}, {"dim3": 10})
+        good_chunks = ({"dim2": 3}, {"dim3": (6, 4)}, {})
         for chunks in good_chunks:
             kwargs = {"chunks": chunks}
             with pytest.warns(None) as record:
@@ -2623,7 +2615,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with raises_regex(ValueError, "HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "not the signature of any supported file"):
+        with raises_regex(ValueError, "cannot guess the engine"):
             with open_dataset(b"garbage"):
                 pass
         with raises_regex(ValueError, "can only read bytes"):
@@ -2636,7 +2628,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     def test_open_twice(self):
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with raises_regex(ValueError, "read/write pointer not at zero"):
+        with raises_regex(ValueError, "read/write pointer not at the start"):
             with create_tmp_file() as tmp_file:
                 expected.to_netcdf(tmp_file, engine="h5netcdf")
                 with open(tmp_file, "rb") as f:
@@ -2669,7 +2661,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                     open_dataset(f, engine="scipy")
 
                 f.seek(8)
-                with raises_regex(ValueError, "read/write pointer not at zero"):
+                with raises_regex(ValueError, "cannot guess the engine"):
                     open_dataset(f)
 
 
@@ -3583,6 +3575,19 @@ class TestCfGrib:
             assert list(ds.data_vars) == ["t"]
             assert ds["t"].min() == 231.0
 
+    def test_read_outer(self):
+        expected = {
+            "number": 2,
+            "time": 3,
+            "isobaricInhPa": 2,
+            "latitude": 2,
+            "longitude": 3,
+        }
+        with open_example_dataset("example.grib", engine="cfgrib") as ds:
+            res = ds.isel(latitude=[0, 2], longitude=[0, 1, 2])
+            assert res.dims == expected
+            assert res["t"].min() == 231.0
+
 
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings("ignore:IOAPI_ISPH is assumed to be 6370000")
@@ -3607,9 +3612,6 @@ class TestPseudoNetCDFFormat:
         """
         Open a CAMx file and test data variables
         """
-        ictfile = open_example_dataset(
-            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
-        )
         stdattr = {
             "fill_value": -9999.0,
             "missing_value": -9999,
@@ -3687,17 +3689,20 @@ class TestPseudoNetCDFFormat:
             },
         }
         chkfile = Dataset.from_dict(input)
-        assert_identical(ictfile, chkfile)
+        with open_example_dataset(
+            "example.ict", engine="pseudonetcdf", backend_kwargs={"format": "ffi1001"}
+        ) as ictfile:
+            assert_identical(ictfile, chkfile)
 
     def test_ict_format_write(self):
         fmtkw = {"format": "ffi1001"}
-        expected = open_example_dataset(
+        with open_example_dataset(
             "example.ict", engine="pseudonetcdf", backend_kwargs=fmtkw
-        )
-        with self.roundtrip(
-            expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
-        ) as actual:
-            assert_identical(expected, actual)
+        ) as expected:
+            with self.roundtrip(
+                expected, save_kwargs=fmtkw, open_kwargs={"backend_kwargs": fmtkw}
+            ) as actual:
+                assert_identical(expected, actual)
 
     def test_uamiv_format_read(self):
         """
@@ -4838,8 +4843,10 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        ) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
 
 
 @requires_zarr
@@ -4847,6 +4854,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
+@pytest.mark.filterwarnings("ignore:Specified Dask chunks")
 def test_chunking_consintency(chunks, tmp_path):
     encoded_chunks = {}
     dask_arr = da.from_array(
@@ -4866,8 +4874,10 @@ def test_chunking_consintency(chunks, tmp_path):
 
     with dask.config.set({"array.chunk-size": "1MiB"}):
         expected = ds.chunk(chunks)
-        actual = xr.open_dataset(tmp_path / "test.zarr", engine="zarr", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with xr.open_dataset(
+            tmp_path / "test.zarr", engine="zarr", chunks=chunks
+        ) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
 
-        actual = xr.open_dataset(tmp_path / "test.nc", chunks=chunks)
-        xr.testing.assert_chunks_equal(actual, expected)
+        with xr.open_dataset(tmp_path / "test.nc", chunks=chunks) as actual:
+            xr.testing.assert_chunks_equal(actual, expected)
