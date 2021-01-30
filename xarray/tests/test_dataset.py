@@ -5028,6 +5028,13 @@ class TestDataset:
         actual = ds.count()
         assert_identical(expected, actual)
 
+    def test_apply_to_dataset(self):
+        def func(ds):
+            return Dataset(ds.data_vars, coords=ds.coords)
+
+        ds = create_test_data()
+        assert_identical(ds, ds.apply_to_dataset(func))
+
     def test_map(self):
         data = create_test_data()
         data.attrs["foo"] = "bar"
