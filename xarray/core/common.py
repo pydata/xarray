@@ -635,6 +635,21 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
+    def apply_to_dataset(self, f):
+        from .dataarray import DataArray
+
+        if isinstance(self, DataArray):
+            ds = self._to_temp_dataset()
+        else:
+            ds = self
+
+        result = f(ds)
+
+        if isinstance(self, DataArray):
+            return self._from_temp_dataset(result, name=self.name)
+        else:
+            return result
+
     def groupby(self, group, squeeze: bool = True, restore_coord_dims: bool = None):
         """Returns a GroupBy object for performing grouped operations.
 
