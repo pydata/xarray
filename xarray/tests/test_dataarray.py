@@ -2617,6 +2617,17 @@ class TestDataArray:
         actual = a.groupby("b").fillna(DataArray([0, 2], dims="b"))
         assert_identical(expected, actual)
 
+    def test_apply_to_dataset(self):
+        def func(ds):
+            return Dataset(ds.data_vars, coords=ds.coords)
+
+        da = DataArray(
+            [[0, 1], [2, 3], [4, 5]],
+            dims=("x", "y"),
+            name="abc",
+        )
+        assert_identical(da, da.apply_to_dataset(func))
+
     def test_groupby_iter(self):
         for ((act_x, act_dv), (exp_x, exp_ds)) in zip(
             self.dv.groupby("y"), self.ds.groupby("y")
