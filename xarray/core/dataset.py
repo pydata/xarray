@@ -9,6 +9,7 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from pathlib import Path
+from inspect import getfullargspec
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -7005,5 +7006,140 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def curvefit(
+        self,
+        x: "Dataset",
+        dim: Union[Hashable, Iterable[Hashable]],
+        func:  Callable[..., Any],
+        skipna: bool = True,
+        cov: bool = False,
+        kwargs: Mapping[str, Any] = None,
+    ):
+        """
+        Curve fitting optimization for arbitrary functions.
+
+        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+
+        Parameters
+        ----------
+        x : DataArray
+            x coordinate over which to perform the curve fitting. Must share at least 
+            one dimension with the calling object.
+        dim : str or sequence of str
+            Dimension(s) over which to aggregate during curve fitting. 
+        func : callable
+            User specified function in the form `f(x, *params)` which returns a numpy 
+            array of length x. `params` are the fittable parameters which are optimized 
+            by scipy curve_fit.
+        skipna : bool, optional
+            Whether to skip missing values when fitting. Default is True.
+        cov : bool or str, optional
+            Whether to return the covariance matrix in addition to the coefficients.
+        kwargs : mapping
+            Additional keyword arguments to pass to scipy curve_fit.
+
+        Returns
+        -------
+        curvefit_results : Dataset
+            A single dataset which contains:
+
+            [var]_curvefit_coefficients
+                The coefficients of the best fit.
+            [var]_curvefit_covariance
+                The covariance matrix of the coefficient estimates (only included if 
+                `cov=True`)
+
+        See also
+        --------
+        Dataset.polyfit
+        scipy.optimize.curve_fit
+
+        Examples
+        --------
+
+        Fit a linear trend at every lat/lon grid point.
+
+        >>> def linear(x, m, b):
+        ...     return m*x + b
+        ...
+        >>> ds = xr.tutorial.open_dataset('air_temperature')
+        >>> ds.curvefit(x=ds.time, dim='time', func=linear)
+        <xarray.Dataset>
+        Dimensions:                    (cov_i: 2, cov_j: 2, lat: 25, lon: 53, param: 2)
+        Coordinates:
+          * lat                        (lat) float32 75.0 72.5 70.0 ... 20.0 17.5 15.0
+          * lon                        (lon) float32 200.0 202.5 205.0 ... 327.5 330.0
+          * param                      (param) <U1 'm' 'b'
+          * cov_i                      (cov_i) <U1 'm' 'b'
+          * cov_j                      (cov_j) <U1 'm' 'b'
+        Data variables:
+            air_curvefit_coefficients  (param, lat, lon) float64 1.183e-16 ... 260.9
+            air_curvefit_covariance    (cov_i, cov_j, lat, lon) float64 1.379e-34 ......
+        """
+        from .computation import apply_ufunc
+        from scipy.optimize import curve_fit
+
+        if kwargs is None:
+            kwargs = {}
+
+        if isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = [dim]
+        else:
+            dims = list(dim)
+
+        params = getfullargspec(func).args[1:]
+        n_params = len(params)
+
+        def _wrapper(x, y, **kwargs):
+            if skipna:
+                # If some points are missing, fit with what is there
+                mask = np.all([~np.isnan(x), ~np.isnan(y)], axis=0)
+                x = x[mask]
+                y = y[mask]
+                if not len(x):
+                    # If all points are missing, return NaN
+                    popt = np.full([n_params], np.nan)
+                    pcov = np.full([n_params, n_params], np.nan)
+                    return popt, pcov                   
+            popt, pcov = curve_fit(func, x, y, **kwargs)
+            return popt, pcov
+
+        result = xr.Dataset()
+        cov_fields = ["cov_i", "cov_j"]
+        for name, da in self.data_vars.items():
+            if isinstance(name, str):
+                name = "{}_".format(name)
+            else:
+                # Thus a ReprObject => curvefit was called on a DataArray
+                name = ""
+
+            popt, pcov = xr.apply_ufunc(_wrapper, x, da,
+                vectorize=True,
+                dask="parallelized",
+                input_core_dims=[dims, dims],
+                output_core_dims=[["param"], ["cov_i", "cov_j"]],
+                dask_gufunc_kwargs={
+                    "output_sizes":{"param":n_params, 
+                                    "cov_i":n_params, 
+                                    "cov_j":n_params},
+                },
+                output_dtypes=(np.float64, np.float64),
+                exclude_dims=set(dims),
+                kwargs=kwargs,
+            )
+            result[name + "curvefit_coefficients"] = popt
+            result[name + "curvefit_covariance"] = pcov
+            cov_fields.append(name + "curvefit_covariance")
+
+        result = result.assign_coords({"param":params, "cov_i":params, "cov_j":params})
+        result = result.transpose("param", "cov_i", "cov_j", ...)
+
+        if n_params==1:
+            result = result.squeeze(["param", "cov_i", "cov_j"])
+
+        if not cov:
+            result = result.drop(cov_fields)
+
+        return result
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
