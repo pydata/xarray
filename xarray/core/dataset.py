@@ -1,6 +1,7 @@
 import copy
 import datetime
 import functools
+import inspect
 import sys
 import warnings
 from collections import defaultdict
@@ -9,7 +10,6 @@ from html import escape
 from numbers import Number
 from operator import methodcaller
 from pathlib import Path
-from inspect import getfullargspec
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -7008,12 +7008,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def curvefit(
         self,
-        x: "Dataset",
+        x: "DataArray",
         dim: Union[Hashable, Iterable[Hashable]],
-        func:  Callable[..., Any],
+        func: Callable[..., Any],
         skipna: bool = True,
         cov: bool = False,
-        kwargs: Mapping[str, Any] = None,
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        kwargs: Dict[str, Any] = None,
     ):
         """
         Curve fitting optimization for arbitrary functions.
@@ -7023,20 +7025,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         x : DataArray
-            x coordinate over which to perform the curve fitting. Must share at least 
+            x coordinate over which to perform the curve fitting. Must share at least
             one dimension with the calling object.
         dim : str or sequence of str
-            Dimension(s) over which to aggregate during curve fitting. 
+            Dimension(s) over which to fit.
         func : callable
-            User specified function in the form `f(x, *params)` which returns a numpy 
-            array of length x. `params` are the fittable parameters which are optimized 
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length x. `params` are the fittable parameters which are optimized
             by scipy curve_fit.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
         cov : bool or str, optional
             Whether to return the covariance matrix in addition to the coefficients.
-        kwargs : mapping
-            Additional keyword arguments to pass to scipy curve_fit.
+        p0 : dictionary
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dictionary
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        kwargs : dictionary
+            Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
         -------
@@ -7046,7 +7056,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             [var]_curvefit_coefficients
                 The coefficients of the best fit.
             [var]_curvefit_covariance
-                The covariance matrix of the coefficient estimates (only included if 
+                The covariance matrix of the coefficient estimates (only included if
                 `cov=True`)
 
         See also
@@ -7060,10 +7070,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Fit a linear trend at every lat/lon grid point.
 
         >>> def linear(x, m, b):
-        ...     return m*x + b
+        ...     return m * x + b
         ...
-        >>> ds = xr.tutorial.open_dataset('air_temperature')
-        >>> ds.curvefit(x=ds.time, dim='time', func=linear)
+        >>> ds = xr.tutorial.open_dataset("air_temperature")
+        >>> ds.curvefit(x=ds.time, dim="time", func=linear)
         <xarray.Dataset>
         Dimensions:                    (cov_i: 2, cov_j: 2, lat: 25, lon: 53, param: 2)
         Coordinates:
@@ -7076,9 +7086,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             air_curvefit_coefficients  (param, lat, lon) float64 1.183e-16 ... 260.9
             air_curvefit_covariance    (cov_i, cov_j, lat, lon) float64 1.379e-34 ......
         """
-        from .computation import apply_ufunc
         from scipy.optimize import curve_fit
 
+        from .computation import apply_ufunc
+
+        if p0 is None:
+            p0 = {}
+        if bounds is None:
+            bounds = {}
         if kwargs is None:
             kwargs = {}
 
@@ -7087,10 +7102,45 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             dims = list(dim)
 
-        params = getfullargspec(func).args[1:]
+        def _initialize_feasible(lb, ub):
+            # Mimics functionality of scipy.optimize.minpack._initialize_feasible
+            lb_finite = np.isfinite(lb)
+            ub_finite = np.isfinite(ub)
+            p0 = (
+                0.5 * (lb + ub) * (lb_finite & ub_finite)
+                + (lb + 1) * (lb_finite & ~ub_finite)
+                + (ub - 1) * (~lb_finite & ub_finite)
+            )
+            return p0
+
+        # Get p0 and bounds
+        # Priority: 1) passed args 2) func signature 3) scipy defaults
+        func_args = inspect.signature(func).parameters
+        params = list(func_args)[1:]
         n_params = len(params)
 
+        param_defaults = {p: 1 for p in params}
+        bounds_defaults = {p: (-np.inf, np.inf) for p in params}
+        for p in params:
+            if func_args[p].default is not func_args[p].empty:
+                param_defaults[p] = func_args[p].default
+            if p in bounds:
+                bounds_defaults[p] = bounds[p]
+                if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
+                    param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
+            if p in p0:
+                param_defaults[p] = p0[p]
+        kwargs.setdefault("p0", [param_defaults[p] for p in params])
+        kwargs.setdefault(
+            "bounds",
+            [
+                [bounds_defaults[p][0] for p in params],
+                [bounds_defaults[p][1] for p in params],
+            ],
+        )
+
         def _wrapper(x, y, **kwargs):
+            # Wrap curve_fit with pointwise handling of NaNs
             if skipna:
                 # If some points are missing, fit with what is there
                 mask = np.all([~np.isnan(x), ~np.isnan(y)], axis=0)
@@ -7100,7 +7150,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     # If all points are missing, return NaN
                     popt = np.full([n_params], np.nan)
                     pcov = np.full([n_params, n_params], np.nan)
-                    return popt, pcov                   
+                    return popt, pcov
             popt, pcov = curve_fit(func, x, y, **kwargs)
             return popt, pcov
 
@@ -7108,20 +7158,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         cov_fields = ["cov_i", "cov_j"]
         for name, da in self.data_vars.items():
             if isinstance(name, str):
-                name = "{}_".format(name)
+                name = f"{name}_"
             else:
-                # Thus a ReprObject => curvefit was called on a DataArray
                 name = ""
 
-            popt, pcov = xr.apply_ufunc(_wrapper, x, da,
+            popt, pcov = apply_ufunc(
+                _wrapper,
+                x,
+                da,
                 vectorize=True,
                 dask="parallelized",
                 input_core_dims=[dims, dims],
                 output_core_dims=[["param"], ["cov_i", "cov_j"]],
                 dask_gufunc_kwargs={
-                    "output_sizes":{"param":n_params, 
-                                    "cov_i":n_params, 
-                                    "cov_j":n_params},
+                    "output_sizes": {
+                        "param": n_params,
+                        "cov_i": n_params,
+                        "cov_j": n_params,
+                    },
                 },
                 output_dtypes=(np.float64, np.float64),
                 exclude_dims=set(dims),
@@ -7131,15 +7185,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result[name + "curvefit_covariance"] = pcov
             cov_fields.append(name + "curvefit_covariance")
 
-        result = result.assign_coords({"param":params, "cov_i":params, "cov_j":params})
+        result = result.assign_coords(
+            {"param": params, "cov_i": params, "cov_j": params}
+        )
         result = result.transpose("param", "cov_i", "cov_j", ...)
+        result.attrs = self.attrs.copy()
 
-        if n_params==1:
+        if n_params == 1:
             result = result.squeeze(["param", "cov_i", "cov_j"])
 
         if not cov:
             result = result.drop(cov_fields)
 
         return result
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

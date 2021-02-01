@@ -4289,10 +4289,12 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         x: "DataArray",
         dim: Union[Hashable, Iterable[Hashable]],
-        func:  Callable[..., Any],
+        func: Callable[..., Any],
         skipna: bool = True,
         cov: bool = False,
-        kwargs: Mapping[str, Any] = {},
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        kwargs: Dict[str, Any] = None,
     ):
         """
         Curve fitting optimization for arbitrary functions.
@@ -4302,20 +4304,28 @@ class DataArray(AbstractArray, DataWithCoords):
         Parameters
         ----------
         x : DataArray
-            x coordinate over which to perform the curve fitting. Must share at least 
+            x coordinate over which to perform the curve fitting. Must share at least
             one dimension with the calling object.
         dim : str or sequence of str
-            Dimension(s) over which to aggregate during curve fitting. 
+            Dimension(s) over which to fit.
         func : callable
-            User specified function in the form `f(x, *params)` which returns a numpy 
-            array of length x. `params` are the fittable parameters which are optimized 
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length x. `params` are the fittable parameters which are optimized
             by scipy curve_fit.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
         cov : bool or str, optional
             Whether to return the covariance matrix in addition to the coefficients.
-        kwargs : mapping
-            Additional keyword arguments to pass to scipy curve_fit.
+        p0 : dictionary
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dictionary
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        kwargs : dictionary
+            Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
         -------
@@ -4325,7 +4335,7 @@ class DataArray(AbstractArray, DataWithCoords):
             [var]_curvefit_coefficients
                 The coefficients of the best fit.
             [var]_curvefit_covariance
-                The covariance matrix of the coefficient estimates (only included if 
+                The covariance matrix of the coefficient estimates (only included if
                 `cov=True`)
 
         See also
@@ -4339,10 +4349,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Fit a linear trend at every lat/lon grid point.
 
         >>> def linear(x, m, b):
-        ...     return m*x + b
+        ...     return m * x + b
         ...
-        >>> ds = xr.tutorial.open_dataset('air_temperature')
-        >>> ds.curvefit(x=ds.time, dim='time', func=linear)
+        >>> ds = xr.tutorial.open_dataset("air_temperature")
+        >>> ds.curvefit(x=ds.time, dim="time", func=linear)
         <xarray.Dataset>
         Dimensions:                    (cov_i: 2, cov_j: 2, lat: 25, lon: 53, param: 2)
         Coordinates:
@@ -4356,7 +4366,7 @@ class DataArray(AbstractArray, DataWithCoords):
             air_curvefit_covariance    (cov_i, cov_j, lat, lon) float64 1.379e-34 ......
         """
         return self._to_temp_dataset().curvefit(
-            x, dim, func, skipna=skipna, cov=cov, kwargs=kwargs
+            x, dim, func, skipna=skipna, cov=cov, p0=p0, bounds=bounds, kwargs=kwargs
         )
 
     # this needs to be at the end, or mypy will confuse with `str`
