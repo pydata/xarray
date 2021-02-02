@@ -234,17 +234,18 @@ re-open it directly with Zarr:
 
 
 How to add a new backend
-------------------------
+------------------------------------
 
-Adding a new backend for read support to Xarray is easy, and does not require to integrate any code in Xarray; all you need to do is approaching the following steps:
+Adding a new backend for read support to Xarray is easy, and does not require
+to integrate any code in Xarray; all you need to do is approaching the
+following steps:
 
-- Create a class that inherits from ``BackendEntrypoint``
-
-- Implement the method :py:func:``open_dataset`` that returns an instance of :py:class:``Dataset``
-
+- Create a class that inherits from Xarray py:class:`~xarray.backend.commonBackendEntrypoint`
+- Implement the method ``open_dataset`` that returns an instance of :py:class:`~xarray.Dataset`
 - Declare such a class as an external plugin in your setup.py.
 
-Your ``BackendEntrypoint`` sub-class is the ~~main~~ primary interface with Xarray, and it should implement the following attributes and functions:
+Your ``BackendEntrypoint`` sub-class is the primary interface with Xarray, and
+it should implement the following attributes and functions:
 
 - ``open_dataset`` (mandatory)
 - [``open_dataset_parameters``] (optional)
@@ -255,14 +256,18 @@ These are detailed in the following.
 open_dataset
 ++++++++++++
 
-**Inputs**
+Inputs
+^^^^^^
 
-The backend ``open_dataset`` method takes as input one argument (``filename``), and one keyword argument (``drop_variables``):
+The backend ``open_dataset`` method takes as input one argument
+(``filename``), and one keyword argument (``drop_variables``):
 
 - ``filename``: can be a string containing a relative path or an instance of ``pathlib.Path``.
 - ``drop_variables``: can be `None` or an iterable containing the variable names to be dropped when reading the data.
 
-If it makes sense for your backend, :py:func:`open_dataset` method should implement in its interface all the following boolean keyword arguments, called **decoders** which default to ``None``:
+If it makes sense for your backend, your ``open_dataset`` method should
+implement in its interface all the following boolean keyword arguments, called
+**decoders** which default to ``None``:
 
 - ``mask_and_scale=None``
 - ``decode_times=None``
@@ -271,46 +276,134 @@ If it makes sense for your backend, :py:func:`open_dataset` method should implem
 - ``concat_characters=None``
 - ``decode_coords=None``
 
-These keyword arguments are explicitly defined in Xarray :py:func:`open_dataset` signature.  Xarray will pass them to the backend only if the User sets a value different from ``None`` explicitly.
-Your backend can also take as input a set of backend-specific keyword arguments. All these keyword arguments can be passed to Xarray :py:func`open_dataset` grouped either via the ``backend_kwarg`` parameter or explicitly using the syntax ``**kwargs``.
+These keyword arguments are explicitly defined in Xarray
+:py:meth:`~xarray.open_dataset` signature.  Xarray will pass them to the
+backend only if the User sets a value different from ``None`` explicitly.
+Your backend can also take as input a set of backend-specific keyword
+arguments. All these keyword arguments can be passed to
+:py:meth:`~xarray.open_dataset` grouped either via the ``backend_kwarg``
+parameter or explicitly using the syntax ``**kwargs``.
 
+Output
+^^^^^^
+The output of the backend `open_dataset` shall be an instance of
+Xarray py:class:`~xarray.Dataset` that implements the additional method ``close``,
+used by Xarray to ensure the related files are eventually closed.
 
-**Output**
-
-The output of the backend :py:func:`open_dataset`  shall be an instance of Xarray :py:class:`Dataset` that implements  the additional method ``close``, used by Xarray to ensure the related files are eventually closed.
-If you don't want to support the lazy loading, then the :py:class:`Dataset` shall contain ``NumPy.arrays`` and your work is almost done.
-
-Dask chunking
-+++++++++++++
-
+If you don't want to support the lazy loading, then the :py:class:`~xarray.Dataset`
+shall contain ``NumPy.arrays`` and your work is almost done.
 
 open_dataset_parameters
 +++++++++++++++++++++++
-``open_dataset_parameters`` is the list of backend ``open_dataset`` parameters. Its use is not mandatory, and if the backend does not provide it explicitly, Xarray creates a list of them automatically by inspecting the backend signature.
-Xarray uses ``open_dataset_parameters`` only when it needs to select the **decoders** supported by the backend.
-If ``open_dataset_parameters`` is not defined, but `**kwargs` and `*args` have been passed to the signature, Xarray raises an error.
-On the other hand, if the backend provides the ``open_dataset_parameters``, then `**kwargs` and `*args` can be used in the signature. However, this practice is discouraged unless there is a good reasons for using `**kwargs` or `*args`.
+``open_dataset_parameters`` is the list of backend ``open_dataset`` parameters.
+It is not a mandatory parameter, and if the backend does not provide it
+explicitly, Xarray creates a list of them automatically by inspecting the
+backend signature.
+
+Xarray uses ``open_dataset_parameters`` only when it needs to select
+the **decoders** supported by the backend.
+
+If ``open_dataset_parameters`` is not defined, but ``**kwargs`` and ``*args`` have
+been passed to the signature, Xarray raises an error.
+On the other hand, if the backend provides the ``open_dataset_parameters``,
+then ``**kwargs`` and `*args`` can be used in the signature.
+
+However, this practice is discouraged unless there is a good reasons for using
+`**kwargs` or `*args`.
 
 guess_can_open
 ++++++++++++++
-``guess_can_open`` is used to identify the proper engine to open your data file automatically in case the engine is not specified explicitly. If you are not interested in supporting this feature, you can skip this step since `BackendEntrypoint` already provides a default ``guess_can_open`` that always returns `False`.
-Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of :py:func:`open_dataset`, and returns a boolean.
+``guess_can_open`` is used to identify the proper engine to open your data
+file automatically in case the engine is not specified explicitly. If you are
+not interested in supporting this feature, you can skip this step since
+py:class:`~xarray.backend.common.BackendEntrypoint` already provides a default
+py:meth:`~xarray.backend.common BackendEntrypoint.guess_engine` that always returns ``False``.
+
+Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
+Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
+
+
+How to register a backend
++++++++++++++++++++++++++++
+
+Define in your setup.py (or setup.cfg) a new entrypoint with:
+
+- group: ``xarray.backend``
+- name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``.
+- object reference: the reference of the class that you have implemented.
+
+See https://packaging.python.org/specifications/entry-points/#data-model
+for more information
 
 How to support Lazy Loading
 +++++++++++++++++++++++++++
 
 
-How to register a backend
-+++++++++++++++++++++++++
-Define in your setup.py (or setup.cfg) a new entrypoint with:
+Dask chunking
++++++++++++++
+The backend is not directly involved in `Dask <http://dask.pydata.org/>`__ chunking, since it is managed
+internally by Xarray. However, the backend can define the preferred chunk size
+inside the variable’s encoding ``var.encoding["preferred_chunks"]``.
+The ``preferred_chunks`` may be useful to improve performances with lazy loading.
+``preferred_chunks`` shall be a  dictionary specifying chunk size per dimension
+like ``{“dim1”: 1000, “dim2”: 2000}``  or
+``{“dim1”: [1000, 100], “dim2”: [2000, 2000, 2000]]}``.
 
-- group: ``xarray.backend``
-- name: the name to be passed to :py:func:`open_dataset` as `engine``.`
-- object reference: the reference of the class that you have implemented.
+The ``preferred_chunks`` is used by Xarray to define the chunk size in some
+special cases:
 
-See https://packaging.python.org/specifications/entry-points/#data-model for more information
+- If ``chunks`` along a dimension is None or not defined
+- If ``chunks`` is “auto”
+
+In the first case Xarray uses the chunks size specified in
+``preferred_chunks``.
+In the second case Xarray accommodates ideal chunk sizes, preserving if
+possible the "preferred_chunks". The ideal chunk size is computed with using
+``dask.core.normalize function``, setting ``previus_chunks = preferred_chunks``.
 
 
 Decoders
 ++++++++
+The decoders implement the specific operations to transform data on-disk
+representation to Xarray representation.
 
+A classic example is the decoding of the time. In the NetCDF, the variable
+time is stored as integers witha time unit that contains an origin (for
+example: "seconds since 1970-1-1"), Xarray transforms the pair integer and
+unit in a ``NumPy.datetimes``.
+
+The standard decoders implemented by Xarray are:
+- strings.CharacterArrayCoder()
+- strings.EncodedStringCoder()
+- variables.UnsignedIntegerCoder()
+- variables.CFMaskCoder()
+- variables.CFScaleOffsetCoder()
+- times.CFTimedeltaCoder()
+- times.CFDatetimeCoder()
+
+Some transformations can be common to more backends, so before implementing a
+new decoder, please be sure that is not already implemented by Xarray.
+
+Xarray’s decoders can be reused by the backends, either instantiating directly
+the decoders or using the higher-level function
+:py:func:`~xarray.conventions.decode_cf_variables` that groups Xarray decoders.
+
+In some cases the transformation to apply strongly depends on the on-disk data
+format, therefore you may need to implement your own decoder.
+
+An example is the time format in grib files. grib format is very different
+from the NetCDF one: the time is stored in two attributes dataDate and
+dataTime as strings. Therefore, in this case it is not possible to reuse the
+Xarray time decoder, but a new one shall be implemented.
+
+Decoders can be activated or deactivated using the boolean keywords of Xarray
+:py:meth:`~xarray.open_dataset` signature: ``mask_and_scale``,
+``decode_times``, ``decode_timedelta``, ``use_cftime``, ``concat_characters``,
+``decode_coords``.
+
+Such keywords are passed to the backend only if the User sets a value
+different from ``None``.  Note that the backend does not necessarily have to
+implement all the decoders, but it shall declare in its ``open_dataset``
+interface only the boolean keywords related to the supported decoders. The
+deactivation and activation of the supported decoders shall be implemented by
+the backend.
