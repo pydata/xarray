@@ -2658,7 +2658,7 @@ class IndexVariable(Variable):
         if check_dtype and self.dtype != other.dtype:
             return False
 
-        return self.to_index().equals(other.to_index())
+        return bool(self.to_index().equals(other.to_index()))
 
     def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
