@@ -189,22 +189,22 @@ def source_ndarray(array):
 # invariants
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, check_dtype=False):
     __tracebackhide__ = True
-    xarray.testing.assert_equal(a, b)
+    xarray.testing.assert_equal(a, b, check_dtype=check_dtype)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, check_dtype=False):
     __tracebackhide__ = True
-    xarray.testing.assert_identical(a, b)
+    xarray.testing.assert_identical(a, b, check_dtype=check_dtype)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
 
 
-def assert_allclose(a, b, **kwargs):
+def assert_allclose(a, b, check_dtype=False, **kwargs):
     __tracebackhide__ = True
-    xarray.testing.assert_allclose(a, b, **kwargs)
+    xarray.testing.assert_allclose(a, b, check_dtype=check_dtype, **kwargs)
     xarray.testing._assert_internal_invariants(a)
     xarray.testing._assert_internal_invariants(b)
