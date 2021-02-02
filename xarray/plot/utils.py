@@ -460,6 +460,8 @@ def label_from_attrs(da, extra=""):
 
     if da.attrs.get("units"):
         units = " [{}]".format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = " [{}]".format(da.attrs["unit"])
     else:
         units = ""
 
