@@ -4294,6 +4294,7 @@ class DataArray(AbstractArray, DataWithCoords):
         cov: bool = False,
         p0: Dict[str, Any] = None,
         bounds: Dict[str, Any] = None,
+        param_names: Sequence[str] = None,
         kwargs: Dict[str, Any] = None,
     ):
         """
@@ -4303,16 +4304,17 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coords : DataArray or sequence of DataArray
+        coords : DataArray, str or sequence of DataArray, str
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
-            functions, supply `coords` as a list in the same order as arguments in `func`.
-            To fit along existing dimensions of the calling object, `coords` can also be
-            specified as a str or sequence of strs.
+            functions, supply `coords` as a sequence in the same order as arguments in
+            `func`. To fit along existing dimensions of the calling object, `coords` can
+            also be specified as a str or sequence of strs.
         func : callable
             User specified function in the form `f(x, *params)` which returns a numpy
             array of length x. `params` are the fittable parameters which are optimized
-            by scipy curve_fit.
+            by scipy curve_fit. `x` can also be specified as a sequence containing multiple
+            coordinates, e.g. `f((x, y), *params)`.
         reduce_dim : str or sequence of str
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
@@ -4320,16 +4322,21 @@ class DataArray(AbstractArray, DataWithCoords):
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        cov : bool or str, optional
+        cov : bool, optional
             Whether to return the covariance matrix in addition to the coefficients.
-        p0 : dictionary
+        p0 : dictionary, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dictionary
-            Optional dictionary of parameter names to initial guesses passed to the
+        bounds : dictionary, optional
+            Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
+        param_names: iterable, optional
+            Sequence of names for the fittable parameters of `func`. If not supplied,
+            this will be automatically determined by arguments of `func`. `param_names`
+            should be manually supplied when fitting a function that takes a variable
+            number of parameters.
         kwargs : dictionary
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -4357,6 +4364,7 @@ class DataArray(AbstractArray, DataWithCoords):
             cov=cov,
             p0=p0,
             bounds=bounds,
+            param_names=param_names,
             kwargs=kwargs,
         )
 

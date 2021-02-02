@@ -443,6 +443,89 @@ The inverse operation is done with :py:meth:`~xarray.polyval`,
 .. note::
     These methods replicate the behaviour of :py:func:`numpy.polyfit` and :py:func:`numpy.polyval`.
 
+
+.. _compute.curvefit:
+
+Fitting arbitrary functions
+===========================
+
+Xarray objects also provide an interface for fitting more complex functions using
+:py:meth:`scipy.optimize.curve_fit`. :py:meth:`~xarray.DataArray.curvefit` accepts
+user-defined functions and can fit along multiple coordinates.
+
+For example, we can fit a relationship between two ``DataArray`` objects, maintaining
+a unique fit at each spatial coordinate but aggregating over the time dimension:
+
+.. ipython:: python
+
+    def exponential(x, a, xc):
+        return np.exp((x - xc) / a)
+
+
+    x = np.arange(-5, 5, 0.1)
+    t = np.arange(-5, 5, 0.1)
+    X, T = np.meshgrid(x, t)
+    Z1 = np.random.uniform(low=-5, high=5, size=X.shape)
+    Z2 = exponential(Z1, 3, X)
+    Z3 = exponential(Z1, 1, -X)
+
+    ds = xr.Dataset(
+        data_vars=dict(
+            var1=(["t", "x"], Z1), var2=(["t", "x"], Z2), var3=(["t", "x"], Z3)
+        ),
+        coords={"t": t, "x": x},
+    )
+    ds[["var2", "var1"]].curvefit(
+        coords=ds.var1,
+        func=exponential,
+        reduce_dim="t",
+        bounds={"a": (0.5, 5), "xc": (-5, 5)},
+    )
+
+We can also fit multi-dimensional functions, and even use a wrapper function to
+simultaneously fit a summation of several functions, such as this field containing
+two gaussian peaks:
+
+.. ipython:: python
+
+    def gaussian_2d(coords, a, xc, yc, xalpha, yalpha):
+        x, y = coords
+        z = a * np.exp(
+            -np.square(x - xc) / 2 / np.square(xalpha)
+            - np.square(y - yc) / 2 / np.square(yalpha)
+        )
+        return z
+
+
+    def multi_peak(coords, *args):
+        z = np.zeros(coords[0].shape)
+        for i in range(len(args) // 5):
+            z += gaussian_2d(coords, *args[i * 5 : i * 5 + 5])
+        return z
+
+
+    x = np.arange(-5, 5, 0.1)
+    y = np.arange(-5, 5, 0.1)
+    X, Y = np.meshgrid(x, y)
+
+    n_peaks = 2
+    names = ["a", "xc", "yc", "xalpha", "yalpha"]
+    names = [f"{name}{i}" for i in range(n_peaks) for name in names]
+    Z = gaussian_2d((X, Y), 3, 1, 1, 2, 1) + gaussian_2d((X, Y), 2, -1, -2, 1, 1)
+    Z += np.random.normal(scale=0.1, size=Z.shape)
+
+    da = xr.DataArray(Z, dims=["y", "x"], coords={"y": y, "x": x})
+    da.curvefit(
+        coords=["x", "y"],
+        func=multi_peak,
+        param_names=names,
+        kwargs={"maxfev": 10000},
+    )
+
+.. note::
+    This method replicates the behavior of :py:func:`scipy.optimize.curve_fit`.
+
+
 .. _compute.broadcasting:
 
 Broadcasting by dimension name
