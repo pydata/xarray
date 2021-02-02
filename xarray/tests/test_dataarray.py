@@ -487,6 +487,33 @@ class TestDataArray:
         assert not a.broadcast_equals(c)
         assert not c.broadcast_equals(a)
 
+    @pytest.mark.parametrize(
+        "dtype1, dtype2, expected",
+        [
+            [float, float, True],
+            [float, int, False],
+            [object, int, False],
+        ],
+    )
+    def test_equals_check_dtype(self, dtype1, dtype2, expected):
+        data1 = np.array([1], dtype=dtype1)
+        data2 = np.array([1], dtype=dtype2)
+
+        da1 = DataArray(data1)
+        da2 = DataArray(data2)
+
+        assert da1.equals(da2, check_dtype=True) is expected
+        assert da1.identical(da2, check_dtype=True) is expected
+        assert da1.broadcast_equals(da2, check_dtype=True) is expected
+
+        # the check also fails if the coords have different dtype
+        da1 = DataArray([1], dims="x", coords={"x": data1})
+        da2 = DataArray([1], dims="x", coords={"x": data2})
+
+        assert da1.equals(da2, check_dtype=True) is expected
+        assert da1.identical(da2, check_dtype=True) is expected
+        assert da1.broadcast_equals(da2, check_dtype=True) is expected
+
     def test_getitem(self):
         # strings pull out dataarrays
         assert_identical(self.dv, self.ds["foo"])

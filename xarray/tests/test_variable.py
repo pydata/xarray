@@ -415,6 +415,26 @@ class VariableSubclassobjects:
             assert v[:2].identical(v2[:2])
             assert v[:2].no_conflicts(v2[:2])
 
+    @pytest.mark.parametrize(
+        "dtype1, dtype2, expected",
+        [
+            [float, float, True],
+            [float, int, False],
+        ],
+    )
+    def test_equals_check_dtype(self, dtype1, dtype2, expected):
+
+        data1 = np.array([1], dtype=dtype1)
+        data2 = np.array([1], dtype=dtype2)
+
+        v1 = self.cls(["data"], data1)
+        v2 = self.cls(["data"], data2)
+
+        assert v1.equals(v2, check_dtype=True) is expected
+        assert v1.identical(v2, check_dtype=True) is expected
+        assert v1.broadcast_equals(v2, check_dtype=True) is expected
+        assert v1.no_conflicts(v2, check_dtype=True) is expected
+
     def test_eq_all_dtypes(self):
         # ensure that we don't choke on comparisons for which numpy returns
         # scalars
