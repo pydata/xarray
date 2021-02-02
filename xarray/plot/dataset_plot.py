@@ -74,7 +74,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     }
 
 
-def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
+def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping, yerr, xerr):
 
     broadcast_keys = ["x", "y"]
     to_broadcast = [ds[x], ds[y]]
@@ -84,10 +84,23 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
     if markersize:
         to_broadcast.append(ds[markersize])
         broadcast_keys.append("size")
+    if yerr:
+        to_broadcast.append(ds[yerr])
+        broadcast_keys.append("yerr")
+    if xerr:
+        to_broadcast.append(ds[xerr])
+        broadcast_keys.append("xerr")
 
     broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
 
-    data = {"x": broadcasted["x"], "y": broadcasted["y"], "hue": None, "sizes": None}
+    data = {
+        "x": broadcasted["x"],
+        "y": broadcasted["y"],
+        "hue": None,
+        "sizes": None,
+        "yerr": None,
+        "xerr": None,
+    }
 
     if hue:
         data["hue"] = broadcasted["hue"]
@@ -101,6 +114,10 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
         data["sizes"] = size.copy(
             data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
         )
+    if xerr:
+        data["xerr"] = broadcasted["xerr"]
+    if yerr:
+        data["yerr"] = broadcasted["yerr"]
 
     return data
 
@@ -176,6 +193,13 @@ def _dsplot(plotfunc):
         Can be either 'discrete' (legend) or 'continuous' (color bar).
     markersize: str, optional
         scatter only. Variable by which to vary size of scattered points.
+    yerr: str, optional
+        scatter only. Variable from which to take the y-error bars.
+        Note that in this case errorbars rather then scatter is used,
+        so this cannot be combined with some options.
+    xerr: str, optional
+        scatter only. Variable from which to take the x-error bars.
+        Same restriction as for yerr.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
     add_guide: bool, optional
@@ -416,22 +440,46 @@ def scatter(ds, x, y, ax, **kwargs):
     markersize = kwargs.pop("markersize", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+    yerr = kwargs.pop("yerr", None)
+    xerr = kwargs.pop("xerr", None)
+
+    if (yerr or xerr) and hue_style == "continous":
+        raise ValueError(
+            "Dataset.plot.scatter does not accept"
+            "'yerr' and 'hue_style=continous'. "
+            "Use 'hue_style=discrete' instead."
+        )
+
+    if yerr or xerr:
+        if kwargs.get("fmt", None) is None:
+            kwargs["fmt"] = "o"
 
     # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
+    data = _infer_scatter_data(
+        ds, x, y, hue, markersize, size_norm, size_mapping, yerr, xerr
+    )
 
-    if hue_style == "discrete":
+    if hue_style == "discrete" or yerr or xerr:
         primitive = []
         # use pd.unique instead of np.unique because that keeps the order of the labels,
         # which is important to keep them in sync with the ones used in
         # FacetGrid.add_legend
+
         for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
 
+            plot_func = ax.scatter
+            if data["yerr"] is not None:
+                kwargs.update(yerr=data["yerr"].where(mask, drop=True).values.flatten())
+                plot_func = ax.errorbar
+            if data["xerr"] is not None:
+                kwargs.update(xerr=data["xerr"].where(mask, drop=True).values.flatten())
+                plot_func = ax.errorbar
+
             primitive.append(
-                ax.scatter(
+                plot_func(
                     data["x"].where(mask, drop=True).values.flatten(),
                     data["y"].where(mask, drop=True).values.flatten(),
                     label=label,
