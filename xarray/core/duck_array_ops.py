@@ -215,7 +215,7 @@ def lazy_array_equiv(arr1, arr2, check_dtype=False):
     arr2 = asarray(arr2)
     if arr1.shape != arr2.shape:
         return False
-    # NOTE: "is False" needed -> should not return on None
+    # "is False" needed -> should not return on None
     if check_dtype and same_dtype(arr1, arr2, lazy=True) is False:
         return False
     if dask_array and is_duck_dask_array(arr1) and is_duck_dask_array(arr2):
