@@ -236,35 +236,33 @@ re-open it directly with Zarr:
 How to add a new backend
 ------------------------
 
-Adding a new backend for read support to Xarray is easy, and you don't need to integrate your code in Xarray.
-All you need to do is to:
+Adding a new backend for read support to Xarray is easy, and does not require to integrate any code in Xarray; all you need to do is approaching the following steps:
 
-- Create a class that inherits from BackendEntrypoint
+- Create a class that inherits from ``BackendEntrypoint``
 
-- Implement the method ``open_dataset`` that returns an instance :py:class:``Dataset``
+- Implement the method :py:func:``open_dataset`` that returns an instance of :py:class:``Dataset``
 
-- Declare such class as an external plugin in your setup.py.
+- Declare such a class as an external plugin in your setup.py.
 
-Your ``BackendEntrypoint` sub-class is the main interface with Xarray, and it should implement the following attributes and functions:
+Your ``BackendEntrypoint`` sub-class is the ~~main~~ primary interface with Xarray, and it should implement the following attributes and functions:
 
-- ``open_dataset``
-- [``open_dataset_parameters``]
-- [``guess_can_open``]
+- ``open_dataset`` (mandatory)
+- [``open_dataset_parameters``] (optional)
+- [``guess_can_open``] (optional)
 
-While ``open_dataset`` is mandatory, ``open_dataset_parameters`` and ``guess_can_open`` are optional.
-
+These are detailed in the following.
 
 open_dataset
-++++++++++++++++++++++++++++++
+++++++++++++
 
 **Inputs**
 
-The backend ``open_dataset`` method shall take in input one argument, ``filename`` and one keyword argument ``drop_variables``:
+The backend ``open_dataset`` method takes as input one argument (``filename``), and one keyword argument (``drop_variables``):
 
-- ``filename`` may be a string containing a relative path, or an instance of ``pathlib.Path``.
-- ``drop_variables`` may be `None` or an iterable containing the variables names to be dropped in reading the data.
+- ``filename``: can be a string containing a relative path or an instance of ``pathlib.Path``.
+- ``drop_variables``: can be `None` or an iterable containing the variable names to be dropped when reading the data.
 
-It is desiderable for the backend ``open_dataset`` to implement in its interface all  the folowing boolean keyword arguments, the **decoders** (if it make sense for  the backend):
+If it makes sense for your backend, :py:func:`open_dataset` method should implement in its interface all the following boolean keyword arguments, called **decoders** which default to ``None``:
 
 - ``mask_and_scale=None``
 - ``decode_times=None``
@@ -273,39 +271,30 @@ It is desiderable for the backend ``open_dataset`` to implement in its interface
 - ``concat_characters=None``
 - ``decode_coords=None``
 
-These keyword arguments are explicitly defined in Xarray :py:func:`open_dataset` signature and they will be passed to the backend only if the User passes from them a value different from `None`. For more details see **decoders** sub-section.
-
-Your backend can also take in input a set of backend-specific keyword arguments. All the kwargs passed to Xarray :py:func:`open_dataset`,  in the parameter ``backend_kwargs`` or explicitly as keyword arguments (``**kwargs``), will be grouped and passed to the backend as keyword arguments.
+These keyword arguments are explicitly defined in Xarray :py:func:`open_dataset` signature.  Xarray will pass them to the backend only if the User sets a value different from ``None`` explicitly.
+Your backend can also take as input a set of backend-specific keyword arguments. All these keyword arguments can be passed to Xarray :py:func`open_dataset` grouped either via the ``backend_kwarg`` parameter or explicitly using the syntax ``**kwargs``.
 
 
 **Output**
 
-Backend ``open_dataset`` output shall be an instance of Xarray :py:class:`Dataset`
-that implements an additional method ``close``, used by Xarray to ensure that the related files are closed.
-If don't want to support the lazy loading, then the :py:class:`Dataset` shall contain NumPy.arrays and your work is almost done.
+The output of the backend :py:func:`open_dataset`  shall be an instance of Xarray :py:class:`Dataset` that implements  the additional method ``close``, used by Xarray to ensure the related files are eventually closed.
+If you don't want to support the lazy loading, then the :py:class:`Dataset` shall contain ``NumPy.arrays`` and your work is almost done.
 
-Dask Chunking
-++++++++++++
+Dask chunking
++++++++++++++
 
-Xarray manege the dataset chunking, so the backend should deal with it. If your on-disk format is already chunked and you want to suggest the preferred chunking, then you can use the attribute ``preferred_chunks`` in each variable encoding: ``ds[variable].encoding[“preferred_chunks”] = my_preferred_chunks `.
-The preferred chunking will be used in two cases.
-The first one is if the User does not select specific chunking for  some dimension, for example:
-``chunks={}``, xarray will use the preferred_chunks for all the dimension.
-``chunks={“x”: 1000}``,  xarray will use the preferred chunking for all the dimensions except “x”
-The second one if ``chunks=”auto”``. In this case, ``preferred_chunks`` is used to estimate the “best” chunking with dask.core.normalize_chunks.
 
 open_dataset_parameters
-+++++++++++++++++++++++++++++++++++++++++
-``open_dataset_parameters`` is the list of backend ``open_dataset`` parameters. It is not mandatory and if the backend doesn’t provide it explicity, Xarray will create it by inspecting backend signature.
-Xarray uses ``open_dataset_parameters`` when needs to select only the decoders supported by the backend.
-If ``open_dataset_parameters`` is not defined, Xarray will raise an error during the inspection if it finds `**kwargs` and `*args` in the signature.
-
-If the backend will provide ``open_dataset_parameters``, then it will be possible to use `**kwargs` and `*args`  in the signature. This is discouraged unless there are good reasons for using `**kwargs` or `*args`.
++++++++++++++++++++++++
+``open_dataset_parameters`` is the list of backend ``open_dataset`` parameters. Its use is not mandatory, and if the backend does not provide it explicitly, Xarray creates a list of them automatically by inspecting the backend signature.
+Xarray uses ``open_dataset_parameters`` only when it needs to select the **decoders** supported by the backend.
+If ``open_dataset_parameters`` is not defined, but `**kwargs` and `*args` have been passed to the signature, Xarray raises an error.
+On the other hand, if the backend provides the ``open_dataset_parameters``, then `**kwargs` and `*args` can be used in the signature. However, this practice is discouraged unless there is a good reasons for using `**kwargs` or `*args`.
 
 guess_can_open
-+++++++++++++++++++++++++++++++++++++++++
-``guess_can_open`` is used for the automatic discovering of the engines able to open the file, in case the User does not specify explicity the engine. If you are not intrested to support this feature, you can skip this step since `BackendEntrypoint`` already provide a default ``guess_can_open`` that returns always `False`.
-Backend ``guess_can_open`` shall take in input the ``filename_or_obj`` :py:func:`open_dataset` parameter, and it shall return a boolean.
+++++++++++++++
+``guess_can_open`` is used to identify the proper engine to open your data file automatically in case the engine is not specified explicitly. If you are not interested in supporting this feature, you can skip this step since `BackendEntrypoint` already provides a default ``guess_can_open`` that always returns `False`.
+Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of :py:func:`open_dataset`, and returns a boolean.
 
 How to support Lazy Loading
 +++++++++++++++++++++++++++
@@ -319,22 +308,9 @@ Define in your setup.py (or setup.cfg) a new entrypoint with:
 - name: the name to be passed to :py:func:`open_dataset` as `engine``.`
 - object reference: the reference of the class that you have implemented.
 
-See https://packaging.python.org/specifications/entry-points/#data-model for more information.
+See https://packaging.python.org/specifications/entry-points/#data-model for more information
+
 
 Decoders
 ++++++++
 
-The decoders implement the specific operations to transform data on-disk representation
-to Xarray representation.
-Xarray uses internally a set of decoders needed to transform netCDF4 on-disk data into a :py:class:`Dataset` following Xarray standards (For more details see :py:function:`open_dataset`):
-
-- strings.CharacterArrayCoder()
-- strings.EncodedStringCoder()
-- variables.UnsignedIntegerCoder()
-- variables.CFMaskCoder()
-- variables.CFScaleOffsetCoder()
-- times.CFTimedeltaCoder()
-- times.CFDatetimeCoder(use_cftime=use_cftime)
-
-They are grouped in higher-level function conventions.decode_cf_variables. It takes in input the list of variables to decode and the decoders to activate/deactivate.
-Some transformations can be common to more backends, so before implementing a decoder, you should to be sure that is not already implemented by xarray.
