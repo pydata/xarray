@@ -25,6 +25,7 @@ Breaking changes
 - xarray no longer supports python 3.6
 
   The minimum versions of some other dependencies were changed:
+
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
@@ -62,6 +63,8 @@ New Features
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Bug fixes
 ~~~~~~~~~
