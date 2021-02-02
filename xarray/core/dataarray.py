@@ -4287,9 +4287,9 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def curvefit(
         self,
-        x: "DataArray",
-        dim: Union[Hashable, Iterable[Hashable]],
+        coords: Union["DataArray", Iterable["DataArray"]],
         func: Callable[..., Any],
+        reduce_dim: Union[Hashable, Iterable[Hashable]] = None,
         skipna: bool = True,
         cov: bool = False,
         p0: Dict[str, Any] = None,
@@ -4303,15 +4303,21 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        x : DataArray
-            x coordinate over which to perform the curve fitting. Must share at least
-            one dimension with the calling object.
-        dim : str or sequence of str
-            Dimension(s) over which to fit.
+        coords : DataArray or sequence of DataArray
+            Independent coordinate(s) over which to perform the curve fitting. Must share
+            at least one dimension with the calling object. When fitting multi-dimensional
+            functions, supply `coords` as a list in the same order as arguments in `func`.
+            To fit along existing dimensions of the calling object, `coords` can also be
+            specified as a str or sequence of strs.
         func : callable
             User specified function in the form `f(x, *params)` which returns a numpy
             array of length x. `params` are the fittable parameters which are optimized
             by scipy curve_fit.
+        reduce_dim : str or sequence of str
+            Additional dimension(s) over which to aggregate while fitting. For example,
+            calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
+            aggregate all lat and lon points and fit the specified function along the
+            time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
         cov : bool or str, optional
@@ -4342,31 +4348,16 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.polyfit
         scipy.optimize.curve_fit
-
-        Examples
-        --------
-
-        Fit a linear trend at every lat/lon grid point.
-
-        >>> def linear(x, m, b):
-        ...     return m * x + b
-        ...
-        >>> ds = xr.tutorial.open_dataset("air_temperature")
-        >>> ds.curvefit(x=ds.time, dim="time", func=linear)
-        <xarray.Dataset>
-        Dimensions:                    (cov_i: 2, cov_j: 2, lat: 25, lon: 53, param: 2)
-        Coordinates:
-          * lat                        (lat) float32 75.0 72.5 70.0 ... 20.0 17.5 15.0
-          * lon                        (lon) float32 200.0 202.5 205.0 ... 327.5 330.0
-          * param                      (param) <U1 'm' 'b'
-          * cov_i                      (cov_i) <U1 'm' 'b'
-          * cov_j                      (cov_j) <U1 'm' 'b'
-        Data variables:
-            air_curvefit_coefficients  (param, lat, lon) float64 1.183e-16 ... 260.9
-            air_curvefit_covariance    (cov_i, cov_j, lat, lon) float64 1.379e-34 ......
         """
         return self._to_temp_dataset().curvefit(
-            x, dim, func, skipna=skipna, cov=cov, p0=p0, bounds=bounds, kwargs=kwargs
+            coords,
+            func,
+            reduce_dim=reduce_dim,
+            skipna=skipna,
+            cov=cov,
+            p0=p0,
+            bounds=bounds,
+            kwargs=kwargs,
         )
 
     # this needs to be at the end, or mypy will confuse with `str`
