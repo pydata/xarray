@@ -869,17 +869,15 @@ def test_interpolate_chunk_advanced(method):
 
 
 @requires_scipy
-@pytest.mark.parametrize("bounds_error", [True, False])
-def test_interp1d_bounds_error(bounds_error):
+def test_interp1d_bounds_error():
     """Ensure exception on bounds error is raised if requested"""
     da = xr.DataArray(
         np.sin(0.3 * np.arange(4)),
         [("time", np.arange(4))],
     )
 
-    if bounds_error:
-        with pytest.raises(ValueError):
-            da.interp(time=3.5, kwargs=dict(bounds_error=bounds_error))
-    else:
-        # default is to fill with nans, so this should pass
-        da.interp(time=3.5, kwargs=dict(bounds_error=bounds_error))
+    with pytest.raises(ValueError):
+        da.interp(time=3.5, kwargs=dict(bounds_error=True))
+
+    # default is to fill with nans, so this should pass
+    da.interp(time=3.5)

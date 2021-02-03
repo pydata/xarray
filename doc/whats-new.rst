@@ -96,6 +96,7 @@ Bug fixes
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Ensure that `Dataset.interp` raises `ValueError` when interpolating outside coordinate range and `bounds_error=True` (:issue:`4854`, :pull:`4855`). By `Leif Denby <https://github.com/leifdenby>`_.
 
 Documentation
 ~~~~~~~~~~~~~
