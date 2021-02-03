@@ -4565,6 +4565,35 @@ class TestDataArray:
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
 
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit(self, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def exp_decay(t, n0, tau):
+            return n0 * np.exp(-t / tau)
+
+        t = np.arange(0, 5, 0.5)
+        da = DataArray(
+            np.stack([exp_decay(t, 3, 2), exp_decay(t, 5, 4)], axis=-1),
+            dims=("t", "x"),
+            coords={"t": t, "x": [0, 1]},
+        )
+        da[0, 0] = np.nan
+
+        expected = DataArray(
+            [[3, 5], [2, 4]],
+            dims=("param", "x"),
+            coords={"param": ["n0", "tau"], "x": [0, 1]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(coords="t", func=exp_decay)
+        assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
