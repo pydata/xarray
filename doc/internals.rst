@@ -337,7 +337,10 @@ for more information
 
 How to support Lazy Loading
 +++++++++++++++++++++++++++
-
+If you want to make your backend effective with big data, then you should support
+the lazy loading. Basically, you shall replace the :py:meth:`numpy.array` inside the variables
+the py:class:`~xarray.Dataset` with a custom class that inherits from
+py:class:`~xarray.backend.common.BackendArray`.
 
 Dask chunking
 +++++++++++++
@@ -358,7 +361,7 @@ special cases:
 In the first case Xarray uses the chunks size specified in
 ``preferred_chunks``.
 In the second case Xarray accommodates ideal chunk sizes, preserving if
-possible the "preferred_chunks". The ideal chunk size is computed with using
+possible the "preferred_chunks". The ideal chunk size is computed using
 ``dask.core.normalize function``, setting ``previus_chunks = preferred_chunks``.
 
 
