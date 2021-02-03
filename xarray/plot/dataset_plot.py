@@ -459,7 +459,7 @@ def scatter(ds, x, y, ax, **kwargs):
         ds, x, y, hue, markersize, size_norm, size_mapping, yerr, xerr
     )
 
-    if hue_style == "discrete" or yerr or xerr:
+    if hue_style == "discrete":
         primitive = []
         # use pd.unique instead of np.unique because that keeps the order of the labels,
         # which is important to keep them in sync with the ones used in
@@ -493,7 +493,15 @@ def scatter(ds, x, y, ax, **kwargs):
         if data["hue"] is not None:
             kwargs.update(c=data["hue"].values.ravel())
 
-        primitive = ax.scatter(
+        plot_func = ax.scatter
+        if data["yerr"] is not None:
+            kwargs.update(yerr=data["yerr"].values.ravel())
+            plot_func = ax.errorbar
+        if data["xerr"] is not None:
+            kwargs.update(xerr=data["xerr"].values.ravel())
+            plot_func = ax.errorbar
+
+        primitive = plot_func(
             data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
         )
 
