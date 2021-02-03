@@ -11,5 +11,4 @@ This guide provides a quick overview and showcases some example notebooks.
    why-xarray
    faq
    quick-overview
-   examples
    installing

@@ -11,4 +11,3 @@ included in Xarray, describing what they are and what they do.
 
    api
    howdoi
-   related-projects
