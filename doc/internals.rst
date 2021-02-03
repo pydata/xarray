@@ -339,24 +339,39 @@ How to support Lazy Loading
 +++++++++++++++++++++++++++
 If you want to make your backend effective with big datasets, then you should support
 the lazy loading.
-Basically, you shall replace the :py:class:`numpy.array` inside the variables with
-a custom class:
+Basically, when you instantiate the variables, instead of using a :py:class:`numpy.array`,
+you need to use custom class that support lazy loading indexing:
 
-.. ipython:: python
-    backend_array = YourBackendArray()
+.. code-block:: python
+
+    backend_array = CustomBackendArray()
     data = indexing.LazilyOuterIndexedArray(backend_array)
-    variable = Variable(..., data, ...)
+    var = Variable(..., data, ...)
 
-Where ``YourBackendArray``is a class that inherit from
-:py:class:`~xarray.backends.common.BackendArray` and
-:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a
-class of Xarray that wraps an array to make basic and outer indexing lazy.
 
-BackendArray
-^^^^^^^^^^^^
+Xarray implements the wrapper class that manages the the lazy loading:
+:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`.
+While the backend must implement ``CustomBackendArray`` that inherit from
+:py:class:`~xarray.backends.common.BackendArray` that implements the
+method `__getitem__`.
+
+BackendArray subclassing
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+In your sub-class you need to implement two methods in addition to the
+``__init__`` one:
+
+- ``__getitem``
+- ``__getitem__``
+
+Where ``__get_item``
+
 
 CachingFileManager
 ^^^^^^^^^^^^^^^^^^
+
+Type of Indexing
+^^^^^^^^^^^^^^^^
 
 
 Dask chunking
