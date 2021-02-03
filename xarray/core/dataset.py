@@ -7081,10 +7081,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         from scipy.optimize import curve_fit
 
-        from .alignment import broadcast
-        from .computation import apply_ufunc
-        from .dataarray import DataArray
-
         if p0 is None:
             p0 = {}
         if bounds is None:
@@ -7101,7 +7097,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         if (
             isinstance(coords, str)
-            or isinstance(coords, DataArray)
+            or isinstance(coords, xr.DataArray)
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
@@ -7109,7 +7105,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # Figure out whether any coords are dims on self
         for coord in coords:
-            reduce_dims += [c for c in self.coords if coord.equals(self[c])]
+            reduce_dims += [c for c in self.dims if coord.equals(self[c])]
         reduce_dims = list(set(reduce_dims))
         preserved_dims = list(set([dim for dim in self.dims]) - set(reduce_dims))
         if not reduce_dims:
@@ -7120,7 +7116,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
         # Broadcast all coords with each other
-        coords = broadcast(*coords)
+        coords = xr.broadcast(*coords)
         coords = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords
         ]
@@ -7138,11 +7134,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # Get p0 and bounds
         # Priority: 1) passed args 2) func signature 3) scipy defaults
-        func_args = inspect.signature(func).parameters
+        try:
+            func_args = inspect.signature(func).parameters
+        except ValueError:
+            func_args = {}
+            if not param_names:
+                raise ValueError(
+                    "Unable to inspect `func` signature, and `param_names` was not provided."
+                )
         if param_names:
             params = param_names
         else:
             params = list(func_args)[1:]
+            if any(
+                [
+                    (p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD])
+                    for p in func_args.values()
+                ]
+            ):
+                raise ValueError(
+                    "`param_names` must be provided because `func` takes variable length arguments."
+                )
+
         n_params = len(params)
         param_defaults = {p: 1 for p in params}
         bounds_defaults = {p: (-np.inf, np.inf) for p in params}
@@ -7180,7 +7193,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             popt, pcov = curve_fit(func, x, y, **kwargs)
             return popt, pcov
 
-        result = Dataset()
+        result = xr.Dataset()
         cov_fields = ["cov_i", "cov_j"]
         for name, da in self.data_vars.items():
             if isinstance(name, str):
@@ -7188,7 +7201,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 name = ""
 
-            popt, pcov = apply_ufunc(
+            popt, pcov = xr.apply_ufunc(
                 _wrapper,
                 da,
                 *coords,
@@ -7221,7 +7234,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             result = result.squeeze(["param", "cov_i", "cov_j"])
 
         if not cov:
-            result = result.drop(cov_fields)
+            result = result.drop_vars(cov_fields)
 
         return result
 
