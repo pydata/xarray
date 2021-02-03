@@ -7185,7 +7185,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
                 x = x[:, mask]
                 y = y[mask]
-                if not len(x):
+                if not len(y):
                     popt = np.full([n_params], np.nan)
                     pcov = np.full([n_params, n_params], np.nan)
                     return popt, pcov
