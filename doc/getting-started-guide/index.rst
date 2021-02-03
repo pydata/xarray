@@ -6,7 +6,7 @@ This guide provides a quick overview and showcases some example notebooks.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    why-xarray
    faq

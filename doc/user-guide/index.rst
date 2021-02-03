@@ -5,7 +5,7 @@ User Guide
 This guide is an overview and explains the important features.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    terminology
    data-structures
