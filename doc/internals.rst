@@ -337,10 +337,27 @@ for more information
 
 How to support Lazy Loading
 +++++++++++++++++++++++++++
-If you want to make your backend effective with big data, then you should support
-the lazy loading. Basically, you shall replace the :py:meth:`numpy.array` inside the variables
-the py:class:`~xarray.Dataset` with a custom class that inherits from
-py:class:`~xarray.backend.common.BackendArray`.
+If you want to make your backend effective with big datasets, then you should support
+the lazy loading.
+Basically, you shall replace the :py:class:`numpy.array` inside the variables with
+a custom class:
+
+.. ipython:: python
+    backend_array = YourBackendArray()
+    data = indexing.LazilyOuterIndexedArray(backend_array)
+    variable = Variable(..., data, ...)
+
+Where ``YourBackendArray``is a class that inherit from
+:py:class:`~xarray.backends.common.BackendArray` and
+:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a
+class of Xarray that wraps an array to make basic and outer indexing lazy.
+
+BackendArray
+^^^^^^^^^^^^
+
+CachingFileManager
+^^^^^^^^^^^^^^^^^^
+
 
 Dask chunking
 +++++++++++++
@@ -367,15 +384,15 @@ possible the "preferred_chunks". The ideal chunk size is computed using
 
 Decoders
 ++++++++
-The decoders implement the specific operations to transform data on-disk
+The decoders implement specific operations to transform data from on-disk
 representation to Xarray representation.
 
-A classic example is the decoding of the time. In the NetCDF, the variable
-time is stored as integers witha time unit that contains an origin (for
-example: "seconds since 1970-1-1"), Xarray transforms the pair integer and
-unit in a ``NumPy.datetimes``.
+A classic example is the “time” variable decoding operation. In NetCDF, the
+elements of the “time” variable are stored as integers, and the unit contains
+an origin (for example: "seconds since 1970-1-1"). In this case, Xarray
+transforms the pair integer-unit in a ``np.datetimes``.
 
-The standard decoders implemented by Xarray are:
+The standard decoders implemented in Xarray are:
 - strings.CharacterArrayCoder()
 - strings.EncodedStringCoder()
 - variables.UnsignedIntegerCoder()
@@ -384,29 +401,30 @@ The standard decoders implemented by Xarray are:
 - times.CFTimedeltaCoder()
 - times.CFDatetimeCoder()
 
-Some transformations can be common to more backends, so before implementing a
-new decoder, please be sure that is not already implemented by Xarray.
+Some of the transformations can be common to more backends, so before
+implementing a new decoder, be sure Xarray does not already implement that one.
 
-Xarray’s decoders can be reused by the backends, either instantiating directly
-the decoders or using the higher-level function
+The backends can reuse Xarray’s decoders, either instantiating the decoders
+directly or using the higher-level function
 :py:func:`~xarray.conventions.decode_cf_variables` that groups Xarray decoders.
 
-In some cases the transformation to apply strongly depends on the on-disk data
-format, therefore you may need to implement your own decoder.
+In some cases, the transformation to apply strongly depends on the on-disk
+data format. Therefore, you may need to implement your decoder.
 
-An example is the time format in grib files. grib format is very different
-from the NetCDF one: the time is stored in two attributes dataDate and
-dataTime as strings. Therefore, in this case it is not possible to reuse the
-Xarray time decoder, but a new one shall be implemented.
+An example of such a case is when you have to deal with the time format of a
+grib file. grib format is very different from the NetCDF one: in grib, the
+time is stored in two attributes dataDate and dataTime as strings. Therefore,
+it is not possible to reuse the Xarray time decoder, and implementing a new
+one is mandatory.
 
-Decoders can be activated or deactivated using the boolean keywords of Xarray
+Decoders can be activated or deactivated using the boolean keywords of
 :py:meth:`~xarray.open_dataset` signature: ``mask_and_scale``,
-``decode_times``, ``decode_timedelta``, ``use_cftime``, ``concat_characters``,
-``decode_coords``.
+``decode_times``, ``decode_timedelta``, ``use_cftime``,
+``concat_characters``, ``decode_coords``.
 
 Such keywords are passed to the backend only if the User sets a value
 different from ``None``.  Note that the backend does not necessarily have to
 implement all the decoders, but it shall declare in its ``open_dataset``
 interface only the boolean keywords related to the supported decoders. The
-deactivation and activation of the supported decoders shall be implemented by
-the backend.
+backend shall implement the deactivation and activation of the supported
+decoders.
