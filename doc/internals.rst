@@ -325,7 +325,7 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 How to register a backend
 +++++++++++++++++++++++++++
 
-Define in your setup.py (or setup.cfg) a new entrypoint with:
+Define in your ``setup.py`` (or ``setup.cfg``) a new entrypoint with:
 
 - group: ``xarray.backend``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``.
@@ -339,7 +339,7 @@ How to support Lazy Loading
 If you want to make your backend effective with big datasets, then you should support
 lazy loading.
 Basically, you shall replace the :py:class:`numpy.array` inside the variables with
-a custom class you need to use custom class that supports lazy loading indexing:
+custom class that supports lazy loading indexing:
 
 .. code-block:: python
 
@@ -377,7 +377,7 @@ The ``preferred_chunks`` is used by Xarray to define the chunk size in some
 special cases:
 
 - If ``chunks`` along a dimension is ``None`` or not defined
-- If ``chunks`` is “auto”
+- If ``chunks`` is ``"auto"``
 
 In the first case Xarray uses the chunks size specified in
 ``preferred_chunks``.
