@@ -337,7 +337,7 @@ for more information
 How to support Lazy Loading
 +++++++++++++++++++++++++++
 If you want to make your backend effective with big datasets, then you should support
-the lazy loading.
+lazy loading.
 Basically, you shall replace the :py:class:`numpy.array` inside the variables with
 a custom class:
 
