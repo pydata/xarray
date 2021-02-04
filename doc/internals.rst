@@ -241,7 +241,7 @@ to integrate any code in Xarray; all you need to do is follow these steps:
 
 - Create a class that inherits from Xarray py:class:`~xarray.backends.common.BackendEntrypoint`
 - Implement the method ``open_dataset`` that returns an instance of :py:class:`~xarray.Dataset`
-- Declare this class as an external plugin in your setup.py.
+- Declare this class as an external plugin in your ``setup.py``.
 
 Your ``BackendEntrypoint`` sub-class is the primary interface with Xarray, and
 it should implement the following attributes and functions:
@@ -347,8 +347,9 @@ a custom class you need to use custom class that supports lazy loading indexing:
     data = indexing.LazilyOuterIndexedArray(backend_array)
     variable = Variable(..., data, ...)
 
-Xarray implements the wrapper class that manages the the lazy loading:
-:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`.
+Xarray implements the wrapper classes that manages the lazy loading:
+:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` and
+:py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray`
 While the backend must implement ``YourBackendArray`` that inherit from
 :py:class:`~xarray.backends.common.BackendArray` and implements the
 method ``__getitem__``.
