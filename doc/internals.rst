@@ -379,7 +379,7 @@ In the first case Xarray uses the chunks size specified in
 ``preferred_chunks``.
 In the second case Xarray accommodates ideal chunk sizes, preserving if
 possible the "preferred_chunks". The ideal chunk size is computed using
-``dask.core.normalize function``, setting ``previus_chunks = preferred_chunks``.
+:py:func:`dask.core.normalize_chunks`, setting ``previous_chunks = preferred_chunks``.
 
 
 Decoders
