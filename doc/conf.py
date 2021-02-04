@@ -81,6 +81,7 @@ extensions = [
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "scanpydoc.rtd_github_links",
+    "sphinx_panels",
 ]
 
 extlinks = {
