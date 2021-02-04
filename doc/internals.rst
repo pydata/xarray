@@ -236,13 +236,12 @@ re-open it directly with Zarr:
 How to add a new backend
 ------------------------------------
 
-Adding a new backend for read support to Xarray is easy, and does not require
-to integrate any code in Xarray; all you need to do is approaching the
-following steps:
+Adding a new backend for read support to Xarray does not require
+to integrate any code in Xarray; all you need to do is follow these steps:
 
-- Create a class that inherits from Xarray py:class:`~xarray.backend.commonBackendEntrypoint`
+- Create a class that inherits from Xarray py:class:`~xarray.backends.common.BackendEntrypoint`
 - Implement the method ``open_dataset`` that returns an instance of :py:class:`~xarray.Dataset`
-- Declare such a class as an external plugin in your setup.py.
+- Declare this class as an external plugin in your setup.py.
 
 Your ``BackendEntrypoint`` sub-class is the primary interface with Xarray, and
 it should implement the following attributes and functions:
@@ -262,7 +261,7 @@ Inputs
 The backend ``open_dataset`` method takes as input one argument
 (``filename``), and one keyword argument (``drop_variables``):
 
-- ``filename``: can be a string containing a relative path or an instance of ``pathlib.Path``.
+- ``filename``: can be a string containing a path or an instance of :py:class:`pathlib.Path`.
 - ``drop_variables``: can be `None` or an iterable containing the variable names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset`` method should
@@ -277,21 +276,21 @@ implement in its interface all the following boolean keyword arguments, called
 - ``decode_coords=None``
 
 These keyword arguments are explicitly defined in Xarray
-:py:meth:`~xarray.open_dataset` signature.  Xarray will pass them to the
+:py:func:`~xarray.open_dataset` signature.  Xarray will pass them to the
 backend only if the User sets a value different from ``None`` explicitly.
 Your backend can also take as input a set of backend-specific keyword
 arguments. All these keyword arguments can be passed to
-:py:meth:`~xarray.open_dataset` grouped either via the ``backend_kwarg``
+:py:meth:`~xarray.open_dataset` grouped either via the ``backend_kwargs``
 parameter or explicitly using the syntax ``**kwargs``.
 
 Output
 ^^^^^^
 The output of the backend `open_dataset` shall be an instance of
-Xarray py:class:`~xarray.Dataset` that implements the additional method ``close``,
+Xarray :py:class:`~xarray.Dataset` that implements the additional method ``close``,
 used by Xarray to ensure the related files are eventually closed.
 
 If you don't want to support the lazy loading, then the :py:class:`~xarray.Dataset`
-shall contain ``NumPy.arrays`` and your work is almost done.
+shall contain :py:class:`numpy.ndarray` and your work is almost done.
 
 open_dataset_parameters
 +++++++++++++++++++++++
@@ -306,18 +305,18 @@ the **decoders** supported by the backend.
 If ``open_dataset_parameters`` is not defined, but ``**kwargs`` and ``*args`` have
 been passed to the signature, Xarray raises an error.
 On the other hand, if the backend provides the ``open_dataset_parameters``,
-then ``**kwargs`` and `*args`` can be used in the signature.
+then ``**kwargs`` and ``*args`` can be used in the signature.
 
 However, this practice is discouraged unless there is a good reasons for using
-`**kwargs` or `*args`.
+``**kwargs`` or ``*args``.
 
 guess_can_open
 ++++++++++++++
 ``guess_can_open`` is used to identify the proper engine to open your data
 file automatically in case the engine is not specified explicitly. If you are
 not interested in supporting this feature, you can skip this step since
-py:class:`~xarray.backend.common.BackendEntrypoint` already provides a default
-py:meth:`~xarray.backend.common BackendEntrypoint.guess_engine` that always returns ``False``.
+py:class:`~xarray.backends.common.BackendEntrypoint` already provides a default
+:py:meth:`~xarray.backend.common.BackendEntrypoint.guess_engine` that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
 Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
@@ -338,41 +337,30 @@ for more information
 How to support Lazy Loading
 +++++++++++++++++++++++++++
 If you want to make your backend effective with big datasets, then you should support
-the lazy loading.
-Basically, when you instantiate the variables, instead of using a :py:class:`numpy.array`,
-you need to use custom class that support lazy loading indexing:
+lazy loading.
+Basically, you shall replace the :py:class:`numpy.array` inside the variables with
+a custom class you need to use custom class that supports lazy loading indexing:
 
 .. code-block:: python
 
-    backend_array = CustomBackendArray()
+    backend_array = YourBackendArray()
     data = indexing.LazilyOuterIndexedArray(backend_array)
-    var = Variable(..., data, ...)
-
+    variable = Variable(..., data, ...)
 
 Xarray implements the wrapper class that manages the the lazy loading:
 :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`.
-While the backend must implement ``CustomBackendArray`` that inherit from
-:py:class:`~xarray.backends.common.BackendArray` that implements the
-method `__getitem__`.
+While the backend must implement ``YourBackendArray`` that inherit from
+:py:class:`~xarray.backends.common.BackendArray` and implements the
+method ``__getitem__``.
 
 BackendArray subclassing
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-In your sub-class you need to implement two methods in addition to the
-``__init__`` one:
-
-- ``__getitem``
-- ``__getitem__``
-
-Where ``__get_item``
-
-
-CachingFileManager
-^^^^^^^^^^^^^^^^^^
-
 Type of Indexing
 ^^^^^^^^^^^^^^^^
 
+CachingFileManager
+^^^^^^^^^^^^^^^^^^
 
 Dask chunking
 +++++++++++++
@@ -387,14 +375,14 @@ like ``{“dim1”: 1000, “dim2”: 2000}``  or
 The ``preferred_chunks`` is used by Xarray to define the chunk size in some
 special cases:
 
-- If ``chunks`` along a dimension is None or not defined
+- If ``chunks`` along a dimension is ``None`` or not defined
 - If ``chunks`` is “auto”
 
 In the first case Xarray uses the chunks size specified in
 ``preferred_chunks``.
 In the second case Xarray accommodates ideal chunk sizes, preserving if
 possible the "preferred_chunks". The ideal chunk size is computed using
-``dask.core.normalize function``, setting ``previus_chunks = preferred_chunks``.
+:py:func:`dask.core.normalize_chunks`, setting ``previous_chunks = preferred_chunks``.
 
 
 Decoders
