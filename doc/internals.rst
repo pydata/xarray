@@ -242,7 +242,7 @@ following steps:
 
 - Create a class that inherits from Xarray py:class:`~xarray.backend.commonBackendEntrypoint`
 - Implement the method ``open_dataset`` that returns an instance of :py:class:`~xarray.Dataset`
-- Declare such a class as an external plugin in your setup.py.
+- Declare this class as an external plugin in your setup.py.
 
 Your ``BackendEntrypoint`` sub-class is the primary interface with Xarray, and
 it should implement the following attributes and functions:
