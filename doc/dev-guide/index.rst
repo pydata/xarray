@@ -9,3 +9,4 @@ Development
    contributing
    internals
    roadmap
+   ../whats-new

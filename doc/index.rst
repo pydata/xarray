@@ -29,12 +29,11 @@ Documentation
    :maxdepth: 1
 
    Getting Started <getting-started-guide/index>
-   Examples <examples.rst>
+   Gallery <gallery.rst>
    User Guide <user-guide/index>
    Ecosystem <related-projects.rst>
    API Reference <reference-guide/index>
    Development <dev-guide/index>
-   What’s New <whats-new.rst>
 
 
 

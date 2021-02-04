@@ -249,6 +249,9 @@ html_theme_options = {
     "github_url": "https://github.com/pydata/xarray",
     "twitter_url": "https://twitter.com/xarray_dev",
     "use_edit_page_button": True,
+    "external_links": [
+        {"name": "Forum", "url": "https://github.com/pydata/xarray/discussions"}
+    ],
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

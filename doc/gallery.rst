@@ -1,8 +1,14 @@
-Examples
-========
+Gallery
+=======
 
-Tutorials
----------
+Here's a list of examples on how to use xarray. We will be adding more examples soon.
+Contributions are highly welcomed and appreciated. So, if you are interested in contributing, please consult the
+contributing guide :doc:`dev-guide/contributing`.
+
+
+
+Notebook Examples
+-----------------
 
 .. panels::
     :container: full-width
@@ -88,6 +94,7 @@ Tutorials
     examples/ROMS_ocean_model
     examples/ERA5-GRIB-example
     examples/apply_ufunc_vectorize_1d
+
 
 External Examples
 -----------------
