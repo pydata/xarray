@@ -1,7 +1,8 @@
 .. currentmodule:: xarray
+.. _io:
 
 Reading and writing files
--------------------------
+=========================
 
 xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
@@ -19,7 +20,7 @@ format (recommended).
 .. _io.netcdf:
 
 netCDF
-======
+------
 
 The recommended way to store xarray data structures is `netCDF`__, which
 is a binary file format for self-described datasets that originated
@@ -500,7 +501,7 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
 .. _io.iris:
 
 Iris
-====
+----
 
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
@@ -532,7 +533,7 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 
 
 OPeNDAP
-=======
+-------
 
 xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
@@ -554,7 +555,7 @@ __ http://iri.columbia.edu/
    tmax = remote_data.tmax[:500, ::3, ::3]
    tmax
 
-   @savefig ../_static/opendap-prism-tmax.png
+   @savefig opendap-prism-tmax.png
    tmax[0].plot()
 
 .. ipython::
@@ -657,7 +658,7 @@ __ http://pydap.readthedocs.io/en/latest/client.html#authentication
 .. _io.pickle:
 
 Pickle
-======
+------
 
 The simplest way to serialize an xarray object is to use Python's built-in pickle
 module:
@@ -692,7 +693,7 @@ this version of xarray will work in future versions.
 .. _dictionary io:
 
 Dictionary
-==========
+----------
 
 We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 :py:meth:`Dataset.to_dict`:
@@ -735,7 +736,7 @@ search indices or other automated data discovery tools.
 .. _io.rasterio:
 
 Rasterio
-========
+--------
 
 GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
 rasterio is installed. Here is an example of how to use
@@ -825,7 +826,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 .. _io.zarr:
 
 Zarr
-====
+----
 
 `Zarr`_ is a Python package that provides an implementation of chunked, compressed,
 N-dimensional arrays.
@@ -1075,7 +1076,7 @@ with ``mode='a'``.
     shutil.rmtree("path/to/directory.zarr")
 
 GRIB format via cfgrib
-======================
+----------------------
 
 xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
@@ -1095,7 +1096,7 @@ We recommend installing cfgrib via conda::
 .. _io.pynio:
 
 Formats supported by PyNIO
-===========================
+--------------------------
 
 xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
@@ -1115,7 +1116,7 @@ We recommend installing PyNIO via conda::
 .. _io.PseudoNetCDF:
 
 Formats supported by PseudoNetCDF
-=================================
+---------------------------------
 
 xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
 formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
@@ -1135,7 +1136,7 @@ options are listed on the PseudoNetCDF page.
 
 
 CSV and other formats supported by Pandas
-=========================================
+-----------------------------------------
 
 For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
@@ -1147,7 +1148,7 @@ For CSV files, one might also consider `xarray_extras`_.
 
 
 Third party libraries
-=====================
+---------------------
 
 More formats are supported by extension libraries:
 

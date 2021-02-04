@@ -2,7 +2,7 @@
 .. _terminology:
 
 Terminology
------------
+===========
 
 *Xarray terminology differs slightly from CF, mathematical conventions, and
 pandas; so we've put together a glossary of its terms. Here,* ``arr`` *

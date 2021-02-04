@@ -82,6 +82,8 @@ extensions = [
     "sphinx_autosummary_accessors",
     "scanpydoc.rtd_github_links",
     "sphinx_panels",
+    "sphinxext.opengraph",
+    "sphinx_reredirects",
 ]
 
 extlinks = {
@@ -253,6 +255,18 @@ html_theme_options = {
         {"name": "Community", "url": "https://github.com/pydata/xarray/discussions"}
     ],
 }
+
+
+# redirects = {}
+
+# configuration for sphinxext.opengraph
+ogp_site_url = "https://xarray.pydata.org/en/latest/"
+ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
+ogp_custom_meta_tags = [
+    '<meta name="twitter:card" content="summary_large_image" />',
+    '<meta property="twitter:site" content="@xarray_dev />',
+    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
+]
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []

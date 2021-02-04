@@ -1,3 +1,5 @@
+.. _groupby:
+
 GroupBy: split-apply-combine
 ----------------------------
 
