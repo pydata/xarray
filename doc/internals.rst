@@ -236,7 +236,7 @@ re-open it directly with Zarr:
 How to add a new backend
 ------------------------------------
 
-Adding a new backend for read support to Xarray is easy, and does not require
+Adding a new backend for read support to Xarray does not require
 to integrate any code in Xarray; all you need to do is approaching the
 following steps:
 
