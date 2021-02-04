@@ -372,7 +372,7 @@ like ``{“dim1”: 1000, “dim2”: 2000}``  or
 The ``preferred_chunks`` is used by Xarray to define the chunk size in some
 special cases:
 
-- If ``chunks`` along a dimension is None or not defined
+- If ``chunks`` along a dimension is ``None`` or not defined
 - If ``chunks`` is “auto”
 
 In the first case Xarray uses the chunks size specified in
