@@ -325,7 +325,7 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 How to register a backend
 +++++++++++++++++++++++++++
 
-Define in your setup.py (or setup.cfg) a new entrypoint with:
+Define in your ``setup.py`` (or ``setup.cfg``) a new entrypoint with:
 
 - group: ``xarray.backend``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``.
