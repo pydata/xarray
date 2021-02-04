@@ -22,11 +22,62 @@ computing.
 .. _dask: http://dask.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 
-Documentation
--------------
+
+.. panels::
+    :container: full-width
+    :column: text-center col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
+    :card: +my-2
+    :body: d-none
+
+    ---
+    :fa:`walking, fa-9x`
+
+    Getting started guide
+    ^^^^^^^^^^^^^^^^^^^^^
+    +++
+    The getting started guide aims to get you using xarray productively as quickly as possible.
+    It is designed as an entry point for new users, and it provided an introduction to xarray's main concepts.
+
+    .. link-button:: getting-started-guide/index
+        :type: ref
+        :text: To the getting started guide
+        :classes: btn-outline-dark btn-block stretched-link
+
+    ---
+    :fa:`book-reader, fa-9x`
+
+    User guide
+    ^^^^^^^^^^
+
+    +++
+    In this user guide, you will find detailed descriptions and
+    examples that describe many common tasks that you can accomplish with xarray.
+
+    .. link-button:: user-guide/index
+        :type: ref
+        :text: To the user guide
+        :classes: btn-outline-dark btn-block stretched-link
+
+    ---
+    :fa:`laptop-code, fa-9x`
+
+    Developer guide
+    ^^^^^^^^^^^^^^^
+
+    +++
+    Contributions are highly welcomed and appreciated. Every little help counts, so do not hesitate!
+    The contribution guide explains how to structure your contributions.
+
+    .. link-button:: reference-guide/index
+        :type: ref
+        :text: To the development guide
+        :classes: btn-outline-dark btn-block stretched-link
+
 
 .. toctree::
    :maxdepth: 1
+   :caption: Documentation
+   :hidden:
 
    Getting Started <getting-started-guide/index>
    Gallery <gallery.rst>
@@ -34,9 +85,6 @@ Documentation
    Ecosystem <related-projects.rst>
    API Reference <reference-guide/index>
    Development <dev-guide/index>
-
-
-
 
 
 See also

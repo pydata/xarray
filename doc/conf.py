@@ -250,7 +250,7 @@ html_theme_options = {
     "twitter_url": "https://twitter.com/xarray_dev",
     "use_edit_page_button": True,
     "external_links": [
-        {"name": "Forum", "url": "https://github.com/pydata/xarray/discussions"}
+        {"name": "Community", "url": "https://github.com/pydata/xarray/discussions"}
     ],
 }
 
