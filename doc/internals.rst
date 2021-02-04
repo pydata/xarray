@@ -287,7 +287,7 @@ parameter or explicitly using the syntax ``**kwargs``.
 Output
 ^^^^^^
 The output of the backend `open_dataset` shall be an instance of
-Xarray py:class:`~xarray.Dataset` that implements the additional method ``close``,
+Xarray :py:class:`~xarray.Dataset` that implements the additional method ``close``,
 used by Xarray to ensure the related files are eventually closed.
 
 If you don't want to support the lazy loading, then the :py:class:`~xarray.Dataset`
