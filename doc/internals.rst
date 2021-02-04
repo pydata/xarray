@@ -316,7 +316,7 @@ guess_can_open
 ``guess_can_open`` is used to identify the proper engine to open your data
 file automatically in case the engine is not specified explicitly. If you are
 not interested in supporting this feature, you can skip this step since
-py:class:`~xarray.backend.common.BackendEntrypoint` already provides a default
+py:class:`~xarray.backends.common.BackendEntrypoint` already provides a default
 py:meth:`~xarray.backend.common BackendEntrypoint.guess_engine` that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
