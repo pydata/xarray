@@ -237,8 +237,7 @@ How to add a new backend
 ------------------------------------
 
 Adding a new backend for read support to Xarray does not require
-to integrate any code in Xarray; all you need to do is approaching the
-following steps:
+to integrate any code in Xarray; all you need to do is follow these steps:
 
 - Create a class that inherits from Xarray py:class:`~xarray.backend.commonBackendEntrypoint`
 - Implement the method ``open_dataset`` that returns an instance of :py:class:`~xarray.Dataset`
