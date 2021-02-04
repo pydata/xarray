@@ -276,7 +276,7 @@ implement in its interface all the following boolean keyword arguments, called
 - ``decode_coords=None``
 
 These keyword arguments are explicitly defined in Xarray
-:py:meth:`~xarray.open_dataset` signature.  Xarray will pass them to the
+:py:func:`~xarray.open_dataset` signature.  Xarray will pass them to the
 backend only if the User sets a value different from ``None`` explicitly.
 Your backend can also take as input a set of backend-specific keyword
 arguments. All these keyword arguments can be passed to
