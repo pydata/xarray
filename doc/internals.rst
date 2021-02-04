@@ -309,7 +309,7 @@ On the other hand, if the backend provides the ``open_dataset_parameters``,
 then ``**kwargs`` and ``*args`` can be used in the signature.
 
 However, this practice is discouraged unless there is a good reasons for using
-`**kwargs` or `*args`.
+``**kwargs`` or ``*args``.
 
 guess_can_open
 ++++++++++++++
