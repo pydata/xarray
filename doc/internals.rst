@@ -291,7 +291,7 @@ Xarray py:class:`~xarray.Dataset` that implements the additional method ``close`
 used by Xarray to ensure the related files are eventually closed.
 
 If you don't want to support the lazy loading, then the :py:class:`~xarray.Dataset`
-shall contain ``NumPy.arrays`` and your work is almost done.
+shall contain :py:class:`numpy.ndarray` and your work is almost done.
 
 open_dataset_parameters
 +++++++++++++++++++++++
