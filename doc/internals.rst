@@ -281,7 +281,7 @@ These keyword arguments are explicitly defined in Xarray
 backend only if the User sets a value different from ``None`` explicitly.
 Your backend can also take as input a set of backend-specific keyword
 arguments. All these keyword arguments can be passed to
-:py:meth:`~xarray.open_dataset` grouped either via the ``backend_kwarg``
+:py:meth:`~xarray.open_dataset` grouped either via the ``backend_kwargs``
 parameter or explicitly using the syntax ``**kwargs``.
 
 Output
