@@ -3,7 +3,7 @@ Gallery
 
 Here's a list of examples on how to use xarray. We will be adding more examples soon.
 Contributions are highly welcomed and appreciated. So, if you are interested in contributing, please consult the
-contributing guide :doc:`dev-guide/contributing`.
+:doc:`dev-guide/contributing` guide.
 
 
 
@@ -18,7 +18,7 @@ Notebook Examples
     :body: d-none
 
     ---
-    :img-top: _static/toy-weather-data.png
+    :img-top: _static/thumbnails/toy-weather-data.png
     ++++
     .. link-button:: examples/weather-data
         :type: ref
@@ -26,7 +26,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/monthly-means.png
+    :img-top: _static/thumbnails/monthly-means.png
     ++++
     .. link-button:: examples/monthly-means
         :type: ref
@@ -34,7 +34,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/area_weighted_temperature.png
+    :img-top: _static/thumbnails/area_weighted_temperature.png
     ++++
     .. link-button:: examples/area_weighted_temperature
         :type: ref
@@ -42,7 +42,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/multidimensional-coords.png
+    :img-top: _static/thumbnails/multidimensional-coords.png
     ++++
     .. link-button:: examples/multidimensional-coords
         :type: ref
@@ -50,7 +50,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/visualization_gallery.png
+    :img-top: _static/thumbnails/visualization_gallery.png
     ++++
     .. link-button:: examples/visualization_gallery
         :type: ref
@@ -58,7 +58,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/ROMS_ocean_model.png
+    :img-top: _static/thumbnails/ROMS_ocean_model.png
     ++++
     .. link-button:: examples/ROMS_ocean_model
         :type: ref
@@ -66,7 +66,7 @@ Notebook Examples
         :classes: btn-outline-dark btn-block stretched-link
 
     ---
-    :img-top: _static/ERA5-GRIB-example.png
+    :img-top: _static/thumbnails/ERA5-GRIB-example.png
     ++++
     .. link-button:: examples/ERA5-GRIB-example
         :type: ref
