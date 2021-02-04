@@ -306,7 +306,7 @@ the **decoders** supported by the backend.
 If ``open_dataset_parameters`` is not defined, but ``**kwargs`` and ``*args`` have
 been passed to the signature, Xarray raises an error.
 On the other hand, if the backend provides the ``open_dataset_parameters``,
-then ``**kwargs`` and `*args`` can be used in the signature.
+then ``**kwargs`` and ``*args`` can be used in the signature.
 
 However, this practice is discouraged unless there is a good reasons for using
 `**kwargs` or `*args`.
