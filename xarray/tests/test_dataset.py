@@ -935,13 +935,21 @@ class TestDataset:
         assert ds1.identical(ds2, check_dtype=True) is expected
         assert ds1.broadcast_equals(ds2, check_dtype=True) is expected
 
-        # the check also fails if the coords have different dtype
+        assert ds1.equals(ds2)
+        assert ds1.identical(ds2)
+        assert ds1.broadcast_equals(ds2)
+
+        # ensure the check also fails if the coords have different dtype
         ds1 = Dataset(coords={"x": data1})
         ds2 = Dataset(coords={"x": data2})
 
         assert ds1.equals(ds2, check_dtype=True) is expected
         assert ds1.identical(ds2, check_dtype=True) is expected
         assert ds1.broadcast_equals(ds2, check_dtype=True) is expected
+
+        assert ds1.equals(ds2)
+        assert ds1.identical(ds2)
+        assert ds1.broadcast_equals(ds2)
 
     def test_attrs(self):
         data = create_test_data(seed=42)

@@ -319,15 +319,23 @@ def test_equiv_check_dtype(dtype1, dtype2, expected):
     assert array_equiv(ar1, ar2, check_dtype=True) is expected
     assert array_notnull_equiv(ar1, ar2, check_dtype=True) is expected
 
+    assert allclose_or_equiv(ar1, ar2)
+    assert array_equiv(ar1, ar2)
+    assert array_notnull_equiv(ar1, ar2)
+
     if has_dask:
         import dask.array as da
 
         ar1 = da.array(1, dtype=dtype1)
         ar2 = da.array(1, dtype=dtype2)
 
-    assert allclose_or_equiv(ar1, ar2, check_dtype=True) is expected
-    assert array_equiv(ar1, ar2, check_dtype=True) is expected
-    assert array_notnull_equiv(ar1, ar2, check_dtype=True) is expected
+        assert allclose_or_equiv(ar1, ar2, check_dtype=True) is expected
+        assert array_equiv(ar1, ar2, check_dtype=True) is expected
+        assert array_notnull_equiv(ar1, ar2, check_dtype=True) is expected
+
+        assert allclose_or_equiv(ar1, ar2)
+        assert array_equiv(ar1, ar2)
+        assert array_notnull_equiv(ar1, ar2)
 
 
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
