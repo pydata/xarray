@@ -342,6 +342,7 @@ Basically, you shall replace the :py:class:`numpy.array` inside the variables wi
 a custom class:
 
 .. ipython:: python
+
     backend_array = YourBackendArray()
     data = indexing.LazilyOuterIndexedArray(backend_array)
     variable = Variable(..., data, ...)
