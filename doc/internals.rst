@@ -261,7 +261,7 @@ Inputs
 The backend ``open_dataset`` method takes as input one argument
 (``filename``), and one keyword argument (``drop_variables``):
 
-- ``filename``: can be a string containing a relative path or an instance of ``pathlib.Path``.
+- ``filename``: can be a string containing a path or an instance of :py:class:`pathlib.Path`.
 - ``drop_variables``: can be `None` or an iterable containing the variable names to be dropped when reading the data.
 
 If it makes sense for your backend, your ``open_dataset`` method should
