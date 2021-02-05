@@ -4308,7 +4308,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def curvefit(
         self,
-        coords: Union["DataArray", Iterable["DataArray"]],
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
         func: Callable[..., Any],
         reduce_dim: Union[Hashable, Iterable[Hashable]] = None,
         skipna: bool = True,

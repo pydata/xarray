@@ -7010,7 +7010,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def curvefit(
         self,
-        coords: Union["DataArray", Iterable["DataArray"]],
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
         func: Callable[..., Any],
         reduce_dim: Union[Hashable, Iterable[Hashable]] = None,
         skipna: bool = True,
@@ -7101,10 +7101,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
-        coords = [self[coord] if isinstance(coord, str) else coord for coord in coords]
+        coords_ = [self[coord] if isinstance(coord, str) else coord for coord in coords]
 
-        # Figure out whether any coords are dims on self
-        for coord in coords:
+        # Determine whether any coords are dims on self
+        for coord in coords_:
             reduce_dims += [c for c in self.dims if coord.equals(self[c])]
         reduce_dims = list(set(reduce_dims))
         preserved_dims = list(set([dim for dim in self.dims]) - set(reduce_dims))
@@ -7116,9 +7116,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
 
         # Broadcast all coords with each other
-        coords = xr.broadcast(*coords)
-        coords = [
-            coord.broadcast_like(self, exclude=preserved_dims) for coord in coords
+        coords_ = xr.broadcast(*coords_)
+        coords_ = [
+            coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
 
         def _initialize_feasible(lb, ub):
@@ -7177,9 +7177,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ],
         )
 
-        def _wrapper(Y, *coords, **kwargs):
+        def _wrapper(Y, *coords_, **kwargs):
             # Wrap curve_fit with raveled coordinates and pointwise NaN handling
-            x = np.vstack([c.ravel() for c in coords])
+            x = np.vstack([c.ravel() for c in coords_])
             y = Y.ravel()
             if skipna:
                 mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
@@ -7204,10 +7204,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             popt, pcov = xr.apply_ufunc(
                 _wrapper,
                 da,
-                *coords,
+                *coords_,
                 vectorize=True,
                 dask="parallelized",
-                input_core_dims=[reduce_dims for d in range(len(coords) + 1)],
+                input_core_dims=[reduce_dims for d in range(len(coords_) + 1)],
                 output_core_dims=[["param"], ["cov_i", "cov_j"]],
                 dask_gufunc_kwargs={
                     "output_sizes": {

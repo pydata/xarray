@@ -475,7 +475,7 @@ a unique fit at each spatial coordinate but aggregating over the time dimension:
         ),
         coords={"t": t, "x": x},
     )
-    ds[["var2", "var1"]].curvefit(
+    ds[["var2", "var3"]].curvefit(
         coords=ds.var1,
         func=exponential,
         reduce_dim="t",
