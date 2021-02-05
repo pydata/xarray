@@ -17,6 +17,7 @@ Top-level functions
    :toctree: generated/
 
    apply_ufunc
+   apply_to_dataset
    align
    broadcast
    concat
