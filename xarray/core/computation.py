@@ -1164,6 +1164,12 @@ def apply_to_dataset(func, obj, *args, **kwargs):
     -----
     If a ``DataArray``, the data variable of the temporary ``Dataset`` will have a
     generic name. The original name will be restored for the result of the call.
+
+    See Also
+    --------
+    Dataset.map
+    Dataset.pipe
+    DataArray.pipe
     """
     from .dataarray import DataArray
 
