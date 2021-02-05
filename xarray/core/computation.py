@@ -1170,6 +1170,49 @@ def apply_to_dataset(func, obj, *args, **kwargs):
     Dataset.map
     Dataset.pipe
     DataArray.pipe
+
+    Examples
+    --------
+    >>> def f(ds):
+    ...     return xr.Dataset(
+    ...         {
+    ...             name: var * var.attrs.get("scale", 1)
+    ...             for name, var in ds.data_vars.items()
+    ...         },
+    ...         coords=ds.coords,
+    ...         attrs=ds.attrs,
+    ...     )
+    ...
+    >>> ds = xr.Dataset(
+    ...     {"a": ("x", [3, 4], {"scale": 0.5}), "b": ("x", [-1, 1], {"scale": 1.5})},
+    ...     coords={"x": [0, 1]},
+    ...     attrs={"attr": "value"},
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:  (x: 2)
+    Coordinates:
+      * x        (x) int64 0 1
+    Data variables:
+        a        (x) int64 3 4
+        b        (x) int64 -1 1
+    Attributes:
+        attr:     value
+    >>> xr.apply_to_dataset(f, ds)
+    <xarray.Dataset>
+    Dimensions:  (x: 2)
+    Coordinates:
+      * x        (x) int64 0 1
+    Data variables:
+        a        (x) float64 1.5 2.0
+        b        (x) float64 -1.5 1.5
+    Attributes:
+        attr:     value
+    >>> xr.apply_to_dataset(f, ds.a)
+    <xarray.DataArray 'a' (x: 2)>
+    array([1.5, 2. ])
+    Coordinates:
+      * x        (x) int64 0 1
     """
     from .dataarray import DataArray
 
