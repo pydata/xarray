@@ -1,5 +1,6 @@
 """Testing functions exposed to the user API"""
 import functools
+import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
@@ -60,13 +61,18 @@ def assert_equal(a, b):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
-    if isinstance(a, (Variable, DataArray)):
-        assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
-    elif isinstance(a, Dataset):
-        assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
-    else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+
+    # sometimes tests elevate warnings to errors -> make sure that does not happen here
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+
+        assert type(a) == type(b)
+        if isinstance(a, (Variable, DataArray)):
+            assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
+        elif isinstance(a, Dataset):
+            assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
+        else:
+            raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def assert_identical(a, b):
@@ -87,16 +93,21 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-    assert type(a) == type(b)
-    if isinstance(a, Variable):
-        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-    elif isinstance(a, DataArray):
-        assert a.name == b.name
-        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-    elif isinstance(a, (Dataset, Variable)):
-        assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
-    else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+
+    # sometimes tests elevate warnings to errors -> make sure that does not happen here
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+
+        assert type(a) == type(b)
+        if isinstance(a, Variable):
+            assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
+        elif isinstance(a, DataArray):
+            assert a.name == b.name
+            assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
+        elif isinstance(a, (Dataset, Variable)):
+            assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
+        else:
+            raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
@@ -138,21 +149,25 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
-    if isinstance(a, Variable):
-        allclose = compat_variable(a, b)
-        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
-    elif isinstance(a, DataArray):
-        allclose = utils.dict_equiv(
-            a.coords, b.coords, compat=compat_variable
-        ) and compat_variable(a.variable, b.variable)
-        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
-    elif isinstance(a, Dataset):
-        allclose = a._coord_names == b._coord_names and utils.dict_equiv(
-            a.variables, b.variables, compat=compat_variable
-        )
-        assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
-    else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+    # sometimes tests elevate warnings to errors -> make sure that does not happen here
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+
+        if isinstance(a, Variable):
+            allclose = compat_variable(a, b)
+            assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+        elif isinstance(a, DataArray):
+            allclose = utils.dict_equiv(
+                a.coords, b.coords, compat=compat_variable
+            ) and compat_variable(a.variable, b.variable)
+            assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+        elif isinstance(a, Dataset):
+            allclose = a._coord_names == b._coord_names and utils.dict_equiv(
+                a.variables, b.variables, compat=compat_variable
+            )
+            assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+        else:
+            raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def _format_message(x, y, err_msg, verbose):
