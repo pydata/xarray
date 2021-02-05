@@ -29,6 +29,29 @@ from .utils import (
 )
 
 
+def _choose_x_y(darray, name, huename):
+    """Create x variable and y variable for line plots, appropriately transposed
+    based on huename."""
+    xplt = darray[name]
+    if xplt.ndim > 1:
+        if huename in darray.dims:
+            otherindex = 1 if darray.dims.index(huename) == 0 else 0
+            otherdim = darray.dims[otherindex]
+            yplt = darray.transpose(..., otherdim, huename, transpose_coords=False)
+            xplt = xplt.transpose(..., otherdim, huename, transpose_coords=False)
+        else:
+            raise ValueError(
+                f"For 2D inputs, hue must be a dimension i.e. one of {darray.dims!r}"
+            )
+
+    else:
+        (xdim,) = darray[name].dims
+        (huedim,) = darray[huename].dims
+        yplt = darray.transpose(..., xdim, huedim)
+
+    return xplt, yplt
+
+
 def _infer_line_data(darray, x, y, hue):
 
     ndims = len(darray.dims)
@@ -66,43 +89,11 @@ def _infer_line_data(darray, x, y, hue):
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
-
-            else:
-                (xdim,) = darray[xname].dims
-                (huedim,) = darray[huename].dims
-                yplt = darray.transpose(xdim, huedim)
+            xplt, yplt = _choose_x_y(darray, xname, huename)
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    xplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
-
-            else:
-                (ydim,) = darray[yname].dims
-                (huedim,) = darray[huename].dims
-                xplt = darray.transpose(ydim, huedim)
+            yplt, xplt = _choose_x_y(darray, yname, huename)
 
         huelabel = label_from_attrs(darray[huename])
         hueplt = darray[huename]
