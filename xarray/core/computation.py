@@ -1162,8 +1162,8 @@ def apply_to_dataset(func, obj, *args, **kwargs):
 
     Notes
     -----
-    If a ``DataArray``, result will have the same name as ``obj`` but the single data
-    variable in the temporary ``Dataset`` will always have a generic name.
+    If a ``DataArray``, the data variable of the temporary ``Dataset`` will have a
+    generic name. The original name will be restored for the result of the call.
     """
     from .dataarray import DataArray
 
