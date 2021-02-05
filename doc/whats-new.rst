@@ -127,7 +127,7 @@ Internal Changes
 - Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
-  the other `assert_*` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
+  the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
