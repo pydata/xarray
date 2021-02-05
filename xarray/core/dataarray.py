@@ -3851,9 +3851,8 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Notes
         -----
-        By default when ``mode="constant"`` and ``constant_values=None``, integer types will be
-        promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
-        specify ``constant_values=np.nan``
+        For ``mode="constant"`` and ``constant_values=None``, integer types will be
+        promoted to ``float`` and padded with ``np.nan``.
 
         Examples
         --------
@@ -3880,16 +3879,16 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 nan 0.0 1.0 nan
           * y        (y) int64 10 20 30 40
             z        (x) float64 nan 100.0 200.0 nan
-        >>> da.pad(x=1, constant_values=np.nan)
+
+        Careful, ``constant_values`` can be coerced to the data type of the array which
+        may lead to a loss of precision:
+
+        >>> da.pad(x=1, constant_values=1.23456789)
         <xarray.DataArray (x: 4, y: 4)>
-        array([[-9223372036854775808, -9223372036854775808, -9223372036854775808,
-                -9223372036854775808],
-               [                   0,                    1,                    2,
-                                   3],
-               [                  10,                   11,                   12,
-                                  13],
-               [-9223372036854775808, -9223372036854775808, -9223372036854775808,
-                -9223372036854775808]])
+        array([[ 1,  1,  1,  1],
+               [ 0,  1,  2,  3],
+               [10, 11, 12, 13],
+               [ 1,  1,  1,  1]])
         Coordinates:
           * x        (x) float64 nan 0.0 1.0 nan
           * y        (y) int64 10 20 30 40
