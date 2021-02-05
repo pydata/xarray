@@ -203,8 +203,15 @@ def assert_duckarray_allclose(
     """ Like `np.testing.assert_allclose`, but for duckarrays. """
     __tracebackhide__ = True
 
-    allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
-    assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+
+        allclose = duck_array_ops.allclose_or_equiv(
+            actual, desired, rtol=rtol, atol=atol
+        )
+        assert allclose, _format_message(
+            actual, desired, err_msg=err_msg, verbose=verbose
+        )
 
 
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):

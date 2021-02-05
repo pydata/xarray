@@ -132,7 +132,13 @@ def test_assert_duckarray_equal(duckarray, obj1, obj2):
 
 
 @pytest.mark.parametrize(
-    "func", ["assert_equal", "assert_identical", "assert_allclose"]
+    "func",
+    [
+        "assert_equal",
+        "assert_identical",
+        "assert_allclose",
+        "assert_duckarray_allclose",
+    ],
 )
 def test_ensure_warnings_not_elevated(func):
     # make sure warnings are not elevated to errors in the assertion functions
