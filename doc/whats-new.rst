@@ -126,6 +126,8 @@ Internal Changes
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
+- Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
+  the other `assert_*` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
@@ -142,7 +144,7 @@ Deprecations
 
 - :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
   have been deprecated. Use ``DataArray.dt.isocalendar().week``
-  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_.
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
