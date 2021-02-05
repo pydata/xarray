@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -42,14 +42,30 @@ Breaking changes
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
 
+Deprecations
+~~~~~~~~~~~~
+
+- ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
+  favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
+  For now using ``dim`` issues a ``FutureWarning``. By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 New Features
 ~~~~~~~~~~~~
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
   By `Justus Magin <https://github.com/keewis>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
+  in the form of kwargs as well as a dict, like most similar methods.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
