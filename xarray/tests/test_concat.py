@@ -315,7 +315,7 @@ class TestConcatDataset:
 
     @pytest.mark.skip(reason="not implemented, yet (see #4827)")
     @pytest.mark.parametrize(
-        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
         [
             (
                 "no_conflicts",
@@ -353,17 +353,20 @@ class TestConcatDataset:
         ],
     )
     def test_concat_combine_attrs_kwarg_variables(
-        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
-        ds1 = Dataset({"a": ("x", [0], var1_attrs)}, coords={"x": [0]})
-        ds2 = Dataset({"a": ("x", [0], var2_attrs)}, coords={"x": [1]})
+        ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
+        ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
 
         if expect_exception:
             with pytest.raises(ValueError, match=f"combine_attrs='{combine_attrs}'"):
                 concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
         else:
             actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
-            expected = Dataset({"a": ("x", [0, 0], expected_attrs)}, {"x": [0, 1]})
+            expected = Dataset(
+                {"a": ("x", [0, 0], expected_attrs)},
+                {"x": ("x", [0, 1], expected_attrs)},
+            )
 
             assert_identical(actual, expected)
 

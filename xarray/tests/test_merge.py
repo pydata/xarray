@@ -125,7 +125,7 @@ class TestMergeFunction:
 
     @pytest.mark.skip(reason="not implemented, yet (see #4827)")
     @pytest.mark.parametrize(
-        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
         [
             (
                 "no_conflicts",
@@ -163,13 +163,15 @@ class TestMergeFunction:
         ],
     )
     def test_merge_arrays_attrs_variables(
-        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
         data = create_test_data()
         data1 = data.copy()
-        data1.var1.attrs = var1_attrs
+        data1.var1.attrs = attrs1
+        data1.dim1.attrs = attrs1
         data2 = data.copy()
-        data2.var1.attrs = var2_attrs
+        data2.var1.attrs = attrs2
+        data2.dim1.attrs = attrs2
 
         if expect_exception:
             with raises_regex(MergeError, "combine_attrs"):
@@ -178,6 +180,7 @@ class TestMergeFunction:
             actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
             expected = data.copy()
             expected.var1.attrs = expected_attrs
+            expected.dim1.attrs = expected_attrs
 
             assert_identical(actual, expected)
 
