@@ -286,7 +286,7 @@ class FacetGrid:
         return self
 
     def map_dataarray_line(
-        self, func, x, y, hue, add_legend=True, _labels=None, **kwargs
+        self, func, x, y, hue, add_legend=True, add_labels=None, **kwargs
     ):
         from .plot import _infer_line_data
 
@@ -301,7 +301,7 @@ class FacetGrid:
                     ax=ax,
                     hue=hue,
                     add_legend=False,
-                    _labels=False,
+                    add_labels=False,
                     **kwargs,
                 )
                 self._mappables.append(mappable)
