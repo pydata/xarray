@@ -5974,9 +5974,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coord: hashable, or a sequence of hashable
+        coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -5987,7 +5987,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         DataArray.integrate
-        numpy.trapz: corresponding numpy function
+        numpy.trapz : corresponding numpy function
 
         Examples
         --------
