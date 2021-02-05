@@ -155,8 +155,10 @@ def test_ensure_warnings_not_elevated(func):
     a = WarningVariable("x", [1])
     b = WarningVariable("x", [2])
 
-    with warnings.catch_warnings(record=True):
+    with warnings.catch_warnings(record=True) as w:
         # elevate warnings to errors
         warnings.filterwarnings("error")
         with pytest.raises(AssertionError):
             getattr(xr.testing, func)(a, b)
+
+        assert len(w) > 0
