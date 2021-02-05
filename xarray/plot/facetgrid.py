@@ -6,6 +6,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _infer_hist_labels,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
@@ -285,10 +286,46 @@ class FacetGrid:
 
         return self
 
+    def map_dataarray_hist(self, func, hue, add_legend=True, add_labels=None, **kwargs):
+        from .plot import _infer_1d_data
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = func(
+                    subset,
+                    ax=ax,
+                    hue=hue,
+                    add_legend=False,
+                    add_labels=False,
+                    **kwargs,
+                )
+                self._mappables.append(mappable[-1])
+
+        _, yplt, hueplt, huelabel = _infer_1d_data(
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=None,
+            y=None,
+            hue=hue,
+            funcname="hist",
+        )
+
+        xlabel, ylabel = _infer_hist_labels(yplt, kwargs)
+
+        self._hue_var = hueplt
+        self._hue_label = huelabel
+        self._finalize_grid(xlabel, ylabel)
+
+        if add_legend and hueplt is not None and huelabel is not None:
+            self.add_legend()
+
+        return self
+
     def map_dataarray_line(
         self, func, x, y, hue, add_legend=True, add_labels=None, **kwargs
     ):
-        from .plot import _infer_line_data
+        from .plot import _infer_1d_data
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -306,8 +343,12 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        xplt, yplt, hueplt, huelabel = _infer_line_data(
-            darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
+        xplt, yplt, hueplt, huelabel = _infer_1d_data(
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=x,
+            y=y,
+            hue=hue,
+            funcname="line",
         )
         xlabel = label_from_attrs(xplt)
         ylabel = label_from_attrs(yplt)
@@ -640,6 +681,9 @@ def _easy_facetgrid(
         size=size,
         subplot_kws=subplot_kws,
     )
+
+    if kind == "hist":
+        return g.map_dataarray_hist(plotfunc, **kwargs)
 
     if kind == "line":
         return g.map_dataarray_line(plotfunc, x, y, **kwargs)

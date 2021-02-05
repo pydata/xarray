@@ -9,13 +9,14 @@ Or use the methods on a DataArray or Dataset:
 import functools
 
 import numpy as np
-import pandas as pd
 
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
     _assert_valid_xy,
     _ensure_plottable,
+    _get_handles_hist_legend,
+    _infer_hist_labels,
     _infer_interval_breaks,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
@@ -27,6 +28,8 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
+
+# import pandas as pd
 
 
 def _choose_x_y(darray, name, huename):
@@ -52,9 +55,18 @@ def _choose_x_y(darray, name, huename):
     return xplt, yplt
 
 
-def _infer_line_data(darray, x, y, hue):
+def _infer_1d_data(darray, x, y, hue, funcname):
 
-    ndims = len(darray.dims)
+    ndims = darray.ndim
+    if ndims > 2:
+        if funcname == "line":
+            raise ValueError(
+                "Line plots are for 1- or 2-dimensional DataArrays. "
+                f"Passed DataArray has {ndims} dimensions."
+            )
+        elif funcname == "hist":
+            darray = darray.stack(stacked=set(darray.dims) - set([hue]))
+            ndims = darray.ndim
 
     if x is not None and y is not None:
         raise ValueError("Cannot specify both x and y kwargs for line plots.")
@@ -85,7 +97,9 @@ def _infer_line_data(darray, x, y, hue):
 
     else:
         if x is None and y is None and hue is None:
-            raise ValueError("For 2D inputs, please specify either hue, x or y.")
+            raise ValueError(
+                "For line plots with 2D arrays, please specify either hue, x or y."
+            )
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
@@ -249,64 +263,6 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
-def hist(
-    darray,
-    figsize=None,
-    size=None,
-    aspect=None,
-    ax=None,
-    xincrease=None,
-    yincrease=None,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-    **kwargs,
-):
-    """
-    Histogram of DataArray
-
-    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
-
-    Plots N dimensional arrays by first flattening the array.
-
-    Parameters
-    ----------
-    darray : DataArray
-        Can be any dimension
-    figsize : tuple, optional
-        A tuple (width, height) of the figure in inches.
-        Mutually exclusive with ``size`` and ``ax``.
-    aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
-        inches. Only used if a ``size`` is provided.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib.axes.Axes, optional
-        Axis on which to plot this figure. By default, use the current axis.
-        Mutually exclusive with ``size`` and ``figsize``.
-    **kwargs : optional
-        Additional keyword arguments to matplotlib.pyplot.hist
-
-    """
-    ax = get_axis(figsize, size, aspect, ax)
-
-    no_nan = np.ravel(darray.values)
-    no_nan = no_nan[pd.notnull(no_nan)]
-
-    primitive = ax.hist(no_nan, **kwargs)
-
-    ax.set_title("Histogram")
-    ax.set_xlabel(label_from_attrs(darray))
-
-    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
-
-    return primitive
-
-
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods:
@@ -327,10 +283,6 @@ class _PlotMethods:
     __doc__ = __call__.__doc__ = plot.__doc__
     __call__.__wrapped__ = plot  # type: ignore
     __call__.__annotations__ = plot.__annotations__
-
-    @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
 
     @functools.wraps(step)
     def step(self, *args, **kwargs):
@@ -439,6 +391,8 @@ def _plot1d(plotfunc):
             allargs.pop("plotfunc")
             if plotfunc.__name__ == "line":
                 return _easy_facetgrid(darray, line, kind="line", **allargs)
+            elif plotfunc.__name__ == "hist":
+                return _easy_facetgrid(darray, hist, kind="hist", **allargs)
             else:
                 raise ValueError(f"Faceting not implemented for {plotfunc.__name__}")
 
@@ -449,7 +403,9 @@ def _plot1d(plotfunc):
             assert "args" not in kwargs
 
         ax = get_axis(figsize, size, aspect, ax)
-        xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+        xplt, yplt, hueplt, hue_label = _infer_1d_data(
+            darray, x, y, hue, plotfunc.__name__
+        )
 
         primitive = plotfunc(xplt, yplt, ax, *args, add_labels=add_labels, **kwargs)
 
@@ -458,9 +414,12 @@ def _plot1d(plotfunc):
 
         if hueplt is not None and add_legend:
             if plotfunc.__name__ == "hist":
-                handles = primitive[-1]
+                handles = _get_handles_hist_legend(
+                    primitive, kwargs.get("histtype", "")
+                )
             else:
                 handles = primitive
+
             ax.legend(
                 handles=handles,
                 labels=list(hueplt.values),
@@ -553,6 +512,26 @@ def line(xplt, yplt, ax, *args, add_labels=True, **kwargs):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
             xlabels.set_ha("right")
+
+    return primitive
+
+
+@_plot1d
+def hist(xplt, yplt, ax, add_labels=True, *args, **kwargs):
+    """
+    Histogram of DataArray
+
+    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
+
+    Plots N dimensional arrays by first flattening the array.
+    """
+    if add_labels:
+        xlabel, ylabel = _infer_hist_labels(yplt, kwargs)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+    # TODO: deal with NaNs
+    primitive = ax.hist(yplt, **kwargs)
 
     return primitive
 
