@@ -192,6 +192,15 @@ class TestMergeFunction:
         ds3.attrs["x"] = 2
         assert ds1.x == 0
 
+    def test_merge_attrs_drop_conflicts(self):
+        ds1 = xr.Dataset(attrs={"a": 0, "b": 0, "c": 0})
+        ds2 = xr.Dataset(attrs={"b": 0, "c": 1, "d": 0})
+        ds3 = xr.Dataset(attrs={"a": 0, "b": 1, "c": 0, "e": 0})
+
+        actual = xr.merge([ds1, ds2, ds3], combine_attrs="drop_conflicts")
+        expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
+        assert_identical(actual, expected)
+
     def test_merge_dicts_simple(self):
         actual = xr.merge([{"foo": 0}, {"bar": "one"}, {"baz": 3.5}])
         expected = xr.Dataset({"foo": 0, "bar": "one", "baz": 3.5})
