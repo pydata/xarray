@@ -1710,7 +1710,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Dictionary whose keys are current dimension names and whose values
             are new names.
 
-        **dim_kwargs : {dim: , ...}, optional
+        **dims_kwargs : {existing_dim: new_dim, ...}, optional
             The keyword arguments form of ``dims_dict``.
             One of dims_dict or dims_kwargs must be provided.
 
