@@ -355,6 +355,7 @@ class TestConcatDataset:
     def test_concat_combine_attrs_kwarg_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
+        """check that combine_attrs is used on data variables and coords"""
         ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
         ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
 

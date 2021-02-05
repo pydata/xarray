@@ -165,6 +165,7 @@ class TestMergeFunction:
     def test_merge_arrays_attrs_variables(
         self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
     ):
+        """check that combine_attrs is used on data variables and coords"""
         data = create_test_data()
         data1 = data.copy()
         data1.var1.attrs = attrs1
