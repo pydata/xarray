@@ -468,6 +468,49 @@ def test_apply_groupby_add():
         add(data_array.groupby("y"), data_array.groupby("x"))
 
 
+@pytest.mark.parametrize(
+    ["obj", "expected"],
+    (
+        pytest.param(
+            xr.DataArray(
+                [0, 1],
+                coords={
+                    "x": ("x", [-1, 1], {"a": 1, "b": 2}),
+                    "u": ("x", [2, 3], {"c": 3}),
+                },
+                dims="x",
+                attrs={"d": 4, "e": 5},
+            ),
+            xr.DataArray([0, 1], coords={"x": [-1, 1], "u": ("x", [2, 3])}, dims="x"),
+            id="DataArray",
+        ),
+        pytest.param(
+            xr.Dataset(
+                {"a": ("x", [1, 2], {"a": 1, "b": 2}), "b": ("x", [0, 1], {"c": 3})},
+                coords={
+                    "x": ("x", [-1, 1], {"d": 4, "e": 5}),
+                    "u": ("x", [2, 3], {"f": 6}),
+                },
+            ),
+            xr.Dataset(
+                {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
+                coords={"x": [-1, 1], "u": ("x", [2, 3])},
+            ),
+            id="Dataset",
+        ),
+    ),
+)
+def test_apply_to_dataset(obj, expected):
+    def clear_all_attrs(ds):
+        new_ds = ds.copy()
+        for var in new_ds.variables.values():
+            var.attrs.clear()
+        new_ds.attrs.clear()
+        return new_ds
+
+    assert_identical(expected, xr.apply_to_dataset(clear_all_attrs, obj))
+
+
 def test_unified_dim_sizes():
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}

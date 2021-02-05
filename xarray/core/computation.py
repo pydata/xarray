@@ -1142,6 +1142,42 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
+def apply_to_dataset(func, obj, *args, **kwargs):
+    """apply a function expecting a Dataset to a xarray object
+
+    Parameters
+    ----------
+    func : callable
+        A function expecting a Dataset as its first parameter.
+    obj : DataArray or Dataset
+        The dataset to apply ``func`` to. If a ``DataArray``, convert it to a single
+        variable ``Dataset`` first.
+    *args, **kwargs
+        Additional arguments to ``func``
+
+    Returns
+    -------
+    DataArray or Dataset
+        The result of ``func(obj, *args, **kwargs)`` with the same type as ``obj``.
+
+    Notes
+    -----
+    If a ``DataArray``, result will have the same name as ``obj`` but the single data
+    variable in the temporary ``Dataset`` will always have a generic name.
+    """
+    from .dataarray import DataArray
+
+    ds = obj._to_temp_dataset() if isinstance(obj, DataArray) else obj
+
+    result = func(ds, *args, **kwargs)
+
+    return (
+        obj._from_temp_dataset(result, name=obj.name)
+        if isinstance(obj, DataArray)
+        else result
+    )
+
+
 def cov(da_a, da_b, dim=None, ddof=1):
     """
     Compute covariance between two DataArray objects along a shared dimension.
