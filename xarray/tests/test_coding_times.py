@@ -8,11 +8,11 @@ from pandas.errors import OutOfBoundsDatetime
 
 from xarray import DataArray, Dataset, Variable, coding, conventions, decode_cf
 from xarray.coding.times import (
+    _encode_datetime_with_cftime,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
     to_timedelta_unboxed,
-    _encode_datetime_with_cftime,
 )
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
