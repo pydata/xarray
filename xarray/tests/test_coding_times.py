@@ -12,7 +12,7 @@ from xarray.coding.times import (
     decode_cf_datetime,
     encode_cf_datetime,
     to_timedelta_unboxed,
-    _encode_datetime_with_cftime
+    _encode_datetime_with_cftime,
 )
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import _update_bounds_attributes, cf_encoder
