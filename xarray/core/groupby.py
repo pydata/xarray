@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from ..plot.plot import _PlotMethods as _DataArray_PlotMethods
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
@@ -262,6 +263,8 @@ class GroupBy(SupportsArithmetic):
         "_stacked_dim",
         "_unique_coord",
         "_dims",
+        "attrs",
+        "name",
     )
 
     def __init__(
@@ -399,6 +402,10 @@ class GroupBy(SupportsArithmetic):
         self._inserted_dims = inserted_dims
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
+
+        # make groupby object mimic underlying object
+        self.attrs = obj.attrs
+        self.name = obj.name if hasattr(obj, "name") else None
 
         # cached attributes
         self._groups = None
@@ -891,6 +898,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
 
         return self.map(reduce_array, shortcut=shortcut)
 
+    @property
+    def plot(self):
+        return _DataArray_PlotMethods(self)
+
 
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
@@ -1010,6 +1021,12 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
+
+    @property
+    def plot(self):
+        raise NotImplementedError(
+            "Plotting not implemented for DatasetGroupBy objects yet."
+        )
 
 
 ops.inject_reduce_methods(DatasetGroupBy)
