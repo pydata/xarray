@@ -110,16 +110,6 @@ def override_signature(f):
     return wrapper
 
 
-# plotfunc and newplotfunc have different signatures:
-# - plotfunc: (x, y, z, ax, **kwargs)
-# - newplotfunc: (darray, x, y, **kwargs)
-# where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
-# and variable names. newplotfunc also explicitly lists most kwargs, so we
-# need to shorten it
-def signature(darray, x, y, **kwargs):
-    pass
-
-
 def plot(
     darray,
     row=None,
@@ -400,6 +390,15 @@ def _plot1d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, *args, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, *args, x, y, **kwargs):
+        pass
+
     @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
@@ -665,6 +664,15 @@ def _plot2d(plotfunc):
 
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
+
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, x, y, **kwargs):
+        pass
 
     @override_signature(signature)
     @functools.wraps(plotfunc)
