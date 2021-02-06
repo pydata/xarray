@@ -1,12 +1,11 @@
 import warnings
+from datetime import timedelta
 from itertools import product
 
 import numpy as np
 import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
-
-from datetime import timedelta
 
 from xarray import (
     DataArray,
