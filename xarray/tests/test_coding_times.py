@@ -6,6 +6,8 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
+from datetime import timedelta
+
 from xarray import (
     DataArray,
     Dataset,
@@ -30,7 +32,7 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_cftime,
-    has_cftime_1_2_1,
+    has_cftime_1_4_1,
     requires_cftime,
     requires_dask,
 )
@@ -1006,42 +1008,26 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq, date
 
 
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-@pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
-def test_encode_decode_roundtrip(freq, date_range):
+def test_encode_decode_roundtrip_datetime64(freq):
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
     # "S", "L", "U", and "N".
-    if not has_cftime_1_2_1 and date_range == cftime_range:
-        pytest.skip("Exact roundtripping requires cftime 1.2.1.")
-    if freq == "N" and date_range == cftime_range:
-        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
-    # if ON_WINDOWS and freq == "U" and date_range == cftime_range:
-    #     pytest.skip("Windows timedeltas use int32 instead of int64 so have a more limited range")
-    initial_time = date_range("1678-01-01", periods=1)
-    times = initial_time.append(date_range("1968", periods=2, freq=freq))
+    initial_time = pd.date_range("1678-01-01", periods=1)
+    times = initial_time.append(pd.date_range("1968", periods=2, freq=freq))
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    use_cftime = date_range == cftime_range
-    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=use_cftime)
+    decoded = conventions.decode_cf_variable("time", encoded)
     assert_equal(variable, decoded)
 
-@pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-@pytest.mark.parametrize("date_range", [cftime_range])
-def test_encode_decode_roundtrip_cftime(freq, date_range):
-    # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
-    # "S", "L", "U", and "N".
-    from datetime import timedelta
-    if not has_cftime_1_2_1 and date_range == cftime_range:
-        pytest.skip("Exact roundtripping requires cftime 1.2.1.")
-    if freq == "N" and date_range == cftime_range:
-        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
-    # if ON_WINDOWS and freq == "U" and date_range == cftime_range:
-    #     pytest.skip("Windows timedeltas use int32 instead of int64 so have a more limited range")
-    initial_time = date_range("0001", periods=1)
-    times = initial_time.append(date_range("0001", periods=2, freq=freq) + timedelta(days=291000 * 365))
+
+@pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
+def test_encode_decode_roundtrip_cftime(freq):
+    if not has_cftime_1_4_1:
+        pytest.skip("Exact roundtripping requires at least cftime 1.4.1.")
+    initial_time = cftime_range("0001", periods=1)
+    times = initial_time.append(
+        cftime_range("0001", periods=2, freq=freq) + timedelta(days=291000 * 365)
+    )
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
-    use_cftime = date_range == cftime_range
-    print(times)
-    print(encoded)
-    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=use_cftime)
+    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=True)
     assert_equal(variable, decoded)
