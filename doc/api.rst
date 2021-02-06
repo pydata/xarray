@@ -724,6 +724,24 @@ GroupBy objects
    core.groupby.DatasetGroupBy.map
    core.groupby.DatasetGroupBy.reduce
 
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   core.groupby.DataArrayGroupBy.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   core.groupby.DataArrayGroupBy.plot.contourf
+   core.groupby.DataArrayGroupBy.plot.contour
+   core.groupby.DataArrayGroupBy.plot.imshow
+   core.groupby.DataArrayGroupBy.plot.pcolormesh
+
 Rolling objects
 ===============
 
