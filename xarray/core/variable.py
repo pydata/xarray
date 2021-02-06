@@ -96,6 +96,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
           it into a new Variable.
         - If all else fails, attempt to convert the object into a Variable by
           unpacking it into the arguments for creating a new Variable.
+
     name : str, optional
         If provided:
 
@@ -389,11 +390,13 @@ class Variable(
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
+
         order : {'C', 'F', 'A', 'K'}, optional
             Controls the memory layout order of the result. ‘C’ means C order,
             ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
             Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
             the order the array elements appear in memory as possible.
+
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
             Controls what kind of data casting may occur.
 
@@ -407,10 +410,12 @@ class Variable(
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
+
         copy : bool, optional
             By default, astype always returns a newly allocated array. If this
             is set to False and the `dtype` requirement is satisfied, the input
             array is returned instead of a copy.
+
         keep_attrs : bool, optional
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.
@@ -428,7 +433,7 @@ class Variable(
         Make sure to only supply these arguments if the underlying array class
         supports them.
 
-        See also
+        See Also
         --------
         numpy.ndarray.astype
         dask.array.Array.astype
@@ -606,8 +611,8 @@ class Variable(
         """Prepare an indexing key for an indexing operation.
 
         Parameters
-        -----------
-        key: int, slice, array-like, dict or tuple of integer, slice and array-like
+        ----------
+        key : int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
@@ -929,7 +934,6 @@ class Variable(
 
         Examples
         --------
-
         Shallow copy versus deep copy
 
         >>> var = xr.Variable(data=[1, 2, 3], dims="x")
@@ -1225,7 +1229,7 @@ class Variable(
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
         **shifts_kwargs
             The keyword arguments form of ``shifts``.
@@ -1535,7 +1539,7 @@ class Variable(
         stacked : Variable
             Variable with the same attributes but stacked data.
 
-        See also
+        See Also
         --------
         Variable.unstack
         """
@@ -1655,7 +1659,7 @@ class Variable(
         unstacked : Variable
             Variable with the same attributes but unstacked data.
 
-        See also
+        See Also
         --------
         Variable.stack
         DataArray.unstack
@@ -1886,8 +1890,10 @@ class Variable(
         q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
+
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
+
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -1917,7 +1923,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
         """
 
@@ -2432,7 +2438,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmin, DataArray.idxmin
         """
@@ -2477,7 +2483,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmax, DataArray.idxmax
         """

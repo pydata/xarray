@@ -541,7 +541,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.fillna
         DataArray.fillna
@@ -560,9 +560,11 @@ class GroupBy(SupportsArithmetic):
         q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
+
         dim : ..., str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
+
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -575,6 +577,7 @@ class GroupBy(SupportsArithmetic):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
+
         skipna : bool, optional
             Whether to skip missing values when aggregating.
 
@@ -590,12 +593,11 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
@@ -672,7 +674,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.where
         """
@@ -698,7 +700,7 @@ class GroupBy(SupportsArithmetic):
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
-        See also
+        See Also
         --------
         Dataset.assign_coords
         Dataset.swap_dims
@@ -770,6 +772,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ----------
         func : callable
             Callable to apply to each array.
+
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
 
@@ -782,8 +785,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+
         *args : tuple, optional
             Positional arguments passed to `func`.
+
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -996,7 +1001,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def assign(self, **kwargs):
         """Assign data variables by group.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """

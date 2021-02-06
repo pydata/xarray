@@ -187,7 +187,7 @@ class AbstractArray(ImplementsArrayReduce):
 
         Immutable.
 
-        See also
+        See Also
         --------
         Dataset.sizes
         """
@@ -409,7 +409,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             defined and attached to an existing dimension using a tuple with
             the first element the dimension name and the second element the
             values for this new coordinate.
-
         **coords_kwargs : optional
             The keyword arguments form of ``coords``.
             One of ``coords`` or ``coords_kwargs`` must be provided.
@@ -470,7 +469,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         is possible, but you cannot reference other variables created within
         the same ``assign_coords`` call.
 
-        See also
+        See Also
         --------
         Dataset.assign
         Dataset.swap_dims
@@ -498,7 +497,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         assigned : same type as caller
             A new object with the new attrs in addition to the existing data.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """
@@ -537,7 +536,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Notes
         -----
-
         Use ``.pipe`` when chaining together functions that expect
         xarray or pandas objects, e.g., instead of writing
 
@@ -561,7 +559,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-
         >>> import numpy as np
         >>> import xarray as xr
         >>> x = xr.Dataset(
@@ -813,7 +810,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        dim: dict, optional
+        dim : dict, optional
             Mapping from the dimension name to create the rolling iterator
             along (e.g. `time`) to its moving window size.
         min_periods : int, default: None
@@ -1101,7 +1098,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         References
         ----------
-
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         # TODO support non-string indexer after removing the old API.
@@ -1189,7 +1185,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> a
@@ -1235,7 +1230,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
-        See also
+        See Also
         --------
         numpy.where : corresponding numpy function
         where : equivalent function
@@ -1386,14 +1381,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-
         >>> array = xr.DataArray([1, 2, 3], dims="x")
         >>> array.isin([1, 3])
         <xarray.DataArray (x: 3)>
         array([ True, False,  True])
         Dimensions without coordinates: x
 
-        See also
+        See Also
         --------
         numpy.isin
         """
@@ -1438,11 +1432,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
+
         order : {'C', 'F', 'A', 'K'}, optional
             Controls the memory layout order of the result. ‘C’ means C order,
             ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
             Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
             the order the array elements appear in memory as possible.
+
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
             Controls what kind of data casting may occur.
 
@@ -1456,10 +1452,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
+
         copy : bool, optional
             By default, astype always returns a newly allocated array. If this
             is set to False and the `dtype` requirement is satisfied, the input
             array is returned instead of a copy.
+
         keep_attrs : bool, optional
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.
@@ -1477,7 +1475,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Make sure to only supply these arguments if the underlying array class
         supports them.
 
-        See also
+        See Also
         --------
         numpy.ndarray.astype
         dask.array.Array.astype
@@ -1533,7 +1531,6 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> x = xr.DataArray(
@@ -1609,9 +1606,8 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
         a        (x) bool True True True
         b        (x) float64 2.0 2.0 2.0
 
-    See also
+    See Also
     --------
-
     zeros_like
     ones_like
 
@@ -1692,7 +1688,6 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> x = xr.DataArray(
@@ -1724,9 +1719,8 @@ def zeros_like(other, dtype: DTypeLike = None):
       * lat      (lat) int64 1 2
       * lon      (lon) int64 0 1 2
 
-    See also
+    See Also
     --------
-
     ones_like
     full_like
 
@@ -1752,7 +1746,6 @@ def ones_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> x = xr.DataArray(
@@ -1776,9 +1769,8 @@ def ones_like(other, dtype: DTypeLike = None):
       * lat      (lat) int64 1 2
       * lon      (lon) int64 0 1 2
 
-    See also
+    See Also
     --------
-
     zeros_like
     full_like
 

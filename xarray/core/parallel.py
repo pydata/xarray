@@ -186,12 +186,15 @@ def map_blocks(
 
     obj : DataArray, Dataset
         Passed to the function as its first argument, one block at a time.
+
     args : sequence
         Passed to func after unpacking and subsetting any xarray objects by blocks.
         xarray objects in args must be aligned with obj, otherwise an error is raised.
+
     kwargs : mapping
         Passed verbatim to func after unpacking. xarray objects, if any, will not be
         subset to blocks. Passing dask collections in kwargs is not allowed.
+
     template : DataArray or Dataset, optional
         xarray object representing the final result after compute is called. If not provided,
         the function will be first run on mocked-up data, that looks like ``obj`` but
@@ -200,7 +203,6 @@ def map_blocks(
         ``template`` must be provided if the function changes the size of existing dimensions.
         When provided, ``attrs`` on variables in `template` are copied over to the result. Any
         ``attrs`` set by ``func`` will be ignored.
-
 
     Returns
     -------
@@ -218,12 +220,11 @@ def map_blocks(
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
     xarray.DataArray.map_blocks
 
     Examples
     --------
-
     Calculate an anomaly from climatology using ``.groupby()``. Using
     ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
     its indices, and its methods like ``.groupby()``.
