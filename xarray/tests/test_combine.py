@@ -482,7 +482,7 @@ class TestNestedCombine:
 
         expected = data[["var1", "var2"]]
         actual = combine_nested(objs, concat_dim=[None, "dim2"])
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
     def test_auto_combine_2d(self):
         ds = create_test_data

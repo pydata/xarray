@@ -437,6 +437,16 @@ def bfill(arr, dim=None, limit=None):
     ).transpose(*arr.dims)
 
 
+def _import_interpolant(interpolant, method):
+    """Import interpolant from scipy.interpolate."""
+    try:
+        from scipy import interpolate
+
+        return getattr(interpolate, interpolant)
+    except ImportError as e:
+        raise ImportError(f"Interpolation with method {method} requires scipy.") from e
+
+
 def _get_interpolator(method, vectorizeable_only=False, **kwargs):
     """helper function to select the appropriate interpolator class
 
@@ -459,12 +469,6 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
         "akima",
     ]
 
-    has_scipy = True
-    try:
-        from scipy import interpolate
-    except ImportError:
-        has_scipy = False
-
     # prioritize scipy.interpolate
     if (
         method == "linear"
@@ -475,32 +479,29 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
         interp_class = NumpyInterpolator
 
     elif method in valid_methods:
-        if not has_scipy:
-            raise ImportError("Interpolation with method `%s` requires scipy" % method)
-
         if method in interp1d_methods:
             kwargs.update(method=method)
             interp_class = ScipyInterpolator
         elif vectorizeable_only:
             raise ValueError(
-                "{} is not a vectorizeable interpolator. "
-                "Available methods are {}".format(method, interp1d_methods)
+                f"{method} is not a vectorizeable interpolator. "
+                f"Available methods are {interp1d_methods}"
             )
         elif method == "barycentric":
-            interp_class = interpolate.BarycentricInterpolator
+            interp_class = _import_interpolant("BarycentricInterpolator", method)
         elif method == "krog":
-            interp_class = interpolate.KroghInterpolator
+            interp_class = _import_interpolant("KroghInterpolator", method)
         elif method == "pchip":
-            interp_class = interpolate.PchipInterpolator
+            interp_class = _import_interpolant("PchipInterpolator", method)
         elif method == "spline":
             kwargs.update(method=method)
             interp_class = SplineInterpolator
         elif method == "akima":
-            interp_class = interpolate.Akima1DInterpolator
+            interp_class = _import_interpolant("Akima1DInterpolator", method)
         else:
-            raise ValueError("%s is not a valid scipy interpolator" % method)
+            raise ValueError(f"{method} is not a valid scipy interpolator")
     else:
-        raise ValueError("%s is not a valid interpolator" % method)
+        raise ValueError(f"{method} is not a valid interpolator")
 
     return interp_class, kwargs
 
@@ -512,18 +513,13 @@ def _get_interpolator_nd(method, **kwargs):
     """
     valid_methods = ["linear", "nearest"]
 
-    try:
-        from scipy import interpolate
-    except ImportError:
-        raise ImportError("Interpolation with method `%s` requires scipy" % method)
-
     if method in valid_methods:
         kwargs.update(method=method)
-        interp_class = interpolate.interpn
+        interp_class = _import_interpolant("interpn", method)
     else:
         raise ValueError(
-            "%s is not a valid interpolator for interpolating "
-            "over multiple dimensions." % method
+            f"{method} is not a valid interpolator for interpolating "
+            "over multiple dimensions."
         )
 
     return interp_class, kwargs
@@ -651,7 +647,7 @@ def interp(var, indexes_coords, method, **kwargs):
                 out_dims.update(indexes_coords[d][1].dims)
             else:
                 out_dims.add(d)
-        result = result.transpose(*tuple(out_dims))
+        result = result.transpose(*out_dims)
     return result
 
 
@@ -734,6 +730,13 @@ def interp_func(var, x, new_x, method, kwargs):
         # if usefull, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
+        # scipy.interpolate.interp1d always forces to float.
+        # Use the same check for blockwise as well:
+        if not issubclass(var.dtype.type, np.inexact):
+            dtype = np.float_
+        else:
+            dtype = var.dtype
+
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
@@ -742,7 +745,7 @@ def interp_func(var, x, new_x, method, kwargs):
             interp_kwargs=kwargs,
             localize=localize,
             concatenate=True,
-            dtype=var.dtype,
+            dtype=dtype,
             new_axes=new_axes,
         )
 
