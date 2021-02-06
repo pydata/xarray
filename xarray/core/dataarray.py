@@ -344,6 +344,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
+    _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, pd.Index]]
     _name: Optional[Hashable]
     _variable: Variable
@@ -351,7 +352,7 @@ class DataArray(AbstractArray, DataWithCoords):
     __slots__ = (
         "_cache",
         "_coords",
-        "_file_obj",
+        "_close",
         "_indexes",
         "_name",
         "_variable",
@@ -421,7 +422,7 @@ class DataArray(AbstractArray, DataWithCoords):
         # public interface.
         self._indexes = indexes
 
-        self._file_obj = None
+        self._close = None
 
     def _replace(
         self,
@@ -1698,7 +1699,9 @@ class DataArray(AbstractArray, DataWithCoords):
             new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
             return self._replace(name=new_name_or_name_dict)
 
-    def swap_dims(self, dims_dict: Mapping[Hashable, Hashable]) -> "DataArray":
+    def swap_dims(
+        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+    ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -1706,6 +1709,10 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
+
+        **dim_kwargs : {dim: , ...}, optional
+            The keyword arguments form of ``dims_dict``.
+            One of dims_dict or dims_kwargs must be provided.
 
         Returns
         -------
@@ -1748,6 +1755,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.rename
         Dataset.swap_dims
         """
+        dims_dict = either_dict_or_kwargs(dims_dict, dims_kwargs, "swap_dims")
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
@@ -2246,6 +2254,28 @@ class DataArray(AbstractArray, DataWithCoords):
 
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
+
+    def drop_isel(self, indexers=None, **indexers_kwargs):
+        """Drop index positions from this DataArray.
+
+        Parameters
+        ----------
+        indexers : mapping of hashable to Any
+            Index locations to drop
+        **indexers_kwargs : {dim: position, ...}, optional
+            The keyword arguments form of ``dim`` and ``positions``
+
+        Returns
+        -------
+        dropped : DataArray
+
+        Raises
+        ------
+        IndexError
+        """
+        dataset = self._to_temp_dataset()
+        dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
+        return self._from_temp_dataset(dataset)
 
     def dropna(
         self, dim: Hashable, how: str = "any", thresh: int = None
@@ -3451,21 +3481,26 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def integrate(
-        self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+        self,
+        coord: Union[Hashable, Sequence[Hashable]] = None,
+        datetime_unit: str = None,
+        *,
+        dim: Union[Hashable, Sequence[Hashable]] = None,
     ) -> "DataArray":
-        """ integrate the array with the trapezoidal rule.
+        """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
-            This feature is limited to simple cartesian geometry, i.e. dim
+            This feature is limited to simple cartesian geometry, i.e. coord
             must be one dimensional.
 
         Parameters
         ----------
+        coord: hashable, or a sequence of hashable
+            Coordinate(s) used for the integration.
         dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", \
-                         "ps", "fs", "as"}, optional
-            Can be used to specify the unit if datetime coordinate is used.
+        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
 
         Returns
         -------
@@ -3473,6 +3508,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
+        Dataset.integrate
         numpy.trapz: corresponding numpy function
 
         Examples
@@ -3498,7 +3534,22 @@ class DataArray(AbstractArray, DataWithCoords):
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
         """
-        ds = self._to_temp_dataset().integrate(dim, datetime_unit)
+        if dim is not None and coord is not None:
+            raise ValueError(
+                "Cannot pass both 'dim' and 'coord'. Please pass only 'coord' instead."
+            )
+
+        if dim is not None and coord is None:
+            coord = dim
+            msg = (
+                "The `dim` keyword argument to `DataArray.integrate` is "
+                "being replaced with `coord`, for consistency with "
+                "`Dataset.integrate`. Please pass `coord` instead."
+                " `dim` will be removed in version 0.19.0."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=2)
+
+        ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self) -> "DataArray":
