@@ -54,9 +54,9 @@ def assert_equal(a, b):
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
 
-    See also
+    See Also
     --------
-    assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
+    assert_identical, assert_allclose, Dataset.equals, DataArray.equals
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
@@ -82,7 +82,7 @@ def assert_identical(a, b):
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
 
-    See also
+    See Also
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
@@ -120,7 +120,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
 
-    See also
+    See Also
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
