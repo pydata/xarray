@@ -195,7 +195,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         ----------
         func : callable
             Callable to apply to each array.
-
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
 
@@ -208,10 +207,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-
         args : tuple, optional
             Positional arguments passed on to `func`.
-
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 

@@ -351,7 +351,6 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         :py:func:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
-
     *args, **kwargs : optional
         Additional arguments following :py:func:`xarray.plot.line`
     """

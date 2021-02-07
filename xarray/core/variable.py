@@ -96,7 +96,6 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
           it into a new Variable.
         - If all else fails, attempt to convert the object into a Variable by
           unpacking it into the arguments for creating a new Variable.
-
     name : str, optional
         If provided:
 
@@ -390,13 +389,11 @@ class Variable(
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
-
         order : {'C', 'F', 'A', 'K'}, optional
             Controls the memory layout order of the result. ‘C’ means C order,
             ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
             Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
             the order the array elements appear in memory as possible.
-
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
             Controls what kind of data casting may occur.
 
@@ -406,16 +403,13 @@ class Variable(
             * 'same_kind' means only safe casts or casts within a kind,
               like float64 to float32, are allowed.
             * 'unsafe' means any data conversions may be done.
-
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
-
         copy : bool, optional
             By default, astype always returns a newly allocated array. If this
             is set to False and the `dtype` requirement is satisfied, the input
             array is returned instead of a copy.
-
         keep_attrs : bool, optional
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.
@@ -1890,10 +1884,8 @@ class Variable(
         q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
-
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -1906,7 +1898,6 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new

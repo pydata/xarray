@@ -1432,13 +1432,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
-
         order : {'C', 'F', 'A', 'K'}, optional
             Controls the memory layout order of the result. ‘C’ means C order,
             ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
             Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
             the order the array elements appear in memory as possible.
-
         casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
             Controls what kind of data casting may occur.
 
@@ -1448,16 +1446,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             * 'same_kind' means only safe casts or casts within a kind,
               like float64 to float32, are allowed.
             * 'unsafe' means any data conversions may be done.
-
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
-
         copy : bool, optional
             By default, astype always returns a newly allocated array. If this
             is set to False and the `dtype` requirement is satisfied, the input
             array is returned instead of a copy.
-
         keep_attrs : bool, optional
             By default, astype keeps attributes. Set to False to remove
             attributes in the returned object.

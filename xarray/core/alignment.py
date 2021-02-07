@@ -93,7 +93,6 @@ def align(
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-
     join : {"outer", "inner", "left", "right", "exact", "override"}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
@@ -107,20 +106,16 @@ def align(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
         only slice operations, then the output may share memory with the input.
         In either case, new xarray objects are always returned.
-
     indexes : dict-like, optional
         Any indexes explicitly provided with the `indexes` argument should be
         used in preference to the aligned indexes.
-
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
-
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to

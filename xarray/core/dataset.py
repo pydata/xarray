@@ -1732,11 +1732,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system.
-
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in file system only for Zarr array chunks.
             Requires zarr-python v2.4.0 or later.
-
         mode : {"w", "w-", "a", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
@@ -1744,31 +1742,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If ``append_dim`` is set, ``mode`` can be omitted as it is
             internally set to ``"a"``. Otherwise, ``mode`` will default to
             `w-` if not set.
-
         synchronizer : object, optional
             Zarr array synchronizer.
-
         group : str, optional
             Group path. (a.k.a. `path` in zarr terminology.)
-
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,}, ...}``
-
         compute : bool, optional
             If True write array data immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed to write
             array data later. Metadata is always updated eagerly.
-
         consolidated : bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing metadata.
-
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
-
         region : dict, optional
             Optional mapping from dimension names to integer slices along
             dataset dimensions to indicate the region of existing zarr array(s)
@@ -2211,7 +2202,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for inexact matches:
 
@@ -2219,16 +2209,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -2444,7 +2431,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             other object need not be the same as the indexes on this
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
-
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found in this
             dataset:
@@ -2453,18 +2439,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like maps
             variable names to fill values.
@@ -2509,7 +2492,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             values will be filled in with NaN, and any mis-matched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
-
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values in ``indexers`` not found in
             this dataset:
@@ -2518,25 +2500,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like,
             maps variable names (including coordinates) to fill values.
-
         sparse : bool, default: False
             use sparse-array.
-
         **indexers_kwargs : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -4465,7 +4442,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-
         method : str, optional
             String indicating which method to use for interpolation:
 
@@ -4477,20 +4453,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
-
         use_coordinate : bool, str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
             eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
-
         limit : int, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-
         max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
@@ -4514,7 +4487,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
@@ -5181,7 +5153,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             If provided, must include all dimensions of this dataset. By
             default, dimensions are sorted alphabetically.
-
         set_index : bool, optional
             If set_index=True, the dask DataFrame is indexed by this dataset's
             coordinate. Since dask DataFrames do not support multi-indexes,
@@ -5745,10 +5716,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
-
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -5761,15 +5730,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
-
         skipna : bool, optional
             Whether to skip missing values when aggregating.
 
@@ -6256,15 +6222,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             This function must return either a single DataArray or a single Dataset.
 
             This function cannot add a new chunked dimension.
-
         args : sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with obj, otherwise an error is raised.
-
         kwargs : mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             subset to blocks. Passing dask collections in kwargs is not allowed.
-
         template : DataArray or Dataset, optional
             xarray object representing the final result after compute is called. If not provided,
             the function will be first run on mocked-up data, that looks like this object but
@@ -6564,7 +6527,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
@@ -6598,7 +6560,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-
         stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -6609,7 +6570,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-
         constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'constant'.  The values to set the padded values for each
             axis.
@@ -6620,7 +6580,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
             Default is 0.
-
         end_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
@@ -6631,13 +6590,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-
         reflect_type : {"even", "odd"}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.

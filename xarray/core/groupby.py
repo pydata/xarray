@@ -560,11 +560,9 @@ class GroupBy(SupportsArithmetic):
         q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
-
         dim : ..., str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
-
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -577,7 +575,6 @@ class GroupBy(SupportsArithmetic):
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         skipna : bool, optional
             Whether to skip missing values when aggregating.
 
@@ -772,7 +769,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ----------
         func : callable
             Callable to apply to each array.
-
         shortcut : bool, optional
             Whether or not to shortcut evaluation under the assumptions that:
 
@@ -785,10 +781,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-
         *args : tuple, optional
             Positional arguments passed to `func`.
-
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 

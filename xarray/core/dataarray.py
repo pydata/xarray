@@ -1168,7 +1168,6 @@ class DataArray(AbstractArray, DataWithCoords):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for inexact matches:
 
@@ -1176,16 +1175,13 @@ class DataArray(AbstractArray, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1361,7 +1357,6 @@ class DataArray(AbstractArray, DataWithCoords):
             other object need not be the same as the indexes on this
             dataset. Any mis-matched index values will be filled in with
             NaN, and any mis-matched dimension names will simply be ignored.
-
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for filling index values from other not found on this
             data array:
@@ -1370,18 +1365,15 @@ class DataArray(AbstractArray, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values. Use this
@@ -1427,13 +1419,11 @@ class DataArray(AbstractArray, DataWithCoords):
             values will be filled in with NaN, and any mis-matched dimension
             names will simply be ignored.
             One of indexers or indexers_kwargs must be provided.
-
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for filling index values in ``indexers`` not found on
             this data array:
@@ -1442,17 +1432,14 @@ class DataArray(AbstractArray, DataWithCoords):
             * pad / ffill: propagate last valid index value forward
             * backfill / bfill: propagate next valid index value backward
             * nearest: use nearest valid index value
-
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values. Use this
             data array's name to refer to the data array's values.
-
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
@@ -1502,23 +1489,19 @@ class DataArray(AbstractArray, DataWithCoords):
             New coordinate can be an scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
             - {"linear", "nearest"} for multidimensional array,
             - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
-
         assume_sorted : bool, optional
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
-
         kwargs : dict
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
-
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -1635,19 +1618,16 @@ class DataArray(AbstractArray, DataWithCoords):
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-
         method : str, default: "linear"
             The method used to interpolate. Choose from
 
             - {"linear", "nearest"} for multidimensional array,
             - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
-
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-
         kwargs : dict, optional
             Additional keyword passed to scipy's interpolator.
 
@@ -2358,7 +2338,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-
         method : str, optional
             String indicating which method to use for interpolation:
 
@@ -2370,20 +2349,17 @@ class DataArray(AbstractArray, DataWithCoords):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
-
         use_coordinate : bool or str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
             eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
-
         limit : int, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-
         max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
@@ -2407,12 +2383,10 @@ class DataArray(AbstractArray, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-
         keep_attrs : bool, default: True
             If True, the dataarray's attributes (`attrs`) will be copied from
             the original object to the new one.  If False, the new
             object will be returned without attributes.
-
         kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
@@ -2614,7 +2588,6 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         name
             Name to give to this array (required if unnamed).
-
         dim_order
             Hierarchical dimension order for the resulting dataframe.
             Array content is transposed to this order and then written out as flat
@@ -3315,10 +3288,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
-
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to apply quantile.
-
         interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
@@ -3331,12 +3302,10 @@ class DataArray(AbstractArray, DataWithCoords):
                 - higher: ``j``.
                 - nearest: ``i`` or ``j``, whichever is nearest.
                 - midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-
         skipna : bool, optional
             Whether to skip missing values when aggregating.
 
@@ -3605,15 +3574,12 @@ class DataArray(AbstractArray, DataWithCoords):
             This function must return either a single DataArray or a single Dataset.
 
             This function cannot add a new chunked dimension.
-
         args : sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with this object, otherwise an error is raised.
-
         kwargs : mapping
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             subset to blocks. Passing dask collections in kwargs is not allowed.
-
         template : DataArray or Dataset, optional
             xarray object representing the final result after compute is called. If not provided,
             the function will be first run on mocked-up data, that looks like this object but
@@ -3783,7 +3749,6 @@ class DataArray(AbstractArray, DataWithCoords):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs)
 
@@ -3817,7 +3782,6 @@ class DataArray(AbstractArray, DataWithCoords):
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-
         stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -3828,7 +3792,6 @@ class DataArray(AbstractArray, DataWithCoords):
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-
         constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'constant'.  The values to set the padded values for each
             axis.
@@ -3839,7 +3802,6 @@ class DataArray(AbstractArray, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
             Default is 0.
-
         end_values : scalar, tuple or mapping of hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
@@ -3850,13 +3812,11 @@ class DataArray(AbstractArray, DataWithCoords):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-
         reflect_type : {"even", "odd"}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-
         **pad_width_kwargs
             The keyword arguments form of ``pad_width``.
             One of ``pad_width`` or ``pad_width_kwargs`` must be provided.
