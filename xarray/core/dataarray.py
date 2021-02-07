@@ -3880,8 +3880,8 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 10 20 30 40
             z        (x) float64 nan 100.0 200.0 nan
 
-        Careful, ``constant_values`` can be coerced to the data type of the array which
-        may lead to a loss of precision:
+        Careful, ``constant_values`` are coerced to the data type of the array which may
+        lead to a loss of precision:
 
         >>> da.pad(x=1, constant_values=1.23456789)
         <xarray.DataArray (x: 4, y: 4)>
