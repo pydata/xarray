@@ -549,7 +549,7 @@ def test_groupby_none_group_name():
     assert "group" in mean.dims
 
 
-def test_groupby_sel(dataset):
+def test_groupby_getitem(dataset):
 
     assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
