@@ -721,7 +721,7 @@ class Coarsen:
             multiple of window size. If 'trim', the excess indexes are trimed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: mapping from coordinate name to func.
+        coord_func : mapping from coordinate name to func.
 
         Returns
         -------

@@ -211,7 +211,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     Note that time unit in `units` must not be smaller than microseconds and
     not larger than days.
 
-    See also
+    See Also
     --------
     cftime.num2date
     """
@@ -413,7 +413,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     def encode_datetime(d):
         return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.vectorize(encode_datetime)(dates)
+    return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
 
 def cast_to_int_if_safe(num):
@@ -429,7 +429,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
-    See also
+    See Also
     --------
     cftime.date2num
     """

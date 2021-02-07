@@ -17,6 +17,7 @@ from xarray import (
     decode_cf,
 )
 from xarray.coding.times import (
+    _encode_datetime_with_cftime,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
@@ -1030,3 +1031,18 @@ def test_encode_decode_roundtrip_cftime(freq):
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded, use_cftime=True)
     assert_equal(variable, decoded)
+
+
+@requires_cftime
+def test__encode_datetime_with_cftime():
+    # See GH 4870. cftime versions > 1.4.0 required us to adapt the
+    # way _encode_datetime_with_cftime was written.
+    import cftime
+
+    calendar = "gregorian"
+    times = cftime.num2date([0, 1], "hours since 2000-01-01", calendar)
+
+    encoding_units = "days since 2000-01-01"
+    expected = cftime.date2num(times, encoding_units, calendar)
+    result = _encode_datetime_with_cftime(times, encoding_units, calendar)
+    np.testing.assert_equal(result, expected)
