@@ -462,7 +462,7 @@ class ZarrStore(AbstractWritableDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
-        writer :
+        writer
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
@@ -566,7 +566,7 @@ def open_zarr(
         based on the variable's zarr chunks. If `chunks=None`, zarr array
         data will lazily convert to numpy arrays upon access. This accepts
         all the chunk specifications as Dask does.
-    overwrite_encoded_chunks: bool, optional
+    overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
@@ -605,7 +605,7 @@ def open_zarr(
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
