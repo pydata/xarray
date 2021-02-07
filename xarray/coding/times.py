@@ -391,7 +391,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     def encode_datetime(d):
         return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.vectorize(encode_datetime)(dates)
+    return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
 
 def cast_to_int_if_safe(num):
