@@ -2,7 +2,7 @@ import contextlib
 import io
 import threading
 import warnings
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -10,13 +10,11 @@ from .locks import acquire
 from .lru_cache import LRUCache
 
 # Global cache for storing open files.
-FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
+FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
     maxsize=cast(int, OPTIONS["file_cache_maxsize"]), on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
-
-REF_COUNTS: Dict[Any, int] = {}
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
@@ -83,12 +81,11 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
-        ref_counts=None,
     ):
-        """Initialize a FileManager.
+        """Initialize a CachingFileManager.
 
-        The cache and ref_counts arguments exist solely to facilitate
-        dependency injection, and should only be set for tests.
+        The cache argument exist solely to facilitate dependency injection, and
+        should only be set for tests.
 
         Parameters
         ----------
@@ -118,9 +115,6 @@ class CachingFileManager(FileManager):
             global variable and contains non-picklable file objects, an
             unpickled FileManager objects will be restored with the default
             cache.
-        ref_counts : dict, optional
-            Optional dict to use for keeping track the number of references to
-            the same file.
         """
         self._opener = opener
         self._args = args
@@ -136,17 +130,10 @@ class CachingFileManager(FileManager):
         self._cache = cache
         self._key = self._make_key()
 
-        # ref_counts[self._key] stores the number of CachingFileManager objects
-        # in memory referencing this same file. We use this to know if we can
-        # close a file when the manager is deallocated.
-        if ref_counts is None:
-            ref_counts = REF_COUNTS
-        self._ref_counter = _RefCounter(ref_counts)
-        self._ref_counter.increment(self._key)
-
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
         value = (
+            id(self),  # each CachingFileManager should separately open files
             self._opener,
             self._args,
             "a" if self._mode == "w" else self._mode,
@@ -222,22 +209,8 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        # If we're the only CachingFileManger referencing a unclosed file, we
-        # should remove it from the cache upon garbage collection.
-        #
-        # Keeping our own count of file references might seem like overkill,
-        # but it's actually pretty common to reopen files with the same
-        # variable name in a notebook or command line environment, e.g., to
-        # fix the parameters used when opening a file:
-        #    >>> ds = xarray.open_dataset('myfile.nc')
-        #    >>> ds = xarray.open_dataset('myfile.nc', decode_times=False)
-        # This second assignment to "ds" drops CPython's ref-count on the first
-        # "ds" argument to zero, which can trigger garbage collections. So if
-        # we didn't check whether another object is referencing 'myfile.nc',
-        # the newly opened file would actually be immediately closed!
-        ref_count = self._ref_counter.decrement(self._key)
-
-        if not ref_count and self._key in self._cache:
+        # Close unclosed file upon garbage collection.
+        if self._key in self._cache:
             if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
@@ -255,8 +228,8 @@ class CachingFileManager(FileManager):
 
     def __getstate__(self):
         """State for pickling."""
-        # cache and ref_counts are intentionally omitted: we don't want to try
-        # to serialize these global objects.
+        # cache is intentionally omitted: we don't want to try to serialize
+        # these global objects.
         lock = None if self._default_lock else self._lock
         return (self._opener, self._args, self._mode, self._kwargs, lock)
 

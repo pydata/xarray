@@ -80,55 +80,30 @@ def test_file_manager_repr():
     assert "my-file" in repr(manager)
 
 
-def test_file_manager_refcounts():
+def test_file_manager_repeated_open():
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
     cache = {}
-    ref_counts = {}
 
-    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
-    assert ref_counts[manager._key] == 1
+    manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
-    assert cache
+    assert len(cache) == 1
 
-    manager2 = CachingFileManager(
-        opener, "filename", cache=cache, ref_counts=ref_counts
-    )
-    assert cache
-    assert manager._key == manager2._key
-    assert ref_counts[manager._key] == 2
+    manager2 = CachingFileManager(opener, "filename", cache=cache)
+    manager2.acquire()
+    assert len(cache) == 2
 
     with set_options(warn_for_unclosed_files=False):
         del manager
         gc.collect()
 
-    assert cache
-    assert ref_counts[manager2._key] == 1
-    mock_file.close.assert_not_called()
+    assert len(cache) == 1
 
     with set_options(warn_for_unclosed_files=False):
         del manager2
         gc.collect()
 
-    assert not ref_counts
     assert not cache
-
-
-def test_file_manager_replace_object():
-    opener = mock.Mock()
-    cache = {}
-    ref_counts = {}
-
-    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
-    manager.acquire()
-    assert ref_counts[manager._key] == 1
-    assert cache
-
-    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
-    assert ref_counts[manager._key] == 1
-    assert cache
-
-    manager.close()
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):
