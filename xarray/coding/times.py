@@ -191,7 +191,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     Note that time unit in `units` must not be smaller than microseconds and
     not larger than days.
 
-    See also
+    See Also
     --------
     cftime.num2date
     """
@@ -407,7 +407,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
-    See also
+    See Also
     --------
     cftime.date2num
     """

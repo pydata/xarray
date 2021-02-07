@@ -135,7 +135,6 @@ def align(
 
     Examples
     --------
-
     >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[25, 35], [10, 24]],
@@ -532,7 +531,7 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
-    sparse: bool, optional
+    sparse : bool, optional
         Use an sparse-array
 
     Returns
@@ -704,7 +703,6 @@ def broadcast(*args, exclude=None):
 
     Examples
     --------
-
     Broadcast two data arrays against one another to fill out their dimensions:
 
     >>> a = xr.DataArray([1, 2, 3], dims="x")

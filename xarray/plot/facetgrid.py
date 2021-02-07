@@ -233,7 +233,7 @@ class FacetGrid:
             plotting method such as `xarray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        kwargs :
+        kwargs
             additional keyword arguments to func
 
         Returns

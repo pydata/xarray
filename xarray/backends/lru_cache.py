@@ -34,7 +34,7 @@ class LRUCache(MutableMapping[K, V]):
         ----------
         maxsize : int
             Integer maximum number of items to hold in the cache.
-        on_evict: callable, optional
+        on_evict : callable, optional
             Function to call like ``on_evict(key, value)`` when items are
             evicted.
         """

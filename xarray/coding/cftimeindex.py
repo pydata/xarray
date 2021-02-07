@@ -516,7 +516,7 @@ class CFTimeIndex(pd.Index):
         -------
         CFTimeIndex
 
-        See also
+        See Also
         --------
         pandas.DatetimeIndex.shift
 

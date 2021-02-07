@@ -787,11 +787,11 @@ def _combine_indexers(old_key, shape, new_key):
 
     Parameters
     ----------
-    old_key: ExplicitIndexer
+    old_key : ExplicitIndexer
         The first indexer for the original array
-    shape: tuple of ints
+    shape : tuple of ints
         Shape of the original array to be indexed by old_key
-    new_key:
+    new_key
         The second indexer for indexing original[old_key]
     """
     if not isinstance(old_key, VectorizedIndexer):
@@ -841,7 +841,7 @@ def explicit_indexing_adapter(
         Shape of the indexed array.
     indexing_support : IndexingSupport enum
         Form of indexing supported by raw_indexing_method.
-    raw_indexing_method: callable
+    raw_indexing_method : callable
         Function (like ndarray.__getitem__) that when called with indexing key
         in the form of a tuple returns an indexed array.
 
@@ -895,8 +895,8 @@ def _decompose_vectorized_indexer(
 
     Parameters
     ----------
-    indexer: VectorizedIndexer
-    indexing_support: one of IndexerSupport entries
+    indexer : VectorizedIndexer
+    indexing_support : one of IndexerSupport entries
 
     Returns
     -------
@@ -977,8 +977,8 @@ def _decompose_outer_indexer(
 
     Parameters
     ----------
-    indexer: OuterIndexer or BasicIndexer
-    indexing_support: One of the entries of IndexingSupport
+    indexer : OuterIndexer or BasicIndexer
+    indexing_support : One of the entries of IndexingSupport
 
     Returns
     -------

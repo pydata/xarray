@@ -67,7 +67,7 @@ def _get_scheduler(get=None, collection=None) -> Optional[str]:
 
     None is returned if no dask scheduler is active.
 
-    See also
+    See Also
     --------
     dask.base.get_scheduler
     """

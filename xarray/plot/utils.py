@@ -159,12 +159,12 @@ def _determine_cmap_params(
     Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
-    ==========
-    plot_data: Numpy array
+    ----------
+    plot_data : Numpy array
         Doesn't handle xarray objects
 
     Returns
-    =======
+    -------
     cmap_params : dict
         Use depends on the type of the plotting function
     """
@@ -791,15 +791,14 @@ def _process_cmap_cbar_kwargs(
 ):
     """
     Parameters
-    ==========
+    ----------
     func : plotting function
     data : ndarray,
         Data values
 
     Returns
-    =======
+    -------
     cmap_params
-
     cbar_kwargs
     """
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)

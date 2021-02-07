@@ -47,7 +47,7 @@ class Indexes(collections.abc.Mapping):
         Parameters
         ----------
         indexes : Dict[Any, pandas.Index]
-           Indexes held by this object.
+            Indexes held by this object.
         """
         self._indexes = indexes
 
@@ -75,7 +75,7 @@ def default_indexes(
     Parameters
     ----------
     coords : Mapping[Any, xarray.Variable]
-       Coordinate variables from which to draw default indexes.
+        Coordinate variables from which to draw default indexes.
     dims : iterable
         Iterable of dimension names.
 

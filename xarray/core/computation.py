@@ -885,11 +885,11 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: bool, optional
+    keep_attrs : bool, optional
         Whether to copy attributes from the first argument to the output.
-    kwargs: dict, optional
+    kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
+    dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
@@ -925,7 +925,6 @@ def apply_ufunc(
 
     Examples
     --------
-
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
@@ -1011,7 +1010,7 @@ def apply_ufunc(
     works well with numba's vectorize and guvectorize. Further explanation with
     examples are provided in the xarray documentation [3]_.
 
-    See also
+    See Also
     --------
     numpy.broadcast_arrays
     numba.vectorize
@@ -1162,10 +1161,10 @@ def cov(da_a, da_b, dim=None, ddof=1):
     -------
     covariance : DataArray
 
-    See also
+    See Also
     --------
     pandas.Series.cov : corresponding pandas function
-    xarray.corr: respective function to calculate correlation
+    xarray.corr : respective function to calculate correlation
 
     Examples
     --------
@@ -1240,7 +1239,7 @@ def corr(da_a, da_b, dim=None):
     -------
     correlation: DataArray
 
-    See also
+    See Also
     --------
     pandas.Series.corr : corresponding pandas function
     xarray.cov : underlying covariance function
@@ -1361,7 +1360,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
@@ -1496,7 +1494,6 @@ def where(cond, x, y):
     All dimension coordinates on `x` and `y`  must be aligned with each
     other and with `cond`.
 
-
     Parameters
     ----------
     cond : scalar, array, Variable, DataArray or Dataset
@@ -1566,10 +1563,11 @@ def where(cond, x, y):
            [0, 0]])
     Dimensions without coordinates: x, y
 
-    See also
+    See Also
     --------
     numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where : equivalent methods
+    Dataset.where, DataArray.where :
+        equivalent methods
     """
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1595,7 +1593,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
-    See also
+    See Also
     --------
     xarray.DataArray.polyfit
     numpy.polyval

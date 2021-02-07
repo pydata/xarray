@@ -796,7 +796,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-       Frequency strings can have multiples, e.g. "5H".
+        Frequency strings can have multiples, e.g. "5H".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -813,7 +813,6 @@ def cftime_range(
 
     Notes
     -----
-
     This function is an analog of ``pandas.date_range`` for use in generating
     sequences of ``cftime.datetime`` objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
@@ -911,7 +910,6 @@ def cftime_range(
     | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
     +----------+--------------------------------------------------------------------+
 
-
     Finally, the following calendar aliases are supported.
 
     +--------------------------------+---------------------------------------+
@@ -932,7 +930,6 @@ def cftime_range(
 
     Examples
     --------
-
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
