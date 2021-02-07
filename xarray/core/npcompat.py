@@ -30,6 +30,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import builtins
 import operator
+from distutils.version import LooseVersion
 from typing import Union
 
 import numpy as np
@@ -78,7 +79,10 @@ def moveaxis(a, source, destination):
 # Type annotations stubs. See also / to be replaced by:
 # https://github.com/numpy/numpy/issues/7370
 # https://github.com/numpy/numpy-stubs/
-DTypeLike = Union[np.dtype, str]
+if LooseVersion(np.__version__) >= "1.20":  # type: ignore
+    from numpy.typing import DTypeLike
+else:
+    DTypeLike = Union[np.dtype, str]  # type: ignore
 
 
 # from dask/array/utils.py

@@ -16,6 +16,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
 import numpy as np
@@ -35,6 +36,8 @@ ALL_DIMS = ...
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
+    from .dataset import Dataset
+    from .variable import Variable
     from .weighted import Weighted
 
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
@@ -1508,7 +1511,26 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         raise NotImplementedError()
 
 
-def full_like(other, fill_value, dtype: DTypeLike = None):
+@overload
+def full_like(
+    other: "Dataset",
+    fill_value,
+    dtype: Union[DTypeLike, Dict[Hashable, DTypeLike]] = None,
+) -> "Dataset":
+    ...
+
+
+@overload
+def full_like(other: "DataArray", fill_value, dtype: DTypeLike = None) -> "DataArray":
+    ...
+
+
+@overload
+def full_like(other: "Variable", fill_value, dtype: DTypeLike = None) -> "Variable":
+    ...
+
+
+def full_like(other, fill_value, dtype=None):
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -1632,10 +1654,10 @@ def full_like(other, fill_value, dtype: DTypeLike = None):
             fill_value = {k: fill_value for k in other.data_vars.keys()}
 
         if not isinstance(dtype, dict):
-            dtype = {k: dtype for k in other.data_vars.keys()}
+            dtype_ = {k: dtype for k in other.data_vars.keys()}
 
         data_vars = {
-            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype.get(k, None))
+            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype_.get(k, None))
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
