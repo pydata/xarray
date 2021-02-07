@@ -4,7 +4,6 @@ channels:
   - nodefaults
 dependencies:
   - python=3.8
-  - black
   - boto3
   - bottleneck
   - cartopy
@@ -12,12 +11,10 @@ dependencies:
   - cfgrib
   - cftime
   - coveralls
-  - flake8
   - h5netcdf
   - h5py=2
   - hdf5
   - hypothesis
-  - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis

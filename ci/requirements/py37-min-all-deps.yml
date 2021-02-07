@@ -8,7 +8,6 @@ dependencies:
   # When upgrading python, numpy, or pandas, must also change
   # doc/installing.rst and setup.py.
   - python=3.7
-  - black
   - boto3=1.9
   - bottleneck=1.2
   - cartopy=0.17
@@ -18,13 +17,11 @@ dependencies:
   - coveralls
   - dask=2.9
   - distributed=2.9
-  - flake8
   - h5netcdf=0.7
   - h5py=2.9  # Policy allows for 2.10, but it's a conflict-fest
   - hdf5=1.10
   - hypothesis
   - iris=2.2
-  - isort
   - lxml=4.4  # Optional dep of pydap
   - matplotlib-base=3.1
   - nc-time-axis=1.2
