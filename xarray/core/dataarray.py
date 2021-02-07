@@ -1707,7 +1707,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
-        **dim_kwargs : {dim: , ...}, optional
+        **dims_kwargs : {existing_dim: new_dim, ...}, optional
             The keyword arguments form of ``dims_dict``.
             One of dims_dict or dims_kwargs must be provided.
 
@@ -3479,21 +3479,22 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: hashable, or a sequence of hashable
+        coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
 
         Returns
         -------
-        integrated: DataArray
+        integrated : DataArray
 
         See also
         --------
         Dataset.integrate
-        numpy.trapz: corresponding numpy function
+        numpy.trapz : corresponding numpy function
 
         Examples
         --------
