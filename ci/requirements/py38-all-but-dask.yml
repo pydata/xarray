@@ -20,7 +20,6 @@ dependencies:
   - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
-  - mypy=0.790  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
