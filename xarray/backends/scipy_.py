@@ -15,7 +15,7 @@ from .common import (
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
-from .store import open_backend_dataset_store
+from .store import StoreBackendEntrypoint
 
 try:
     import scipy.io
@@ -232,56 +232,54 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager.close()
 
 
-def guess_can_open_scipy(store_spec):
-    try:
-        return read_magic_number(store_spec).startswith(b"CDF")
-    except TypeError:
-        pass
+class ScipyBackendEntrypoint(BackendEntrypoint):
+    def guess_can_open(self, store_spec):
+        try:
+            return read_magic_number(store_spec).startswith(b"CDF")
+        except TypeError:
+            pass
 
-    try:
-        _, ext = os.path.splitext(store_spec)
-    except TypeError:
-        return False
-    return ext in {".nc", ".nc4", ".cdf", ".gz"}
+        try:
+            _, ext = os.path.splitext(store_spec)
+        except TypeError:
+            return False
+        return ext in {".nc", ".nc4", ".cdf", ".gz"}
 
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=None,
+        concat_characters=None,
+        decode_coords=None,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode="r",
+        format=None,
+        group=None,
+        mmap=None,
+        lock=None,
+    ):
 
-def open_backend_dataset_scipy(
-    filename_or_obj,
-    mask_and_scale=True,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    mode="r",
-    format=None,
-    group=None,
-    mmap=None,
-    lock=None,
-):
-
-    store = ScipyDataStore(
-        filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
-    )
-    with close_on_error(store):
-        ds = open_backend_dataset_store(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+        store = ScipyDataStore(
+            filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )
-    return ds
 
-
-scipy_backend = BackendEntrypoint(
-    open_dataset=open_backend_dataset_scipy, guess_can_open=guess_can_open_scipy
-)
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
 
 
 if has_scipy:
-    BACKEND_ENTRYPOINTS["scipy"] = scipy_backend
+    BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
