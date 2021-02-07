@@ -137,6 +137,7 @@ def test_assert_duckarray_equal(duckarray, obj1, obj2):
         "assert_equal",
         "assert_identical",
         "assert_allclose",
+        "assert_duckarray_equal",
         "assert_duckarray_allclose",
     ],
 )
@@ -151,6 +152,10 @@ def test_ensure_warnings_not_elevated(func):
         def dims(self):
             warnings.warn("warning in test")
             return super().dims
+
+        def __array__(self):
+            warnings.warn("warning in test")
+            return super().__array__()
 
     a = WarningVariable("x", [1])
     b = WarningVariable("x", [2])

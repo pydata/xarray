@@ -22,6 +22,19 @@ __all__ = (
 )
 
 
+def ensure_warnings(func):
+    # sometimes tests elevate warnings to errors
+    # -> make sure that does not happen in the assert_* functions
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
 def _decode_string_data(data):
     if data.dtype.kind == "S":
         return np.core.defchararray.decode(data, "utf-8", "replace")
@@ -39,6 +52,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
         return duck_array_ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
+@ensure_warnings
 def assert_equal(a, b):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
@@ -61,20 +75,16 @@ def assert_equal(a, b):
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
-
-    # sometimes tests elevate warnings to errors -> make sure that does not happen here
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-
-        assert type(a) == type(b)
-        if isinstance(a, (Variable, DataArray)):
-            assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
-        elif isinstance(a, Dataset):
-            assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
-        else:
-            raise TypeError("{} not supported by assertion comparison".format(type(a)))
+    assert type(a) == type(b)
+    if isinstance(a, (Variable, DataArray)):
+        assert a.equals(b), formatting.diff_array_repr(a, b, "equals")
+    elif isinstance(a, Dataset):
+        assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
+    else:
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_identical(a, b):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
@@ -93,23 +103,19 @@ def assert_identical(a, b):
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
     __tracebackhide__ = True
-
-    # sometimes tests elevate warnings to errors -> make sure that does not happen here
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-
-        assert type(a) == type(b)
-        if isinstance(a, Variable):
-            assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-        elif isinstance(a, DataArray):
-            assert a.name == b.name
-            assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
-        elif isinstance(a, (Dataset, Variable)):
-            assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
-        else:
-            raise TypeError("{} not supported by assertion comparison".format(type(a)))
+    assert type(a) == type(b)
+    if isinstance(a, Variable):
+        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
+    elif isinstance(a, DataArray):
+        assert a.name == b.name
+        assert a.identical(b), formatting.diff_array_repr(a, b, "identical")
+    elif isinstance(a, (Dataset, Variable)):
+        assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
+    else:
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
@@ -149,25 +155,21 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
 
         return a.dims == b.dims and (a._data is b._data or equiv(a.data, b.data))
 
-    # sometimes tests elevate warnings to errors -> make sure that does not happen here
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-
-        if isinstance(a, Variable):
-            allclose = compat_variable(a, b)
-            assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
-        elif isinstance(a, DataArray):
-            allclose = utils.dict_equiv(
-                a.coords, b.coords, compat=compat_variable
-            ) and compat_variable(a.variable, b.variable)
-            assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
-        elif isinstance(a, Dataset):
-            allclose = a._coord_names == b._coord_names and utils.dict_equiv(
-                a.variables, b.variables, compat=compat_variable
-            )
-            assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
-        else:
-            raise TypeError("{} not supported by assertion comparison".format(type(a)))
+    if isinstance(a, Variable):
+        allclose = compat_variable(a, b)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, DataArray):
+        allclose = utils.dict_equiv(
+            a.coords, b.coords, compat=compat_variable
+        ) and compat_variable(a.variable, b.variable)
+        assert allclose, formatting.diff_array_repr(a, b, compat=equiv)
+    elif isinstance(a, Dataset):
+        allclose = a._coord_names == b._coord_names and utils.dict_equiv(
+            a.variables, b.variables, compat=compat_variable
+        )
+        assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
+    else:
+        raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
 def _format_message(x, y, err_msg, verbose):
@@ -197,23 +199,18 @@ def _format_message(x, y, err_msg, verbose):
     return "\n".join(parts)
 
 
+@ensure_warnings
 def assert_duckarray_allclose(
     actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
 ):
     """ Like `np.testing.assert_allclose`, but for duckarrays. """
     __tracebackhide__ = True
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
-
-        allclose = duck_array_ops.allclose_or_equiv(
-            actual, desired, rtol=rtol, atol=atol
-        )
-        assert allclose, _format_message(
-            actual, desired, err_msg=err_msg, verbose=verbose
-        )
+    allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
+    assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
 
 
+@ensure_warnings
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
