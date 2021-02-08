@@ -2245,6 +2245,9 @@ class TestAsCompatibleData:
         with raises_regex(ValueError, "must be scalar"):
             full_like(orig, [1.0, 2.0])
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(orig, True, dtype={"x": bool})
+
     @requires_dask
     def test_full_like_dask(self):
         orig = Variable(

@@ -1508,7 +1508,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 def full_like(
     other: "Dataset",
     fill_value,
-    dtype: Union[DTypeLike, Dict[Hashable, DTypeLike]] = None,
+    dtype: Union[DTypeLike, Mapping[Hashable, DTypeLike]] = None,
 ) -> "Dataset":
     ...
 
@@ -1640,12 +1640,19 @@ def full_like(other, fill_value, dtype=None):
             f"fill_value must be scalar or, for datasets, a dict-like. Received {fill_value} instead."
         )
 
+    if not isinstance(other, Dataset) and isinstance(dtype, Mapping):
+        raise ValueError(
+            "'dtype' cannot be dict-like when passing a DataArray or Variable"
+        )
+
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
             fill_value = {k: fill_value for k in other.data_vars.keys()}
 
-        if not isinstance(dtype, dict):
+        if not isinstance(dtype, Mapping):
             dtype_ = {k: dtype for k in other.data_vars.keys()}
+        else:
+            dtype_ = dtype
 
         data_vars = {
             k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype_.get(k, None))
