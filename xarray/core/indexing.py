@@ -1397,20 +1397,20 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             elif hasattr(array, "categories"):
                 # category isn't a real numpy dtype
-                dtype = array.categories.dtype
+                dtype_ = array.categories.dtype
             elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             else:
-                dtype = array.dtype
+                dtype_ = array.dtype
         else:
-            dtype = np.dtype(dtype)
-        self._dtype = dtype
+            dtype_ = np.dtype(dtype)
+        self._dtype = dtype_
 
     @property
-    def dtype(self) -> DTypeLike:
+    def dtype(self) -> np.dtype:
         return self._dtype
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:

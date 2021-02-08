@@ -32,7 +32,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes
-from .npcompat import DTypeLike
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -594,7 +593,7 @@ class NDArrayMixin(NdimSizeLenMixin):
     __slots__ = ()
 
     @property
-    def dtype(self: Any) -> DTypeLike:
+    def dtype(self: Any) -> np.dtype:
         return self.array.dtype
 
     @property
