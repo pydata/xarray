@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 
@@ -127,3 +129,41 @@ def test_assert_duckarray_equal(duckarray, obj1, obj2):
     b = duckarray(obj2)
 
     xr.testing.assert_duckarray_equal(a, b)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        "assert_equal",
+        "assert_identical",
+        "assert_allclose",
+        "assert_duckarray_equal",
+        "assert_duckarray_allclose",
+    ],
+)
+def test_ensure_warnings_not_elevated(func):
+    # make sure warnings are not elevated to errors in the assertion functions
+    # e.g. by @pytest.mark.filterwarnings("error")
+    # see https://github.com/pydata/xarray/pull/4760#issuecomment-774101639
+
+    # define a custom Variable class that raises a warning in assert_*
+    class WarningVariable(xr.Variable):
+        @property  # type: ignore
+        def dims(self):
+            warnings.warn("warning in test")
+            return super().dims
+
+        def __array__(self):
+            warnings.warn("warning in test")
+            return super().__array__()
+
+    a = WarningVariable("x", [1])
+    b = WarningVariable("x", [2])
+
+    with warnings.catch_warnings(record=True) as w:
+        # elevate warnings to errors
+        warnings.filterwarnings("error")
+        with pytest.raises(AssertionError):
+            getattr(xr.testing, func)(a, b)
+
+        assert len(w) > 0
