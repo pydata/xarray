@@ -1,5 +1,6 @@
 """Testing functions exposed to the user API"""
 import functools
+import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
@@ -19,6 +20,19 @@ __all__ = (
     "assert_equal",
     "assert_identical",
 )
+
+
+def ensure_warnings(func):
+    # sometimes tests elevate warnings to errors
+    # -> make sure that does not happen in the assert_* functions
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            return func(*args, **kwargs)
+
+    return wrapper
 
 
 def _decode_string_data(data):
@@ -42,6 +56,7 @@ def _data_allclose_or_equiv(
         )
 
 
+@ensure_warnings
 def assert_equal(a, b, check_dtype=False):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
@@ -80,6 +95,7 @@ def assert_equal(a, b, check_dtype=False):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_identical(a, b, check_dtype=False):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
@@ -119,6 +135,7 @@ def assert_identical(a, b, check_dtype=False):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, check_dtype=False):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
@@ -215,6 +232,7 @@ def _format_message(x, y, err_msg, verbose):
     return "\n".join(parts)
 
 
+@ensure_warnings
 def assert_duckarray_allclose(
     actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
 ):
@@ -225,6 +243,7 @@ def assert_duckarray_allclose(
     assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
 
 
+@ensure_warnings
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
