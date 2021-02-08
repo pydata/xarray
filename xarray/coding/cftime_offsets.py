@@ -848,7 +848,7 @@ def cftime_range(
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - It supports many, but not all, frequencies supported by
       ``pandas.date_range``.  For example it does not currently support any of
-      the business-related, semi-monthly, or sub-second frequencies.
+      the business-related or semi-monthly frequencies.
     - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
       these can easily be written in terms of the finest common resolution,
       e.g. '61min'.
