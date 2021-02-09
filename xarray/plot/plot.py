@@ -331,7 +331,7 @@ def _plot1d(plotfunc):
     """
     Decorator for common 1d plotting logic.
 
-    Also adds the 2d plot method to class _PlotMethods
+    Also adds the 1d plot method to class _PlotMethods.
     """
     commondoc = """
     Parameters
