@@ -329,7 +329,7 @@ class _PlotMethods:
 
 def _plot1d(plotfunc):
     """
-    Decorator for common 2d plotting logic
+    Decorator for common 1d plotting logic.
 
     Also adds the 2d plot method to class _PlotMethods
     """
@@ -376,7 +376,7 @@ def _plot1d(plotfunc):
         Use xarray metadata to label axes
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only used
-        for 2D and FacetGrid plots.
+        for FacetGrid plots.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -427,7 +427,7 @@ def _plot1d(plotfunc):
         ylim=None,
         **kwargs,
     ):
-        # All 2d plots in xarray share this function signature.
+        # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
         # Handle facetgrids first
