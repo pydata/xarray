@@ -9,7 +9,7 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - dask<2021.02.0
+  - dask
   - distributed
   - h5netcdf
   - h5py=2

@@ -920,20 +920,38 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @staticmethod
     def _dask_postpersist(dsk, info, *args):
+        from dask.core import flatten
+        from dask.highlevelgraph import HighLevelGraph
+        from dask.optimization import cull
+
         variables = {}
         # postpersist is called in both dask.optimize and dask.persist
         # When persisting, we want to filter out unrelated keys for
         # each Variable's task graph.
-        is_persist = len(dsk) == len(info)
         for is_dask, k, v in info:
             if is_dask:
-                func, args2 = v
-                if is_persist:
-                    name = args2[1][0]
-                    dsk2 = {k: v for k, v in dsk.items() if k[0] == name}
+                rebuild, rebuild_args = v
+                tmp = rebuild(dsk, *rebuild_args)
+                keys = set(flatten(tmp.__dask_keys__()))
+                if isinstance(dsk, HighLevelGraph):
+                    # __dask_postpersist__() was invoked by various functions in the
+                    # dask.graph_manipulation module.
+                    #
+                    # In case of multiple layers, don't pollute a Variable's
+                    # HighLevelGraph with layers belonging exclusively to other
+                    # Variables. However, we need to prevent partial layers:
+                    # https://github.com/dask/dask/issues/7137
+                    # TODO We're wasting a lot of key-level work. We should write a fast
+                    #      variant of HighLevelGraph.cull() that works at layer level
+                    #      only.
+                    dsk2 = dsk.cull(keys)
+                    dsk3 = HighLevelGraph(
+                        {k: dsk.layers[k] for k in dsk2.layers}, dsk2.dependencies
+                    )
                 else:
-                    dsk2 = dsk
-                result = func(dsk2, *args2)
+                    # __dask_postpersist__() was invoked by dask.persist()
+                    dsk3, _ = cull(dsk, keys)
+                result = rebuild(dsk3, *rebuild_args)
             else:
                 result = v
             variables[k] = result
