@@ -1,4 +1,5 @@
 import warnings
+from datetime import timedelta
 from itertools import product
 
 import numpy as np
@@ -6,7 +7,15 @@ import pandas as pd
 import pytest
 from pandas.errors import OutOfBoundsDatetime
 
-from xarray import DataArray, Dataset, Variable, coding, conventions, decode_cf
+from xarray import (
+    DataArray,
+    Dataset,
+    Variable,
+    cftime_range,
+    coding,
+    conventions,
+    decode_cf,
+)
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
     cftime_to_nptime,
@@ -19,7 +28,15 @@ from xarray.conventions import _update_bounds_attributes, cf_encoder
 from xarray.core.common import contains_cftime_datetimes
 from xarray.testing import assert_equal
 
-from . import arm_xfail, assert_array_equal, has_cftime, requires_cftime, requires_dask
+from . import (
+    arm_xfail,
+    assert_array_equal,
+    has_cftime,
+    has_cftime_1_4_1,
+    requires_cftime,
+    requires_cftime_1_4_1,
+    requires_dask,
+)
 
 _NON_STANDARD_CALENDARS_SET = {
     "noleap",
@@ -973,8 +990,13 @@ def test_decode_ambiguous_time_warns(calendar):
 
 @pytest.mark.parametrize("encoding_units", FREQUENCIES_TO_ENCODING_UNITS.values())
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq):
-    times = pd.date_range("2000", periods=3, freq=freq)
+@pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
+def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq, date_range):
+    if not has_cftime_1_4_1 and date_range == cftime_range:
+        pytest.skip("Test requires cftime 1.4.1.")
+    if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
+        pytest.skip("Nanosecond frequency is not valid for cftime dates.")
+    times = date_range("2000", periods=3, freq=freq)
     units = f"{encoding_units} since 2000-01-01"
     encoded, _, _ = coding.times.encode_cf_datetime(times, units)
 
@@ -987,7 +1009,7 @@ def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq):
 
 
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
-def test_encode_decode_roundtrip(freq):
+def test_encode_decode_roundtrip_datetime64(freq):
     # See GH 4045. Prior to GH 4684 this test would fail for frequencies of
     # "S", "L", "U", and "N".
     initial_time = pd.date_range("1678-01-01", periods=1)
@@ -995,6 +1017,19 @@ def test_encode_decode_roundtrip(freq):
     variable = Variable(["time"], times)
     encoded = conventions.encode_cf_variable(variable)
     decoded = conventions.decode_cf_variable("time", encoded)
+    assert_equal(variable, decoded)
+
+
+@requires_cftime_1_4_1
+@pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
+def test_encode_decode_roundtrip_cftime(freq):
+    initial_time = cftime_range("0001", periods=1)
+    times = initial_time.append(
+        cftime_range("0001", periods=2, freq=freq) + timedelta(days=291000 * 365)
+    )
+    variable = Variable(["time"], times)
+    encoded = conventions.encode_cf_variable(variable)
+    decoded = conventions.decode_cf_variable("time", encoded, use_cftime=True)
     assert_equal(variable, decoded)
 
 
