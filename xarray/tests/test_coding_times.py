@@ -34,6 +34,7 @@ from . import (
     has_cftime,
     has_cftime_1_4_1,
     requires_cftime,
+    requires_cftime_1_4_1,
     requires_dask,
 )
 
@@ -991,8 +992,8 @@ def test_decode_ambiguous_time_warns(calendar):
 @pytest.mark.parametrize("freq", FREQUENCIES_TO_ENCODING_UNITS.keys())
 @pytest.mark.parametrize("date_range", [pd.date_range, cftime_range])
 def test_encode_cf_datetime_defaults_to_correct_dtype(encoding_units, freq, date_range):
-    if not has_cftime and date_range == cftime_range:
-        pytest.skip("Test requires cftime.")
+    if not has_cftime_1_4_1 and date_range == cftime_range:
+        pytest.skip("Test requires cftime 1.4.1.")
     if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
@@ -1019,10 +1020,9 @@ def test_encode_decode_roundtrip_datetime64(freq):
     assert_equal(variable, decoded)
 
 
+@requires_cftime_1_4_1
 @pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
 def test_encode_decode_roundtrip_cftime(freq):
-    if not has_cftime_1_4_1:
-        pytest.skip("Exact roundtripping requires at least cftime 1.4.1.")
     initial_time = cftime_range("0001", periods=1)
     times = initial_time.append(
         cftime_range("0001", periods=2, freq=freq) + timedelta(days=291000 * 365)
