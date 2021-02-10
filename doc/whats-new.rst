@@ -48,7 +48,9 @@ Deprecations
 
 - ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
   favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
-  For now using ``dim`` issues a ``FutureWarning``. By `Tom Nicholas <https://github.com/TomNicholas>`_.
+  For now using ``dim`` issues a ``FutureWarning``. It will be removed in
+  version 0.19.0 (:pull:`3993`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 New Features
@@ -59,6 +61,10 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
+  (:issue:`4749`, :pull:`4827`).
+  By `Justus Magin <https://github.com/keewis>`_.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
@@ -97,6 +103,8 @@ Bug fixes
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Fix time encoding bug associated with using cftime versions greater than
+  1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -127,6 +135,8 @@ Internal Changes
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
+- Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
+  the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
@@ -143,7 +153,7 @@ Deprecations
 
 - :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
   have been deprecated. Use ``DataArray.dt.isocalendar().week``
-  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_.
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
