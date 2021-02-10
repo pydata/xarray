@@ -154,7 +154,7 @@ class ScipyInterpolator(BaseInterpolator):
             yi,
             kind=self.method,
             fill_value=fill_value,
-            bounds_error=False,
+            bounds_error=bounds_error,
             assume_sorted=assume_sorted,
             copy=copy,
             **self.cons_kwargs,
