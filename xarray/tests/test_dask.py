@@ -731,11 +731,13 @@ class TestDataArrayAndDataset(DaskTestCase):
 class TestToDaskDataFrame:
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
-        x = da.from_array(np.random.randn(10), chunks=4)
+        x = np.random.randn(10)
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        ds = Dataset(
+            {"a": ("t", da.from_array(x, chunks=4)), "b": ("t", y), "t": ("t", t)}
+        )
 
         expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -758,8 +760,8 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
-        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
-        ds = Dataset({"w": (("x", "y"), w)})
+        w = np.random.randn(2, 3)
+        ds = Dataset({"w": (("x", "y"), da.from_array(w, chunks=(1, 2)))})
         ds["x"] = ("x", np.array([0, 1], np.int64))
         ds["y"] = ("y", list("abc"))
 
@@ -791,10 +793,15 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_coordinates(self):
         # Test if coordinate is also a dask array
-        x = da.from_array(np.random.randn(10), chunks=4)
-        t = da.from_array(np.arange(10) * 2, chunks=4)
+        x = np.random.randn(10)
+        t = np.arange(10) * 2
 
-        ds = Dataset({"a": ("t", x), "t": ("t", t)})
+        ds = Dataset(
+            {
+                "a": ("t", da.from_array(x, chunks=4)),
+                "t": ("t", da.from_array(t, chunks=4)),
+            }
+        )
 
         expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)

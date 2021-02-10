@@ -370,6 +370,20 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
         da.interpolate_na("time")
 
 
+@requires_dask
+@requires_scipy
+@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+def test_interpolate_dask_expected_dtype(dtype, method):
+    da = xr.DataArray(
+        data=np.array([0, 1], dtype=dtype),
+        dims=["time"],
+        coords=dict(time=np.array([0, 1])),
+    ).chunk(dict(time=2))
+    da = da.interp(time=np.array([0, 0.5, 1, 2]), method=method)
+
+    assert da.dtype == da.compute().dtype
+
+
 @requires_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")

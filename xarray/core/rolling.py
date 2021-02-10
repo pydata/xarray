@@ -41,10 +41,10 @@ class Rolling:
 
     See Also
     --------
-    Dataset.groupby
-    DataArray.groupby
-    Dataset.rolling
-    DataArray.rolling
+    xarray.Dataset.groupby
+    xarray.DataArray.groupby
+    xarray.Dataset.rolling
+    xarray.DataArray.rolling
     """
 
     __slots__ = ("obj", "window", "min_periods", "center", "dim", "keep_attrs")
@@ -209,10 +209,10 @@ class DataArrayRolling(Rolling):
 
         See Also
         --------
-        DataArray.rolling
-        DataArray.groupby
-        Dataset.rolling
-        Dataset.groupby
+        xarray.DataArray.rolling
+        xarray.DataArray.groupby
+        xarray.Dataset.rolling
+        xarray.Dataset.groupby
         """
         super().__init__(
             obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
@@ -526,10 +526,10 @@ class DatasetRolling(Rolling):
 
         See Also
         --------
-        Dataset.rolling
-        DataArray.rolling
-        Dataset.groupby
-        DataArray.groupby
+        xarray.Dataset.rolling
+        xarray.DataArray.rolling
+        xarray.Dataset.groupby
+        xarray.DataArray.groupby
         """
         super().__init__(obj, windows, min_periods, center, keep_attrs)
         if any(d not in self.obj.dims for d in self.dim):
@@ -721,7 +721,7 @@ class Coarsen:
             multiple of window size. If 'trim', the excess indexes are trimed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: mapping from coordinate name to func.
+        coord_func : mapping from coordinate name to func.
 
         Returns
         -------

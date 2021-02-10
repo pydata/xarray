@@ -30,16 +30,20 @@ def format_log_message(path):
     summary = f"Python {py_version} Test Summary Info"
     with open(path) as f:
         data = extract_short_test_summary_info(line.rstrip() for line in f)
-    message = textwrap.dedent(
-        f"""\
-        <details><summary>{summary}</summary>
+    message = (
+        textwrap.dedent(
+            """\
+            <details><summary>{summary}</summary>
 
-        ```
-        {data}
-        ```
+            ```
+            {data}
+            ```
 
-        </details>
-        """
+            </details>
+            """
+        )
+        .rstrip()
+        .format(summary=summary, data=data)
     )
 
     return message

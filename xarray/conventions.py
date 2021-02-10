@@ -576,12 +576,12 @@ def decode_cf(
         vars = obj._variables
         attrs = obj.attrs
         extra_coords = set(obj.coords)
-        file_obj = obj._file_obj
+        close = obj._close
         encoding = obj.encoding
     elif isinstance(obj, AbstractDataStore):
         vars, attrs = obj.load()
         extra_coords = set()
-        file_obj = obj
+        close = obj.close
         encoding = obj.get_encoding()
     else:
         raise TypeError("can only decode Dataset or DataStore objects")
@@ -599,7 +599,7 @@ def decode_cf(
     )
     ds = Dataset(vars, attrs=attrs)
     ds = ds.set_coords(coord_names.union(extra_coords).intersection(vars))
-    ds._file_obj = file_obj
+    ds.set_close(close)
     ds.encoding = encoding
 
     return ds
@@ -624,7 +624,7 @@ def cf_decoder(
     concat_characters : bool
         Should character arrays be concatenated to strings, for
         example: ["h", "e", "l", "l", "o"] -> "hello"
-    mask_and_scale: bool
+    mask_and_scale : bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue).
     decode_times : bool
@@ -637,7 +637,7 @@ def cf_decoder(
     decoded_attributes : dict
         A dictionary mapping from attribute name to values.
 
-    See also
+    See Also
     --------
     decode_cf_variable
     """
@@ -747,7 +747,6 @@ def cf_encoder(variables, attributes):
     This includes masking, scaling, character array handling,
     and CF-time encoding.
 
-
     Parameters
     ----------
     variables : dict
@@ -762,7 +761,7 @@ def cf_encoder(variables, attributes):
     encoded_attributes : dict
         A dictionary mapping from attribute name to value
 
-    See also
+    See Also
     --------
     decode_cf_variable, encode_cf_variable
     """
