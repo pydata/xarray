@@ -809,3 +809,12 @@
    backends.DummyFileManager.acquire
    backends.DummyFileManager.acquire_context
    backends.DummyFileManager.close
+
+   backends.common.BackendArray
+
+   core.indexing.IndexingSupport
+   core.indexing.explicit_indexing_adapter
+   core.indexing.BasicIndexer
+   core.indexing.OuterIndexer
+   core.indexing.VectorizedIndexer
+   core.indexing.LazilyOuterIndexedArray
