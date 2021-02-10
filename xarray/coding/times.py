@@ -1,6 +1,6 @@
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from functools import partial
 
@@ -34,6 +34,26 @@ _NS_PER_TIME_DELTA = {
     "h": int(1e9) * 60 * 60,
     "D": int(1e9) * 60 * 60 * 24,
 }
+
+_US_PER_TIME_DELTA = {
+    "microseconds": 1,
+    "milliseconds": 1_000,
+    "seconds": 1_000_000,
+    "minutes": 60 * 1_000_000,
+    "hours": 60 * 60 * 1_000_000,
+    "days": 24 * 60 * 60 * 1_000_000,
+}
+
+_NETCDF_TIME_UNITS_CFTIME = [
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+]
+
+_NETCDF_TIME_UNITS_NUMPY = _NETCDF_TIME_UNITS_CFTIME + ["nanoseconds"]
 
 TIME_UNITS = frozenset(
     [
@@ -225,9 +245,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 if calendar in _STANDARD_CALENDARS:
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
-        dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(float), units, calendar
-        )
+        dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
@@ -262,25 +280,33 @@ def decode_cf_timedelta(num_timedeltas, units):
     return result.reshape(num_timedeltas.shape)
 
 
+def _unit_timedelta_cftime(units):
+    return timedelta(microseconds=_US_PER_TIME_DELTA[units])
+
+
+def _unit_timedelta_numpy(units):
+    numpy_units = _netcdf_to_numpy_timeunit(units)
+    return np.timedelta64(_NS_PER_TIME_DELTA[numpy_units], "ns")
+
+
 def _infer_time_units_from_diff(unique_timedeltas):
-    # Note that the modulus operator was only implemented for np.timedelta64
-    # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
-    # supported is greater than or equal to this we will no longer need to cast
-    # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
-    # modulus operator works for TimedeltaIndex objects.
-    unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
-    for time_unit in [
-        "days",
-        "hours",
-        "minutes",
-        "seconds",
-        "milliseconds",
-        "microseconds",
-        "nanoseconds",
-    ]:
-        delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
-        unit_delta = np.timedelta64(delta_ns, "ns")
-        if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
+    if unique_timedeltas.dtype == np.dtype("O"):
+        time_units = _NETCDF_TIME_UNITS_CFTIME
+        unit_timedelta = _unit_timedelta_cftime
+        zero_timedelta = timedelta(microseconds=0)
+        timedeltas = unique_timedeltas
+    else:
+        time_units = _NETCDF_TIME_UNITS_NUMPY
+        unit_timedelta = _unit_timedelta_numpy
+        zero_timedelta = np.timedelta64(0, "ns")
+        # Note that the modulus operator was only implemented for np.timedelta64
+        # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
+        # supported is greater than or equal to this we will no longer need to cast
+        # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
+        # modulus operator works for TimedeltaIndex objects.
+        timedeltas = pd.TimedeltaIndex(unique_timedeltas)
+    for time_unit in time_units:
+        if np.all(timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 
@@ -309,10 +335,6 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
         reference_date = format_cftime_datetime(reference_date)
     unique_timedeltas = np.unique(np.diff(dates))
-    if unique_timedeltas.dtype == np.dtype("O"):
-        # Convert to np.timedelta64 objects using pandas to work around a
-        # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
-        unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
     units = _infer_time_units_from_diff(unique_timedeltas)
     return f"{units} since {reference_date}"
 
