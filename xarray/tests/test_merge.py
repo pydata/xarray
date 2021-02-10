@@ -92,6 +92,20 @@ class TestMergeFunction:
                 {"a": 1, "b": 2},
                 False,
             ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": np.array([2]), "c": np.array([3])},
+                {"b": 1, "c": np.array([3]), "d": 4},
+                {"a": 1, "c": np.array([3]), "d": 4},
+                False,
+            ),
         ],
     )
     def test_merge_arrays_attrs(
@@ -109,12 +123,83 @@ class TestMergeFunction:
             expected.attrs = expected_attrs
             assert_identical(actual, expected)
 
+    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_merge_arrays_attrs_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        data = create_test_data()
+        data1 = data.copy()
+        data1.var1.attrs = attrs1
+        data1.dim1.attrs = attrs1
+        data2 = data.copy()
+        data2.var1.attrs = attrs2
+        data2.dim1.attrs = attrs2
+
+        if expect_exception:
+            with raises_regex(MergeError, "combine_attrs"):
+                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+        else:
+            actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+            expected = data.copy()
+            expected.var1.attrs = expected_attrs
+            expected.dim1.attrs = expected_attrs
+
+            assert_identical(actual, expected)
+
     def test_merge_attrs_override_copy(self):
         ds1 = xr.Dataset(attrs={"x": 0})
         ds2 = xr.Dataset(attrs={"x": 1})
         ds3 = xr.merge([ds1, ds2], combine_attrs="override")
         ds3.attrs["x"] = 2
         assert ds1.x == 0
+
+    def test_merge_attrs_drop_conflicts(self):
+        ds1 = xr.Dataset(attrs={"a": 0, "b": 0, "c": 0})
+        ds2 = xr.Dataset(attrs={"b": 0, "c": 1, "d": 0})
+        ds3 = xr.Dataset(attrs={"a": 0, "b": 1, "c": 0, "e": 0})
+
+        actual = xr.merge([ds1, ds2, ds3], combine_attrs="drop_conflicts")
+        expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
+        assert_identical(actual, expected)
 
     def test_merge_dicts_simple(self):
         actual = xr.merge([{"foo": 0}, {"bar": "one"}, {"baz": 3.5}])
