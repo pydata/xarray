@@ -54,8 +54,16 @@ Deprecations
 
 New Features
 ~~~~~~~~~~~~
+
 - ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
-  By `Justus Magin <https://github.com/keewis>`_.  
+  By `Justus Magin <https://github.com/keewis>`_.
+- Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
+  roundtripping of ``cftime.datetime`` objects (:pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
+  millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies
+  for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Significantly higher ``unstack`` performance on numpy-backed arrays which
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
