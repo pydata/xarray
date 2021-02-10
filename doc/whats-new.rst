@@ -145,7 +145,7 @@ Internal Changes
   the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_
-  
+
 .. _whats-new.0.16.2:
 
 v0.16.2 (30 Nov 2020)
