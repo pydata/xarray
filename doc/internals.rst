@@ -611,7 +611,7 @@ Example:
 **OUTER_1VECTOR**
 
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at least one
-list. The behaviour shall be the same of ``OUTER`` indexing.
+list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 **VECTORIZED**
 
