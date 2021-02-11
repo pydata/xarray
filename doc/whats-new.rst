@@ -39,10 +39,8 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
-- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_
 - Variables referred to in attributes like ``bounds`` and ``grid_mapping``
-  are now automatically set as coordinate variables. These attributes
+  are can be set as coordinate variables. These attributes
   are moved to :py:attr:`DataArray.encoding` from
   :py:attr:`DataArray.attrs`. This behaviour is controlled by the
   ``decode_coords`` kwarg to :py:func:`open_dataset` and
