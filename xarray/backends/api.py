@@ -354,12 +354,13 @@ def open_dataset(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool or str, optional
+    decode_coords : bool or {"coordinates", "all"}, optional
         Controls which variables are set as coordinate variables:
-        * ``"coordinates"`` or ``True``: Set variables reffered to in the
-          ``'coordinates'`` `attribute of the datasets or individual variables
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
           as coordinate variables.
-        * ``"all"``: Set variables refferd to in  'grid_mapping', 'bounds' and
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
@@ -617,12 +618,13 @@ def open_dataarray(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool or str, optional
+    decode_coords : bool or {"coordinates", "all"}, optional
         Controls which variables are set as coordinate variables:
-        * ``"coordinates"`` or ``True``: Set variables reffered to in the
-          ``'coordinates'`` `attribute of the datasets or individual variables
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
           as coordinate variables.
-        * ``"all"``: Set variables refferd to in  'grid_mapping', 'bounds' and
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
