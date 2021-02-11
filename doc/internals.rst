@@ -491,9 +491,8 @@ Where:
 
 - :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a class
   provided by Xarray that manages the lazy loading. Note, that
-  :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` supports `basic`
-  and `outer` indexing. While `outer` is supported by
-  :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`. For more details
+  it supports `basic` and `outer` indexing. While `vectorized` indexing is supported by
+  :py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray`. For more details
   see the following sections.
 - ``YourBackendArray`` shall be implemented by the backend and shall inherit
   from :py:class:`~xarray.backends.common.BackendArray`.
