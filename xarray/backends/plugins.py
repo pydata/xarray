@@ -8,7 +8,7 @@ import pkg_resources
 
 from .common import BACKEND_ENTRYPOINTS
 
-standard_backends_order = ["netcdf4", "h5netcdf", "scipy"]
+STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
 def remove_duplicates(pkg_entrypoints):
@@ -69,7 +69,7 @@ def set_missing_parameters(backend_entrypoints):
 
 def sort_backends(backend_entrypoints):
     ordered_backends_entrypoints = {}
-    for be_name in standard_backends_order:
+    for be_name in STANDARD_BACKENDS_ORDER:
         if backend_entrypoints.get(be_name, None) is not None:
             ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
     ordered_backends_entrypoints.update(

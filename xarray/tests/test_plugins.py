@@ -136,7 +136,7 @@ def test_build_engines_sorted():
     backend_entrypoints = list(backend_entrypoints)
 
     indices = []
-    for be in plugins.standard_backends_order:
+    for be in plugins.STANDARD_BACKENDS_ORDER:
         try:
             index = backend_entrypoints.index(be)
             backend_entrypoints.pop(index)
