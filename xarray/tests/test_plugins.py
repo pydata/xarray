@@ -101,7 +101,7 @@ def test_set_missing_parameters_raise_error():
 @mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=dummy_cfgrib))
 def test_build_engines():
     dummy_cfgrib_pkg_entrypoint = pkg_resources.EntryPoint.parse(
-        "cfgrib = xarray.tests.test_plugins:backend_1",
+        "cfgrib = xarray.tests.test_plugins:backend_1"
     )
     backend_entrypoints = plugins.build_engines([dummy_cfgrib_pkg_entrypoint])
     assert backend_entrypoints["cfgrib"] is dummy_cfgrib
@@ -114,8 +114,12 @@ def test_build_engines():
 @mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=dummy_cfgrib))
 def test_build_engines_sorted():
     dummy_pkg_entrypoints = [
-        pkg_resources.EntryPoint.parse("dummy2 = xarray.tests.test_plugins:backend_1",),
-        pkg_resources.EntryPoint.parse("dummy1 = xarray.tests.test_plugins:backend_1",)
+        pkg_resources.EntryPoint.parse(
+            "dummy2 = xarray.tests.test_plugins:backend_1",
+        ),
+        pkg_resources.EntryPoint.parse(
+            "dummy1 = xarray.tests.test_plugins:backend_1",
+        ),
     ]
     backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
     backend_entrypoints = list(backend_entrypoints)
@@ -128,5 +132,3 @@ def test_build_engines_sorted():
 
     assert set(indices) < {0, -1}
     assert list(backend_entrypoints) == sorted(backend_entrypoints)
-
-

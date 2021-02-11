@@ -8,7 +8,6 @@ import pkg_resources
 
 from .common import BACKEND_ENTRYPOINTS
 
-
 standard_backends_order = ["netcdf4", "h5netcdf", "scipy"]
 
 
@@ -16,9 +15,7 @@ def remove_duplicates(pkg_entrypoints):
 
     # sort and group entrypoints by name
     pkg_entrypoints = sorted(pkg_entrypoints, key=lambda ep: ep.name)
-    pkg_entrypoints_grouped = itertools.groupby(
-        pkg_entrypoints, key=lambda ep: ep.name
-    )
+    pkg_entrypoints_grouped = itertools.groupby(pkg_entrypoints, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
     unique_pkg_entrypoints = []
     for name, matches in pkg_entrypoints_grouped:
@@ -67,7 +64,7 @@ def set_missing_parameters(engines):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def merge_backends_dict(backend_entrypoints,external_backend_entrypoints):
+def merge_backends_dict(backend_entrypoints, external_backend_entrypoints):
     backend_entrypoints = backend_entrypoints.copy()
     backend_entrypoints.update(external_backend_entrypoints)
     ordered_backends_entrypoints = {}
@@ -83,7 +80,9 @@ def merge_backends_dict(backend_entrypoints,external_backend_entrypoints):
 def build_engines(pkg_entrypoints):
     pkg_entrypoints = remove_duplicates(pkg_entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
-    backend_entrypoints = merge_backends_dict(BACKEND_ENTRYPOINTS, external_backend_entrypoints)
+    backend_entrypoints = merge_backends_dict(
+        BACKEND_ENTRYPOINTS, external_backend_entrypoints
+    )
     set_missing_parameters(backend_entrypoints)
     return backend_entrypoints
 
