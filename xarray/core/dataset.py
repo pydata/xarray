@@ -866,13 +866,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         import dask
 
         info = [
-            (True, k, v.__dask_postcompute__())
+            (k, None) + v.__dask_postcompute__()
             if dask.is_dask_collection(v)
-            else (False, k, v)
+            else (k, v, None, None)
             for k, v in self._variables.items()
         ]
-        args = (
-            info,
+        construct_direct_args = (
             self._coord_names,
             self._dims,
             self._attrs,
@@ -880,19 +879,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postcompute, args
+        return self._dask_postcompute, (info, construct_direct_args)
 
     def __dask_postpersist__(self):
         import dask
 
         info = [
-            (True, k, v.__dask_postpersist__())
+            (k, None, v.__dask_keys__()) + v.__dask_postpersist__()
             if dask.is_dask_collection(v)
-            else (False, k, v)
+            else (k, v, None, None, None)
             for k, v in self._variables.items()
         ]
-        args = (
-            info,
+        construct_direct_args = (
             self._coord_names,
             self._dims,
             self._attrs,
@@ -900,63 +898,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postpersist, args
+        return self._dask_postpersist, (info, construct_direct_args)
 
     @staticmethod
-    def _dask_postcompute(results, info, *args):
+    def _dask_postcompute(results, info, construct_direct_args):
         variables = {}
-        results2 = list(results[::-1])
-        for is_dask, k, v in info:
-            if is_dask:
-                func, args2 = v
-                r = results2.pop()
-                result = func(r, *args2)
+        results_iter = iter(results)
+        for k, v, rebuild, rebuild_args in info:
+            if v is None:
+                variables[k] = rebuild(next(results_iter), *rebuild_args)
             else:
-                result = v
-            variables[k] = result
+                variables[k] = v
 
-        final = Dataset._construct_direct(variables, *args)
+        final = Dataset._construct_direct(variables, *construct_direct_args)
         return final
 
     @staticmethod
-    def _dask_postpersist(dsk, info, *args):
-        from dask.core import flatten
-        from dask.highlevelgraph import HighLevelGraph
+    def _dask_postpersist(dsk, info, construct_direct_args):
         from dask.optimization import cull
 
         variables = {}
         # postpersist is called in both dask.optimize and dask.persist
         # When persisting, we want to filter out unrelated keys for
         # each Variable's task graph.
-        for is_dask, k, v in info:
-            if is_dask:
-                rebuild, rebuild_args = v
-                tmp = rebuild(dsk, *rebuild_args)
-                keys = set(flatten(tmp.__dask_keys__()))
-                if isinstance(dsk, HighLevelGraph):
-                    # __dask_postpersist__() was invoked by various functions in the
-                    # dask.graph_manipulation module.
-                    #
-                    # In case of multiple layers, don't pollute a Variable's
-                    # HighLevelGraph with layers belonging exclusively to other
-                    # Variables. However, we need to prevent partial layers:
-                    # https://github.com/dask/dask/issues/7137
-                    # TODO We're wasting a lot of key-level work. We should write a fast
-                    #      variant of HighLevelGraph.cull() that works at layer level
-                    #      only.
-                    dsk2 = dsk.cull(keys)
-                    dsk3 = HighLevelGraph(
-                        {k: dsk.layers[k] for k in dsk2.layers}, dsk2.dependencies
-                    )
-                else:
-                    # __dask_postpersist__() was invoked by dask.persist()
-                    dsk3, _ = cull(dsk, keys)
-                result = rebuild(dsk3, *rebuild_args)
+        for k, v, dask_keys, rebuild, rebuild_args in info:
+            if v is None:
+                dsk2, _ = cull(dsk, dask_keys)
+                variables[k] = rebuild(dsk2, *rebuild_args)
             else:
-                result = v
-            variables[k] = result
+                variables[k] = v
 
-        return Dataset._construct_direct(variables, *args)
+        return Dataset._construct_direct(variables, *construct_direct_args)
 
     def compute(self, **kwargs) -> "Dataset":
         """Manually trigger loading and/or computation of this dataset's data
