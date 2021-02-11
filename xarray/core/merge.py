@@ -498,7 +498,9 @@ def merge_attrs(variable_attrs, combine_attrs):
         # no attributes to merge
         return None
 
-    if combine_attrs == "drop":
+    if callable(combine_attrs):
+        return combine_attrs(variable_attrs)
+    elif combine_attrs == "drop":
         return {}
     elif combine_attrs == "override":
         return dict(variable_attrs[0])
