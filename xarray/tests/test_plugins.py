@@ -111,6 +111,7 @@ def test_build_engines():
         "cfgrib = xarray.tests.test_plugins:backend_1"
     )
     backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
+
     assert isinstance(backend_entrypoints["cfgrib"], DummyBackendEntrypoint1)
     assert backend_entrypoints["cfgrib"].open_dataset_parameters == (
         "filename_or_obj",
@@ -136,9 +137,12 @@ def test_build_engines_sorted():
 
     indices = []
     for be in plugins.standard_backends_order:
-        index = backend_entrypoints.index(be)
-        backend_entrypoints.pop(index)
-        indices.append(index)
+        try:
+            index = backend_entrypoints.index(be)
+            backend_entrypoints.pop(index)
+            indices.append(index)
+        except ValueError:
+            pass
 
     assert set(indices) < {0, -1}
     assert list(backend_entrypoints) == sorted(backend_entrypoints)
