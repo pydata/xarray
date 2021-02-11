@@ -866,13 +866,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         import dask
 
         info = [
-            (True, k, v.__dask_postcompute__())
+            (k, None) + v.__dask_postcompute__()
             if dask.is_dask_collection(v)
-            else (False, k, v)
+            else (k, v, None, None)
             for k, v in self._variables.items()
         ]
-        args = (
-            info,
+        construct_direct_args = (
             self._coord_names,
             self._dims,
             self._attrs,
@@ -880,19 +879,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postcompute, args
+        return self._dask_postcompute, (info, construct_direct_args)
 
     def __dask_postpersist__(self):
         import dask
 
         info = [
-            (True, k, v.__dask_postpersist__())
+            (k, None, v.__dask_keys__()) + v.__dask_postpersist__()
             if dask.is_dask_collection(v)
-            else (False, k, v)
+            else (k, v, None, None, None)
             for k, v in self._variables.items()
         ]
-        args = (
-            info,
+        construct_direct_args = (
             self._coord_names,
             self._dims,
             self._attrs,
@@ -900,45 +898,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postpersist, args
+        return self._dask_postpersist, (info, construct_direct_args)
 
     @staticmethod
-    def _dask_postcompute(results, info, *args):
+    def _dask_postcompute(results, info, construct_direct_args):
         variables = {}
-        results2 = list(results[::-1])
-        for is_dask, k, v in info:
-            if is_dask:
-                func, args2 = v
-                r = results2.pop()
-                result = func(r, *args2)
+        results_iter = iter(results)
+        for k, v, rebuild, rebuild_args in info:
+            if v is None:
+                variables[k] = rebuild(next(results_iter), *rebuild_args)
             else:
-                result = v
-            variables[k] = result
+                variables[k] = v
 
-        final = Dataset._construct_direct(variables, *args)
+        final = Dataset._construct_direct(variables, *construct_direct_args)
         return final
 
     @staticmethod
-    def _dask_postpersist(dsk, info, *args):
+    def _dask_postpersist(dsk, info, construct_direct_args):
+        from dask.optimization import cull
+
         variables = {}
         # postpersist is called in both dask.optimize and dask.persist
         # When persisting, we want to filter out unrelated keys for
         # each Variable's task graph.
-        is_persist = len(dsk) == len(info)
-        for is_dask, k, v in info:
-            if is_dask:
-                func, args2 = v
-                if is_persist:
-                    name = args2[1][0]
-                    dsk2 = {k: v for k, v in dsk.items() if k[0] == name}
-                else:
-                    dsk2 = dsk
-                result = func(dsk2, *args2)
+        for k, v, dask_keys, rebuild, rebuild_args in info:
+            if v is None:
+                dsk2, _ = cull(dsk, dask_keys)
+                variables[k] = rebuild(dsk2, *rebuild_args)
             else:
-                result = v
-            variables[k] = result
+                variables[k] = v
 
-        return Dataset._construct_direct(variables, *args)
+        return Dataset._construct_direct(variables, *construct_direct_args)
 
     def compute(self, **kwargs) -> "Dataset":
         """Manually trigger loading and/or computation of this dataset's data
@@ -3160,7 +3150,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
-        **dim_kwargs : {existing_dim: new_dim, ...}, optional
+        **dims_kwargs : {existing_dim: new_dim, ...}, optional
             The keyword arguments form of ``dims_dict``.
             One of dims_dict or dims_kwargs must be provided.
 
@@ -5956,9 +5946,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coord: hashable, or a sequence of hashable
+        coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if datetime coordinate is used.
 
@@ -5969,7 +5959,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See also
         --------
         DataArray.integrate
-        numpy.trapz: corresponding numpy function
+        numpy.trapz : corresponding numpy function
 
         Examples
         --------
