@@ -54,12 +54,23 @@ Deprecations
 
 New Features
 ~~~~~~~~~~~~
+- Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
+  roundtripping of ``cftime.datetime`` objects (:pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
+  millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies
+  for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Significantly higher ``unstack`` performance on numpy-backed arrays which
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+- add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
+  (:issue:`4749`, :pull:`4827`).
+  By `Justus Magin <https://github.com/keewis>`_.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
@@ -98,6 +109,8 @@ Bug fixes
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
+  By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
