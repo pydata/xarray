@@ -866,3 +866,18 @@ def test_interpolate_chunk_advanced(method):
     z = z.chunk(3)
     actual = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp1d_bounds_error():
+    """Ensure exception on bounds error is raised if requested"""
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    with pytest.raises(ValueError):
+        da.interp(time=3.5, kwargs=dict(bounds_error=True))
+
+    # default is to fill with nans, so this should pass
+    da.interp(time=3.5)
