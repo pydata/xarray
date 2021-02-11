@@ -167,6 +167,13 @@ class TestMergeFunction:
                 {"a": 1, "c": 3, "d": 4},
                 False,
             ),
+            (
+                lambda attrs: attrs[1],
+                {"a": 1, "b": 2, "c": 3},
+                {"a": 4, "b": 3, "c": 1},
+                {"a": 4, "b": 3, "c": 1},
+                False,
+            ),
         ],
     )
     def test_merge_arrays_attrs_variables(
