@@ -594,9 +594,7 @@ Example:
 
 The ``OUTER`` indexing shall support number, slices and in addition it shall
 support also lists of integers. The the outer indexing is equivalent to
-combining multiple input list with ``itertools.product()``.
-
-Example:
+combining multiple input list with ``itertools.product()``:
 
 .. code-block:: python
 
@@ -617,9 +615,8 @@ list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 ``VECTORIZED`` shall support integers, slices and lists of integers.
 The indexing with lists in this case is equivalent to combining multiple
-input list with zip().
-
-Example:
+input list with ``zip()``. This is the same semantic used by
+`NumPy <https://numpy.org/>`__ for lists:
 
 .. code-block:: python
 
