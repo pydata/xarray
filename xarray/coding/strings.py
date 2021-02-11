@@ -191,11 +191,8 @@ def _numpy_char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible."""
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order="C")
-    shape = arr.shape
-    dtype = "S" + str(shape[-1])
-    if arr.dtype.kind == "O":
-        arr = arr.astype("S1")
-    return arr.view(dtype).reshape(shape[:-1])
+    dtype = "S" + str(arr.shape[-1])
+    return arr.view(dtype).reshape(arr.shape[:-1])
 
 
 class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
