@@ -818,3 +818,17 @@
    core.indexing.OuterIndexer
    core.indexing.VectorizedIndexer
    core.indexing.LazilyOuterIndexedArray
+   core.indexing.LazilyVectorizedIndexedArray
+
+   conventions.decode_cf_variables
+
+   coding.variables.UnsignedIntegerCoder
+   coding.variables.CFMaskCoder
+   coding.variables.CFScaleOffsetCoder
+
+   coding.strings.CharacterArrayCoder
+   coding.strings.EncodedStringCoder
+
+   coding.times.CFTimedeltaCoder
+   coding.times.CFDatetimeCoder
+
