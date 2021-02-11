@@ -3939,14 +3939,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
-        combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                        default: "drop"
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                        "override"}, default: "drop"
             String indicating how to combine attrs of the objects being merged:
 
             - "drop": empty attrs on returned Dataset.
             - "identical": all attrs must be the same on every object.
             - "no_conflicts": attrs from all objects are combined, any that have
               the same name must also have the same value.
+            - "drop_conflicts": attrs from all objects are combined, any that have
+              the same name but different values are dropped.
             - "override": skip comparing and copy attrs from the first dataset to
               the result.
 
