@@ -158,7 +158,7 @@ class H5NetCDFStore(WritableCFDataStore):
                     "h5netcdf backend keyword argument 'phony_dims' needs "
                     "h5netcdf >= 0.8.0."
                 )
-        if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.9.0") and LooseVersion(
+        if LooseVersion(h5netcdf.__version__) >= LooseVersion("0.10.0") and LooseVersion(
             h5netcdf.core.h5py.__version__
         ) >= LooseVersion("3.0.0"):
             kwargs["decode_strings"] = decode_strings
