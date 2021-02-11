@@ -262,12 +262,11 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 .. code-block:: python
 
     class YourBackendEntrypoint(BackendEntrypoint):
-
         def open_dataset(
             self,
             filename_or_obj,
             decode_coords=None,
-            ...
+            # other backend specific keyword arguments
         ):
             ...
             return ds
@@ -400,9 +399,7 @@ In the following an example on how to use the coders ``decode`` method:
 .. ipython:: python
 
     var = xr.Variable(
-        dims=("x",),
-        data=np.arange(10.0),
-        attrs={"scale_factor": 10, "add_offset": 2}
+        dims=("x",), data=np.arange(10.0), attrs={"scale_factor": 10, "add_offset": 2}
     )
     var
 
@@ -455,15 +452,16 @@ You can declare the entrypoint in ``setup.py`` using the following syntax:
 .. code-block::
 
     setuptools.setup(
-        ...
-         entry_points={
-            'xarray.backends': ['engine_name=your_package.your_module:your_backendentrypoint'],
+        entry_points={
+            "xarray.backends": [
+                "engine_name=your_package.your_module:your_backendentrypoint"
+            ],
         },
     )
 
 in ``setup.cfg``:
 
-.. code-block::
+.. code-block:: cfg
 
     [options.entry_points]
     xarray.backends =
@@ -528,7 +526,6 @@ This is an example ``BackendArray`` subclass implementation:
 .. code-block:: python
 
     class YourBackendArray(BackendArray):
-
         def __init__(self, ...):
             self.shape = ...
             self.dtype = ...
@@ -536,7 +533,10 @@ This is an example ``BackendArray`` subclass implementation:
 
         def __getitem__(self, key):
             return indexing.explicit_indexing_adapter(
-                key, self.shape, indexing.IndexingSupport.BASIC, self._raw_indexing_method
+                key,
+                self.shape,
+                indexing.IndexingSupport.BASIC,
+                self._raw_indexing_method,
             )
 
         def _raw_indexing_method(self, key):
@@ -579,21 +579,17 @@ Example:
 
 .. code-block:: python
 
-     # () shall return the full array
-    >>> backend_array._raw_indexing_method(())
-    array([[ 0,  1,  2,  3],
-           [ 4,  5,  6,  7],
-           [ 8,  9, 10, 11]])
+    # () shall return the full array
+    >> backend_array._raw_indexing_method(())
+    array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     # shall support integers
-    >>> backend_array._raw_indexing_method(1, 1)
+    >> backend_array._raw_indexing_method(1, 1)
     5
 
-     # shall support slices
-    >>> backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
-    array([[ 2,  3],
-           [ 6,  7],
-           [10, 11]])
+    # shall support slices
+    >> backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+    array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
 
@@ -605,12 +601,11 @@ Example:
 
 .. code-block:: python
 
-    >>> backend_array._raw_indexing_method([0, 1], [0, 1, 2])
-    array([[ 0,  1,  2],
-           [ 4,  5,  6]])
+    >> backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+    array([[0, 1, 2], [4, 5, 6]])
 
     # shall support integers
-    >>> backend_array._raw_indexing_method(1, 1)
+    >> backend_array._raw_indexing_method(1, 1)
     5
 
 
@@ -621,13 +616,16 @@ list. The behaviour shall be the same of ``OUTER`` indexing.
 
 **VECTORIZED**
 
-``VECTORIZED`` shall take in input lists of integers. This
-indexing is equivalent to combining multiple input list with zip().
+``VECTORIZED`` shall support integers, slices and lists of integers.
+The indexing with lists in this case is equivalent to combining multiple
+input list with zip().
+
+Example:
 
 .. code-block:: python
 
     >>> backend_array._raw_indexing_method([0, 1, 2], [0, 1, 2])
-    array([ 0,  5,  10])
+    array([0, 5, 10])
 
 Note, if your need to use this type of indexing support, you shall use
 :py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray` instead of
@@ -660,4 +658,3 @@ In the second case Xarray accommodates ideal chunk sizes, preserving if
 possible the "preferred_chunks". The ideal chunk size is computed using
 :py:func:`dask.core.normalize_chunks`, setting
 ``previous_chunks = preferred_chunks``.
-
