@@ -526,7 +526,10 @@ This is an example ``BackendArray`` subclass implementation:
 .. code-block:: python
 
     class YourBackendArray(BackendArray):
-        def __init__(self, ...):
+        def __init__(
+            self,
+            # other backend specific keyword arguments
+        ):
             self.shape = ...
             self.dtype = ...
             self.lock = ...
@@ -580,7 +583,7 @@ Example:
 .. code-block:: python
 
     # () shall return the full array
-    >> backend_array._raw_indexing_method(())
+    >>> backend_array._raw_indexing_method(())
     array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
     # shall support integers
@@ -588,7 +591,7 @@ Example:
     5
 
     # shall support slices
-    >> backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+    >>> backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
     array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
@@ -601,11 +604,11 @@ Example:
 
 .. code-block:: python
 
-    >> backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+    >>> backend_array._raw_indexing_method([0, 1], [0, 1, 2])
     array([[0, 1, 2], [4, 5, 6]])
 
     # shall support integers
-    >> backend_array._raw_indexing_method(1, 1)
+    >>> backend_array._raw_indexing_method(1, 1)
     5
 
 
