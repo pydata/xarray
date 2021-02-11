@@ -387,12 +387,12 @@ The standard coders implemented in Xarray are:
 - :py:class:`xarray.coding.times.CFTimedeltaCoder()`
 - :py:class:`xarray.coding.times.CFDatetimeCoder()`
 
-Xarray coders have all the same interface. They have two methods: ``decode``
-and ``encode``. The method ``decode`` applies a transformation from on-disk
-format to Xarray format using the :py:class:`~xarray.Variable` attributes.
-The attributes used for the encoding are dropped and saved inside the
-``Variable.encoding``. The method ``encode`` perform the
-inverse transformation using the ``encoding`` instead of the attributes.
+Xarray coders all have the same interface. They have two methods: ``decode``
+and ``encode``. The method ``decode`` takes a ``Variable`` in on-disk
+format and returns a ``Variable`` in Xarray format. Variable
+attributes no more applicable after the decoding, are dropped and stored in the
+``Variable.encoding`` to make them available to the ``encode`` method, which
+performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
 
@@ -490,11 +490,11 @@ See the example below:
 Where:
 
 - :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a class
-  provided by Xarray that manages the lazy loading. Note, if your backend
-  support only vectorized index, you must use
-  :py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray` instead of
-  :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` (for more details
-  on indexing support see the following sections)
+  provided by Xarray that manages the lazy loading. Note, that
+  :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` supports `basic`
+  and `outer` indexing. While `outer` is supported by
+  :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`. For more details
+  see the following sections.
 - ``YourBackendArray`` shall be implemented by the backend and shall inherit
   from :py:class:`~xarray.backends.common.BackendArray`.
 
