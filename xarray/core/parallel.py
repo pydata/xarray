@@ -183,7 +183,6 @@ def map_blocks(
         This function must return either a single DataArray or a single Dataset.
 
         This function cannot add a new chunked dimension.
-
     obj : DataArray, Dataset
         Passed to the function as its first argument, one block at a time.
     args : sequence
@@ -201,7 +200,6 @@ def map_blocks(
         When provided, ``attrs`` on variables in `template` are copied over to the result. Any
         ``attrs`` set by ``func`` will be ignored.
 
-
     Returns
     -------
     A single DataArray or Dataset with dask backend, reassembled from the outputs of the
@@ -218,12 +216,11 @@ def map_blocks(
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
     xarray.DataArray.map_blocks
 
     Examples
     --------
-
     Calculate an anomaly from climatology using ``.groupby()``. Using
     ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
     its indices, and its methods like ``.groupby()``.
