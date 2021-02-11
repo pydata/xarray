@@ -354,9 +354,13 @@ def open_dataset(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        Use the 'coordinates', 'grid_mapping', 'bounds' and other attributes
-        on variables (or the dataset itself) to identify coordinate variables.
+    decode_coords : bool or str, optional
+        Controls which variables are set as coordinate variables:
+        * ``"coordinates"`` or ``True``: Set variables reffered to in the
+          ``'coordinates'`` `attribute of the datasets or individual variables
+          as coordinate variables.
+        * ``"all"``: Set variables refferd to in  'grid_mapping', 'bounds' and
+          other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
@@ -613,9 +617,13 @@ def open_dataarray(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        Use the 'coordinates', 'grid_mapping', 'bounds' and other attributes
-        on variables (or the dataset itself) to identify coordinate variables.
+    decode_coords : bool or str, optional
+        Controls which variables are set as coordinate variables:
+        * ``"coordinates"`` or ``True``: Set variables reffered to in the
+          ``'coordinates'`` `attribute of the datasets or individual variables
+          as coordinate variables.
+        * ``"all"``: Set variables refferd to in  'grid_mapping', 'bounds' and
+          other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
         Engine to use when reading files. If not provided, the default engine

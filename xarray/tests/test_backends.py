@@ -924,8 +924,18 @@ class CFEncodedBase(DatasetIOBase):
 
     def test_coordinate_variables_after_dataset_roundtrip(self):
         original = self._create_cf_dataset()
-        with self.roundtrip(original) as actual:
+        with self.roundtrip(original, open_kwargs={"decode_coords": "all"}) as actual:
             assert_identical(actual, original)
+
+        with self.roundtrip(original) as actual:
+            expected = original.reset_coords(
+                ["latitude_bnds", "longitude_bnds", "areas", "P0", "latlon"]
+            )
+            # equal checks that coords and data_vars are equal which
+            # should be enough
+            # identical would require resetting a number of attributes
+            # skip that.
+            assert_equal(actual, expected)
 
     def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(self):
         original = self._create_cf_dataset()
@@ -944,7 +954,9 @@ class CFEncodedBase(DatasetIOBase):
                 r"\['l(at|ong)itude_bnds'\]"
             ),
         ):
-            with self.roundtrip(original["variable"].to_dataset()) as actual:
+            with self.roundtrip(
+                original["variable"].to_dataset(), open_kwargs={"decode_coords": "all"}
+            ) as actual:
                 assert_identical(actual, original["variable"].to_dataset())
 
     @requires_iris
