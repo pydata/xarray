@@ -66,7 +66,7 @@ New Features
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
   By `Justus Magin <https://github.com/keewis>`_.
