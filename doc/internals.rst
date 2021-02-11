@@ -490,10 +490,7 @@ See the example below:
 Where:
 
 - :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a class
-  provided by Xarray that manages the lazy loading. Note, that
-  it supports `basic` and `outer` indexing. While `vectorized` indexing is supported by
-  :py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray`. For more details
-  see the following sections.
+  provided by Xarray that manages the lazy loading.
 - ``YourBackendArray`` shall be implemented by the backend and shall inherit
   from :py:class:`~xarray.backends.common.BackendArray`.
 
@@ -628,10 +625,6 @@ Example:
 
     >>> backend_array._raw_indexing_method([0, 1, 2], [0, 1, 2])
     array([0, 5, 10])
-
-Note, if your need to use this type of indexing support, you shall use
-:py:class:`~xarray.core.indexing.LazilyVectorizedIndexedArray` instead of
-:py:class:`~xarray.core.indexing.LazilyOuterIndexedArray`.
 
 
 .. _RST dask:
