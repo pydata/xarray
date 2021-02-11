@@ -19,7 +19,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .indexing import get_indexer_nd
-from .utils import is_dict_like, is_full_slice
+from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
@@ -135,7 +135,6 @@ def align(
 
     Examples
     --------
-
     >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[25, 35], [10, 24]],
@@ -278,10 +277,12 @@ def align(
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
+    all_coords = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)
     for obj in objects:
         for dim in obj.dims:
             if dim not in exclude:
+                all_coords[dim].append(obj.coords[dim])
                 try:
                     index = obj.indexes[dim]
                 except KeyError:
@@ -306,7 +307,7 @@ def align(
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = index
+                joined_indexes[dim] = indexes[dim]
         else:
             if (
                 any(
@@ -318,9 +319,11 @@ def align(
                 if join == "exact":
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
                 index = joiner(matching_indexes)
+                # make sure str coords are not cast to object
+                index = maybe_coerce_to_str(index, all_coords[dim])
                 joined_indexes[dim] = index
             else:
-                index = matching_indexes[0]
+                index = all_coords[dim][0]
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
@@ -528,7 +531,7 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
-    sparse: bool, optional
+    sparse : bool, optional
         Use an sparse-array
 
     Returns
@@ -583,7 +586,7 @@ def reindex_variables(
             args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
-        reindexed[dim] = IndexVariable((dim,), target, *args)
+        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:
@@ -700,7 +703,6 @@ def broadcast(*args, exclude=None):
 
     Examples
     --------
-
     Broadcast two data arrays against one another to fill out their dimensions:
 
     >>> a = xr.DataArray([1, 2, 3], dims="x")

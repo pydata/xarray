@@ -924,11 +924,11 @@ def test_vectorize_dask_dtype_meta():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[int],
-        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=np.float)),
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
     assert_identical(expected, actual)
-    assert np.float == actual.dtype
+    assert float == actual.dtype
 
 
 def pandas_median_add(x, y):
