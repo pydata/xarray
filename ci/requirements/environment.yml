@@ -12,7 +12,7 @@ dependencies:
   - dask<2021.02.0
   - distributed
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
   - iris
