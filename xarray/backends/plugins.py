@@ -67,9 +67,7 @@ def set_missing_parameters(backend_entrypoints):
             backend.open_dataset_parameters = detect_parameters(open_dataset)
 
 
-def merge_backends_dict(backend_entrypoints, external_backend_entrypoints):
-    backend_entrypoints = backend_entrypoints.copy()
-    backend_entrypoints.update(external_backend_entrypoints)
+def sort_backends(backend_entrypoints):
     ordered_backends_entrypoints = {}
     for be_name in standard_backends_order:
         if backend_entrypoints.get(be_name, None) is not None:
@@ -81,11 +79,11 @@ def merge_backends_dict(backend_entrypoints, external_backend_entrypoints):
 
 
 def build_engines(pkg_entrypoints):
+    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
     pkg_entrypoints = remove_duplicates(pkg_entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
-    backend_entrypoints = merge_backends_dict(
-        BACKEND_ENTRYPOINTS, external_backend_entrypoints
-    )
+    backend_entrypoints.update(external_backend_entrypoints)
+    backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
     engines = {}
     for name, backend in backend_entrypoints.items():

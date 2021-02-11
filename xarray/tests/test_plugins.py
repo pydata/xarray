@@ -118,7 +118,10 @@ def test_build_engines():
     )
 
 
-@mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=dummy_cfgrib))
+@mock.patch(
+    "pkg_resources.EntryPoint.load",
+    mock.MagicMock(return_value=DummyBackendEntrypoint1),
+)
 def test_build_engines_sorted():
     dummy_pkg_entrypoints = [
         pkg_resources.EntryPoint.parse(
