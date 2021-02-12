@@ -5,8 +5,8 @@ from typing import Any, Callable, Dict
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
+from .arithmetic import CoarsenArithmetic
 from .dask_array_ops import dask_rolling_wrapper
-from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
 
@@ -685,7 +685,7 @@ class DatasetRolling(Rolling):
         )
 
 
-class Coarsen:
+class Coarsen(CoarsenArithmetic):
     """A object that implements the coarsen.
 
     See Also
@@ -844,7 +844,3 @@ class DatasetCoarsen(Coarsen):
             return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
-
-
-inject_reduce_methods(DataArrayCoarsen)
-inject_reduce_methods(DatasetCoarsen)

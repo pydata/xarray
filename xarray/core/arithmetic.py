@@ -1,11 +1,34 @@
 """Base classes implementing arithmetic for xarray objects."""
 import numbers
+from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .ops import (
+    IncludeAllOpsAndReduceMethods,
+    IncludeBinaryOps,
+    IncludeMostOpsAndReduceMethods,
+    IncludeReduceMethods,
+)
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_array_type
-from .utils import not_implemented
+
+if TYPE_CHECKING:
+    # _typed_ops.pyi is a generated stub file
+    from ._typed_ops import (
+        TypedDataArrayGroupByOps,
+        TypedDataArrayOps,
+        TypedDatasetGroupByOps,
+        TypedDatasetOps,
+        TypedVariableOps,
+    )
+else:
+    TypedDataArrayGroupByOps = object
+    TypedDataArrayOps = object
+    TypedDatasetGroupByOps = object
+    TypedDatasetOps = object
+    TypedVariableOps = object
 
 
 class SupportsArithmetic:
@@ -80,26 +103,58 @@ class SupportsArithmetic:
             keep_attrs=_get_keep_attrs(default=True),
         )
 
-    # this has no runtime function - these are listed so IDEs know these
-    # methods are defined and don't warn on these operations
-    __lt__ = (
-        __le__
-    ) = (
-        __ge__
-    ) = (
-        __gt__
-    ) = (
-        __add__
-    ) = (
-        __sub__
-    ) = (
-        __mul__
-    ) = (
-        __truediv__
-    ) = (
-        __floordiv__
-    ) = (
-        __mod__
-    ) = (
-        __pow__
-    ) = __and__ = __xor__ = __or__ = __div__ = __eq__ = __ne__ = not_implemented
+
+class VariableArithmetic(
+    ImplementsArrayReduce,
+    IncludeAllOpsAndReduceMethods,
+    SupportsArithmetic,
+    TypedVariableOps,
+):
+    __slots__ = ()
+    # prioritize our operations over those of numpy.ndarray (priority=0)
+    __array_priority__ = 50
+
+
+class DatasetArithmetic(
+    ImplementsDatasetReduce,
+    IncludeMostOpsAndReduceMethods,
+    SupportsArithmetic,
+    TypedDatasetOps,
+):
+    __slots__ = ()
+    __array_priority__ = 50
+
+
+class DataArrayArithmetic(
+    ImplementsArrayReduce,
+    IncludeAllOpsAndReduceMethods,
+    SupportsArithmetic,
+    TypedDataArrayOps,
+):
+    __slots__ = ()
+    # priority must be higher than Variable to properly work with binary ufuncs
+    __array_priority__ = 60
+
+
+class DataArrayGroupbyArithmetic(
+    ImplementsArrayReduce,
+    IncludeReduceMethods,
+    IncludeBinaryOps,
+    SupportsArithmetic,
+    TypedDataArrayGroupByOps,
+):
+    __slots__ = ()
+
+
+class DatasetGroupbyArithmetic(
+    ImplementsDatasetReduce,
+    IncludeReduceMethods,
+    IncludeBinaryOps,
+    SupportsArithmetic,
+    TypedDatasetGroupByOps,
+):
+    __slots__ = ()
+
+
+class CoarsenArithmetic(IncludeReduceMethods):
+    __slots__ = ()

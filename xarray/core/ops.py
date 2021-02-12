@@ -118,20 +118,6 @@ min_count : int, default: None
     If fewer than min_count non-NA values are present the result will
     be NA. New in version 0.10.8: Added with the default being None."""
 
-_COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
-Coarsen this object by applying `{name}` along its dimensions.
-
-Parameters
-----------
-**kwargs : dict
-    Additional keyword arguments passed on to `{name}`.
-
-Returns
--------
-reduced : DataArray or Dataset
-    New object with `{name}` applied along its coasen dimnensions.
-"""
-
 
 def fillna(data, other, join="left", dataset_join="left"):
     """Fill missing values in this object with data from the other object.
@@ -305,7 +291,8 @@ def inplace_to_noninplace_op(f):
     return NON_INPLACE_OP[f]
 
 
-def inject_binary_ops(cls, inplace=False):
+def inject_binary_ops(cls):
+
     for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
         setattr(cls, op_str(name), cls._binary_op(get_op(name)))
 
@@ -313,34 +300,76 @@ def inject_binary_ops(cls, inplace=False):
         setattr(cls, op_str(name), cls._binary_op(f))
 
     for name in NUM_BINARY_OPS:
-        # only numeric operations have in-place and reflexive variants
+        # only numeric operations have reflexive variants
         setattr(cls, op_str("r" + name), cls._binary_op(get_op(name), reflexive=True))
-        if inplace:
-            setattr(cls, op_str("i" + name), cls._inplace_binary_op(get_op("i" + name)))
 
 
-def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
-    # prioritize our operations over those of numpy.ndarray (priority=1)
-    # and numpy.matrix (priority=10)
-    cls.__array_priority__ = priority
+def inject_inplace_binary_ops(cls):
+    for name in NUM_BINARY_OPS:
+        setattr(cls, op_str("i" + name), cls._inplace_binary_op(get_op("i" + name)))
 
-    # patch in standard special operations
+
+def inject_unary_ops_and_methods(cls):
     for name in UNARY_OPS:
         setattr(cls, op_str(name), cls._unary_op(get_op(name)))
-    inject_binary_ops(cls, inplace=True)
 
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
+    # round_method
     f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
     setattr(cls, "round", cls._unary_op(f))
 
-    if array_only:
-        # these methods don't return arrays of the same shape as the input, so
-        # don't try to patch these in for Dataset objects
-        for name in NUMPY_SAME_METHODS:
-            setattr(cls, name, _values_method_wrapper(name))
 
-    inject_reduce_methods(cls)
-    inject_cum_methods(cls)
+def inject_numpy_same(cls):
+    # these methods don't return arrays of the same shape as the input, so
+    # don't try to patch these in for Dataset objects
+    for name in NUMPY_SAME_METHODS:
+        setattr(cls, name, _values_method_wrapper(name))
+
+
+class IncludeBinaryOps:
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        if getattr(cls, "_binary_op", None):
+            inject_binary_ops(cls)
+
+
+class IncludeReduceMethods:
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        if getattr(cls, "_reduce_method", None):
+            inject_reduce_methods(cls)
+
+
+class IncludeMostOpsAndReduceMethods(IncludeBinaryOps, IncludeReduceMethods):
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        if getattr(cls, "_unary_op", None):
+            inject_unary_ops_and_methods(cls)
+
+        if getattr(cls, "_inplace_binary_op", None):
+            inject_inplace_binary_ops(cls)
+
+        if getattr(cls, "_reduce_method", None):
+            inject_cum_methods(cls)
+
+
+class IncludeAllOpsAndReduceMethods(IncludeMostOpsAndReduceMethods):
+    __slots__ = ()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        if getattr(cls, "_reduce_method", None):
+            inject_numpy_same(cls)  # some methods not applicable to Dataset objects

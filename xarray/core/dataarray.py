@@ -43,6 +43,7 @@ from .alignment import (
     align,
     reindex_like_indexers,
 )
+from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates,
@@ -70,9 +71,9 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
+T_DataArray = TypeVar("T_DataArray", bound="DataArray")
+T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
-    T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
-
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -218,7 +219,7 @@ class _LocIndexer:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class DataArray(AbstractArray, DataWithCoords):
+class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses
@@ -2944,7 +2945,7 @@ class DataArray(AbstractArray, DataWithCoords):
                 if not reflexive
                 else f(other_variable, self.variable)
             )
-            coords, indexes = self.coords._merge_raw(other_coords)
+            coords, indexes = self.coords._merge_raw(other_coords, reflexive)
             name = self._result_name(other)
 
             return self._replace(variable, coords, name, indexes=indexes)
@@ -3553,11 +3554,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def map_blocks(
         self,
-        func: "Callable[..., T_DSorDA]",
+        func: Callable[..., T_DSorDA],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> "T_DSorDA":
+    ) -> T_DSorDA:
         """
         Apply a function to each block of this DataArray.
 
@@ -4287,7 +4288,3 @@ class DataArray(AbstractArray, DataWithCoords):
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
-
-
-# priority most be higher than Variable to properly work with binary ufuncs
-ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

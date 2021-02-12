@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -118,7 +117,7 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray:
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -199,7 +198,7 @@ class AttrAccessMixin:
 
     __slots__ = ()
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls, **kwargs):
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
         raise error in the core xarray module and a FutureWarning in third-party
         extensions.
@@ -215,6 +214,7 @@ class AttrAccessMixin:
                 FutureWarning,
                 stacklevel=2,
             )
+        super().__init_subclass__(**kwargs)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
@@ -335,7 +335,7 @@ def get_squeeze_dims(
     return dim
 
 
-class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
+class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     _close: Optional[Callable[[], None]]

@@ -24,7 +24,9 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from .arithmetic import VariableArithmetic
+from .common import AbstractArray
 from .indexing import (
     BasicIndexer,
     OuterIndexer,
@@ -41,6 +43,7 @@ from .pycompat import (
     is_duck_dask_array,
 )
 from .utils import (
+    NdimSizeLenMixin,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -282,9 +285,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(
-    common.AbstractArray, arithmetic.SupportsArithmetic, utils.NdimSizeLenMixin
-):
+class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -982,9 +983,7 @@ class Variable(
         # attributes and encoding will be copied when the new Array is created
         return self._replace(data=data)
 
-    def _replace(
-        self, dims=_default, data=_default, attrs=_default, encoding=_default
-    ) -> "Variable":
+    def _replace(self, dims=_default, data=_default, attrs=_default, encoding=_default):
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -2282,7 +2281,10 @@ class Variable(
         def func(self, other):
             if isinstance(other, (xr.DataArray, xr.Dataset)):
                 return NotImplemented
-            self_data, other_data, dims = _broadcast_compat_data(self, other)
+            if reflexive and issubclass(type(self), type(other)):
+                other_data, self_data, dims = _broadcast_compat_data(other, self)
+            else:
+                self_data, other_data, dims = _broadcast_compat_data(self, other)
             keep_attrs = _get_keep_attrs(default=False)
             attrs = self._attrs if keep_attrs else None
             with np.errstate(all="ignore"):
@@ -2479,9 +2481,6 @@ class Variable(
         DataArray.argmax, DataArray.idxmax
         """
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
-
-
-ops.inject_all_ops_and_reduce_methods(Variable)
 
 
 class IndexVariable(Variable):
@@ -2727,7 +2726,7 @@ def _broadcast_compat_variables(*variables):
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_variables(), some variables may have
-    dimensions of size 1 instead of the the size of the broadcast dimension.
+    dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)

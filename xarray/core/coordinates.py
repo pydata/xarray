@@ -117,13 +117,14 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         )
         self._update_coords(coords, indexes)
 
-    def _merge_raw(self, other):
+    def _merge_raw(self, other, reflexive):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
             indexes = dict(self.indexes)
         else:
-            variables, indexes = merge_coordinates_without_align([self, other])
+            coord_list = [self, other] if not reflexive else [other, self]
+            variables, indexes = merge_coordinates_without_align(coord_list)
         return variables, indexes
 
     @contextmanager
