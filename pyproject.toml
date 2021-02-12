@@ -8,3 +8,4 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+fallback_version = "999"
