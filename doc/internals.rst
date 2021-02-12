@@ -611,18 +611,6 @@ combining multiple input list with ``itertools.product()``:
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at least one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
-**VECTORIZED**
-
-``VECTORIZED`` shall support integers, slices and lists of integers.
-The indexing with lists in this case is equivalent to combining multiple
-input list with ``zip()``. This is the same semantic used by
-`NumPy <https://numpy.org/>`__ for lists:
-
-.. code-block:: python
-
-    >>> backend_array._raw_indexing_method([0, 1, 2], [0, 1, 2])
-    array([0, 5, 10])
-
 
 .. _RST dask:
 
