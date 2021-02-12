@@ -164,6 +164,7 @@ def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
     prioritized: Mapping[Hashable, MergeElement] = None,
     compat: str = "minimal",
+    combine_attrs="override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -232,6 +233,11 @@ def merge_collected(
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
+
+                attrs = [var.attrs for var in variables]
+                merged_vars[name].attrs = merge_attrs(
+                    attrs, combine_attrs=combine_attrs
+                )
 
     return merged_vars, merged_indexes
 
@@ -613,7 +619,9 @@ def merge_core(
     collected = collect_variables_and_indexes(aligned)
 
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
-    variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
+    variables, out_indexes = merge_collected(
+        collected, prioritized, compat=compat, combine_attrs=combine_attrs
+    )
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
