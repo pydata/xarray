@@ -2995,7 +2995,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _rename_indexes(self, name_dict, dims_set):
         if self._indexes is None:
-            return None
+            return {}
         indexes = {}
         for k, v in self.indexes.items():
             new_name = name_dict.get(k, k)
@@ -3017,23 +3017,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # Variable could be renamed to an existing dimension name
         # in this case, convert to IndexVariable and set indexes
         # GH4107
-        for name in set(self.dims):
-            if name in variables:
-                variables[name] = variables[name].to_index_variable()
-                if indexes is None:
-                    indexes = dict()
-                indexes[name] = variables[name].to_index()
-                coord_names.add(name)
+        for name in set(self.dims) & set(variables) - set(indexes):
+            variables[name] = variables[name].to_index_variable()
+            indexes[name] = variables[name].to_index()
+            coord_names.add(name)
 
         # rename_dims was called to rename an indexed dimension
         # the new renamed dimension is unindexed
-        # So we need to remove the old variable from indexes
-        # and convert to a base variable
-        if indexes is not None:
+        # remove the old variable from indexes and convert to a base variable
+        if indexes:
             for name, newname in dims_dict.items():
-                if name == newname:
-                    continue
-                if name in indexes:
+                if name != newname and name in indexes:
                     variables[name] = variables[name].to_base_variable()
                     del indexes[name]
 
