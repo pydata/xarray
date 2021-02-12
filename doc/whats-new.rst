@@ -17,7 +17,7 @@ What's New
 
 .. _whats-new.0.16.3:
 
-v0.16.3 (unreleased)
+v0.17.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -39,14 +39,42 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
-- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull: `4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_
+- remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
+  favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
+  For now using ``dim`` issues a ``FutureWarning``. It will be removed in
+  version 0.19.0 (:pull:`3993`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 New Features
 ~~~~~~~~~~~~
+- Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
+  roundtripping of ``cftime.datetime`` objects (:pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
+  millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies
+  for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Significantly higher ``unstack`` performance on numpy-backed arrays which
+  contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
+  (:pull:`4746`);
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
+  (:issue:`4749`, :pull:`4827`).
+  By `Justus Magin <https://github.com/keewis>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
+  in the form of kwargs as well as a dict, like most similar methods.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -80,6 +108,11 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
+- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
+  By `Leif Denby <https://github.com/leifdenby>`_.
+- Fix time encoding bug associated with using cftime versions greater than
+  1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -108,6 +141,10 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
+  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
+- Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
+  the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 .. _whats-new.0.16.2:
 
@@ -124,7 +161,7 @@ Deprecations
 
 - :py:attr:`~core.accessor_dt.DatetimeAccessor.weekofyear` and :py:attr:`~core.accessor_dt.DatetimeAccessor.week`
   have been deprecated. Use ``DataArray.dt.isocalendar().week``
-  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_,
+  instead (:pull:`4534`). By `Mathias Hauser <https://github.com/mathause>`_.
   `Maximilian Roos <https://github.com/max-sixty>`_, and `Spencer Clark <https://github.com/spencerkclark>`_.
 - :py:attr:`DataArray.rolling` and :py:attr:`Dataset.rolling` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use

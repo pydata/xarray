@@ -1639,6 +1639,16 @@ class TestDataArray:
                 expected.indexes[dim_name], actual.indexes[dim_name]
             )
 
+        # as kwargs
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
+        actual = array.swap_dims(x="y")
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
         # multiindex case
         idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
         array = DataArray(np.random.randn(3), {"y": ("x", idx)}, "x")
@@ -2326,6 +2336,12 @@ class TestDataArray:
 
         with pytest.warns(DeprecationWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")
+
+    def test_drop_index_positions(self):
+        arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
+        actual = arr.drop_isel(y=[0, 1])
+        expected = arr[:, 2:]
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
@@ -4455,6 +4471,26 @@ class TestDataArray:
         )
         assert actual.shape == (7, 4, 5)
         assert_identical(actual, expected)
+
+        ar = xr.DataArray([9], dims="x")
+
+        actual = ar.pad(x=1)
+        expected = xr.DataArray([np.NaN, 9, np.NaN], dims="x")
+        assert_identical(actual, expected)
+
+        actual = ar.pad(x=1, constant_values=1.23456)
+        expected = xr.DataArray([1, 9, 1], dims="x")
+        assert_identical(actual, expected)
+
+        if LooseVersion(np.__version__) >= "1.20":
+            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+                ar.pad(x=1, constant_values=np.NaN)
+        else:
+            actual = ar.pad(x=1, constant_values=np.NaN)
+            expected = xr.DataArray(
+                [-9223372036854775808, 9, -9223372036854775808], dims="x"
+            )
+            assert_identical(actual, expected)
 
     def test_pad_coords(self):
         ar = DataArray(

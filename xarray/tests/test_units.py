@@ -3681,7 +3681,7 @@ class TestDataArray:
         (
             method("diff", dim="x"),
             method("differentiate", coord="x"),
-            method("integrate", dim="x"),
+            method("integrate", coord="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
