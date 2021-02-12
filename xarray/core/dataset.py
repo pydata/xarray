@@ -2995,7 +2995,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def _rename_indexes(self, name_dict, dims_set):
         if self._indexes is None:
-            return {}
+            return None
         indexes = {}
         for k, v in self.indexes.items():
             new_name = name_dict.get(k, k)
