@@ -313,7 +313,6 @@ class TestConcatDataset:
 
             assert_identical(actual, expected)
 
-    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
     @pytest.mark.parametrize(
         "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
         [
