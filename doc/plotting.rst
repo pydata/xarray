@@ -768,7 +768,7 @@ For more advanced scatter plots, we recommend converting the relevant data varia
 Quiver
 ~~~~~~
 
-Visualizing vector fields using a quiver plot is easy.
+Visualizing vector fields is supported with quiver plots:
 
 .. ipython:: python
     :okwarning:
@@ -777,7 +777,7 @@ Visualizing vector fields using a quiver plot is easy.
     ds.isel(w=1, z=1).plot.quiver(x="x", y="y", u="A", v="B")
 
 
-Again, faceting is also possible
+where ``u`` and ``v`` denote the x and y direction components of the arrow vectors. Again, faceting is also possible:
 
 .. ipython:: python
     :okwarning:
@@ -785,6 +785,7 @@ Again, faceting is also possible
     @savefig ds_facet_quiver.png
     ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
 
+``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
 
 .. _plot-maps:
 
