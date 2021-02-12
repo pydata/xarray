@@ -373,7 +373,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             lock=lock,
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
-            decode_strings=decode_vlen_strings,
+            decode_vlen_strings=decode_vlen_strings,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
