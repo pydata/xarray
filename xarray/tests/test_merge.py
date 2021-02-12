@@ -166,6 +166,10 @@ class TestMergeFunction:
     ):
         """check that combine_attrs is used on data variables and coords"""
         data = create_test_data()
+        for var in data.variables.values():
+            var.attrs.clear()
+        data.attrs.clear()
+
         data1 = data.copy()
         data1.var1.attrs = attrs1
         data1.dim1.attrs = attrs1
