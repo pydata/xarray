@@ -151,17 +151,18 @@ def process_pkg(
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
     policy_published = datetime.now() - relativedelta(months=policy_months)
 
-    policy_major, policy_minor = max(
+    filtered_versions = [
         version
         for version, published in versions.items()
-        if published <= policy_published
-    )
-    policy_published_actual = versions[policy_major, policy_minor]
+        if published < policy_published
+    ]
+    policy_major, policy_minor = max(filtered_versions, default=(req_major, req_minor))
 
     try:
         policy_major, policy_minor = POLICY_OVERRIDE[pkg]
     except KeyError:
         pass
+    policy_published_actual = versions[policy_major, policy_minor]
 
     if (req_major, req_minor) < (policy_major, policy_minor):
         status = "<"
