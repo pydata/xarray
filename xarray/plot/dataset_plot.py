@@ -453,6 +453,20 @@ def scatter(ds, x, y, ax, **kwargs):
 
 
 def _attach_to_plot_class(plotfunc):
+    """Set the function to the plot class and add common docstring."""
+    # Build on the original docstring:
+    original_doc = getattr(_PlotMethods, plotfunc.__name__, None)
+    commondoc = original_doc.__doc__
+    if commondoc is not None:
+        doc_warning = (
+            f"This docstring was copied from xr.DataArray.plot.{original_doc.__name__}."
+            " Some inconsistencies may exist."
+        )
+        commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
+    else:
+        commondoc = ""
+    plotfunc.__doc__ = f"    {plotfunc.__doc__}{commondoc}"
+
     @functools.wraps(plotfunc)
     def plotmethod(self, *args, **kwargs):
         return plotfunc(self._ds, *args, **kwargs)
