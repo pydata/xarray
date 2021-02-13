@@ -26,6 +26,13 @@ from . import assert_equal, assert_identical, raises_regex, requires_cftime
 from .test_dataset import create_test_data
 
 
+def clear_attrs(ds):
+    for var in ds.variables.values():
+        var.attrs.clear()
+    ds.attrs.clear()
+    return ds
+
+
 def assert_combined_tile_ids_equal(dict1, dict2):
     assert len(dict1) == len(dict2)
     for k, v in dict1.items():
@@ -478,7 +485,8 @@ class TestNestedCombine:
         assert_identical(x_first, y_first)
 
     def test_concat_one_dim_merge_another(self):
-        data = create_test_data()
+        data = clear_attrs(create_test_data())
+
         data1 = data.copy(deep=True)
         data2 = data.copy(deep=True)
 
@@ -504,7 +512,7 @@ class TestNestedCombine:
         assert_equal(result, expected)
 
     def test_auto_combine_2d_combine_attrs_kwarg(self):
-        ds = create_test_data
+        ds = lambda x: clear_attrs(create_test_data(x))
 
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
