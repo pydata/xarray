@@ -463,6 +463,7 @@ def _attach_to_plot_class(plotfunc):
             f"This docstring was copied from xr.DataArray.plot.{original_doc.__name__}."
             " Some inconsistencies may exist."
         )
+        # Add indentation so it matches the original doc:
         commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
     else:
         commondoc = ""
