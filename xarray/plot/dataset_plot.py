@@ -5,6 +5,7 @@ import pandas as pd
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
+from .plot import _PlotMethods
 from .utils import (
     _add_colorbar,
     _is_numeric,
