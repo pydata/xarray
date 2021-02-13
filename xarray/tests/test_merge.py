@@ -262,6 +262,8 @@ class TestMergeFunction:
 
     def test_merge_no_conflicts_multi_var(self):
         data = create_test_data()
+        for var in data.variables.values():
+            var.attrs.clear()
         data1 = data.copy(deep=True)
         data2 = data.copy(deep=True)
 
