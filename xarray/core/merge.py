@@ -228,16 +228,14 @@ def merge_collected(
                 variables = [variable for variable, _ in elements_list]
                 try:
                     merged_vars[name] = unique_variable(name, variables, compat)
+                    merged_vars[name].attrs = merge_attrs(
+                        [var.attrs for var in variables], combine_attrs=combine_attrs
+                    )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
-
-                attrs = [var.attrs for var in variables]
-                merged_vars[name].attrs = merge_attrs(
-                    attrs, combine_attrs=combine_attrs
-                )
 
     return merged_vars, merged_indexes
 
