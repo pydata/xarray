@@ -167,7 +167,13 @@ def process_pkg(
         status = "<"
     elif (req_major, req_minor) > (policy_major, policy_minor):
         status = "> (!)"
-        error("Package is too new: " + pkg)
+        delta = relativedelta(datetime.now(), policy_published_actual).normalized()
+        n_months = delta.years * 12 + delta.months
+        error(
+            f"Package is too new: {pkg}={req_major}.{req_minor} was "
+            f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
+            f"(which is {n_months} months from today and within the past {policy_months} months)"
+        )
     else:
         status = "="
 
