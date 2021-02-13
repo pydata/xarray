@@ -64,7 +64,7 @@ method_template_binops = """\
     @overload
     def {method}(self, other: DataArray) -> Dataset: ...{misc}
     @overload
-    def {method}(self, other: T_GroupbybIncompatible) -> NoReturn: ..."""
+    def {method}(self, other: T_GroupByIncompatible) -> NoReturn: ..."""
 stub_info["TypedDatasetGroupByOps"].append((method_template_binops, binary_ops))
 
 # TypedDataArrayGroupByOps
@@ -74,7 +74,7 @@ method_template_binops = """\
     @overload
     def {method}(self, other: T_DataArray) -> T_DataArray: ...{misc}
     @overload
-    def {method}(self, other: T_GroupbybIncompatible) -> NoReturn: ..."""
+    def {method}(self, other: T_GroupByIncompatible) -> NoReturn: ..."""
 stub_info["TypedDataArrayGroupByOps"].append((method_template_binops, binary_ops))
 
 
@@ -100,7 +100,6 @@ stubfile_preamble = '''\
 
 This file was generated using xarray.util.stubgen_ops. Do not edit manually."""
 
-import numbers
 from typing import NoReturn, TypeVar, Union, overload
 
 import numpy as np
@@ -120,13 +119,13 @@ T_DataArray = TypeVar("T_DataArray", bound=DataArray)
 T_Variable = TypeVar("T_Variable", bound=Variable)
 T_Self = TypeVar("T_Self")
 
-# Note: T_Compatible (and types involving T_Compatible) is to be used last in
-# overloads, since nd.ndarray is typed as Any for older versions of numpy.
-T_Compatible = Union[complex, bytes, str, np.ndarray, np.generic, DaskArray]
-T_DsOther = Union[Dataset, DataArray, Variable, T_Compatible, GroupBy]
-T_DaOther = Union[DataArray, Variable, T_Compatible]
-T_VarOther = Union[Variable, T_Compatible]
-T_GroupbybIncompatible = Union[Variable, T_Compatible, GroupBy]'''
+# Note: T_Other (and types involving T_Other) is to be used last in overloads,
+# since nd.ndarray is typed as Any for older versions of numpy.
+T_Other = Union[complex, bytes, str, np.ndarray, np.generic, DaskArray]
+T_DsOther = Union[Dataset, DataArray, Variable, T_Other, GroupBy]
+T_DaOther = Union[DataArray, Variable, T_Other]
+T_VarOther = Union[Variable, T_Other]
+T_GroupByIncompatible = Union[Variable, GroupBy, T_Other]'''
 
 
 # Render stub file

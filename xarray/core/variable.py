@@ -983,7 +983,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # attributes and encoding will be copied when the new Array is created
         return self._replace(data=data)
 
-    def _replace(self, dims=_default, data=_default, attrs=_default, encoding=_default):
+    def _replace(
+        self, dims=_default, data=_default, attrs=_default, encoding=_default
+    ) -> "Variable":
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
