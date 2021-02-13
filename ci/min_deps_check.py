@@ -26,7 +26,7 @@ IGNORE_DEPS = {
     "pytest-xdist",
 }
 
-POLICY_MONTHS = {"python": 42, "numpy": 24, "setuptools": 42}
+POLICY_MONTHS = {"python": 24, "numpy": 18, "setuptools": 42}
 POLICY_MONTHS_DEFAULT = 12
 POLICY_OVERRIDE = {
     # dask < 2.9 has trouble with nan-reductions
