@@ -4,11 +4,12 @@ policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import itertools
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Iterator, Optional, Tuple
 
 import conda.api
 import yaml
+from dateutil.relativedelta import relativedelta
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
@@ -148,17 +149,14 @@ def process_pkg(
         return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
-    policy_published = datetime.now() - timedelta(days=policy_months * 30)
+    policy_published = datetime.now() - relativedelta(months=policy_months)
 
-    policy_major = req_major
-    policy_minor = req_minor
-    policy_published_actual = req_published
-    for (major, minor), published in reversed(sorted(versions.items())):
-        if published < policy_published:
-            break
-        policy_major = major
-        policy_minor = minor
-        policy_published_actual = published
+    policy_major, policy_minor = max(
+        version
+        for version, published in versions.items()
+        if published <= policy_published
+    )
+    policy_published_actual = versions[policy_major, policy_minor]
 
     try:
         policy_major, policy_minor = POLICY_OVERRIDE[pkg]
