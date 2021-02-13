@@ -31,12 +31,16 @@ class TestMergeInternals:
 class TestMergeFunction:
     def test_merge_arrays(self):
         data = create_test_data()
+        for var in data.variables.values():
+            var.attrs.clear()
         actual = xr.merge([data.var1, data.var2])
         expected = data[["var1", "var2"]]
         assert_identical(actual, expected)
 
     def test_merge_datasets(self):
         data = create_test_data()
+        for var in data.variables.values():
+            var.attrs.clear()
 
         actual = xr.merge([data[["var1"]], data[["var2"]]])
         expected = data[["var1", "var2"]]
@@ -60,6 +64,8 @@ class TestMergeFunction:
         data.var2.attrs = var2_attrs
         actual = xr.merge([data.var1, data.var2])
         expected = data[["var1", "var2"]]
+        for var in expected.variables.values():
+            var.attrs.clear()
         expected.attrs = expected_attrs
         assert_identical(actual, expected)
 
