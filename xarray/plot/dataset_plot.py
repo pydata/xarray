@@ -467,7 +467,12 @@ def _attach_to_plot_class(plotfunc):
         commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
     else:
         commondoc = ""
-    plotfunc.__doc__ = f"    {plotfunc.__doc__}{commondoc}"
+    plotfunc.__doc__ = (
+        f"    {plotfunc.__doc__}\n\n"
+        "    The y DataArray will be used as base,"
+        "    any other variables wis added as coords.\n\n"
+        f"{commondoc}"
+    )
 
     @functools.wraps(plotfunc)
     def plotmethod(self, *args, **kwargs):
