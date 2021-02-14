@@ -470,7 +470,7 @@ def _attach_to_plot_class(plotfunc):
     plotfunc.__doc__ = (
         f"    {plotfunc.__doc__}\n\n"
         "    The y DataArray will be used as base,"
-        "    any other variables wis added as coords.\n\n"
+        "    any other variables are added as coords.\n\n"
         f"{commondoc}"
     )
 
