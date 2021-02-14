@@ -829,6 +829,7 @@ class _PlotMethods:
     def scatter(self, *args, **kwargs):
         return scatter(self._da, *args, **kwargs)
 
+
 def override_signature(f):
     def wrapper(func):
         func.__wrapped__ = f
