@@ -4810,7 +4810,7 @@ def test_extract_zarr_variable_encoding():
 @requires_zarr
 @requires_fsspec
 def test_open_fsspec():
-    import fsspec  # type: ignore
+    import fsspec
     import zarr
 
     if not hasattr(zarr.storage, "FSStore") or not hasattr(
