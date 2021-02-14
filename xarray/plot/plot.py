@@ -739,7 +739,11 @@ def scatter(
         """Add legend to axes."""
         # Get handles and labels to use in the legend:
         handles, labels = _legend_elements_from_list(
-            primitives, prop, num="auto", alpha=0.6, func=func,
+            primitives,
+            prop,
+            num="auto",
+            alpha=0.6,
+            func=func,
         )
 
         # title has to be a required check as otherwise the legend may
