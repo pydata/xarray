@@ -11,6 +11,7 @@ import functools
 import numpy as np
 import pandas as pd
 
+from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
@@ -18,6 +19,7 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
+    _is_numeric,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
@@ -26,10 +28,7 @@ from .utils import (
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
-    _is_numeric,
 )
-
-from ..core.alignment import broadcast
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
