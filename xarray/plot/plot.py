@@ -26,7 +26,174 @@ from .utils import (
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
+    _is_numeric,
 )
+
+from ..core.alignment import broadcast
+
+# copied from seaborn
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
+
+
+def _infer_meta_data(darray, x, y, hue, hue_style, size, add_guide):
+    def _hue_calc(darray, hue, hue_style, add_guide):
+        """Something."""
+        hue_is_numeric = _is_numeric(darray[hue].values)
+
+        if hue_style is None:
+            hue_style = "continuous" if hue_is_numeric else "discrete"
+        elif hue_style not in ["discrete", "continuous"]:
+            raise ValueError(
+                "hue_style must be either None, 'discrete' or 'continuous'."
+            )
+
+        if not hue_is_numeric and (hue_style == "continuous"):
+            raise ValueError(
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
+            )
+
+        hue_label = label_from_attrs(darray[hue])
+        hue = darray[hue]
+
+        # Handle colorbar and legend:
+        if add_guide is None or add_guide is True:
+            add_colorbar = True if hue_style == "continuous" else False
+            add_legend = True if hue_style == "discrete" else False
+        else:
+            add_colorbar = False
+            add_legend = False
+
+        return hue, hue_style, hue_label, add_colorbar, add_legend
+
+    if x is not None and y is not None:
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        xplt = darray[x]
+        yplt = darray
+    elif y is not None:
+        xplt = darray
+        yplt = darray[y]
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    if hue:
+        hue, hue_style, hue_label, add_colorbar, add_legend = _hue_calc(
+            darray, hue, hue_style, add_guide
+        )
+    else:
+        # Try finding a hue:
+        _, hue = _infer_xy_labels(darray=yplt, x=xplt.name, y=hue)
+
+        if hue:
+            hue, hue_style, hue_label, add_colorbar, add_legend = _hue_calc(
+                darray, hue, hue_style, add_guide
+            )
+        else:
+            if add_guide is True:
+                raise ValueError("Cannot set add_guide when hue is None.")
+            add_legend = False
+            add_colorbar = False
+
+            hue_label = None
+            hue = None
+
+    if size:
+        size_label = label_from_attrs(darray[size])
+        size = darray[size]
+    else:
+        size_label = None
+        size = None
+
+    return dict(
+        add_colorbar=add_colorbar,
+        add_legend=add_legend,
+        hue_label=hue_label,
+        hue_style=hue_style,
+        xlabel=xlabel,
+        ylabel=ylabel,
+        hue=hue,
+        size=size,
+        size_label=size_label,
+    )
+
+
+# copied from seaborn
+def _parse_size(data, norm, width):
+
+    import matplotlib as mpl
+
+    if data is None:
+        return None
+
+    data = data.values.flatten()
+
+    if not _is_numeric(data):
+        levels = np.unique(data)
+        numbers = np.arange(1, 1 + len(levels))[::-1]
+    else:
+        levels = numbers = np.sort(np.unique(data))
+
+    min_width, max_width = width
+    # width_range = min_width, max_width
+
+    if norm is None:
+        norm = mpl.colors.Normalize()
+    elif isinstance(norm, tuple):
+        norm = mpl.colors.Normalize(*norm)
+    elif not isinstance(norm, mpl.colors.Normalize):
+        err = "``size_norm`` must be None, tuple, or Normalize object."
+        raise ValueError(err)
+
+    norm.clip = True
+    if not norm.scaled():
+        norm(np.asarray(numbers))
+    # limits = norm.vmin, norm.vmax
+
+    scl = norm(numbers)
+    widths = np.asarray(min_width + scl * (max_width - min_width))
+    if scl.mask.any():
+        widths[scl.mask] = 0
+    sizes = dict(zip(levels, widths))
+
+    return pd.Series(sizes)
+
+
+def _infer_scatter_data(
+    darray, x, y, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
+):
+    if x is not None and y is not None:
+        raise ValueError("Cannot specify both x and y kwargs for scatter plots.")
+
+    # Broadcast together all the chosen variables:
+    if x is not None:
+        to_broadcast = dict(x=darray[x], y=darray)
+    elif y is not None:
+        to_broadcast = dict(x=darray, y=darray[y])
+    to_broadcast.update(
+        {
+            key: darray[value]
+            for key, value in dict(hue=hue, size=size).items()
+            if value in darray.dims
+        }
+    )
+    broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
+
+    data = dict(x=broadcasted["x"], y=broadcasted["y"], sizes=None)
+    data.update(hue=broadcasted.get("hue", None))
+
+    if size:
+        size = broadcasted["size"]
+
+        if size_mapping is None:
+            size_mapping = _parse_size(size, size_norm, size_range)
+
+        data["sizes"] = size.copy(
+            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
+        )
+        data["sizes_to_labels"] = pd.Series(size_mapping.index, index=size_mapping)
+
+    return data
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -427,6 +594,204 @@ def hist(
     return primitive
 
 
+def scatter(
+    darray,
+    *args,
+    row=None,
+    col=None,
+    figsize=None,
+    aspect=None,
+    size=None,
+    ax=None,
+    hue=None,
+    hue_style=None,
+    x=None,
+    y=None,
+    xincrease=None,
+    yincrease=None,
+    xscale=None,
+    yscale=None,
+    xticks=None,
+    yticks=None,
+    xlim=None,
+    ylim=None,
+    add_legend=True,
+    _labels=True,
+    **kwargs,
+):
+    # Handle facetgrids first
+    if row or col:
+        allargs = locals().copy()
+        allargs.update(allargs.pop("kwargs"))
+        allargs.pop("darray")
+        return _easy_facetgrid(darray, scatter, kind="dataarray", **allargs)
+
+    # _is_facetgrid = kwargs.pop("_is_facetgrid", False)
+    _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
+    add_guide = kwargs.pop("add_guide", None)
+    size_norm = kwargs.pop("size_norm", None)
+    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+    cbar_ax = kwargs.pop("cbar_ax", None)
+
+    figsize = kwargs.pop("figsize", None)
+    ax = get_axis(figsize, size, aspect, ax)
+
+    _data = _infer_meta_data(darray, x, y, hue, hue_style, _sizes, add_guide)
+
+    # need to infer size_mapping with full dataset
+    _data.update(
+        _infer_scatter_data(
+            darray,
+            x,
+            y,
+            _data["hue_label"],
+            _sizes,
+            size_norm,
+            size_mapping,
+            _MARKERSIZE_RANGE,
+        )
+    )
+
+    # Plot the data:
+    if _data["hue_style"] == "discrete":
+        # Plot discrete data. ax.scatter only supports numerical values
+        # in colors and sizes. Use a for loop to work around this issue.
+
+        primitive = []
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
+        for label in pd.unique(_data["hue"].values.ravel()):
+            mask = _data["hue"] == label
+            if _data["sizes"] is not None:
+                kwargs.update(s=_data["sizes"].where(mask, drop=True).values.ravel())
+
+            primitive.append(
+                ax.scatter(
+                    _data["x"].where(mask, drop=True).values.ravel(),
+                    _data["y"].where(mask, drop=True).values.ravel(),
+                    label=label,
+                    **kwargs,
+                )
+            )
+    elif _data["hue_label"] is None or _data["hue_style"] == "continuous":
+        # ax.scatter suppoerts numerical values in colors and sizes.
+        # So no need for for loops.
+
+        cmap_params_subset = {}
+        if _data["hue"] is not None:
+            kwargs.update(c=_data["hue"].values.ravel())
+
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                scatter, darray[_data["hue_label"]].values, **locals()
+            )
+
+            # subset that can be passed to scatter, hist2d
+            cmap_params_subset = {
+                vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
+            }
+
+        if _data["sizes"] is not None:
+            kwargs.update(s=_data["sizes"].values.ravel())
+
+        primitive = ax.scatter(
+            _data["x"].values.ravel(),
+            _data["y"].values.ravel(),
+            **cmap_params_subset,
+            **kwargs,
+        )
+
+    # Set x and y labels:
+    if _data["xlabel"]:
+        ax.set_xlabel(_data["xlabel"])
+    if _data["ylabel"]:
+        ax.set_ylabel(_data["ylabel"])
+
+    def _legend_elements_from_list(primitives, prop, **kwargs):
+        """
+        Get unique legend elements from a list of pathcollections.
+
+        Getting multiple pathcollections happens when adding multiple
+        scatters to the same plot.
+        """
+        import warnings
+
+        handles = np.array([], dtype=object)
+        labels = np.array([], dtype=str)
+
+        for i, pc in enumerate(primitives):
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                # Get legend elements, suppress empty data warnings
+                # because it will be handled later:
+                hdl, lbl = pc.legend_elements(prop=prop, **kwargs)
+            handles = np.append(handles, hdl)
+            labels = np.append(labels, lbl)
+
+        # Duplicate legend entries is not necessary, therefore return
+        # unique labels:
+        unique_indices = np.sort(np.unique(labels, return_index=True)[1])
+        handles = handles[unique_indices]
+        labels = labels[unique_indices]
+
+        return [handles, labels]
+
+    def _add_legend(primitives, prop, func, ax, title, loc):
+        """Add legend to axes."""
+        # Get handles and labels to use in the legend:
+        handles, labels = _legend_elements_from_list(
+            primitives, prop, num="auto", alpha=0.6, func=func,
+        )
+
+        # title has to be a required check as otherwise the legend may
+        # display values that are not related to the data, such as the
+        # markersize value:
+        if title and len(handles) > 1:
+            # The normal case where a prop has been defined and
+            # legend_elements finds results:
+            legend = ax.legend(handles, labels, title=title, loc=loc)
+            ax.add_artist(legend)
+        elif title and len(primitives) > 1:
+            # For caases when
+            legend = ax.legend(handles=primitives, title=title, loc=loc)
+            ax.add_artist(legend)
+
+    if _data["hue_style"] == "discrete":
+        primitives = primitive
+    else:
+        primitives = [primitive]
+
+    if _data["add_legend"] and _data["hue_label"]:
+        _add_legend(
+            primitives,
+            prop="colors",
+            func=lambda x: x,
+            ax=ax,
+            title=_data["hue_label"],
+            loc="upper right",
+        )
+
+    if _data["add_legend"] and _data["size_label"]:
+        _add_legend(
+            primitives,
+            prop="sizes",
+            func=lambda x: _data["sizes_to_labels"][x]
+            if "sizes_to_labels" in _data
+            else x,
+            ax=ax,
+            title=_data["size_label"],
+            loc="upper left",
+        )
+
+    if _data["add_colorbar"] and _data["hue_label"]:
+        cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+        if "label" not in cbar_kwargs:
+            cbar_kwargs["label"] = _data["hue_label"]
+        _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+
+    return primitive
+
+
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods:
@@ -460,6 +825,9 @@ class _PlotMethods:
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
 
+    @functools.wraps(scatter)
+    def scatter(self, *args, **kwargs):
+        return scatter(self._da, *args, **kwargs)
 
 def override_signature(f):
     def wrapper(func):
