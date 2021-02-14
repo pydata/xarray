@@ -477,12 +477,15 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _temp_dataarray(ds, x, y):
-    """Create a temporary datarray with the x-axis as a coordinate."""
+def _temp_dataarray(ds, y, extra_coords):
+    """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
 
+    # Base coords:
     coords = dict(ds.indexes)
-    coords[x] = ds[x]
+
+    # Add extra coords to the DataArray:
+    coords.update({v: ds[v] for v in extra_coords})
 
     return DataArray(ds[y], coords=coords)
 
@@ -490,6 +493,6 @@ def _temp_dataarray(ds, x, y):
 @_attach_to_plot_class
 def line(ds, x=None, y=None, ax=None, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, x, y)
+    da = _temp_dataarray(ds, y, extra_coords=[x])
 
     return da.plot.line(x=x, ax=ax, **kwargs)
