@@ -113,6 +113,11 @@ Bug fixes
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Stop ``sum`` and ``prod`` computing lazy arrays when called with a ``min_count``
+  parameter (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
+- Fix bug preventing the ``min_count`` parameter to ``sum`` and ``prod`` working correctly
+  when calculating over all axes of a float64 array (:issue:`4898`, :pull:`4911`).
+  By `Blair Bonnett <https://github.com/bcbnz>`_.
 
 Documentation
 ~~~~~~~~~~~~~
