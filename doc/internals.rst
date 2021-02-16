@@ -10,6 +10,15 @@ stack, NumPy and pandas. It is written in pure Python (no C or Cython
 extensions), which makes it easy to develop and extend. Instead, we push
 compiled code to :ref:`optional dependencies<installing>`.
 
+.. ipython:: python
+    :suppress:
+
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+
+    np.random.seed(123456)
+
 Variable objects
 ----------------
 
@@ -77,15 +86,6 @@ argument:
 
 Extending xarray
 ----------------
-
-.. ipython:: python
-    :suppress:
-
-    import numpy as np
-    import pandas as pd
-    import xarray as xr
-
-    np.random.seed(123456)
 
 xarray is designed as a general purpose library, and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
