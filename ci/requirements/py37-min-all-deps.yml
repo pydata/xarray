@@ -7,7 +7,7 @@ dependencies:
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
   # doc/installing.rst and setup.py.
-  - aiobotocore=1.1.2
+  - aiobotocore=0.12
   - python=3.7
   - boto3=1.9
   - bottleneck=1.2
