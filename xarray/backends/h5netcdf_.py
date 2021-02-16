@@ -131,7 +131,7 @@ class H5NetCDFStore(WritableCFDataStore):
         autoclose=False,
         invalid_netcdf=None,
         phony_dims=None,
-        decode_vlen_strings=None,
+        decode_vlen_strings=True,
     ):
 
         if isinstance(filename, bytes):
