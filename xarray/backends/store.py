@@ -1,23 +1,25 @@
 from .. import conventions
 from ..core.dataset import Dataset
-from ..core.utils import close_on_error
-from .plugins import BackendEntrypoint
+from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
-def open_backend_dataset_store(
-    store,
-    *,
-    mask_and_scale=True,
-    decode_times=True,
-    concat_characters=True,
-    decode_coords=True,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-):
-    with close_on_error(store):
+class StoreBackendEntrypoint(BackendEntrypoint):
+    def guess_can_open(self, store_spec):
+        return isinstance(store_spec, AbstractDataStore)
+
+    def open_dataset(
+        self,
+        store,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+    ):
         vars, attrs = store.load()
-        file_obj = store
         encoding = store.get_encoding()
 
         vars, attrs, coord_names = conventions.decode_cf_variables(
@@ -34,10 +36,10 @@ def open_backend_dataset_store(
 
         ds = Dataset(vars, attrs=attrs)
         ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
+        ds.set_close(store.close)
         ds.encoding = encoding
 
-    return ds
+        return ds
 
 
-store_backend = BackendEntrypoint(open_dataset=open_backend_dataset_store)
+BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint

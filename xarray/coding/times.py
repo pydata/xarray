@@ -1,6 +1,6 @@
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from functools import partial
 
@@ -26,6 +26,7 @@ from .variables import (
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 
 _NS_PER_TIME_DELTA = {
+    "ns": 1,
     "us": int(1e3),
     "ms": int(1e6),
     "s": int(1e9),
@@ -34,8 +35,36 @@ _NS_PER_TIME_DELTA = {
     "D": int(1e9) * 60 * 60 * 24,
 }
 
+_US_PER_TIME_DELTA = {
+    "microseconds": 1,
+    "milliseconds": 1_000,
+    "seconds": 1_000_000,
+    "minutes": 60 * 1_000_000,
+    "hours": 60 * 60 * 1_000_000,
+    "days": 24 * 60 * 60 * 1_000_000,
+}
+
+_NETCDF_TIME_UNITS_CFTIME = [
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+]
+
+_NETCDF_TIME_UNITS_NUMPY = _NETCDF_TIME_UNITS_CFTIME + ["nanoseconds"]
+
 TIME_UNITS = frozenset(
-    ["days", "hours", "minutes", "seconds", "milliseconds", "microseconds"]
+    [
+        "days",
+        "hours",
+        "minutes",
+        "seconds",
+        "milliseconds",
+        "microseconds",
+        "nanoseconds",
+    ]
 )
 
 
@@ -44,6 +73,7 @@ def _netcdf_to_numpy_timeunit(units):
     if not units.endswith("s"):
         units = "%ss" % units
     return {
+        "nanoseconds": "ns",
         "microseconds": "us",
         "milliseconds": "ms",
         "seconds": "s",
@@ -151,21 +181,22 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
         # strings, in which case we fall back to using cftime
         raise OutOfBoundsDatetime
 
-    # fixes: https://github.com/pydata/pandas/issues/14068
-    # these lines check if the the lowest or the highest value in dates
-    # cause an OutOfBoundsDatetime (Overflow) error
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+    # To avoid integer overflow when converting to nanosecond units for integer
+    # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
+    # (GH 2002).
+    if flat_num_dates.dtype.kind == "i":
+        flat_num_dates = flat_num_dates.astype(np.int64)
 
-    # Cast input dates to integers of nanoseconds because `pd.to_datetime`
-    # works much faster when dealing with integers
-    # make _NS_PER_TIME_DELTA an array to ensure type upcasting
-    flat_num_dates_ns_int = (
-        flat_num_dates.astype(np.float64) * _NS_PER_TIME_DELTA[delta]
-    ).astype(np.int64)
+    # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
+    # works much faster when dealing with integers (GH 1399).
+    flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
+        np.int64
+    )
 
+    # Use pd.to_timedelta to safely cast integer values to timedeltas,
+    # and add those to a Timestamp to safely produce a DatetimeIndex.  This
+    # ensures that we do not encounter integer overflow at any point in the
+    # process without raising OutOfBoundsDatetime.
     return (pd.to_timedelta(flat_num_dates_ns_int, "ns") + ref_date).values
 
 
@@ -180,7 +211,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     Note that time unit in `units` must not be smaller than microseconds and
     not larger than days.
 
-    See also
+    See Also
     --------
     cftime.num2date
     """
@@ -214,9 +245,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 if calendar in _STANDARD_CALENDARS:
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
-        dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(float), units, calendar
-        )
+        dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
@@ -251,12 +280,33 @@ def decode_cf_timedelta(num_timedeltas, units):
     return result.reshape(num_timedeltas.shape)
 
 
+def _unit_timedelta_cftime(units):
+    return timedelta(microseconds=_US_PER_TIME_DELTA[units])
+
+
+def _unit_timedelta_numpy(units):
+    numpy_units = _netcdf_to_numpy_timeunit(units)
+    return np.timedelta64(_NS_PER_TIME_DELTA[numpy_units], "ns")
+
+
 def _infer_time_units_from_diff(unique_timedeltas):
-    for time_unit in ["days", "hours", "minutes", "seconds"]:
-        delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
-        unit_delta = np.timedelta64(delta_ns, "ns")
-        diffs = unique_timedeltas / unit_delta
-        if np.all(diffs == diffs.astype(int)):
+    if unique_timedeltas.dtype == np.dtype("O"):
+        time_units = _NETCDF_TIME_UNITS_CFTIME
+        unit_timedelta = _unit_timedelta_cftime
+        zero_timedelta = timedelta(microseconds=0)
+        timedeltas = unique_timedeltas
+    else:
+        time_units = _NETCDF_TIME_UNITS_NUMPY
+        unit_timedelta = _unit_timedelta_numpy
+        zero_timedelta = np.timedelta64(0, "ns")
+        # Note that the modulus operator was only implemented for np.timedelta64
+        # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
+        # supported is greater than or equal to this we will no longer need to cast
+        # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
+        # modulus operator works for TimedeltaIndex objects.
+        timedeltas = pd.TimedeltaIndex(unique_timedeltas)
+    for time_unit in time_units:
+        if np.all(timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 
@@ -285,10 +335,6 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
         reference_date = format_cftime_datetime(reference_date)
     unique_timedeltas = np.unique(np.diff(dates))
-    if unique_timedeltas.dtype == np.dtype("O"):
-        # Convert to np.timedelta64 objects using pandas to work around a
-        # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
-        unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
     units = _infer_time_units_from_diff(unique_timedeltas)
     return f"{units} since {reference_date}"
 
@@ -367,7 +413,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     def encode_datetime(d):
         return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.vectorize(encode_datetime)(dates)
+    return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
 
 def cast_to_int_if_safe(num):
@@ -383,7 +429,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
-    See also
+    See Also
     --------
     cftime.date2num
     """
@@ -416,7 +462,15 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
         # an OverflowError is raised if the ref_date is too far away from
         # dates to be encoded (GH 2272).
-        num = (pd.DatetimeIndex(dates.ravel()) - ref_date) / time_delta
+        dates_as_index = pd.DatetimeIndex(dates.ravel())
+        time_deltas = dates_as_index - ref_date
+
+        # Use floor division if time_delta evenly divides all differences
+        # to preserve integer dtype if possible (GH 4045).
+        if np.all(time_deltas % time_delta == np.timedelta64(0, "ns")):
+            num = time_deltas // time_delta
+        else:
+            num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError):

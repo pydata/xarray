@@ -159,12 +159,12 @@ def _determine_cmap_params(
     Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
-    ==========
-    plot_data: Numpy array
+    ----------
+    plot_data : Numpy array
         Doesn't handle xarray objects
 
     Returns
-    =======
+    -------
     cmap_params : dict
         Use depends on the type of the plotting function
     """
@@ -460,6 +460,8 @@ def label_from_attrs(da, extra=""):
 
     if da.attrs.get("units"):
         units = " [{}]".format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = " [{}]".format(da.attrs["unit"])
     else:
         units = ""
 
@@ -503,12 +505,14 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
-def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+def _resolve_intervals_1dplot(xval, yval, kwargs):
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
     points which double the length.
     """
+    x_suffix = ""
+    y_suffix = ""
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
@@ -534,13 +538,13 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, [pd.Interval]):
             xval = _interval_to_mid_points(xval)
-            xlabel += "_center"
+            x_suffix = "_center"
         if _valid_other_type(yval, [pd.Interval]):
             yval = _interval_to_mid_points(yval)
-            ylabel += "_center"
+            y_suffix = "_center"
 
     # return converted arguments
-    return xval, yval, xlabel, ylabel, kwargs
+    return xval, yval, x_suffix, y_suffix, kwargs
 
 
 def _resolve_intervals_2dplot(val, func_name):
@@ -787,15 +791,14 @@ def _process_cmap_cbar_kwargs(
 ):
     """
     Parameters
-    ==========
+    ----------
     func : plotting function
     data : ndarray,
         Data values
 
     Returns
-    =======
+    -------
     cmap_params
-
     cbar_kwargs
     """
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)

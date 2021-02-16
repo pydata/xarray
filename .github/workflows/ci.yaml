@@ -1,0 +1,104 @@
+name: CI
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch: # allows you to trigger manually
+
+jobs:
+  detect-ci-trigger:
+    name: detect ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: xarray-contrib/ci-trigger@v1
+        id: detect-trigger
+        with:
+          keyword: "[skip-ci]"
+  test:
+    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.7", "3.8"]
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      - name: Set environment variables
+        run: |
+          if [[ ${{ matrix.os }} == windows* ]] ;
+          then
+            echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+          else
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+
+          fi
+          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
+
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
+            hashFiles('ci/requirements/**.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: ${{ matrix.python-version }}
+          use-only-tar-bz2: true
+
+      - name: Install conda dependencies
+        run: |
+          mamba env update -f $CONDA_ENV_FILE
+
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+
+      - name: Version info
+        run: |
+          conda info -a
+          conda list
+          python xarray/util/print_versions.py
+      - name: Import xarray
+        run: |
+          python -c "import xarray"
+      - name: Run tests
+        run: |
+          python -m pytest -n 4 \
+             --cov=xarray \
+             --cov-report=xml
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          env_vars: RUNNER_OS,PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false

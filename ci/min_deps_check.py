@@ -1,15 +1,16 @@
 """Fetch from conda database all available versions of the xarray dependencies and their
-publication date. Compare it against requirements/py36-min-all-deps.yml to verify the
+publication date. Compare it against requirements/py37-min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
-import subprocess
+import itertools
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Dict, Iterator, Optional, Tuple
 
+import conda.api
 import yaml
 
+CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
     "black",
     "coveralls",
@@ -35,9 +36,11 @@ POLICY_OVERRIDE = {
     # setuptools-scm doesn't work with setuptools < 36.7 (Nov 2017).
     # The conda metadata is malformed for setuptools < 38.4 (Jan 2018)
     # (it's missing a timestamp which prevents this tool from working).
+    # setuptools < 40.4 (Sep 2018) from conda-forge cannot be installed into a py37
+    # environment
     # TODO remove this special case and the matching note in installing.rst
-    #      after July 2021.
-    "setuptools": (38, 4),
+    #      after March 2022.
+    "setuptools": (40, 4),
 }
 has_errors = False
 
@@ -53,7 +56,7 @@ def warning(msg: str) -> None:
 
 
 def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
-    """Load requirements/py36-min-all-deps.yml
+    """Load requirements/py37-min-all-deps.yml
 
     Yield (package name, major version, minor version, [patch version])
     """
@@ -89,30 +92,23 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
 
     Return map of {(major version, minor version): publication date}
     """
-    stdout = subprocess.check_output(
-        ["conda", "search", pkg, "--info", "-c", "defaults", "-c", "conda-forge"]
-    )
-    out = {}  # type: Dict[Tuple[int, int], datetime]
-    major = None
-    minor = None
 
-    for row in stdout.decode("utf-8").splitlines():
-        label, _, value = row.partition(":")
-        label = label.strip()
-        if label == "file name":
-            value = value.strip()[len(pkg) :]
-            smajor, sminor = value.split("-")[1].split(".")[:2]
-            major = int(smajor)
-            minor = int(sminor)
-        if label == "timestamp":
-            assert major is not None
-            assert minor is not None
-            ts = datetime.strptime(value.split()[0].strip(), "%Y-%m-%d")
+    def metadata(entry):
+        version = entry.version
 
-            if (major, minor) in out:
-                out[major, minor] = min(out[major, minor], ts)
-            else:
-                out[major, minor] = ts
+        time = datetime.fromtimestamp(entry.timestamp)
+        major, minor = map(int, version.split(".")[:2])
+
+        return (major, minor), time
+
+    raw_data = conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
+    data = sorted(metadata(entry) for entry in raw_data if entry.timestamp != 0)
+
+    release_dates = {
+        version: [time for _, time in group if time is not None]
+        for version, group in itertools.groupby(data, key=lambda x: x[0])
+    }
+    out = {version: min(dates) for version, dates in release_dates.items() if dates}
 
     # Hardcoded fix to work around incorrect dates in conda
     if pkg == "python":
@@ -200,16 +196,14 @@ def fmt_version(major: int, minor: int, patch: int = None) -> str:
 
 def main() -> None:
     fname = sys.argv[1]
-    with ThreadPoolExecutor(8) as ex:
-        futures = [
-            ex.submit(process_pkg, pkg, major, minor, patch)
-            for pkg, major, minor, patch in parse_requirements(fname)
-        ]
-        rows = [f.result() for f in futures]
+    rows = [
+        process_pkg(pkg, major, minor, patch)
+        for pkg, major, minor, patch in parse_requirements(fname)
+    ]
 
-    print("Package       Required             Policy               Status")
-    print("------------- -------------------- -------------------- ------")
-    fmt = "{:13} {:7} ({:10}) {:7} ({:10}) {}"
+    print("Package           Required             Policy               Status")
+    print("----------------- -------------------- -------------------- ------")
+    fmt = "{:17} {:7} ({:10}) {:7} ({:10}) {}"
     for row in rows:
         print(fmt.format(*row))
 

@@ -19,7 +19,7 @@ Reordering dimensions
 ---------------------
 
 To reorder dimensions on a :py:class:`~xarray.DataArray` or across all variables
-on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An 
+on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`. An
 ellipsis (`...`) can be use to represent all other dimensions:
 
 .. ipython:: python
