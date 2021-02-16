@@ -83,6 +83,8 @@ argument:
 
         ...
 
+To avoid duplicated information, this method must omit information about the shape and
+:term:`dtype`.
 
 Extending xarray
 ----------------
