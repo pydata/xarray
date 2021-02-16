@@ -4472,6 +4472,26 @@ class TestDataArray:
         assert actual.shape == (7, 4, 5)
         assert_identical(actual, expected)
 
+        ar = xr.DataArray([9], dims="x")
+
+        actual = ar.pad(x=1)
+        expected = xr.DataArray([np.NaN, 9, np.NaN], dims="x")
+        assert_identical(actual, expected)
+
+        actual = ar.pad(x=1, constant_values=1.23456)
+        expected = xr.DataArray([1, 9, 1], dims="x")
+        assert_identical(actual, expected)
+
+        if LooseVersion(np.__version__) >= "1.20":
+            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+                ar.pad(x=1, constant_values=np.NaN)
+        else:
+            actual = ar.pad(x=1, constant_values=np.NaN)
+            expected = xr.DataArray(
+                [-9223372036854775808, 9, -9223372036854775808], dims="x"
+            )
+            assert_identical(actual, expected)
+
     def test_pad_coords(self):
         ar = DataArray(
             np.arange(3 * 4 * 5).reshape(3, 4, 5),
