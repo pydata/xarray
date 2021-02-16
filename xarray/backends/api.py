@@ -643,7 +643,9 @@ def open_dataarray(
     backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        allow user control of dataset processing. If using fsspec URLs,
+        include the key "storage_options" to pass arguments to the
+        storage layer.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -869,14 +871,33 @@ def open_mfdataset(
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths):
+        if is_remote_uri(paths) and engine == "zarr":
+            try:
+                from fsspec.core import get_fs_token_paths
+            except ImportError as e:
+                raise ImportError(
+                    "The use of remote URLs for opening zarr requires the package fsspec"
+                ) from e
+
+            fs, _, _ = get_fs_token_paths(
+                paths,
+                mode="rb",
+                storage_options=kwargs.get("backend_kwargs", {}).get(
+                    "storage_options", {}
+                ),
+                expand=False,
+            )
+            paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+            paths = [fs.get_mapper(path) for path in paths]
+        elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs: "
                 "{!r}. Instead, supply paths as an explicit list of strings.".format(
                     paths
                 )
             )
-        paths = sorted(glob(_normalize_path(paths)))
+        else:
+            paths = sorted(glob(_normalize_path(paths)))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 

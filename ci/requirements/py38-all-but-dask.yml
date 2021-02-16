@@ -4,6 +4,8 @@ channels:
   - nodefaults
 dependencies:
   - python=3.8
+  - black
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
