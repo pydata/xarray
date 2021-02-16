@@ -396,19 +396,19 @@ These methods may also be applied to ``Dataset`` objects
     ds.isel(x=xr.DataArray([0, 1, 2], dims=["points"]))
 
 Vectorized indexing may be used to extract information from the nearest
-grid cells of interest, for example, the nearest climate model grid
-cells to a collection specified weather station latitudes and longitudes.
+grid cells of interest, for example, the nearest climate model grid cells
+to a collection specified weather station latitudes and longitudes.
 
 .. ipython:: python
 
     ds = xr.tutorial.open_dataset("air_temperature")
 
     # Define target latitude and longitude (where weather stations might be)
-    tgt_lat = xr.DataArray(np.linspace(40, 45, num=6), dims="points")
-    tgt_lon = xr.DataArray(np.linspace(200, 205, num=6), dims="points")
+    target_lon = xr.DataArray([200, 201, 202, 205], dims="points")
+    target_lat = xr.DataArray([31, 41, 42, 42], dims="points")
 
     # Retrieve data at the grid cells nearest to the target latitudes and longitudes
-    da = ds["air"].sel(lon=tgt_lon, lat=tgt_lat, method="nearest")
+    da = ds["air"].sel(lon=target_lon, lat=target_lat, method="nearest")
     da
 
 .. tip::
