@@ -529,9 +529,9 @@ class DataArrayRolling(Rolling):
         else:
             if fillna is not None:
                 if fillna is dtypes.INF:
-                    fillna = dtypes.get_pos_infinity(self.obj.dtype)
+                    fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
                 elif fillna is dtypes.NINF:
-                    fillna = dtypes.get_neg_infinity(self.obj.dtype)
+                    fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
                 kwargs.setdefault("skipna", False)
                 kwargs.setdefault("fillna", fillna)
 
