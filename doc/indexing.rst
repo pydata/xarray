@@ -408,7 +408,7 @@ cells to a collection specified weather station latitudes and longitudes.
     tgt_lon = xr.DataArray(np.linspace(200, 205, num=6), dims="points")
 
     # Retrieve data at the grid cells nearest to the target latitudes and longitudes
-    da = ds['air'].sel(lon=tgt_lon, lat=tgt_lat, method='nearest')
+    da = ds["air"].sel(lon=tgt_lon, lat=tgt_lat, method="nearest")
     da
 
 .. tip::

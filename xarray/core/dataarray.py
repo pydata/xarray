@@ -1090,10 +1090,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> da = xr.DataArray(
-        ...     np.arange(25).reshape(5, 5),
-        ...     dims=("x", "y")
-        ... )
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1101,7 +1098,7 @@ class DataArray(AbstractArray, DataWithCoords):
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-                Dimensions without coordinates: x, y
+        Dimensions without coordinates: x, y
 
         >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
         >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
@@ -1223,7 +1220,7 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> da = xr.DataArray(
         ...     np.arange(25).reshape(5, 5),
         ...     coords={"x": np.arange(5), "y": np.arange(5)},
-        ...     dims=("x", "y")
+        ...     dims=("x", "y"),
         ... )
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
@@ -1238,7 +1235,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
         >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
-        >>> da = da.sel(x=tgt_x, y=tgt_y, method='nearest')
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
         >>> da
         <xarray.DataArray (points: 5)>
         array([ 0,  6, 12, 18, 24])
