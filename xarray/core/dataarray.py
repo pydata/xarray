@@ -1094,6 +1094,26 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel
         DataArray.sel
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
+        >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> da = da.isel(x=tgt_x, y=tgt_y)
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1202,6 +1222,34 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.sel
         DataArray.isel
 
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(5), "y": np.arange(5)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
+        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
