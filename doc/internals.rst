@@ -15,6 +15,7 @@ compiled code to :ref:`optional dependencies<installing>`.
 
     import numpy as np
     import pandas as pd
+    import sparse
     import xarray as xr
 
     np.random.seed(123456)
@@ -84,7 +85,19 @@ argument:
         ...
 
 To avoid duplicated information, this method must omit information about the shape and
-:term:`dtype`.
+:term:`dtype`. For example, the string representation of a ``dask`` array or a
+``sparse`` matrix would be:
+
+.. ipython:: python
+
+    a = np.eye(10)
+    a[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
+    a = sparse.COO.from_numpy(a)
+    a
+
+    xr.Dataset(
+        {"a": ("x", np.linspace(0, 1, 10)), "b": (("y", "z"), sparse.COO.from_numpy(a))}
+    ).chunk({"x": 2})
 
 Extending xarray
 ----------------
