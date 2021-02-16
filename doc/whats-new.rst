@@ -41,6 +41,10 @@ Breaking changes
   values were required, which would lead to inaccurate I/O round-trips.
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
+- As a result of :pull:`4911` the output from calling :py:meth:`DataArray.sum`
+  or :py:meth:`DataArray.prod` on an integer array with ``skipna=True`` and a
+  non-None value for ``min_count`` will now be a float array rather than an
+  integer array.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -113,11 +117,12 @@ Bug fixes
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
-- Stop ``sum`` and ``prod`` computing lazy arrays when called with a ``min_count``
-  parameter (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
-- Fix bug preventing the ``min_count`` parameter to ``sum`` and ``prod`` working correctly
-  when calculating over all axes of a float64 array (:issue:`4898`, :pull:`4911`).
+- Stop :py:meth:`DataArray.sum` and :py:meth:`DataArray.prod` computing lazy
+  arrays when called with a ``min_count`` parameter (:issue:`4898`, :pull:`4911`).
   By `Blair Bonnett <https://github.com/bcbnz>`_.
+- Fix bug preventing the ``min_count`` parameter to :py:meth:`DataArray.sum` and
+  :py:meth:`DataArray.prod` working correctly when calculating over all axes of
+  a float64 array (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
 
 Documentation
 ~~~~~~~~~~~~~
