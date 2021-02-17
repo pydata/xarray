@@ -40,6 +40,13 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
+- Variables referred to in attributes like ``bounds`` and ``grid_mapping``
+  are can be set as coordinate variables. These attributes
+  are moved to :py:attr:`DataArray.encoding` from
+  :py:attr:`DataArray.attrs`. This behaviour is controlled by the
+  ``decode_coords`` kwarg to :py:func:`open_dataset` and
+  :py:func:`open_mfdataset`.  The full list of decoded attributes is in
+  :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
 
@@ -55,6 +62,13 @@ Deprecations
 
 New Features
 ~~~~~~~~~~~~
+- Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
+  roundtripping of ``cftime.datetime`` objects (:pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
+  millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies
+  for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`4758`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Significantly higher ``unstack`` performance on numpy-backed arrays which
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
@@ -69,6 +83,11 @@ New Features
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
+  (including globs for the latter) for ``engine="zarr"``, and so allow reading from
+  many remote and other file systems (:pull:`4461`)
+  By `Martin Durant <https://github.com/martindurant>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -103,8 +122,12 @@ Bug fixes
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
+  By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -331,7 +354,6 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Expose ``use_cftime`` option in :py:func:`~xarray.open_zarr` (:issue:`2886`, :pull:`3229`)
   By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 
 Bug fixes
 ~~~~~~~~~
