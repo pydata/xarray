@@ -95,9 +95,9 @@ To avoid duplicated information, this method must omit information about the sha
     a = sparse.COO.from_numpy(a)
     a
 
-    xr.Dataset(
-        {"a": ("x", np.linspace(0, 1, 10)), "b": (("y", "z"), sparse.COO.from_numpy(a))}
-    ).chunk({"x": 2})
+    xr.Dataset({"a": ("x", np.linspace(0, 1, 10)), "b": (("y", "z"), a)}).chunk(
+        {"x": 2}
+    )
 
 Extending xarray
 ----------------
