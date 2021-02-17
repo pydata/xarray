@@ -13,6 +13,7 @@ compiled code to :ref:`optional dependencies<installing>`.
 .. ipython:: python
     :suppress:
 
+    import dask.array as da
     import numpy as np
     import pandas as pd
     import sparse
@@ -90,14 +91,15 @@ To avoid duplicated information, this method must omit information about the sha
 
 .. ipython:: python
 
-    a = np.eye(10)
-    a[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
-    a = sparse.COO.from_numpy(a)
+    a = da.linspace(0, 1, 20, chunks=2)
     a
 
-    xr.Dataset({"a": ("x", np.linspace(0, 1, 10)), "b": (("y", "z"), a)}).chunk(
-        {"x": 2}
-    )
+    b = np.eye(10)
+    b[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
+    b = sparse.COO.from_numpy(b)
+    b
+
+    xr.Dataset({"a": ("x", a), "b": (("y", "z"), b)})
 
 Extending xarray
 ----------------
