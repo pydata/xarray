@@ -452,4 +452,4 @@ def escape_underscores(string):
 
 def setup(app):
     DEFAULT_FILTERS["escape_underscores"] = escape_underscores
-    return {"parallel_read_safe": True}
+    return dict(version=version, parallel_read_safe=False, parallel_write_safe=True)
