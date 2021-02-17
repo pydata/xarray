@@ -2314,7 +2314,7 @@ class TestAsCompatibleData:
         assert isinstance(orig._data, CustomIndexable)
 
         array = CustomWithValuesAttr(np.arange(3))
-        orig = Variable(dims=("x"), data=[array], attrs={"foo": "bar"})
+        orig = Variable(dims=(), data=array)
         assert isinstance(orig._data.item(), CustomWithValuesAttr)
 
 
