@@ -1,3 +1,4 @@
+import functools
 import operator
 
 import numpy as np
@@ -5,33 +6,68 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core import formatting
+from xarray.core import dtypes
 from xarray.core.npcompat import IS_NEP18_ACTIVE
+
+from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
+from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
 
-unit_registry = pint.UnitRegistry()
+# make sure scalars are converted to 0d arrays so quantities can
+# always be treated like ndarrays
+unit_registry = pint.UnitRegistry(force_ndarray=True)
 Quantity = unit_registry.Quantity
+
 
 pytestmark = [
     pytest.mark.skipif(
         not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
     ),
-    # TODO: remove this once pint has a released version with __array_function__
-    pytest.mark.skipif(
-        not hasattr(unit_registry.Quantity, "__array_function__"),
-        reason="pint does not implement __array_function__ yet",
-    ),
-    # pytest.mark.filterwarnings("ignore:::pint[.*]"),
+    pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
 
+def is_compatible(unit1, unit2):
+    def dimensionality(obj):
+        if isinstance(obj, (unit_registry.Quantity, unit_registry.Unit)):
+            unit_like = obj
+        else:
+            unit_like = unit_registry.dimensionless
+
+        return unit_like.dimensionality
+
+    return dimensionality(unit1) == dimensionality(unit2)
+
+
+def compatible_mappings(first, second):
+    return {
+        key: is_compatible(unit1, unit2)
+        for key, (unit1, unit2) in zip_mappings(first, second)
+    }
+
+
+def merge_mappings(base, *mappings):
+    result = base.copy()
+    for m in mappings:
+        result.update(m)
+
+    return result
+
+
+def zip_mappings(*mappings):
+    for key in set(mappings[0]).intersection(*mappings[1:]):
+        yield key, tuple(m[key] for m in mappings)
+
+
 def array_extract_units(obj):
-    raw = obj.data if hasattr(obj, "data") else obj
+    if isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
+        obj = obj.data
+
     try:
-        return raw.units
+        return obj.units
     except AttributeError:
         return None
 
@@ -43,53 +79,17 @@ def array_strip_units(array):
         return array
 
 
-def array_attach_units(data, unit, convert_from=None):
-    try:
-        unit, convert_from = unit
-    except TypeError:
-        pass
-
+def array_attach_units(data, unit):
     if isinstance(data, Quantity):
-        if not convert_from:
-            raise ValueError(
-                "cannot attach unit {unit} to quantity ({data.units})".format(
-                    unit=unit, data=data
-                )
-            )
-        elif isinstance(convert_from, unit_registry.Unit):
-            data = data.magnitude
-        elif convert_from is True:  # intentionally accept exactly true
-            if data.check(unit):
-                convert_from = data.units
-                data = data.magnitude
-            else:
-                raise ValueError(
-                    "cannot convert quantity ({data.units}) to {unit}".format(
-                        unit=unit, data=data
-                    )
-                )
-        else:
-            raise ValueError(
-                "cannot convert from invalid unit {convert_from}".format(
-                    convert_from=convert_from
-                )
-            )
+        raise ValueError(f"cannot attach unit {unit} to quantity {data}")
 
-    # to make sure we also encounter the case of "equal if converted"
-    if convert_from is not None:
-        quantity = (data * convert_from).to(
-            unit
-            if isinstance(unit, unit_registry.Unit)
-            else unit_registry.dimensionless
-        )
-    else:
-        try:
-            quantity = data * unit
-        except np.core._exceptions.UFuncTypeError:
-            if unit != 1:
-                raise
+    try:
+        quantity = data * unit
+    except np.core._exceptions.UFuncTypeError:
+        if isinstance(unit, unit_registry.Unit):
+            raise
 
-            quantity = data
+        quantity = data
 
     return quantity
 
@@ -111,8 +111,12 @@ def extract_units(obj):
         }
 
         units = {**vars_units, **coords_units}
+    elif isinstance(obj, xr.Variable):
+        vars_units = {None: array_extract_units(obj.data)}
+
+        units = {**vars_units}
     elif isinstance(obj, Quantity):
-        vars_units = {"<array>": array_extract_units(obj)}
+        vars_units = {None: array_extract_units(obj)}
 
         units = {**vars_units}
     else:
@@ -146,6 +150,9 @@ def strip_units(obj):
         new_obj = xr.DataArray(
             name=strip_units(obj.name), data=data, coords=coords, dims=obj.dims
         )
+    elif isinstance(obj, xr.Variable):
+        data = array_strip_units(obj.data)
+        new_obj = obj.copy(data=data)
     elif isinstance(obj, unit_registry.Quantity):
         new_obj = obj.magnitude
     elif isinstance(obj, (list, tuple)):
@@ -157,8 +164,9 @@ def strip_units(obj):
 
 
 def attach_units(obj, units):
-    if not isinstance(obj, (xr.DataArray, xr.Dataset)):
-        return array_attach_units(obj, units.get("data", 1))
+    if not isinstance(obj, (xr.DataArray, xr.Dataset, xr.Variable)):
+        units = units.get("data", None) or units.get(None, None) or 1
+        return array_attach_units(obj, units)
 
     if isinstance(obj, xr.Dataset):
         data_vars = {
@@ -170,14 +178,9 @@ def attach_units(obj, units):
         }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
-    else:
+    elif isinstance(obj, xr.DataArray):
         # try the array name, "data" and None, then fall back to dimensionless
-        data_units = (
-            units.get(obj.name, None)
-            or units.get("data", None)
-            or units.get(None, None)
-            or 1
-        )
+        data_units = units.get(obj.name, None) or units.get(None, None) or 1
 
         data = array_attach_units(obj.data, data_units)
 
@@ -196,28 +199,42 @@ def attach_units(obj, units):
         new_obj = xr.DataArray(
             name=obj.name, data=data, coords=coords, attrs=attrs, dims=dims
         )
+    else:
+        data_units = units.get("data", None) or units.get(None, None) or 1
+
+        data = array_attach_units(obj.data, data_units)
+        new_obj = obj.copy(data=data)
 
     return new_obj
 
 
 def convert_units(obj, to):
+    # preprocess
+    to = {
+        key: None if not isinstance(value, unit_registry.Unit) else value
+        for key, value in to.items()
+    }
     if isinstance(obj, xr.Dataset):
         data_vars = {
-            name: convert_units(array, to) for name, array in obj.data_vars.items()
+            name: convert_units(array.variable, {None: to.get(name)})
+            for name, array in obj.data_vars.items()
         }
-        coords = {name: convert_units(array, to) for name, array in obj.coords.items()}
+        coords = {
+            name: convert_units(array.variable, {None: to.get(name)})
+            for name, array in obj.coords.items()
+        }
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords, attrs=obj.attrs)
     elif isinstance(obj, xr.DataArray):
         name = obj.name
 
         new_units = (
-            to.get(name, None) or to.get("data", None) or to.get(None, None) or 1
+            to.get(name, None) or to.get("data", None) or to.get(None, None) or None
         )
-        data = convert_units(obj.data, {None: new_units})
+        data = convert_units(obj.variable, {None: new_units})
 
         coords = {
-            name: (array.dims, convert_units(array.data, to))
+            name: (array.dims, convert_units(array.variable, {None: to.get(name)}))
             for name, array in obj.coords.items()
             if name != obj.name
         }
@@ -225,6 +242,9 @@ def convert_units(obj, to):
         new_obj = xr.DataArray(
             name=name, data=data, coords=coords, attrs=obj.attrs, dims=obj.dims
         )
+    elif isinstance(obj, xr.Variable):
+        new_data = convert_units(obj.data, to)
+        new_obj = obj.copy(data=new_data)
     elif isinstance(obj, unit_registry.Quantity):
         units = to.get(None)
         new_obj = obj.to(units) if units is not None else obj
@@ -234,46 +254,32 @@ def convert_units(obj, to):
     return new_obj
 
 
-def assert_equal_with_units(a, b):
-    # works like xr.testing.assert_equal, but also explicitly checks units
-    # so, it is more like assert_identical
+def assert_units_equal(a, b):
     __tracebackhide__ = True
-
-    if isinstance(a, xr.Dataset) or isinstance(b, xr.Dataset):
-        a_units = extract_units(a)
-        b_units = extract_units(b)
-
-        a_without_units = strip_units(a)
-        b_without_units = strip_units(b)
-
-        assert a_without_units.equals(b_without_units), formatting.diff_dataset_repr(
-            a, b, "equals"
-        )
-        assert a_units == b_units
-    else:
-        a = a if not isinstance(a, (xr.DataArray, xr.Variable)) else a.data
-        b = b if not isinstance(b, (xr.DataArray, xr.Variable)) else b.data
-
-        assert type(a) == type(b) or (
-            isinstance(a, Quantity) and isinstance(b, Quantity)
-        )
-
-        # workaround until pint implements allclose in __array_function__
-        if isinstance(a, Quantity) or isinstance(b, Quantity):
-            assert (
-                hasattr(a, "magnitude") and hasattr(b, "magnitude")
-            ) and np.allclose(a.magnitude, b.magnitude, equal_nan=True)
-            assert (hasattr(a, "units") and hasattr(b, "units")) and a.units == b.units
-        else:
-            assert np.allclose(a, b, equal_nan=True)
+    assert extract_units(a) == extract_units(b)
 
 
-@pytest.fixture(params=[float, int])
+@pytest.fixture(params=[np.dtype(float), np.dtype(int)], ids=str)
 def dtype(request):
     return request.param
 
 
+def merge_args(default_args, new_args):
+    from itertools import zip_longest
+
+    fill_value = object()
+    return [
+        second if second is not fill_value else first
+        for first, second in zip_longest(default_args, new_args, fillvalue=fill_value)
+    ]
+
+
 class method:
+    """wrapper class to help with passing methods via parametrize
+
+    This is works a bit similar to using `partial(Class.method, arg, kwarg)`
+    """
+
     def __init__(self, name, *args, **kwargs):
         self.name = name
         self.args = args
@@ -283,22 +289,32 @@ class method:
         from collections.abc import Callable
         from functools import partial
 
-        all_args = list(self.args) + list(args)
+        all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
+        xarray_classes = (
+            xr.Variable,
+            xr.DataArray,
+            xr.Dataset,
+            xr.core.groupby.GroupBy,
+        )
+
+        if not isinstance(obj, xarray_classes):
+            # remove typical xarray args like "dim"
+            exclude_kwargs = ("dim", "dims")
+            all_kwargs = {
+                key: value
+                for key, value in all_kwargs.items()
+                if key not in exclude_kwargs
+            }
+
         func = getattr(obj, self.name, None)
+
         if func is None or not isinstance(func, Callable):
             # fall back to module level numpy functions if not a xarray object
             if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
                 numpy_func = getattr(np, self.name)
                 func = partial(numpy_func, obj)
-                # remove typical xr args like "dim"
-                exclude_kwargs = ("dim", "dims")
-                all_kwargs = {
-                    key: value
-                    for key, value in all_kwargs.items()
-                    if key not in exclude_kwargs
-                }
             else:
                 raise AttributeError(f"{obj} has no method named '{self.name}'")
 
@@ -309,12 +325,21 @@ class method:
 
 
 class function:
-    def __init__(self, name_or_function, *args, **kwargs):
+    """wrapper class for numpy functions
+
+    Same as method, but the name is used for referencing numpy functions
+    """
+
+    def __init__(self, name_or_function, *args, function_label=None, **kwargs):
         if callable(name_or_function):
-            self.name = name_or_function.__name__
+            self.name = (
+                function_label
+                if function_label is not None
+                else name_or_function.__name__
+            )
             self.func = name_or_function
         else:
-            self.name = name_or_function
+            self.name = name_or_function if function_label is None else function_label
             self.func = getattr(np, name_or_function)
             if self.func is None:
                 raise AttributeError(
@@ -325,7 +350,7 @@ class function:
         self.kwargs = kwargs
 
     def __call__(self, *args, **kwargs):
-        all_args = list(self.args) + list(args)
+        all_args = merge_args(self.args, args)
         all_kwargs = {**self.kwargs, **kwargs}
 
         return self.func(*all_args, **all_kwargs)
@@ -334,24 +359,81 @@ class function:
         return f"function_{self.name}"
 
 
-def test_apply_ufunc_dataarray(dtype):
-    func = function(
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)
+def test_apply_ufunc_dataarray(variant, dtype):
+    variants = {
+        "data": (unit_registry.m, 1, 1),
+        "dims": (1, unit_registry.m, 1),
+        "coords": (1, 1, unit_registry.m),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+    func = functools.partial(
         xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
     )
 
-    array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.m
-    x = np.arange(20) * unit_registry.s
-    data_array = xr.DataArray(data=array, dims="x", coords={"x": x})
+    array = np.linspace(0, 10, 20).astype(dtype) * data_unit
+    x = np.arange(20) * dim_unit
+    u = np.linspace(-1, 1, 20) * coord_unit
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x, "u": ("x", u)})
 
     expected = attach_units(func(strip_units(data_array)), extract_units(data_array))
-    result = func(data_array)
+    actual = func(data_array)
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(
-    reason="pint does not implement `np.result_type` and align strips units"
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
 )
+def test_apply_ufunc_dataset(variant, dtype):
+    variants = {
+        "data": (unit_registry.m, 1, 1),
+        "dims": (1, unit_registry.m, 1),
+        "coords": (1, 1, unit_registry.s),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
+
+    func = functools.partial(
+        xr.apply_ufunc, np.mean, input_core_dims=[["x"]], kwargs={"axis": -1}
+    )
+
+    array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+    array2 = np.linspace(0, 10, 5).astype(dtype) * data_unit
+
+    x = np.arange(5) * dim_unit
+    y = np.arange(10) * dim_unit
+
+    u = np.linspace(-1, 1, 10) * coord_unit
+
+    ds = xr.Dataset(
+        data_vars={"a": (("x", "y"), array1), "b": ("x", array2)},
+        coords={"x": x, "y": y, "u": ("y", u)},
+    )
+
+    expected = attach_units(func(strip_units(ds)), extract_units(ds))
+    actual = func(ds)
+
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -369,40 +451,61 @@ def test_apply_ufunc_dataarray(dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
-@pytest.mark.parametrize("fill_value", (np.float64(10), np.float64(np.nan)))
-def test_align_dataarray(fill_value, variant, unit, error, dtype):
+@pytest.mark.parametrize("value", (10, dtypes.NA))
+def test_align_dataarray(value, variant, unit, error, dtype):
+    if variant == "coords" and (
+        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+    ):
+        pytest.xfail(
+            reason=(
+                "fill_value is used for both data variables and coords. "
+                "See https://github.com/pydata/xarray/issues/4165"
+            )
+        )
+
+    fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
+
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
-    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit
-    x = np.arange(2) * original_unit
-    x_a1 = np.array([10, 5]) * original_unit
-    x_a2 = np.array([10, 5]) * coord_unit
+    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit1
+    array2 = np.linspace(0, 8, 2 * 5).reshape(2, 5).astype(dtype) * data_unit2
 
-    y1 = np.arange(5) * original_unit
-    y2 = np.arange(2, 7) * dim_unit
+    x = np.arange(2) * dim_unit1
+    y1 = np.arange(5) * dim_unit1
+    y2 = np.arange(2, 7) * dim_unit2
 
-    data_array1 = xr.DataArray(
-        data=array1, coords={"x": x, "x_a": ("x", x_a1), "y": y1}, dims=("x", "y")
-    )
-    data_array2 = xr.DataArray(
-        data=array2, coords={"x": x, "x_a": ("x", x_a2), "y": y2}, dims=("x", "y")
-    )
+    u1 = np.array([3, 5, 7, 8, 9]) * coord_unit1
+    u2 = np.array([7, 8, 9, 11, 13]) * coord_unit2
 
-    fill_value = fill_value * data_unit
+    coords1 = {"x": x, "y": y1}
+    coords2 = {"x": x, "y": y2}
+    if variant == "coords":
+        coords1["y_a"] = ("y", u1)
+        coords2["y_a"] = ("y", u2)
+
+    data_array1 = xr.DataArray(data=array1, coords=coords1, dims=("x", "y"))
+    data_array2 = xr.DataArray(data=array2, coords=coords2, dims=("x", "y"))
+
+    fill_value = fill_value * data_unit2
     func = function(xr.align, join="outer", fill_value=fill_value)
-    if error is not None:
+    if error is not None and (value != dtypes.NA or isinstance(fill_value, Quantity)):
         with pytest.raises(error):
             func(data_array1, data_array2)
 
@@ -410,32 +513,31 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
 
     stripped_kwargs = {
         key: strip_units(
-            convert_units(value, {None: original_unit})
-            if isinstance(value, unit_registry.Quantity)
-            else value
+            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None})
         )
         for key, value in func.kwargs.items()
     }
-    units = extract_units(data_array1)
-    # FIXME: should the expected_b have the same units as data_array1
-    # or data_array2?
-    expected_a, expected_b = tuple(
-        attach_units(elem, units)
-        for elem in func(
-            strip_units(data_array1),
-            strip_units(convert_units(data_array2, units)),
-            **stripped_kwargs,
-        )
+    units_a = extract_units(data_array1)
+    units_b = extract_units(data_array2)
+    expected_a, expected_b = func(
+        strip_units(data_array1),
+        strip_units(convert_units(data_array2, units_a)),
+        **stripped_kwargs,
     )
-    result_a, result_b = func(data_array1, data_array2)
+    expected_a = attach_units(expected_a, units_a)
+    if isinstance(array2, Quantity):
+        expected_b = convert_units(attach_units(expected_b, units_a), units_b)
+    else:
+        expected_b = attach_units(expected_b, units_b)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    actual_a, actual_b = func(data_array1, data_array2)
+
+    assert_units_equal(expected_a, actual_a)
+    assert_allclose(expected_a, actual_a)
+    assert_units_equal(expected_b, actual_b)
+    assert_allclose(expected_b, actual_b)
 
 
-@pytest.mark.xfail(
-    reason="pint does not implement `np.result_type` and align strips units"
-)
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -453,43 +555,61 @@ def test_align_dataarray(fill_value, variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
-@pytest.mark.parametrize("fill_value", (np.float64(10), np.float64(np.nan)))
-def test_align_dataset(fill_value, unit, variant, error, dtype):
+@pytest.mark.parametrize("value", (10, dtypes.NA))
+def test_align_dataset(value, unit, variant, error, dtype):
+    if variant == "coords" and (
+        value != dtypes.NA or isinstance(unit, unit_registry.Unit)
+    ):
+        pytest.xfail(
+            reason=(
+                "fill_value is used for both data variables and coords. "
+                "See https://github.com/pydata/xarray/issues/4165"
+            )
+        )
+
+    fill_value = dtypes.get_fill_value(dtype) if value == dtypes.NA else value
+
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * original_unit
-    array2 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit
+    array1 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit1
+    array2 = np.linspace(0, 10, 2 * 5).reshape(2, 5).astype(dtype) * data_unit2
 
-    x = np.arange(2) * original_unit
-    x_a1 = np.array([10, 5]) * original_unit
-    x_a2 = np.array([10, 5]) * coord_unit
+    x = np.arange(2) * dim_unit1
+    y1 = np.arange(5) * dim_unit1
+    y2 = np.arange(2, 7) * dim_unit2
 
-    y1 = np.arange(5) * original_unit
-    y2 = np.arange(2, 7) * dim_unit
+    u1 = np.array([3, 5, 7, 8, 9]) * coord_unit1
+    u2 = np.array([7, 8, 9, 11, 13]) * coord_unit2
 
-    ds1 = xr.Dataset(
-        data_vars={"a": (("x", "y"), array1)},
-        coords={"x": x, "x_a": ("x", x_a1), "y": y1},
-    )
-    ds2 = xr.Dataset(
-        data_vars={"a": (("x", "y"), array2)},
-        coords={"x": x, "x_a": ("x", x_a2), "y": y2},
-    )
+    coords1 = {"x": x, "y": y1}
+    coords2 = {"x": x, "y": y2}
+    if variant == "coords":
+        coords1["u"] = ("y", u1)
+        coords2["u"] = ("y", u2)
 
-    fill_value = fill_value * data_unit
+    ds1 = xr.Dataset(data_vars={"a": (("x", "y"), array1)}, coords=coords1)
+    ds2 = xr.Dataset(data_vars={"a": (("x", "y"), array2)}, coords=coords2)
+
+    fill_value = fill_value * data_unit2
     func = function(xr.align, join="outer", fill_value=fill_value)
-    if error is not None:
+    if error is not None and (value != dtypes.NA or isinstance(fill_value, Quantity)):
         with pytest.raises(error):
             func(ds1, ds2)
 
@@ -497,58 +617,89 @@ def test_align_dataset(fill_value, unit, variant, error, dtype):
 
     stripped_kwargs = {
         key: strip_units(
-            convert_units(value, {None: original_unit})
-            if isinstance(value, unit_registry.Quantity)
-            else value
+            convert_units(value, {None: data_unit1 if data_unit2 != 1 else None})
         )
         for key, value in func.kwargs.items()
     }
-    units = extract_units(ds1)
-    # FIXME: should the expected_b have the same units as ds1 or ds2?
-    expected_a, expected_b = tuple(
-        attach_units(elem, units)
-        for elem in func(
-            strip_units(ds1), strip_units(convert_units(ds2, units)), **stripped_kwargs
-        )
+    units_a = extract_units(ds1)
+    units_b = extract_units(ds2)
+    expected_a, expected_b = func(
+        strip_units(ds1),
+        strip_units(convert_units(ds2, units_a)),
+        **stripped_kwargs,
     )
-    result_a, result_b = func(ds1, ds2)
+    expected_a = attach_units(expected_a, units_a)
+    if isinstance(array2, Quantity):
+        expected_b = convert_units(attach_units(expected_b, units_a), units_b)
+    else:
+        expected_b = attach_units(expected_b, units_b)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    actual_a, actual_b = func(ds1, ds2)
+
+    assert_units_equal(expected_a, actual_a)
+    assert_allclose(expected_a, actual_a)
+    assert_units_equal(expected_b, actual_b)
+    assert_allclose(expected_b, actual_b)
 
 
 def test_broadcast_dataarray(dtype):
+    # uses align internally so more thorough tests are not needed
     array1 = np.linspace(0, 10, 2) * unit_registry.Pa
     array2 = np.linspace(0, 10, 3) * unit_registry.Pa
 
     a = xr.DataArray(data=array1, dims="x")
     b = xr.DataArray(data=array2, dims="y")
 
-    expected_a, expected_b = tuple(
-        attach_units(elem, extract_units(a))
-        for elem in xr.broadcast(strip_units(a), strip_units(b))
-    )
-    result_a, result_b = xr.broadcast(a, b)
+    units_a = extract_units(a)
+    units_b = extract_units(b)
+    expected_a, expected_b = xr.broadcast(strip_units(a), strip_units(b))
+    expected_a = attach_units(expected_a, units_a)
+    expected_b = convert_units(attach_units(expected_b, units_a), units_b)
 
-    assert_equal_with_units(expected_a, result_a)
-    assert_equal_with_units(expected_b, result_b)
+    actual_a, actual_b = xr.broadcast(a, b)
+
+    assert_units_equal(expected_a, actual_a)
+    assert_identical(expected_a, actual_a)
+    assert_units_equal(expected_b, actual_b)
+    assert_identical(expected_b, actual_b)
 
 
 def test_broadcast_dataset(dtype):
+    # uses align internally so more thorough tests are not needed
     array1 = np.linspace(0, 10, 2) * unit_registry.Pa
     array2 = np.linspace(0, 10, 3) * unit_registry.Pa
 
-    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("y", array2)})
+    x1 = np.arange(2)
+    y1 = np.arange(3)
 
-    (expected,) = tuple(
-        attach_units(elem, extract_units(ds)) for elem in xr.broadcast(strip_units(ds))
+    x2 = np.arange(2, 4)
+    y2 = np.arange(3, 6)
+
+    ds = xr.Dataset(
+        data_vars={"a": ("x", array1), "b": ("y", array2)}, coords={"x": x1, "y": y1}
     )
-    (result,) = xr.broadcast(ds)
+    other = xr.Dataset(
+        data_vars={
+            "a": ("x", array1.to(unit_registry.hPa)),
+            "b": ("y", array2.to(unit_registry.hPa)),
+        },
+        coords={"x": x2, "y": y2},
+    )
 
-    assert_equal_with_units(expected, result)
+    units_a = extract_units(ds)
+    units_b = extract_units(other)
+    expected_a, expected_b = xr.broadcast(strip_units(ds), strip_units(other))
+    expected_a = attach_units(expected_a, units_a)
+    expected_b = attach_units(expected_b, units_b)
+
+    actual_a, actual_b = xr.broadcast(ds, other)
+
+    assert_units_equal(expected_a, actual_a)
+    assert_identical(expected_a, actual_a)
+    assert_units_equal(expected_b, actual_b)
+    assert_identical(expected_b, actual_b)
 
 
-@pytest.mark.xfail(reason="`combine_by_coords` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -566,7 +717,9 @@ def test_broadcast_dataset(dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
@@ -574,31 +727,35 @@ def test_combine_by_coords(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    x = np.arange(1, 4) * 10 * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    x = np.arange(1, 4) * 10 * dim_unit1
+    y = np.arange(2) * dim_unit1
+    u = np.arange(3) * coord_unit1
 
-    other_array1 = np.ones_like(array1) * data_unit
-    other_array2 = np.ones_like(array2) * data_unit
-    other_x = np.arange(1, 4) * 10 * dim_unit
-    other_y = np.arange(2, 4) * dim_unit
-    other_z = np.arange(3, 6) * coord_unit
+    other_array1 = np.ones_like(array1) * data_unit2
+    other_array2 = np.ones_like(array2) * data_unit2
+    other_x = np.arange(1, 4) * 10 * dim_unit2
+    other_y = np.arange(2, 4) * dim_unit2
+    other_u = np.arange(3, 6) * coord_unit2
 
     ds = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
-        coords={"x": x, "y": y, "z": ("x", z)},
+        coords={"x": x, "y": y, "u": ("x", u)},
     )
     other = xr.Dataset(
         data_vars={"a": (("y", "x"), other_array1), "b": (("y", "x"), other_array2)},
-        coords={"x": other_x, "y": other_y, "z": ("x", other_z)},
+        coords={"x": other_x, "y": other_y, "u": ("x", other_u)},
     )
 
     if error is not None:
@@ -614,12 +771,12 @@ def test_combine_by_coords(variant, unit, error, dtype):
         ),
         units,
     )
-    result = xr.combine_by_coords([ds, other])
+    actual = xr.combine_by_coords([ds, other])
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -637,7 +794,9 @@ def test_combine_by_coords(variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
@@ -645,18 +804,22 @@ def test_combine_nested(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
 
-    x = np.arange(1, 4) * 10 * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    x = np.arange(1, 4) * 10 * dim_unit1
+    y = np.arange(2) * dim_unit1
+    z = np.arange(3) * coord_unit1
 
     ds1 = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
@@ -664,35 +827,35 @@ def test_combine_nested(variant, unit, error, dtype):
     )
     ds2 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(3) * dim_unit,
-            "y": np.arange(2, 4) * dim_unit,
-            "z": ("x", np.arange(-3, 0) * coord_unit),
+            "x": np.arange(3) * dim_unit2,
+            "y": np.arange(2, 4) * dim_unit2,
+            "z": ("x", np.arange(-3, 0) * coord_unit2),
         },
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.zeros_like(array1) * np.nan * data_unit),
-            "b": (("y", "x"), np.zeros_like(array2) * np.nan * data_unit),
+            "a": (("y", "x"), np.full_like(array1, fill_value=np.nan) * data_unit2),
+            "b": (("y", "x"), np.full_like(array2, fill_value=np.nan) * data_unit2),
         },
         coords={
-            "x": np.arange(3, 6) * dim_unit,
-            "y": np.arange(4, 6) * dim_unit,
-            "z": ("x", np.arange(3, 6) * coord_unit),
+            "x": np.arange(3, 6) * dim_unit2,
+            "y": np.arange(4, 6) * dim_unit2,
+            "z": ("x", np.arange(3, 6) * coord_unit2),
         },
     )
     ds4 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), -1 * np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), -1 * np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(6, 9) * dim_unit,
-            "y": np.arange(6, 8) * dim_unit,
-            "z": ("x", np.arange(6, 9) * coord_unit),
+            "x": np.arange(6, 9) * dim_unit2,
+            "y": np.arange(6, 8) * dim_unit2,
+            "z": ("x", np.arange(6, 9) * coord_unit2),
         },
     )
 
@@ -714,12 +877,12 @@ def test_combine_nested(variant, unit, error, dtype):
         ),
         units,
     )
-    result = func([[ds1, ds2], [ds3, ds4]])
+    actual = func([[ds1, ds2], [ds3, ds4]])
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -737,22 +900,37 @@ def test_combine_nested(variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
     ),
 )
 def test_concat_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
-    data_unit, dims_unit = variants.get(variant)
+    variants = {
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
+    }
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
-    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
-    x1 = np.arange(5, 15) * original_unit
-    x2 = np.arange(5) * dims_unit
+    array1 = np.linspace(0, 5, 10).astype(dtype) * data_unit1
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit2
 
-    arr1 = xr.DataArray(data=array1, coords={"x": x1}, dims="x")
-    arr2 = xr.DataArray(data=array2, coords={"x": x2}, dims="x")
+    x1 = np.arange(5, 15) * dim_unit1
+    x2 = np.arange(5) * dim_unit2
+
+    u1 = np.linspace(1, 2, 10).astype(dtype) * coord_unit1
+    u2 = np.linspace(0, 1, 5).astype(dtype) * coord_unit2
+
+    arr1 = xr.DataArray(data=array1, coords={"x": x1, "u": ("x", u1)}, dims="x")
+    arr2 = xr.DataArray(data=array2, coords={"x": x2, "u": ("x", u2)}, dims="x")
 
     if error is not None:
         with pytest.raises(error):
@@ -760,15 +938,19 @@ def test_concat_dataarray(variant, unit, error, dtype):
 
         return
 
+    units = extract_units(arr1)
     expected = attach_units(
-        xr.concat([strip_units(arr1), strip_units(arr2)], dim="x"), extract_units(arr1)
+        xr.concat(
+            [strip_units(arr1), strip_units(convert_units(arr2, units))], dim="x"
+        ),
+        units,
     )
-    result = xr.concat([arr1, arr2], dim="x")
+    actual = xr.concat([arr1, arr2], dim="x")
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="`concat` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -786,22 +968,37 @@ def test_concat_dataarray(variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
     ),
 )
 def test_concat_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
-    variants = {"data": (unit, original_unit), "dims": (original_unit, unit)}
-    data_unit, dims_unit = variants.get(variant)
+    variants = {
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
+    }
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
-    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit
-    x1 = np.arange(5, 15) * original_unit
-    x2 = np.arange(5) * dims_unit
+    array1 = np.linspace(0, 5, 10).astype(dtype) * data_unit1
+    array2 = np.linspace(-5, 0, 5).astype(dtype) * data_unit2
 
-    ds1 = xr.Dataset(data_vars={"a": ("x", array1)}, coords={"x": x1})
-    ds2 = xr.Dataset(data_vars={"a": ("x", array2)}, coords={"x": x2})
+    x1 = np.arange(5, 15) * dim_unit1
+    x2 = np.arange(5) * dim_unit2
+
+    u1 = np.linspace(1, 2, 10).astype(dtype) * coord_unit1
+    u2 = np.linspace(0, 1, 5).astype(dtype) * coord_unit2
+
+    ds1 = xr.Dataset(data_vars={"a": ("x", array1)}, coords={"x": x1, "u": ("x", u1)})
+    ds2 = xr.Dataset(data_vars={"a": ("x", array2)}, coords={"x": x2, "u": ("x", u2)})
 
     if error is not None:
         with pytest.raises(error):
@@ -809,15 +1006,17 @@ def test_concat_dataset(variant, unit, error, dtype):
 
         return
 
+    units = extract_units(ds1)
     expected = attach_units(
-        xr.concat([strip_units(ds1), strip_units(ds2)], dim="x"), extract_units(ds1)
+        xr.concat([strip_units(ds1), strip_units(convert_units(ds2, units))], dim="x"),
+        units,
     )
-    result = xr.concat([ds1, ds2], dim="x")
+    actual = xr.concat([ds1, ds2], dim="x")
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -835,7 +1034,9 @@ def test_concat_dataset(variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
@@ -843,71 +1044,83 @@ def test_merge_dataarray(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * original_unit
-    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit
-    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit
+    array1 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit1
+    x1 = np.arange(2) * dim_unit1
+    y1 = np.arange(3) * dim_unit1
+    u1 = np.linspace(10, 20, 2) * coord_unit1
+    v1 = np.linspace(10, 20, 3) * coord_unit1
 
-    x = np.arange(2) * original_unit
-    y = np.arange(3) * original_unit
-    z = np.arange(4) * original_unit
-    u = np.linspace(10, 20, 2) * original_unit
-    v = np.linspace(10, 20, 3) * original_unit
-    w = np.linspace(10, 20, 4) * original_unit
+    array2 = np.linspace(1, 2, 2 * 4).reshape(2, 4).astype(dtype) * data_unit2
+    x2 = np.arange(2, 4) * dim_unit2
+    z2 = np.arange(4) * dim_unit1
+    u2 = np.linspace(20, 30, 2) * coord_unit2
+    w2 = np.linspace(10, 20, 4) * coord_unit1
+
+    array3 = np.linspace(0, 2, 3 * 4).reshape(3, 4).astype(dtype) * data_unit2
+    y3 = np.arange(3, 6) * dim_unit2
+    z3 = np.arange(4, 8) * dim_unit2
+    v3 = np.linspace(10, 20, 3) * coord_unit2
+    w3 = np.linspace(10, 20, 4) * coord_unit2
 
     arr1 = xr.DataArray(
         name="a",
         data=array1,
-        coords={"x": x, "y": y, "u": ("x", u), "v": ("y", v)},
+        coords={"x": x1, "y": y1, "u": ("x", u1), "v": ("y", v1)},
         dims=("x", "y"),
     )
     arr2 = xr.DataArray(
-        name="b",
+        name="a",
         data=array2,
-        coords={
-            "x": np.arange(2, 4) * dim_unit,
-            "z": z,
-            "u": ("x", np.linspace(20, 30, 2) * coord_unit),
-            "w": ("z", w),
-        },
+        coords={"x": x2, "z": z2, "u": ("x", u2), "w": ("z", w2)},
         dims=("x", "z"),
     )
     arr3 = xr.DataArray(
-        name="c",
+        name="a",
         data=array3,
-        coords={
-            "y": np.arange(3, 6) * dim_unit,
-            "z": np.arange(4, 8) * dim_unit,
-            "v": ("y", np.linspace(10, 20, 3) * coord_unit),
-            "w": ("z", np.linspace(10, 20, 4) * coord_unit),
-        },
+        coords={"y": y3, "z": z3, "v": ("y", v3), "w": ("z", w3)},
         dims=("y", "z"),
     )
 
-    func = function(xr.merge)
     if error is not None:
         with pytest.raises(error):
-            func([arr1, arr2, arr3])
+            xr.merge([arr1, arr2, arr3])
 
         return
 
-    units = {name: original_unit for name in list("abcuvwxyz")}
+    units = {
+        "a": data_unit1,
+        "u": coord_unit1,
+        "v": coord_unit1,
+        "w": coord_unit1,
+        "x": dim_unit1,
+        "y": dim_unit1,
+        "z": dim_unit1,
+    }
     convert_and_strip = lambda arr: strip_units(convert_units(arr, units))
+
     expected = attach_units(
-        func([strip_units(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]),
+        xr.merge(
+            [convert_and_strip(arr1), convert_and_strip(arr2), convert_and_strip(arr3)]
+        ),
         units,
     )
-    result = func([arr1, arr2, arr3])
 
-    assert_equal_with_units(expected, result)
+    actual = xr.merge([arr1, arr2, arr3])
+
+    assert_units_equal(expected, actual)
+    assert_allclose(expected, actual)
 
 
-@pytest.mark.xfail(reason="blocked by `where`")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -925,7 +1138,9 @@ def test_merge_dataarray(variant, unit, error, dtype):
     "variant",
     (
         "data",
-        pytest.param("dims", marks=pytest.mark.xfail(reason="indexes strip units")),
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
         "coords",
     ),
 )
@@ -933,43 +1148,47 @@ def test_merge_dataset(variant, unit, error, dtype):
     original_unit = unit_registry.m
 
     variants = {
-        "data": (unit, original_unit, original_unit),
-        "dims": (original_unit, unit, original_unit),
-        "coords": (original_unit, original_unit, unit),
+        "data": ((original_unit, unit), (1, 1), (1, 1)),
+        "dims": ((1, 1), (original_unit, unit), (1, 1)),
+        "coords": ((1, 1), (1, 1), (original_unit, unit)),
     }
-    data_unit, dim_unit, coord_unit = variants.get(variant)
+    (
+        (data_unit1, data_unit2),
+        (dim_unit1, dim_unit2),
+        (coord_unit1, coord_unit2),
+    ) = variants.get(variant)
 
-    array1 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
-    array2 = np.zeros(shape=(2, 3), dtype=dtype) * original_unit
+    array1 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
+    array2 = np.zeros(shape=(2, 3), dtype=dtype) * data_unit1
 
-    x = np.arange(11, 14) * original_unit
-    y = np.arange(2) * original_unit
-    z = np.arange(3) * original_unit
+    x = np.arange(11, 14) * dim_unit1
+    y = np.arange(2) * dim_unit1
+    u = np.arange(3) * coord_unit1
 
     ds1 = xr.Dataset(
         data_vars={"a": (("y", "x"), array1), "b": (("y", "x"), array2)},
-        coords={"x": x, "y": y, "z": ("x", z)},
+        coords={"x": x, "y": y, "u": ("x", u)},
     )
     ds2 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.ones_like(array1) * data_unit),
-            "b": (("y", "x"), np.ones_like(array2) * data_unit),
+            "a": (("y", "x"), np.ones_like(array1) * data_unit2),
+            "b": (("y", "x"), np.ones_like(array2) * data_unit2),
         },
         coords={
-            "x": np.arange(3) * dim_unit,
-            "y": np.arange(2, 4) * dim_unit,
-            "z": ("x", np.arange(-3, 0) * coord_unit),
+            "x": np.arange(3) * dim_unit2,
+            "y": np.arange(2, 4) * dim_unit2,
+            "u": ("x", np.arange(-3, 0) * coord_unit2),
         },
     )
     ds3 = xr.Dataset(
         data_vars={
-            "a": (("y", "x"), np.zeros_like(array1) * np.nan * data_unit),
-            "b": (("y", "x"), np.zeros_like(array2) * np.nan * data_unit),
+            "a": (("y", "x"), np.full_like(array1, np.nan) * data_unit2),
+            "b": (("y", "x"), np.full_like(array2, np.nan) * data_unit2),
         },
         coords={
-            "x": np.arange(3, 6) * dim_unit,
-            "y": np.arange(4, 6) * dim_unit,
-            "z": ("x", np.arange(3, 6) * coord_unit),
+            "x": np.arange(3, 6) * dim_unit2,
+            "y": np.arange(4, 6) * dim_unit2,
+            "u": ("x", np.arange(3, 6) * coord_unit2),
         },
     )
 
@@ -983,131 +1202,189 @@ def test_merge_dataset(variant, unit, error, dtype):
     units = extract_units(ds1)
     convert_and_strip = lambda ds: strip_units(convert_units(ds, units))
     expected = attach_units(
-        func([strip_units(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]), units
+        func([convert_and_strip(ds1), convert_and_strip(ds2), convert_and_strip(ds3)]),
+        units,
     )
-    result = func([ds1, ds2, ds3])
+    actual = func([ds1, ds2, ds3])
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_allclose(expected, actual)
 
 
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
-def test_replication_dataarray(func, dtype):
-    array = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
-    data_array = xr.DataArray(data=array, dims="x")
+def test_replication_dataarray(func, variant, dtype):
+    unit = unit_registry.m
 
-    numpy_func = getattr(np, func.__name__)
-    expected = xr.DataArray(data=numpy_func(array), dims="x")
-    result = func(data_array)
+    variants = {
+        "data": (unit, 1, 1),
+        "dims": (1, unit, 1),
+        "coords": (1, 1, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
 
-    assert_equal_with_units(expected, result)
+    array = np.linspace(0, 10, 20).astype(dtype) * data_unit
+    x = np.arange(20) * dim_unit
+    u = np.linspace(0, 1, 20) * coord_unit
+
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x, "u": ("x", u)})
+    units = extract_units(data_array)
+    units.pop(data_array.name)
+
+    expected = attach_units(func(strip_units(data_array)), units)
+    actual = func(data_array)
+
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize(
+    "variant",
+    (
+        "data",
+        pytest.param(
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+        ),
+        "coords",
+    ),
+)
 @pytest.mark.parametrize("func", (xr.zeros_like, xr.ones_like))
-def test_replication_dataset(func, dtype):
-    array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
-    array2 = np.linspace(5, 10, 10).astype(dtype) * unit_registry.Pa
-    x = np.arange(20).astype(dtype) * unit_registry.m
-    y = np.arange(10).astype(dtype) * unit_registry.m
-    z = y.to(unit_registry.mm)
+def test_replication_dataset(func, variant, dtype):
+    unit = unit_registry.m
+
+    variants = {
+        "data": ((unit_registry.m, unit_registry.Pa), 1, 1),
+        "dims": ((1, 1), unit, 1),
+        "coords": ((1, 1), 1, unit),
+    }
+    (data_unit1, data_unit2), dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 10, 20).astype(dtype) * data_unit1
+    array2 = np.linspace(5, 10, 10).astype(dtype) * data_unit2
+    x = np.arange(20).astype(dtype) * dim_unit
+    y = np.arange(10).astype(dtype) * dim_unit
+    u = np.linspace(0, 1, 10) * coord_unit
 
     ds = xr.Dataset(
         data_vars={"a": ("x", array1), "b": ("y", array2)},
-        coords={"x": x, "y": y, "z": ("y", z)},
+        coords={"x": x, "y": y, "u": ("y", u)},
     )
+    units = {
+        name: unit
+        for name, unit in extract_units(ds).items()
+        if name not in ds.data_vars
+    }
 
-    numpy_func = getattr(np, func.__name__)
-    expected = ds.copy(
-        data={name: numpy_func(array.data) for name, array in ds.data_vars.items()}
-    )
-    result = func(ds)
+    expected = attach_units(func(strip_units(ds)), units)
 
-    assert_equal_with_units(expected, result)
+    actual = func(ds)
+
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be expected: hgrecco/pint#882"
-    )
-)
 @pytest.mark.parametrize(
-    "unit,error",
+    "variant",
     (
-        pytest.param(1, DimensionalityError, id="no_unit"),
+        "data",
         pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
-        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.ms, None, id="compatible_unit"),
-        pytest.param(unit_registry.s, None, id="identical_unit"),
+        pytest.param(
+            "coords",
+            marks=pytest.mark.xfail(reason="can't copy quantity into non-quantity"),
+        ),
     ),
-    ids=repr,
 )
-def test_replication_full_like_dataarray(unit, error, dtype):
-    array = np.linspace(0, 5, 10) * unit_registry.s
-    data_array = xr.DataArray(data=array, dims="x")
+def test_replication_full_like_dataarray(variant, dtype):
+    # since full_like will strip units and then use the units of the
+    # fill value, we don't need to try multiple units
+    unit = unit_registry.m
 
-    fill_value = -1 * unit
-    if error is not None:
-        with pytest.raises(error):
-            xr.full_like(data_array, fill_value=fill_value)
-    else:
-        result = xr.full_like(data_array, fill_value=fill_value)
-        expected = np.full_like(array, fill_value=fill_value)
+    variants = {
+        "data": (unit, 1, 1),
+        "dims": (1, unit, 1),
+        "coords": (1, 1, unit),
+    }
+    data_unit, dim_unit, coord_unit = variants.get(variant)
 
-        assert_equal_with_units(expected, result)
+    array = np.linspace(0, 5, 10) * data_unit
+    x = np.arange(10) * dim_unit
+    u = np.linspace(0, 1, 10) * coord_unit
+    data_array = xr.DataArray(data=array, dims="x", coords={"x": x, "u": ("x", u)})
 
+    fill_value = -1 * unit_registry.degK
 
-@pytest.mark.xfail(
-    reason=(
-        "pint is undecided on how `full_like` should work, so incorrect errors "
-        "may be expected: hgrecco/pint#882"
+    units = extract_units(data_array)
+    units[data_array.name] = fill_value.units
+    expected = attach_units(
+        xr.full_like(strip_units(data_array), fill_value=strip_units(fill_value)), units
     )
-)
+    actual = xr.full_like(data_array, fill_value=fill_value)
+
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize(
-    "unit,error",
+    "variant",
     (
-        pytest.param(1, DimensionalityError, id="no_unit"),
+        "data",
         pytest.param(
-            unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
-        pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
-        pytest.param(unit_registry.ms, None, id="compatible_unit"),
-        pytest.param(unit_registry.s, None, id="identical_unit"),
+        pytest.param(
+            "coords",
+            marks=pytest.mark.xfail(reason="can't copy quantity into non-quantity"),
+        ),
     ),
-    ids=repr,
 )
-def test_replication_full_like_dataset(unit, error, dtype):
-    array1 = np.linspace(0, 10, 20).astype(dtype) * unit_registry.s
-    array2 = np.linspace(5, 10, 10).astype(dtype) * unit_registry.Pa
-    x = np.arange(20).astype(dtype) * unit_registry.m
-    y = np.arange(10).astype(dtype) * unit_registry.m
-    z = y.to(unit_registry.mm)
+def test_replication_full_like_dataset(variant, dtype):
+    unit = unit_registry.m
+
+    variants = {
+        "data": ((unit_registry.s, unit_registry.Pa), 1, 1),
+        "dims": ((1, 1), unit, 1),
+        "coords": ((1, 1), 1, unit),
+    }
+    (data_unit1, data_unit2), dim_unit, coord_unit = variants.get(variant)
+
+    array1 = np.linspace(0, 10, 20).astype(dtype) * data_unit1
+    array2 = np.linspace(5, 10, 10).astype(dtype) * data_unit2
+    x = np.arange(20).astype(dtype) * dim_unit
+    y = np.arange(10).astype(dtype) * dim_unit
+
+    u = np.linspace(0, 1, 10) * coord_unit
 
     ds = xr.Dataset(
         data_vars={"a": ("x", array1), "b": ("y", array2)},
-        coords={"x": x, "y": y, "z": ("y", z)},
+        coords={"x": x, "y": y, "u": ("y", u)},
     )
 
-    fill_value = -1 * unit
-    if error is not None:
-        with pytest.raises(error):
-            xr.full_like(ds, fill_value=fill_value)
+    fill_value = -1 * unit_registry.degK
 
-        return
-
-    expected = ds.copy(
-        data={
-            name: np.full_like(array, fill_value=fill_value)
-            for name, array in ds.data_vars.items()
-        }
+    units = {
+        **extract_units(ds),
+        **{name: unit_registry.degK for name in ds.data_vars},
+    }
+    expected = attach_units(
+        xr.full_like(strip_units(ds), fill_value=strip_units(fill_value)), units
     )
-    result = xr.full_like(ds, fill_value=fill_value)
+    actual = xr.full_like(ds, fill_value=fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="`where` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1127,30 +1404,30 @@ def test_where_dataarray(fill_value, unit, error, dtype):
 
     x = xr.DataArray(data=array, dims="x")
     cond = x < 5 * unit_registry.m
-    # FIXME: this should work without wrapping in array()
-    fill_value = np.array(fill_value) * unit
+    fill_value = fill_value * unit
 
-    if error is not None:
+    if error is not None and not (
+        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
+    ):
         with pytest.raises(error):
             xr.where(cond, x, fill_value)
 
         return
 
-    fill_value_ = (
-        fill_value.to(unit_registry.m)
-        if isinstance(fill_value, unit_registry.Quantity)
-        and fill_value.check(unit_registry.m)
-        else fill_value
-    )
     expected = attach_units(
-        xr.where(cond, strip_units(x), strip_units(fill_value_)), extract_units(x)
+        xr.where(
+            cond,
+            strip_units(x),
+            strip_units(convert_units(fill_value, {None: unit_registry.m})),
+        ),
+        extract_units(x),
     )
-    result = xr.where(cond, x, fill_value)
+    actual = xr.where(cond, x, fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="`where` strips units")
 @pytest.mark.parametrize(
     "unit,error",
     (
@@ -1168,34 +1445,33 @@ def test_where_dataarray(fill_value, unit, error, dtype):
 def test_where_dataset(fill_value, unit, error, dtype):
     array1 = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
     array2 = np.linspace(-5, 0, 10).astype(dtype) * unit_registry.m
-    x = np.arange(10) * unit_registry.s
 
-    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
-    cond = ds.x < 5 * unit_registry.s
-    # FIXME: this should work without wrapping in array()
-    fill_value = np.array(fill_value) * unit
+    ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)})
+    cond = array1 < 2 * unit_registry.m
+    fill_value = fill_value * unit
 
-    if error is not None:
+    if error is not None and not (
+        np.isnan(fill_value) and not isinstance(fill_value, Quantity)
+    ):
         with pytest.raises(error):
             xr.where(cond, ds, fill_value)
 
         return
 
-    fill_value_ = (
-        fill_value.to(unit_registry.m)
-        if isinstance(fill_value, unit_registry.Quantity)
-        and fill_value.check(unit_registry.m)
-        else fill_value
-    )
     expected = attach_units(
-        xr.where(cond, strip_units(ds), strip_units(fill_value_)), extract_units(ds)
+        xr.where(
+            cond,
+            strip_units(ds),
+            strip_units(convert_units(fill_value, {None: unit_registry.m})),
+        ),
+        extract_units(ds),
     )
-    result = xr.where(cond, ds, fill_value)
+    actual = xr.where(cond, ds, fill_value)
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
 
 
-@pytest.mark.xfail(reason="pint does not implement `np.einsum`")
 def test_dot_dataarray(dtype):
     array1 = (
         np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
@@ -1206,26 +1482,767 @@ def test_dot_dataarray(dtype):
         np.linspace(10, 20, 10 * 20).reshape(10, 20).astype(dtype) * unit_registry.s
     )
 
-    arr1 = xr.DataArray(data=array1, dims=("x", "y"))
-    arr2 = xr.DataArray(data=array2, dims=("y", "z"))
+    data_array = xr.DataArray(data=array1, dims=("x", "y"))
+    other = xr.DataArray(data=array2, dims=("y", "z"))
 
-    expected = array1.dot(array2)
-    result = xr.dot(arr1, arr2)
+    expected = attach_units(
+        xr.dot(strip_units(data_array), strip_units(other)), {None: unit_registry.m}
+    )
+    actual = xr.dot(data_array, other)
 
-    assert_equal_with_units(expected, result)
+    assert_units_equal(expected, actual)
+    assert_identical(expected, actual)
+
+
+class TestVariable:
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("all"),
+            method("any"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
+            method("argsort"),
+            method("cumprod"),
+            method("cumsum"),
+            method("max"),
+            method("mean"),
+            method("median"),
+            method("min"),
+            method("prod"),
+            method("std"),
+            method("sum"),
+            method("var"),
+        ),
+        ids=repr,
+    )
+    def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
+        array = np.linspace(0, 1, 10).astype(dtype) * (
+            unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
+        )
+        variable = xr.Variable("x", array)
+
+        numpy_kwargs = func.kwargs.copy()
+        if "dim" in func.kwargs:
+            numpy_kwargs["axis"] = variable.get_axis_num(numpy_kwargs.pop("dim"))
+
+        units = extract_units(func(array, **numpy_kwargs))
+        expected = attach_units(func(strip_units(variable)), units)
+        actual = func(variable)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    def test_aggregate_complex(self):
+        variable = xr.Variable("x", [1, 2j, np.nan] * unit_registry.m)
+        expected = xr.Variable((), (0.5 + 1j) * unit_registry.m)
+        actual = variable.mean()
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("astype", np.float32),
+            method("conj"),
+            method("conjugate"),
+            method("clip", min=2, max=7),
+        ),
+        ids=repr,
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_numpy_methods(self, func, unit, error, dtype):
+        array = np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable("x", array)
+
+        args = [
+            item * unit if isinstance(item, (int, float, list)) else item
+            for item in func.args
+        ]
+        kwargs = {
+            key: value * unit if isinstance(value, (int, float, list)) else value
+            for key, value in func.kwargs.items()
+        }
+
+        if error is not None and func.name in ("searchsorted", "clip"):
+            with pytest.raises(error):
+                func(variable, *args, **kwargs)
+
+            return
+
+        converted_args = [
+            strip_units(convert_units(item, {None: unit_registry.m})) for item in args
+        ]
+        converted_kwargs = {
+            key: strip_units(convert_units(value, {None: unit_registry.m}))
+            for key, value in kwargs.items()
+        }
+
+        units = extract_units(func(array, *args, **kwargs))
+        expected = attach_units(
+            func(strip_units(variable), *converted_args, **converted_kwargs), units
+        )
+        actual = func(variable, *args, **kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    @pytest.mark.parametrize(
+        "func", (method("item", 5), method("searchsorted", 5)), ids=repr
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_raw_numpy_methods(self, func, unit, error, dtype):
+        array = np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable("x", array)
+
+        args = [
+            item * unit
+            if isinstance(item, (int, float, list)) and func.name != "item"
+            else item
+            for item in func.args
+        ]
+        kwargs = {
+            key: value * unit
+            if isinstance(value, (int, float, list)) and func.name != "item"
+            else value
+            for key, value in func.kwargs.items()
+        }
+
+        if error is not None and func.name != "item":
+            with pytest.raises(error):
+                func(variable, *args, **kwargs)
+
+            return
+
+        converted_args = [
+            strip_units(convert_units(item, {None: unit_registry.m}))
+            if func.name != "item"
+            else item
+            for item in args
+        ]
+        converted_kwargs = {
+            key: strip_units(convert_units(value, {None: unit_registry.m}))
+            if func.name != "item"
+            else value
+            for key, value in kwargs.items()
+        }
+
+        units = extract_units(func(array, *args, **kwargs))
+        expected = attach_units(
+            func(strip_units(variable), *converted_args, **converted_kwargs), units
+        )
+        actual = func(variable, *args, **kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_duckarray_allclose(expected, actual)
+
+    @pytest.mark.parametrize(
+        "func", (method("isnull"), method("notnull"), method("count")), ids=repr
+    )
+    def test_missing_value_detection(self, func):
+        array = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            )
+            * unit_registry.degK
+        )
+        variable = xr.Variable(("x", "y"), array)
+
+        expected = func(strip_units(variable))
+        actual = func(variable)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_missing_value_fillna(self, unit, error):
+        value = 10
+        array = (
+            np.array(
+                [
+                    [1.4, 2.3, np.nan, 7.2],
+                    [np.nan, 9.7, np.nan, np.nan],
+                    [2.1, np.nan, np.nan, 4.6],
+                    [9.9, np.nan, 7.2, 9.1],
+                ]
+            )
+            * unit_registry.m
+        )
+        variable = xr.Variable(("x", "y"), array)
+
+        fill_value = value * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                variable.fillna(value=fill_value)
+
+            return
+
+        expected = attach_units(
+            strip_units(variable).fillna(
+                value=fill_value.to(unit_registry.m).magnitude
+            ),
+            extract_units(variable),
+        )
+        actual = variable.fillna(value=fill_value)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+            ),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "convert_data",
+        (
+            pytest.param(False, id="no_conversion"),
+            pytest.param(True, id="with_conversion"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip(reason="behavior of identical is undecided"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_comparisons(self, func, unit, convert_data, dtype):
+        array = np.linspace(0, 1, 9).astype(dtype)
+        quantity1 = array * unit_registry.m
+        variable = xr.Variable("x", quantity1)
+
+        if convert_data and is_compatible(unit_registry.m, unit):
+            quantity2 = convert_units(array * unit_registry.m, {None: unit})
+        else:
+            quantity2 = array * unit
+        other = xr.Variable("x", quantity2)
+
+        expected = func(
+            strip_units(variable),
+            strip_units(
+                convert_units(other, extract_units(variable))
+                if is_compatible(unit_registry.m, unit)
+                else other
+            ),
+        )
+        if func.name == "identical":
+            expected &= extract_units(variable) == extract_units(other)
+        else:
+            expected &= all(
+                compatible_mappings(
+                    extract_units(variable), extract_units(other)
+                ).values()
+            )
+
+        actual = func(variable, other)
+
+        assert expected == actual
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_broadcast_equals(self, unit, dtype):
+        base_unit = unit_registry.m
+        left_array = np.ones(shape=(2, 2), dtype=dtype) * base_unit
+        value = (
+            (1 * base_unit).to(unit).magnitude if is_compatible(unit, base_unit) else 1
+        )
+        right_array = np.full(shape=(2,), fill_value=value, dtype=dtype) * unit
+
+        left = xr.Variable(("x", "y"), left_array)
+        right = xr.Variable("x", right_array)
+
+        units = {
+            **extract_units(left),
+            **({} if is_compatible(unit, base_unit) else {None: None}),
+        }
+        expected = strip_units(left).broadcast_equals(
+            strip_units(convert_units(right, units))
+        ) & is_compatible(unit, base_unit)
+        actual = left.broadcast_equals(right)
+
+        assert expected == actual
+
+    @pytest.mark.parametrize(
+        "indices",
+        (
+            pytest.param(4, id="single index"),
+            pytest.param([5, 2, 9, 1], id="multiple indices"),
+        ),
+    )
+    def test_isel(self, indices, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.s
+        variable = xr.Variable("x", array)
+
+        expected = attach_units(
+            strip_units(variable).isel(x=indices), extract_units(variable)
+        )
+        actual = variable.isel(x=indices)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            function(lambda x, *_: +x, function_label="unary_plus"),
+            function(lambda x, *_: -x, function_label="unary_minus"),
+            function(lambda x, *_: abs(x), function_label="absolute"),
+            function(lambda x, y: x + y, function_label="sum"),
+            function(lambda x, y: y + x, function_label="commutative_sum"),
+            function(lambda x, y: x * y, function_label="product"),
+            function(lambda x, y: y * x, function_label="commutative_product"),
+        ),
+        ids=repr,
+    )
+    def test_1d_math(self, func, unit, error, dtype):
+        base_unit = unit_registry.m
+        array = np.arange(5).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+
+        values = np.ones(5)
+        y = values * unit
+
+        if error is not None and func.name in ("sum", "commutative_sum"):
+            with pytest.raises(error):
+                func(variable, y)
+
+            return
+
+        units = extract_units(func(array, y))
+        if all(compatible_mappings(units, extract_units(y)).values()):
+            converted_y = convert_units(y, units)
+        else:
+            converted_y = y
+
+        if all(compatible_mappings(units, extract_units(variable)).values()):
+            converted_variable = convert_units(variable, units)
+        else:
+            converted_variable = variable
+
+        expected = attach_units(
+            func(strip_units(converted_variable), strip_units(converted_y)), units
+        )
+        actual = func(variable, y)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func", (method("where"), method("_getitem_with_mask")), ids=repr
+    )
+    def test_masking(self, func, unit, error, dtype):
+        base_unit = unit_registry.m
+        array = np.linspace(0, 5, 10).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+        cond = np.array([True, False] * 5)
+
+        other = -1 * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                func(variable, cond, other)
+
+            return
+
+        expected = attach_units(
+            func(
+                strip_units(variable),
+                cond,
+                strip_units(
+                    convert_units(
+                        other,
+                        {None: base_unit}
+                        if is_compatible(base_unit, unit)
+                        else {None: None},
+                    )
+                ),
+            ),
+            extract_units(variable),
+        )
+        actual = func(variable, cond, other)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
+    def test_squeeze(self, dim, dtype):
+        shape = (2, 1, 3, 1, 1, 2)
+        names = list("abcdef")
+        dim_lengths = dict(zip(names, shape))
+        array = np.ones(shape=shape) * unit_registry.m
+        variable = xr.Variable(names, array)
+
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
+        expected = attach_units(
+            strip_units(variable).squeeze(**kwargs), extract_units(variable)
+        )
+        actual = variable.squeeze(**kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("coarsen", windows={"y": 2}, func=np.mean),
+            method("quantile", q=[0.25, 0.75]),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
+            ),
+            method("roll", {"x": 2}),
+            pytest.param(
+                method("rolling_window", "x", 3, "window"),
+                marks=pytest.mark.xfail(reason="converts to ndarray"),
+            ),
+            method("reduce", np.std, "x"),
+            method("round", 2),
+            method("shift", {"x": -2}),
+            method("transpose", "y", "x"),
+        ),
+        ids=repr,
+    )
+    def test_computation(self, func, dtype):
+        base_unit = unit_registry.m
+        array = np.linspace(0, 5, 5 * 10).reshape(5, 10).astype(dtype) * base_unit
+        variable = xr.Variable(("x", "y"), array)
+
+        expected = attach_units(func(strip_units(variable)), extract_units(variable))
+
+        actual = func(variable)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_searchsorted(self, unit, error, dtype):
+        base_unit = unit_registry.m
+        array = np.linspace(0, 5, 10).astype(dtype) * base_unit
+        variable = xr.Variable("x", array)
+
+        value = 0 * unit
+
+        if error is not None:
+            with pytest.raises(error):
+                variable.searchsorted(value)
+
+            return
+
+        expected = strip_units(variable).searchsorted(
+            strip_units(convert_units(value, {None: base_unit}))
+        )
+
+        actual = variable.searchsorted(value)
+
+        assert_units_equal(expected, actual)
+        np.testing.assert_allclose(expected, actual)
+
+    def test_stack(self, dtype):
+        array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable(("x", "y"), array)
+
+        expected = attach_units(
+            strip_units(variable).stack(z=("x", "y")), extract_units(variable)
+        )
+        actual = variable.stack(z=("x", "y"))
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    def test_unstack(self, dtype):
+        array = np.linspace(0, 5, 3 * 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable("z", array)
+
+        expected = attach_units(
+            strip_units(variable).unstack(z={"x": 3, "y": 10}), extract_units(variable)
+        )
+        actual = variable.unstack(z={"x": 3, "y": 10})
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_concat(self, unit, error, dtype):
+        array1 = (
+            np.linspace(0, 5, 9 * 10).reshape(3, 6, 5).astype(dtype) * unit_registry.m
+        )
+        array2 = np.linspace(5, 10, 10 * 3).reshape(3, 2, 5).astype(dtype) * unit
+
+        variable = xr.Variable(("x", "y", "z"), array1)
+        other = xr.Variable(("x", "y", "z"), array2)
+
+        if error is not None:
+            with pytest.raises(error):
+                xr.Variable.concat([variable, other], dim="y")
+
+            return
+
+        units = extract_units(variable)
+        expected = attach_units(
+            xr.Variable.concat(
+                [strip_units(variable), strip_units(convert_units(other, units))],
+                dim="y",
+            ),
+            units,
+        )
+        actual = xr.Variable.concat([variable, other], dim="y")
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    def test_set_dims(self, dtype):
+        array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable(("x", "y"), array)
+
+        dims = {"z": 6, "x": 3, "a": 1, "b": 4, "y": 10}
+        expected = attach_units(
+            strip_units(variable).set_dims(dims), extract_units(variable)
+        )
+        actual = variable.set_dims(dims)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    def test_copy(self, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+        other = np.arange(10).astype(dtype) * unit_registry.s
+
+        variable = xr.Variable("x", array)
+        expected = attach_units(
+            strip_units(variable).copy(data=strip_units(other)), extract_units(other)
+        )
+        actual = variable.copy(data=other)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    def test_no_conflicts(self, unit, dtype):
+        base_unit = unit_registry.m
+        array1 = (
+            np.array(
+                [
+                    [6.3, 0.3, 0.45],
+                    [np.nan, 0.3, 0.3],
+                    [3.7, np.nan, 0.2],
+                    [9.43, 0.3, 0.7],
+                ]
+            )
+            * base_unit
+        )
+        array2 = np.array([np.nan, 0.3, np.nan]) * unit
+
+        variable = xr.Variable(("x", "y"), array1)
+        other = xr.Variable("y", array2)
+
+        expected = strip_units(variable).no_conflicts(
+            strip_units(
+                convert_units(
+                    other, {None: base_unit if is_compatible(base_unit, unit) else None}
+                )
+            )
+        ) & is_compatible(base_unit, unit)
+        actual = variable.no_conflicts(other)
+
+        assert expected == actual
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            "constant",
+            "mean",
+            "median",
+            "reflect",
+            "edge",
+            "linear_ramp",
+            "maximum",
+            "minimum",
+            "symmetric",
+            "wrap",
+        ],
+    )
+    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    def test_pad(self, mode, xr_arg, np_arg):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2) * unit_registry.m
+        v = xr.Variable(["x", "y", "z"], data)
+
+        expected = attach_units(
+            strip_units(v).pad(mode=mode, **xr_arg),
+            extract_units(v),
+        )
+        actual = v.pad(mode=mode, **xr_arg)
+
+        assert_units_equal(expected, actual)
+        assert_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_pad_unit_constant_value(self, unit, error, dtype):
+        array = np.linspace(0, 5, 3 * 10).reshape(3, 10).astype(dtype) * unit_registry.m
+        variable = xr.Variable(("x", "y"), array)
+
+        fill_value = -100 * unit
+
+        func = method("pad", mode="constant", x=(2, 3), y=(1, 4))
+        if error is not None:
+            with pytest.raises(error):
+                func(variable, constant_values=fill_value)
+
+            return
+
+        units = extract_units(variable)
+        expected = attach_units(
+            func(
+                strip_units(variable),
+                constant_values=strip_units(convert_units(fill_value, units)),
+            ),
+            units,
+        )
+        actual = func(variable, constant_values=fill_value)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
 
 class TestDataArray:
-    @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "variant",
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
-            pytest.param("with_coords"),
-            pytest.param("without_coords"),
+            "with_coords",
+            "without_coords",
         ),
     )
     def test_init(self, variant, dtype):
@@ -1251,7 +2268,6 @@ class TestDataArray:
             }.values()
         )
 
-    @pytest.mark.filterwarnings("error:::pint[.*]")
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
     )
@@ -1260,7 +2276,7 @@ class TestDataArray:
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             pytest.param("with_coords"),
             pytest.param("without_coords"),
@@ -1287,127 +2303,94 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                function("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                function("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            function("all"),
+            function("any"),
             pytest.param(
                 function("argmax"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                    "supported"
                 ),
             ),
             pytest.param(
                 function("argmin"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                    "supported"
                 ),
             ),
             function("max"),
             function("mean"),
             pytest.param(
                 function("median"),
-                marks=pytest.mark.xfail(
-                    reason="np.median on DataArray strips the units"
+                marks=pytest.mark.skip(
+                    reason="median does not work with dataarrays yet"
                 ),
             ),
             function("min"),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                function("sum"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
+            function("prod"),
+            function("sum"),
             function("std"),
             function("var"),
             function("cumsum"),
-            pytest.param(
-                function("cumprod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                method("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                method("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
-            pytest.param(
-                method("argmax"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantities with ndarrays in nanops not implemented"
-                ),
-            ),
-            pytest.param(
-                method("argmin"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantities with ndarrays in nanops not implemented"
-                ),
-            ),
+            function("cumprod"),
+            method("all"),
+            method("any"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("max"),
             method("mean"),
             method("median"),
             method("min"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
-            pytest.param(
-                method("sum"),
-                marks=pytest.mark.xfail(
-                    reason="comparison of quantity with ndarrays in nanops not implemented"
-                ),
-            ),
+            method("prod"),
+            method("sum"),
             method("std"),
             method("var"),
             method("cumsum"),
-            pytest.param(
-                method("cumprod"),
-                marks=pytest.mark.xfail(reason="pint does not implement cumprod yet"),
-            ),
+            method("cumprod"),
         ),
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        array = np.arange(10).astype(dtype) * unit_registry.m
-        data_array = xr.DataArray(data=array)
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
 
-        expected = xr.DataArray(data=func(array))
-        result = func(data_array)
+        array = np.arange(10).astype(dtype) * (
+            unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
+        )
+        data_array = xr.DataArray(data=array, dims="x")
 
-        assert_equal_with_units(expected, result)
+        numpy_kwargs = func.kwargs.copy()
+        if "dim" in numpy_kwargs:
+            numpy_kwargs["axis"] = data_array.get_axis_num(numpy_kwargs.pop("dim"))
+
+        # units differ based on the applied function, so we need to
+        # first compute the units
+        units = extract_units(func(array))
+        expected = attach_units(func(strip_units(data_array)), units)
+        actual = func(data_array)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (
             pytest.param(operator.neg, id="negate"),
             pytest.param(abs, id="absolute"),
-            pytest.param(
-                np.round,
-                id="round",
-                marks=pytest.mark.xfail(reason="pint does not implement round"),
-            ),
+            pytest.param(np.round, id="round"),
         ),
     )
     def test_unary_operations(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
-        expected = xr.DataArray(data=func(array))
-        result = func(data_array)
+        units = extract_units(func(array))
+        expected = attach_units(func(strip_units(data_array)), units)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -1415,30 +2398,29 @@ class TestDataArray:
             pytest.param(lambda x: 2 * x, id="multiply"),
             pytest.param(lambda x: x + x, id="add"),
             pytest.param(lambda x: x[0] + x, id="add scalar"),
-            pytest.param(
-                lambda x: x.T @ x,
-                id="matrix multiply",
-                marks=pytest.mark.xfail(
-                    reason="pint does not support matrix multiplication yet"
-                ),
-            ),
+            pytest.param(lambda x: x.T @ x, id="matrix multiply"),
         ),
     )
     def test_binary_operations(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array)
 
-        expected = xr.DataArray(data=func(array))
-        result = func(data_array)
+        units = extract_units(func(array))
+        expected = attach_units(func(strip_units(data_array)), units)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "comparison",
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(operator.eq, id="equal"),
+            pytest.param(
+                operator.eq,
+                id="equal",
+            ),
         ),
     )
     @pytest.mark.parametrize(
@@ -1448,8 +2430,9 @@ class TestDataArray:
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incorrect_unit"),
-            pytest.param(unit_registry.m, None, id="correct_unit"),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.mm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_comparison_operations(self, comparison, unit, error, dtype):
@@ -1469,48 +2452,94 @@ class TestDataArray:
 
             with pytest.raises(error):
                 comparison(data_array, to_compare_with)
-        else:
-            result = comparison(data_array, to_compare_with)
-            # pint compares incompatible arrays to False, so we need to extend
-            # the multiplication works for both scalar and array results
-            expected = xr.DataArray(
-                data=comparison(array, to_compare_with)
-                * np.ones_like(array, dtype=bool)
-            )
 
-            assert_equal_with_units(expected, result)
+            return
+
+        actual = comparison(data_array, to_compare_with)
+
+        expected_units = {None: unit_registry.m if array.check(unit) else None}
+        expected = array.check(unit) & comparison(
+            strip_units(data_array),
+            strip_units(convert_units(to_compare_with, expected_units)),
+        )
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "units,error",
         (
             pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.m, DimensionalityError, id="incorrect unit"),
-            pytest.param(unit_registry.degree, None, id="correct unit"),
+            pytest.param(unit_registry.m, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.degree, None, id="compatible_unit"),
         ),
     )
     def test_univariate_ufunc(self, units, error, dtype):
         array = np.arange(10).astype(dtype) * units
         data_array = xr.DataArray(data=array)
 
+        func = function("sin")
+
         if error is not None:
             with pytest.raises(error):
                 np.sin(data_array)
-        else:
-            expected = xr.DataArray(data=np.sin(array))
-            result = np.sin(data_array)
 
-            assert_equal_with_units(expected, result)
+            return
 
-    @pytest.mark.xfail(reason="pint's implementation of `np.maximum` strips units")
-    def test_bivariate_ufunc(self, dtype):
-        unit = unit_registry.m
-        array = np.arange(10).astype(dtype) * unit
+        expected = attach_units(
+            func(strip_units(convert_units(data_array, {None: unit_registry.radians}))),
+            {None: unit_registry.dimensionless},
+        )
+        actual = func(data_array)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.xfail(reason="needs the type register system for __array_ufunc__")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="without_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(
+                unit_registry.mm,
+                None,
+                id="compatible_unit",
+                marks=pytest.mark.xfail(reason="pint converts to the wrong units"),
+            ),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_bivariate_ufunc(self, unit, error, dtype):
+        original_unit = unit_registry.m
+        array = np.arange(10).astype(dtype) * original_unit
         data_array = xr.DataArray(data=array)
 
-        expected = xr.DataArray(np.maximum(array, 0 * unit))
+        if error is not None:
+            with pytest.raises(error):
+                np.maximum(data_array, 1 * unit)
 
-        assert_equal_with_units(expected, np.maximum(data_array, 0 * unit))
-        assert_equal_with_units(expected, np.maximum(0 * unit, data_array))
+            return
+
+        expected_units = {None: original_unit}
+        expected = attach_units(
+            np.maximum(
+                strip_units(data_array),
+                strip_units(convert_units(1 * unit, expected_units)),
+            ),
+            expected_units,
+        )
+
+        actual = np.maximum(data_array, 1 * unit)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+        actual = np.maximum(1 * unit, data_array)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize("property", ("T", "imag", "real"))
     def test_numpy_properties(self, property, dtype):
@@ -1518,41 +2547,114 @@ class TestDataArray:
             np.arange(5 * 10).astype(dtype)
             + 1j * np.linspace(-1, 0, 5 * 10).astype(dtype)
         ).reshape(5, 10) * unit_registry.s
+
         data_array = xr.DataArray(data=array, dims=("x", "y"))
 
-        expected = xr.DataArray(
-            data=getattr(array, property),
-            dims=("x", "y")[:: 1 if property != "T" else -1],
+        expected = attach_units(
+            getattr(strip_units(data_array), property), extract_units(data_array)
         )
-        result = getattr(data_array, property)
+        actual = getattr(data_array, property)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
-        (
-            method("conj"),
-            method("argsort"),
-            method("conjugate"),
-            method("round"),
-            pytest.param(
-                method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
-            ),
-        ),
+        (method("conj"), method("argsort"), method("conjugate"), method("round")),
         ids=repr,
     )
     def test_numpy_methods(self, func, dtype):
         array = np.arange(10).astype(dtype) * unit_registry.m
         data_array = xr.DataArray(data=array, dims="x")
 
-        expected = xr.DataArray(func(array), dims="x")
-        result = func(data_array)
+        units = extract_units(func(array))
+        expected = attach_units(strip_units(data_array), units)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    def test_item(self, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        func = method("item", 2)
+
+        expected = func(strip_units(data_array)) * unit_registry.m
+        actual = func(data_array)
+
+        assert_duckarray_allclose(expected, actual)
 
     @pytest.mark.parametrize(
-        "func", (method("clip", min=3, max=8), method("searchsorted", v=5)), ids=repr
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("searchsorted", 5),
+            pytest.param(
+                function("searchsorted", 5),
+                marks=pytest.mark.xfail(
+                    reason="xarray does not implement __array_function__"
+                ),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_searchsorted(self, func, unit, error, dtype):
+        array = np.arange(10).astype(dtype) * unit_registry.m
+        data_array = xr.DataArray(data=array)
+
+        scalar_types = (int, float)
+        args = list(value * unit for value in func.args)
+        kwargs = {
+            key: (value * unit if isinstance(value, scalar_types) else value)
+            for key, value in func.kwargs.items()
+        }
+
+        if error is not None:
+            with pytest.raises(error):
+                func(data_array, *args, **kwargs)
+
+            return
+
+        units = extract_units(data_array)
+        expected_units = extract_units(func(array, *args, **kwargs))
+        stripped_args = [strip_units(convert_units(value, units)) for value in args]
+        stripped_kwargs = {
+            key: strip_units(convert_units(value, units))
+            for key, value in kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(data_array), *stripped_args, **stripped_kwargs),
+            expected_units,
+        )
+        actual = func(data_array, *args, **kwargs)
+
+        assert_units_equal(expected, actual)
+        np.testing.assert_allclose(expected, actual)
+
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("clip", min=3, max=8),
+            pytest.param(
+                function("clip", a_min=3, a_max=8),
+                marks=pytest.mark.xfail(
+                    reason="xarray does not implement __array_function__"
+                ),
+            ),
+        ),
+        ids=repr,
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -1571,24 +2673,32 @@ class TestDataArray:
         data_array = xr.DataArray(data=array)
 
         scalar_types = (int, float)
+        args = list(value * unit for value in func.args)
         kwargs = {
             key: (value * unit if isinstance(value, scalar_types) else value)
             for key, value in func.kwargs.items()
         }
-
         if error is not None:
             with pytest.raises(error):
-                func(data_array, **kwargs)
-        else:
-            expected = func(array, **kwargs)
-            if func.name not in ["searchsorted"]:
-                expected = xr.DataArray(data=expected)
-            result = func(data_array, **kwargs)
+                func(data_array, *args, **kwargs)
 
-            if func.name in ["searchsorted"]:
-                assert np.allclose(expected, result)
-            else:
-                assert_equal_with_units(expected, result)
+            return
+
+        units = extract_units(data_array)
+        expected_units = extract_units(func(array, *args, **kwargs))
+        stripped_args = [strip_units(convert_units(value, units)) for value in args]
+        stripped_kwargs = {
+            key: strip_units(convert_units(value, units))
+            for key, value in kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(data_array), *stripped_args, **stripped_kwargs),
+            expected_units,
+        )
+        actual = func(data_array, *args, **kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -1605,15 +2715,13 @@ class TestDataArray:
             )
             * unit_registry.degK
         )
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * unit_registry.m
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+        data_array = xr.DataArray(data=array)
 
         expected = func(strip_units(data_array))
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose units in data")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -1623,48 +2731,64 @@ class TestDataArray:
             * unit_registry.degK
         )
         x = np.arange(len(array))
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
-
-        result_without_units = func(strip_units(data_array), dim="x")
-        result = xr.DataArray(
-            data=result_without_units.data * unit_registry.degK,
-            coords={"x": x},
-            dims=["x"],
-        )
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
         expected = attach_units(
-            func(strip_units(data_array), dim="x"), {"data": unit_registry.degK}
+            func(strip_units(data_array), dim="x"), extract_units(data_array)
         )
-        result = func(data_array, dim="x")
+        actual = func(data_array, dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="fillna drops the unit")
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
     @pytest.mark.parametrize(
         "fill_value",
         (
-            pytest.param(
-                -1,
-                id="python scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar cannot be converted using astype()"
-                ),
-            ),
-            pytest.param(np.array(-1), id="numpy scalar"),
-            pytest.param(np.array([-1]), id="numpy array"),
+            pytest.param(-1, id="python_scalar"),
+            pytest.param(np.array(-1), id="numpy_scalar"),
+            pytest.param(np.array([-1]), id="numpy_array"),
         ),
     )
-    def test_fillna(self, fill_value, dtype):
-        unit = unit_registry.m
-        array = np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * unit
+    def test_fillna(self, fill_value, unit, error, dtype):
+        original_unit = unit_registry.m
+        array = (
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
+            * original_unit
+        )
         data_array = xr.DataArray(data=array)
 
-        expected = attach_units(
-            strip_units(data_array).fillna(value=fill_value), {"data": unit}
-        )
-        result = data_array.fillna(value=fill_value * unit)
+        func = method("fillna")
 
-        assert_equal_with_units(expected, result)
+        value = fill_value * unit
+        if error is not None:
+            with pytest.raises(error):
+                func(data_array, value=value)
+
+            return
+
+        units = extract_units(data_array)
+        expected = attach_units(
+            func(
+                strip_units(data_array), value=strip_units(convert_units(value, units))
+            ),
+            units,
+        )
+        actual = func(data_array, value=value)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     def test_dropna(self, dtype):
         array = (
@@ -1674,14 +2798,13 @@ class TestDataArray:
         x = np.arange(len(array))
         data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
 
-        expected = attach_units(
-            strip_units(data_array).dropna(dim="x"), {"data": unit_registry.m}
-        )
-        result = data_array.dropna(dim="x")
+        units = extract_units(data_array)
+        expected = attach_units(strip_units(data_array).dropna(dim="x"), units)
+        actual = data_array.dropna(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -1689,7 +2812,7 @@ class TestDataArray:
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
             pytest.param(unit_registry.cm, id="compatible_unit"),
-            pytest.param(unit_registry.m, id="same_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
     def test_isin(self, unit, dtype):
@@ -1702,35 +2825,17 @@ class TestDataArray:
         raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
         values = raw_values * unit
 
-        result_without_units = strip_units(data_array).isin(raw_values)
-        if unit != unit_registry.m:
-            result_without_units[:] = False
-        result_with_units = data_array.isin(values)
+        units = {None: unit_registry.m if array.check(unit) else None}
+        expected = strip_units(data_array).isin(
+            strip_units(convert_units(values, units))
+        ) & array.check(unit)
+        actual = data_array.isin(values)
 
-        assert_equal_with_units(result_without_units, result_with_units)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-            pytest.param(
-                "replacing_scalar",
-                marks=pytest.mark.xfail(reason="scalar not convertible using astype"),
-            ),
-            pytest.param(
-                "replacing_array",
-                marks=pytest.mark.xfail(
-                    reason="replacing using an array drops the units"
-                ),
-            ),
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -1741,13 +2846,10 @@ class TestDataArray:
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
             pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="same_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     def test_where(self, variant, unit, error, dtype):
-        def _strip_units(mapping):
-            return {key: array_strip_units(value) for key, value in mapping.items()}
-
         original_unit = unit_registry.m
         array = np.linspace(0, 1, 10).astype(dtype) * original_unit
 
@@ -1762,37 +2864,46 @@ class TestDataArray:
             "dropping": {"cond": condition, "drop": True},
         }
         kwargs = variant_kwargs.get(variant)
-        kwargs_without_units = _strip_units(kwargs)
+        kwargs_without_units = {
+            key: strip_units(
+                convert_units(
+                    value, {None: original_unit if array.check(unit) else None}
+                )
+            )
+            for key, value in kwargs.items()
+        }
 
         if variant not in ("masking", "dropping") and error is not None:
             with pytest.raises(error):
                 data_array.where(**kwargs)
-        else:
-            expected = attach_units(
-                strip_units(array).where(**kwargs_without_units),
-                {"data": original_unit},
-            )
-            result = data_array.where(**kwargs)
 
-            assert_equal_with_units(expected, result)
+            return
 
-    @pytest.mark.xfail(reason="interpolate strips units")
-    def test_interpolate_na(self, dtype):
+        expected = attach_units(
+            strip_units(data_array).where(**kwargs_without_units),
+            extract_units(data_array),
+        )
+        actual = data_array.where(**kwargs)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.xfail(reason="uses numpy.vectorize")
+    def test_interpolate_na(self):
         array = (
             np.array([-1.03, 0.1, 1.4, np.nan, 2.3, np.nan, np.nan, 9.1])
             * unit_registry.m
         )
         x = np.arange(len(array))
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x").astype(dtype)
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
-        expected = attach_units(
-            strip_units(data_array).interpolate_na(dim="x"), {"data": unit_registry.m}
-        )
-        result = data_array.interpolate_na(dim="x")
+        units = extract_units(data_array)
+        expected = attach_units(strip_units(data_array).interpolate_na(dim="x"), units)
+        actual = data_array.interpolate_na(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="uses DataArray.where, which currently fails")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -1801,8 +2912,16 @@ class TestDataArray:
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="identical_unit",
+            ),
         ),
     )
     def test_combine_first(self, unit, error, dtype):
@@ -1819,88 +2938,21 @@ class TestDataArray:
         if error is not None:
             with pytest.raises(error):
                 data_array.combine_first(other)
-        else:
-            expected = attach_units(
-                strip_units(data_array).combine_first(strip_units(other)),
-                {"data": unit_registry.m},
-            )
-            result = data_array.combine_first(other)
 
-            assert_equal_with_units(expected, result)
+            return
 
-    @pytest.mark.parametrize(
-        "unit",
-        (
-            pytest.param(1, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, id="dimensionless"),
-            pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="identical does not check units yet"),
+        units = extract_units(data_array)
+        expected = attach_units(
+            strip_units(data_array).combine_first(
+                strip_units(convert_units(other, units))
             ),
-            pytest.param(unit_registry.m, id="identical_unit"),
-        ),
-    )
-    @pytest.mark.parametrize(
-        "variation",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
-            ),
-            "coords",
-        ),
-    )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
-    def test_comparisons(self, func, variation, unit, dtype):
-        data = np.linspace(0, 5, 10).astype(dtype)
-        coord = np.arange(len(data)).astype(dtype)
-
-        base_unit = unit_registry.m
-        quantity = data * base_unit
-        x = coord * base_unit
-        y = coord * base_unit
-
-        units = {
-            "data": (unit, base_unit, base_unit),
-            "dims": (base_unit, unit, base_unit),
-            "coords": (base_unit, base_unit, unit),
-        }
-        data_unit, dim_unit, coord_unit = units.get(variation)
-
-        data_array = xr.DataArray(
-            data=quantity, coords={"x": x, "y": ("x", y)}, dims="x"
+            units,
         )
+        actual = data_array.combine_first(other)
 
-        other = attach_units(
-            strip_units(data_array),
-            {
-                None: (data_unit, base_unit if quantity.check(data_unit) else None),
-                "x": (dim_unit, base_unit if x.check(dim_unit) else None),
-                "y": (coord_unit, base_unit if y.check(coord_unit) else None),
-            },
-        )
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-        # TODO: test dim coord once indexes leave units intact
-        # also, express this in terms of calls on the raw data array
-        # and then check the units
-        equal_arrays = (
-            np.all(quantity == other.data)
-            and (np.all(x == other.x.data) or True)  # dims can't be checked yet
-            and np.all(y == other.y.data)
-        )
-        equal_units = (
-            data_unit == unit_registry.m
-            and coord_unit == unit_registry.m
-            and dim_unit == unit_registry.m
-        )
-        expected = equal_arrays and (func.name != "identical" or equal_units)
-        result = func(data_array, other)
-
-        assert expected == result
-
-    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -1911,24 +2963,132 @@ class TestDataArray:
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
-    def test_broadcast_like(self, unit, dtype):
-        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+    @pytest.mark.parametrize(
+        "variation",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip(reason="the behavior of identical is undecided"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_comparisons(self, func, variation, unit, dtype):
+        def is_compatible(a, b):
+            a = a if a is not None else 1
+            b = b if b is not None else 1
+            quantity = np.arange(5) * a
 
-        x1 = np.arange(2) * unit_registry.m
-        x2 = np.arange(2) * unit
-        y1 = np.array([0]) * unit_registry.m
-        y2 = np.arange(3) * unit
+            return a == b or quantity.check(b)
 
-        arr1 = xr.DataArray(data=array1, coords={"x": x1, "y": y1}, dims=("x", "y"))
-        arr2 = xr.DataArray(data=array2, coords={"x": x2, "y": y2}, dims=("x", "y"))
+        data = np.linspace(0, 5, 10).astype(dtype)
+        coord = np.arange(len(data)).astype(dtype)
+
+        base_unit = unit_registry.m
+        array = data * (base_unit if variation == "data" else 1)
+        x = coord * (base_unit if variation == "dims" else 1)
+        y = coord * (base_unit if variation == "coords" else 1)
+
+        variations = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variations.get(variation)
+
+        data_array = xr.DataArray(data=array, coords={"x": x, "y": ("x", y)}, dims="x")
+
+        other = attach_units(
+            strip_units(data_array), {None: data_unit, "x": dim_unit, "y": coord_unit}
+        )
+
+        units = extract_units(data_array)
+        other_units = extract_units(other)
+
+        equal_arrays = all(
+            is_compatible(units[name], other_units[name]) for name in units.keys()
+        ) and (
+            strip_units(data_array).equals(
+                strip_units(convert_units(other, extract_units(data_array)))
+            )
+        )
+        equal_units = units == other_units
+        expected = equal_arrays and (func.name != "identical" or equal_units)
+
+        actual = func(data_array, other)
+
+        assert expected == actual
+
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_broadcast_like(self, variant, unit, dtype):
+        original_unit = unit_registry.m
+
+        variants = {
+            "data": ((original_unit, unit), (1, 1), (1, 1)),
+            "dims": ((1, 1), (original_unit, unit), (1, 1)),
+            "coords": ((1, 1), (1, 1), (original_unit, unit)),
+        }
+        (
+            (data_unit1, data_unit2),
+            (dim_unit1, dim_unit2),
+            (coord_unit1, coord_unit2),
+        ) = variants.get(variant)
+
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * data_unit1
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit2
+
+        x1 = np.arange(2) * dim_unit1
+        x2 = np.arange(2) * dim_unit2
+        y1 = np.array([0]) * dim_unit1
+        y2 = np.arange(3) * dim_unit2
+
+        u1 = np.linspace(0, 1, 2) * coord_unit1
+        u2 = np.linspace(0, 1, 2) * coord_unit2
+
+        arr1 = xr.DataArray(
+            data=array1, coords={"x": x1, "y": y1, "u": ("x", u1)}, dims=("x", "y")
+        )
+        arr2 = xr.DataArray(
+            data=array2, coords={"x": x2, "y": y2, "u": ("x", u2)}, dims=("x", "y")
+        )
 
         expected = attach_units(
             strip_units(arr1).broadcast_like(strip_units(arr2)), extract_units(arr1)
         )
-        result = arr1.broadcast_like(arr2)
+        actual = arr1.broadcast_like(arr2)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -1942,126 +3102,127 @@ class TestDataArray:
     )
     def test_broadcast_equals(self, unit, dtype):
         left_array = np.ones(shape=(2, 2), dtype=dtype) * unit_registry.m
-        right_array = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array.check(unit) else None,
-        )
+        right_array = np.ones(shape=(2,), dtype=dtype) * unit
 
         left = xr.DataArray(data=left_array, dims=("x", "y"))
         right = xr.DataArray(data=right_array, dims="x")
 
-        expected = np.all(left_array == right_array[:, None])
-        result = left.broadcast_equals(right)
+        units = {
+            **extract_units(left),
+            **({} if left_array.check(unit) else {None: None}),
+        }
+        expected = strip_units(left).broadcast_equals(
+            strip_units(convert_units(right, units))
+        ) & left_array.check(unit)
+        actual = left.broadcast_equals(right)
 
-        assert expected == result
+        assert expected == actual
 
+    def test_pad(self, dtype):
+        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
+
+        data_array = xr.DataArray(data=array, dims="x")
+        units = extract_units(data_array)
+
+        expected = attach_units(strip_units(data_array).pad(x=(2, 3)), units)
+        actual = data_array.pad(x=(2, 3))
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     @pytest.mark.parametrize(
         "func",
         (
             method("pipe", lambda da: da * 10),
-            method("assign_coords", y2=("y", np.arange(10) * unit_registry.mm)),
+            method("assign_coords", w=("y", np.arange(10) * unit_registry.mm)),
             method("assign_attrs", attr1="value"),
-            method("rename", x2="x_mm"),
-            method("swap_dims", {"x": "x2"}),
-            method(
-                "expand_dims",
-                dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
-                axis=1,
+            method("rename", u="v"),
+            pytest.param(
+                method("swap_dims", {"x": "u"}),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
-            method("drop_sel", labels="x"),
-            method("reset_coords", names="x2"),
+            pytest.param(
+                method(
+                    "expand_dims",
+                    dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
+                    axis=1,
+                ),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
+            method("drop_vars", "x"),
+            method("reset_coords", names="u"),
             method("copy"),
-            pytest.param(
-                method("astype", np.float32),
-                marks=pytest.mark.xfail(reason="units get stripped"),
-            ),
-            pytest.param(
-                method("item", 1), marks=pytest.mark.xfail(reason="units get stripped")
-            ),
+            method("astype", np.float32),
         ),
         ids=repr,
     )
-    def test_content_manipulation(self, func, dtype):
-        quantity = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
-            * unit_registry.pascal
-        )
-        x = np.arange(quantity.shape[0]) * unit_registry.m
-        y = np.arange(quantity.shape[1]) * unit_registry.m
-        x2 = x.to(unit_registry.mm)
+    def test_content_manipulation(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        quantity = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+        x = np.arange(quantity.shape[0]) * dim_unit
+        y = np.arange(quantity.shape[1]) * dim_unit
+        u = np.linspace(0, 1, quantity.shape[0]) * coord_unit
 
         data_array = xr.DataArray(
-            name="data",
+            name="a",
             data=quantity,
-            coords={"x": x, "x2": ("x", x2), "y": y},
+            coords={"x": x, "u": ("x", u), "y": y},
             dims=("x", "y"),
         )
 
         stripped_kwargs = {
             key: array_strip_units(value) for key, value in func.kwargs.items()
         }
-        expected = attach_units(
-            func(strip_units(data_array), **stripped_kwargs),
-            {
-                "data": quantity.units,
-                "x": x.units,
-                "x_mm": x2.units,
-                "x2": x2.units,
-                "y": y.units,
-            },
-        )
-        result = func(data_array)
+        units = extract_units(data_array)
+        units["u"] = getattr(u, "units", None)
+        units["v"] = getattr(u, "units", None)
 
-        assert_equal_with_units(expected, result)
+        expected = attach_units(func(strip_units(data_array), **stripped_kwargs), units)
+        actual = func(data_array)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
-        "func",
+        "unit",
         (
-            pytest.param(
-                method("drop_sel", labels=dict(x=np.array([1, 5]))),
-                marks=pytest.mark.xfail(
-                    reason="selecting using incompatible units does not raise"
-                ),
-            ),
-            pytest.param(method("copy", data=np.arange(20))),
-        ),
-        ids=repr,
-    )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.degK, id="with_unit"),
         ),
     )
-    def test_content_manipulation_with_units(self, func, unit, error, dtype):
+    def test_copy(self, unit, dtype):
         quantity = np.linspace(0, 10, 20, dtype=dtype) * unit_registry.pascal
-        x = np.arange(len(quantity)) * unit_registry.m
+        new_data = np.arange(20)
 
-        data_array = xr.DataArray(name="data", data=quantity, coords={"x": x}, dims="x")
-
-        kwargs = {
-            key: (value * unit if isinstance(value, np.ndarray) else value)
-            for key, value in func.kwargs.items()
-        }
-        stripped_kwargs = func.kwargs
+        data_array = xr.DataArray(data=quantity, dims="x")
 
         expected = attach_units(
-            func(strip_units(data_array), **stripped_kwargs),
-            {"data": quantity.units if func.name == "drop_sel" else unit, "x": x.units},
+            strip_units(data_array).copy(data=new_data), {None: unit}
         )
-        if error is not None and func.name == "drop_sel":
-            with pytest.raises(error):
-                func(data_array, **kwargs)
-        else:
-            result = func(data_array, **kwargs)
-            assert_equal_with_units(expected, result)
+
+        actual = data_array.copy(data=new_data * unit)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "indices",
@@ -2071,126 +3232,234 @@ class TestDataArray:
         ),
     )
     def test_isel(self, indices, dtype):
+        # TODO: maybe test for units in indexes?
         array = np.arange(10).astype(dtype) * unit_registry.s
-        x = np.arange(len(array)) * unit_registry.m
 
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        data_array = xr.DataArray(data=array, dims="x")
 
         expected = attach_units(
-            strip_units(data_array).isel(x=indices),
-            {"data": unit_registry.s, "x": unit_registry.m},
+            strip_units(data_array).isel(x=indices), extract_units(data_array)
         )
-        result = data_array.isel(x=indices)
+        actual = data_array.isel(x=indices)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single value"),
-            pytest.param([10, 5, 13], id="list of multiple values"),
-            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
-        "units,error",
+        "unit,error",
         (
-            pytest.param(1, KeyError, id="no units"),
+            pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incorrect unit"),
-            pytest.param(unit_registry.s, None, id="correct unit"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_sel(self, values, units, error, dtype):
+    def test_sel(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
-        x = np.arange(len(array)) * unit_registry.s
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        x = np.arange(len(array)) * unit_registry.m
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
-        values_with_units = values * units
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and x.check(unit)
+        ):
             with pytest.raises(error):
-                data_array.sel(x=values_with_units)
-        else:
-            result_array = array[values]
-            result_data_array = data_array.sel(x=values_with_units)
-            assert_equal_with_units(result_array, result_data_array)
+                data_array.sel(x=values)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+            return
+
+        expected = attach_units(
+            strip_units(data_array).sel(
+                x=strip_units(convert_units(values, {None: array.units}))
+            ),
+            extract_units(data_array),
+        )
+        actual = data_array.sel(x=values)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single value"),
-            pytest.param([10, 5, 13], id="list of multiple values"),
-            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
-        "units,error",
+        "unit,error",
         (
-            pytest.param(1, KeyError, id="no units"),
+            pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incorrect unit"),
-            pytest.param(unit_registry.s, None, id="correct unit"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_loc(self, values, units, error, dtype):
+    def test_loc(self, raw_values, unit, error, dtype):
         array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
-        x = np.arange(len(array)) * unit_registry.s
-        data_array = xr.DataArray(data=array, coords={"x": x}, dims=["x"])
+        x = np.arange(len(array)) * unit_registry.m
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
 
-        values_with_units = values * units
+        values = raw_values * unit
 
-        if error is not None:
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and x.check(unit)
+        ):
             with pytest.raises(error):
-                data_array.loc[values_with_units]
-        else:
-            result_array = array[values]
-            result_data_array = data_array.loc[values_with_units]
-            assert_equal_with_units(result_array, result_data_array)
+                data_array.loc[{"x": values}]
 
-    @pytest.mark.xfail(reason="tries to coerce using asarray")
+            return
+
+        expected = attach_units(
+            strip_units(data_array).loc[
+                {"x": strip_units(convert_units(values, {None: array.units}))}
+            ],
+            extract_units(data_array),
+        )
+        actual = data_array.loc[{"x": values}]
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
+    @pytest.mark.parametrize(
+        "raw_values",
+        (
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, KeyError, id="no_units"),
+            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.dm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_drop_sel(self, raw_values, unit, error, dtype):
+        array = np.linspace(5, 10, 20).astype(dtype) * unit_registry.m
+        x = np.arange(len(array)) * unit_registry.m
+        data_array = xr.DataArray(data=array, coords={"x": x}, dims="x")
+
+        values = raw_values * unit
+
+        if error is not None and not (
+            isinstance(raw_values, (int, float)) and x.check(unit)
+        ):
+            with pytest.raises(error):
+                data_array.drop_sel(x=values)
+
+            return
+
+        expected = attach_units(
+            strip_units(data_array).drop_sel(
+                x=strip_units(convert_units(values, {None: x.units}))
+            ),
+            extract_units(data_array),
+        )
+        actual = data_array.drop_sel(x=values)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
     @pytest.mark.parametrize(
         "shape",
         (
-            pytest.param((10, 20), id="nothing squeezable"),
-            pytest.param((10, 20, 1), id="last dimension squeezable"),
-            pytest.param((10, 1, 20), id="middle dimension squeezable"),
-            pytest.param((1, 10, 20), id="first dimension squeezable"),
-            pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
+            pytest.param((10, 20), id="nothing_squeezable"),
+            pytest.param((10, 20, 1), id="last_dimension_squeezable"),
+            pytest.param((10, 1, 20), id="middle_dimension_squeezable"),
+            pytest.param((1, 10, 20), id="first_dimension_squeezable"),
+            pytest.param((1, 10, 1, 20), id="first_and_last_dimension_squeezable"),
         ),
     )
-    def test_squeeze(self, shape, dtype):
+    def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        coords = {
-            name: np.arange(length).astype(dtype)
-            * (unit_registry.m if name != "t" else unit_registry.s)
-            for name, length in zip(names, shape)
-        }
+        dim_lengths = dict(zip(names, shape))
+        names = "xyzt"
         array = np.arange(10 * 20).astype(dtype).reshape(shape) * unit_registry.J
-        data_array = xr.DataArray(
-            data=array, coords=coords, dims=tuple(names[: len(shape)])
+        data_array = xr.DataArray(data=array, dims=tuple(names[: len(shape)]))
+
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
+
+        expected = attach_units(
+            strip_units(data_array).squeeze(**kwargs), extract_units(data_array)
         )
+        actual = data_array.squeeze(**kwargs)
 
-        result_array = array.squeeze()
-        result_data_array = data_array.squeeze()
-        assert_equal_with_units(result_array, result_data_array)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-        # try squeezing the dimensions separately
-        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
-        for index, name in enumerate(names):
-            assert_equal_with_units(
-                np.squeeze(array, axis=index), data_array.squeeze(dim=name)
-            )
-
-    @pytest.mark.xfail(
-        reason="indexes strip units and head / tail / thin only support integers"
+    @pytest.mark.parametrize(
+        "func",
+        (method("head", x=7, y=3), method("tail", x=7, y=3), method("thin", x=7, y=3)),
+        ids=repr,
     )
+    def test_head_tail_thin(self, func, dtype):
+        # TODO: works like isel. Maybe also test units in indexes?
+        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
+
+        data_array = xr.DataArray(data=array, dims=("x", "y"))
+
+        expected = attach_units(
+            func(strip_units(data_array)), extract_units(data_array)
+        )
+        actual = func(data_array)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("interp"), marks=pytest.mark.xfail(reason="uses scipy")
+            ),
+            method("reindex"),
+        ),
+        ids=repr,
+    )
+    def test_interp_reindex(self, variant, func, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(1, 2, 10).astype(dtype) * data_unit
+        y = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(10) + 0.5
+        data_array = xr.DataArray(array, coords={"x": x, "y": ("x", y)}, dims="x")
+
+        units = extract_units(data_array)
+        expected = attach_units(func(strip_units(data_array), x=new_x), units)
+        actual = func(data_array, x=new_x)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -2205,188 +3474,111 @@ class TestDataArray:
     )
     @pytest.mark.parametrize(
         "func",
-        (method("head", x=7, y=3), method("tail", x=7, y=3), method("thin", x=7, y=3)),
+        (method("interp"), method("reindex")),
         ids=repr,
     )
-    def test_head_tail_thin(self, func, unit, error, dtype):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
-
-        arr = xr.DataArray(data=array, coords=coords, dims=("x", "y"))
-
-        kwargs = {name: value * unit for name, value in func.kwargs.items()}
+    def test_interp_reindex_indexing(self, func, unit, error, dtype):
+        array = np.linspace(1, 2, 10).astype(dtype)
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(10) + 0.5) * unit
+        data_array = xr.DataArray(array, coords={"x": x}, dims="x")
 
         if error is not None:
             with pytest.raises(error):
-                func(arr, **kwargs)
+                func(data_array, x=new_x)
 
             return
 
-        expected = attach_units(func(strip_units(arr)), extract_units(arr))
-        result = func(arr, **kwargs)
-
-        assert_equal_with_units(expected, result)
-
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, None, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_interp(self, unit, error):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        new_coords = (np.arange(10) + 0.5) * unit
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
-
-        if error is not None:
-            with pytest.raises(error):
-                data_array.interp(x=new_coords)
-        else:
-            new_coords_ = (
-                new_coords.magnitude if hasattr(new_coords, "magnitude") else new_coords
-            )
-            result_array = strip_units(data_array).interp(
-                x=new_coords_ * unit_registry.degK
-            )
-            result_data_array = data_array.interp(x=new_coords)
-
-            assert_equal_with_units(result_array, result_data_array)
-
-    @pytest.mark.xfail(reason="tries to coerce using asarray")
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, None, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_interp_like(self, unit, error):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        coords = {
-            "x": (np.arange(10) + 0.3) * unit_registry.m,
-            "y": (np.arange(5) + 0.3) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
-        new_data_array = xr.DataArray(
-            data=np.empty((20, 10)),
-            coords={"x": np.arange(20) * unit, "y": np.arange(10) * unit},
-            dims=("x", "y"),
+        units = extract_units(data_array)
+        expected = attach_units(
+            func(
+                strip_units(data_array),
+                x=strip_units(convert_units(new_x, {None: unit_registry.m})),
+            ),
+            units,
         )
+        actual = func(data_array, x=new_x)
 
-        if error is not None:
-            with pytest.raises(error):
-                data_array.interp_like(new_data_array)
-        else:
-            result_array = (
-                xr.DataArray(
-                    data=array.magnitude,
-                    coords={name: value.magnitude for name, value in coords.items()},
-                    dims=("x", "y"),
-                ).interp_like(strip_units(new_data_array))
-                * unit_registry.degK
-            )
-            result_data_array = data_array.interp_like(new_data_array)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-            assert_equal_with_units(result_array, result_data_array)
-
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("interp_like"), marks=pytest.mark.xfail(reason="uses scipy")
+            ),
+            method("reindex_like"),
+        ),
+        ids=repr,
     )
+    def test_interp_reindex_like(self, variant, func, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(1, 2, 10).astype(dtype) * data_unit
+        coord = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(-2, 2) + 0.5
+        data_array = xr.DataArray(array, coords={"x": x, "y": ("x", coord)}, dims="x")
+        other = xr.DataArray(np.empty_like(new_x), coords={"x": new_x}, dims="x")
+
+        units = extract_units(data_array)
+        expected = attach_units(func(strip_units(data_array), other), units)
+        actual = func(data_array, other)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, None, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="incompatible_unit"),
+            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(
+                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+            ),
+            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
             pytest.param(unit_registry.cm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_reindex(self, unit, error):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        new_coords = (np.arange(10) + 0.5) * unit
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-        }
+    @pytest.mark.parametrize(
+        "func",
+        (method("interp_like"), method("reindex_like")),
+        ids=repr,
+    )
+    def test_interp_reindex_like_indexing(self, func, unit, error, dtype):
+        array = np.linspace(1, 2, 10).astype(dtype)
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(-2, 2) + 0.5) * unit
 
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
+        data_array = xr.DataArray(array, coords={"x": x}, dims="x")
+        other = xr.DataArray(np.empty_like(new_x), {"x": new_x}, dims="x")
 
         if error is not None:
             with pytest.raises(error):
-                data_array.interp(x=new_coords)
-        else:
-            result_array = strip_units(data_array).reindex(
-                x=(
-                    new_coords.magnitude
-                    if hasattr(new_coords, "magnitude")
-                    else new_coords
-                )
-                * unit_registry.degK
-            )
-            result_data_array = data_array.reindex(x=new_coords)
+                func(data_array, other)
 
-            assert_equal_with_units(result_array, result_data_array)
+            return
 
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, None, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, None, id="dimensionless"),
-            pytest.param(unit_registry.s, None, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_reindex_like(self, unit, error):
-        array = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        coords = {
-            "x": (np.arange(10) + 0.3) * unit_registry.m,
-            "y": (np.arange(5) + 0.3) * unit_registry.m,
-        }
-
-        data_array = xr.DataArray(array, coords=coords, dims=("x", "y"))
-        new_data_array = xr.DataArray(
-            data=np.empty((20, 10)),
-            coords={"x": np.arange(20) * unit, "y": np.arange(10) * unit},
-            dims=("x", "y"),
+        units = extract_units(data_array)
+        expected = attach_units(
+            func(
+                strip_units(data_array),
+                strip_units(convert_units(other, {None: unit_registry.m})),
+            ),
+            units,
         )
+        actual = func(data_array, other)
 
-        if error is not None:
-            with pytest.raises(error):
-                data_array.reindex_like(new_data_array)
-        else:
-            expected = attach_units(
-                strip_units(data_array).reindex_like(strip_units(new_data_array)),
-                {
-                    "data": unit_registry.degK,
-                    "x": unit_registry.m,
-                    "y": unit_registry.m,
-                },
-            )
-            result = data_array.reindex_like(new_data_array)
-
-            assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2406,11 +3598,12 @@ class TestDataArray:
         stacked = data_array.stack(z=("x", "y"))
 
         expected = attach_units(func(strip_units(stacked)), {"data": unit_registry.m})
-        result = func(stacked)
+        actual = func(stacked)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes strip the label units")
+    @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
         array = (
             np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
@@ -2429,13 +3622,10 @@ class TestDataArray:
             func(strip_units(data_array)),
             {"y": y.units, **dict(zip(x.magnitude, [array.units] * len(y)))},
         ).rename({elem.magnitude: elem for elem in x})
-        result = func(data_array)
+        actual = func(data_array)
 
-        print(data_array, expected, result, sep="\n")
-
-        assert_equal_with_units(expected, result)
-
-        assert False
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2443,13 +3633,12 @@ class TestDataArray:
             method("transpose", "y", "x", "z"),
             method("stack", a=("x", "y")),
             method("set_index", x="x2"),
+            method("shift", x=2),
             pytest.param(
-                method("shift", x=2), marks=pytest.mark.xfail(reason="strips units")
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
             ),
-            pytest.param(
-                method("roll", x=2, roll_coords=False),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
         ids=repr,
@@ -2471,91 +3660,126 @@ class TestDataArray:
             dims=("x", "y", "z"),
         )
 
-        expected = attach_units(
-            func(strip_units(data_array)), {"data": unit_registry.m}
-        )
-        result = func(data_array)
+        expected = attach_units(func(strip_units(data_array)), {None: unit_registry.m})
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     @pytest.mark.parametrize(
         "func",
         (
             method("diff", dim="x"),
             method("differentiate", coord="x"),
-            method("integrate", dim="x"),
-            pytest.param(
-                method("quantile", q=[0.25, 0.75]),
-                marks=pytest.mark.xfail(
-                    reason="pint does not implement nanpercentile yet"
-                ),
-            ),
-            pytest.param(
-                method("reduce", func=np.sum, dim="x"),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(
-                lambda x: x.dot(x),
-                id="method_dot",
-                marks=pytest.mark.xfail(reason="pint does not implement einsum"),
-            ),
+            method("integrate", coord="x"),
+            method("quantile", q=[0.25, 0.75]),
+            method("reduce", func=np.sum, dim="x"),
+            pytest.param(lambda x: x.dot(x), id="method_dot"),
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_computation(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
 
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * unit_registry.s
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
+        # we want to make sure the output unit is correct
         units = extract_units(data_array)
+        if not isinstance(func, (function, method)):
+            units.update(extract_units(func(array.reshape(-1))))
 
         expected = attach_units(func(strip_units(data_array)), units)
-        result = func(data_array)
+        actual = func(data_array)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("groupby", "y"), marks=pytest.mark.xfail(reason="strips units")
-            ),
-            pytest.param(
-                method("groupby_bins", "y", bins=4),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("groupby", "x"),
+            method("groupby_bins", "y", bins=4),
             method("coarsen", y=2),
             pytest.param(
-                method("rolling", y=3), marks=pytest.mark.xfail(reason="strips units")
+                method("rolling", y=3),
+                marks=pytest.mark.xfail(
+                    reason="numpy.lib.stride_tricks.as_strided converts to ndarray"
+                ),
             ),
             pytest.param(
                 method("rolling_exp", y=3),
-                marks=pytest.mark.xfail(reason="strips units"),
+                marks=pytest.mark.xfail(
+                    reason="numbagg functions are not supported by pint"
+                ),
             ),
+            method("weighted", xr.DataArray(data=np.linspace(0, 1, 10), dims="y")),
         ),
         ids=repr,
     )
-    def test_computation_objects(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_computation_objects(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.array([0, 0, 1, 2, 2]) * dim_unit
+        y = np.arange(array.shape[1]) * 3 * dim_unit
+
+        u = np.linspace(0, 1, 5) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
-
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * 3 * unit_registry.s
-
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
         units = extract_units(data_array)
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
-        result = func(data_array).mean()
+        actual = func(data_array).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="strips units")
     def test_resample(self, dtype):
         array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.m
 
@@ -2566,52 +3790,78 @@ class TestDataArray:
         func = method("resample", time="6m")
 
         expected = attach_units(func(strip_units(data_array)).mean(), units)
-        result = func(data_array).mean()
+        actual = func(data_array).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("assign_coords", {"z": (["x"], np.arange(5) * unit_registry.s)}),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(method("first")),
-            pytest.param(method("last")),
-            pytest.param(
-                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("assign_coords", z=("x", np.arange(5) * unit_registry.s)),
+            method("first"),
+            method("last"),
+            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, dtype):
-        array = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
+    def test_grouped_operations(self, func, variant, dtype):
+        unit = unit_registry.m
+
+        variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * 3 * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
         )
+        units = {**extract_units(data_array), **{"z": unit_registry.s, "q": None}}
 
-        x = np.arange(array.shape[0]) * unit_registry.m
-        y = np.arange(array.shape[1]) * 3 * unit_registry.s
+        stripped_kwargs = {
+            key: (
+                strip_units(value)
+                if not isinstance(value, tuple)
+                else tuple(strip_units(elem) for elem in value)
+            )
+            for key, value in func.kwargs.items()
+        }
+        expected = attach_units(
+            func(strip_units(data_array).groupby("y"), **stripped_kwargs), units
+        )
+        actual = func(data_array.groupby("y"))
 
-        data_array = xr.DataArray(data=array, coords={"x": x, "y": y}, dims=("x", "y"))
-        units = extract_units(data_array)
-
-        expected = attach_units(func(strip_units(data_array).groupby("y")), units)
-        result = func(data_array.groupby("y"))
-
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
 
 
 class TestDataset:
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, DimensionalityError, id="no_unit"),
+            pytest.param(1, xr.MergeError, id="no_unit"),
             pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
+                unit_registry.dimensionless, xr.MergeError, id="dimensionless"
             ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
+            pytest.param(unit_registry.s, xr.MergeError, id="incompatible_unit"),
             pytest.param(unit_registry.mm, None, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="same_unit"),
         ),
@@ -2621,13 +3871,9 @@ class TestDataset:
         (
             "nothing",
             pytest.param(
-                "dims",
-                marks=pytest.mark.xfail(reason="reindex does not work with pint yet"),
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
-            pytest.param(
-                "coords",
-                marks=pytest.mark.xfail(reason="reindex does not work with pint yet"),
-            ),
+            "coords",
         ),
     )
     def test_init(self, shared, unit, error, dtype):
@@ -2635,60 +3881,53 @@ class TestDataset:
         scaled_unit = unit_registry.mm
 
         a = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
-        b = np.linspace(-1, 0, 12).astype(dtype) * unit_registry.Pa
+        b = np.linspace(-1, 0, 10).astype(dtype) * unit_registry.degK
 
-        raw_x = np.arange(a.shape[0])
-        x = raw_x * original_unit
-        x2 = x.to(scaled_unit)
+        values_a = np.arange(a.shape[0])
+        dim_a = values_a * original_unit
+        coord_a = dim_a.to(scaled_unit)
 
-        raw_y = np.arange(b.shape[0])
-        y = raw_y * unit
-        y_units = unit if isinstance(y, unit_registry.Quantity) else None
-        if isinstance(y, unit_registry.Quantity):
-            if y.check(scaled_unit):
-                y2 = y.to(scaled_unit)
-            else:
-                y2 = y * 1000
-            y2_units = y2.units
-        else:
-            y2 = y * 1000
-            y2_units = None
+        values_b = np.arange(b.shape[0])
+        dim_b = values_b * unit
+        coord_b = (
+            dim_b.to(scaled_unit)
+            if unit_registry.is_compatible_with(dim_b, scaled_unit)
+            and unit != scaled_unit
+            else dim_b * 1000
+        )
 
         variants = {
-            "nothing": ({"x": x, "x2": ("x", x2)}, {"y": y, "y2": ("y", y2)}),
-            "dims": (
-                {"x": x, "x2": ("x", strip_units(x2))},
-                {"x": y, "y2": ("x", strip_units(y2))},
+            "nothing": ({}, {}),
+            "dims": ({"x": dim_a}, {"x": dim_b}),
+            "coords": (
+                {"x": values_a, "y": ("x", coord_a)},
+                {"x": values_b, "y": ("x", coord_b)},
             ),
-            "coords": ({"x": raw_x, "y": ("x", x2)}, {"x": raw_y, "y": ("x", y2)}),
         }
         coords_a, coords_b = variants.get(shared)
 
         dims_a, dims_b = ("x", "y") if shared == "nothing" else ("x", "x")
 
-        arr1 = xr.DataArray(data=a, coords=coords_a, dims=dims_a)
-        arr2 = xr.DataArray(data=b, coords=coords_b, dims=dims_b)
+        a = xr.DataArray(data=a, coords=coords_a, dims=dims_a)
+        b = xr.DataArray(data=b, coords=coords_b, dims=dims_b)
+
         if error is not None and shared != "nothing":
             with pytest.raises(error):
-                xr.Dataset(data_vars={"a": arr1, "b": arr2})
+                xr.Dataset(data_vars={"a": a, "b": b})
 
             return
 
-        result = xr.Dataset(data_vars={"a": arr1, "b": arr2})
+        actual = xr.Dataset(data_vars={"a": a, "b": b})
 
-        expected_units = {
-            "a": a.units,
-            "b": b.units,
-            "x": x.units,
-            "x2": x2.units,
-            "y": y_units,
-            "y2": y2_units,
-        }
-        expected = attach_units(
-            xr.Dataset(data_vars={"a": strip_units(arr1), "b": strip_units(arr2)}),
-            expected_units,
+        units = merge_mappings(
+            extract_units(a.rename("a")), extract_units(b.rename("b"))
         )
-        assert_equal_with_units(result, expected)
+        expected = attach_units(
+            xr.Dataset(data_vars={"a": strip_units(a), "b": strip_units(b)}), units
+        )
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (pytest.param(str, id="str"), pytest.param(repr, id="repr"))
@@ -2696,154 +3935,141 @@ class TestDataset:
     @pytest.mark.parametrize(
         "variant",
         (
+            "data",
             pytest.param(
-                "with_dims",
-                marks=pytest.mark.xfail(reason="units in indexes are not supported"),
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
-            pytest.param("with_coords"),
-            pytest.param("without_coords"),
+            "coords",
         ),
     )
-    @pytest.mark.filterwarnings("error:::pint[.*]")
     def test_repr(self, func, variant, dtype):
-        array1 = np.linspace(1, 2, 10, dtype=dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 10, dtype=dtype) * unit_registry.degK
+        unit1, unit2 = (
+            (unit_registry.Pa, unit_registry.degK) if variant == "data" else (1, 1)
+        )
+
+        array1 = np.linspace(1, 2, 10, dtype=dtype) * unit1
+        array2 = np.linspace(0, 1, 10, dtype=dtype) * unit2
 
         x = np.arange(len(array1)) * unit_registry.s
         y = x.to(unit_registry.ms)
 
         variants = {
-            "with_dims": {"x": x},
-            "with_coords": {"y": ("x", y)},
-            "without_coords": {},
+            "dims": {"x": x},
+            "coords": {"y": ("x", y)},
+            "data": {},
         }
 
-        data_array = xr.Dataset(
+        ds = xr.Dataset(
             data_vars={"a": ("x", array1), "b": ("x", array2)},
             coords=variants.get(variant),
         )
 
         # FIXME: this just checks that the repr does not raise
         # warnings or errors, but does not check the result
-        func(data_array)
+        func(ds)
 
     @pytest.mark.parametrize(
         "func",
         (
+            function("all"),
+            function("any"),
             pytest.param(
-                function("all"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
+                function("argmax"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmax as a function on xarray objects is not "
+                    "supported"
+                ),
             ),
             pytest.param(
-                function("any"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
+                function("argmin"),
+                marks=pytest.mark.skip(
+                    reason="calling np.argmin as a function on xarray objects is not "
+                    "supported"
+                ),
             ),
-            function("argmax"),
-            function("argmin"),
             function("max"),
             function("min"),
             function("mean"),
             pytest.param(
                 function("median"),
-                marks=pytest.mark.xfail(
-                    reason="np.median does not work with dataset yet"
-                ),
+                marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
             ),
-            pytest.param(
-                function("sum"),
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by pint"
-                ),
-            ),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
+            function("sum"),
+            function("prod"),
             function("std"),
             function("var"),
             function("cumsum"),
-            pytest.param(
-                function("cumprod"),
-                marks=pytest.mark.xfail(
-                    reason="pint does not support cumprod on non-dimensionless yet"
-                ),
-            ),
-            pytest.param(
-                method("all"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
-            pytest.param(
-                method("any"), marks=pytest.mark.xfail(reason="not implemented by pint")
-            ),
-            method("argmax"),
-            method("argmin"),
+            function("cumprod"),
+            method("all"),
+            method("any"),
+            method("argmax", dim="x"),
+            method("argmin", dim="x"),
             method("max"),
             method("min"),
             method("mean"),
             method("median"),
-            pytest.param(
-                method("sum"),
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by pint"
-                ),
-            ),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
+            method("sum"),
+            method("prod"),
             method("std"),
             method("var"),
             method("cumsum"),
-            pytest.param(
-                method("cumprod"),
-                marks=pytest.mark.xfail(
-                    reason="pint does not support cumprod on non-dimensionless yet"
-                ),
-            ),
+            method("cumprod"),
         ),
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        unit_a = unit_registry.Pa
-        unit_b = unit_registry.kg / unit_registry.m ** 3
-        a = xr.DataArray(data=np.linspace(0, 1, 10).astype(dtype) * unit_a, dims="x")
-        b = xr.DataArray(data=np.linspace(-1, 0, 10).astype(dtype) * unit_b, dims="x")
-        x = xr.DataArray(data=np.arange(10).astype(dtype) * unit_registry.m, dims="x")
-        y = xr.DataArray(
-            data=np.arange(10, 20).astype(dtype) * unit_registry.s, dims="x"
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
+        unit_a, unit_b = (
+            (unit_registry.Pa, unit_registry.degK)
+            if func.name != "cumprod"
+            else (unit_registry.dimensionless, unit_registry.dimensionless)
         )
 
-        ds = xr.Dataset(data_vars={"a": a, "b": b}, coords={"x": x, "y": y})
+        a = np.linspace(0, 1, 10).astype(dtype) * unit_a
+        b = np.linspace(-1, 0, 10).astype(dtype) * unit_b
 
-        result = func(ds)
-        expected = attach_units(
-            func(strip_units(ds)),
-            {"a": array_extract_units(func(a)), "b": array_extract_units(func(b))},
-        )
+        ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
 
-        assert_equal_with_units(result, expected)
+        if "dim" in func.kwargs:
+            numpy_kwargs = func.kwargs.copy()
+            dim = numpy_kwargs.pop("dim")
+
+            axis_a = ds.a.get_axis_num(dim)
+            axis_b = ds.b.get_axis_num(dim)
+
+            numpy_kwargs_a = numpy_kwargs.copy()
+            numpy_kwargs_a["axis"] = axis_a
+            numpy_kwargs_b = numpy_kwargs.copy()
+            numpy_kwargs_b["axis"] = axis_b
+        else:
+            numpy_kwargs_a = {}
+            numpy_kwargs_b = {}
+
+        units_a = array_extract_units(func(a, **numpy_kwargs_a))
+        units_b = array_extract_units(func(b, **numpy_kwargs_b))
+        units = {"a": units_a, "b": units_b}
+
+        actual = func(ds)
+        expected = attach_units(func(strip_units(ds)), units)
+
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     @pytest.mark.parametrize("property", ("imag", "real"))
     def test_numpy_properties(self, property, dtype):
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(
-                    data=np.linspace(0, 1, 10) * unit_registry.Pa, dims="x"
-                ),
-                "b": xr.DataArray(
-                    data=np.linspace(-1, 0, 15) * unit_registry.Pa, dims="y"
-                ),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
+        a = np.linspace(0, 1, 10) * unit_registry.Pa
+        b = np.linspace(-1, 0, 15) * unit_registry.degK
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
         units = extract_units(ds)
 
-        result = getattr(ds, property)
+        actual = getattr(ds, property)
         expected = attach_units(getattr(strip_units(ds), property), units)
 
-        assert_equal_with_units(result, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -2853,39 +4079,23 @@ class TestDataset:
             method("argsort"),
             method("conjugate"),
             method("round"),
-            pytest.param(
-                method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="pint does not implement rank yet"),
-            ),
         ),
         ids=repr,
     )
     def test_numpy_methods(self, func, dtype):
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(
-                    data=np.linspace(1, -1, 10) * unit_registry.Pa, dims="x"
-                ),
-                "b": xr.DataArray(
-                    data=np.linspace(-1, 1, 15) * unit_registry.Pa, dims="y"
-                ),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
-        units = {
-            "a": array_extract_units(func(ds.a)),
-            "b": array_extract_units(func(ds.b)),
-            "x": unit_registry.m,
-            "y": unit_registry.s,
-        }
+        a = np.linspace(1, -1, 10) * unit_registry.Pa
+        b = np.linspace(-1, 1, 15) * unit_registry.degK
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
 
-        result = func(ds)
+        units_a = array_extract_units(func(a))
+        units_b = array_extract_units(func(b))
+        units = {"a": units_a, "b": units_b}
+
+        actual = func(ds)
         expected = attach_units(func(strip_units(ds)), units)
 
-        assert_equal_with_units(result, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize("func", (method("clip", min=3, max=8),), ids=repr)
     @pytest.mark.parametrize(
@@ -2902,37 +4112,13 @@ class TestDataset:
     )
     def test_numpy_methods_with_args(self, func, unit, error, dtype):
         data_unit = unit_registry.m
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=np.arange(10) * data_unit, dims="x"),
-                "b": xr.DataArray(data=np.arange(15) * data_unit, dims="y"),
-            },
-            coords={
-                "x": np.arange(10) * unit_registry.m,
-                "y": np.arange(15) * unit_registry.s,
-            },
-        )
+        a = np.linspace(0, 10, 15) * unit_registry.m
+        b = np.linspace(-2, 12, 20) * unit_registry.m
+        ds = xr.Dataset({"a": ("x", a), "b": ("y", b)})
         units = extract_units(ds)
 
-        def strip(value):
-            return (
-                value.magnitude if isinstance(value, unit_registry.Quantity) else value
-            )
-
-        def convert(value, to):
-            if isinstance(value, unit_registry.Quantity) and value.check(to):
-                return value.to(to)
-
-            return value
-
-        scalar_types = (int, float)
         kwargs = {
-            key: (value * unit if isinstance(value, scalar_types) else value)
-            for key, value in func.kwargs.items()
-        }
-
-        stripped_kwargs = {
-            key: strip(convert(value, data_unit)) for key, value in kwargs.items()
+            key: array_attach_units(value, unit) for key, value in func.kwargs.items()
         }
 
         if error is not None:
@@ -2941,10 +4127,16 @@ class TestDataset:
 
             return
 
-        result = func(ds, **kwargs)
+        stripped_kwargs = {
+            key: strip_units(convert_units(value, {None: data_unit}))
+            for key, value in kwargs.items()
+        }
+
+        actual = func(ds, **kwargs)
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
 
-        assert_equal_with_units(result, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func", (method("isnull"), method("notnull"), method("count")), ids=repr
@@ -2974,22 +4166,13 @@ class TestDataset:
             * unit_registry.Pa
         )
 
-        x = np.arange(array1.shape[0]) * unit_registry.m
-        y = np.arange(array1.shape[1]) * unit_registry.m
-        z = np.arange(array2.shape[0]) * unit_registry.m
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("z", "x")),
-            },
-            coords={"x": x, "y": y, "z": z},
-        )
+        ds = xr.Dataset({"a": (("x", "y"), array1), "b": (("z", "x"), array2)})
 
         expected = func(strip_units(ds))
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason="ffill and bfill lose the unit")
     @pytest.mark.parametrize("func", (method("ffill"), method("bfill")), ids=repr)
@@ -3003,54 +4186,37 @@ class TestDataset:
             * unit_registry.Pa
         )
 
-        x = np.arange(len(array1))
+        ds = xr.Dataset({"a": ("x", array1), "b": ("y", array2)})
+        units = extract_units(ds)
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        expected = attach_units(func(strip_units(ds), dim="x"), units)
+        actual = func(ds, dim="x")
 
-        expected = attach_units(
-            func(strip_units(ds), dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
-        )
-        result = func(ds, dim="x")
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-        assert_equal_with_units(expected, result)
-
-    @pytest.mark.xfail(reason="fillna drops the unit")
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(
-                1,
-                DimensionalityError,
-                id="no_unit",
-                marks=pytest.mark.xfail(reason="blocked by the failing `where`"),
-            ),
+            pytest.param(1, DimensionalityError, id="no_unit"),
             pytest.param(
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+            ),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
     @pytest.mark.parametrize(
         "fill_value",
         (
-            pytest.param(
-                -1,
-                id="python scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar cannot be converted using astype()"
-                ),
-            ),
-            pytest.param(np.array(-1), id="numpy scalar"),
-            pytest.param(np.array([-1]), id="numpy array"),
+            pytest.param(-1, id="python_scalar"),
+            pytest.param(np.array(-1), id="numpy_scalar"),
+            pytest.param(np.array([-1]), id="numpy_array"),
         ),
     )
     def test_fillna(self, fill_value, unit, error, dtype):
@@ -3062,26 +4228,26 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.m
         )
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            }
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        value = fill_value * unit
+        units = extract_units(ds)
 
         if error is not None:
             with pytest.raises(error):
-                ds.fillna(value=fill_value * unit)
+                ds.fillna(value=value)
 
             return
 
-        result = ds.fillna(value=fill_value * unit)
+        actual = ds.fillna(value=value)
         expected = attach_units(
-            strip_units(ds).fillna(value=fill_value),
-            {"a": unit_registry.m, "b": unit_registry.m},
+            strip_units(ds).fillna(
+                value=strip_units(convert_units(value, {None: unit_registry.m}))
+            ),
+            units,
         )
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     def test_dropna(self, dtype):
         array1 = (
@@ -3092,24 +4258,15 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.Pa
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
-        expected = attach_units(
-            strip_units(ds).dropna(dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
-        )
-        result = ds.dropna(dim="x")
+        expected = attach_units(strip_units(ds).dropna(dim="x"), units)
+        actual = ds.dropna(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="pint does not implement `numpy.isin`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -3129,61 +4286,31 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.m
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
 
         raw_values = np.array([1.4, np.nan, 2.3]).astype(dtype)
         values = raw_values * unit
 
-        if (
-            isinstance(values, unit_registry.Quantity)
-            and values.check(unit_registry.m)
-            and unit != unit_registry.m
-        ):
-            raw_values = values.to(unit_registry.m).magnitude
+        converted_values = (
+            convert_units(values, {None: unit_registry.m})
+            if is_compatible(unit, unit_registry.m)
+            else values
+        )
 
-        expected = strip_units(ds).isin(raw_values)
-        if not isinstance(values, unit_registry.Quantity) or not values.check(
-            unit_registry.m
-        ):
+        expected = strip_units(ds).isin(strip_units(converted_values))
+        # TODO: use `unit_registry.is_compatible_with(unit, unit_registry.m)` instead.
+        # Needs `pint>=0.12.1`, though, so we probably should wait until that is released.
+        if not is_compatible(unit, unit_registry.m):
             expected.a[:] = False
             expected.b[:] = False
-        result = ds.isin(values)
 
-        assert_equal_with_units(result, expected)
+        actual = ds.isin(values)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
-        "variant",
-        (
-            pytest.param(
-                "masking",
-                marks=pytest.mark.xfail(
-                    reason="np.result_type not implemented by quantity"
-                ),
-            ),
-            pytest.param(
-                "replacing_scalar",
-                marks=pytest.mark.xfail(
-                    reason="python scalar not convertible using astype"
-                ),
-            ),
-            pytest.param(
-                "replacing_array",
-                marks=pytest.mark.xfail(
-                    reason="replacing using an array drops the units"
-                ),
-            ),
-            pytest.param(
-                "dropping",
-                marks=pytest.mark.xfail(reason="nan not compatible with quantity"),
-            ),
-        ),
+        "variant", ("masking", "replacing_scalar", "replacing_array", "dropping")
     )
     @pytest.mark.parametrize(
         "unit,error",
@@ -3198,20 +4325,12 @@ class TestDataset:
         ),
     )
     def test_where(self, variant, unit, error, dtype):
-        def _strip_units(mapping):
-            return {key: array_strip_units(value) for key, value in mapping.items()}
-
         original_unit = unit_registry.m
         array1 = np.linspace(0, 1, 10).astype(dtype) * original_unit
         array2 = np.linspace(-1, 0, 10).astype(dtype) * original_unit
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": np.arange(len(array1))},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
         condition = ds < 0.5 * original_unit
         other = np.linspace(-2, -1, 10).astype(dtype) * unit
@@ -3222,23 +4341,27 @@ class TestDataset:
             "dropping": {"cond": condition, "drop": True},
         }
         kwargs = variant_kwargs.get(variant)
-        kwargs_without_units = _strip_units(kwargs)
-
         if variant not in ("masking", "dropping") and error is not None:
             with pytest.raises(error):
                 ds.where(**kwargs)
 
             return
 
+        kwargs_without_units = {
+            key: strip_units(convert_units(value, {None: original_unit}))
+            for key, value in kwargs.items()
+        }
+
         expected = attach_units(
             strip_units(ds).where(**kwargs_without_units),
-            {"a": original_unit, "b": original_unit},
+            units,
         )
-        result = ds.where(**kwargs)
+        actual = ds.where(**kwargs)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="interpolate strips units")
+    @pytest.mark.xfail(reason="interpolate_na uses numpy.vectorize")
     def test_interpolate_na(self, dtype):
         array1 = (
             np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
@@ -3248,24 +4371,18 @@ class TestDataset:
             np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
             * unit_registry.Pa
         )
-        x = np.arange(len(array1))
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
         expected = attach_units(
             strip_units(ds).interpolate_na(dim="x"),
-            {"a": unit_registry.degK, "b": unit_registry.Pa},
+            units,
         )
-        result = ds.interpolate_na(dim="x")
+        actual = ds.interpolate_na(dim="x")
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="uses Dataset.where, which currently fails")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3278,31 +4395,42 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="same_unit"),
         ),
     )
-    def test_combine_first(self, unit, error, dtype):
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
+        ),
+    )
+    def test_combine_first(self, variant, unit, error, dtype):
+        variants = {
+            "data": (unit_registry.m, unit, 1, 1),
+            "dims": (1, 1, unit_registry.m, unit),
+        }
+        data_unit, other_data_unit, dims_unit, other_dims_unit = variants.get(variant)
+
         array1 = (
-            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype)
-            * unit_registry.degK
+            np.array([1.4, np.nan, 2.3, np.nan, np.nan, 9.1]).astype(dtype) * data_unit
         )
         array2 = (
-            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype)
-            * unit_registry.Pa
+            np.array([4.3, 9.8, 7.5, np.nan, 8.2, np.nan]).astype(dtype) * data_unit
         )
-        x = np.arange(len(array1))
+        x = np.arange(len(array1)) * dims_unit
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
+            data_vars={"a": ("x", array1), "b": ("x", array2)},
             coords={"x": x},
         )
-        other_array1 = np.ones_like(array1) * unit
-        other_array2 = -1 * np.ones_like(array2) * unit
+        units = extract_units(ds)
+
+        other_array1 = np.ones_like(array1) * other_data_unit
+        other_array2 = np.full_like(array2, fill_value=-1) * other_data_unit
+        other_x = (np.arange(array1.shape[0]) + 5) * other_dims_unit
         other = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=other_array1, dims="x"),
-                "b": xr.DataArray(data=other_array2, dims="x"),
-            },
-            coords={"x": np.arange(array1.shape[0])},
+            data_vars={"a": ("x", other_array1), "b": ("x", other_array2)},
+            coords={"x": other_x},
         )
 
         if error is not None:
@@ -3312,95 +4440,14 @@ class TestDataset:
             return
 
         expected = attach_units(
-            strip_units(ds).combine_first(strip_units(other)),
-            {"a": unit_registry.m, "b": unit_registry.m},
+            strip_units(ds).combine_first(strip_units(convert_units(other, units))),
+            units,
         )
-        result = ds.combine_first(other)
+        actual = ds.combine_first(other)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.parametrize(
-        "unit",
-        (
-            pytest.param(1, id="no_unit"),
-            pytest.param(unit_registry.dimensionless, id="dimensionless"),
-            pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(
-                unit_registry.cm,
-                id="compatible_unit",
-                marks=pytest.mark.xfail(reason="identical does not check units yet"),
-            ),
-            pytest.param(unit_registry.m, id="identical_unit"),
-        ),
-    )
-    @pytest.mark.parametrize(
-        "variation",
-        (
-            "data",
-            pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
-            ),
-            "coords",
-        ),
-    )
-    @pytest.mark.parametrize("func", (method("equals"), method("identical")), ids=repr)
-    def test_comparisons(self, func, variation, unit, dtype):
-        array1 = np.linspace(0, 5, 10).astype(dtype)
-        array2 = np.linspace(-5, 0, 10).astype(dtype)
-
-        coord = np.arange(len(array1)).astype(dtype)
-
-        original_unit = unit_registry.m
-        quantity1 = array1 * original_unit
-        quantity2 = array2 * original_unit
-        x = coord * original_unit
-        y = coord * original_unit
-
-        units = {
-            "data": (unit, original_unit, original_unit),
-            "dims": (original_unit, unit, original_unit),
-            "coords": (original_unit, original_unit, unit),
-        }
-        data_unit, dim_unit, coord_unit = units.get(variation)
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=quantity1, dims="x"),
-                "b": xr.DataArray(data=quantity2, dims="x"),
-            },
-            coords={"x": x, "y": ("x", y)},
-        )
-
-        other = attach_units(
-            strip_units(ds),
-            {
-                "a": (data_unit, original_unit if quantity1.check(data_unit) else None),
-                "b": (data_unit, original_unit if quantity2.check(data_unit) else None),
-                "x": (dim_unit, original_unit if x.check(dim_unit) else None),
-                "y": (coord_unit, original_unit if y.check(coord_unit) else None),
-            },
-        )
-
-        # TODO: test dim coord once indexes leave units intact
-        # also, express this in terms of calls on the raw data array
-        # and then check the units
-        equal_arrays = (
-            np.all(ds.a.data == other.a.data)
-            and np.all(ds.b.data == other.b.data)
-            and (np.all(x == other.x.data) or True)  # dims can't be checked yet
-            and np.all(y == other.y.data)
-        )
-        equal_units = (
-            data_unit == original_unit
-            and coord_unit == original_unit
-            and dim_unit == original_unit
-        )
-        expected = equal_arrays and (func.name != "identical" or equal_units)
-        result = func(ds, other)
-
-        assert expected == result
-
-    @pytest.mark.xfail(reason="blocked by `where`")
     @pytest.mark.parametrize(
         "unit",
         (
@@ -3411,14 +4458,123 @@ class TestDataset:
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
-    def test_broadcast_like(self, unit, dtype):
-        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * unit_registry.Pa
-        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * unit_registry.Pa
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("equals"),
+            pytest.param(
+                method("identical"),
+                marks=pytest.mark.skip("behaviour of identical is unclear"),
+            ),
+        ),
+        ids=repr,
+    )
+    def test_comparisons(self, func, variant, unit, dtype):
+        array1 = np.linspace(0, 5, 10).astype(dtype)
+        array2 = np.linspace(-5, 0, 10).astype(dtype)
 
-        x1 = np.arange(2) * unit_registry.m
-        x2 = np.arange(2) * unit
-        y1 = np.array([0]) * unit_registry.m
-        y2 = np.arange(3) * unit
+        coord = np.arange(len(array1)).astype(dtype)
+
+        variants = {
+            "data": (unit_registry.m, 1, 1),
+            "dims": (1, unit_registry.m, 1),
+            "coords": (1, 1, unit_registry.m),
+        }
+        data_unit, dim_unit, coord_unit = variants.get(variant)
+
+        a = array1 * data_unit
+        b = array2 * data_unit
+        x = coord * dim_unit
+        y = coord * coord_unit
+
+        ds = xr.Dataset(
+            data_vars={"a": ("x", a), "b": ("x", b)},
+            coords={"x": x, "y": ("x", y)},
+        )
+        units = extract_units(ds)
+
+        other_variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        other_data_unit, other_dim_unit, other_coord_unit = other_variants.get(variant)
+
+        other_units = {
+            "a": other_data_unit,
+            "b": other_data_unit,
+            "x": other_dim_unit,
+            "y": other_coord_unit,
+        }
+
+        to_convert = {
+            key: unit if is_compatible(unit, reference) else None
+            for key, (unit, reference) in zip_mappings(units, other_units)
+        }
+        # convert units where possible, then attach all units to the converted dataset
+        other = attach_units(strip_units(convert_units(ds, to_convert)), other_units)
+        other_units = extract_units(other)
+
+        # make sure all units are compatible and only then try to
+        # convert and compare values
+        equal_ds = all(
+            is_compatible(unit, other_unit)
+            for _, (unit, other_unit) in zip_mappings(units, other_units)
+        ) and (strip_units(ds).equals(strip_units(convert_units(other, units))))
+        equal_units = units == other_units
+        expected = equal_ds and (func.name != "identical" or equal_units)
+
+        actual = func(ds, other)
+
+        assert expected == actual
+
+    # TODO: eventually use another decorator / wrapper function that
+    # applies a filter to the parametrize combinations:
+    # we only need a single test for data
+    @pytest.mark.parametrize(
+        "unit",
+        (
+            pytest.param(1, id="no_unit"),
+            pytest.param(unit_registry.dimensionless, id="dimensionless"),
+            pytest.param(unit_registry.s, id="incompatible_unit"),
+            pytest.param(unit_registry.cm, id="compatible_unit"),
+            pytest.param(unit_registry.m, id="identical_unit"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
+        ),
+    )
+    def test_broadcast_like(self, variant, unit, dtype):
+        variants = {
+            "data": ((unit_registry.m, unit), (1, 1)),
+            "dims": ((1, 1), (unit_registry.m, unit)),
+        }
+        (data_unit1, data_unit2), (dim_unit1, dim_unit2) = variants.get(variant)
+
+        array1 = np.linspace(1, 2, 2 * 1).reshape(2, 1).astype(dtype) * data_unit1
+        array2 = np.linspace(0, 1, 2 * 3).reshape(2, 3).astype(dtype) * data_unit2
+
+        x1 = np.arange(2) * dim_unit1
+        x2 = np.arange(2) * dim_unit2
+        y1 = np.array([0]) * dim_unit1
+        y2 = np.arange(3) * dim_unit2
 
         ds1 = xr.Dataset(
             data_vars={"a": (("x", "y"), array1)}, coords={"x": x1, "y": y1}
@@ -3430,9 +4586,10 @@ class TestDataset:
         expected = attach_units(
             strip_units(ds1).broadcast_like(strip_units(ds2)), extract_units(ds1)
         )
-        result = ds1.broadcast_like(ds2)
+        actual = ds1.broadcast_like(ds2)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit",
@@ -3445,110 +4602,124 @@ class TestDataset:
         ),
     )
     def test_broadcast_equals(self, unit, dtype):
+        # TODO: does this use indexes?
         left_array1 = np.ones(shape=(2, 3), dtype=dtype) * unit_registry.m
-        left_array2 = np.zeros(shape=(2, 6), dtype=dtype) * unit_registry.m
+        left_array2 = np.zeros(shape=(3, 6), dtype=dtype) * unit_registry.m
 
-        right_array1 = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array1.check(unit) else None,
-        )
-        right_array2 = array_attach_units(
-            np.ones(shape=(2,), dtype=dtype),
-            unit,
-            convert_from=unit_registry.m if left_array2.check(unit) else None,
-        )
+        right_array1 = np.ones(shape=(2,)) * unit
+        right_array2 = np.zeros(shape=(3,)) * unit
 
         left = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=left_array1, dims=("x", "y")),
-                "b": xr.DataArray(data=left_array2, dims=("x", "z")),
-            }
+            {"a": (("x", "y"), left_array1), "b": (("y", "z"), left_array2)},
         )
-        right = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=right_array1, dims="x"),
-                "b": xr.DataArray(data=right_array2, dims="x"),
-            }
-        )
+        right = xr.Dataset({"a": ("x", right_array1), "b": ("y", right_array2)})
 
-        expected = np.all(left_array1 == right_array1[:, None]) and np.all(
-            left_array2 == right_array2[:, None]
+        units = merge_mappings(
+            extract_units(left),
+            {} if is_compatible(left_array1, unit) else {"a": None, "b": None},
         )
-        result = left.broadcast_equals(right)
+        expected = is_compatible(left_array1, unit) and strip_units(
+            left
+        ).broadcast_equals(strip_units(convert_units(right, units)))
+        actual = left.broadcast_equals(right)
 
-        assert expected == result
+        assert expected == actual
+
+    def test_pad(self, dtype):
+        a = np.linspace(0, 5, 10).astype(dtype) * unit_registry.Pa
+        b = np.linspace(-5, 0, 10).astype(dtype) * unit_registry.degK
+
+        ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        units = extract_units(ds)
+
+        expected = attach_units(strip_units(ds).pad(x=(2, 3)), units)
+        actual = ds.pad(x=(2, 3))
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (method("unstack"), method("reset_index", "v"), method("reorder_levels")),
         ids=repr,
     )
-    def test_stacking_stacked(self, func, dtype):
-        array1 = (
-            np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * unit_registry.m
-        )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
+        ),
+    )
+    def test_stacking_stacked(self, variant, func, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "dims": (1, unit_registry.m),
+        }
+        data_unit, dim_unit = variants.get(variant)
+
+        array1 = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
         array2 = (
             np.linspace(-10, 0, 5 * 10 * 15).reshape(5, 10, 15).astype(dtype)
-            * unit_registry.m
+            * data_unit
         )
 
-        x = np.arange(array1.shape[0])
-        y = np.arange(array1.shape[1])
-        z = np.arange(array2.shape[2])
+        x = np.arange(array1.shape[0]) * dim_unit
+        y = np.arange(array1.shape[1]) * dim_unit
+        z = np.arange(array2.shape[2]) * dim_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-            },
+            data_vars={"a": (("x", "y"), array1), "b": (("x", "y", "z"), array2)},
             coords={"x": x, "y": y, "z": z},
         )
+        units = extract_units(ds)
 
         stacked = ds.stack(v=("x", "y"))
 
-        expected = attach_units(
-            func(strip_units(stacked)), {"a": unit_registry.m, "b": unit_registry.m}
-        )
-        result = func(stacked)
+        expected = attach_units(func(strip_units(stacked)), units)
+        actual = func(stacked)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="tries to subscript scalar quantities")
+    @pytest.mark.xfail(
+        reason="stacked dimension's labels have to be hashable, but is a numpy.array"
+    )
     def test_to_stacked_array(self, dtype):
-        labels = np.arange(5).astype(dtype) * unit_registry.s
-        arrays = {name: np.linspace(0, 1, 10) * unit_registry.m for name in labels}
+        labels = range(5) * unit_registry.s
+        arrays = {
+            name: np.linspace(0, 1, 10).astype(dtype) * unit_registry.m
+            for name in labels
+        }
 
-        ds = xr.Dataset(
-            data_vars={
-                name: xr.DataArray(data=array, dims="x")
-                for name, array in arrays.items()
-            }
-        )
+        ds = xr.Dataset({name: ("x", array) for name, array in arrays.items()})
+        units = {None: unit_registry.m, "y": unit_registry.s}
 
         func = method("to_stacked_array", "z", variable_dim="y", sample_dims=["x"])
 
-        result = func(ds).rename(None)
+        actual = func(ds).rename(None)
         expected = attach_units(
             func(strip_units(ds)).rename(None),
-            {None: unit_registry.m, "y": unit_registry.s},
+            units,
         )
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (
             method("transpose", "y", "x", "z1", "z2"),
-            method("stack", a=("x", "y")),
+            method("stack", u=("x", "y")),
             method("set_index", x="x2"),
+            method("shift", x=2),
             pytest.param(
-                method("shift", x=2), marks=pytest.mark.xfail(reason="sets all to nan")
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
             ),
-            pytest.param(
-                method("roll", x=2, roll_coords=False),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
         ids=repr,
@@ -3572,20 +4743,19 @@ class TestDataset:
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y", "z1")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z2")),
+                "a": (("x", "y", "z1"), array1),
+                "b": (("x", "y", "z2"), array2),
             },
             coords={"x": x, "y": y, "z1": z1, "z2": z2, "x2": ("x", x2)},
         )
+        units = extract_units(ds)
 
-        expected = attach_units(
-            func(strip_units(ds)), {"a": unit_registry.Pa, "b": unit_registry.degK}
-        )
-        result = func(ds)
+        expected = attach_units(func(strip_units(ds)), units)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes strip units")
     @pytest.mark.parametrize(
         "indices",
         (
@@ -3597,48 +4767,38 @@ class TestDataset:
         array1 = np.arange(10).astype(dtype) * unit_registry.s
         array2 = np.linspace(0, 1, 10).astype(dtype) * unit_registry.Pa
 
-        x = np.arange(len(array1)) * unit_registry.m
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
+        ds = xr.Dataset(data_vars={"a": ("x", array1), "b": ("x", array2)})
+        units = extract_units(ds)
 
-        expected = attach_units(
-            strip_units(ds).isel(x=indices),
-            {"a": unit_registry.s, "b": unit_registry.Pa, "x": unit_registry.m},
-        )
-        result = ds.isel(x=indices)
+        expected = attach_units(strip_units(ds).isel(x=indices), units)
+        actual = ds.isel(x=indices)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single_value"),
+            pytest.param(10, id="single_value"),
             pytest.param([10, 5, 13], id="list_of_values"),
             pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
     )
     @pytest.mark.parametrize(
-        "units,error",
+        "unit,error",
         (
             pytest.param(1, KeyError, id="no_units"),
             pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
             pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.s, None, id="same_unit"),
+            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_sel(self, values, units, error, dtype):
+    def test_sel(self, raw_values, unit, error, dtype):
         array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
         array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
-        x = np.arange(len(array1)) * unit_registry.s
+        x = np.arange(len(array1)) * unit_registry.m
 
         ds = xr.Dataset(
             data_vars={
@@ -3648,85 +4808,133 @@ class TestDataset:
             coords={"x": x},
         )
 
-        values_with_units = values * units
+        values = raw_values * unit
 
+        # TODO: if we choose dm as compatible unit, single value keys
+        # can be found. Should we check that?
         if error is not None:
             with pytest.raises(error):
-                ds.sel(x=values_with_units)
+                ds.sel(x=values)
 
             return
 
         expected = attach_units(
-            strip_units(ds).sel(x=values),
-            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
+            strip_units(ds).sel(
+                x=strip_units(convert_units(values, {None: unit_registry.m}))
+            ),
+            extract_units(ds),
         )
-        result = ds.sel(x=values_with_units)
-        assert_equal_with_units(expected, result)
+        actual = ds.sel(x=values)
 
-    @pytest.mark.xfail(
-        reason="xarray does not support duck arrays in dimension coordinates"
-    )
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
-        "values",
+        "raw_values",
         (
-            pytest.param(12, id="single value"),
-            pytest.param([10, 5, 13], id="list of multiple values"),
-            pytest.param(np.array([9, 3, 7, 12]), id="array of multiple values"),
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
         ),
-    )
-    @pytest.mark.parametrize(
-        "units,error",
-        (
-            pytest.param(1, KeyError, id="no_units"),
-            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
-            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
-            pytest.param(unit_registry.ms, KeyError, id="compatible_unit"),
-            pytest.param(unit_registry.s, None, id="same_unit"),
-        ),
-    )
-    def test_loc(self, values, units, error, dtype):
-        array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
-        array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
-        x = np.arange(len(array1)) * unit_registry.s
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims="x"),
-                "b": xr.DataArray(data=array2, dims="x"),
-            },
-            coords={"x": x},
-        )
-
-        values_with_units = values * units
-
-        if error is not None:
-            with pytest.raises(error):
-                ds.loc[{"x": values_with_units}]
-
-            return
-
-        expected = attach_units(
-            strip_units(ds).loc[{"x": values}],
-            {"a": unit_registry.degK, "b": unit_registry.Pa, "x": unit_registry.s},
-        )
-        result = ds.loc[{"x": values_with_units}]
-        assert_equal_with_units(expected, result)
-
-    @pytest.mark.xfail(
-        reason="indexes strip units and head / tail / thin only support integers"
     )
     @pytest.mark.parametrize(
         "unit,error",
         (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
+            pytest.param(1, KeyError, id="no_units"),
+            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
+    def test_drop_sel(self, raw_values, unit, error, dtype):
+        array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
+        array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
+        x = np.arange(len(array1)) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        values = raw_values * unit
+
+        # TODO: if we choose dm as compatible unit, single value keys
+        # can be found. Should we check that?
+        if error is not None:
+            with pytest.raises(error):
+                ds.drop_sel(x=values)
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).drop_sel(
+                x=strip_units(convert_units(values, {None: unit_registry.m}))
+            ),
+            extract_units(ds),
+        )
+        actual = ds.drop_sel(x=values)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
+    @pytest.mark.parametrize(
+        "raw_values",
+        (
+            pytest.param(10, id="single_value"),
+            pytest.param([10, 5, 13], id="list_of_values"),
+            pytest.param(np.array([9, 3, 7, 12]), id="array_of_values"),
+        ),
+    )
+    @pytest.mark.parametrize(
+        "unit,error",
+        (
+            pytest.param(1, KeyError, id="no_units"),
+            pytest.param(unit_registry.dimensionless, KeyError, id="dimensionless"),
+            pytest.param(unit_registry.degree, KeyError, id="incompatible_unit"),
+            pytest.param(unit_registry.mm, KeyError, id="compatible_unit"),
+            pytest.param(unit_registry.m, None, id="identical_unit"),
+        ),
+    )
+    def test_loc(self, raw_values, unit, error, dtype):
+        array1 = np.linspace(5, 10, 20).astype(dtype) * unit_registry.degK
+        array2 = np.linspace(0, 5, 20).astype(dtype) * unit_registry.Pa
+        x = np.arange(len(array1)) * unit_registry.m
+
+        ds = xr.Dataset(
+            data_vars={
+                "a": xr.DataArray(data=array1, dims="x"),
+                "b": xr.DataArray(data=array2, dims="x"),
+            },
+            coords={"x": x},
+        )
+
+        values = raw_values * unit
+
+        # TODO: if we choose dm as compatible unit, single value keys
+        # can be found. Should we check that?
+        if error is not None:
+            with pytest.raises(error):
+                ds.loc[{"x": values}]
+
+            return
+
+        expected = attach_units(
+            strip_units(ds).loc[
+                {"x": strip_units(convert_units(values, {None: unit_registry.m}))}
+            ],
+            extract_units(ds),
+        )
+        actual = ds.loc[{"x": values}]
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
     @pytest.mark.parametrize(
         "func",
         (
@@ -3736,14 +4944,34 @@ class TestDataset:
         ),
         ids=repr,
     )
-    def test_head_tail_thin(self, func, unit, error, dtype):
-        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_head_tail_thin(self, func, variant, dtype):
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit_a, unit_b), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_a
+        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_b
 
         coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.m,
+            "x": np.arange(10) * dim_unit,
+            "y": np.arange(5) * dim_unit,
+            "z": np.arange(8) * dim_unit,
+            "u": ("x", np.linspace(0, 1, 10) * coord_unit),
+            "v": ("y", np.linspace(1, 2, 5) * coord_unit),
+            "w": ("z", np.linspace(-1, 0, 8) * coord_unit),
         }
 
         ds = xr.Dataset(
@@ -3754,19 +4982,13 @@ class TestDataset:
             coords=coords,
         )
 
-        kwargs = {name: value * unit for name, value in func.kwargs.items()}
-
-        if error is not None:
-            with pytest.raises(error):
-                func(ds, **kwargs)
-
-            return
-
         expected = attach_units(func(strip_units(ds)), extract_units(ds))
-        result = func(ds, **kwargs)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("dim", ("x", "y", "z", "t", "all"))
     @pytest.mark.parametrize(
         "shape",
         (
@@ -3777,13 +4999,9 @@ class TestDataset:
             pytest.param((1, 10, 1, 20), id="first and last dimension squeezable"),
         ),
     )
-    def test_squeeze(self, shape, dtype):
+    def test_squeeze(self, shape, dim, dtype):
         names = "xyzt"
-        coords = {
-            name: np.arange(length).astype(dtype)
-            * (unit_registry.m if name != "t" else unit_registry.s)
-            for name, length in zip(names, shape)
-        }
+        dim_lengths = dict(zip(names, shape))
         array1 = (
             np.linspace(0, 1, 10 * 20).astype(dtype).reshape(shape) * unit_registry.degK
         )
@@ -3793,26 +5011,59 @@ class TestDataset:
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=tuple(names[: len(shape)])),
-                "b": xr.DataArray(data=array2, dims=tuple(names[: len(shape)])),
+                "a": (tuple(names[: len(shape)]), array1),
+                "b": (tuple(names[: len(shape)]), array2),
             },
-            coords=coords,
         )
         units = extract_units(ds)
 
-        expected = attach_units(strip_units(ds).squeeze(), units)
+        kwargs = {"dim": dim} if dim != "all" and dim_lengths.get(dim, 0) == 1 else {}
 
-        result = ds.squeeze()
-        assert_equal_with_units(result, expected)
+        expected = attach_units(strip_units(ds).squeeze(**kwargs), units)
 
-        # try squeezing the dimensions separately
-        names = tuple(dim for dim, coord in coords.items() if len(coord) == 1)
-        for name in names:
-            expected = attach_units(strip_units(ds).squeeze(dim=name), units)
-            result = ds.squeeze(dim=name)
-            assert_equal_with_units(result, expected)
+        actual = ds.squeeze(**kwargs)
 
-    @pytest.mark.xfail(reason="ignores units")
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("interp"), marks=pytest.mark.xfail(reason="uses scipy")
+            ),
+            method("reindex"),
+        ),
+        ids=repr,
+    )
+    def test_interp_reindex(self, func, variant, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-1, 0, 10).astype(dtype) * data_unit
+        array2 = np.linspace(0, 1, 10).astype(dtype) * data_unit
+
+        y = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(8) + 0.5
+
+        ds = xr.Dataset(
+            {"a": ("x", array1), "b": ("x", array2)}, coords={"x": x, "y": ("x", y)}
+        )
+        units = extract_units(ds)
+
+        expected = attach_units(func(strip_units(ds), x=new_x), units)
+        actual = func(ds, x=new_x)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3825,40 +5076,69 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_interp(self, unit, error):
-        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+    @pytest.mark.parametrize("func", (method("interp"), method("reindex")), ids=repr)
+    def test_interp_reindex_indexing(self, func, unit, error, dtype):
+        array1 = np.linspace(-1, 0, 10).astype(dtype)
+        array2 = np.linspace(0, 1, 10).astype(dtype)
 
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.s,
-        }
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(8) + 0.5) * unit
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
-
-        new_coords = (np.arange(10) + 0.5) * unit
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
+        units = extract_units(ds)
 
         if error is not None:
             with pytest.raises(error):
-                ds.interp(x=new_coords)
+                func(ds, x=new_x)
 
             return
 
-        expected = attach_units(
-            strip_units(ds).interp(x=strip_units(new_coords)), extract_units(ds)
+        expected = attach_units(func(strip_units(ds), x=new_x), units)
+        actual = func(ds, x=new_x)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.parametrize("variant", ("data", "coords"))
+    @pytest.mark.parametrize(
+        "func",
+        (
+            pytest.param(
+                method("interp_like"), marks=pytest.mark.xfail(reason="uses scipy")
+            ),
+            method("reindex_like"),
+        ),
+        ids=repr,
+    )
+    def test_interp_reindex_like(self, func, variant, dtype):
+        variants = {
+            "data": (unit_registry.m, 1),
+            "coords": (1, unit_registry.m),
+        }
+        data_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-1, 0, 10).astype(dtype) * data_unit
+        array2 = np.linspace(0, 1, 10).astype(dtype) * data_unit
+
+        y = np.arange(10) * coord_unit
+
+        x = np.arange(10)
+        new_x = np.arange(8) + 0.5
+
+        ds = xr.Dataset(
+            {"a": ("x", array1), "b": ("x", array2)}, coords={"x": x, "y": ("x", y)}
         )
-        result = ds.interp(x=new_coords)
+        units = extract_units(ds)
 
-        assert_equal_with_units(result, expected)
+        other = xr.Dataset({"a": ("x", np.empty_like(new_x))}, coords={"x": new_x})
 
-    @pytest.mark.xfail(reason="ignores units")
+        expected = attach_units(func(strip_units(ds), other), units)
+        actual = func(ds, other)
+
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
+
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3871,162 +5151,32 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    def test_interp_like(self, unit, error, dtype):
-        array1 = (
-            np.linspace(0, 10, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
-
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.m,
-        }
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
-
-        other = xr.Dataset(
-            data_vars={
-                "c": xr.DataArray(data=np.empty((20, 10)), dims=("x", "y")),
-                "d": xr.DataArray(data=np.empty((20, 15)), dims=("x", "z")),
-            },
-            coords={
-                "x": (np.arange(20) + 0.3) * unit,
-                "y": (np.arange(10) - 0.2) * unit,
-                "z": (np.arange(15) + 0.4) * unit,
-            },
-        )
-
-        if error is not None:
-            with pytest.raises(error):
-                ds.interp_like(other)
-
-            return
-
-        expected = attach_units(
-            strip_units(ds).interp_like(strip_units(other)), extract_units(ds)
-        )
-        result = ds.interp_like(other)
-
-        assert_equal_with_units(result, expected)
-
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
     @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
+        "func", (method("interp_like"), method("reindex_like")), ids=repr
     )
-    def test_reindex(self, unit, error):
-        array1 = np.linspace(1, 2, 10 * 5).reshape(10, 5) * unit_registry.degK
-        array2 = np.linspace(1, 2, 10 * 8).reshape(10, 8) * unit_registry.Pa
+    def test_interp_reindex_like_indexing(self, func, unit, error, dtype):
+        array1 = np.linspace(-1, 0, 10).astype(dtype)
+        array2 = np.linspace(0, 1, 10).astype(dtype)
 
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.s,
-        }
+        x = np.arange(10) * unit_registry.m
+        new_x = (np.arange(8) + 0.5) * unit
 
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
+        ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)}, coords={"x": x})
+        units = extract_units(ds)
 
-        new_coords = (np.arange(10) + 0.5) * unit
+        other = xr.Dataset({"a": ("x", np.empty_like(new_x))}, coords={"x": new_x})
 
         if error is not None:
             with pytest.raises(error):
-                ds.interp(x=new_coords)
+                func(ds, other)
 
             return
 
-        expected = attach_units(
-            strip_units(ds).reindex(x=strip_units(new_coords)), extract_units(ds)
-        )
-        result = ds.reindex(x=new_coords)
+        expected = attach_units(func(strip_units(ds), other), units)
+        actual = func(ds, other)
 
-        assert_equal_with_units(result, expected)
-
-    @pytest.mark.xfail(
-        reason="pint does not implement np.result_type in __array_function__ yet"
-    )
-    @pytest.mark.parametrize(
-        "unit,error",
-        (
-            pytest.param(1, DimensionalityError, id="no_unit"),
-            pytest.param(
-                unit_registry.dimensionless, DimensionalityError, id="dimensionless"
-            ),
-            pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit"),
-            pytest.param(unit_registry.m, None, id="identical_unit"),
-        ),
-    )
-    def test_reindex_like(self, unit, error, dtype):
-        array1 = (
-            np.linspace(0, 10, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
-
-        coords = {
-            "x": np.arange(10) * unit_registry.m,
-            "y": np.arange(5) * unit_registry.m,
-            "z": np.arange(8) * unit_registry.m,
-        }
-
-        ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "z")),
-            },
-            coords=coords,
-        )
-
-        other = xr.Dataset(
-            data_vars={
-                "c": xr.DataArray(data=np.empty((20, 10)), dims=("x", "y")),
-                "d": xr.DataArray(data=np.empty((20, 15)), dims=("x", "z")),
-            },
-            coords={
-                "x": (np.arange(20) + 0.3) * unit,
-                "y": (np.arange(10) - 0.2) * unit,
-                "z": (np.arange(15) + 0.4) * unit,
-            },
-        )
-
-        if error is not None:
-            with pytest.raises(error):
-                ds.reindex_like(other)
-
-            return
-
-        expected = attach_units(
-            strip_units(ds).reindex_like(strip_units(other)), extract_units(ds)
-        )
-        result = ds.reindex_like(other)
-
-        assert_equal_with_units(result, expected)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
@@ -4034,169 +5184,194 @@ class TestDataset:
             method("diff", dim="x"),
             method("differentiate", coord="x"),
             method("integrate", coord="x"),
-            pytest.param(
-                method("quantile", q=[0.25, 0.75]),
-                marks=pytest.mark.xfail(
-                    reason="pint does not implement nanpercentile yet"
-                ),
-            ),
-            pytest.param(
-                method("reduce", func=np.sum, dim="x"),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(
-                method("map", np.fabs),
-                marks=pytest.mark.xfail(reason="fabs strips units"),
-            ),
+            method("quantile", q=[0.25, 0.75]),
+            method("reduce", func=np.sum, dim="x"),
+            method("map", np.fabs),
         ),
         ids=repr,
     )
-    def test_computation(self, func, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
-        x = np.arange(10) * unit_registry.m
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_computation(self, func, variant, dtype):
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-5, 5, 4 * 5).reshape(4, 5).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 4 * 3).reshape(4, 3).astype(dtype) * unit2
+        x = np.arange(4) * dim_unit
+        y = np.arange(5) * dim_unit
+        z = np.arange(3) * dim_unit
 
         ds = xr.Dataset(
             data_vars={
                 "a": xr.DataArray(data=array1, dims=("x", "y")),
                 "b": xr.DataArray(data=array2, dims=("x", "z")),
             },
-            coords={"x": x, "y": y, "z": z},
+            coords={"x": x, "y": y, "z": z, "y2": ("y", np.arange(5) * coord_unit)},
         )
 
         units = extract_units(ds)
 
         expected = attach_units(func(strip_units(ds)), units)
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("groupby", "x"), marks=pytest.mark.xfail(reason="strips units")
-            ),
-            pytest.param(
-                method("groupby_bins", "x", bins=4),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
+            method("groupby", "x"),
+            method("groupby_bins", "x", bins=2),
             method("coarsen", x=2),
             pytest.param(
                 method("rolling", x=3), marks=pytest.mark.xfail(reason="strips units")
             ),
             pytest.param(
                 method("rolling_exp", x=3),
-                marks=pytest.mark.xfail(reason="strips units"),
+                marks=pytest.mark.xfail(
+                    reason="numbagg functions are not supported by pint"
+                ),
             ),
+            method("weighted", xr.DataArray(data=np.linspace(0, 1, 5), dims="y")),
         ),
         ids=repr,
     )
-    def test_computation_objects(self, func, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
-            * unit_registry.Pa
-        )
-        x = np.arange(10) * unit_registry.m
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_computation_objects(self, func, variant, dtype):
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-5, 5, 4 * 5).reshape(4, 5).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 4 * 3).reshape(4, 3).astype(dtype) * unit2
+        x = np.arange(4) * dim_unit
+        y = np.arange(5) * dim_unit
+        z = np.arange(3) * dim_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-            },
-            coords={"x": x, "y": y, "z": z},
+            data_vars={"a": (("x", "y"), array1), "b": (("x", "z"), array2)},
+            coords={"x": x, "y": y, "z": z, "y2": ("y", np.arange(5) * coord_unit)},
         )
         units = extract_units(ds)
 
         args = [] if func.name != "groupby" else ["y"]
-        reduce_func = method("mean", *args)
-        expected = attach_units(reduce_func(func(strip_units(ds))), units)
-        result = reduce_func(func(ds))
+        expected = attach_units(func(strip_units(ds)).mean(*args), units)
+        actual = func(ds).mean(*args)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="strips units")
-    def test_resample(self, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit_registry.Pa
-        )
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_resample(self, variant, dtype):
+        # TODO: move this to test_computation_objects
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 10 * 8).reshape(10, 8).astype(dtype) * unit2
+
         t = pd.date_range("10-09-2010", periods=array1.shape[0], freq="1y")
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+        y = np.arange(5) * dim_unit
+        z = np.arange(8) * dim_unit
+
+        u = np.linspace(-1, 0, 5) * coord_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("time", "y")),
-                "b": xr.DataArray(data=array2, dims=("time", "z")),
-            },
-            coords={"time": t, "y": y, "z": z},
+            data_vars={"a": (("time", "y"), array1), "b": (("time", "z"), array2)},
+            coords={"time": t, "y": y, "z": z, "u": ("y", u)},
         )
         units = extract_units(ds)
 
         func = method("resample", time="6m")
 
         expected = attach_units(func(strip_units(ds)).mean(), units)
-        result = func(ds).mean()
+        actual = func(ds).mean()
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (
-            pytest.param(
-                method("assign", c=lambda ds: 10 * ds.b),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(
-                method("assign_coords", v=("x", np.arange(10) * unit_registry.s)),
-                marks=pytest.mark.xfail(reason="strips units"),
-            ),
-            pytest.param(method("first")),
-            pytest.param(method("last")),
-            pytest.param(
-                method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
-                marks=pytest.mark.xfail(
-                    reason="dataset groupby does not implement quantile"
-                ),
-            ),
+            method("assign", c=lambda ds: 10 * ds.b),
+            method("assign_coords", v=("x", np.arange(5) * unit_registry.s)),
+            method("first"),
+            method("last"),
+            method("quantile", q=[0.25, 0.5, 0.75], dim="x"),
         ),
         ids=repr,
     )
-    def test_grouped_operations(self, func, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype) * unit_registry.degK
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
-            * unit_registry.Pa
-        )
-        x = np.arange(10) * unit_registry.m
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_grouped_operations(self, func, variant, dtype):
+        variants = {
+            "data": ((unit_registry.degK, unit_registry.Pa), 1, 1),
+            "dims": ((1, 1), unit_registry.m, 1),
+            "coords": ((1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2), dim_unit, coord_unit = variants.get(variant)
+
+        array1 = np.linspace(-5, 5, 5 * 4).reshape(5, 4).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 5 * 4 * 3).reshape(5, 4, 3).astype(dtype) * unit2
+        x = np.arange(5) * dim_unit
+        y = np.arange(4) * dim_unit
+        z = np.arange(3) * dim_unit
+
+        u = np.linspace(-1, 0, 4) * coord_unit
 
         ds = xr.Dataset(
-            data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-            },
-            coords={"x": x, "y": y, "z": z},
+            data_vars={"a": (("x", "y"), array1), "b": (("x", "y", "z"), array2)},
+            coords={"x": x, "y": y, "z": z, "u": ("y", u)},
         )
-        units = extract_units(ds)
-        units.update({"c": unit_registry.Pa, "v": unit_registry.s})
+
+        assigned_units = {"c": unit2, "v": unit_registry.s}
+        units = merge_mappings(extract_units(ds), assigned_units)
 
         stripped_kwargs = {
             name: strip_units(value) for name, value in func.kwargs.items()
@@ -4204,23 +5379,29 @@ class TestDataset:
         expected = attach_units(
             func(strip_units(ds).groupby("y"), **stripped_kwargs), units
         )
-        result = func(ds.groupby("y"))
+        actual = func(ds.groupby("y"))
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "func",
         (
             method("pipe", lambda ds: ds * 10),
             method("assign", d=lambda ds: ds.b * 10),
-            method("assign_coords", y2=("y", np.arange(5) * unit_registry.mm)),
+            method("assign_coords", y2=("y", np.arange(4) * unit_registry.mm)),
             method("assign_attrs", attr1="value"),
             method("rename", x2="x_mm"),
             method("rename_vars", c="temperature"),
             method("rename_dims", x="offset_x"),
-            method("swap_dims", {"x": "x2"}),
-            method("expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1),
-            method("drop_sel", labels="x"),
+            method("swap_dims", {"x": "u"}),
+            pytest.param(
+                method(
+                    "expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1
+                ),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
+            ),
+            method("drop_vars", "x"),
             method("drop_dims", "z"),
             method("set_coords", names="c"),
             method("reset_coords", names="x2"),
@@ -4228,50 +5409,65 @@ class TestDataset:
         ),
         ids=repr,
     )
-    def test_content_manipulation(self, func, dtype):
-        array1 = (
-            np.linspace(-5, 5, 10 * 5).reshape(10, 5).astype(dtype)
-            * unit_registry.m ** 3
-        )
-        array2 = (
-            np.linspace(10, 20, 10 * 5 * 8).reshape(10, 5, 8).astype(dtype)
-            * unit_registry.Pa
-        )
-        array3 = np.linspace(0, 10, 10).astype(dtype) * unit_registry.degK
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    def test_content_manipulation(self, func, variant, dtype):
+        variants = {
+            "data": (
+                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                1,
+                1,
+            ),
+            "dims": ((1, 1, 1), unit_registry.m, 1),
+            "coords": ((1, 1, 1), 1, unit_registry.m),
+        }
+        (unit1, unit2, unit3), dim_unit, coord_unit = variants.get(variant)
 
-        x = np.arange(10) * unit_registry.m
-        x2 = x.to(unit_registry.mm)
-        y = np.arange(5) * unit_registry.m
-        z = np.arange(8) * unit_registry.m
+        array1 = np.linspace(-5, 5, 5 * 4).reshape(5, 4).astype(dtype) * unit1
+        array2 = np.linspace(10, 20, 5 * 4 * 3).reshape(5, 4, 3).astype(dtype) * unit2
+        array3 = np.linspace(0, 10, 5).astype(dtype) * unit3
+
+        x = np.arange(5) * dim_unit
+        y = np.arange(4) * dim_unit
+        z = np.arange(3) * dim_unit
+
+        x2 = np.linspace(-1, 0, 5) * coord_unit
 
         ds = xr.Dataset(
             data_vars={
-                "a": xr.DataArray(data=array1, dims=("x", "y")),
-                "b": xr.DataArray(data=array2, dims=("x", "y", "z")),
-                "c": xr.DataArray(data=array3, dims="x"),
+                "a": (("x", "y"), array1),
+                "b": (("x", "y", "z"), array2),
+                "c": ("x", array3),
             },
             coords={"x": x, "y": y, "z": z, "x2": ("x", x2)},
         )
-        units = extract_units(ds)
-        units.update(
-            {
-                "y2": unit_registry.mm,
-                "x_mm": unit_registry.mm,
-                "offset_x": unit_registry.m,
-                "d": unit_registry.Pa,
-                "temperature": unit_registry.degK,
-            }
-        )
+
+        new_units = {
+            "y2": unit_registry.mm,
+            "x_mm": coord_unit,
+            "offset_x": unit_registry.m,
+            "d": unit2,
+            "temperature": unit3,
+        }
+        units = merge_mappings(extract_units(ds), new_units)
 
         stripped_kwargs = {
             key: strip_units(value) for key, value in func.kwargs.items()
         }
         expected = attach_units(func(strip_units(ds), **stripped_kwargs), units)
-        result = func(ds)
+        actual = func(ds)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="blocked by reindex")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -4284,27 +5480,40 @@ class TestDataset:
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
-    @pytest.mark.parametrize("variant", ("data", "dims", "coords"))
+    @pytest.mark.parametrize(
+        "variant",
+        (
+            "data",
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
     def test_merge(self, variant, unit, error, dtype):
-        original_data_unit = unit_registry.m
-        original_dim_unit = unit_registry.m
-        original_coord_unit = unit_registry.m
-
-        variants = {
-            "data": (unit, original_dim_unit, original_coord_unit),
-            "dims": (original_data_unit, unit, original_coord_unit),
-            "coords": (original_data_unit, original_dim_unit, unit),
+        left_variants = {
+            "data": (unit_registry.m, 1, 1),
+            "dims": (1, unit_registry.m, 1),
+            "coords": (1, 1, unit_registry.m),
         }
-        data_unit, dim_unit, coord_unit = variants.get(variant)
 
-        left_array = np.arange(10).astype(dtype) * original_data_unit
-        right_array = np.arange(-5, 5).astype(dtype) * data_unit
+        left_data_unit, left_dim_unit, left_coord_unit = left_variants.get(variant)
 
-        left_dim = np.arange(10, 20) * original_dim_unit
-        right_dim = np.arange(5, 15) * dim_unit
+        right_variants = {
+            "data": (unit, 1, 1),
+            "dims": (1, unit, 1),
+            "coords": (1, 1, unit),
+        }
+        right_data_unit, right_dim_unit, right_coord_unit = right_variants.get(variant)
 
-        left_coord = np.arange(-10, 0) * original_coord_unit
-        right_coord = np.arange(-15, -5) * coord_unit
+        left_array = np.arange(10).astype(dtype) * left_data_unit
+        right_array = np.arange(-5, 5).astype(dtype) * right_data_unit
+
+        left_dim = np.arange(10, 20) * left_dim_unit
+        right_dim = np.arange(5, 15) * right_dim_unit
+
+        left_coord = np.arange(-10, 0) * left_coord_unit
+        right_coord = np.arange(-15, -5) * right_coord_unit
 
         left = xr.Dataset(
             data_vars={"a": ("x", left_array)},
@@ -4325,6 +5534,7 @@ class TestDataset:
 
         converted = convert_units(right, units)
         expected = attach_units(strip_units(left).merge(strip_units(converted)), units)
-        result = left.merge(right)
+        actual = left.merge(right)
 
-        assert_equal_with_units(expected, result)
+        assert_units_equal(expected, actual)
+        assert_equal(expected, actual)

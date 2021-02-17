@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from numpy.testing import assert_array_equal
 
 from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous, rolling_window
@@ -46,4 +47,20 @@ def test_rolling():
     x = np.stack([x, x * 1.1])
     actual = rolling_window(x, axis=-1, window=3, center=False, fill_value=0.0)
     expected = np.stack([expected, expected * 1.1], axis=0)
+    assert_array_equal(actual, expected)
+
+
+@pytest.mark.parametrize("center", [[True, True], [False, False]])
+@pytest.mark.parametrize("axis", [(0, 1), (1, 2), (2, 0)])
+def test_nd_rolling(center, axis):
+    x = np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float)
+    window = [3, 3]
+    actual = rolling_window(
+        x, axis=axis, window=window, center=center, fill_value=np.nan
+    )
+    expected = x
+    for ax, win, cent in zip(axis, window, center):
+        expected = rolling_window(
+            expected, axis=ax, window=win, center=cent, fill_value=np.nan
+        )
     assert_array_equal(actual, expected)

@@ -40,6 +40,6 @@ class InMemoryDataStore(AbstractWritableDataStore):
         # copy to imitate writing to disk.
         self._attributes[k] = copy.deepcopy(v)
 
-    def set_dimension(self, d, l, unlimited_dims=None):
+    def set_dimension(self, dim, length, unlimited_dims=None):
         # in this model, dimensions are accounted for in the variables
         pass

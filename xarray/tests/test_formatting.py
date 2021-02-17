@@ -3,9 +3,11 @@ from textwrap import dedent
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray.core import formatting
+from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import raises_regex
 
@@ -85,6 +87,9 @@ class TestFormatting:
             (b"foo", "b'foo'"),
             (1, "1"),
             (1.0, "1.0"),
+            (np.float16(1.1234), "1.123"),
+            (np.float32(1.0111111), "1.011"),
+            (np.float64(22.222222), "22.22"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
@@ -114,7 +119,7 @@ class TestFormatting:
 
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 2)
-        expected = "0 ... 99"
+        expected = "..."
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100), 9)
@@ -133,11 +138,13 @@ class TestFormatting:
         expected = "0 1 2 ... 98 99"
         assert expected == actual
 
+        # NB: Probably not ideal; an alternative would be cutting after the
+        # first ellipsis
         actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = "0.0 ... 99.0"
+        expected = "0.0 ... ..."
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(100.0), 1)
+        actual = formatting.format_array_flat(np.arange(100.0), 12)
         expected = "0.0 ... 99.0"
         assert expected == actual
 
@@ -153,16 +160,25 @@ class TestFormatting:
         expected = ""
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(1), 0)
+        actual = formatting.format_array_flat(np.arange(1), 1)
         expected = "0"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(2), 0)
+        actual = formatting.format_array_flat(np.arange(2), 3)
         expected = "0 1"
         assert expected == actual
 
-        actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = "0 ... 3"
+        actual = formatting.format_array_flat(np.arange(4), 7)
+        expected = "0 1 2 3"
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(5), 7)
+        expected = "0 ... 4"
+        assert expected == actual
+
+        long_str = [" ".join(["hello world" for _ in range(100)])]
+        actual = formatting.format_array_flat(np.asarray([long_str]), 21)
+        expected = "'hello world hello..."
         assert expected == actual
 
     def test_pretty_print(self):
@@ -275,6 +291,44 @@ class TestFormatting:
         except AssertionError:
             assert actual == expected.replace(", dtype=int64", "")
 
+    @pytest.mark.filterwarnings("error")
+    def test_diff_attrs_repr_with_array(self):
+        attrs_a = {"attr": np.array([0, 1])}
+
+        attrs_b = {"attr": 1}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: 1
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        attrs_b = {"attr": np.array([-3, 5])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [-3  5]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
+        # should not raise a warning
+        attrs_b = {"attr": np.array([0, 1, 2])}
+        expected = dedent(
+            """\
+            Differing attributes:
+            L   attr: [0 1]
+            R   attr: [0 1 2]
+            """
+        ).strip()
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        assert expected == actual
+
     def test_diff_dataset_repr(self):
         ds_a = xr.Dataset(
             data_vars={
@@ -341,6 +395,44 @@ class TestFormatting:
         assert actual == expected
 
 
+@pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
+def test_inline_variable_array_repr_custom_repr():
+    class CustomArray:
+        def __init__(self, value, attr):
+            self.value = value
+            self.attr = attr
+
+        def _repr_inline_(self, width):
+            formatted = f"({self.attr}) {self.value}"
+            if len(formatted) > width:
+                formatted = f"({self.attr}) ..."
+
+            return formatted
+
+        def __array_function__(self, *args, **kwargs):
+            return NotImplemented
+
+        @property
+        def shape(self):
+            return self.value.shape
+
+        @property
+        def dtype(self):
+            return self.value.dtype
+
+        @property
+        def ndim(self):
+            return self.value.ndim
+
+    value = CustomArray(np.array([20, 40]), "m")
+    variable = xr.Variable("x", value)
+
+    max_width = 10
+    actual = formatting.inline_variable_array_repr(variable, max_width=10)
+
+    assert actual == value._repr_inline_(max_width)
+
+
 def test_set_numpy_options():
     original_options = np.get_printoptions()
     with formatting.set_numpy_options(threshold=10):
@@ -355,10 +447,52 @@ def test_short_numpy_repr():
         np.random.randn(20, 20),
         np.random.randn(5, 10, 15),
         np.random.randn(5, 10, 15, 3),
+        np.random.randn(100, 5, 1),
     ]
     # number of lines:
-    # for default numpy repr: 167, 140, 254, 248
-    # for short_numpy_repr: 1, 7, 24, 19
+    # for default numpy repr: 167, 140, 254, 248, 599
+    # for short_numpy_repr: 1, 7, 24, 19, 25
     for array in cases:
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
+
+
+def test_large_array_repr_length():
+
+    da = xr.DataArray(np.random.randn(100, 5, 1))
+
+    result = repr(da).splitlines()
+    assert len(result) < 50
+
+
+@pytest.mark.parametrize(
+    "display_max_rows, n_vars, n_attr",
+    [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
+)
+def test__mapping_repr(display_max_rows, n_vars, n_attr):
+    long_name = "long_name"
+    a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
+    b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    attrs = {k: 2 for k in b}
+    coords = dict(time=np.array([0, 1]))
+    data_vars = dict()
+    for v in a:
+        data_vars[v] = xr.DataArray(
+            name=v,
+            data=np.array([3, 4]),
+            dims=["time"],
+            coords=coords,
+        )
+    ds = xr.Dataset(data_vars)
+    ds.attrs = attrs
+
+    with xr.set_options(display_max_rows=display_max_rows):
+
+        # Parse the data_vars print and show only data_vars rows:
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
+
+        # The length should be less than or equal to display_max_rows:
+        len_summary = len(summary)
+        data_vars_print_size = min(display_max_rows, len_summary)
+        assert len_summary == data_vars_print_size

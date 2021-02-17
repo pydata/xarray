@@ -135,8 +135,8 @@ def test_dask_distributed_read_netcdf_integration_test(
 def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
     if consolidated:
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
-        write_kwargs = dict(consolidated=True)
-        read_kwargs = dict(consolidated=True)
+        write_kwargs = {"consolidated": True}
+        read_kwargs = {"backend_kwargs": {"consolidated": True}}
     else:
         write_kwargs = read_kwargs = {}
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
@@ -151,7 +151,9 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
                 )
                 if not compute:
                     maybe_futures.compute()
-                with xr.open_zarr(filename, **read_kwargs) as restored:
+                with xr.open_dataset(
+                    filename, chunks="auto", engine="zarr", **read_kwargs
+                ) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
@@ -186,7 +188,7 @@ def test_dask_distributed_cfgrib_integration_test(loop):
     reason="Need recent distributed version to clean up get",
 )
 @gen_cluster(client=True, timeout=None)
-def test_async(c, s, a, b):
+async def test_async(c, s, a, b):
     x = create_test_data()
     assert not dask.is_dask_collection(x)
     y = x.chunk({"dim2": 4}) + 10
@@ -206,7 +208,7 @@ def test_async(c, s, a, b):
     assert futures_of(z)
 
     future = c.compute(z)
-    w = yield future
+    w = await future
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
 
@@ -218,7 +220,7 @@ def test_hdf5_lock():
 
 
 @gen_cluster(client=True)
-def test_serializable_locks(c, s, a, b):
+async def test_serializable_locks(c, s, a, b):
     def f(x, lock=None):
         with lock:
             return x + 1
@@ -233,7 +235,7 @@ def test_serializable_locks(c, s, a, b):
     ]:
 
         futures = c.map(f, list(range(10)), lock=lock)
-        yield c.gather(futures)
+        await c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
         assert type(lock) == type(lock2)

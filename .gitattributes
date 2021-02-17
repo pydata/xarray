@@ -1,3 +1,2 @@
 # reduce the number of merge conflicts
 doc/whats-new.rst merge=union
-xarray/_version.py export-subst

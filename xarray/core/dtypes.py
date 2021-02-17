@@ -137,8 +137,7 @@ def get_neg_infinity(dtype):
 
 
 def is_datetime_like(dtype):
-    """Check if a dtype is a subclass of the numpy datetime types
-    """
+    """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 

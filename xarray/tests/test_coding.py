@@ -1,12 +1,14 @@
 from contextlib import suppress
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray.coding import variables
+from xarray.conventions import decode_cf_variable, encode_cf_variable
 
-from . import assert_equal, assert_identical, requires_dask
+from . import assert_allclose, assert_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -20,20 +22,36 @@ def test_CFMaskCoder_decode():
     assert_identical(expected, encoded)
 
 
-def test_CFMaskCoder_encode_missing_fill_values_conflict():
-    original = xr.Variable(
-        ("x",),
-        [0.0, -1.0, 1.0],
-        encoding={"_FillValue": np.float32(1e20), "missing_value": np.float64(1e20)},
-    )
-    coder = variables.CFMaskCoder()
-    encoded = coder.encode(original)
+encoding_with_dtype = {
+    "dtype": np.dtype("float64"),
+    "_FillValue": np.float32(1e20),
+    "missing_value": np.float64(1e20),
+}
+encoding_without_dtype = {
+    "_FillValue": np.float32(1e20),
+    "missing_value": np.float64(1e20),
+}
+CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS = {
+    "numeric-with-dtype": ([0.0, -1.0, 1.0], encoding_with_dtype),
+    "numeric-without-dtype": ([0.0, -1.0, 1.0], encoding_without_dtype),
+    "times-with-dtype": (pd.date_range("2000", periods=3), encoding_with_dtype),
+}
+
+
+@pytest.mark.parametrize(
+    ("data", "encoding"),
+    CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.values(),
+    ids=list(CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.keys()),
+)
+def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding):
+    original = xr.Variable(("x",), data, encoding=encoding)
+    encoded = encode_cf_variable(original)
 
     assert encoded.dtype == encoded.attrs["missing_value"].dtype
     assert encoded.dtype == encoded.attrs["_FillValue"].dtype
 
     with pytest.warns(variables.SerializationWarning):
-        roundtripped = coder.decode(coder.encode(original))
+        roundtripped = decode_cf_variable("foo", encoded)
         assert_identical(roundtripped, original)
 
 
@@ -87,3 +105,15 @@ def test_scaling_converts_to_float32(dtype):
     roundtripped = coder.decode(encoded)
     assert_identical(original, roundtripped)
     assert roundtripped.dtype == np.float32
+
+
+@pytest.mark.parametrize("scale_factor", (10, [10]))
+@pytest.mark.parametrize("add_offset", (0.1, [0.1]))
+def test_scaling_offset_as_list(scale_factor, add_offset):
+    # test for #4631
+    encoding = dict(scale_factor=scale_factor, add_offset=add_offset)
+    original = xr.Variable(("x",), np.arange(10.0), encoding=encoding)
+    coder = variables.CFScaleOffsetCoder()
+    encoded = coder.encode(original)
+    roundtripped = coder.decode(encoded)
+    assert_allclose(original, roundtripped)

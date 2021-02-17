@@ -1,10 +1,24 @@
 import numpy as np
 
-from .. import Variable
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import Frozen, FrozenDict, is_dict_like
-from .common import AbstractDataStore, BackendArray, robust_getitem
+from ..core.utils import Frozen, FrozenDict, close_on_error, is_dict_like, is_remote_uri
+from ..core.variable import Variable
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    robust_getitem,
+)
+from .store import StoreBackendEntrypoint
+
+try:
+    import pydap.client
+
+    has_pydap = True
+except ModuleNotFoundError:
+    has_pydap = False
 
 
 class PydapArrayWrapper(BackendArray):
@@ -73,7 +87,6 @@ class PydapDataStore(AbstractDataStore):
 
     @classmethod
     def open(cls, url, session=None):
-        import pydap.client
 
         ds = pydap.client.open_url(url, session=session)
         return cls(ds)
@@ -92,3 +105,43 @@ class PydapDataStore(AbstractDataStore):
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)
+
+
+class PydapBackendEntrypoint(BackendEntrypoint):
+    def guess_can_open(self, store_spec):
+        return isinstance(store_spec, str) and is_remote_uri(store_spec)
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        session=None,
+    ):
+        store = PydapDataStore.open(
+            filename_or_obj,
+            session=session,
+        )
+
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+            return ds
+
+
+if has_pydap:
+    BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

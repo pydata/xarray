@@ -7,8 +7,8 @@ from xarray.core import dtypes
 @pytest.mark.parametrize(
     "args, expected",
     [
-        ([np.bool], np.bool),
-        ([np.bool, np.string_], np.object_),
+        ([bool], bool),
+        ([bool, np.string_], np.object_),
         ([np.float32, np.float64], np.float64),
         ([np.float32, np.string_], np.object_),
         ([np.unicode_, np.int64], np.object_),

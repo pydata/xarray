@@ -49,7 +49,7 @@ Core data structures
 --------------------
 
 xarray has two core data structures, which build upon and extend the core
-strengths of  NumPy_ and pandas_. Both data structures are fundamentally N-dimensional:
+strengths of NumPy_ and pandas_. Both data structures are fundamentally N-dimensional:
 
 - :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
   array. It is an N-D generalization of a :py:class:`pandas.Series`. The name

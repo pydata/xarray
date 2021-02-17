@@ -4,11 +4,12 @@ Frequently Asked Questions
 ==========================
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 
@@ -103,21 +104,21 @@ code fragment
 .. ipython:: python
 
     arr = xr.DataArray([1, 2, 3])
-    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()})
+    pd.Series({"x": arr[0], "mean": arr.mean(), "std": arr.std()})
 
 does not yield the pandas DataFrame we expected. We need to specify the type
 conversion ourselves:
 
 .. ipython:: python
 
-    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()}, dtype=float)
+    pd.Series({"x": arr[0], "mean": arr.mean(), "std": arr.std()}, dtype=float)
 
 Alternatively, we could use the ``item`` method or the ``float`` constructor to
 convert values one at a time
 
 .. ipython:: python
 
-    pd.Series({'x': arr[0].item(), 'mean': float(arr.mean())})
+    pd.Series({"x": arr[0].item(), "mean": float(arr.mean())})
 
 
 .. _approach to metadata:
@@ -165,7 +166,7 @@ different approaches to handling metadata: Iris strictly interprets
 `CF conventions`_. Iris particularly shines at mapping, thanks to its
 integration with Cartopy_.
 
-.. _Iris: http://scitools.org.uk/iris/
+.. _Iris: https://scitools-iris.readthedocs.io/en/stable/
 .. _Cartopy: http://scitools.org.uk/cartopy/docs/latest/
 
 `UV-CDAT`__ is another Python library that implements in-memory netCDF-like

@@ -61,6 +61,10 @@ class FacetGrid:
     axes : numpy object array
         Contains axes in corresponding position, as returned from
         plt.subplots
+    col_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
+    row_labels : list
+        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
     fig : matplotlib.Figure
         The figure containing all the axes
     name_dicts : numpy object array
@@ -127,7 +131,7 @@ class FacetGrid:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row " "were passed")
+                warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
         elif not row and col:
@@ -200,6 +204,8 @@ class FacetGrid:
         self._ncol = ncol
         self._col_var = col
         self._col_wrap = col_wrap
+        self.row_labels = [None] * nrow
+        self.col_labels = [None] * ncol
         self._x_var = None
         self._y_var = None
         self._cmap_extend = None
@@ -227,7 +233,7 @@ class FacetGrid:
             plotting method such as `xarray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        kwargs :
+        kwargs
             additional keyword arguments to func
 
         Returns
@@ -267,7 +273,9 @@ class FacetGrid:
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(
+                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                )
                 self._mappables.append(mappable)
 
         self._finalize_grid(x, y)
@@ -298,9 +306,11 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+        xplt, yplt, hueplt, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
         )
+        xlabel = label_from_attrs(xplt)
+        ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
         self._hue_label = huelabel
@@ -402,11 +412,13 @@ class FacetGrid:
         self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar
-        """
+        """Draw a colorbar"""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)
+        # dont pass extend as kwarg if it is in the mappable
+        if hasattr(self._mappables[-1], "extend"):
+            kwargs.pop("extend", None)
         if "label" not in kwargs:
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
@@ -482,22 +494,32 @@ class FacetGrid:
                     ax.set_title(title, size=size, **kwargs)
         else:
             # The row titles on the right edge of the grid
-            for ax, row_name in zip(self.axes[:, -1], self.row_names):
+            for index, (ax, row_name, handle) in enumerate(
+                zip(self.axes[:, -1], self.row_names, self.row_labels)
+            ):
                 title = nicetitle(coord=self._row_var, value=row_name, maxchar=maxchar)
-                ax.annotate(
-                    title,
-                    xy=(1.02, 0.5),
-                    xycoords="axes fraction",
-                    rotation=270,
-                    ha="left",
-                    va="center",
-                    **kwargs,
-                )
+                if not handle:
+                    self.row_labels[index] = ax.annotate(
+                        title,
+                        xy=(1.02, 0.5),
+                        xycoords="axes fraction",
+                        rotation=270,
+                        ha="left",
+                        va="center",
+                        **kwargs,
+                    )
+                else:
+                    handle.set_text(title)
 
             # The column titles on the top row
-            for ax, col_name in zip(self.axes[0, :], self.col_names):
+            for index, (ax, col_name, handle) in enumerate(
+                zip(self.axes[0, :], self.col_names, self.col_labels)
+            ):
                 title = nicetitle(coord=self._col_var, value=col_name, maxchar=maxchar)
-                ax.set_title(title, size=size, **kwargs)
+                if not handle:
+                    self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
+                else:
+                    handle.set_text(title)
 
         return self
 

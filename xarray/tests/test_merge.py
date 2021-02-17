@@ -3,6 +3,8 @@ import pytest
 
 import xarray as xr
 from xarray.core import dtypes, merge
+from xarray.core.merge import MergeError
+from xarray.testing import assert_equal, assert_identical
 
 from . import raises_regex
 from .test_dataset import create_test_data
@@ -31,32 +33,183 @@ class TestMergeFunction:
         data = create_test_data()
         actual = xr.merge([data.var1, data.var2])
         expected = data[["var1", "var2"]]
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
     def test_merge_datasets(self):
         data = create_test_data()
 
         actual = xr.merge([data[["var1"]], data[["var2"]]])
         expected = data[["var1", "var2"]]
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
         actual = xr.merge([data, data])
-        assert actual.identical(data)
+        assert_identical(actual, data)
 
     def test_merge_dataarray_unnamed(self):
         data = xr.DataArray([1, 2], dims="x")
         with raises_regex(ValueError, "without providing an explicit name"):
             xr.merge([data])
 
+    def test_merge_arrays_attrs_default(self):
+        var1_attrs = {"a": 1, "b": 2}
+        var2_attrs = {"a": 1, "c": 3}
+        expected_attrs = {}
+
+        data = create_test_data()
+        data.var1.attrs = var1_attrs
+        data.var2.attrs = var2_attrs
+        actual = xr.merge([data.var1, data.var2])
+        expected = data[["var1", "var2"]]
+        expected.attrs = expected_attrs
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": np.array([2]), "c": np.array([3])},
+                {"b": 1, "c": np.array([3]), "d": 4},
+                {"a": 1, "c": np.array([3]), "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_merge_arrays_attrs(
+        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+    ):
+        data = create_test_data()
+        data.var1.attrs = var1_attrs
+        data.var2.attrs = var2_attrs
+        if expect_exception:
+            with raises_regex(MergeError, "combine_attrs"):
+                actual = xr.merge([data.var1, data.var2], combine_attrs=combine_attrs)
+        else:
+            actual = xr.merge([data.var1, data.var2], combine_attrs=combine_attrs)
+            expected = data[["var1", "var2"]]
+            expected.attrs = expected_attrs
+            assert_identical(actual, expected)
+
+    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_merge_arrays_attrs_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        data = create_test_data()
+        data1 = data.copy()
+        data1.var1.attrs = attrs1
+        data1.dim1.attrs = attrs1
+        data2 = data.copy()
+        data2.var1.attrs = attrs2
+        data2.dim1.attrs = attrs2
+
+        if expect_exception:
+            with raises_regex(MergeError, "combine_attrs"):
+                actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+        else:
+            actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
+            expected = data.copy()
+            expected.var1.attrs = expected_attrs
+            expected.dim1.attrs = expected_attrs
+
+            assert_identical(actual, expected)
+
+    def test_merge_attrs_override_copy(self):
+        ds1 = xr.Dataset(attrs={"x": 0})
+        ds2 = xr.Dataset(attrs={"x": 1})
+        ds3 = xr.merge([ds1, ds2], combine_attrs="override")
+        ds3.attrs["x"] = 2
+        assert ds1.x == 0
+
+    def test_merge_attrs_drop_conflicts(self):
+        ds1 = xr.Dataset(attrs={"a": 0, "b": 0, "c": 0})
+        ds2 = xr.Dataset(attrs={"b": 0, "c": 1, "d": 0})
+        ds3 = xr.Dataset(attrs={"a": 0, "b": 1, "c": 0, "e": 0})
+
+        actual = xr.merge([ds1, ds2, ds3], combine_attrs="drop_conflicts")
+        expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
+        assert_identical(actual, expected)
+
     def test_merge_dicts_simple(self):
         actual = xr.merge([{"foo": 0}, {"bar": "one"}, {"baz": 3.5}])
         expected = xr.Dataset({"foo": 0, "bar": "one", "baz": 3.5})
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
     def test_merge_dicts_dims(self):
         actual = xr.merge([{"y": ("x", [13])}, {"x": [12]}])
         expected = xr.Dataset({"x": [12], "y": ("x", [13])})
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
     def test_merge_error(self):
         ds = xr.Dataset({"x": 0})
@@ -106,7 +259,7 @@ class TestMergeFunction:
 
         expected = data[["var1", "var2"]]
         actual = xr.merge([data1.var1, data2.var2], compat="no_conflicts")
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
         data1["var1"][:, :5] = np.nan
         data2["var1"][:, 5:] = np.nan
@@ -115,22 +268,22 @@ class TestMergeFunction:
         del data2["var3"]
 
         actual = xr.merge([data1, data2], compat="no_conflicts")
-        assert data.equals(actual)
+        assert_equal(data, actual)
 
     def test_merge_no_conflicts_preserve_attrs(self):
         data = xr.Dataset({"x": ([], 0, {"foo": "bar"})})
         actual = xr.merge([data, data])
-        assert data.identical(actual)
+        assert_identical(data, actual)
 
     def test_merge_no_conflicts_broadcast(self):
         datasets = [xr.Dataset({"x": ("y", [0])}), xr.Dataset({"x": np.nan})]
         actual = xr.merge(datasets)
         expected = xr.Dataset({"x": ("y", [0])})
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
         datasets = [xr.Dataset({"x": ("y", [np.nan])}), xr.Dataset({"x": 0})]
         actual = xr.merge(datasets)
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
 
 class TestMergeMethod:
@@ -140,17 +293,17 @@ class TestMergeMethod:
         ds2 = data[["var3"]]
         expected = data[["var1", "var3"]]
         actual = ds1.merge(ds2)
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
         actual = ds2.merge(ds1)
-        assert expected.identical(actual)
+        assert_identical(expected, actual)
 
         actual = data.merge(data)
-        assert data.identical(actual)
+        assert_identical(data, actual)
         actual = data.reset_coords(drop=True).merge(data)
-        assert data.identical(actual)
+        assert_identical(data, actual)
         actual = data.merge(data.reset_coords(drop=True))
-        assert data.identical(actual)
+        assert_identical(data, actual)
 
         with pytest.raises(ValueError):
             ds1.merge(ds2.rename({"var3": "var1"}))
@@ -163,19 +316,19 @@ class TestMergeMethod:
         ds1 = xr.Dataset({"x": 0})
         ds2 = xr.Dataset({"x": ("y", [0, 0])})
         actual = ds1.merge(ds2)
-        assert ds2.identical(actual)
+        assert_identical(ds2, actual)
 
         actual = ds2.merge(ds1)
-        assert ds2.identical(actual)
+        assert_identical(ds2, actual)
 
         actual = ds1.copy()
         actual.update(ds2)
-        assert ds2.identical(actual)
+        assert_identical(ds2, actual)
 
         ds1 = xr.Dataset({"x": np.nan})
         ds2 = xr.Dataset({"x": ("y", [np.nan, np.nan])})
         actual = ds1.merge(ds2)
-        assert ds2.identical(actual)
+        assert_identical(ds2, actual)
 
     def test_merge_compat(self):
         ds1 = xr.Dataset({"x": 0})
@@ -215,16 +368,22 @@ class TestMergeMethod:
         assert expected.identical(ds1.merge(ds2, join="inner"))
         assert expected.identical(ds2.merge(ds1, join="inner"))
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_merge_fill_value(self, fill_value):
         ds1 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
         ds2 = xr.Dataset({"b": ("x", [3, 4]), "x": [1, 2]})
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_a = fill_value_b = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_a = fill_value["a"]
+            fill_value_b = fill_value["b"]
+        else:
+            fill_value_a = fill_value_b = fill_value
+
         expected = xr.Dataset(
-            {"a": ("x", [1, 2, fill_value]), "b": ("x", [fill_value, 3, 4])},
+            {"a": ("x", [1, 2, fill_value_a]), "b": ("x", [fill_value_b, 3, 4])},
             {"x": [0, 1, 2]},
         )
         assert expected.identical(ds1.merge(ds2, fill_value=fill_value))
@@ -253,3 +412,9 @@ class TestMergeMethod:
         with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({"a": ("y", [2, 3]), "y": [1, 2]})
             ds1.merge(ds3, compat="no_conflicts")
+
+    def test_merge_dataarray(self):
+        ds = xr.Dataset({"a": 0})
+        da = xr.DataArray(data=1, name="b")
+
+        assert_identical(ds.merge(da), xr.merge([ds, da]))

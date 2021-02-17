@@ -67,16 +67,19 @@ def _get_scheduler(get=None, collection=None) -> Optional[str]:
 
     None is returned if no dask scheduler is active.
 
-    See also
+    See Also
     --------
     dask.base.get_scheduler
     """
     try:
-        import dask  # noqa: F401
+        # Fix for bug caused by dask installation that doesn't involve the toolz library
+        # Issue: 4164
+        import dask
+        from dask.base import get_scheduler  # noqa: F401
+
+        actual_get = get_scheduler(get, collection)
     except ImportError:
         return None
-
-    actual_get = dask.base.get_scheduler(get, collection)
 
     try:
         from dask.distributed import Client

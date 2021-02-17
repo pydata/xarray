@@ -596,7 +596,7 @@ def test_wrap():
     )
 
     # expected values
-    xp = xr.DataArray(
+    expected = xr.DataArray(
         [
             "hello world",
             "hello world!",
@@ -610,15 +610,29 @@ def test_wrap():
         ]
     )
 
-    rs = values.str.wrap(12, break_long_words=True)
-    assert_equal(rs, xp)
+    result = values.str.wrap(12, break_long_words=True)
+    assert_equal(result, expected)
 
     # test with pre and post whitespace (non-unicode), NaN, and non-ascii
     # Unicode
     values = xr.DataArray(["  pre  ", "\xac\u20ac\U00008000 abadcafe"])
-    xp = xr.DataArray(["  pre", "\xac\u20ac\U00008000 ab\nadcafe"])
-    rs = values.str.wrap(6)
-    assert_equal(rs, xp)
+    expected = xr.DataArray(["  pre", "\xac\u20ac\U00008000 ab\nadcafe"])
+    result = values.str.wrap(6)
+    assert_equal(result, expected)
+
+
+def test_wrap_kwargs_passed():
+    # GH4334
+
+    values = xr.DataArray("  hello world  ")
+
+    result = values.str.wrap(7)
+    expected = xr.DataArray("  hello\nworld")
+    assert_equal(result, expected)
+
+    result = values.str.wrap(7, drop_whitespace=False)
+    expected = xr.DataArray("  hello\n world\n  ")
+    assert_equal(result, expected)
 
 
 def test_get(dtype):
@@ -639,6 +653,15 @@ def test_get(dtype):
     # negative index
     result = values.str[-6]
     expected = xr.DataArray(["_", "8", ""]).astype(dtype)
+    assert_equal(result, expected)
+
+
+def test_get_default(dtype):
+    # GH4334
+    values = xr.DataArray(["a_b", "c", ""]).astype(dtype)
+
+    result = values.str.get(2, "default")
+    expected = xr.DataArray(["b", "default", "default"]).astype(dtype)
     assert_equal(result, expected)
 
 
