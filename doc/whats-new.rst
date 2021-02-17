@@ -74,6 +74,11 @@ New Features
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
+  (including globs for the latter) for ``engine="zarr"``, and so allow reading from
+  many remote and other file systems (:pull:`4461`)
+  By `Martin Durant <https://github.com/martindurant>`_
+
 Bug fixes
 ~~~~~~~~~
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
@@ -111,6 +116,8 @@ Bug fixes
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~

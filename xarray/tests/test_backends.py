@@ -54,6 +54,7 @@ from . import (
     requires_cfgrib,
     requires_cftime,
     requires_dask,
+    requires_fsspec,
     requires_h5netcdf,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -2578,13 +2579,19 @@ class TestH5NetCDFAlreadyOpen:
                 v = group.createVariable("x", "int")
                 v[...] = 42
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            kwargs = {}
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+                "0.10.0"
+            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+                kwargs = dict(decode_vlen_strings=True)
+
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5["g"])
             with open_dataset(store) as ds:
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5, group="g")
             with open_dataset(store) as ds:
                 expected = Dataset({"x": ((), 42)})
@@ -2599,7 +2606,13 @@ class TestH5NetCDFAlreadyOpen:
                 v = nc.createVariable("y", np.int32, ("x",))
                 v[:] = np.arange(10)
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            kwargs = {}
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+                "0.10.0"
+            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+                kwargs = dict(decode_vlen_strings=True)
+
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5)
             with open_dataset(store) as ds:
                 copied = ds.copy(deep=True)
@@ -3040,9 +3053,16 @@ class TestDask(DatasetIOBase):
 
         with raises_regex(IOError, "no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
-
         with raises_regex(ValueError, "wild-card"):
             open_mfdataset("http://some/remote/uri")
+
+    @requires_fsspec
+    def test_open_mfdataset_no_files(self):
+        pytest.importorskip("aiobotocore")
+
+        # glob is attempted as of #4823, but finds no files
+        with raises_regex(OSError, "no files"):
+            open_mfdataset("http://some/remote/uri", engine="zarr")
 
     def test_open_mfdataset_2d(self):
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
@@ -4797,6 +4817,48 @@ def test_extract_zarr_variable_encoding():
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
+
+
+@requires_zarr
+@requires_fsspec
+def test_open_fsspec():
+    import fsspec
+    import zarr
+
+    if not hasattr(zarr.storage, "FSStore") or not hasattr(
+        zarr.storage.FSStore, "getitems"
+    ):
+        pytest.skip("zarr too old")
+
+    ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
+
+    m = fsspec.filesystem("memory")
+    mm = m.get_mapper("out1.zarr")
+    ds.to_zarr(mm)  # old interface
+    ds0 = ds.copy()
+    ds0["time"] = ds.time + pd.to_timedelta("1 day")
+    mm = m.get_mapper("out2.zarr")
+    ds0.to_zarr(mm)  # old interface
+
+    # single dataset
+    url = "memory://out2.zarr"
+    ds2 = open_dataset(url, engine="zarr")
+    assert ds0 == ds2
+
+    # single dataset with caching
+    url = "simplecache::memory://out2.zarr"
+    ds2 = open_dataset(url, engine="zarr")
+    assert ds0 == ds2
+
+    # multi dataset
+    url = "memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    assert xr.concat([ds, ds0], dim="time") == ds2
+
+    # multi dataset with caching
+    url = "simplecache::memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    assert xr.concat([ds, ds0], dim="time") == ds2
 
 
 @requires_h5netcdf
