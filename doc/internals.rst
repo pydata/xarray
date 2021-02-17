@@ -10,6 +10,17 @@ stack, NumPy and pandas. It is written in pure Python (no C or Cython
 extensions), which makes it easy to develop and extend. Instead, we push
 compiled code to :ref:`optional dependencies<installing>`.
 
+.. ipython:: python
+    :suppress:
+
+    import dask.array as da
+    import numpy as np
+    import pandas as pd
+    import sparse
+    import xarray as xr
+
+    np.random.seed(123456)
+
 Variable objects
 ----------------
 
@@ -74,18 +85,24 @@ argument:
 
         ...
 
+To avoid duplicated information, this method must omit information about the shape and
+:term:`dtype`. For example, the string representation of a ``dask`` array or a
+``sparse`` matrix would be:
+
+.. ipython:: python
+
+    a = da.linspace(0, 1, 20, chunks=2)
+    a
+
+    b = np.eye(10)
+    b[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
+    b = sparse.COO.from_numpy(b)
+    b
+
+    xr.Dataset({"a": ("x", a), "b": (("y", "z"), b)})
 
 Extending xarray
 ----------------
-
-.. ipython:: python
-    :suppress:
-
-    import numpy as np
-    import pandas as pd
-    import xarray as xr
-
-    np.random.seed(123456)
 
 xarray is designed as a general purpose library, and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
