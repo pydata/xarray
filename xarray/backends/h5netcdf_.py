@@ -131,6 +131,7 @@ class H5NetCDFStore(WritableCFDataStore):
         autoclose=False,
         invalid_netcdf=None,
         phony_dims=None,
+        decode_vlen_strings=True,
     ):
 
         if isinstance(filename, bytes):
@@ -157,6 +158,10 @@ class H5NetCDFStore(WritableCFDataStore):
                     "h5netcdf backend keyword argument 'phony_dims' needs "
                     "h5netcdf >= 0.8.0."
                 )
+        if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+            "0.10.0"
+        ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            kwargs["decode_vlen_strings"] = decode_vlen_strings
 
         if lock is None:
             if mode == "r":
@@ -347,9 +352,9 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj,
         *,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
@@ -358,6 +363,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         lock=None,
         invalid_netcdf=None,
         phony_dims=None,
+        decode_vlen_strings=True,
     ):
 
         store = H5NetCDFStore.open(
@@ -367,6 +373,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
             lock=lock,
             invalid_netcdf=invalid_netcdf,
             phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
