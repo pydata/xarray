@@ -39,6 +39,13 @@ Breaking changes
   always be set such that ``int64`` values can be used.  In the past, no units
   finer than "seconds" were chosen, which would sometimes mean that ``float64``
   values were required, which would lead to inaccurate I/O round-trips.
+- Variables referred to in attributes like ``bounds`` and ``grid_mapping``
+  are can be set as coordinate variables. These attributes
+  are moved to :py:attr:`DataArray.encoding` from
+  :py:attr:`DataArray.attrs`. This behaviour is controlled by the
+  ``decode_coords`` kwarg to :py:func:`open_dataset` and
+  :py:func:`open_mfdataset`.  The full list of decoded attributes is in
+  :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
 
@@ -346,7 +353,6 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Expose ``use_cftime`` option in :py:func:`~xarray.open_zarr` (:issue:`2886`, :pull:`3229`)
   By `Samnan Rahee <https://github.com/Geektrovert>`_ and `Anderson Banihirwe <https://github.com/andersy005>`_.
-
 
 Bug fixes
 ~~~~~~~~~
