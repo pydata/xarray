@@ -111,8 +111,14 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name: str, fillna) -> Callable:  # type: ignore
-        array_agg_func = getattr(duck_array_ops, name)
+    def _reduce_method(name: str, fillna, rolling_agg_func: Callable = None) -> Callable:  # type: ignore
+        """Constructs reduction methods built on a numpy reduction function (e.g. sum),
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        if rolling_agg_func:
+            array_agg_func = None
+        else:
+            array_agg_func = getattr(duck_array_ops, name)
+
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
@@ -122,6 +128,7 @@ class Rolling:
             return self._numpy_or_bottleneck_reduce(
                 array_agg_func,
                 bottleneck_move_func,
+                rolling_agg_func,
                 keep_attrs=keep_attrs,
                 fillna=fillna,
                 **kwargs,
@@ -131,13 +138,21 @@ class Rolling:
         method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
         return method
 
+    def _mean(self, keep_attrs, **kwargs):
+        result = self.sum(**kwargs) / self.count()
+        if keep_attrs:
+            result.attrs = self.obj.attrs
+        return result
+
+    _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
+
     argmax = _reduce_method("argmax", dtypes.NINF)
     argmin = _reduce_method("argmin", dtypes.INF)
     max = _reduce_method("max", dtypes.NINF)
     min = _reduce_method("min", dtypes.INF)
-    mean = _reduce_method("mean", None)  # sum/count
     prod = _reduce_method("prod", 1)
     sum = _reduce_method("sum", 0)
+    mean = _reduce_method("mean", None, _mean)
     std = _reduce_method("std", None)
     var = _reduce_method("var", None)
     median = _reduce_method("median", None)
@@ -503,7 +518,13 @@ class DataArrayRolling(Rolling):
         return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, fillna, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        fillna,
+        **kwargs,
     ):
         if "dim" in kwargs:
             warnings.warn(
@@ -527,6 +548,10 @@ class DataArrayRolling(Rolling):
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
         else:
+            if rolling_agg_func:
+                return rolling_agg_func(
+                    self, keep_attrs=self._get_keep_attrs(keep_attrs)
+                )
             if fillna is not None:
                 if fillna is dtypes.INF:
                     fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
@@ -641,13 +666,19 @@ class DatasetRolling(Rolling):
         )
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        **kwargs,
     ):
         return self._dataset_implementation(
             functools.partial(
                 DataArrayRolling._numpy_or_bottleneck_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
+                rolling_agg_func=rolling_agg_func,
             ),
             keep_attrs=keep_attrs,
             **kwargs,
