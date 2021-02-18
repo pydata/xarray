@@ -139,7 +139,7 @@ class Rolling:
         return method
 
     def _mean(self, keep_attrs, **kwargs):
-        result = self.sum(**kwargs) / self.count()
+        result = self.sum(keep_attrs=False, **kwargs) / self.count(keep_attrs=False)
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result
