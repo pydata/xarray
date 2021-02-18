@@ -1133,7 +1133,7 @@ We recommend installing PyNIO via conda::
 
     conda install -c conda-forge pynio
 
-    .. note::
+.. warning::
 
     PyNIO is no longer actively maintained and conflicts with netcdf4 > 1.5.3.
     The PyNIO backend may be moved outside of xarray in the future.
