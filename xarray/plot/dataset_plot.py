@@ -7,6 +7,7 @@ from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _get_nice_quiver_magnitude,
     _is_numeric,
     _process_cmap_cbar_kwargs,
     get_axis,
@@ -17,7 +18,7 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
+def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
     error_msg = " must be one of ({:s})".format(", ".join(dvars))
 
@@ -48,10 +49,23 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True:
+        if add_guide is True and funcname != "quiver":
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
+
+    if (add_guide or add_guide is None) and funcname == "quiver":
+        add_quiverkey = True
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver"
+                )
+    else:
+        add_quiverkey = False
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
@@ -66,6 +80,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     return {
         "add_colorbar": add_colorbar,
         "add_legend": add_legend,
+        "add_quiverkey": add_quiverkey,
         "hue_label": hue_label,
         "hue_style": hue_style,
         "xlabel": label_from_attrs(ds[x]),
@@ -170,6 +185,8 @@ def _dsplot(plotfunc):
     ds : Dataset
     x, y : str
         Variable names for x, y axis.
+    u, v : str, optional
+        Variable names for quiver plots
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
@@ -250,6 +267,8 @@ def _dsplot(plotfunc):
         ds,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -282,7 +301,9 @@ def _dsplot(plotfunc):
         if _is_facetgrid:  # facetgrid call
             meta_data = kwargs.pop("meta_data")
         else:
-            meta_data = _infer_meta_data(ds, x, y, hue, hue_style, add_guide)
+            meta_data = _infer_meta_data(
+                ds, x, y, hue, hue_style, add_guide, funcname=plotfunc.__name__
+            )
 
         hue_style = meta_data["hue_style"]
 
@@ -317,13 +338,18 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
+        if (u is not None or v is not None) and plotfunc.__name__ != "quiver":
+            raise ValueError("u, v are only allowed for quiver plots.")
+
         primitive = plotfunc(
             ds=ds,
             x=x,
             y=y,
+            ax=ax,
+            u=u,
+            v=v,
             hue=hue,
             hue_style=hue_style,
-            ax=ax,
             cmap_params=cmap_params_subset,
             **kwargs,
         )
@@ -344,6 +370,25 @@ def _dsplot(plotfunc):
                 cbar_kwargs["label"] = meta_data.get("hue_label", None)
             _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
 
+        if meta_data["add_quiverkey"]:
+            magnitude = _get_nice_quiver_magnitude(ds[u], ds[v])
+            units = ds[u].attrs.get("units", "")
+            ax.quiverkey(
+                primitive,
+                X=0.85,
+                Y=0.9,
+                U=magnitude,
+                label=f"{magnitude}\n{units}",
+                labelpos="E",
+                coordinates="figure",
+            )
+
+        if plotfunc.__name__ == "quiver":
+            title = ds[u]._title_for_slice()
+        else:
+            title = ds[x]._title_for_slice()
+        ax.set_title(title)
+
         return primitive
 
     @functools.wraps(newplotfunc)
@@ -351,6 +396,8 @@ def _dsplot(plotfunc):
         _PlotMethods_obj,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -398,7 +445,7 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
+def scatter(ds, x, y, ax, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
     """
@@ -450,3 +497,32 @@ def scatter(ds, x, y, ax, **kwargs):
         )
 
     return primitive
+
+
+@_dsplot
+def quiver(ds, x, y, ax, u, v, **kwargs):
+    """ Quiver plot with Dataset variables."""
+    import matplotlib as mpl
+
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for quiver plots.")
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    cmap_params = kwargs.pop("cmap_params")
+
+    if hue:
+        args.append(ds[hue].values)
+
+        # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+        if not cmap_params["norm"]:
+            cmap_params["norm"] = mpl.colors.Normalize(
+                cmap_params.pop("vmin"), cmap_params.pop("vmax")
+            )
+
+    kwargs.pop("hue_style")
+    kwargs.setdefault("pivot", "middle")
+    hdl = ax.quiver(*args, **kwargs, **cmap_params)
+    return hdl

@@ -1475,7 +1475,7 @@ class Common2dMixin:
         )
 
         # catch contour case
-        if hasattr(g, "cbar"):
+        if g.cbar is not None:
             assert get_colorbar_label(g.cbar) == "test_label"
 
     def test_facetgrid_no_cbar_ax(self):
@@ -2153,6 +2153,66 @@ class TestFacetedLinePlots(PlotTestCase):
 
 
 @requires_matplotlib
+class TestDatasetQuiverPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        das = [
+            DataArray(
+                np.random.randn(3, 3, 4, 4),
+                dims=["x", "y", "row", "col"],
+                coords=[range(k) for k in [3, 3, 4, 4]],
+            )
+            for _ in [1, 2]
+        ]
+        ds = Dataset({"u": das[0], "v": das[1]})
+        ds.x.attrs["units"] = "xunits"
+        ds.y.attrs["units"] = "yunits"
+        ds.col.attrs["units"] = "colunits"
+        ds.row.attrs["units"] = "rowunits"
+        ds.u.attrs["units"] = "uunits"
+        ds.v.attrs["units"] = "vunits"
+        ds["mag"] = np.hypot(ds.u, ds.v)
+        self.ds = ds
+
+    def test_quiver(self):
+        with figure_context():
+            hdl = self.ds.isel(row=0, col=0).plot.quiver(x="x", y="y", u="u", v="v")
+            assert isinstance(hdl, mpl.quiver.Quiver)
+        with raises_regex(ValueError, "specify x, y, u, v"):
+            self.ds.isel(row=0, col=0).plot.quiver(x="x", y="y", u="u")
+
+        with raises_regex(ValueError, "hue_style"):
+            self.ds.isel(row=0, col=0).plot.quiver(
+                x="x", y="y", u="u", v="v", hue="mag", hue_style="discrete"
+            )
+
+    def test_facetgrid(self):
+        with figure_context():
+            fg = self.ds.plot.quiver(
+                x="x", y="y", u="u", v="v", row="row", col="col", scale=1, hue="mag"
+            )
+            for handle in fg._mappables:
+                assert isinstance(handle, mpl.quiver.Quiver)
+            assert "uunits" in fg.quiverkey.text.get_text()
+
+        with figure_context():
+            fg = self.ds.plot.quiver(
+                x="x",
+                y="y",
+                u="u",
+                v="v",
+                row="row",
+                col="col",
+                scale=1,
+                hue="mag",
+                add_guide=False,
+            )
+            assert fg.quiverkey is None
+        with raises_regex(ValueError, "Please provide scale"):
+            self.ds.plot.quiver(x="x", y="y", u="u", v="v", row="row", col="col")
+
+
+@requires_matplotlib
 class TestDatasetScatterPlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -2194,7 +2254,13 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_add_guide(self, add_guide, hue_style, legend, colorbar):
 
         meta_data = _infer_meta_data(
-            self.ds, x="A", y="B", hue="hue", hue_style=hue_style, add_guide=add_guide
+            self.ds,
+            x="A",
+            y="B",
+            hue="hue",
+            hue_style=hue_style,
+            add_guide=add_guide,
+            funcname="scatter",
         )
         assert meta_data["add_legend"] is legend
         assert meta_data["add_colorbar"] is colorbar
@@ -2272,6 +2338,9 @@ class TestDatasetScatterPlots(PlotTestCase):
     )
     def test_scatter(self, x, y, hue, markersize):
         self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
+
+        with raises_regex(ValueError, "u, v"):
+            self.ds.plot.scatter(x, y, u="col", v="row")
 
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
