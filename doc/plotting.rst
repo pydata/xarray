@@ -227,7 +227,7 @@ from the time and assign it as a non-dimension coordinate:
     :okwarning:
 
     decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1d")
-    air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day))
+    air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day.data))
     air1d_multi
 
 To use ``'decimal_day'`` as x coordinate it must be explicitly specified:
