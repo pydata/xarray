@@ -6623,6 +6623,16 @@ def test_ndrolling_reduce(da, center, min_periods, name):
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
 
+    if name in ["mean"]:
+        # test our reimplementation of nanmean using np.nanmean
+        expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+            ["tw", "xw"]
+        )
+        count = rolling_obj.count()
+        if min_periods is None:
+            min_periods = 1
+        assert_allclose(actual, expected.where(count >= min_periods))
+
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))
 @pytest.mark.parametrize("fill_value", (np.nan, 0.0))

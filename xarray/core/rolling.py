@@ -111,8 +111,14 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name: str) -> Callable:  # type: ignore
-        array_agg_func = getattr(duck_array_ops, name)
+    def _reduce_method(name: str, fillna, rolling_agg_func: Callable = None) -> Callable:  # type: ignore
+        """Constructs reduction methods built on a numpy reduction function (e.g. sum),
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        if rolling_agg_func:
+            array_agg_func = None
+        else:
+            array_agg_func = getattr(duck_array_ops, name)
+
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
@@ -120,23 +126,36 @@ class Rolling:
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
-                array_agg_func, bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
+                array_agg_func,
+                bottleneck_move_func,
+                rolling_agg_func,
+                keep_attrs=keep_attrs,
+                fillna=fillna,
+                **kwargs,
             )
 
         method.__name__ = name
         method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
         return method
 
-    argmax = _reduce_method("argmax")
-    argmin = _reduce_method("argmin")
-    max = _reduce_method("max")
-    min = _reduce_method("min")
-    mean = _reduce_method("mean")
-    prod = _reduce_method("prod")
-    sum = _reduce_method("sum")
-    std = _reduce_method("std")
-    var = _reduce_method("var")
-    median = _reduce_method("median")
+    def _mean(self, keep_attrs, **kwargs):
+        result = self.sum(keep_attrs=False, **kwargs) / self.count(keep_attrs=False)
+        if keep_attrs:
+            result.attrs = self.obj.attrs
+        return result
+
+    _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
+
+    argmax = _reduce_method("argmax", dtypes.NINF)
+    argmin = _reduce_method("argmin", dtypes.INF)
+    max = _reduce_method("max", dtypes.NINF)
+    min = _reduce_method("min", dtypes.INF)
+    prod = _reduce_method("prod", 1)
+    sum = _reduce_method("sum", 0)
+    mean = _reduce_method("mean", None, _mean)
+    std = _reduce_method("std", None)
+    var = _reduce_method("var", None)
+    median = _reduce_method("median", None)
 
     def count(self, keep_attrs=None):
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -301,6 +320,24 @@ class DataArrayRolling(Rolling):
 
         """
 
+        return self._construct(
+            self.obj,
+            window_dim=window_dim,
+            stride=stride,
+            fill_value=fill_value,
+            keep_attrs=keep_attrs,
+            **window_dim_kwargs,
+        )
+
+    def _construct(
+        self,
+        obj,
+        window_dim=None,
+        stride=1,
+        fill_value=dtypes.NA,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
         from .dataarray import DataArray
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -317,18 +354,18 @@ class DataArrayRolling(Rolling):
         )
         stride = self._mapping_to_list(stride, default=1)
 
-        window = self.obj.variable.rolling_window(
+        window = obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
         )
 
-        attrs = self.obj.attrs if keep_attrs else {}
+        attrs = obj.attrs if keep_attrs else {}
 
         result = DataArray(
             window,
-            dims=self.obj.dims + tuple(window_dim),
-            coords=self.obj.coords,
+            dims=obj.dims + tuple(window_dim),
+            coords=obj.coords,
             attrs=attrs,
-            name=self.obj.name,
+            name=obj.name,
         )
         return result.isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
@@ -393,7 +430,18 @@ class DataArrayRolling(Rolling):
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
-        windows = self.construct(rolling_dim, keep_attrs=keep_attrs)
+
+        # save memory with reductions GH4325
+        fillna = kwargs.pop("fillna", dtypes.NA)
+        if fillna is not dtypes.NA:
+            obj = self.obj.fillna(fillna)
+        else:
+            obj = self.obj
+
+        windows = self._construct(
+            obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
+        )
+
         result = windows.reduce(
             func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
         )
@@ -470,7 +518,13 @@ class DataArrayRolling(Rolling):
         return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        fillna,
+        **kwargs,
     ):
         if "dim" in kwargs:
             warnings.warn(
@@ -494,6 +548,18 @@ class DataArrayRolling(Rolling):
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
         else:
+            if rolling_agg_func:
+                return rolling_agg_func(
+                    self, keep_attrs=self._get_keep_attrs(keep_attrs)
+                )
+            if fillna is not None:
+                if fillna is dtypes.INF:
+                    fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
+                elif fillna is dtypes.NINF:
+                    fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
+                kwargs.setdefault("skipna", False)
+                kwargs.setdefault("fillna", fillna)
+
             return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
@@ -600,13 +666,19 @@ class DatasetRolling(Rolling):
         )
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        **kwargs,
     ):
         return self._dataset_implementation(
             functools.partial(
                 DataArrayRolling._numpy_or_bottleneck_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
+                rolling_agg_func=rolling_agg_func,
             ),
             keep_attrs=keep_attrs,
             **kwargs,
