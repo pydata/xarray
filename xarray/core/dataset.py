@@ -3886,6 +3886,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ValueError
             If any dimensions would have inconsistent sizes in the updated
             dataset.
+
+        See Also
+        --------
+        Dataset.assign
         """
         merge_result = dataset_update_method(self, other)
         return self._replace(inplace=True, **merge_result._asdict())
