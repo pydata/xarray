@@ -241,6 +241,7 @@ Plotting
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
+   Dataset.plot.quiver
 
 DataArray
 =========
