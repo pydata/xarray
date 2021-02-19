@@ -34,8 +34,8 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(darray, x, y, hue, hue_style, size, add_guide):
-    def _hue_calc(darray, hue, hue_style, add_guide):
+def _infer_meta_data(darray, x, y, hue, hue_style, size):
+    def _hue_calc(darray, hue, hue_style):
         """Something."""
         hue_is_numeric = _is_numeric(darray[hue].values)
 
@@ -54,15 +54,7 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size, add_guide):
         hue_label = label_from_attrs(darray[hue])
         hue = darray[hue]
 
-        # Handle colorbar and legend:
-        if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
-        else:
-            add_colorbar = False
-            add_legend = False
-
-        return hue, hue_style, hue_label, add_colorbar, add_legend
+        return hue, hue_style, hue_label
 
     if x is not None and y is not None:
         raise ValueError("Cannot specify both x and y kwargs for line plots.")
@@ -77,23 +69,14 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size, add_guide):
     ylabel = label_from_attrs(yplt)
 
     if hue:
-        hue, hue_style, hue_label, add_colorbar, add_legend = _hue_calc(
-            darray, hue, hue_style, add_guide
-        )
+        hue, hue_style, hue_label = _hue_calc(darray, hue, hue_style)
     else:
         # Try finding a hue:
         _, hue = _infer_xy_labels(darray=yplt, x=xplt.name, y=hue)
 
         if hue:
-            hue, hue_style, hue_label, add_colorbar, add_legend = _hue_calc(
-                darray, hue, hue_style, add_guide
-            )
+            hue, hue_style, hue_label = _hue_calc(darray, hue, hue_style)
         else:
-            if add_guide is True:
-                raise ValueError("Cannot set add_guide when hue is None.")
-            add_legend = False
-            add_colorbar = False
-
             hue_label = None
             hue = None
 
@@ -105,8 +88,6 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size, add_guide):
         size = None
 
     return dict(
-        add_colorbar=add_colorbar,
-        add_legend=add_legend,
         hue_label=hue_label,
         hue_style=hue_style,
         xlabel=xlabel,
@@ -614,7 +595,8 @@ def scatter(
     yticks=None,
     xlim=None,
     ylim=None,
-    add_legend=True,
+    add_legend=None,
+    add_colorbar=None,
     _labels=True,
     **kwargs,
 ):
@@ -623,7 +605,6 @@ def scatter(
 
     Parameters
     ----------
-
     darray : DataArray
         Dataarray to plot.
     x, y : str
@@ -699,7 +680,6 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
-
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -709,15 +689,30 @@ def scatter(
 
     # _is_facetgrid = kwargs.pop("_is_facetgrid", False)
     _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
-    add_guide = kwargs.pop("add_guide", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
     cbar_ax = kwargs.pop("cbar_ax", None)
+    cbar_kwargs = kwargs.pop("cbar_kwargs", None)
 
     figsize = kwargs.pop("figsize", None)
     ax = get_axis(figsize, size, aspect, ax)
 
-    _data = _infer_meta_data(darray, x, y, hue, hue_style, _sizes, add_guide)
+    _data = _infer_meta_data(darray, x, y, hue, hue_style, _sizes)
+
+    add_guide = kwargs.pop("add_guide", None)
+    if add_legend:
+        pass
+    elif add_guide is None or add_guide is True:
+        add_legend = True if hue_style == "discrete" else False
+    elif add_legend is None:
+        add_legend = False
+
+    if add_colorbar:
+        pass
+    elif add_guide is None or add_guide is True:
+        add_colorbar = True if hue_style == "continuous" else False
+    else:
+        add_colorbar = False
 
     # need to infer size_mapping with full dataset
     _data.update(
@@ -817,15 +812,11 @@ def scatter(
 
         return [handles, labels]
 
-    def _add_legend(primitives, prop, func, ax, title, loc):
+    def _add_legend(primitives, prop, func, ax, title, **kwargs):
         """Add legend to axes."""
         # Get handles and labels to use in the legend:
         handles, labels = _legend_elements_from_list(
-            primitives,
-            prop,
-            num="auto",
-            alpha=0.6,
-            func=func,
+            primitives, prop, num="auto", alpha=0.6, func=func,
         )
 
         # title has to be a required check as otherwise the legend may
@@ -834,11 +825,11 @@ def scatter(
         if title and len(handles) > 1:
             # The normal case where a prop has been defined and
             # legend_elements finds results:
-            legend = ax.legend(handles, labels, title=title, loc=loc)
+            legend = ax.legend(handles, labels, title=title, **kwargs)
             ax.add_artist(legend)
         elif title and len(primitives) > 1:
             # For caases when
-            legend = ax.legend(handles=primitives, title=title, loc=loc)
+            legend = ax.legend(handles=primitives, title=title, **kwargs)
             ax.add_artist(legend)
 
     if _data["hue_style"] == "discrete":
@@ -846,7 +837,7 @@ def scatter(
     else:
         primitives = [primitive]
 
-    if _data["add_legend"] and _data["hue_label"]:
+    if add_legend and _data["hue_label"]:
         _add_legend(
             primitives,
             prop="colors",
@@ -856,7 +847,7 @@ def scatter(
             loc="upper right",
         )
 
-    if _data["add_legend"] and _data["size_label"]:
+    if add_legend and _data["size_label"]:
         _add_legend(
             primitives,
             prop="sizes",
@@ -868,7 +859,9 @@ def scatter(
             loc="upper left",
         )
 
-    if _data["add_colorbar"] and _data["hue_label"]:
+    if add_colorbar and _data["hue_label"]:
+        if _data["hue_style"] == "discrete":
+            raise NotImplementedError("Cannot create a colorbar for non numerics.")
         cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
         if "label" not in cbar_kwargs:
             cbar_kwargs["label"] = _data["hue_label"]
