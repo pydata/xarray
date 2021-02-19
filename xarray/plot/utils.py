@@ -360,6 +360,25 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
 
 
+def _infer_hist_labels(yplt, kwargs):
+    """Infers x, y labels for histograms based on
+    'orientation' and 'density' kwargs."""
+    if kwargs.get("orientation", "vertical") == "vertical":
+        xlabel = label_from_attrs(yplt)
+        if kwargs.get("density", False):
+            ylabel = "density"
+        else:
+            ylabel = "count"
+    else:
+        if kwargs.get("density", False):
+            xlabel = "density"
+        else:
+            xlabel = "count"
+        ylabel = label_from_attrs(yplt)
+
+    return xlabel, ylabel
+
+
 def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     """
     Determine x and y labels. For use in _plot2d
@@ -841,3 +860,21 @@ def _process_cmap_cbar_kwargs(
         }
 
     return cmap_params, cbar_kwargs
+
+
+def _get_handles_hist_legend(primitive, histtype):
+    """ Returns handles that can be used by legend. Deal with all hist types."""
+    # why, matplotlib, why
+    # https://stackoverflow.com/questions/47490586/change-the-legend-format-of-python-histogram
+    import matplotlib as mpl
+
+    def _get_color(obj):
+        color = obj.get_facecolor()
+        if color[-1] == 0:  # no alpha, invisible
+            color = obj.get_edgecolor()
+        return color
+
+    handles = primitive[-1]
+    if "step" in histtype:
+        handles = [mpl.lines.Line2D([], [], c=_get_color(obj[0])) for obj in handles]
+    return handles
