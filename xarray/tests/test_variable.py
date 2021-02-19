@@ -1082,7 +1082,7 @@ class TestVariable(VariableSubclassobjects):
         assert as_variable(td, "time").dtype.kind == "m"
 
         with pytest.warns(DeprecationWarning):
-            as_variable(("x", DataArray()))
+            as_variable(("x", DataArray([])))
 
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
