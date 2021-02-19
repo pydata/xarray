@@ -114,9 +114,12 @@ skipna : bool, optional
 
 _MINCOUNT_DOCSTRING = """
 min_count : int, default: None
-    The required number of valid values to perform the operation.
-    If fewer than min_count non-NA values are present the result will
-    be NA. New in version 0.10.8: Added with the default being None."""
+    The required number of valid values to perform the operation. If
+    fewer than min_count non-NA values are present the result will be
+    NA. Only used if skipna is set to True or defaults to True for the
+    array's dtype. New in version 0.10.8: Added with the default being
+    None. Changed in version 0.17.0: if specified on an integer array
+    and skipna=True, the result will be a float array."""
 
 _COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
 Coarsen this object by applying `{name}` along its dimensions.
