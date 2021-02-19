@@ -126,6 +126,7 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.drop_sel
+   Dataset.drop_isel
    Dataset.head
    Dataset.tail
    Dataset.thin
@@ -240,6 +241,7 @@ Plotting
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
+   Dataset.plot.quiver
 
 DataArray
 =========
@@ -307,6 +309,7 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.drop_sel
+   DataArray.drop_isel
    DataArray.head
    DataArray.tail
    DataArray.thin
@@ -475,8 +478,6 @@ Datetimelike properties
    DataArray.dt.second
    DataArray.dt.microsecond
    DataArray.dt.nanosecond
-   DataArray.dt.weekofyear
-   DataArray.dt.week
    DataArray.dt.dayofweek
    DataArray.dt.weekday
    DataArray.dt.weekday_name
@@ -500,6 +501,7 @@ Datetimelike properties
 
    DataArray.dt.floor
    DataArray.dt.ceil
+   DataArray.dt.isocalendar
    DataArray.dt.round
    DataArray.dt.strftime
 
@@ -896,3 +898,10 @@ Deprecated / Pending Deprecation
    Dataset.apply
    core.groupby.DataArrayGroupBy.apply
    core.groupby.DatasetGroupBy.apply
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.weekofyear
+   DataArray.dt.week

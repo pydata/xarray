@@ -102,7 +102,7 @@ class BaseCFTimeOffset:
         import cftime
 
         if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract a cftime.datetime " "from a time offset.")
+            raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
@@ -122,7 +122,7 @@ class BaseCFTimeOffset:
 
     def __rsub__(self, other):
         if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
-            raise TypeError("Cannot subtract cftime offsets of differing " "types")
+            raise TypeError("Cannot subtract cftime offsets of differing types")
         return -self + other
 
     def __apply__(self):
@@ -576,6 +576,26 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
+class Millisecond(BaseCFTimeOffset):
+    _freq = "L"
+
+    def as_timedelta(self):
+        return timedelta(milliseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
+class Microsecond(BaseCFTimeOffset):
+    _freq = "U"
+
+    def as_timedelta(self):
+        return timedelta(microseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
 _FREQUENCIES = {
     "A": YearEnd,
     "AS": YearBegin,
@@ -590,6 +610,10 @@ _FREQUENCIES = {
     "T": Minute,
     "min": Minute,
     "S": Second,
+    "L": Millisecond,
+    "ms": Millisecond,
+    "U": Microsecond,
+    "us": Microsecond,
     "AS-JAN": partial(YearBegin, month=1),
     "AS-FEB": partial(YearBegin, month=2),
     "AS-MAR": partial(YearBegin, month=3),
@@ -796,7 +820,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-       Frequency strings can have multiples, e.g. "5H".
+        Frequency strings can have multiples, e.g. "5H".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -813,7 +837,6 @@ def cftime_range(
 
     Notes
     -----
-
     This function is an analog of ``pandas.date_range`` for use in generating
     sequences of ``cftime.datetime`` objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
@@ -825,7 +848,7 @@ def cftime_range(
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - It supports many, but not all, frequencies supported by
       ``pandas.date_range``.  For example it does not currently support any of
-      the business-related, semi-monthly, or sub-second frequencies.
+      the business-related or semi-monthly frequencies.
     - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
       these can easily be written in terms of the finest common resolution,
       e.g. '61min'.
@@ -855,6 +878,10 @@ def cftime_range(
     | T, min | Minute frequency         |
     +--------+--------------------------+
     | S      | Second frequency         |
+    +--------+--------------------------+
+    | L, ms  | Millisecond frequency    |
+    +--------+--------------------------+
+    | U, us  | Microsecond frequency    |
     +--------+--------------------------+
 
     Any multiples of the following anchored offsets are also supported.
@@ -911,7 +938,6 @@ def cftime_range(
     | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
     +----------+--------------------------------------------------------------------+
 
-
     Finally, the following calendar aliases are supported.
 
     +--------------------------------+---------------------------------------+
@@ -932,14 +958,13 @@ def cftime_range(
 
     Examples
     --------
-
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
     >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
-                dtype='object', length=6, calendar='noleap')
+                dtype='object', length=6, calendar='noleap', freq='2MS')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with

@@ -14,11 +14,13 @@
 
 import datetime
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
+from jinja2.defaults import DEFAULT_FILTERS
 
 import xarray
 
@@ -32,7 +34,7 @@ if "conda" in sys.executable:
     subprocess.run(["conda", "list"])
 else:
     print("pip environment:")
-    subprocess.run(["pip", "list"])
+    subprocess.run([sys.executable, "-m", "pip", "list"])
 
 print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
@@ -78,6 +80,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "scanpydoc.rtd_github_links",
 ]
 
 extlinks = {
@@ -97,10 +100,22 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
 """
 
 autosummary_generate = True
+
+# for scanpydoc's jinja filter
+project_dir = pathlib.Path(__file__).parent.parent
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+}
+
 autodoc_typehints = "none"
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
 napoleon_use_param = False
-napoleon_use_rtype = True
+napoleon_use_rtype = False
 napoleon_preprocess_types = True
 napoleon_type_aliases = {
     # general terms
@@ -396,11 +411,21 @@ htmlhelp_basename = "xarraydoc"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools.org.uk/iris/docs/latest", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
 }
+
+
+def escape_underscores(string):
+    return string.replace("_", r"\_")
+
+
+def setup(app):
+    DEFAULT_FILTERS["escape_underscores"] = escape_underscores

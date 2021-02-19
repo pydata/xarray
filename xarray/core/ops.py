@@ -43,7 +43,6 @@ NUMPY_SAME_METHODS = ["item", "searchsorted"]
 # methods which don't modify the data shape, so the result should still be
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
-PANDAS_UNARY_FUNCTIONS = ["isnull", "notnull"]
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
@@ -115,9 +114,12 @@ skipna : bool, optional
 
 _MINCOUNT_DOCSTRING = """
 min_count : int, default: None
-    The required number of valid values to perform the operation.
-    If fewer than min_count non-NA values are present the result will
-    be NA. New in version 0.10.8: Added with the default being None."""
+    The required number of valid values to perform the operation. If
+    fewer than min_count non-NA values are present the result will be
+    NA. Only used if skipna is set to True or defaults to True for the
+    array's dtype. New in version 0.10.8: Added with the default being
+    None. Changed in version 0.17.0: if specified on an integer array
+    and skipna=True, the result will be a float array."""
 
 _COARSEN_REDUCE_DOCSTRING_TEMPLATE = """\
 Coarsen this object by applying `{name}` along its dimensions.
@@ -333,10 +335,6 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
     # patch in numpy/pandas methods
     for name in NUMPY_UNARY_METHODS:
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
-
-    for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
-        setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
     setattr(cls, "round", cls._unary_op(f))

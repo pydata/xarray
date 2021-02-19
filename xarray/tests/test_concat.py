@@ -258,27 +258,118 @@ class TestConcatDataset:
         )
         assert_identical(actual, expected)
 
-    def test_concat_combine_attrs_kwarg(self):
-        ds1 = Dataset({"a": ("x", [0])}, coords={"x": [0]}, attrs={"b": 42})
-        ds2 = Dataset({"a": ("x", [0])}, coords={"x": [1]}, attrs={"b": 42, "c": 43})
+    @pytest.mark.parametrize(
+        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+        ],
+    )
+    def test_concat_combine_attrs_kwarg(
+        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+    ):
+        ds1 = Dataset({"a": ("x", [0])}, coords={"x": [0]}, attrs=var1_attrs)
+        ds2 = Dataset({"a": ("x", [0])}, coords={"x": [1]}, attrs=var2_attrs)
 
-        expected = {}
-        expected["drop"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]})
-        expected["no_conflicts"] = Dataset(
-            {"a": ("x", [0, 0])}, {"x": [0, 1]}, {"b": 42, "c": 43}
-        )
-        expected["override"] = Dataset({"a": ("x", [0, 0])}, {"x": [0, 1]}, {"b": 42})
-
-        with raises_regex(ValueError, "combine_attrs='identical'"):
-            actual = concat([ds1, ds2], dim="x", combine_attrs="identical")
-        with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
-            ds3 = ds2.copy(deep=True)
-            ds3.attrs["b"] = 44
-            actual = concat([ds1, ds3], dim="x", combine_attrs="no_conflicts")
-
-        for combine_attrs in expected:
+        if expect_exception:
+            with pytest.raises(ValueError, match=f"combine_attrs='{combine_attrs}'"):
+                concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+        else:
             actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
-            assert_identical(actual, expected[combine_attrs])
+            expected = Dataset(
+                {"a": ("x", [0, 0])}, {"x": [0, 1]}, attrs=expected_attrs
+            )
+
+            assert_identical(actual, expected)
+
+    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+        ],
+    )
+    def test_concat_combine_attrs_kwarg_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
+        ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
+
+        if expect_exception:
+            with pytest.raises(ValueError, match=f"combine_attrs='{combine_attrs}'"):
+                concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+        else:
+            actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+            expected = Dataset(
+                {"a": ("x", [0, 0], expected_attrs)},
+                {"x": ("x", [0, 1], expected_attrs)},
+            )
+
+            assert_identical(actual, expected)
 
     def test_concat_promote_shape(self):
         # mixed dims within variables
@@ -375,6 +466,30 @@ class TestConcatDataset:
         )
         actual = concat(datasets, dim="t", fill_value=fill_value)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": [0, 1],
+                "x2": np.array(["a", "b"], dtype=dtype),
+            }
+        )
+        da2 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": np.array([1, 2]),
+                "x2": np.array(["c", "d"], dtype=dtype),
+            }
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
 
 
 class TestConcatDataArray:
@@ -524,6 +639,26 @@ class TestConcatDataArray:
         for combine_attrs in expected:
             actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
             assert_identical(actual, expected[combine_attrs])
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": [0, 1], "x2": np.array(["a", "b"], dtype=dtype)},
+        )
+        da2 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": np.array([1, 2]), "x2": np.array(["c", "d"], dtype=dtype)},
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
 
 
 @pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))

@@ -541,7 +541,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.fillna
         DataArray.fillna
@@ -590,12 +590,11 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
@@ -672,7 +671,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.where
         """
@@ -698,7 +697,7 @@ class GroupBy(SupportsArithmetic):
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
-        See also
+        See Also
         --------
         Dataset.assign_coords
         Dataset.swap_dims
@@ -814,7 +813,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
-    def _combine(self, applied, restore_coord_dims=False, shortcut=False):
+    def _combine(self, applied, shortcut=False):
         """Recombine the applied objects like the original."""
         applied_example, applied = peek_at(applied)
         coord, dim, positions = self._infer_concat_args(applied_example)
@@ -996,7 +995,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def assign(self, **kwargs):
         """Assign data variables by group.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """

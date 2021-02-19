@@ -42,6 +42,14 @@ _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
+def _first_of_type(args, kind):
+    """ Return either first object of type 'kind' or raise if not found. """
+    for arg in args:
+        if isinstance(arg, kind):
+            return arg
+    raise ValueError("This should be unreachable.")
+
+
 class _UFuncSignature:
     """Core dimensions signature for a given function.
 
@@ -252,8 +260,9 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs and hasattr(args[0], "name"):
-        name = args[0].name
+    if keep_attrs:
+        first_obj = _first_of_type(args, DataArray)
+        name = first_obj.name
     else:
         name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
@@ -269,6 +278,14 @@ def apply_dataarray_vfunc(
     else:
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
+
+    if keep_attrs:
+        if isinstance(out, tuple):
+            for da in out:
+                # This is adding attrs in place
+                da._copy_attrs_from(first_obj)
+        else:
+            out._copy_attrs_from(first_obj)
 
     return out
 
@@ -390,14 +407,15 @@ def apply_dataset_vfunc(
     """
     from .dataset import Dataset
 
-    first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
-
     if dataset_join not in _JOINS_WITHOUT_FILL_VALUES and fill_value is _NO_FILL_VALUE:
         raise TypeError(
             "to apply an operation to datasets with different "
             "data variables with apply_ufunc, you must supply the "
             "dataset_fill_value argument."
         )
+
+    if keep_attrs:
+        first_obj = _first_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
@@ -417,9 +435,11 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs and isinstance(first_obj, Dataset):
+    if keep_attrs:
         if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(first_obj) for ds in out)
+            for ds in out:
+                # This is adding attrs in place
+                ds._copy_attrs_from(first_obj)
         else:
             out._copy_attrs_from(first_obj)
     return out
@@ -595,6 +615,8 @@ def apply_variable_ufunc(
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
+    first_obj = _first_of_type(args, Variable)
+
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
     )
@@ -624,6 +646,8 @@ def apply_variable_ufunc(
 
             if dask_gufunc_kwargs is None:
                 dask_gufunc_kwargs = {}
+            else:
+                dask_gufunc_kwargs = dask_gufunc_kwargs.copy()
 
             allow_rechunk = dask_gufunc_kwargs.get("allow_rechunk", None)
             if allow_rechunk is None:
@@ -734,8 +758,8 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs and isinstance(args[0], Variable):
-            var.attrs.update(args[0].attrs)
+        if keep_attrs:
+            var.attrs.update(first_obj.attrs)
         output.append(var)
 
     if signature.num_outputs == 1:
@@ -861,11 +885,11 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: bool, optional
+    keep_attrs : bool, optional
         Whether to copy attributes from the first argument to the output.
-    kwargs: dict, optional
+    kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
+    dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
@@ -901,12 +925,12 @@ def apply_ufunc(
 
     Examples
     --------
-
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
     ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
     ...     return xr.apply_ufunc(func, a, b)
+    ...
 
     You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
     objects, with automatically preserved dimensions and coordinates, e.g.,
@@ -986,7 +1010,7 @@ def apply_ufunc(
     works well with numba's vectorize and guvectorize. Further explanation with
     examples are provided in the xarray documentation [3]_.
 
-    See also
+    See Also
     --------
     numpy.broadcast_arrays
     numba.vectorize
@@ -1123,24 +1147,24 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
-    ddof: int, optional
+    ddof : int, optional
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
     Returns
     -------
-    covariance: DataArray
+    covariance : DataArray
 
-    See also
+    See Also
     --------
-    pandas.Series.cov: corresponding pandas function
-    xr.corr: respective function to calculate correlation
+    pandas.Series.cov : corresponding pandas function
+    xarray.corr : respective function to calculate correlation
 
     Examples
     --------
@@ -1204,21 +1228,21 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
-    dim: str, optional
+    dim : str, optional
         The dimension along which the correlation will be computed
 
     Returns
     -------
     correlation: DataArray
 
-    See also
+    See Also
     --------
-    pandas.Series.corr: corresponding pandas function
-    xr.cov: underlying covariance function
+    pandas.Series.corr : corresponding pandas function
+    xarray.cov : underlying covariance function
 
     Examples
     --------
@@ -1336,7 +1360,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
@@ -1471,7 +1494,6 @@ def where(cond, x, y):
     All dimension coordinates on `x` and `y`  must be aligned with each
     other and with `cond`.
 
-
     Parameters
     ----------
     cond : scalar, array, Variable, DataArray or Dataset
@@ -1541,10 +1563,11 @@ def where(cond, x, y):
            [0, 0]])
     Dimensions without coordinates: x, y
 
-    See also
+    See Also
     --------
     numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where : equivalent methods
+    Dataset.where, DataArray.where :
+        equivalent methods
     """
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1570,7 +1593,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
-    See also
+    See Also
     --------
     xarray.DataArray.polyfit
     numpy.polyval

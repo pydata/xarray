@@ -158,7 +158,7 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def astype(data, **kwargs):
+def astype(data, dtype, **kwargs):
     try:
         import sparse
     except ImportError:
@@ -177,7 +177,7 @@ def astype(data, **kwargs):
         )
         kwargs.pop("casting")
 
-    return data.astype(**kwargs)
+    return data.astype(dtype, **kwargs)
 
 
 def asarray(data, xp=np):
@@ -230,7 +230,9 @@ def allclose_or_equiv(arr1, arr2, rtol=1e-5, atol=1e-8):
 
     lazy_equiv = lazy_array_equiv(arr1, arr2)
     if lazy_equiv is None:
-        return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
+            return bool(isclose(arr1, arr2, rtol=rtol, atol=atol, equal_nan=True).all())
     else:
         return lazy_equiv
 
@@ -325,10 +327,14 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
             nanname = "nan" + name
             func = getattr(nanops, nanname)
         else:
+            if name in ["sum", "prod"]:
+                kwargs.pop("min_count", None)
             func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
-            return func(values, axis=axis, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "All-NaN slice encountered")
+                return func(values, axis=axis, **kwargs)
         except AttributeError:
             if not is_duck_dask_array(values):
                 raise
@@ -361,7 +367,7 @@ median = _create_nan_agg_method("median", dask_module=dask_array_compat)
 median.numeric_only = True
 prod = _create_nan_agg_method("prod")
 prod.numeric_only = True
-sum.available_min_count = True
+prod.available_min_count = True
 cumprod_1d = _create_nan_agg_method("cumprod")
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum")
@@ -399,21 +405,21 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     Parameters
     ----------
-    da : array-like
-      Input data
-    offset: None, datetime or cftime.datetime
-      Datetime offset. If None, this is set by default to the array's minimum
-      value to reduce round off errors.
-    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      If not None, convert output to a given datetime unit. Note that some
-      conversions are not allowed due to non-linear relationships between units.
-    dtype: dtype
-      Output dtype.
+    array : array-like
+        Input data
+    offset : None, datetime or cftime.datetime
+        Datetime offset. If None, this is set by default to the array's minimum
+        value to reduce round off errors.
+    datetime_unit : {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+        If not None, convert output to a given datetime unit. Note that some
+        conversions are not allowed due to non-linear relationships between units.
+    dtype : dtype
+        Output dtype.
 
     Returns
     -------
     array
-      Numerical representation of datetime object relative to an offset.
+        Numerical representation of datetime object relative to an offset.
 
     Notes
     -----
@@ -457,12 +463,12 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     Parameters
     ----------
     value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
-      Time delta representation.
+        Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      The time units of the output values. Note that some conversions are not allowed due to
-      non-linear relationships between units.
+        The time units of the output values. Note that some conversions are not allowed due to
+        non-linear relationships between units.
     dtype : type
-      The output data type.
+        The output data type.
 
     """
     import datetime as dt

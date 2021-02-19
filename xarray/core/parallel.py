@@ -183,7 +183,6 @@ def map_blocks(
         This function must return either a single DataArray or a single Dataset.
 
         This function cannot add a new chunked dimension.
-
     obj : DataArray, Dataset
         Passed to the function as its first argument, one block at a time.
     args : sequence
@@ -201,7 +200,6 @@ def map_blocks(
         When provided, ``attrs`` on variables in `template` are copied over to the result. Any
         ``attrs`` set by ``func`` will be ignored.
 
-
     Returns
     -------
     A single DataArray or Dataset with dask backend, reassembled from the outputs of the
@@ -218,12 +216,11 @@ def map_blocks(
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
     xarray.DataArray.map_blocks
 
     Examples
     --------
-
     Calculate an anomaly from climatology using ``.groupby()``. Using
     ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
     its indices, and its methods like ``.groupby()``.
@@ -232,6 +229,7 @@ def map_blocks(
     ...     gb = da.groupby(groupby_type)
     ...     clim = gb.mean(dim="time")
     ...     return gb - clim
+    ...
     >>> time = xr.cftime_range("1990-01", "1992-01", freq="M")
     >>> month = xr.DataArray(time.month, coords={"time": time}, dims=["time"])
     >>> np.random.seed(123)
@@ -255,7 +253,9 @@ def map_blocks(
     to the function being applied in ``xr.map_blocks()``:
 
     >>> array.map_blocks(
-    ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array,
+    ...     calculate_anomaly,
+    ...     kwargs={"groupby_type": "time.year"},
+    ...     template=array,
     ... )  # doctest: +ELLIPSIS
     <xarray.DataArray (time: 24)>
     dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>

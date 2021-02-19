@@ -28,9 +28,11 @@ dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
+    """ A version of this function which accepts numpy arrays """
+    from xarray.testing import assert_identical as assert_identical_
+
     if hasattr(a, "identical"):
-        msg = f"not identical:\n{a!r}\n{b!r}"
-        assert a.identical(b), msg
+        assert_identical_(a, b)
     else:
         assert_array_equal(a, b)
 
@@ -796,6 +798,32 @@ def test_apply_dask_new_output_dimension():
     assert_identical(expected, actual)
 
 
+@requires_dask
+def test_apply_dask_new_output_sizes():
+    ds = xr.Dataset({"foo": (["lon", "lat"], np.arange(10 * 10).reshape((10, 10)))})
+    ds["bar"] = ds["foo"]
+    newdims = {"lon_new": 3, "lat_new": 6}
+
+    def extract(obj):
+        def func(da):
+            return da[1:4, 1:7]
+
+        return apply_ufunc(
+            func,
+            obj,
+            dask="parallelized",
+            input_core_dims=[["lon", "lat"]],
+            output_core_dims=[["lon_new", "lat_new"]],
+            dask_gufunc_kwargs=dict(output_sizes=newdims),
+        )
+
+    expected = extract(ds)
+
+    actual = extract(ds.chunk())
+    assert actual.dims == {"lon_new": 3, "lat_new": 6}
+    assert_identical(expected.chunk(), actual)
+
+
 def pandas_median(x):
     return pd.Series(x).median()
 
@@ -896,11 +924,11 @@ def test_vectorize_dask_dtype_meta():
         vectorize=True,
         dask="parallelized",
         output_dtypes=[int],
-        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=np.float)),
+        dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
     assert_identical(expected, actual)
-    assert np.float == actual.dtype
+    assert float == actual.dtype
 
 
 def pandas_median_add(x, y):
@@ -1280,7 +1308,7 @@ def test_dot(use_dask):
     # for only a single array is passed without dims argument, just return
     # as is
     actual = xr.dot(da_a)
-    assert da_a.identical(actual)
+    assert_identical(da_a, actual)
 
     # test for variable
     actual = xr.dot(da_a.variable, da_b.variable)

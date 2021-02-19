@@ -87,6 +87,9 @@ class TestFormatting:
             (b"foo", "b'foo'"),
             (1, "1"),
             (1.0, "1.0"),
+            (np.float16(1.1234), "1.123"),
+            (np.float32(1.0111111), "1.011"),
+            (np.float64(22.222222), "22.22"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
@@ -460,3 +463,36 @@ def test_large_array_repr_length():
 
     result = repr(da).splitlines()
     assert len(result) < 50
+
+
+@pytest.mark.parametrize(
+    "display_max_rows, n_vars, n_attr",
+    [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
+)
+def test__mapping_repr(display_max_rows, n_vars, n_attr):
+    long_name = "long_name"
+    a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
+    b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    attrs = {k: 2 for k in b}
+    coords = dict(time=np.array([0, 1]))
+    data_vars = dict()
+    for v in a:
+        data_vars[v] = xr.DataArray(
+            name=v,
+            data=np.array([3, 4]),
+            dims=["time"],
+            coords=coords,
+        )
+    ds = xr.Dataset(data_vars)
+    ds.attrs = attrs
+
+    with xr.set_options(display_max_rows=display_max_rows):
+
+        # Parse the data_vars print and show only data_vars rows:
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
+
+        # The length should be less than or equal to display_max_rows:
+        len_summary = len(summary)
+        data_vars_print_size = min(display_max_rows, len_summary)
+        assert len_summary == data_vars_print_size

@@ -68,11 +68,6 @@ def _sanitize_slice_element(x):
             )
         x = x[()]
 
-    if isinstance(x, np.timedelta64):
-        # pandas does not support indexing with np.timedelta64 yet:
-        # https://github.com/pandas-dev/pandas/issues/20393
-        x = pd.Timedelta(x)
-
     return x
 
 
@@ -121,7 +116,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     if isinstance(label, slice):
         if method is not None or tolerance is not None:
             raise NotImplementedError(
-                "cannot use ``method`` argument if any indexers are " "slice objects"
+                "cannot use ``method`` argument if any indexers are slice objects"
             )
         indexer = index.slice_indexer(
             _sanitize_slice_element(label.start),
@@ -280,25 +275,38 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     return pos_indexers, new_indexes
 
 
+def _normalize_slice(sl, size):
+    """Ensure that given slice only contains positive start and stop values
+    (stop can be -1 for full-size slices with negative steps, e.g. [-10::-1])"""
+    return slice(*sl.indices(size))
+
+
 def slice_slice(old_slice, applied_slice, size):
     """Given a slice and the size of the dimension to which it will be applied,
     index it with another slice to return a new slice equivalent to applying
     the slices sequentially
     """
-    step = (old_slice.step or 1) * (applied_slice.step or 1)
+    old_slice = _normalize_slice(old_slice, size)
 
-    # For now, use the hack of turning old_slice into an ndarray to reconstruct
-    # the slice start and stop. This is not entirely ideal, but it is still
-    # definitely better than leaving the indexer as an array.
-    items = _expand_slice(old_slice, size)[applied_slice]
-    if len(items) > 0:
-        start = items[0]
-        stop = items[-1] + int(np.sign(step))
-        if stop < 0:
-            stop = None
-    else:
-        start = 0
-        stop = 0
+    size_after_old_slice = len(range(old_slice.start, old_slice.stop, old_slice.step))
+    if size_after_old_slice == 0:
+        # nothing left after applying first slice
+        return slice(0)
+
+    applied_slice = _normalize_slice(applied_slice, size_after_old_slice)
+
+    start = old_slice.start + applied_slice.start * old_slice.step
+    if start < 0:
+        # nothing left after applying second slice
+        # (can only happen for old_slice.step < 0, e.g. [10::-1], [20:])
+        return slice(0)
+
+    stop = old_slice.start + applied_slice.stop * old_slice.step
+    if stop < 0:
+        stop = None
+
+    step = old_slice.step * applied_slice.step
+
     return slice(start, stop, step)
 
 
@@ -779,11 +787,11 @@ def _combine_indexers(old_key, shape, new_key):
 
     Parameters
     ----------
-    old_key: ExplicitIndexer
+    old_key : ExplicitIndexer
         The first indexer for the original array
-    shape: tuple of ints
+    shape : tuple of ints
         Shape of the original array to be indexed by old_key
-    new_key:
+    new_key
         The second indexer for indexing original[old_key]
     """
     if not isinstance(old_key, VectorizedIndexer):
@@ -833,7 +841,7 @@ def explicit_indexing_adapter(
         Shape of the indexed array.
     indexing_support : IndexingSupport enum
         Form of indexing supported by raw_indexing_method.
-    raw_indexing_method: callable
+    raw_indexing_method : callable
         Function (like ndarray.__getitem__) that when called with indexing key
         in the form of a tuple returns an indexed array.
 
@@ -887,8 +895,8 @@ def _decompose_vectorized_indexer(
 
     Parameters
     ----------
-    indexer: VectorizedIndexer
-    indexing_support: one of IndexerSupport entries
+    indexer : VectorizedIndexer
+    indexing_support : one of IndexerSupport entries
 
     Returns
     -------
@@ -969,8 +977,8 @@ def _decompose_outer_indexer(
 
     Parameters
     ----------
-    indexer: OuterIndexer or BasicIndexer
-    indexing_support: One of the entries of IndexingSupport
+    indexer : OuterIndexer or BasicIndexer
+    indexing_support : One of the entries of IndexingSupport
 
     Returns
     -------

@@ -5,7 +5,7 @@ Xarray related projects
 
 Below is a list of existing open source projects that build
 functionality upon xarray. See also section :ref:`internals` for more
-details on how to build xarray extensions. We also maintain the 
+details on how to build xarray extensions. We also maintain the
 `xarray-contrib <https://github.com/xarray-contrib>`_ GitHub organization
 as a place to curate projects that build upon xarray.
 
@@ -15,6 +15,7 @@ Geosciences
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
+- `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
 - `MetPy <https://unidata.github.io/MetPy/dev/index.html>`_: A collection of tools in Python for reading, visualizing, and performing calculations with weather data.
@@ -42,7 +43,7 @@ Geosciences
 - `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
 - `xclim <https://xclim.readthedocs.io/>`_: A library for calculating climate science indices with unit handling built from xarray and dask.
-- `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
+- `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
 - `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
@@ -73,7 +74,7 @@ Extend xarray capabilities
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
-- `xskillscore <https://github.com/raybellwaves/xskillscore>`_: Metrics for verifying forecasts.
+- `xskillscore <https://github.com/xarray-contrib/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
@@ -82,6 +83,7 @@ Visualization
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.
+- `xtrude <https://github.com/davidbrochart/xtrude>`_: An xarray extension for 3D terrain visualization based on pydeck.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~

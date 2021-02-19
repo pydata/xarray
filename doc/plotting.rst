@@ -37,7 +37,7 @@ For more extensive plotting applications consider the following projects:
   Integrates well with pandas.
 
 - `HoloViews <http://holoviews.org/>`_
-  and `GeoViews <http://geo.holoviews.org/>`_: "Composable, declarative
+  and `GeoViews <https://geoviews.org/>`_: "Composable, declarative
   data structures for building even complex visualizations easily." Includes
   native support for xarray objects.
 
@@ -106,7 +106,7 @@ The simplest way to make a plot is to call the :py:func:`DataArray.plot()` metho
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
 
-xarray uses the coordinate name along with  metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
 
 .. ipython:: python
 
@@ -715,6 +715,9 @@ Consider this dataset
     ds
 
 
+Scatter
+~~~~~~~
+
 Suppose we want to scatter ``A`` against ``B``
 
 .. ipython:: python
@@ -762,6 +765,27 @@ Faceting is also possible
 
 For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
+Quiver
+~~~~~~
+
+Visualizing vector fields is supported with quiver plots:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_simple_quiver.png
+    ds.isel(w=1, z=1).plot.quiver(x="x", y="y", u="A", v="B")
+
+
+where ``u`` and ``v`` denote the x and y direction components of the arrow vectors. Again, faceting is also possible:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_quiver.png
+    ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
+
+``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
 
 .. _plot-maps:
 

@@ -60,6 +60,7 @@ Documentation
 * :doc:`io`
 * :doc:`dask`
 * :doc:`plotting`
+* :doc:`duckarrays`
 
 .. toctree::
    :maxdepth: 1
@@ -80,6 +81,7 @@ Documentation
    io
    dask
    plotting
+   duckarrays
 
 **Help & reference**
 
