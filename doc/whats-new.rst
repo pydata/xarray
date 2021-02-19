@@ -48,6 +48,10 @@ Breaking changes
   :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
+- As a result of :pull:`4911` the output from calling :py:meth:`DataArray.sum`
+  or :py:meth:`DataArray.prod` on an integer array with ``skipna=True`` and a
+  non-None value for ``min_count`` will now be a float array rather than an
+  integer array.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -129,6 +133,12 @@ Bug fixes
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Stop :py:meth:`DataArray.sum` and :py:meth:`DataArray.prod` computing lazy
+  arrays when called with a ``min_count`` parameter (:issue:`4898`, :pull:`4911`).
+  By `Blair Bonnett <https://github.com/bcbnz>`_.
+- Fix bug preventing the ``min_count`` parameter to :py:meth:`DataArray.sum` and
+  :py:meth:`DataArray.prod` working correctly when calculating over all axes of
+  a float64 array (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
 - Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
