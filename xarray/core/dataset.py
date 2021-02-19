@@ -3863,7 +3863,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
-        """Update this dataset's variables with those from another dataset inplace.
+        """Update this dataset's variables with those from another dataset.
+
+        Just like :py:meth:`dict.update` this is a in-place operation.
 
         Parameters
         ----------
