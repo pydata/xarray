@@ -130,8 +130,7 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
                 ),
                 DeprecationWarning,
             )
-            dims, data, *attrs = obj
-            obj = (dims, data.data, *attrs)
+            obj = (obj[0], obj[1].data, *obj[2:])
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
