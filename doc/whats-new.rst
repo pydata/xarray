@@ -76,13 +76,11 @@ New Features
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+- Add :py:meth:`Dataset.plot.quiver` for quiver plots with :py:class:`Dataset` variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
   By `Justus Magin <https://github.com/keewis>`_.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -173,6 +171,8 @@ Internal Changes
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
   the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 .. _whats-new.0.16.2:
 
