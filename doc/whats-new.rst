@@ -151,6 +151,8 @@ Documentation
 - add concat examples and improve combining documentation (:issue:`4620`, :pull:`4645`).
   By `Ray Bell <https://github.com/raybellwaves>`_ and
   `Justus Magin <https://github.com/keewis>`_.
+- explicitly mention that :py:meth:`Dataset.update` updates inplace (:issue:``, :pull:``).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
