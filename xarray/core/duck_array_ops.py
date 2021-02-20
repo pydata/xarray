@@ -405,21 +405,21 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     Parameters
     ----------
-    da : array-like
-      Input data
-    offset: None, datetime or cftime.datetime
-      Datetime offset. If None, this is set by default to the array's minimum
-      value to reduce round off errors.
-    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      If not None, convert output to a given datetime unit. Note that some
-      conversions are not allowed due to non-linear relationships between units.
-    dtype: dtype
-      Output dtype.
+    array : array-like
+        Input data
+    offset : None, datetime or cftime.datetime
+        Datetime offset. If None, this is set by default to the array's minimum
+        value to reduce round off errors.
+    datetime_unit : {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+        If not None, convert output to a given datetime unit. Note that some
+        conversions are not allowed due to non-linear relationships between units.
+    dtype : dtype
+        Output dtype.
 
     Returns
     -------
     array
-      Numerical representation of datetime object relative to an offset.
+        Numerical representation of datetime object relative to an offset.
 
     Notes
     -----
@@ -463,12 +463,12 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     Parameters
     ----------
     value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
-      Time delta representation.
+        Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      The time units of the output values. Note that some conversions are not allowed due to
-      non-linear relationships between units.
+        The time units of the output values. Note that some conversions are not allowed due to
+        non-linear relationships between units.
     dtype : type
-      The output data type.
+        The output data type.
 
     """
     import datetime as dt

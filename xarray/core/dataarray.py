@@ -945,7 +945,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         Shallow versus deep copy
 
         >>> array = xr.DataArray([1, 2, 3], dims="x", coords={"x": ["a", "b", "c"]})
@@ -1095,6 +1094,26 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel
         DataArray.sel
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
+        >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> da = da.isel(x=tgt_x, y=tgt_y)
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1203,6 +1222,34 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.sel
         DataArray.isel
 
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(5), "y": np.arange(5)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
+        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
@@ -1294,7 +1341,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr1 = xr.DataArray(
         ...     np.random.randn(2, 3),
         ...     dims=("x", "y"),
@@ -1709,8 +1755,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dims_dict : dict-like
             Dictionary whose keys are current dimension names and whose values
             are new names.
-
-        **dim_kwargs : {dim: , ...}, optional
+        **dims_kwargs : {existing_dim: new_dim, ...}, optional
             The keyword arguments form of ``dims_dict``.
             One of dims_dict or dims_kwargs must be provided.
 
@@ -1721,7 +1766,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr = xr.DataArray(
         ...     data=[0, 1],
         ...     dims="x",
@@ -1751,7 +1795,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-
         DataArray.rename
         Dataset.swap_dims
         """
@@ -1768,7 +1811,6 @@ class DataArray(AbstractArray, DataWithCoords):
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
-
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -1965,7 +2007,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr = xr.DataArray(
         ...     np.arange(6).reshape(2, 3),
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
@@ -2026,7 +2067,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr = xr.DataArray(
         ...     np.arange(6).reshape(2, 3),
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
@@ -2191,7 +2231,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors: {"raise", "ignore"}, optional
+        errors : {"raise", "ignore"}, optional
             If 'raise' (default), raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             DataArray are dropped and no error is raised.
@@ -2357,7 +2397,6 @@ class DataArray(AbstractArray, DataWithCoords):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
-
         use_coordinate : bool or str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
@@ -2369,7 +2408,7 @@ class DataArray(AbstractArray, DataWithCoords):
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
             see ``max_gap``.
-        max_gap: int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
+        max_gap : int, float, str, pandas.Timedelta, numpy.timedelta64, datetime.timedelta, default: None
             Maximum size of gap, a continuous sequence of NaNs, that will be filled.
             Use None for no limit. When interpolating along a datetime64 dimension
             and ``use_coordinate=True``, ``max_gap`` can be one of the following:
@@ -2404,7 +2443,7 @@ class DataArray(AbstractArray, DataWithCoords):
         interpolated: DataArray
             Filled in DataArray.
 
-        See also
+        See Also
         --------
         numpy.interp
         scipy.interpolate
@@ -2716,7 +2755,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Whether to include the actual data in the dictionary. When set to
             False, returns just the schema.
 
-        See also
+        See Also
         --------
         DataArray.from_dict
         """
@@ -2757,7 +2796,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         obj : xarray.DataArray
 
-        See also
+        See Also
         --------
         DataArray.to_dict
         Dataset.from_dict
@@ -2794,7 +2833,7 @@ class DataArray(AbstractArray, DataWithCoords):
         If sparse=True, creates a sparse array instead of a dense NumPy array.
         Requires the pydata/sparse package.
 
-        See also
+        See Also
         --------
         xarray.Dataset.from_dataframe
         """
@@ -3047,7 +3086,6 @@ class DataArray(AbstractArray, DataWithCoords):
         `n` matches numpy's behavior and is different from pandas' first argument named
         `periods`.
 
-
         Examples
         --------
         >>> arr = xr.DataArray([5, 5, 6, 6], [[1, 2, 3, 4]], ["x"])
@@ -3087,7 +3125,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
         **shifts_kwargs
             The keyword arguments form of ``shifts``.
@@ -3099,13 +3137,12 @@ class DataArray(AbstractArray, DataWithCoords):
             DataArray with the same coordinates and attributes but shifted
             data.
 
-        See also
+        See Also
         --------
         roll
 
         Examples
         --------
-
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.shift(x=1)
         <xarray.DataArray (x: 3)>
@@ -3149,13 +3186,12 @@ class DataArray(AbstractArray, DataWithCoords):
         rolled : DataArray
             DataArray with the same attributes but rolled data and coordinates.
 
-        See also
+        See Also
         --------
         shift
 
         Examples
         --------
-
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.roll(x=1)
         <xarray.DataArray (x: 3)>
@@ -3195,14 +3231,13 @@ class DataArray(AbstractArray, DataWithCoords):
         result : DataArray
             Array resulting from the dot product over all shared dimensions.
 
-        See also
+        See Also
         --------
         dot
         numpy.tensordot
 
         Examples
         --------
-
         >>> da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
         >>> da = xr.DataArray(da_vals, dims=["x", "y", "z"])
         >>> dm_vals = np.arange(4)
@@ -3265,7 +3300,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     np.random.rand(5),
         ...     coords=[pd.date_range("1/1/2000", periods=5)],
@@ -3338,7 +3372,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     data=[[0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [7, 9], "y": [1, 1.5, 2, 2.5]},
@@ -3410,7 +3443,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr = xr.DataArray([5, 6, 7], dims="x")
         >>> arr.rank("x")
         <xarray.DataArray (x: 3)>
@@ -3495,21 +3527,22 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: hashable, or a sequence of hashable
+        coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
-        datetime_unit: {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
 
         Returns
         -------
-        integrated: DataArray
+        integrated : DataArray
 
         See also
         --------
         Dataset.integrate
-        numpy.trapz: corresponding numpy function
+        numpy.trapz : corresponding numpy function
 
         Examples
         --------
@@ -3557,12 +3590,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Returns
         -------
-
         DataArray with consistent chunk sizes for all dask-array variables
 
         See Also
         --------
-
         dask.array.core.unify_chunks
         """
         ds = self._to_temp_dataset().unify_chunks()
@@ -3623,12 +3654,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See Also
         --------
-        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+        dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
         xarray.DataArray.map_blocks
 
         Examples
         --------
-
         Calculate an anomaly from climatology using ``.groupby()``. Using
         ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
         its indices, and its methods like ``.groupby()``.
@@ -3728,7 +3758,7 @@ class DataArray(AbstractArray, DataWithCoords):
             polyfit_covariance
                 The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
 
-        See also
+        See Also
         --------
         numpy.polyfit
         """
@@ -3845,7 +3875,7 @@ class DataArray(AbstractArray, DataWithCoords):
         padded : DataArray
             DataArray with the padded coordinates and data.
 
-        See also
+        See Also
         --------
         DataArray.shift, DataArray.roll, DataArray.bfill, DataArray.ffill, numpy.pad, dask.array.pad
 
@@ -3856,7 +3886,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-
         >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0, 1, 2])])
         >>> arr.pad(x=(1, 2), constant_values=0)
         <xarray.DataArray (x: 6)>
@@ -3948,13 +3977,12 @@ class DataArray(AbstractArray, DataWithCoords):
             New `DataArray` object with `idxmin` applied to its data and the
             indicated dimension removed.
 
-        See also
+        See Also
         --------
         Dataset.idxmin, DataArray.idxmax, DataArray.min, DataArray.argmin
 
         Examples
         --------
-
         >>> array = xr.DataArray(
         ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
         ... )
@@ -4045,13 +4073,12 @@ class DataArray(AbstractArray, DataWithCoords):
             New `DataArray` object with `idxmax` applied to its data and the
             indicated dimension removed.
 
-        See also
+        See Also
         --------
         Dataset.idxmax, DataArray.idxmin, DataArray.max, DataArray.argmax
 
         Examples
         --------
-
         >>> array = xr.DataArray(
         ...     [0, 2, 1, 0, -2], dims="x", coords={"x": ["a", "b", "c", "d", "e"]}
         ... )
@@ -4139,7 +4166,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         result : DataArray or dict of DataArray
 
-        See also
+        See Also
         --------
         Variable.argmin, DataArray.idxmin
 
@@ -4242,7 +4269,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         result : DataArray or dict of DataArray
 
-        See also
+        See Also
         --------
         Variable.argmax, DataArray.idxmax
 

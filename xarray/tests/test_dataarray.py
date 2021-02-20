@@ -3635,6 +3635,33 @@ class TestDataArray:
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
 
+    def test_to_dataframe_multiindex(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 3)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert_array_equal(actual["foo"].values, arr_np.flatten())
+        assert_array_equal(actual.index.names, list("ABC"))
+        assert_array_equal(actual.index.levels[0], [1, 2])
+        assert_array_equal(actual.index.levels[1], ["a", "b"])
+        assert_array_equal(actual.index.levels[2], [5, 6, 7])
+
+    def test_to_dataframe_0length(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 0)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert len(actual) == 0
+        assert_array_equal(actual.index.names, list("ABC"))
+
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -6676,6 +6703,16 @@ def test_ndrolling_reduce(da, center, min_periods, name):
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
+
+    if name in ["mean"]:
+        # test our reimplementation of nanmean using np.nanmean
+        expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+            ["tw", "xw"]
+        )
+        count = rolling_obj.count()
+        if min_periods is None:
+            min_periods = 1
+        assert_allclose(actual, expected.where(count >= min_periods))
 
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))
