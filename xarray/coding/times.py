@@ -115,16 +115,21 @@ def _ensure_padded_year(ref_date):
     return ref_date_padded
 
 
-def _unpack_netcdf_time_units(units):
-    # CF datetime units follow the format: "UNIT since DATE"
-    # this parses out the unit and date allowing for extraneous
-    # whitespace. It also ensures that the year is padded with zeros
-    # so it will be correctly understood by pandas (via dateutil).
+def _unpack_netcdf_delta_units_ref_date(units):
     matches = re.match(r"(.+) since (.+)", units)
     if not matches:
         raise ValueError(f"invalid time units: {units}")
 
     delta_units, ref_date = [s.strip() for s in matches.groups()]
+    return delta_units, ref_date
+
+
+def _unpack_netcdf_time_units(units):
+    # CF datetime units follow the format: "UNIT since DATE"
+    # this parses out the unit and date allowing for extraneous
+    # whitespace. It also ensures that the year is padded with zeros
+    # so it will be correctly understood by pandas (via dateutil).
+    delta_units, ref_date = _unpack_netcdf_delta_units_ref_date(units)
     ref_date = _ensure_padded_year(ref_date)
 
     return delta_units, ref_date

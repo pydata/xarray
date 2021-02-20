@@ -379,6 +379,20 @@ def decode_cf_variable(
     return Variable(dimensions, data, attributes, encoding=encoding)
 
 
+def _update_time_reference_attributes(variables):
+    # For all time variables with time_reference
+    for v in variables.values():
+        attrs = v.attrs
+        has_date_units = "units" in attrs and "since" in attrs["units"]
+        if has_date_units:
+            delta_units, time_reference = times._unpack_netcdf_delta_units_ref_date(
+                attrs["units"]
+            )
+            if time_reference in variables:
+                ref_date = str(variables[time_reference].data)
+                attrs["units"] = " ".join([delta_units, "since", ref_date])
+
+
 def _update_bounds_attributes(variables):
     """Adds time attributes to time bounds variables.
 
@@ -498,6 +512,7 @@ def decode_cf_variables(
     # Time bounds coordinates might miss the decoding attributes
     if decode_times:
         _update_bounds_attributes(variables)
+        _update_time_reference_attributes(variables)
 
     new_vars = {}
     for k, v in variables.items():
