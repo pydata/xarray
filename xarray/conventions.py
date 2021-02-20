@@ -383,7 +383,6 @@ def _update_time_reference_attributes(variables):
     # For all time variables with time_reference
     for v in variables.values():
         attrs = v.attrs
-        encoding = v.encoding
         has_date_units = "units" in attrs and "since" in attrs["units"]
         if has_date_units:
             delta_units, time_reference = times._unpack_netcdf_delta_units_ref_date(
@@ -391,7 +390,7 @@ def _update_time_reference_attributes(variables):
             )
             if time_reference in variables:
                 ref_date = str(variables[time_reference].data)
-                encoding["time_reference"] = time_reference
+                v.encoding["time_reference"] = time_reference
                 attrs["units"] = " ".join([delta_units, "since", ref_date])
 
 

@@ -657,6 +657,33 @@ def test_decode_cf(calendar):
             assert ds.test.dtype == np.dtype("M8[ns]")
 
 
+def test_cf_time_reference():
+    time = np.array([0])
+    time_attrs = dict(
+        standard_name="time", units="seconds since time_reference", calendar="gregorian"
+    )
+    time_ref_attrs = dict(
+        comments="UTC reference date. Format follows ISO 8601 standard."
+    )
+
+    expected = Dataset(
+        data_vars=dict(
+            time=(["time"], time, time_attrs),
+            time_reference=([], "1970-01-01T00:00:00Z", time_ref_attrs),
+        )
+    )
+
+    decoded = decode_cf(expected)
+    assert decoded.time.values == np.array(
+        ["1970-01-01T00:00:00.000000000"], dtype="datetime64[ns]"
+    )
+    assert decoded.time.encoding["time_reference"] == "time_reference"
+    assert decoded.time.encoding["units"] == "seconds since 1970-01-01T00:00:00Z"
+
+    encoded, _ = cf_encoder(decoded.variables, decoded.attrs)
+    assert encoded == expected
+
+
 def test_decode_cf_time_bounds():
 
     da = DataArray(
