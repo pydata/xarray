@@ -101,7 +101,7 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size):
 # copied from seaborn
 def _parse_size(data, norm, width):
     """Parse sizes."""
-    plt = import_matplotlib_pyplot
+    plt = import_matplotlib_pyplot()
 
     if data is None:
         return None
@@ -118,10 +118,10 @@ def _parse_size(data, norm, width):
     # width_range = min_width, max_width
 
     if norm is None:
-        norm = plt.colors.Normalize()
+        norm = plt.Normalize()
     elif isinstance(norm, tuple):
-        norm = plt.colors.Normalize(*norm)
-    elif not isinstance(norm, plt.colors.Normalize):
+        norm = plt.Normalize(*norm)
+    elif not isinstance(norm, plt.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
