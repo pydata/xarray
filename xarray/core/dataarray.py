@@ -4309,9 +4309,8 @@ class DataArray(AbstractArray, DataWithCoords):
         self,
         coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
         func: Callable[..., Any],
-        reduce_dim: Union[Hashable, Iterable[Hashable]] = None,
+        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
         skipna: bool = True,
-        cov: bool = False,
         p0: Dict[str, Any] = None,
         bounds: Dict[str, Any] = None,
         param_names: Sequence[str] = None,
@@ -4332,18 +4331,16 @@ class DataArray(AbstractArray, DataWithCoords):
             also be specified as a str or sequence of strs.
         func : callable
             User specified function in the form `f(x, *params)` which returns a numpy
-            array of length x. `params` are the fittable parameters which are optimized
+            array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
-            coordinates, e.g. `f((x, y), *params)`.
-        reduce_dim : str or sequence of str
+            coordinates, e.g. `f((x0, x1), *params)`.
+        reduce_dims : str or sequence of str
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        cov : bool, optional
-            Whether to return the covariance matrix in addition to the coefficients.
         p0 : dictionary, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
@@ -4352,7 +4349,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names: iterable, optional
+        param_names: seq, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
@@ -4368,8 +4365,7 @@ class DataArray(AbstractArray, DataWithCoords):
             [var]_curvefit_coefficients
                 The coefficients of the best fit.
             [var]_curvefit_covariance
-                The covariance matrix of the coefficient estimates (only included if
-                `cov=True`)
+                The covariance matrix of the coefficient estimates.
 
         See also
         --------
@@ -4379,9 +4375,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._to_temp_dataset().curvefit(
             coords,
             func,
-            reduce_dim=reduce_dim,
+            reduce_dims=reduce_dims,
             skipna=skipna,
-            cov=cov,
             p0=p0,
             bounds=bounds,
             param_names=param_names,
