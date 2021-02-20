@@ -35,8 +35,8 @@ _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
 def _infer_meta_data(darray, x, y, hue, hue_style, size):
-    def _hue_calc(darray, hue, hue_style):
-        """Something."""
+    def _determine_hue(darray, hue, hue_style):
+        """Find and determine what type of hue it is."""
         hue_is_numeric = _is_numeric(darray[hue].values)
 
         if hue_style is None:
@@ -69,13 +69,13 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size):
     ylabel = label_from_attrs(yplt)
 
     if hue:
-        hue, hue_style, hue_label = _hue_calc(darray, hue, hue_style)
+        hue, hue_style, hue_label = _determine_hue(darray, hue, hue_style)
     else:
         # Try finding a hue:
         _, hue = _infer_xy_labels(darray=yplt, x=xplt.name, y=hue)
 
         if hue:
-            hue, hue_style, hue_label = _hue_calc(darray, hue, hue_style)
+            hue, hue_style, hue_label = _determine_hue(darray, hue, hue_style)
         else:
             hue_label = None
             hue = None
@@ -100,8 +100,8 @@ def _infer_meta_data(darray, x, y, hue, hue_style, size):
 
 # copied from seaborn
 def _parse_size(data, norm, width):
-
-    import matplotlib as mpl
+    """Parse sizes."""
+    plt = import_matplotlib_pyplot
 
     if data is None:
         return None
@@ -118,10 +118,10 @@ def _parse_size(data, norm, width):
     # width_range = min_width, max_width
 
     if norm is None:
-        norm = mpl.colors.Normalize()
+        norm = plt.colors.Normalize()
     elif isinstance(norm, tuple):
-        norm = mpl.colors.Normalize(*norm)
-    elif not isinstance(norm, mpl.colors.Normalize):
+        norm = plt.colors.Normalize(*norm)
+    elif not isinstance(norm, plt.colors.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
