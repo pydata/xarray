@@ -693,6 +693,7 @@ def scatter(
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
     cbar_ax = kwargs.pop("cbar_ax", None)
     cbar_kwargs = kwargs.pop("cbar_kwargs", None)
+    cmap_params = kwargs.pop("cmap_params", None)
 
     figsize = kwargs.pop("figsize", None)
     ax = get_axis(figsize, size, aspect, ax)
@@ -703,14 +704,14 @@ def scatter(
     if add_legend:
         pass
     elif add_guide is None or add_guide is True:
-        add_legend = True if hue_style == "discrete" else False
+        add_legend = True if _data["hue_style"] == "discrete" else False
     elif add_legend is None:
         add_legend = False
 
     if add_colorbar:
         pass
     elif add_guide is None or add_guide is True:
-        add_colorbar = True if hue_style == "continuous" else False
+        add_colorbar = True if _data["hue_style"] == "continuous" else False
     else:
         add_colorbar = False
 
@@ -750,6 +751,8 @@ def scatter(
                     **kwargs,
                 )
             )
+        primitives = primitive
+
     elif _data["hue_label"] is None or _data["hue_style"] == "continuous":
         # ax.scatter suppoerts numerical values in colors and sizes.
         # So no need for for loops.
@@ -776,6 +779,8 @@ def scatter(
             **cmap_params_subset,
             **kwargs,
         )
+
+        primitives = [primitive]
 
     # Set x and y labels:
     if _data["xlabel"]:
@@ -812,52 +817,74 @@ def scatter(
 
         return [handles, labels]
 
-    def _add_legend(primitives, prop, func, ax, title, **kwargs):
-        """Add legend to axes."""
-        # Get handles and labels to use in the legend:
-        handles, labels = _legend_elements_from_list(
-            primitives, prop, num="auto", alpha=0.6, func=func,
-        )
+    def _legend_add_subtitle(handles, labels, text, func):
+        """Add a subtitle to legend handles."""
+        if text and len(handles) > 1:
+            # Create a blank handle that's not visible, the
+            # invisibillity will be used to discern which are subtitles
+            # or not:
+            blank_handle = func([], [], label=text)
+            blank_handle.set_visible(False)
 
-        # title has to be a required check as otherwise the legend may
-        # display values that are not related to the data, such as the
-        # markersize value:
-        if title and len(handles) > 1:
+            # Subtitles are shown first:
+            handles = np.insert(handles, 0, blank_handle)
+            labels = np.insert(labels, 0, text)
+
+        return handles, labels
+
+    def _adjust_legend_subtitles(legend):
+        """Make invisible-handle "subtitles" entries look more like titles."""
+        plt = import_matplotlib_pyplot()
+
+        # Legend title not in rcParams until 3.0
+        font_size = plt.rcParams.get("legend.title_fontsize", None)
+        hpackers = legend.findobj(plt.matplotlib.offsetbox.VPacker)[0].get_children()
+        for hpack in hpackers:
+            draw_area, text_area = hpack.get_children()
+            handles = draw_area.get_children()
+
+            # Assume that all artists that are not visible are
+            # subtitles:
+            if not all(artist.get_visible() for artist in handles):
+                # Remove the dummy marker which will bring the text
+                # more to the center:
+                draw_area.set_width(0)
+                for text in text_area.get_children():
+                    if font_size is not None:
+                        # The sutbtitles should have the same font size
+                        # as normal legend titles:
+                        text.set_size(font_size)
+
+    def _add_legend(primitives, handles, labels, ax, **kwargs):
+        if len(handles) > 1:
             # The normal case where a prop has been defined and
             # legend_elements finds results:
-            legend = ax.legend(handles, labels, title=title, **kwargs)
-            ax.add_artist(legend)
-        elif title and len(primitives) > 1:
-            # For caases when
-            legend = ax.legend(handles=primitives, title=title, **kwargs)
-            ax.add_artist(legend)
+            legend = ax.legend(handles, labels, framealpha=0.5, **kwargs)
+        elif len(primitives) > 1:
+            # When no handles have been found use the primitives instead.
+            # Example: hue and sizes have the same string:
+            legend = ax.legend(handles=primitives, framealpha=0.5, **kwargs)
 
-    if _data["hue_style"] == "discrete":
-        primitives = primitive
-    else:
-        primitives = [primitive]
+        return legend
 
-    if add_legend and _data["hue_label"]:
-        _add_legend(
-            primitives,
-            prop="colors",
-            func=lambda x: x,
-            ax=ax,
-            title=_data["hue_label"],
-            loc="upper right",
-        )
+    if add_legend:
+        handles, labels = np.array([]), np.array([])
+        if _data["hue_label"] and (_data["hue_label"] == _data["size_label"]):
+            _add_legend(primitives, handles, labels, ax, title=_data["hue_label"])
+        else:
+            for hue_lbl, prop, func in [
+                (_data["hue_label"], "colors", lambda x: x),
+                (_data["size_label"], "sizes", lambda x: _data["sizes_to_labels"][x]),
+            ]:
+                if hue_lbl:
+                    hdl, lbl = _legend_elements_from_list(
+                        primitives, prop, num="auto", func=func,
+                    )
+                    hdl, lbl = _legend_add_subtitle(hdl, lbl, hue_lbl, ax.scatter)
+                    handles, labels = np.append(handles, hdl), np.append(labels, lbl)
 
-    if add_legend and _data["size_label"]:
-        _add_legend(
-            primitives,
-            prop="sizes",
-            func=lambda x: _data["sizes_to_labels"][x]
-            if "sizes_to_labels" in _data
-            else x,
-            ax=ax,
-            title=_data["size_label"],
-            loc="upper left",
-        )
+            legend = _add_legend(primitives, handles, labels, ax)
+            _adjust_legend_subtitles(legend)
 
     if add_colorbar and _data["hue_label"]:
         if _data["hue_style"] == "discrete":
