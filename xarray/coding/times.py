@@ -420,6 +420,12 @@ def _encode_datetime_with_cftime(dates, units, calendar):
 
     return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
+def _ensure_encode_time_reference(units, encoding):
+    delta_units, _ = _unpack_netcdf_delta_units_ref_date(units)
+    time_reference = encoding.pop("time_reference")
+    units = " ".join([delta_units, "since", time_reference])
+    return units
+
 
 def cast_to_int_if_safe(num):
     int_num = np.array(num, dtype=np.int64)
@@ -508,6 +514,8 @@ class CFDatetimeCoder(VariableCoder):
             (data, units, calendar) = encode_cf_datetime(
                 data, encoding.pop("units", None), encoding.pop("calendar", None)
             )
+            if "time_reference" in encoding:
+                units = _ensure_encode_time_reference(units, encoding)
             safe_setitem(attrs, "units", units, name=name)
             safe_setitem(attrs, "calendar", calendar, name=name)
 
@@ -537,6 +545,8 @@ class CFTimedeltaCoder(VariableCoder):
 
         if np.issubdtype(data.dtype, np.timedelta64):
             data, units = encode_cf_timedelta(data, encoding.pop("units", None))
+            if "time_reference" in encoding:
+                units = _ensure_encode_time_reference(units, encoding)
             safe_setitem(attrs, "units", units, name=name)
 
         return Variable(dims, data, attrs, encoding)
