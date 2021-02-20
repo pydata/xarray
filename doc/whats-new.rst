@@ -49,6 +49,10 @@ Breaking changes
   :ref:`weather-climate` (:pull:`2844`, :issue:`3689`)
 - remove deprecated ``autoclose`` kwargs from :py:func:`open_dataset` (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
+- As a result of :pull:`4911` the output from calling :py:meth:`DataArray.sum`
+  or :py:meth:`DataArray.prod` on an integer array with ``skipna=True`` and a
+  non-None value for ``min_count`` will now be a float array rather than an
+  integer array.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -65,6 +69,8 @@ New Features
 - Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
   roundtripping of ``cftime.datetime`` objects (:pull:`4758`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Most rolling operations use significantly less memory. (:issue:`4325`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
   millisecond (``"L"`` or ``"ms"``) and microsecond (``"U"`` or ``"us"``) frequencies
   for ``cftime.datetime`` coordinates (:issue:`4097`, :pull:`4758`).
@@ -73,13 +79,11 @@ New Features
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+- Add :py:meth:`Dataset.plot.quiver` for quiver plots with :py:class:`Dataset` variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
   By `Justus Magin <https://github.com/keewis>`_.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
@@ -91,6 +95,10 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Use specific type checks in
+  :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
+  access to ``values`` attribute (:issue:`2097`)
+  By `Yunus Sevinchan <https://github.com/blsqr>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 - By default, when possible, xarray will now always use values of type ``int64`` when encoding
@@ -121,13 +129,25 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
+- Raise DeprecationWarning when trying to typecast a tuple containing a :py:class:`DataArray`.
+  User now prompted to first call `.data` on it (:issue:`4483`).
+  By `Chun Ho Chow <https://github.com/chunhochow>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
   1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Stop :py:meth:`DataArray.sum` and :py:meth:`DataArray.prod` computing lazy
+  arrays when called with a ``min_count`` parameter (:issue:`4898`, :pull:`4911`).
+  By `Blair Bonnett <https://github.com/bcbnz>`_.
+- Fix bug preventing the ``min_count`` parameter to :py:meth:`DataArray.sum` and
+  :py:meth:`DataArray.prod` working correctly when calculating over all axes of
+  a float64 array (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
 - Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Allow converting :py:class:`Dataset` or :py:class:`DataArray` objects with a ``MultiIndex``
+  and at least one other dimension to a ``pandas`` object (:issue:`3008`, :pull:`4442`).
+  By `ghislainp <https://github.com/ghislainp>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -160,6 +180,8 @@ Internal Changes
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
   the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 .. _whats-new.0.16.2:
 
