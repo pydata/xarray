@@ -721,7 +721,7 @@ def scatter(
             darray,
             x,
             y,
-            _data["hue_label"],
+            _data["hue"].name,
             _sizes,
             size_norm,
             size_mapping,
@@ -753,7 +753,7 @@ def scatter(
             )
         primitives = primitive
 
-    elif _data["hue_label"] is None or _data["hue_style"] == "continuous":
+    elif _data["hue_style"] == "continuous":
         # ax.scatter suppoerts numerical values in colors and sizes.
         # So no need for for loops.
 
@@ -762,7 +762,7 @@ def scatter(
             kwargs.update(c=_data["hue"].values.ravel())
 
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                scatter, darray[_data["hue_label"]].values, **locals()
+                scatter, _data["hue"].values, **locals()
             )
 
             # subset that can be passed to scatter, hist2d

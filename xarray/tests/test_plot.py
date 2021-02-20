@@ -2590,3 +2590,36 @@ def test_get_axis_cartopy():
     with figure_context():
         ax = get_axis(**kwargs)
         assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "x, y, hue, markersize, add_legend, add_colorbar",
+    [
+        ("A", "B", None, None, None, None),
+        ("B", "A", "w", None, True, None),
+        ("A", "B", "y", "z", True, True),
+    ],
+)
+def test_datarray_scatter(x, y, hue, markersize, add_legend, add_colorbar):
+    """Test datarray scatter. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset()
+
+    extra_coords = [v for v in [x, hue, markersize] if v is not None]
+
+    # Base coords:
+    coords = dict(ds.coords)
+
+    # Add extra coords to the DataArray:
+    coords.update({v: ds[v] for v in extra_coords})
+
+    darray = xr.DataArray(ds[y], coords=coords)
+
+    with figure_context():
+        darray.plot.scatter(
+            x=x,
+            hue=hue,
+            markersize=markersize,
+            add_legend=add_legend,
+            add_colorbar=add_colorbar,
+        )
