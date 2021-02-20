@@ -420,6 +420,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
 
     return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
+
 def _ensure_encode_time_reference(units, encoding):
     delta_units, _ = _unpack_netcdf_delta_units_ref_date(units)
     time_reference = encoding.pop("time_reference")
