@@ -563,7 +563,7 @@ def _temp_dataarray(ds, y, extra_coords):
     from ..core.dataarray import DataArray
 
     # Base coords:
-    coords = dict(ds.indexes)
+    coords = dict(ds.coords)
 
     # Add extra coords to the DataArray:
     coords.update({v: ds[v] for v in extra_coords})
