@@ -65,7 +65,7 @@ Deprecations
   version 0.19.0 (:pull:`3993`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - the return value of :py:meth:`Dataset.update` is being deprecated to make it work more
-  like :py:meth:`dict.update`.
+  like :py:meth:`dict.update` (:pull:`4932`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 
@@ -165,7 +165,7 @@ Documentation
 - add concat examples and improve combining documentation (:issue:`4620`, :pull:`4645`).
   By `Ray Bell <https://github.com/raybellwaves>`_ and
   `Justus Magin <https://github.com/keewis>`_.
-- explicitly mention that :py:meth:`Dataset.update` updates inplace (:issue:``, :pull:``).
+- explicitly mention that :py:meth:`Dataset.update` updates inplace (:issue:`2951`, :pull:`4932`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
