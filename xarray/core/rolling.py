@@ -836,7 +836,9 @@ class DataArrayCoarsen(Coarsen):
     _reduce_extra_args_docstring = """"""
 
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
+    def _reduce_method(
+        cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
+    ):
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -871,6 +873,38 @@ class DataArrayCoarsen(Coarsen):
 
         return wrapped_func
 
+    def reduce(self, func: Callable, **kwargs):
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over the coarsening dimensions.  It must be possible to
+            provide the `axis` argument with a tuple of integers.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : DataArray
+            Array with summarized data.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(8).reshape(2, 4), dims=("a", "b"))
+        >>> coarsen = da.coarsen(b=2)
+        >>> coarsen.reduce(np.sum)
+        <xarray.DataArray (a: 2, b: 2)>
+        array([[ 1,  5],
+               [ 9, 13]])
+        Dimensions without coordinates: a, b
+        """
+        wrapped_func = self._reduce_method(func)
+        return wrapped_func(self, **kwargs)
+
 
 class DatasetCoarsen(Coarsen):
     __slots__ = ()
@@ -878,7 +912,9 @@ class DatasetCoarsen(Coarsen):
     _reduce_extra_args_docstring = """"""
 
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
+    def _reduce_method(
+        cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
+    ):
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -916,6 +952,28 @@ class DatasetCoarsen(Coarsen):
             return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
+
+    def reduce(self, func: Callable, **kwargs):
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form
+            `func(x, axis, **kwargs)` to return the result of collapsing an
+            np.ndarray over the coarsening dimensions.  It must be possible to
+            provide the `axis` argument with a tuple of integers.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Dataset
+            Arrays with summarized data.
+        """
+        wrapped_func = self._reduce_method(func)
+        return wrapped_func(self, **kwargs)
 
 
 inject_reduce_methods(DataArrayCoarsen)
