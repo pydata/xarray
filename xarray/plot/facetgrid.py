@@ -6,6 +6,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _get_nice_quiver_magnitude,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
@@ -195,7 +196,11 @@ class FacetGrid:
         self.axes = axes
         self.row_names = row_names
         self.col_names = col_names
+
+        # guides
         self.figlegend = None
+        self.quiverkey = None
+        self.cbar = None
 
         # Next the private variables
         self._single_group = single_group
@@ -327,14 +332,15 @@ class FacetGrid:
         from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
-        kwargs["_is_facetgrid"] = True
 
         if kwargs.get("markersize", None):
             kwargs["size_mapping"] = _parse_size(
                 self.data[kwargs["markersize"]], kwargs.pop("size_norm", None)
             )
 
-        meta_data = _infer_meta_data(self.data, x, y, hue, hue_style, add_guide)
+        meta_data = _infer_meta_data(
+            self.data, x, y, hue, hue_style, add_guide, funcname=func.__name__
+        )
         kwargs["meta_data"] = meta_data
 
         if hue and meta_data["hue_style"] == "continuous":
@@ -343,6 +349,12 @@ class FacetGrid:
             )
             kwargs["meta_data"]["cmap_params"] = cmap_params
             kwargs["meta_data"]["cbar_kwargs"] = cbar_kwargs
+
+        kwargs["_is_facetgrid"] = True
+
+        if func.__name__ == "quiver" and "scale" not in kwargs:
+            raise ValueError("Please provide scale.")
+            # TODO: come up with an algorithm for reasonable scale choice
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -365,6 +377,9 @@ class FacetGrid:
             elif meta_data["add_colorbar"]:
                 self.add_colorbar(label=self._hue_label, **cbar_kwargs)
 
+        if meta_data["add_quiverkey"]:
+            self.add_quiverkey(kwargs["u"], kwargs["v"])
+
         return self
 
     def _finalize_grid(self, *axlabels):
@@ -380,36 +395,38 @@ class FacetGrid:
 
             self._finalized = True
 
-    def add_legend(self, **kwargs):
-        figlegend = self.fig.legend(
-            handles=self._mappables[-1],
-            labels=list(self._hue_var.values),
-            title=self._hue_label,
-            loc="center right",
-            **kwargs,
-        )
-
-        self.figlegend = figlegend
+    def _adjust_fig_for_guide(self, guide):
         # Draw the plot to set the bounding boxes correctly
-        self.fig.draw(self.fig.canvas.get_renderer())
+        renderer = self.fig.canvas.get_renderer()
+        self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
         figure_width = self.fig.get_figwidth()
-        self.fig.set_figwidth(figure_width + legend_width)
+        self.fig.set_figwidth(figure_width + guide_width)
 
         # Draw the plot again to get the new transformations
-        self.fig.draw(self.fig.canvas.get_renderer())
+        self.fig.draw(renderer)
 
         # Now calculate how much space we need on the right side
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
-        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
+        space_needed = guide_width / (figure_width + guide_width) + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
 
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
+
+    def add_legend(self, **kwargs):
+        self.figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self._hue_var.values),
+            title=self._hue_label,
+            loc="center right",
+            **kwargs,
+        )
+        self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs):
         """Draw a colorbar"""
@@ -424,6 +441,26 @@ class FacetGrid:
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axes.flat), **kwargs
         )
+        return self
+
+    def add_quiverkey(self, u, v, **kwargs):
+        kwargs = kwargs.copy()
+
+        magnitude = _get_nice_quiver_magnitude(self.data[u], self.data[v])
+        units = self.data[u].attrs.get("units", "")
+        self.quiverkey = self.axes.flat[-1].quiverkey(
+            self._mappables[-1],
+            X=0.8,
+            Y=0.9,
+            U=magnitude,
+            label=f"{magnitude}\n{units}",
+            labelpos="E",
+            coordinates="figure",
+        )
+
+        # TODO: does not work because self.quiverkey.get_window_extent(renderer) = 0
+        # https://github.com/matplotlib/matplotlib/issues/18530
+        # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
