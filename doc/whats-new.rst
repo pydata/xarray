@@ -64,6 +64,9 @@ Deprecations
   For now using ``dim`` issues a ``FutureWarning``. It will be removed in
   version 0.19.0 (:pull:`3993`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- the return value of :py:meth:`Dataset.update` is being deprecated to make it work more
+  like :py:meth:`dict.update`.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 New Features
