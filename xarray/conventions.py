@@ -11,6 +11,23 @@ from .core.common import contains_cftime_datetimes
 from .core.pycompat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
 
+CF_RELATED_DATA = (
+    "bounds",
+    "grid_mapping",
+    "climatology",
+    "geometry",
+    "node_coordinates",
+    "node_count",
+    "part_node_count",
+    "interior_ring",
+    "cell_measures",
+    "formula_terms",
+)
+CF_RELATED_DATA_NEEDS_PARSING = (
+    "cell_measures",
+    "formula_terms",
+)
+
 
 class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Decode arrays on the fly from non-native to native endianness
@@ -256,6 +273,9 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
     var = ensure_dtype_not_object(var, name=name)
+
+    for attr_name in CF_RELATED_DATA:
+        pop_to(var.encoding, var.attrs, attr_name)
     return var
 
 
@@ -499,7 +519,7 @@ def decode_cf_variables(
             use_cftime=use_cftime,
             decode_timedelta=decode_timedelta,
         )
-        if decode_coords:
+        if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:
                 coord_str = var_attrs["coordinates"]
@@ -508,6 +528,38 @@ def decode_cf_variables(
                     new_vars[k].encoding["coordinates"] = coord_str
                     del var_attrs["coordinates"]
                     coord_names.update(var_coord_names)
+
+        if decode_coords == "all":
+            for attr_name in CF_RELATED_DATA:
+                if attr_name in var_attrs:
+                    attr_val = var_attrs[attr_name]
+                    if attr_name not in CF_RELATED_DATA_NEEDS_PARSING:
+                        var_names = attr_val.split()
+                    else:
+                        roles_and_names = [
+                            role_or_name
+                            for part in attr_val.split(":")
+                            for role_or_name in part.split()
+                        ]
+                        if len(roles_and_names) % 2 == 1:
+                            warnings.warn(
+                                f"Attribute {attr_name:s} malformed", stacklevel=5
+                            )
+                        var_names = roles_and_names[1::2]
+                    if all(var_name in variables for var_name in var_names):
+                        new_vars[k].encoding[attr_name] = attr_val
+                        coord_names.update(var_names)
+                    else:
+                        referenced_vars_not_in_variables = [
+                            proj_name
+                            for proj_name in var_names
+                            if proj_name not in variables
+                        ]
+                        warnings.warn(
+                            f"Variable(s) referenced in {attr_name:s} not in variables: {referenced_vars_not_in_variables!s}",
+                            stacklevel=5,
+                        )
+                    del var_attrs[attr_name]
 
     if decode_coords and "coordinates" in attributes:
         attributes = dict(attributes)
@@ -542,9 +594,14 @@ def decode_cf(
     decode_times : bool, optional
         Decode cf times (e.g., integers since "hours since 2000-01-01") to
         np.datetime64.
-    decode_coords : bool, optional
-        Use the 'coordinates' attribute on variable (or the dataset itself) to
-        identify coordinates.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
     drop_variables : str or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -664,6 +721,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
 
     global_coordinates = non_dim_coord_names.copy()
     variable_coordinates = defaultdict(set)
+    not_technically_coordinates = set()
     for coord_name in non_dim_coord_names:
         target_dims = variables[coord_name].dims
         for k, v in variables.items():
@@ -673,6 +731,13 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 and set(target_dims) <= set(v.dims)
             ):
                 variable_coordinates[k].add(coord_name)
+
+            if any(
+                attr_name in v.encoding and coord_name in v.encoding.get(attr_name)
+                for attr_name in CF_RELATED_DATA
+            ):
+                not_technically_coordinates.add(coord_name)
+                global_coordinates.discard(coord_name)
 
     variables = {k: v.copy(deep=False) for k, v in variables.items()}
 
@@ -691,7 +756,11 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         # we get support for attrs["coordinates"] for free.
         coords_str = pop_to(encoding, attrs, "coordinates")
         if not coords_str and variable_coordinates[name]:
-            attrs["coordinates"] = " ".join(map(str, variable_coordinates[name]))
+            attrs["coordinates"] = " ".join(
+                str(coord_name)
+                for coord_name in variable_coordinates[name]
+                if coord_name not in not_technically_coordinates
+            )
         if "coordinates" in attrs:
             written_coords.update(attrs["coordinates"].split())
 
