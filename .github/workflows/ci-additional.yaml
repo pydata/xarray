@@ -160,6 +160,8 @@ jobs:
   typing:
     name: Type checking (mypy)
     runs-on: "ubuntu-latest"
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
@@ -185,7 +187,7 @@ jobs:
         run: |
           mamba env update -f ci/requirements/environment.yml
       - name: Install mypy
-        run: |
+        run: | # version must correstpond to the one in .pre-commit-config.yaml
           mamba install mypy=0.800
       - name: Install xarray
         run: |
