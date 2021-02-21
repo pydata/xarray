@@ -34,6 +34,9 @@ Breaking changes
 
   (:issue:`4688`, :pull:`4720`)
   By `Justus Magin <https://github.com/keewis>`_.
+- use ``pyproject.toml`` instead of the ``setup_requires`` option for
+  ``setuptools`` (:pull:`4897`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - As a result of :pull:`4684` the default units encoding for
   datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
   always be set such that ``int64`` values can be used.  In the past, no units
@@ -86,6 +89,8 @@ New Features
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Allow installing from git archives (:pull:`4897`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
   (including globs for the latter) for ``engine="zarr"``, and so allow reading from
