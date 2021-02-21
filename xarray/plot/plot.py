@@ -61,7 +61,10 @@ def _infer_meta_data(darray, x, z, hue, hue_style, size):
 
     label = dict(y=label_from_attrs(darray))
     label.update(
-        {k: v if v in darray.coords else None for k, v in [("x", x), ("z", z)]}
+        {
+            k: label_from_attrs(darray[v]) if v in darray.coords else None
+            for k, v in [("x", x), ("z", z)]
+        }
     )
 
     if hue:
