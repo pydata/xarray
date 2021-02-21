@@ -173,7 +173,7 @@ def process_pkg(
         error(
             f"Package is too new: {pkg}={req_major}.{req_minor} was "
             f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
-            f"(which is {n_months} months from today and within the past {policy_months} months)"
+            f"which was {n_months} months ago (policy is {policy_months} months)"
         )
     else:
         status = "="
