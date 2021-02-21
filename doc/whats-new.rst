@@ -28,6 +28,7 @@ Breaking changes
   releases.
 
   The minimum versions of some other dependencies were changed:
+
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
