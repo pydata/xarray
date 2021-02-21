@@ -188,7 +188,7 @@ jobs:
           mamba env update -f ci/requirements/environment.yml
       - name: Install mypy
         run: |
-        # version must correspond to the one in .pre-commit-config.yaml
+          # version must correspond to the one in .pre-commit-config.yaml
           mamba install mypy=0.800
       - name: Install xarray
         run: |
