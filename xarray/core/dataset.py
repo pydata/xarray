@@ -4656,6 +4656,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if "axis" in kwargs:
+            raise ValueError(
+                "passing 'axis' to Dataset reduce methods is ambiguous."
+                " Please use 'dim' instead."
+            )
+
         if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
