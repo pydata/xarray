@@ -34,67 +34,56 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(darray, x, y, hue, hue_style, size):
-    def _determine_hue(darray, hue, hue_style):
-        """Find and determine what type of hue it is."""
-        hue_is_numeric = _is_numeric(darray[hue].values)
+def _infer_meta_data(darray, x, z, hue, hue_style, size):
+    def _determine_array(darray, name, array_style):
+        """Find and determine what type of array it is."""
+        array = darray[name]
+        array_is_numeric = _is_numeric(array.values)
 
-        if hue_style is None:
-            hue_style = "continuous" if hue_is_numeric else "discrete"
-        elif hue_style not in ["discrete", "continuous"]:
+        if array_style is None:
+            array_style = "continuous" if array_is_numeric else "discrete"
+        elif array_style not in ["discrete", "continuous"]:
             raise ValueError(
                 "hue_style must be either None, 'discrete' or 'continuous'."
             )
 
-        if not hue_is_numeric and (hue_style == "continuous"):
+        if not array_is_numeric and (array_style == "continuous"):
             raise ValueError(
-                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
+                f"Cannot create a colorbar for a non numeric coordinate: {name}"
             )
 
-        hue_label = label_from_attrs(darray[hue])
-        hue = darray[hue]
+        array_label = label_from_attrs(array)
 
-        return hue, hue_style, hue_label
+        return array, array_style, array_label
 
-    if x is not None and y is not None:
-        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+    # if x is not None and y is not None:
+    #     raise ValueError("Cannot specify both x and y kwargs for line plots.")
 
-    if x is not None:
-        xplt = darray[x]
-        yplt = darray
-    elif y is not None:
-        xplt = darray
-        yplt = darray[y]
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
+    label = dict(y=label_from_attrs(darray))
+    label.update(
+        {k: v if v in darray.coords else None for k, v in [("x", x), ("z", z)]}
+    )
 
     if hue:
-        hue, hue_style, hue_label = _determine_hue(darray, hue, hue_style)
+        hue, hue_style, hue_label = _determine_array(darray, hue, hue_style)
     else:
-        # Try finding a hue:
-        _, hue = _infer_xy_labels(darray=yplt, x=xplt.name, y=hue)
-
-        if hue:
-            hue, hue_style, hue_label = _determine_hue(darray, hue, hue_style)
-        else:
-            hue_label = None
-            hue = None
+        hue, hue_style, hue_label = None, None, None
 
     if size:
-        size_label = label_from_attrs(darray[size])
-        size = darray[size]
+        size, size_style, size_label = _determine_array(darray, size, None)
     else:
-        size_label = None
-        size = None
+        size, size_style, size_label = None, None, None
 
     return dict(
+        xlabel=label["x"],
+        ylabel=label["y"],
+        zlabel=label["z"],
+        hue=hue,
         hue_label=hue_label,
         hue_style=hue_style,
-        xlabel=xlabel,
-        ylabel=ylabel,
-        hue=hue,
         size=size,
         size_label=size_label,
+        size_style=size_style,
     )
 
 
@@ -140,40 +129,43 @@ def _parse_size(data, norm, width):
 
 
 def _infer_scatter_data(
-    darray, x, y, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
+    darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
 ):
-    if x is not None and y is not None:
-        raise ValueError("Cannot specify both x and y kwargs for scatter plots.")
+    # if x is not None and y is not None:
+    #     raise ValueError("Cannot specify both x and y kwargs for scatter plots.")
 
     # Broadcast together all the chosen variables:
-    if x is not None:
-        to_broadcast = dict(x=darray[x], y=darray)
-    elif y is not None:
-        to_broadcast = dict(x=darray, y=darray[y])
+    to_broadcast = dict(y=darray)
+    to_broadcast.update(
+        {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
+    )
     to_broadcast.update(
         {
             key: darray[value]
-            for key, value in dict(hue=hue, size=size).items()
+            for key, value in dict(hue=hue, sizes=size).items()
             if value in darray.dims
         }
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
-
-    data = dict(x=broadcasted["x"], y=broadcasted["y"], sizes=None)
-    data.update(hue=broadcasted.get("hue", None))
+    broadcasted.update(
+        hue=broadcasted.pop("hue", None), sizes=broadcasted.pop("sizes", None)
+    )
 
     if size:
-        size = broadcasted["size"]
-
         if size_mapping is None:
-            size_mapping = _parse_size(size, size_norm, size_range)
+            size_mapping = _parse_size(broadcasted["sizes"], size_norm, size_range)
 
-        data["sizes"] = size.copy(
-            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
+        broadcasted["sizes"] = broadcasted["sizes"].copy(
+            data=np.reshape(
+                size_mapping.loc[broadcasted["sizes"].values.ravel()].values,
+                broadcasted["sizes"].shape,
+            )
         )
-        data["sizes_to_labels"] = pd.Series(size_mapping.index, index=size_mapping)
+        broadcasted["sizes_to_labels"] = pd.Series(
+            size_mapping.index, index=size_mapping
+        )
 
-    return data
+    return broadcasted
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -586,7 +578,7 @@ def scatter(
     hue=None,
     hue_style=None,
     x=None,
-    y=None,
+    z=None,
     xincrease=None,
     yincrease=None,
     xscale=None,
@@ -696,19 +688,25 @@ def scatter(
     cmap_params = kwargs.pop("cmap_params", None)
 
     figsize = kwargs.pop("figsize", None)
-    ax = get_axis(figsize, size, aspect, ax)
+    if z is None:
+        ax = get_axis(figsize, size, aspect, ax)
+    else:
+        try:
+            ax.set_zlabel
+        except AttributeError as e:
+            raise AttributeError("3D projection not set on axes.") from e
 
-    _data = _infer_meta_data(darray, x, y, hue, hue_style, _sizes)
+    _data = _infer_meta_data(darray, x, z, hue, hue_style, _sizes)
 
     add_guide = kwargs.pop("add_guide", None)
-    if add_legend:
+    if add_legend is not None:
         pass
     elif add_guide is None or add_guide is True:
         add_legend = True if _data["hue_style"] == "discrete" else False
     elif add_legend is None:
         add_legend = False
 
-    if add_colorbar:
+    if add_colorbar is not None:
         pass
     elif add_guide is None or add_guide is True:
         add_colorbar = True if _data["hue_style"] == "continuous" else False
@@ -718,42 +716,13 @@ def scatter(
     # need to infer size_mapping with full dataset
     _data.update(
         _infer_scatter_data(
-            darray,
-            x,
-            y,
-            _data["hue"].name,
-            _sizes,
-            size_norm,
-            size_mapping,
-            _MARKERSIZE_RANGE,
+            darray, x, z, hue, _sizes, size_norm, size_mapping, _MARKERSIZE_RANGE,
         )
     )
 
     # Plot the data:
-    if _data["hue_style"] == "discrete":
-        # Plot discrete data. ax.scatter only supports numerical values
-        # in colors and sizes. Use a for loop to work around this issue.
-
-        primitive = []
-        # use pd.unique instead of np.unique because that keeps the order of the labels,
-        # which is important to keep them in sync with the ones used in
-        # FacetGrid.add_legend
-        for label in pd.unique(_data["hue"].values.ravel()):
-            mask = _data["hue"] == label
-            if _data["sizes"] is not None:
-                kwargs.update(s=_data["sizes"].where(mask, drop=True).values.ravel())
-
-            primitive.append(
-                ax.scatter(
-                    _data["x"].where(mask, drop=True).values.ravel(),
-                    _data["y"].where(mask, drop=True).values.ravel(),
-                    label=label,
-                    **kwargs,
-                )
-            )
-        primitives = primitive
-
-    elif _data["hue_style"] == "continuous":
+    axis_order = ["x", "z", "y"]
+    if _data["hue_style"] is None or _data["hue_style"] == "continuous":
         # ax.scatter suppoerts numerical values in colors and sizes.
         # So no need for for loops.
 
@@ -774,19 +743,50 @@ def scatter(
             kwargs.update(s=_data["sizes"].values.ravel())
 
         primitive = ax.scatter(
-            _data["x"].values.ravel(),
-            _data["y"].values.ravel(),
+            *[
+                _data[v].values.ravel()
+                for v in axis_order
+                if _data.get(v, None) is not None
+            ],
             **cmap_params_subset,
             **kwargs,
         )
 
         primitives = [primitive]
 
-    # Set x and y labels:
-    if _data["xlabel"]:
-        ax.set_xlabel(_data["xlabel"])
-    if _data["ylabel"]:
-        ax.set_ylabel(_data["ylabel"])
+    elif _data["hue_style"] == "discrete":
+        # Plot discrete data. ax.scatter only supports numerical values
+        # in colors and sizes. Use a for loop to work around this issue.
+
+        primitive = []
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
+        for label in pd.unique(_data["hue"].values.ravel()):
+            mask = _data["hue"] == label
+            if _data["sizes"] is not None:
+                kwargs.update(s=_data["sizes"].where(mask, drop=True).values.ravel())
+
+            primitive.append(
+                ax.scatter(
+                    *[
+                        _data[v].where(mask, drop=True).values.ravel()
+                        for v in axis_order
+                        if _data.get(v, None) is not None
+                    ],
+                    label=label,
+                    **kwargs,
+                )
+            )
+        primitives = primitive
+
+    # Set x, y, z labels:
+    i = 0
+    set_label = [ax.set_xlabel, ax.set_ylabel, getattr(ax, "set_zlabel", [])]
+    for v in axis_order:
+        if _data.get(f"{v}label", None) is not None:
+            set_label[i](_data[f"{v}label"])
+            i += 1
 
     def _legend_elements_from_list(primitives, prop, **kwargs):
         """
@@ -856,35 +856,73 @@ def scatter(
                         text.set_size(font_size)
 
     def _add_legend(primitives, handles, labels, ax, **kwargs):
+        # Title is used as backup:
+        title = kwargs.pop("title", None)
         if len(handles) > 1:
             # The normal case where a prop has been defined and
             # legend_elements finds results:
-            legend = ax.legend(handles, labels, framealpha=0.5, **kwargs)
+            return ax.legend(handles, labels, framealpha=0.5, **kwargs)
         elif len(primitives) > 1:
             # When no handles have been found use the primitives instead.
-            # Example: hue and sizes have the same string:
-            legend = ax.legend(handles=primitives, framealpha=0.5, **kwargs)
-
-        return legend
+            # Example:
+            # * hue and sizes having the same string
+            # * non-numerics in colors or sizes
+            return ax.legend(handles=primitives, framealpha=0.5, title=title, **kwargs)
+        else:
+            return None
 
     if add_legend:
-        handles, labels = np.array([]), np.array([])
-        if _data["hue_label"] and (_data["hue_label"] == _data["size_label"]):
-            _add_legend(primitives, handles, labels, ax, title=_data["hue_label"])
-        else:
-            for hue_lbl, prop, func in [
-                (_data["hue_label"], "colors", lambda x: x),
-                (_data["size_label"], "sizes", lambda x: _data["sizes_to_labels"][x]),
-            ]:
-                if hue_lbl:
-                    hdl, lbl = _legend_elements_from_list(
-                        primitives, prop, num="auto", func=func,
-                    )
-                    hdl, lbl = _legend_add_subtitle(hdl, lbl, hue_lbl, ax.scatter)
-                    handles, labels = np.append(handles, hdl), np.append(labels, lbl)
-
-            legend = _add_legend(primitives, handles, labels, ax)
+        handles, labels = [], []
+        for hue_lbl, prop, func in [
+            (_data["hue_label"], "colors", lambda x: x),
+            (
+                _data["size_label"],
+                "sizes",
+                lambda x: _data["sizes_to_labels"][x]
+                if "sizes_to_labels" in _data
+                else x,
+            ),
+        ]:
+            # if hue_lbl:
+            hdl, lbl = _legend_elements_from_list(
+                primitives, prop, num="auto", func=func,
+            )
+            hdl, lbl = _legend_add_subtitle(hdl, lbl, hue_lbl, ax.scatter)
+            # handles, labels = ax.get_legend_handles_labels()
+            handles.append(hdl)
+            labels.append(lbl)
+        legend = _add_legend(
+            primitives,
+            np.concatenate(handles),
+            np.concatenate(labels),
+            ax,
+            title=_data["hue_label"],
+        )
+        if legend is not None:
             _adjust_legend_subtitles(legend)
+
+            # else:
+            #     hdl, lbl = [], []
+            # handles.append(hdl)
+            # labels.append(lbl)
+
+        # if _data["hue_label"] is not None and _data["size_label"] is not None:
+        # legend = _add_legend(primitives, np.append(*handles), np.append(*labels), ax)
+        # if legend is not None:
+        #     _adjust_legend_subtitles(legend)
+        # else:
+        #     _add_legend(primitives, [], [], ax, title=_data["hue_label"])
+
+        # if (_data["hue_label"] == _data["size_label"]) or (
+        #     all(len(h) < 2 for h in handles) and len(primitives) > 1
+        # ):
+        #     _add_legend(primitives, [], [], ax, title=_data["hue_label"])
+        # elif len(primitives) < 2 and len(handles) < 2:
+        #     pass
+        # else:
+        #     legend = _add_legend(primitives, np.append(*handles), np.append(*labels), ax)
+        #     if legend is not None:
+        #         _adjust_legend_subtitles(legend)
 
     if add_colorbar and _data["hue_label"]:
         if _data["hue_style"] == "discrete":
