@@ -111,9 +111,9 @@ dependencies:
   numpy >=1.17.
 - **all other libraries:** 12 months
 
-This means the latest minor (X.Y) version from N months prior.
-Patch versions (x.y.Z) are not pinned, and only the
-latest available at the moment of publishing the xarray release is guaranteed to work.
+This means the latest minor (X.Y) version from N months prior. Patch versions (x.y.Z)
+are not pinned, and only the latest available at the moment of publishing the xarray
+release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
