@@ -34,6 +34,9 @@ Breaking changes
 
   (:issue:`4688`, :pull:`4720`)
   By `Justus Magin <https://github.com/keewis>`_.
+- use ``pyproject.toml`` instead of the ``setup_requires`` option for
+  ``setuptools`` (:pull:`4897`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - As a result of :pull:`4684` the default units encoding for
   datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
   always be set such that ``int64`` values can be used.  In the past, no units
@@ -86,6 +89,8 @@ New Features
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Allow installing from git archives (:pull:`4897`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 - :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
   (including globs for the latter) for ``engine="zarr"``, and so allow reading from
@@ -128,6 +133,9 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
+- Raise DeprecationWarning when trying to typecast a tuple containing a :py:class:`DataArray`.
+  User now prompted to first call `.data` on it (:issue:`4483`).
+  By `Chun Ho Chow <https://github.com/chunhochow>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
   By `Leif Denby <https://github.com/leifdenby>`_.
@@ -141,6 +149,9 @@ Bug fixes
   a float64 array (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
 - Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Allow converting :py:class:`Dataset` or :py:class:`DataArray` objects with a ``MultiIndex``
+  and at least one other dimension to a ``pandas`` object (:issue:`3008`, :pull:`4442`).
+  By `ghislainp <https://github.com/ghislainp>`_.
 
 Documentation
 ~~~~~~~~~~~~~

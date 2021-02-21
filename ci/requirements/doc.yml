@@ -24,7 +24,7 @@ dependencies:
   - seaborn
   - setuptools
   - sparse
-  - sphinx=3.3
+  - sphinx>=3.3
   - sphinx_rtd_theme>=0.4
   - sphinx-autosummary-accessors
   - zarr>=2.4
