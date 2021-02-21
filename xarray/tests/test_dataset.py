@@ -4746,6 +4746,9 @@ class TestDataset:
 
         assert_equal(data.mean(dim=[]), data)
 
+        with pytest.raises(ValueError):
+            data.mean(axis=0)
+
     def test_reduce_coords(self):
         # regression test for GH1470
         data = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"b": 4})
