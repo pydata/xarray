@@ -75,11 +75,12 @@ def moveaxis(a, source, destination):
     return result
 
 
-# Type annotations stubs. See also / to be replaced by:
-# https://github.com/numpy/numpy/issues/7370
-# https://github.com/numpy/numpy-stubs/
-DTypeLike = Union[np.dtype, str]
-
+# Type annotations stubs.
+try:
+    from numpy.typing import DTypeLike
+except ImportError:
+    # fall back for numpy < 1.20
+    DTypeLike = Union[np.dtype, str]
 
 # from dask/array/utils.py
 def _is_nep18_active():
