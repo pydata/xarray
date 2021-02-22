@@ -1,0 +1,3 @@
+# used for the "Type checking (mypy)" CI run
+# version must correspond to the one in .pre-commit-config.yaml
+mypy=0.812
