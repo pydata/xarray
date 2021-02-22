@@ -24,7 +24,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6
 
+  The minimum version policy was changed to also apply to projects with irregular
+  releases.
+
   The minimum versions of some other dependencies were changed:
+
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
@@ -32,7 +36,7 @@ Breaking changes
   setuptools   38.4   40.4
   ============ ====== ====
 
-  (:issue:`4688`, :pull:`4720`)
+  (:issue:`4688`, :pull:`4720`, :pull:`4907`)
   By `Justus Magin <https://github.com/keewis>`_.
 - use ``pyproject.toml`` instead of the ``setup_requires`` option for
   ``setuptools`` (:pull:`4897`).
