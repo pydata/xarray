@@ -3884,7 +3884,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Updated dataset. Note that since the update is in-place this is the input
             dataset.
 
-            Deprecated since 0.17.
+            It is deprecated since version 0.17 and scheduled to be removed in 0.19.
 
         Raises
         ------
