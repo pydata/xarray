@@ -82,6 +82,7 @@ except ImportError:
     # fall back for numpy < 1.20
     DTypeLike = Union[np.dtype, str]
 
+
 # from dask/array/utils.py
 def _is_nep18_active():
     class A:
