@@ -102,6 +102,7 @@ def legend_elements(
         The string labels for elements of the legend.
     """
     import matplotlib as mpl
+    import warnings
 
     mlines = mpl.lines
 
