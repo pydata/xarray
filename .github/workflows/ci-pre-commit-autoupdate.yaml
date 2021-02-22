@@ -35,6 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EXECUTE_COMMANDS: |
             python -m pre_commit autoupdate
+            python .github/workflows/sync_linter_versions.py .pre-commit-config.yaml ci/requirements/mypy_only
           COMMIT_MESSAGE: 'pre-commit: autoupdate hook versions'
           PR_TITLE: 'pre-commit: autoupdate hook versions'
           PR_BRANCH_PREFIX: 'pre-commit/'
