@@ -189,7 +189,7 @@ jobs:
       - name: Install mypy
         run: |
           # version must correspond to the one in .pre-commit-config.yaml
-          mamba install mypy=0.800
+          mamba install mypy=0.812
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
