@@ -2078,10 +2078,10 @@ class Variable(
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            array = self.astype(dtype, copy=False).data
+            var = self.astype(dtype, copy=False)
         else:
             dtype = self.dtype
-            array = self.data
+            var = self
 
         if isinstance(dim, list):
             assert len(dim) == len(window)
@@ -2092,12 +2092,23 @@ class Variable(
             window = [window]
             window_dim = [window_dim]
             center = [center]
+
+        pads = {}
+        for d, win, cent in zip(dim, window, center):
+            if cent:
+                start = int(win / 2)  # 10 -> 5,  9 -> 4
+                end = win - 1 - start
+                pads[d] = (start, end)
+            else:
+                pads[d] = (win - 1, 0)
+
+        padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
-            duck_array_ops.rolling_window(
-                array, axis=axis, window=window, center=center, fill_value=fill_value
+            duck_array_ops.sliding_window_view(
+                padded.data, window_shape=window, axis=axis
             ),
         )
 
