@@ -30,7 +30,7 @@ repos:
   #     - id: velin
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    # version must correstpond to the one in .github/workflows/ci-additional.yaml
+    # version must correspond to the one in .github/workflows/ci-additional.yaml
     rev: v0.812
     hooks:
       - id: mypy
