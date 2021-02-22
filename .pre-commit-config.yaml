@@ -31,7 +31,7 @@ repos:
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
     # version must correstpond to the one in .github/workflows/ci-additional.yaml
-    rev: v0.800
+    rev: v0.812
     hooks:
       - id: mypy
         exclude: "properties|asv_bench"
