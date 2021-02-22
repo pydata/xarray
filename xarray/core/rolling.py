@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .dask_array_ops import dask_rolling_wrapper
 from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -502,13 +501,10 @@ class DataArrayRolling(Rolling):
 
         if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
-            values = dask_rolling_wrapper(
-                func, padded.data, window=self.window[0], min_count=min_count, axis=axis
-            )
-        else:
-            values = func(
-                padded.data, window=self.window[0], min_count=min_count, axis=axis
-            )
+
+        values = func(
+            padded.data, window=self.window[0], min_count=min_count, axis=axis
+        )
 
         if self.center[0]:
             values = values[valid]
