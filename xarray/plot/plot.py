@@ -854,16 +854,14 @@ def scatter(
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
     cbar_ax = kwargs.pop("cbar_ax", None)
     cbar_kwargs = kwargs.pop("cbar_kwargs", None)
+    cmap = kwargs.pop("cmap", None)
     cmap_params = kwargs.pop("cmap_params", None)
 
     figsize = kwargs.pop("figsize", None)
-    if z is None:
-        ax = get_axis(figsize, size, aspect, ax)
-    else:
-        try:
-            ax.set_zlabel
-        except AttributeError as e:
-            raise AttributeError("3D projection not set on axes.") from e
+    subplot_kws = dict()
+    if z is not None and ax is None:
+        subplot_kws.update(projection="3d")
+    ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
     _data = _infer_meta_data(darray, x, z, hue, hue_style, _sizes)
 
@@ -891,63 +889,33 @@ def scatter(
 
     # Plot the data:
     axis_order = ["x", "z", "y"]
-    if _data["hue_style"] is None or _data["hue_style"] == "continuous":
-        # ax.scatter suppoerts numerical values in colors and sizes.
-        # So no need for for loops.
+    cmap_params_subset = {}
+    if _data["hue"] is not None:
+        kwargs.update(c=_data["colors"].values.ravel())
 
-        cmap_params_subset = {}
-        if _data["hue"] is not None:
-            kwargs.update(c=_data["hue"].values.ravel())
-
-            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                scatter, _data["hue"].values, **locals()
-            )
-
-            # subset that can be passed to scatter, hist2d
-            cmap_params_subset = {
-                vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
-            }
-
-        if _data["sizes"] is not None:
-            kwargs.update(s=_data["sizes"].values.ravel())
-
-        primitive = ax.scatter(
-            *[
-                _data[v].values.ravel()
-                for v in axis_order
-                if _data.get(v, None) is not None
-            ],
-            **cmap_params_subset,
-            **kwargs,
+        if cmap is None and _data["hue_style"] == "discrete":
+            cmap = "tab10"
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            scatter, _data["colors"].values, **locals()
         )
 
-        primitives = [primitive]
+        # subset that can be passed to scatter, hist2d
+        cmap_params_subset = {
+            vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
+        }
 
-    elif _data["hue_style"] == "discrete":
-        # Plot discrete data. ax.scatter only supports numerical values
-        # in colors and sizes. Use a for loop to work around this issue.
+    if _data["sizes"] is not None:
+        kwargs.update(s=_data["sizes"].values.ravel())
 
-        primitive = []
-        # use pd.unique instead of np.unique because that keeps the order of the labels,
-        # which is important to keep them in sync with the ones used in
-        # FacetGrid.add_legend
-        for label in pd.unique(_data["hue"].values.ravel()):
-            mask = _data["hue"] == label
-            if _data["sizes"] is not None:
-                kwargs.update(s=_data["sizes"].where(mask, drop=True).values.ravel())
-
-            primitive.append(
-                ax.scatter(
-                    *[
-                        _data[v].where(mask, drop=True).values.ravel()
-                        for v in axis_order
-                        if _data.get(v, None) is not None
-                    ],
-                    label=label,
-                    **kwargs,
-                )
-            )
-        primitives = primitive
+    primitive = ax.scatter(
+        *[
+            _data[v].values.ravel()
+            for v in axis_order
+            if _data.get(v, None) is not None
+        ],
+        **cmap_params_subset,
+        **kwargs,
+    )
 
     # Set x, y, z labels:
     i = 0
@@ -956,35 +924,6 @@ def scatter(
         if _data.get(f"{v}label", None) is not None:
             set_label[i](_data[f"{v}label"])
             i += 1
-
-    def _legend_elements_from_list(primitives, prop, **kwargs):
-        """
-        Get unique legend elements from a list of pathcollections.
-
-        Getting multiple pathcollections happens when adding multiple
-        scatters to the same plot.
-        """
-        import warnings
-
-        handles = np.array([], dtype=object)
-        labels = np.array([], dtype=str)
-
-        for i, pc in enumerate(primitives):
-            with warnings.catch_warnings(record=True):
-                warnings.simplefilter("always")
-                # Get legend elements, suppress empty data warnings
-                # because it will be handled later:
-                hdl, lbl = pc.legend_elements(prop=prop, **kwargs)
-            handles = np.append(handles, hdl)
-            labels = np.append(labels, lbl)
-
-        # Duplicate legend entries is not necessary, therefore return
-        # unique labels:
-        unique_indices = np.sort(np.unique(labels, return_index=True)[1])
-        handles = handles[unique_indices]
-        labels = labels[unique_indices]
-
-        return [handles, labels]
 
     def _legend_add_subtitle(handles, labels, text, func):
         """Add a subtitle to legend handles."""
@@ -996,8 +935,8 @@ def scatter(
             blank_handle.set_visible(False)
 
             # Subtitles are shown first:
-            handles = np.insert(handles, 0, blank_handle)
-            labels = np.insert(labels, 0, text)
+            handles = [blank_handle] + handles
+            labels = [text] + labels
 
         return handles, labels
 
@@ -1024,74 +963,25 @@ def scatter(
                         # as normal legend titles:
                         text.set_size(font_size)
 
-    def _add_legend(primitives, handles, labels, ax, **kwargs):
-        # Title is used as backup:
-        title = kwargs.pop("title", None)
-        if len(handles) > 1:
-            # The normal case where a prop has been defined and
-            # legend_elements finds results:
-            return ax.legend(handles, labels, framealpha=0.5, **kwargs)
-        elif len(primitives) > 1:
-            # When no handles have been found use the primitives instead.
-            # Example:
-            # * hue and sizes having the same string
-            # * non-numerics in colors or sizes
-            return ax.legend(handles=primitives, framealpha=0.5, title=title, **kwargs)
-        else:
-            return None
-
     if add_legend:
+
+        def to_label(d, key):
+            return lambda x: d[key][x] if key in d else x
+
         handles, labels = [], []
-        for hue_lbl, prop, func in [
-            (_data["hue_label"], "colors", lambda x: x),
-            (
-                _data["size_label"],
-                "sizes",
-                lambda x: _data["sizes_to_labels"][x]
-                if "sizes_to_labels" in _data
-                else x,
-            ),
+        for subtitle, prop, func in [
+            (_data["hue_label"], "colors", to_label(_data, "colors_to_labels")),
+            (_data["size_label"], "sizes", to_label(_data, "sizes_to_labels")),
         ]:
-            # if hue_lbl:
-            hdl, lbl = _legend_elements_from_list(
-                primitives, prop, num="auto", func=func,
-            )
-            hdl, lbl = _legend_add_subtitle(hdl, lbl, hue_lbl, ax.scatter)
-            # handles, labels = ax.get_legend_handles_labels()
-            handles.append(hdl)
-            labels.append(lbl)
-        legend = _add_legend(
-            primitives,
-            np.concatenate(handles),
-            np.concatenate(labels),
-            ax,
-            title=_data["hue_label"],
-        )
-        if legend is not None:
-            _adjust_legend_subtitles(legend)
-
-            # else:
-            #     hdl, lbl = [], []
-            # handles.append(hdl)
-            # labels.append(lbl)
-
-        # if _data["hue_label"] is not None and _data["size_label"] is not None:
-        # legend = _add_legend(primitives, np.append(*handles), np.append(*labels), ax)
-        # if legend is not None:
-        #     _adjust_legend_subtitles(legend)
-        # else:
-        #     _add_legend(primitives, [], [], ax, title=_data["hue_label"])
-
-        # if (_data["hue_label"] == _data["size_label"]) or (
-        #     all(len(h) < 2 for h in handles) and len(primitives) > 1
-        # ):
-        #     _add_legend(primitives, [], [], ax, title=_data["hue_label"])
-        # elif len(primitives) < 2 and len(handles) < 2:
-        #     pass
-        # else:
-        #     legend = _add_legend(primitives, np.append(*handles), np.append(*labels), ax)
-        #     if legend is not None:
-        #         _adjust_legend_subtitles(legend)
+            if subtitle:
+                hdl, lbl = legend_elements(
+                    primitive, prop, num="auto", func=func, fmt="{x}"
+                )
+                hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
+                handles += hdl
+                labels += lbl
+        legend = ax.legend(handles, labels, framealpha=0.5)
+        _adjust_legend_subtitles(legend)
 
     if add_colorbar and _data["hue_label"]:
         if _data["hue_style"] == "discrete":
