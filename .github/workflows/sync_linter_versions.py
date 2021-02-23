@@ -5,6 +5,7 @@ import pathlib
 
 import yaml
 from packaging import version
+from packaging.requirements import Requirement
 
 
 def extract_versions(config):
@@ -17,6 +18,19 @@ def extract_versions(config):
         for repo in repos
     )
     return dict(itertools.chain.from_iterable(extracted_versions))
+
+
+def update_requirement(line, new_versions):
+    preprocessed = line.replace("=", "==")  # convert to pep-508 compatible
+    requirement = Requirement(preprocessed)
+
+    specifier, *_ = requirement.specifier
+    old_version = specifier.version
+    new_version = new_versions.get(requirement.name, old_version)
+
+    new_line = f"{requirement.name}={new_version}"
+
+    return new_line
 
 
 if __name__ == "__main__":
@@ -34,13 +48,15 @@ if __name__ == "__main__":
     versions = extract_versions(config)
     mypy_version = versions["mypy"]
 
-    requirements = args.requirements.read_text()
-    new_requirements = "\n".join(
-        [
-            line if not line.startswith("mypy=") else f"mypy={mypy_version}"
-            for line in requirements.split("\n")
-        ]
-    )
+    requirements_text = args.requirements.read_text()
+    requirements = requirements_text.split("\n")
+    new_requirements = [
+        update_requirement(line, versions)
+        if line and not line.startswith("# ")
+        else line
+        for line in requirements
+    ]
+    new_requirements_text = "\n".join(new_requirements)
 
     if args.dry:
         separator = "\n" + "—" * 80 + "\n"
@@ -51,4 +67,4 @@ if __name__ == "__main__":
             end=separator,
         )
     else:
-        args.requirements.write_text(new_requirements)
+        args.requirements.write_text(new_requirements_text)
