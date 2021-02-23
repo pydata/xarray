@@ -24,7 +24,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6
 
+  The minimum version policy was changed to also apply to projects with irregular
+  releases.
+
   The minimum versions of some other dependencies were changed:
+
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
@@ -32,7 +36,7 @@ Breaking changes
   setuptools   38.4   40.4
   ============ ====== ====
 
-  (:issue:`4688`, :pull:`4720`)
+  (:issue:`4688`, :pull:`4720`, :pull:`4907`)
   By `Justus Magin <https://github.com/keewis>`_.
 - use ``pyproject.toml`` instead of the ``setup_requires`` option for
   ``setuptools`` (:pull:`4897`).
@@ -98,6 +102,10 @@ New Features
   (including globs for the latter) for ``engine="zarr"``, and so allow reading from
   many remote and other file systems (:pull:`4461`)
   By `Martin Durant <https://github.com/martindurant>`_
+- :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
+  ``reduce`` method, enabling coarsening operations with custom reduction
+  functions (:issue:`3741`, :pull:`4939`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
