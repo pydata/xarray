@@ -978,12 +978,14 @@ def scatter(
     if add_legend:
 
         def to_label(d, key):
-            """Map prop values back to it's original values."""
+            """Map prop values back to its original values."""
 
             def _to_label(x):
                 if key in d:
-                    # Use reindex to be less sensitive to float errors:
-                    return d[key].reindex(x, method="nearest")
+                    # Use reindex to be less sensitive to float errors.
+                    # Return as numpy array since legend_elements
+                    # seems to require that:
+                    return d[key].reindex(x, method="nearest").to_numpy()
                 else:
                     return x
 
@@ -1005,12 +1007,15 @@ def scatter(
             ),
         ]:
             if subtitle:
-                if style == "discrete":
-                    hdl, lbl = legend_elements(
-                        primitive, prop, num="auto", func=func, fmt="{x}"
-                    )
-                else:
-                    hdl, lbl = legend_elements(primitive, prop, num="auto")
+                # Floats are handled nicely by the defaults but strings
+                # needs special format to bypass numerical operations:
+                fmt = "{x}" if style == "discrete" else None
+
+                # Get legend handles and labels that displays the
+                # values correctly:
+                hdl, lbl = legend_elements(
+                    primitive, prop, num="auto", func=func, fmt=fmt
+                )
                 hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
                 handles += hdl
                 labels += lbl
