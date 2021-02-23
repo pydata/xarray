@@ -301,9 +301,6 @@ def _parse_size(data, norm, width):
 def _infer_scatter_data(
     darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
 ):
-    # if x is not None and y is not None:
-    #     raise ValueError("Cannot specify both x and y kwargs for scatter plots.")
-
     # Broadcast together all the chosen variables:
     to_broadcast = dict(y=darray)
     to_broadcast.update(
@@ -320,6 +317,20 @@ def _infer_scatter_data(
     broadcasted.update(
         hue=broadcasted.pop("hue", None), sizes=broadcasted.pop("sizes", None)
     )
+
+    if hue:
+        # if hue_mapping is None:
+        hue_mapping = _parse_size(broadcasted["hue"], None, [0, 1])
+
+        broadcasted["colors"] = broadcasted["hue"].copy(
+            data=np.reshape(
+                hue_mapping.loc[broadcasted["hue"].values.ravel()].values,
+                broadcasted["hue"].shape,
+            )
+        )
+        broadcasted["colors_to_labels"] = pd.Series(
+            hue_mapping.index, index=hue_mapping
+        )
 
     if size:
         if size_mapping is None:
