@@ -100,6 +100,10 @@ New Features
   (including globs for the latter) for ``engine="zarr"``, and so allow reading from
   many remote and other file systems (:pull:`4461`)
   By `Martin Durant <https://github.com/martindurant>`_
+- :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
+  ``reduce`` method, enabling coarsening operations with custom reduction
+  functions (:issue:`3741`, :pull:`4939`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
