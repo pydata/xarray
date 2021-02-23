@@ -195,8 +195,7 @@ def legend_elements(
         handles.append(h)
         if hasattr(fmt, "set_locs"):
             fmt.set_locs(label_values)
-        l = fmt(lab)
-        labels.append(l)
+        labels.append(fmt(lab))
 
     return handles, labels
 
