@@ -25,15 +25,30 @@ Breaking changes
 - xarray no longer supports python 3.6
 
   The minimum version policy was changed to also apply to projects with irregular
-  releases.
-
-  The minimum versions of some other dependencies were changed:
+  releases. As a result, the minimum versions of some dependencies were changed:
 
   ============ ====== ====
   Package      Old    New
   ============ ====== ====
   Python       3.6    3.7
   setuptools   38.4   40.4
+  numpy        1.15   1.17
+  pandas       0.25   1.0
+  dask         2.9    2.11
+  distributed  2.9    2.11
+  boto3        1.9    1.12
+  bottleneck   1.2    1.3
+  h5netcdf     0.7    0.8
+  h5py         0.9    2.10
+  iris         2.2    2.4
+  lxml         4.4    4.5
+  netcdf4      1.4    1.5
+  numba        0.46   0.48
+  pseudonetcdf 3.0    3.1
+  rasterio     1.0    1.1
+  scipy        1.3    1.4
+  seaborn      0.9    0.10
+  zarr         2.3    2.4
   ============ ====== ====
 
   (:issue:`4688`, :pull:`4720`, :pull:`4907`)
