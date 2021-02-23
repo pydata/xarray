@@ -18,7 +18,7 @@ dependencies:
   - dask=2.11
   - distributed=2.11
   - h5netcdf=0.8
-  - h5py=2.10  # Policy allows for 2.10, but it's a conflict-fest
+  - h5py=2.10
   - hdf5=1.10
   - hypothesis
   - iris=2.4
