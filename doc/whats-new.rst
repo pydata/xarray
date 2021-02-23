@@ -85,7 +85,6 @@ New Features
   contain missing values; 8x faster in our benchmark, and 2x faster than pandas.
   (:pull:`4746`);
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
 - Add :py:meth:`Dataset.plot.quiver` for quiver plots with :py:class:`Dataset` variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
