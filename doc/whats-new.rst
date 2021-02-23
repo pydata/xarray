@@ -47,7 +47,7 @@ Breaking changes
   zarr         2.3    2.4
   ============ ====== ====
 
-  (:issue:`4688`, :pull:`4720`, :pull:`4907`)
+  (:issue:`4688`, :pull:`4720`, :pull:`4907`, :pull:`4942`)
   By `Justus Magin <https://github.com/keewis>`_.
 - use ``pyproject.toml`` instead of the ``setup_requires`` option for
   ``setuptools`` (:pull:`4897`).
