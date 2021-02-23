@@ -966,17 +966,39 @@ def scatter(
     if add_legend:
 
         def to_label(d, key):
-            return lambda x: d[key][x] if key in d else x
+            """Map prop values back to it's original values."""
+
+            def _to_label(x):
+                if key in d:
+                    # Use reindex to be less sensitive to float errors:
+                    return d[key].reindex(x, method="nearest")
+                else:
+                    return x
+
+            return _to_label
 
         handles, labels = [], []
-        for subtitle, prop, func in [
-            (_data["hue_label"], "colors", to_label(_data, "colors_to_labels")),
-            (_data["size_label"], "sizes", to_label(_data, "sizes_to_labels")),
+        for subtitle, prop, func, style in [
+            (
+                _data["hue_label"],
+                "colors",
+                to_label(_data, "colors_to_labels"),
+                _data["hue_style"],
+            ),
+            (
+                _data["size_label"],
+                "sizes",
+                to_label(_data, "sizes_to_labels"),
+                _data["size_style"],
+            ),
         ]:
             if subtitle:
-                hdl, lbl = legend_elements(
-                    primitive, prop, num="auto", func=func, fmt="{x}"
-                )
+                if style == "discrete":
+                    hdl, lbl = legend_elements(
+                        primitive, prop, num="auto", func=func, fmt="{x}"
+                    )
+                else:
+                    hdl, lbl = legend_elements(primitive, prop, num="auto")
                 hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
                 handles += hdl
                 labels += lbl
