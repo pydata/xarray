@@ -25,7 +25,7 @@ Breaking changes
 - xarray no longer supports python 3.6
 
   The minimum version policy was changed to also apply to projects with irregular
-  releases. As a result, the minimum versions of some dependencies were changed:
+  releases. As a result, the minimum versions of some dependencies have changed:
 
   ============ ====== ====
   Package      Old    New
