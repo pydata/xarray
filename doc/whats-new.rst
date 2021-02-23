@@ -87,7 +87,7 @@ New Features
 - add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
   By `Justus Magin <https://github.com/keewis>`_.
-- allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
+- Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
