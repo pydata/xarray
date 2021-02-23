@@ -4311,7 +4311,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             subset = iter(self.data_vars)
 
         count = np.zeros(self.dims[dim], dtype=np.int64)
-        size = 0
+        size = np.int_(0)  # for type checking
 
         for k in subset:
             array = self._variables[k]
@@ -6370,7 +6370,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore
 
         # Weights:
         if w is not None:
@@ -6414,7 +6414,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
                 skipna_da = True
             elif skipna is None:
-                skipna_da = np.any(da.isnull())
+                skipna_da = bool(np.any(da.isnull()))
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
             stacked_coords: Dict[Hashable, DataArray] = {}
