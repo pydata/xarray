@@ -960,7 +960,7 @@ class DatasetCoarsen(Coarsen):
         Parameters
         ----------
         func : callable
-            Function which can be called in the form  `func(x, axis, **kwargs)`
+            Function which can be called in the form `func(x, axis, **kwargs)`
             to return the result of collapsing an np.ndarray over the coarsening
             dimensions.  It must be possible to  provide the `axis` argument with
             a tuple of integers.
