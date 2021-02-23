@@ -4,6 +4,8 @@ channels:
   - nodefaults
 dependencies:
   - python=3.8
+  - black
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
@@ -12,7 +14,7 @@ dependencies:
   - cftime
   - coveralls
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
   - lxml    # Optional dep of pydap

@@ -1,5 +1,6 @@
 import os
 import pathlib
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -295,6 +296,7 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None,
         append_dim=None,
         write_region=None,
     ):
@@ -303,7 +305,15 @@ class ZarrStore(AbstractWritableDataStore):
         if isinstance(store, pathlib.Path):
             store = os.fspath(store)
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        open_kwargs = dict(
+            mode=mode,
+            synchronizer=synchronizer,
+            path=group,
+        )
+        if LooseVersion(zarr.__version__) >= "2.5.0":
+            open_kwargs["storage_options"] = storage_options
+        elif storage_options:
+            raise ValueError("Storage options only compatible with zarr>=2.5.0")
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
 
@@ -537,6 +547,7 @@ def open_zarr(
     consolidated=False,
     overwrite_encoded_chunks=False,
     chunk_store=None,
+    storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
     **kwargs,
@@ -649,6 +660,7 @@ def open_zarr(
         "consolidated": consolidated,
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
+        "storage_options": storage_options,
     }
 
     ds = open_dataset(
@@ -675,9 +687,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
@@ -687,6 +699,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None,
     ):
         store = ZarrStore.open_group(
             filename_or_obj,
@@ -696,6 +709,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             consolidated=consolidated,
             consolidate_on_close=consolidate_on_close,
             chunk_store=chunk_store,
+            storage_options=storage_options,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

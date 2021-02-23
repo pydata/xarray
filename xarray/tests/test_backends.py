@@ -54,7 +54,9 @@ from . import (
     requires_cfgrib,
     requires_cftime,
     requires_dask,
+    requires_fsspec,
     requires_h5netcdf,
+    requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
     requires_pydap,
@@ -856,6 +858,118 @@ class CFEncodedBase(DatasetIOBase):
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
+
+    @staticmethod
+    def _create_cf_dataset():
+        original = Dataset(
+            dict(
+                variable=(
+                    ("ln_p", "latitude", "longitude"),
+                    np.arange(8, dtype="f4").reshape(2, 2, 2),
+                    {"ancillary_variables": "std_devs det_lim"},
+                ),
+                std_devs=(
+                    ("ln_p", "latitude", "longitude"),
+                    np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
+                    {"standard_name": "standard_error"},
+                ),
+                det_lim=(
+                    (),
+                    0.1,
+                    {"standard_name": "detection_minimum"},
+                ),
+            ),
+            dict(
+                latitude=("latitude", [0, 1], {"units": "degrees_north"}),
+                longitude=("longitude", [0, 1], {"units": "degrees_east"}),
+                latlon=((), -1, {"grid_mapping_name": "latitude_longitude"}),
+                latitude_bnds=(("latitude", "bnds2"), [[0, 1], [1, 2]]),
+                longitude_bnds=(("longitude", "bnds2"), [[0, 1], [1, 2]]),
+                areas=(
+                    ("latitude", "longitude"),
+                    [[1, 1], [1, 1]],
+                    {"units": "degree^2"},
+                ),
+                ln_p=(
+                    "ln_p",
+                    [1.0, 0.5],
+                    {
+                        "standard_name": "atmosphere_ln_pressure_coordinate",
+                        "computed_standard_name": "air_pressure",
+                    },
+                ),
+                P0=((), 1013.25, {"units": "hPa"}),
+            ),
+        )
+        original["variable"].encoding.update(
+            {"cell_measures": "area: areas", "grid_mapping": "latlon"},
+        )
+        original.coords["latitude"].encoding.update(
+            dict(grid_mapping="latlon", bounds="latitude_bnds")
+        )
+        original.coords["longitude"].encoding.update(
+            dict(grid_mapping="latlon", bounds="longitude_bnds")
+        )
+        original.coords["ln_p"].encoding.update({"formula_terms": "p0: P0 lev : ln_p"})
+        return original
+
+    def test_grid_mapping_and_bounds_are_not_coordinates_in_file(self):
+        original = self._create_cf_dataset()
+        with create_tmp_file() as tmp_file:
+            original.to_netcdf(tmp_file)
+            with open_dataset(tmp_file, decode_coords=False) as ds:
+                assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
+                assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
+                assert "latlon" not in ds["variable"].attrs["coordinates"]
+                assert "coordinates" not in ds.attrs
+
+    def test_coordinate_variables_after_dataset_roundtrip(self):
+        original = self._create_cf_dataset()
+        with self.roundtrip(original, open_kwargs={"decode_coords": "all"}) as actual:
+            assert_identical(actual, original)
+
+        with self.roundtrip(original) as actual:
+            expected = original.reset_coords(
+                ["latitude_bnds", "longitude_bnds", "areas", "P0", "latlon"]
+            )
+            # equal checks that coords and data_vars are equal which
+            # should be enough
+            # identical would require resetting a number of attributes
+            # skip that.
+            assert_equal(actual, expected)
+
+    def test_grid_mapping_and_bounds_are_coordinates_after_dataarray_roundtrip(self):
+        original = self._create_cf_dataset()
+        # The DataArray roundtrip should have the same warnings as the
+        # Dataset, but we already tested for those, so just go for the
+        # new warnings.  It would appear that there is no way to tell
+        # pytest "This warning and also this warning should both be
+        # present".
+        # xarray/tests/test_conventions.py::TestCFEncodedDataStore
+        # needs the to_dataset. The other backends should be fine
+        # without it.
+        with pytest.warns(
+            UserWarning,
+            match=(
+                r"Variable\(s\) referenced in bounds not in variables: "
+                r"\['l(at|ong)itude_bnds'\]"
+            ),
+        ):
+            with self.roundtrip(
+                original["variable"].to_dataset(), open_kwargs={"decode_coords": "all"}
+            ) as actual:
+                assert_identical(actual, original["variable"].to_dataset())
+
+    @requires_iris
+    def test_coordinate_variables_after_iris_roundtrip(self):
+        original = self._create_cf_dataset()
+        iris_cube = original["variable"].to_iris()
+        actual = DataArray.from_iris(iris_cube)
+        # Bounds will be missing (xfail)
+        del original.coords["latitude_bnds"], original.coords["longitude_bnds"]
+        # Ancillary vars will be missing
+        # Those are data_vars, and will be dropped when grabbing the variable
+        assert_identical(actual, original["variable"])
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
@@ -2578,13 +2692,19 @@ class TestH5NetCDFAlreadyOpen:
                 v = group.createVariable("x", "int")
                 v[...] = 42
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            kwargs = {}
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+                "0.10.0"
+            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+                kwargs = dict(decode_vlen_strings=True)
+
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5["g"])
             with open_dataset(store) as ds:
                 expected = Dataset({"x": ((), 42)})
                 assert_identical(expected, ds)
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5, group="g")
             with open_dataset(store) as ds:
                 expected = Dataset({"x": ((), 42)})
@@ -2599,7 +2719,13 @@ class TestH5NetCDFAlreadyOpen:
                 v = nc.createVariable("y", np.int32, ("x",))
                 v[:] = np.arange(10)
 
-            h5 = h5netcdf.File(tmp_file, mode="r")
+            kwargs = {}
+            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+                "0.10.0"
+            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+                kwargs = dict(decode_vlen_strings=True)
+
+            h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
             store = backends.H5NetCDFStore(h5)
             with open_dataset(store) as ds:
                 copied = ds.copy(deep=True)
@@ -3040,9 +3166,16 @@ class TestDask(DatasetIOBase):
 
         with raises_regex(IOError, "no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
-
         with raises_regex(ValueError, "wild-card"):
             open_mfdataset("http://some/remote/uri")
+
+    @requires_fsspec
+    def test_open_mfdataset_no_files(self):
+        pytest.importorskip("aiobotocore")
+
+        # glob is attempted as of #4823, but finds no files
+        with raises_regex(OSError, "no files"):
+            open_mfdataset("http://some/remote/uri", engine="zarr")
 
     def test_open_mfdataset_2d(self):
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
@@ -4797,6 +4930,48 @@ def test_extract_zarr_variable_encoding():
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
+
+
+@requires_zarr
+@requires_fsspec
+def test_open_fsspec():
+    import fsspec
+    import zarr
+
+    if not hasattr(zarr.storage, "FSStore") or not hasattr(
+        zarr.storage.FSStore, "getitems"
+    ):
+        pytest.skip("zarr too old")
+
+    ds = open_dataset(os.path.join(os.path.dirname(__file__), "data", "example_1.nc"))
+
+    m = fsspec.filesystem("memory")
+    mm = m.get_mapper("out1.zarr")
+    ds.to_zarr(mm)  # old interface
+    ds0 = ds.copy()
+    ds0["time"] = ds.time + pd.to_timedelta("1 day")
+    mm = m.get_mapper("out2.zarr")
+    ds0.to_zarr(mm)  # old interface
+
+    # single dataset
+    url = "memory://out2.zarr"
+    ds2 = open_dataset(url, engine="zarr")
+    assert ds0 == ds2
+
+    # single dataset with caching
+    url = "simplecache::memory://out2.zarr"
+    ds2 = open_dataset(url, engine="zarr")
+    assert ds0 == ds2
+
+    # multi dataset
+    url = "memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    assert xr.concat([ds, ds0], dim="time") == ds2
+
+    # multi dataset with caching
+    url = "simplecache::memory://out*.zarr"
+    ds2 = open_mfdataset(url, engine="zarr")
+    assert xr.concat([ds, ds0], dim="time") == ds2
 
 
 @requires_h5netcdf
