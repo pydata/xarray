@@ -2,10 +2,13 @@
 import argparse
 import itertools
 import pathlib
+import re
 
 import yaml
 from packaging import version
 from packaging.requirements import Requirement
+
+operator_re = re.compile("=+")
 
 
 def extract_versions(config):
@@ -21,7 +24,8 @@ def extract_versions(config):
 
 
 def update_requirement(line, new_versions):
-    preprocessed = line.replace("=", "==")  # convert to pep-508 compatible
+    # convert to pep-508 compatible
+    preprocessed = operator_re.sub("==", line)
     requirement = Requirement(preprocessed)
 
     specifier, *_ = requirement.specifier
