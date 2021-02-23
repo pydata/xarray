@@ -874,18 +874,18 @@ class DataArrayCoarsen(Coarsen):
         return wrapped_func
 
     def reduce(self, func: Callable, **kwargs):
-        """Reduce the items in this group by applying ``func`` along some
+        """Reduce the items in this group by applying `func` along some
         dimension(s).
 
         Parameters
         ----------
         func : callable
-            Function which can be called in the form ``func(x, axis, **kwargs)``
+            Function which can be called in the form `func(x, axis, **kwargs)`
             to return the result of collapsing an np.ndarray over the coarsening
-            dimensions.  It must be possible to provide the ``axis`` argument
+            dimensions.  It must be possible to provide the `axis` argument
             with a tuple of integers.
         **kwargs : dict
-            Additional keyword arguments passed on to ``func``.
+            Additional keyword arguments passed on to `func`.
 
         Returns
         -------
@@ -954,17 +954,17 @@ class DatasetCoarsen(Coarsen):
         return wrapped_func
 
     def reduce(self, func: Callable, **kwargs):
-        """Reduce the items in this group by applying ``func`` along some
+        """Reduce the items in this group by applying `func` along some
         dimension(s).
 
         Parameters
         ----------
-        func : callable Function which can be called in the form ``func(x, axis,
-            **kwargs)`` to return the result of collapsing an np.ndarray over
+        func : callable Function which can be called in the form `func(x, axis,
+            **kwargs)` to return the result of collapsing an np.ndarray over
             the coarsening dimensions.  It must be possible to provide the
-            ``axis`` argument with a tuple of integers.
+            `axis` argument with a tuple of integers.
         **kwargs : dict
-            Additional keyword arguments passed on to ``func``.
+            Additional keyword arguments passed on to `func.
 
         Returns
         -------
