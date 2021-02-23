@@ -94,7 +94,7 @@ New Features
 - :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
   ``reduce`` method, enabling coarsening operations with custom reduction
   functions (:issue:`3741`, :pull:`4939`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`.
+  <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
