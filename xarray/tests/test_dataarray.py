@@ -4200,6 +4200,9 @@ class TestDataArray:
         assert expect.dtype == bool
         assert_identical(expect, actual)
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(da, fill_value=True, dtype={"x": bool})
+
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)

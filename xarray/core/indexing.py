@@ -4,7 +4,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Iterable, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -1010,7 +1010,7 @@ def _decompose_outer_indexer(
         return indexer, BasicIndexer(())
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
-    backend_indexer = []
+    backend_indexer: List[Any] = []
     np_indexer = []
     # make indexer positive
     pos_indexer = []
@@ -1397,17 +1397,17 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             elif hasattr(array, "categories"):
                 # category isn't a real numpy dtype
-                dtype = array.categories.dtype
+                dtype_ = array.categories.dtype
             elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             else:
-                dtype = array.dtype
+                dtype_ = array.dtype
         else:
-            dtype = np.dtype(dtype)
-        self._dtype = dtype
+            dtype_ = np.dtype(dtype)
+        self._dtype = dtype_
 
     @property
     def dtype(self) -> np.dtype:

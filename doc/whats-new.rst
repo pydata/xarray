@@ -190,6 +190,7 @@ Internal Changes
   in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
   all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
+- Update type hints to work with numpy v1.20 (:pull:`4878`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
   the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
