@@ -25,8 +25,8 @@ jobs:
         uses: actions/setup-python@v2
       - name: upgrade pip
         run: python -m pip install --upgrade pip
-      - name: install pre-commit
-        run: python -m pip install --upgrade pre-commit
+      - name: install dependencies
+        run: python -m pip install --upgrade pre-commit pyyaml packaging
       - name: version info
         run: python -m pip list
       - name: autoupdate
@@ -35,7 +35,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EXECUTE_COMMANDS: |
             python -m pre_commit autoupdate
+            python .github/workflows/sync_linter_versions.py .pre-commit-config.yaml ci/requirements/mypy_only
           COMMIT_MESSAGE: 'pre-commit: autoupdate hook versions'
+          COMMIT_NAME: 'github-actions[bot]'
+          COMMIT_EMAIL: 'github-actions[bot]@users.noreply.github.com'
           PR_TITLE: 'pre-commit: autoupdate hook versions'
           PR_BRANCH_PREFIX: 'pre-commit/'
           PR_BRANCH_NAME: 'autoupdate-${PR_ID}'
