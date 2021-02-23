@@ -6064,10 +6064,10 @@ def test_coarsen_reduce(ds, window, name):
     coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
-    actual = coarsen_obj.reduce(getattr(np, "nan%s" % name))
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
     expected = getattr(coarsen_obj, name)()
     assert_allclose(actual, expected)
-    assert actual.dims == expected.dims
+
     # make sure the order of data_var are not changed.
     assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
 

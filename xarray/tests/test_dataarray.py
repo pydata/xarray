@@ -6387,17 +6387,15 @@ def test_coarsen_keep_attrs():
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
 def test_coarsen_reduce(da, window, name):
     if da.isnull().sum() > 1 and window == 1:
-        # this causes all nan slices
-        window = 2
+        pytest.skip("These parameters lead to all-NaN slices")
 
     # Use boundary="trim" to accomodate all window sizes used in tests
     coarsen_obj = da.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
-    actual = coarsen_obj.reduce(getattr(np, "nan%s" % name))
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
     expected = getattr(coarsen_obj, name)()
     assert_allclose(actual, expected)
-    assert actual.dims == expected.dims
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
