@@ -965,7 +965,7 @@ class DatasetCoarsen(Coarsen):
             dimensions.  It must be possible to  provide the `axis` argument with
             a tuple of integers.
         **kwargs : dict
-            Additional keyword arguments passed on to `func.
+            Additional keyword arguments passed on to `func`.
 
         Returns
         -------
