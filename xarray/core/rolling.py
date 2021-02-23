@@ -969,7 +969,8 @@ class DatasetCoarsen(Coarsen):
 
         Returns
         -------
-        reduced : Dataset Arrays with summarized data.
+        reduced : Dataset
+            Arrays with summarized data.
         """
         wrapped_func = self._reduce_method(func)
         return wrapped_func(self, **kwargs)
