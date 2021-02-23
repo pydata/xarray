@@ -94,7 +94,6 @@ New Features
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-
 - :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
   (including globs for the latter) for ``engine="zarr"``, and so allow reading from
   many remote and other file systems (:pull:`4461`)
