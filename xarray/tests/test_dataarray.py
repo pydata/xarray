@@ -95,7 +95,7 @@ class TestDataArray:
         assert expected == repr(self.mda)
 
     @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.16",  # type: ignore
+        LooseVersion(np.__version__) < "1.16",
         reason="old versions of numpy have different printing behavior",
     )
     def test_repr_multiindex_long(self):

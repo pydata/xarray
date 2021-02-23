@@ -80,7 +80,7 @@ try:
     from numpy.typing import DTypeLike
 except ImportError:
     # fall back for numpy < 1.20
-    DTypeLike = Union[np.dtype, str]
+    DTypeLike = Union[np.dtype, str]  # type: ignore
 
 
 # from dask/array/utils.py
