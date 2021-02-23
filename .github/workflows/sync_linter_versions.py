@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 import argparse
+import itertools
 import pathlib
 
 import yaml
 from packaging import version
 
 
-def extract_version(config, name):
+def extract_versions(config):
     repos = config.get("repos")
     if repos is None:
         raise ValueError("invalid pre-commit configuration")
 
-    for repo in repos:
-        hooks = repo["hooks"]
-        hook_names = [hook["id"] for hook in hooks]
-        if name in hook_names:
-            return version.parse(repo["rev"])
-
-    raise KeyError(f"cannot find hook {name!r} in the pre-commit configuration")
+    extracted_versions = (
+        ((hook["id"], version.parse(repo["rev"])) for hook in repo["hooks"])
+        for repo in repos
+    )
+    return dict(itertools.chain.from_iterable(extracted_versions))
 
 
 if __name__ == "__main__":
@@ -32,7 +31,8 @@ if __name__ == "__main__":
     with args.pre_commit_config.open() as f:
         config = yaml.safe_load(f)
 
-    mypy_version = extract_version(config, "mypy")
+    versions = extract_versions(config)
+    mypy_version = versions["mypy"]
 
     requirements = args.requirements.read_text()
     new_requirements = "\n".join(
