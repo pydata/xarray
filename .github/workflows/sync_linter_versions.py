@@ -61,8 +61,10 @@ if __name__ == "__main__":
     if args.dry:
         separator = "\n" + "—" * 80 + "\n"
         print(
+            "contents of the old requirements file:",
+            requirements_text,
             "contents of the new requirements file:",
-            new_requirements,
+            new_requirements_text,
             sep=separator,
             end=separator,
         )
