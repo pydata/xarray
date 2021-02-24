@@ -3865,6 +3865,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def update(self, other: "CoercibleMapping") -> "Dataset":
         """Update this dataset's variables with those from another dataset.
 
+        Just like :py:meth:`dict.update` this is a in-place operation.
+
         Parameters
         ----------
         other : Dataset or mapping
@@ -3879,13 +3881,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         updated : Dataset
-            Updated dataset.
+            Updated dataset. Note that since the update is in-place this is the input
+            dataset.
+
+            It is deprecated since version 0.17 and scheduled to be removed in 0.19.
 
         Raises
         ------
         ValueError
             If any dimensions would have inconsistent sizes in the updated
             dataset.
+
+        See Also
+        --------
+        Dataset.assign
         """
         merge_result = dataset_update_method(self, other)
         return self._replace(inplace=True, **merge_result._asdict())
