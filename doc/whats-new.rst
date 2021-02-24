@@ -22,9 +22,9 @@ v0.17.0 (24 Feb 2021)
 
 This release brings a few important performance improvements, a wide range of
 usability upgrades, lots of bug fixes, and some new features. These include
-better ``cftime`` support, a new quiver plot, better ``unstack`` performance, more efficient memory
-use in rolling operations, and some python packaging improvements. We also have
-a few documentation improvements (and more planned!).
+better ``cftime`` support, a new quiver plot, better ``unstack`` performance,
+more efficient memory use in rolling operations, and some python packaging
+improvements. We also have a few documentation improvements (and more planned!).
 
 Many thanks to the 36 contributors to this release: Alessandro Amici, Anderson
 Banihirwe, Aureliana Barghini, Ayrton Bourn, Benjamin Bean, Blair Bonnett, Chun
