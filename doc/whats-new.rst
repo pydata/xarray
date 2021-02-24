@@ -139,13 +139,14 @@ Bug fixes
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger
   computations anymore if :py:meth:`Dataset.weighted` or
   :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By
-  `Julius Busecke <https://github.com/jbusecke>`_. - :py:func:`merge` with
-  ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`). - By
-  default, when possible, xarray will now always use values of type ``int64``
-  when encoding and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures
-  that maximum precision and accuracy are maintained in the round-tripping
-  process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding
-  standard calendar dates with time units of nanoseconds (:pull:`4400`).
+  `Julius Busecke <https://github.com/jbusecke>`_.
+- :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs
+  (:issue:`4627`).
+- By default, when possible, xarray will now always use values of
+  type ``int64`` when encoding and decoding ``numpy.datetime64[ns]`` datetimes.  This
+  ensures that maximum precision and accuracy are maintained in the round-tripping
+  process (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard
+  calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
   <http://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
@@ -160,9 +161,12 @@ Bug fixes
   By `Alessandro Amici <https://github.com/alexamici>`_
 - Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations,
   e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype
-  (:issue:`2658` and :issue:`4543`) by `Mathias Hauser <https://github.com/mathause>`_.
-- Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`). By `Jimmy Westling <https://github.com/illviljan>`_.
-- Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+  (:issue:`2658` and :issue:`4543`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Limit number of data rows when printing large datasets. (:issue:`4736`, :pull:`4750`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add ``missing_dims`` parameter to transpose (:issue:`4647`, :pull:`4767`).
+  By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Fix regression when decoding a variable with a ``scale_factor`` and ``add_offset`` given
@@ -221,8 +225,8 @@ Internal Changes
 - Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)``
   for clearer error messages (:pull:`4752`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
-  in IPython (:issue:`4741`, :pull:`4742`).
+- Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and
+  tab completion in IPython (:issue:`4741`, :pull:`4742`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for backends
   to specify how to voluntary release all resources. (:pull:`#4809`)
@@ -230,8 +234,10 @@ Internal Changes
 - Update type hints to work with numpy v1.20 (:pull:`4878`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
-  the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
+  the other ``assert_*`` functions (:pull:`4864`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+- Performance improvement when constructing DataArrays. Significantly speeds up
+  repr for Datasets with large number of variables.
   By `Deepak Cherian <https://github.com/dcherian>`_
 
 .. _whats-new.0.16.2:
