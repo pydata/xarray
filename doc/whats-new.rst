@@ -79,6 +79,18 @@ Breaking changes
   non-None value for ``min_count`` will now be a float array rather than an
   integer array.
 
+Deprecations
+~~~~~~~~~~~~
+
+- ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
+  favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
+  For now using ``dim`` issues a ``FutureWarning``. It will be removed in
+  version 0.19.0 (:pull:`3993`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- the return value of :py:meth:`Dataset.update` is being deprecated to make it work more
+  like :py:meth:`dict.update`. It will be removed in version 0.19.0 (:pull:`4932`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
 
 New Features
 ~~~~~~~~~~~~
@@ -202,6 +214,8 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Deprecated ``autoclose`` kwargs from :py:func:`open_dataset` are removed; (:pull:`4725`).
   By `Aureliana Barghini <https://github.com/aurghs>`_.
+- explicitly mention that :py:meth:`Dataset.update` updates inplace (:issue:`2951`, :pull:`4932`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
