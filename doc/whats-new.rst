@@ -153,11 +153,12 @@ Bug fixes
   (:issue:`4644`, :pull:`4683`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Remove dictionary unpacking when using ``.loc`` to avoid collision with ``.sel`` parameters (:pull:`4695`).
-  By `Anderson Banihirwe <https://github.com/andersy005>`_
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 - Fix the legend created by :py:meth:`Dataset.plot.scatter` (:issue:`4641`, :pull:`4723`).
   By `Justus Magin <https://github.com/keewis>`_.
-- Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'`` (:issue:`4733` :pull:`4737`).
-  By `Alessandro Amici <https://github.com/alexamici>`_
+- Fix a crash in orthogonal indexing on geographic coordinates with ``engine='cfgrib'``
+  (:issue:`4733` :pull:`4737`).
+  By `Alessandro Amici <https://github.com/alexamici>`_.
 - Coordinates with dtype ``str`` or ``bytes`` now retain their dtype on many operations,
   e.g. ``reindex``, ``align``, ``concat``, ``assign``, previously they were cast to an object dtype
   (:issue:`2658` and :issue:`4543`).
@@ -237,7 +238,7 @@ Internal Changes
   By `Mathias Hauser <https://github.com/mathause>`_.
 - Performance improvement when constructing DataArrays. Significantly speeds up
   repr for Datasets with large number of variables.
-  By `Deepak Cherian <https://github.com/dcherian>`_
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.16.2:
 
