@@ -62,7 +62,6 @@ Breaking changes
   ============ ====== ====
 
   (:issue:`4688`, :pull:`4720`, :pull:`4907`, :pull:`4942`)
-  By `Justus Magin <https://github.com/keewis>`_.
 - As a result of :pull:`4684` the default units encoding for
   datetime-like values (``np.datetime64[ns]`` or ``cftime.datetime``) will now
   always be set such that ``int64`` values can be used.  In the past, no units
