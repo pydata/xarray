@@ -1188,8 +1188,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Examples
         --------
-        >>> import xarray as xr
-        >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
         >>> a
         <xarray.DataArray (x: 5, y: 5)>
