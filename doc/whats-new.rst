@@ -116,7 +116,6 @@ New Features
   <https://github.com/spencerkclark>`_.
 - Most rolling operations use significantly less memory. (:issue:`4325`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel`;
   (:issue:`4658`, :pull:`4819`).
   By `Daniel Mesejo <https://github.com/mesejo>`_.
@@ -201,8 +200,8 @@ Documentation
 - Add concat examples and improve combining documentation (:issue:`4620`, :pull:`4645`).
   By `Ray Bell <https://github.com/raybellwaves>`_ and
   `Justus Magin <https://github.com/keewis>`_.
-- Added docs on vectorized indexing; (:pull:`4711`).
-  By `Eric Keenan <https://github.com/EricKeenan`_.
+- Added docs on vectorized indexing (:pull:`4711`).
+  By `Eric Keenan <https://github.com/EricKeenan>`_.
 
 Deprecations
 ~~~~~~~~~~~~
