@@ -91,7 +91,6 @@ Deprecations
   like :py:meth:`dict.update`. It will be removed in version 0.19.0 (:pull:`4932`).
   By `Justus Magin <https://github.com/keewis>`_.
 
-
 New Features
 ~~~~~~~~~~~~
 - :py:meth:`~xarray.cftime_range` and :py:meth:`DataArray.resample` now support
@@ -100,8 +99,7 @@ New Features
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Significantly higher ``unstack`` performance on numpy-backed arrays which
   contain missing values; 8x faster than previous versions in our benchmark, and
-  now 2x faster than pandas.
-  (:pull:`4746`);
+  now 2x faster than pandas (:pull:`4746`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Add :py:meth:`Dataset.plot.quiver` for quiver plots with :py:class:`Dataset` variables.
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -116,7 +114,7 @@ New Features
   <https://github.com/spencerkclark>`_.
 - Most rolling operations use significantly less memory. (:issue:`4325`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel`;
+- Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel`
   (:issue:`4658`, :pull:`4819`).
   By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Xarray now leverages updates as of cftime version 1.4.1, which enable exact I/O
@@ -229,16 +227,17 @@ Internal Changes
 - Use ``pyproject.toml`` instead of the ``setup_requires`` option for
   ``setuptools`` (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-
 - Replace all usages of ``assert x.identical(y)`` with ``assert_identical(x,  y)``
-  for clearer error messages.
-  (:pull:`4752`);
+  for clearer error messages (:pull:`4752`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Speed up attribute style access (e.g. ``ds.somevar`` instead of ``ds["somevar"]``) and tab completion
-  in ipython (:issue:`4741`, :pull:`4742`). By `Richard Kleijn <https://github.com/rhkleijn>`_.
-- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for beckends to specify how to voluntary release
-  all resources. (:pull:`#4809`), By `Alessandro Amici <https://github.com/alexamici>`_.
-- Update type hints to work with numpy v1.20 (:pull:`4878`). By `Mathias Hauser <https://github.com/mathause>`_.
+  in IPython (:issue:`4741`, :pull:`4742`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
+- Added the ``set_close`` method to ``Dataset`` and ``DataArray`` for backends
+  to specify how to voluntary release all resources. (:pull:`#4809`)
+  By `Alessandro Amici <https://github.com/alexamici>`_.
+- Update type hints to work with numpy v1.20 (:pull:`4878`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Ensure warnings cannot be turned into exceptions in :py:func:`testing.assert_equal` and
   the other ``assert_*`` functions (:pull:`4864`). By `Mathias Hauser <https://github.com/mathause>`_.
 - Performance improvement when constructing DataArrays. Significantly speeds up repr for Datasets with large number of variables.
