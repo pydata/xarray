@@ -110,11 +110,6 @@ def legend_elements(
     handles = []
     labels = []
     hasarray = self.get_array() is not None
-    if fmt is None:
-        fmt = mpl.ticker.ScalarFormatter(useOffset=False, useMathText=True)
-    elif isinstance(fmt, str):
-        fmt = mpl.ticker.StrMethodFormatter(fmt)
-    fmt.create_dummy_axis()
 
     if prop == "colors":
         if not hasarray:
@@ -137,6 +132,15 @@ def legend_elements(
 
     func_value = np.asarray(func(u))
     func_is_numeric = np.issubdtype(func_value.dtype, np.number)
+
+    if fmt is None:
+        if func_is_numeric:
+            fmt = mpl.ticker.ScalarFormatter(useOffset=False, useMathText=True)
+        else:
+            fmt = mpl.ticker.StrMethodFormatter("{x}")
+    elif isinstance(fmt, str):
+        fmt = mpl.ticker.StrMethodFormatter(fmt)
+    fmt.create_dummy_axis()
     if func_is_numeric:
         fmt.set_bounds(min(func_value), max(func_value))
 
@@ -992,30 +996,14 @@ def scatter(
             return _to_label
 
         handles, labels = [], []
-        for subtitle, prop, func, style in [
-            (
-                _data["hue_label"],
-                "colors",
-                to_label(_data, "colors_to_labels"),
-                _data["hue_style"],
-            ),
-            (
-                _data["size_label"],
-                "sizes",
-                to_label(_data, "sizes_to_labels"),
-                _data["size_style"],
-            ),
+        for subtitle, prop, func in [
+            (_data["hue_label"], "colors", to_label(_data, "colors_to_labels")),
+            (_data["size_label"], "sizes", to_label(_data, "sizes_to_labels")),
         ]:
             if subtitle:
-                # Floats are handled nicely by the defaults but strings
-                # needs special format to bypass numerical operations:
-                fmt = "{x}" if style == "discrete" else None
-
                 # Get legend handles and labels that displays the
                 # values correctly:
-                hdl, lbl = legend_elements(
-                    primitive, prop, num="auto", func=func, fmt=fmt
-                )
+                hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
                 hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
                 handles += hdl
                 labels += lbl
