@@ -87,6 +87,8 @@ Deprecations
   For now using ``dim`` issues a ``FutureWarning``. It will be removed in
   version 0.19.0 (:pull:`3993`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Deprecated ``autoclose`` kwargs from :py:func:`open_dataset` are removed (:pull:`4725`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
 - the return value of :py:meth:`Dataset.update` is being deprecated to make it work more
   like :py:meth:`dict.update`. It will be removed in version 0.19.0 (:pull:`4932`).
   By `Justus Magin <https://github.com/keewis>`_.
@@ -198,21 +200,10 @@ Documentation
 - Add concat examples and improve combining documentation (:issue:`4620`, :pull:`4645`).
   By `Ray Bell <https://github.com/raybellwaves>`_ and
   `Justus Magin <https://github.com/keewis>`_.
-- Added docs on vectorized indexing (:pull:`4711`).
-  By `Eric Keenan <https://github.com/EricKeenan>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
-- ``dim`` argument to :py:meth:`DataArray.integrate` is being deprecated in
-  favour of a ``coord`` argument, for consistency with :py:meth:`Dataset.integrate`.
-  For now using ``dim`` issues a ``FutureWarning``. It will be removed in
-  version 0.19.0 (:pull:`3993`).
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Deprecated ``autoclose`` kwargs from :py:func:`open_dataset` are removed; (:pull:`4725`).
-  By `Aureliana Barghini <https://github.com/aurghs>`_.
 - explicitly mention that :py:meth:`Dataset.update` updates inplace (:issue:`2951`, :pull:`4932`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Added docs on vectorized indexing (:pull:`4711`).
+  By `Eric Keenan <https://github.com/EricKeenan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
