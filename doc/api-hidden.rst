@@ -811,6 +811,7 @@
    backends.DummyFileManager.close
 
    backends.common.BackendArray
+   backends.common.BackendEntrypoint
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter
