@@ -461,16 +461,13 @@ it is not possible to reuse the Xarray time decoder, and implementing a new
 one is mandatory.
 
 Decoders can be activated or deactivated using the boolean keywords of
-:py:meth:`~xarray.open_dataset` signature: ``mask_and_scale``,
+Xarray :py:meth:`~xarray.open_dataset` signature: ``mask_and_scale``,
 ``decode_times``, ``decode_timedelta``, ``use_cftime``,
 ``concat_characters``, ``decode_coords``.
-
 Such keywords are passed to the backend only if the User sets a value
 different from ``None``.  Note that the backend does not necessarily have to
 implement all the decoders, but it shall declare in its ``open_dataset``
-interface only the boolean keywords related to the supported decoders. The
-backend shall implement the deactivation and activation of the supported
-decoders.
+interface only the boolean keywords related to the supported decoders.
 
 .. _RST backend_registration:
 
