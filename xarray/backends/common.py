@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from typing import Dict, Tuple, Type, Union, Any
+from typing import Any, Dict, Tuple, Type, Union
 
 import numpy as np
 
