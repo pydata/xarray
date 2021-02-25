@@ -1,5 +1,6 @@
 """Testing functions exposed to the user API"""
 import functools
+import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
@@ -21,6 +22,19 @@ __all__ = (
 )
 
 
+def ensure_warnings(func):
+    # sometimes tests elevate warnings to errors
+    # -> make sure that does not happen in the assert_* functions
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
 def _decode_string_data(data):
     if data.dtype.kind == "S":
         return np.core.defchararray.decode(data, "utf-8", "replace")
@@ -38,6 +52,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08, decode_bytes=Tru
         return duck_array_ops.allclose_or_equiv(arr1, arr2, rtol=rtol, atol=atol)
 
 
+@ensure_warnings
 def assert_equal(a, b):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
@@ -54,9 +69,9 @@ def assert_equal(a, b):
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
 
-    See also
+    See Also
     --------
-    assert_identical, assert_allclose, Dataset.equals, DataArray.equals,
+    assert_identical, assert_allclose, Dataset.equals, DataArray.equals
     numpy.testing.assert_array_equal
     """
     __tracebackhide__ = True
@@ -69,6 +84,7 @@ def assert_equal(a, b):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_identical(a, b):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
@@ -82,7 +98,7 @@ def assert_identical(a, b):
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
 
-    See also
+    See Also
     --------
     assert_equal, assert_allclose, Dataset.equals, DataArray.equals
     """
@@ -99,6 +115,7 @@ def assert_identical(a, b):
         raise TypeError("{} not supported by assertion comparison".format(type(a)))
 
 
+@ensure_warnings
 def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
@@ -120,7 +137,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
 
-    See also
+    See Also
     --------
     assert_identical, assert_equal, numpy.testing.assert_allclose
     """
@@ -182,6 +199,7 @@ def _format_message(x, y, err_msg, verbose):
     return "\n".join(parts)
 
 
+@ensure_warnings
 def assert_duckarray_allclose(
     actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
 ):
@@ -192,6 +210,7 @@ def assert_duckarray_allclose(
     assert allclose, _format_message(actual, desired, err_msg=err_msg, verbose=verbose)
 
 
+@ensure_warnings
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
     """ Like `np.testing.assert_array_equal`, but for duckarrays """
     __tracebackhide__ = True
