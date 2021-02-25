@@ -246,7 +246,7 @@ to integrate any code in Xarray; all you need to do is:
 
 If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 
-Note that the new interface for backends is available from xarray
+Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
 
 .. _RST backend_entrypoint:
@@ -338,8 +338,8 @@ The input of ``open_dataset`` method are one argument
 - ``drop_variables``: can be `None` or an iterable containing the variable
   names to be dropped when reading the data.
 
-If it makes sense for your backend, your ``open_dataset`` method should
-implement in its interface the following boolean keyword arguments, called
+If it makes sense for your backend, your ``open_dataset``  method
+should implement in its interface the following boolean keyword arguments, called
 **decoders**, which default to ``None``:
 
 - ``mask_and_scale``
@@ -349,10 +349,12 @@ implement in its interface the following boolean keyword arguments, called
 - ``concat_characters``
 - ``decode_coords``
 
+Note: all the supported decoders shall be declared explicitly
+in backend ``open_dataset`` signature.
+
 These keyword arguments are explicitly defined in Xarray
 :py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
 backend only if the User explicitly sets a value different from ``None``.
-
 For more details on decoders see :ref:`RST decoders`.
 
 Your backend can also take as input a set of backend-specific keyword
@@ -375,14 +377,10 @@ It is not a mandatory parameter, and if the backend does not provide it
 explicitly, Xarray creates a list of them automatically by inspecting the
 backend signature.
 
-Xarray uses ``open_dataset_parameters`` only when it needs to select
-the **decoders** supported by the backend.
-
 If ``open_dataset_parameters`` is not defined, but ``**kwargs`` and ``*args``
 are in the backend ``open_dataset`` signature, Xarray raises an error.
 On the other hand, if the backend provides the ``open_dataset_parameters``,
 then ``**kwargs`` and ``*args`` can be used in the signature.
-
 However, this practice is discouraged unless there is a good reasons for using
 ``**kwargs`` or ``*args``.
 
