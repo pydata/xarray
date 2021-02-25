@@ -32,6 +32,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    raise_if_dask_computes,
     raises_regex,
     requires_dask,
     requires_sparse,
@@ -873,26 +874,26 @@ class VariableSubclassobjects:
         )
         assert_array_equal(actual, expected)
 
-    def test_rolling_window(self):
+    @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
+    def test_rolling_window(self, d, w):
         # Just a working test. See test_nputils for the algorithm validation
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
-        for (d, w) in [("x", 3), ("y", 5)]:
-            v_rolling = v.rolling_window(d, w, d + "_window")
-            assert v_rolling.dims == ("x", "y", "z", d + "_window")
-            assert v_rolling.shape == v.shape + (w,)
+        v_rolling = v.rolling_window(d, w, d + "_window")
+        assert v_rolling.dims == ("x", "y", "z", d + "_window")
+        assert v_rolling.shape == v.shape + (w,)
 
-            v_rolling = v.rolling_window(d, w, d + "_window", center=True)
-            assert v_rolling.dims == ("x", "y", "z", d + "_window")
-            assert v_rolling.shape == v.shape + (w,)
+        v_rolling = v.rolling_window(d, w, d + "_window", center=True)
+        assert v_rolling.dims == ("x", "y", "z", d + "_window")
+        assert v_rolling.shape == v.shape + (w,)
 
-            # dask and numpy result should be the same
-            v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
-            assert_array_equal(v_rolling, v_loaded)
+        # dask and numpy result should be the same
+        v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
+        assert_array_equal(v_rolling, v_loaded)
 
-            # numpy backend should not be over-written
-            if isinstance(v._data, np.ndarray):
-                with pytest.raises(ValueError):
-                    v_loaded[0] = 1.0
+        # numpy backend should not be over-written
+        if isinstance(v._data, np.ndarray):
+            with pytest.raises(ValueError):
+                v_loaded[0] = 1.0
 
 
 class TestVariable(VariableSubclassobjects):
@@ -2009,6 +2010,29 @@ class TestVariableWithDask(VariableSubclassobjects):
             v._getitem_with_mask(indexer, fill_value=-1),
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
+
+    @pytest.mark.parametrize("dim", ["x", "y"])
+    @pytest.mark.parametrize("window", [3, 8, 11])
+    @pytest.mark.parametrize("center", [True, False])
+    def test_dask_rolling(self, dim, window, center):
+        import dask
+        import dask.array as da
+
+        dask.config.set(scheduler="single-threaded")
+
+        x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
+        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+
+        expected = x.rolling_window(
+            dim, window, "window", center=center, fill_value=np.nan
+        )
+        with raise_if_dask_computes():
+            actual = dx.rolling_window(
+                dim, window, "window", center=center, fill_value=np.nan
+            )
+        assert isinstance(actual.data, da.Array)
+        assert actual.shape == expected.shape
+        assert_equal(actual, expected)
 
 
 @requires_sparse
