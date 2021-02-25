@@ -1511,7 +1511,7 @@ class DataArray(AbstractArray, DataWithCoords):
         <xarray.DataArray (lat: 4)>
         array([0.5488135 , 0.71518937, 0.60276338, 0.54488318])
         Coordinates:
-          * lat      (lat) int64 90 89 88 87        
+          * lat      (lat) int64 90 89 88 87
         >>> da.reindex(lat=da.lat[::-1])
         <xarray.DataArray (lat: 4)>
         array([0.25308004, 0.50687518, 0.85155305, 0.4583866 ])
