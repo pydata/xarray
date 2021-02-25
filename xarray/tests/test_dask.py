@@ -1599,3 +1599,41 @@ def test_optimize():
     arr = xr.DataArray(a).chunk(5)
     (arr2,) = dask.optimize(arr)
     arr2.compute()
+
+
+# The graph_manipulation module is in dask since 2021.2 but it became usable with
+# xarray only since 2021.3
+@pytest.mark.skipif(LooseVersion(dask.__version__) <= "2021.02.0", reason="new module")
+def test_graph_manipulation():
+    """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
+    function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
+    a HighLevelGraph whereas with dask.persist() and dask.optimize() it's a plain dict.
+    """
+    import dask.graph_manipulation as gm
+
+    # BasicLayer with 3 keys + Blockwise layer
+    v = Variable(["x"], [1, 2]).chunk(1) * 2
+    da = DataArray(v)
+    ds = Dataset({"d1": v[0], "d2": v[1], "d3": ("x", [3, 4])})
+    v2, da2, ds2 = gm.clone(ds, da, v)
+
+    assert_equal(v2, v)
+    assert_equal(da2, da)
+    assert_equal(ds2, ds)
+
+    assert v2.name != v.name
+    assert v2.__dask_keys__() != v.__dask_keys__()
+    assert v2.dask.layers.keys() != v.dask.layers.keys()
+
+    assert da2.name != da.name
+    assert da2.__dask_keys__() != da.__dask_keys__()
+    assert da2.dask.layers.keys() != da.dask.layers.keys()
+
+    assert ds2.__dask_keys__() != ds.__dask_keys__()
+    assert ds2.dask.layers.keys() != ds.dask.layers.keys()
+
+    # Above we performed a slice operation; adding the two slices back together creates
+    # a diamond-shaped dependency graph, which in turn will trigger a collision in layer
+    # names if we were to use HighLevelGraph.cull() instead of
+    # HighLevelGraph.cull_layers() in Dataset.__dask_postpersist__().
+    assert_equal(ds2.d1 + ds2.d2, ds.d1 + ds.d2)
