@@ -109,15 +109,6 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
-  in the form of kwargs as well as a dict, like most similar methods.
-  By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Allow installing from git archives (:pull:`4897`).
-  By `Justus Magin <https://github.com/keewis>`_.
-- :py:func:`open_dataset` and :py:func:`open_mfdataset` now accept ``fsspec`` URLs
-  (including globs for the latter) for ``engine="zarr"``, and so allow reading from
-  many remote and other file systems (:pull:`4461`)
-  By `Martin Durant <https://github.com/martindurant>`_
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
