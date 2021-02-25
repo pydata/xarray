@@ -239,11 +239,15 @@ How to add a new backend
 Adding a new backend for read support to Xarray does not require
 to integrate any code in Xarray; all you need to do is:
 
-- Create a class that inherits from Xarray :py:class:`~xarray.backends.common.BackendEntrypoint` and implements the method ``open_dataset`` (:ref:`RST backend_entrypoint`)
+- Create a class that inherits from Xarray :py:class:`~xarray.backends.common.BackendEntrypoint`
+  and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
 
-- Declare this class as an external plugin in your ``setup.py`` (:ref:`RST backend_registration`)
+- Declare this class as an external plugin in your ``setup.py``, see :ref:`RST backend_registration`
 
-If you also want to support lazy loading and dask see :ref:`RST lazy_loading` and :ref:`RST dask`.
+If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
+
+Note that the new interface for backends is available from xarray
+version >= 0.18 onwards.
 
 .. _RST backend_entrypoint:
 
@@ -261,17 +265,18 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
 .. code-block:: python
 
-    class YourBackendEntrypoint(BackendEntrypoint):
+    class MyBackendEntrypoint(BackendEntrypoint):
         def open_dataset(
             self,
             filename_or_obj,
-            decode_coords=None,
+            *,
+            drop_variables=None,
             # other backend specific keyword arguments
         ):
             ...
             return ds
 
-        open_dataset_parameters = ...
+        open_dataset_parameters = ["filename_or_obj", "drop_variables"]
 
         def guess_can_open(self, filename_or_obj):
             try:
@@ -287,10 +292,46 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 open_dataset
 ^^^^^^^^^^^^
 
-**Inputs**
+The backend ``open_dataset`` shall implement reading from file, the variables
+decoding and it shall instantiate the output Xarray class :py:class:`~xarray.Dataset`.
 
-The backend ``open_dataset`` method takes as input one argument
-(``filename``), and one keyword argument (``drop_variables``):
+The following is an example of the high level processing steps:
+
+.. code-block:: python
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        *,
+        drop_variables=None,
+        decode_times=True,
+        decode_timedelta=True,
+        decode_coords=True,
+        my_backend_param=None,
+    ):
+        vars, attrs, coords = my_reader(
+            filename_or_obj,
+            drop_variables=drop_variables,
+            my_backend_param=my_backend_param,
+        )
+        vars, attrs, coords = my_decode_variables(
+            vars, attrs, decode_times, decode_timedelta, decode_coords
+        )  #  see also conventions.decode_cf_variables
+
+        ds = xr.Dataset(vars, attrs=attrs)
+        ds = ds.set_coords(coords)
+        ds.set_close(store.close)
+
+        return ds
+
+
+The output :py:class:`~xarray.Dataset` shall implement the additional custom method
+``close``, used by Xarray to ensure the related files are eventually closed. This
+method shall be set by using :py:meth:`~xarray.Dataset.set_close`.
+
+
+The input of ``open_dataset`` method are one argument
+(``filename``) and one keyword argument (``drop_variables``):
 
 - ``filename``: can be a string containing a path or an instance of
   :py:class:`pathlib.Path`.
@@ -319,11 +360,6 @@ arguments. All these keyword arguments can be passed to
 :py:func:`~xarray.open_dataset` grouped either via the ``backend_kwargs``
 parameter or explicitly using the syntax ``**kwargs``.
 
-**Output**
-
-The output of the backend `open_dataset` shall be an instance of
-Xarray :py:class:`~xarray.Dataset` that implements the additional method
-``close``, used by Xarray to ensure the related files are eventually closed.
 
 If you don't want to support the lazy loading, then the
 :py:class:`~xarray.Dataset` shall contain values as a :py:class:`numpy.ndarray`
@@ -359,7 +395,7 @@ guess_can_open
 file automatically in case the engine is not specified explicitly. If you are
 not interested in supporting this feature, you can skip this step since
 :py:class:`~xarray.backends.common.BackendEntrypoint` already provides a
-default :py:meth:`~xarray.backend.common.BackendEntrypoint.guess_engine`
+default :py:meth:`~xarray.backend.common.BackendEntrypoint.guess_can_open`
 that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
@@ -483,15 +519,15 @@ See the example below:
 
 .. code-block:: python
 
-    backend_array = YourBackendArray()
+    backend_array = MyBackendArray()
     data = indexing.LazilyOuterIndexedArray(backend_array)
-    variable = Variable(..., data, ...)
+    var = xr.Variable(dims, data, attrs=attrs, encoding=encoding)
 
 Where:
 
 - :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a class
   provided by Xarray that manages the lazy loading.
-- ``YourBackendArray`` shall be implemented by the backend and shall inherit
+- ``MyBackendArray`` shall be implemented by the backend and shall inherit
   from :py:class:`~xarray.backends.common.BackendArray`.
 
 BackendArray subclassing
@@ -521,14 +557,17 @@ This is an example ``BackendArray`` subclass implementation:
 
 .. code-block:: python
 
-    class YourBackendArray(BackendArray):
+    class MyBackendArray(BackendArray):
         def __init__(
             self,
+            shape,
+            dtype,
+            lock,
             # other backend specific keyword arguments
         ):
-            self.shape = ...
-            self.dtype = ...
-            self.lock = ...
+            self.shape = shape
+            self.dtype = lock
+            self.lock = dtype
 
         def __getitem__(self, key):
             return indexing.explicit_indexing_adapter(
@@ -572,23 +611,23 @@ Indexing Examples
 **BASIC**
 
 In the ``BASIC`` indexing support, numbers and slices are supported.
-The behaviour is the same as `NumPy <https://numpy.org/>`__ .
 
 Example:
 
-.. code-block:: python
+.. ipython::
+    :verbatim:
 
-    # () shall return the full array
-    >>> backend_array._raw_indexing_method(())
-    array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
+    In [1]: # () shall return the full array
+       ...: backend_array._raw_indexing_method(())
+    Out[1]: array([[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
-    # shall support integers
-    >> backend_array._raw_indexing_method(1, 1)
-    5
+    In [2]: # shall support integers
+       ...: backend_array._raw_indexing_method(1, 1)
+    Out[2]: 5
 
-    # shall support slices
-    >>> backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
-    array([[2, 3], [6, 7], [10, 11]])
+    In [3]: # shall support slices
+       ...: backend_array._raw_indexing_method(slice(0, 3), slice(2, 4))
+    Out[3]: array([[2, 3], [6, 7], [10, 11]])
 
 **OUTER**
 
@@ -596,14 +635,15 @@ The ``OUTER`` indexing shall support number, slices and in addition it shall
 support also lists of integers. The the outer indexing is equivalent to
 combining multiple input list with ``itertools.product()``:
 
-.. code-block:: python
+.. ipython::
+    :verbatim:
 
-    >>> backend_array._raw_indexing_method([0, 1], [0, 1, 2])
-    array([[0, 1, 2], [4, 5, 6]])
+    In [1]: backend_array._raw_indexing_method([0, 1], [0, 1, 2])
+    Out[1]: array([[0, 1, 2], [4, 5, 6]])
 
     # shall support integers
-    >>> backend_array._raw_indexing_method(1, 1)
-    5
+    In [2]: backend_array._raw_indexing_method(1, 1)
+    Out[2]: 5
 
 
 **OUTER_1VECTOR**
@@ -611,8 +651,11 @@ combining multiple input list with ``itertools.product()``:
 The ``OUTER_1VECTOR`` indexing shall supports number, slices and at least one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
+If you support more complex indexing as `explicit indexing` or
+`numpy indexing`, you can have a look to the implemetation of Zarr backend and Scipy backend,
+currently available in :py:mod:`~xarray.backends` module.
 
-.. _RST dask:
+.. _RST preferred_chunks:
 
 Backend preferred chunks
 ^^^^^^^^^^^^^^^^^^^^^^^^
