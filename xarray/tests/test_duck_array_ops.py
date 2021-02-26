@@ -221,40 +221,17 @@ class TestArrayNotNullEquiv:
 
 
 @pytest.mark.parametrize(
-    "dtype1, dtype2, expected",
-    [
-        [bool, bool, True],
-        [int, int, True],
-        [float, float, True],
-        [object, object, True],
-        [str, str, True],
-        [bytes, bytes, True],
-        ["U1", "U2", False],
-        ["S1", "S2", False],
-        [bool, int, False],
-        [float, int, False],
-        [object, int, False],
-    ],
-)
-def test_same_dtype(dtype1, dtype2, expected):
-
-    ar1 = np.array(1, dtype=dtype1)
-    ar2 = np.array(1, dtype=dtype2)
-
-    # lazy makes no difference when not passing a dask array
-    assert same_dtype(ar1, ar2, lazy=True) is expected
-    assert same_dtype(ar1, ar2, lazy=False) is expected
-
-
-@requires_dask
-@pytest.mark.parametrize(
-    "dtype1, dtype2, expected_lazy, expected_nonlazy",
+    "dtype1, dtype2, expected_lazy, expected_eager",
     [
         [bool, bool, True, True],
         [int, int, True, True],
         [float, float, True, True],
+        [str, str, True, True],
+        [bytes, bytes, True, True],
         [object, object, None, True],
         [bool, int, False, False],
+        ["U1", "U2", False, False],
+        ["S1", "S2", False, False],
         [float, int, False, False],
         [object, int, None, False],
         [int, object, None, False],
@@ -262,19 +239,28 @@ def test_same_dtype(dtype1, dtype2, expected):
         [float, object, None, False],
     ],
 )
-def test_same_dtype_dask(dtype1, dtype2, expected_lazy, expected_nonlazy):
+def test_same_dtype(dtype1, dtype2, expected_lazy, expected_eager):
 
-    import dask.array as da
+    ar1 = np.array(1, dtype=dtype1)
+    ar2 = np.array(1, dtype=dtype2)
 
-    ar1 = da.array(1, dtype=dtype1)
-    ar2 = da.array(1, dtype=dtype2)
+    # lazy makes no difference when not passing a numpy array
+    assert same_dtype(ar1, ar2, lazy=True) is expected_eager
+    assert same_dtype(ar1, ar2, lazy=False) is expected_eager
 
-    # lazy differs for dask arrays with object dtype
-    # because these can change dtype on compute
-    with raise_if_dask_computes():
-        assert same_dtype(ar1, ar2, lazy=True) is expected_lazy
+    if has_dask:
 
-    assert same_dtype(ar1, ar2, lazy=False) is expected_nonlazy
+        import dask.array as da
+
+        ar1 = da.array(1, dtype=dtype1)
+        ar2 = da.array(1, dtype=dtype2)
+
+        # lazy differs for dask arrays with object dtype
+        # because these can change dtype on compute
+        with raise_if_dask_computes():
+            assert same_dtype(ar1, ar2, lazy=True) is expected_lazy
+
+        assert same_dtype(ar1, ar2, lazy=False) is expected_eager
 
 
 @requires_dask
@@ -319,7 +305,9 @@ def test_equiv_check_dtype(dtype1, dtype2, expected):
     assert array_equiv(ar1, ar2, check_dtype=True) is expected
     assert array_notnull_equiv(ar1, ar2, check_dtype=True) is expected
 
-    assert allclose_or_equiv(ar1, ar2)
+    # np.allclose does not work for object array
+    if dtype1 is not object:
+        assert allclose_or_equiv(ar1, ar2)
     assert array_equiv(ar1, ar2)
     assert array_notnull_equiv(ar1, ar2)
 
@@ -333,7 +321,9 @@ def test_equiv_check_dtype(dtype1, dtype2, expected):
         assert array_equiv(ar1, ar2, check_dtype=True) is expected
         assert array_notnull_equiv(ar1, ar2, check_dtype=True) is expected
 
-        assert allclose_or_equiv(ar1, ar2)
+        # np.allclose does not work for object array
+        if dtype1 is not object:
+            assert allclose_or_equiv(ar1, ar2)
         assert array_equiv(ar1, ar2)
         assert array_notnull_equiv(ar1, ar2)
 

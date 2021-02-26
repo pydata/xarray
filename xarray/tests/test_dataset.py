@@ -935,6 +935,7 @@ class TestDataset:
         assert ds1.identical(ds2, check_dtype=True) is expected
         assert ds1.broadcast_equals(ds2, check_dtype=True) is expected
 
+        # check the default (check_dtype=False)
         assert ds1.equals(ds2)
         assert ds1.identical(ds2)
         assert ds1.broadcast_equals(ds2)
@@ -947,6 +948,7 @@ class TestDataset:
         assert ds1.identical(ds2, check_dtype=True) is expected
         assert ds1.broadcast_equals(ds2, check_dtype=True) is expected
 
+        # check the default (check_dtype=False)
         assert ds1.equals(ds2)
         assert ds1.identical(ds2)
         assert ds1.broadcast_equals(ds2)

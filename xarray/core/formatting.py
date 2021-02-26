@@ -566,13 +566,13 @@ def _diff_mapping_repr(
         try:
             # compare xarray variable
             if not callable(compat):
-                compatible = getattr(a_mapping[k].variable, compat)(
-                    b_mapping[k].variable, check_dtype=check_dtype
+                compatible = getattr(a_mapping[k], compat)(
+                    b_mapping[k], check_dtype=check_dtype
                 )
             else:
                 compatible = compat(
-                    a_mapping[k].variable,
-                    b_mapping[k].variable,
+                    a_mapping[k],
+                    b_mapping[k],
                     check_dtype=check_dtype,
                 )
             is_variable = True

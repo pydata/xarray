@@ -506,11 +506,12 @@ class TestDataArray:
         assert da1.identical(da2, check_dtype=True) is expected
         assert da1.broadcast_equals(da2, check_dtype=True) is expected
 
+        # check the default (check_dtype=False)
         assert da1.equals(da2)
         assert da1.identical(da2)
         assert da1.broadcast_equals(da2)
 
-        # the check also fails if the coords have different dtype
+        # it also checks the dtype of the coords
         da1 = DataArray([1], dims="x", coords={"x": data1})
         da2 = DataArray([1], dims="x", coords={"x": data2})
 
@@ -518,6 +519,7 @@ class TestDataArray:
         assert da1.identical(da2, check_dtype=True) is expected
         assert da1.broadcast_equals(da2, check_dtype=True) is expected
 
+        # check the default (check_dtype=False)
         assert da1.equals(da2)
         assert da1.identical(da2)
         assert da1.broadcast_equals(da2)

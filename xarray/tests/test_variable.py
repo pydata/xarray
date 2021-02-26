@@ -435,6 +435,7 @@ class VariableSubclassobjects:
         assert v1.broadcast_equals(v2, check_dtype=True) is expected
         assert v1.no_conflicts(v2, check_dtype=True) is expected
 
+        # test the default (check_dtype=False)
         assert v1.equals(v2)
         assert v1.identical(v2)
         assert v1.broadcast_equals(v2)
