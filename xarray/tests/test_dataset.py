@@ -4929,9 +4929,6 @@ class TestDataset:
         with raises_regex(TypeError, "missing 1 required positional argument: 'axis'"):
             ds.reduce(mean_only_one_axis)
 
-        with raises_regex(TypeError, "non-integer axis"):
-            ds.reduce(mean_only_one_axis, axis=["x", "y"])
-
     def test_reduce_no_axis(self):
         def total_sum(x):
             return np.sum(x.flatten())
@@ -4940,9 +4937,6 @@ class TestDataset:
         expected = Dataset({"a": ((), 10)})
         actual = ds.reduce(total_sum)
         assert_identical(expected, actual)
-
-        with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
-            ds.reduce(total_sum, axis=0)
 
         with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim="x")
