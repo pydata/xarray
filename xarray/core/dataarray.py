@@ -1498,6 +1498,26 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataset array, with this array's data but replaced
             coordinates.
 
+        Examples
+        --------
+        Reverse latitude:
+
+        >>> da = xr.DataArray(
+        ...     np.arange(4),
+        ...     coords=[np.array([90, 89, 88, 87])],
+        ...     dims="lat",
+        ... )
+        >>> da
+        <xarray.DataArray (lat: 4)>
+        array([0, 1, 2, 3])
+        Coordinates:
+          * lat      (lat) int64 90 89 88 87
+        >>> da.reindex(lat=da.lat[::-1])
+        <xarray.DataArray (lat: 4)>
+        array([3, 2, 1, 0])
+        Coordinates:
+          * lat      (lat) int64 87 88 89 90
+
         See Also
         --------
         DataArray.reindex_like
