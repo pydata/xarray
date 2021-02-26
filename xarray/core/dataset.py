@@ -900,26 +900,36 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
 
         for k, v in self._variables.items():
-            if is_dask_collection(v):
-                if isinstance(dsk, HighLevelGraph):
-                    # dask >= 2021.3
-                    # __dask_postpersist__() was called by dask.highlevelgraph
-                    #
-                    # In case of multiple layers, don't pollute a Variable's
-                    # HighLevelGraph with layers belonging exclusively to other
-                    # Variables. However, we need to prevent partial layers:
-                    # https://github.com/dask/dask/issues/7137
-                    dsk2 = dsk.cull_layers(v.__dask_layers__())
-                else:
-                    # __dask_postpersist__() was called by dask.optimize or dask.persist
-                    dsk2, _ = cull(dsk, v.__dask_keys__())
+            if not is_dask_collection(v):
+                variables[k] = v
+                continue
 
-                rebuild, args = v.__dask_postpersist__()
-                # rename was added in dask 2021.3
-                kwargs = {"rename": rename} if rename else {}
-                v = rebuild(dsk2, *args, **kwargs)
+            if isinstance(dsk, HighLevelGraph):
+                # dask >= 2021.3
+                # __dask_postpersist__() was called by dask.highlevelgraph.
+                # Don't use dsk.cull(), as we need to prevent partial layers:
+                # https://github.com/dask/dask/issues/7137
+                layers = v.__dask_layers__()
+                if rename:
+                    layers = [rename.get(k, k) for k in layers]
+                dsk2 = dsk.cull_layers(layers)
+            elif rename:  # pragma: nocover
+                # At the moment of writing, this is only for forward compatibility.
+                # replace_name_in_key requires dask >= 2021.3.
+                from dask.base import flatten, replace_name_in_key
 
-            variables[k] = v
+                keys = [
+                    replace_name_in_key(k, rename) for k in flatten(v.__dask_keys__())
+                ]
+                dsk2, _ = cull(dsk, keys)
+            else:
+                # __dask_postpersist__() was called by dask.optimize or dask.persist
+                dsk2, _ = cull(dsk, v.__dask_keys__())
+
+            rebuild, args = v.__dask_postpersist__()
+            # rename was added in dask 2021.3
+            kwargs = {"rename": rename} if rename else {}
+            variables[k] = rebuild(dsk2, *args, **kwargs)
 
         return Dataset._construct_direct(
             variables,
