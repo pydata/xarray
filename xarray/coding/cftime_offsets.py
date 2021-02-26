@@ -576,6 +576,26 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
+class Millisecond(BaseCFTimeOffset):
+    _freq = "L"
+
+    def as_timedelta(self):
+        return timedelta(milliseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
+class Microsecond(BaseCFTimeOffset):
+    _freq = "U"
+
+    def as_timedelta(self):
+        return timedelta(microseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
 _FREQUENCIES = {
     "A": YearEnd,
     "AS": YearBegin,
@@ -590,6 +610,10 @@ _FREQUENCIES = {
     "T": Minute,
     "min": Minute,
     "S": Second,
+    "L": Millisecond,
+    "ms": Millisecond,
+    "U": Microsecond,
+    "us": Microsecond,
     "AS-JAN": partial(YearBegin, month=1),
     "AS-FEB": partial(YearBegin, month=2),
     "AS-MAR": partial(YearBegin, month=3),
@@ -824,7 +848,7 @@ def cftime_range(
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - It supports many, but not all, frequencies supported by
       ``pandas.date_range``.  For example it does not currently support any of
-      the business-related, semi-monthly, or sub-second frequencies.
+      the business-related or semi-monthly frequencies.
     - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
       these can easily be written in terms of the finest common resolution,
       e.g. '61min'.
@@ -854,6 +878,10 @@ def cftime_range(
     | T, min | Minute frequency         |
     +--------+--------------------------+
     | S      | Second frequency         |
+    +--------+--------------------------+
+    | L, ms  | Millisecond frequency    |
+    +--------+--------------------------+
+    | U, us  | Microsecond frequency    |
     +--------+--------------------------+
 
     Any multiples of the following anchored offsets are also supported.

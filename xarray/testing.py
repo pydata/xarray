@@ -27,6 +27,8 @@ def ensure_warnings(func):
     # -> make sure that does not happen in the assert_* functions
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        __tracebackhide__ = True
+
         with warnings.catch_warnings():
             warnings.simplefilter("always")
 
