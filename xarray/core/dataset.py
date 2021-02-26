@@ -3883,6 +3883,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def update(self, other: "CoercibleMapping") -> "Dataset":
         """Update this dataset's variables with those from another dataset.
 
+        Just like :py:meth:`dict.update` this is a in-place operation.
+
         Parameters
         ----------
         other : Dataset or mapping
@@ -3897,13 +3899,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Returns
         -------
         updated : Dataset
-            Updated dataset.
+            Updated dataset. Note that since the update is in-place this is the input
+            dataset.
+
+            It is deprecated since version 0.17 and scheduled to be removed in 0.19.
 
         Raises
         ------
         ValueError
             If any dimensions would have inconsistent sizes in the updated
             dataset.
+
+        See Also
+        --------
+        Dataset.assign
         """
         merge_result = dataset_update_method(self, other)
         return self._replace(inplace=True, **merge_result._asdict())
@@ -4329,7 +4338,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             subset = iter(self.data_vars)
 
         count = np.zeros(self.dims[dim], dtype=np.int64)
-        size = 0
+        size = np.int_(0)  # for type checking
 
         for k in subset:
             array = self._variables[k]
@@ -6388,7 +6397,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.core.finfo(x.dtype).eps
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore
 
         # Weights:
         if w is not None:
@@ -6432,7 +6441,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # deficient ranks nor does it output the "full" info (issue dask/dask#6516)
                 skipna_da = True
             elif skipna is None:
-                skipna_da = np.any(da.isnull())
+                skipna_da = bool(np.any(da.isnull()))
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
             stacked_coords: Dict[Hashable, DataArray] = {}
