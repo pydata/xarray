@@ -7,7 +7,7 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 
 
 def create(data, method):
-    if method in ("prod"):
+    if method in ("prod",):
         units = "dimensionless"
     else:
         units = "m"
