@@ -31,6 +31,8 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from . import dtypes
+
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -74,6 +76,23 @@ def maybe_cast_to_coords_dtype(label, coords_dtype):
     if coords_dtype.kind == "f" and not isinstance(label, slice):
         label = np.asarray(label, dtype=coords_dtype)
     return label
+
+
+def maybe_coerce_to_str(index, original_coords):
+    """maybe coerce a pandas Index back to a nunpy array of type str
+
+    pd.Index uses object-dtype to store str - try to avoid this for coords
+    """
+
+    try:
+        result_type = dtypes.result_type(*original_coords)
+    except TypeError:
+        pass
+    else:
+        if result_type.kind in "SU":
+            index = np.asarray(index, dtype=result_type.type)
+
+    return index
 
 
 def safe_cast_to_index(array: Any) -> pd.Index:
@@ -626,7 +645,12 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r"^https?\://", path))
+    """Finds URLs of the form protocol:// or protocol::
+
+    This also matches for http[s]://, which were the only remote URLs
+    supported in <=v0.16.2.
+    """
+    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
 def read_magic_number(filename_or_obj, count=8):

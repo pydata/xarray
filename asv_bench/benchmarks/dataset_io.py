@@ -59,7 +59,6 @@ class IOSingleNetCDF:
             coords={"lon": lons, "lat": lats, "time": times},
             dims=("time", "lon", "lat"),
             name="foo",
-            encoding=None,
             attrs={"units": "foo units", "description": "a description"},
         )
         self.ds["bar"] = xr.DataArray(
@@ -67,7 +66,6 @@ class IOSingleNetCDF:
             coords={"lon": lons, "lat": lats, "time": times},
             dims=("time", "lon", "lat"),
             name="bar",
-            encoding=None,
             attrs={"units": "bar units", "description": "a description"},
         )
         self.ds["baz"] = xr.DataArray(
@@ -75,7 +73,6 @@ class IOSingleNetCDF:
             coords={"lon": lons, "lat": lats},
             dims=("lon", "lat"),
             name="baz",
-            encoding=None,
             attrs={"units": "baz units", "description": "a description"},
         )
 
@@ -270,7 +267,6 @@ class IOMultipleNetCDF:
                 coords={"lon": lons, "lat": lats, "time": times},
                 dims=("time", "lon", "lat"),
                 name="foo",
-                encoding=None,
                 attrs={"units": "foo units", "description": "a description"},
             )
             ds["bar"] = xr.DataArray(
@@ -278,7 +274,6 @@ class IOMultipleNetCDF:
                 coords={"lon": lons, "lat": lats, "time": times},
                 dims=("time", "lon", "lat"),
                 name="bar",
-                encoding=None,
                 attrs={"units": "bar units", "description": "a description"},
             )
             ds["baz"] = xr.DataArray(
@@ -286,7 +281,6 @@ class IOMultipleNetCDF:
                 coords={"lon": lons, "lat": lats},
                 dims=("lon", "lat"),
                 name="baz",
-                encoding=None,
                 attrs={"units": "baz units", "description": "a description"},
             )
 

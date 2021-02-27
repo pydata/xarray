@@ -34,7 +34,7 @@ if "conda" in sys.executable:
     subprocess.run(["conda", "list"])
 else:
     print("pip environment:")
-    subprocess.run(["pip", "list"])
+    subprocess.run([sys.executable, "-m", "pip", "list"])
 
 print(f"xarray: {xarray.__version__}, {xarray.__file__}")
 
@@ -411,11 +411,11 @@ htmlhelp_basename = "xarraydoc"
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
-    "iris": ("https://scitools.org.uk/iris/docs/latest", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
     "cftime": ("https://unidata.github.io/cftime", None),
     "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),

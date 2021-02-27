@@ -354,9 +354,14 @@ def open_dataset(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
@@ -522,7 +527,7 @@ def open_dataset(
 
         else:
             ds2 = ds
-        ds2._file_obj = ds._file_obj
+        ds2.set_close(ds._close)
         return ds2
 
     filename_or_obj = _normalize_path(filename_or_obj)
@@ -613,9 +618,14 @@ def open_dataarray(
         form string arrays. Dimensions will only be concatenated over (and
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
         optional
         Engine to use when reading files. If not provided, the default engine
@@ -643,7 +653,9 @@ def open_dataarray(
     backend_kwargs: dict, optional
         A dictionary of keyword arguments to pass on to the backend. This
         may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        allow user control of dataset processing. If using fsspec URLs,
+        include the key "storage_options" to pass arguments to the
+        storage layer.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -701,7 +713,7 @@ def open_dataarray(
     else:
         (data_array,) = dataset.data_vars.values()
 
-    data_array._file_obj = dataset._file_obj
+    data_array.set_close(dataset._close)
 
     # Reset names if they were changed during saving
     # to ensure that we can 'roundtrip' perfectly
@@ -713,17 +725,6 @@ def open_dataarray(
         data_array.name = None
 
     return data_array
-
-
-class _MultiFileCloser:
-    __slots__ = ("file_objs",)
-
-    def __init__(self, file_objs):
-        self.file_objs = file_objs
-
-    def close(self):
-        for f in self.file_objs:
-            f.close()
 
 
 def open_mfdataset(
@@ -880,14 +881,33 @@ def open_mfdataset(
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths):
+        if is_remote_uri(paths) and engine == "zarr":
+            try:
+                from fsspec.core import get_fs_token_paths
+            except ImportError as e:
+                raise ImportError(
+                    "The use of remote URLs for opening zarr requires the package fsspec"
+                ) from e
+
+            fs, _, _ = get_fs_token_paths(
+                paths,
+                mode="rb",
+                storage_options=kwargs.get("backend_kwargs", {}).get(
+                    "storage_options", {}
+                ),
+                expand=False,
+            )
+            paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+            paths = [fs.get_mapper(path) for path in paths]
+        elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs: "
                 "{!r}. Instead, supply paths as an explicit list of strings.".format(
                     paths
                 )
             )
-        paths = sorted(glob(paths))
+        else:
+            paths = sorted(glob(_normalize_path(paths)))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
@@ -918,14 +938,14 @@ def open_mfdataset(
         getattr_ = getattr
 
     datasets = [open_(p, **open_kwargs) for p in paths]
-    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
     if parallel:
         # calling compute here will return the datasets/file_objs lists,
         # the underlying datasets will still be stored as dask arrays
-        datasets, file_objs = dask.compute(datasets, file_objs)
+        datasets, closers = dask.compute(datasets, closers)
 
     # Combine all datasets, closing them in case of a ValueError
     try:
@@ -963,7 +983,11 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined._file_obj = _MultiFileCloser(file_objs)
+    def multi_file_closer():
+        for closer in closers:
+            closer()
+
+    combined.set_close(multi_file_closer)
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
@@ -1386,10 +1410,11 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, Path):
-        store = str(store)
-    if isinstance(chunk_store, Path):
-        chunk_store = str(store)
+
+    # expand str and Path arguments
+    store = _normalize_path(store)
+    chunk_store = _normalize_path(chunk_store)
+
     if encoding is None:
         encoding = {}
 
@@ -1418,9 +1443,6 @@ def to_zarr(
             "Instead, set consolidated=True when writing to zarr with "
             "compute=False before writing data."
         )
-
-    if isinstance(store, Path):
-        store = str(store)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

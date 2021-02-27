@@ -90,7 +90,7 @@ def _dataset_from_backend_dataset(
             **extra_tokens,
         )
 
-    ds._file_obj = backend_ds._file_obj
+    ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
     if "source" not in ds.encoding:
@@ -195,10 +195,14 @@ def open_dataset(
         removed) if they have no corresponding variable and if they are only
         used as the last dimension of character arrays.
         This keyword may not be supported by all the backends.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset. This keyword may not be supported by all the
-        backends.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
     drop_variables: str or iterable, optional
         A variable or list of variables to exclude from the dataset parsing.
         This may be useful to drop variables with problems or

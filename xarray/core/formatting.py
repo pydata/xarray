@@ -189,9 +189,8 @@ def format_array_flat(array, max_width: int):
         (max_possibly_relevant < array.size) or (cum_len > max_width).any()
     ):
         padding = " ... "
-        count = min(
-            array.size, max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)
-        )
+        max_len = max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)  # type: ignore
+        count = min(array.size, max_len)
     else:
         count = array.size
         padding = "" if (count <= 1) else " "
@@ -300,11 +299,18 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
+    if len(coord) > 100 and col_width < len(coord):
+        n_values = col_width
+        indices = list(range(0, n_values)) + list(range(-n_values, 0))
+        subset = coord[indices]
+    else:
+        subset = coord
+
     return "\n".join(
         summarize_variable(
-            lname, coord.get_level_variable(lname), col_width, marker=marker
+            lname, subset.get_level_variable(lname), col_width, marker=marker
         )
-        for lname in coord.level_names
+        for lname in subset.level_names
     )
 
 
@@ -372,7 +378,9 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
         max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
-        if len(mapping) > max_rows:
+        len_mapping = len(mapping)
+        if len_mapping > max_rows:
+            summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             items = list(mapping.items())
             summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]

@@ -19,7 +19,9 @@ jobs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/detect-ci-trigger
+        with:
+          fetch-depth: 2
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
@@ -32,7 +34,7 @@ jobs:
       always()
       && github.repository == 'pydata/xarray'
       && (
-        (github.event_name == 'scheduled' || github.event_name == 'workflow_dispatch')
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         || needs.detect-ci-trigger.outputs.triggered == 'true'
       )
     defaults:
@@ -62,7 +64,11 @@ jobs:
         run: |
           mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
+      - name: Version info
+        run: |
+          conda info -a
           conda list
+          python xarray/util/print_versions.py
       - name: import xarray
         run: |
           python -c 'import xarray'
@@ -71,7 +77,7 @@ jobs:
         id: status
         run: |
           set -euo pipefail
-          python -m pytest -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
           )
       - name: Upload artifacts

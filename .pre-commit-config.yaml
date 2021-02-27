@@ -17,15 +17,21 @@ repos:
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.2
+    rev: v0.3.3
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.4
     hooks:
       - id: flake8
+  # - repo: https://github.com/Carreau/velin
+  #   rev: 0.0.8
+  #   hooks:
+  #     - id: velin
+  #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.790  # Must match ci/requirements/*.yml
+    # version must correspond to the one in .github/workflows/ci-additional.yaml
+    rev: v0.812
     hooks:
       - id: mypy
         exclude: "properties|asv_bench"

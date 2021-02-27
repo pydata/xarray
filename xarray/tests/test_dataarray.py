@@ -1569,6 +1569,19 @@ class TestDataArray:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_reindex_str_dtype(self, dtype):
+
+        data = DataArray(
+            [1, 2], dims="x", coords={"x": np.array(["a", "b"], dtype=dtype)}
+        )
+
+        actual = data.reindex(x=data.x)
+        expected = data
+
+        assert_identical(expected, actual)
+        assert actual.dtype == expected.dtype
+
     def test_rename(self):
         renamed = self.dv.rename("bar")
         assert_identical(renamed.to_dataset(), self.ds.rename({"foo": "bar"}))
@@ -1621,6 +1634,16 @@ class TestDataArray:
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
+        assert_identical(expected, actual)
+        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+            pd.testing.assert_index_equal(
+                expected.indexes[dim_name], actual.indexes[dim_name]
+            )
+
+        # as kwargs
+        array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
+        expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
+        actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
         for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
             pd.testing.assert_index_equal(
@@ -2314,6 +2337,12 @@ class TestDataArray:
 
         with pytest.warns(DeprecationWarning):
             arr.drop([0, 1, 3], dim="y", errors="ignore")
+
+    def test_drop_index_positions(self):
+        arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
+        actual = arr.drop_isel(y=[0, 1])
+        expected = arr[:, 2:]
+        assert_identical(actual, expected)
 
     def test_dropna(self):
         x = np.random.randn(4, 4)
@@ -3440,6 +3469,26 @@ class TestDataArray:
                 DataArray([1, 2], coords=[("x", [0, 1])]),
             )
 
+    def test_align_str_dtype(self):
+
+        a = DataArray([0, 1], dims=["x"], coords={"x": ["a", "b"]})
+        b = DataArray([1, 2], dims=["x"], coords={"x": ["b", "c"]})
+
+        expected_a = DataArray(
+            [0, 1, np.NaN], dims=["x"], coords={"x": ["a", "b", "c"]}
+        )
+        expected_b = DataArray(
+            [np.NaN, 1, 2], dims=["x"], coords={"x": ["a", "b", "c"]}
+        )
+
+        actual_a, actual_b = xr.align(a, b, join="outer")
+
+        assert_identical(expected_a, actual_a)
+        assert expected_a.x.dtype == actual_a.x.dtype
+
+        assert_identical(expected_b, actual_b)
+        assert expected_b.x.dtype == actual_b.x.dtype
+
     def test_broadcast_arrays(self):
         x = DataArray([1, 2], coords=[("a", [-1, -2])], name="x")
         y = DataArray([1, 2], coords=[("b", [3, 4])], name="y")
@@ -3590,6 +3639,33 @@ class TestDataArray:
         arr.name = None  # unnamed
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
+
+    def test_to_dataframe_multiindex(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 3)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert_array_equal(actual["foo"].values, arr_np.flatten())
+        assert_array_equal(actual.index.names, list("ABC"))
+        assert_array_equal(actual.index.levels[0], [1, 2])
+        assert_array_equal(actual.index.levels[1], ["a", "b"])
+        assert_array_equal(actual.index.levels[2], [5, 6, 7])
+
+    def test_to_dataframe_0length(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 0)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert len(actual) == 0
+        assert_array_equal(actual.index.names, list("ABC"))
 
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
@@ -4129,6 +4205,9 @@ class TestDataArray:
         assert expect.dtype == bool
         assert_identical(expect, actual)
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(da, fill_value=True, dtype={"x": bool})
+
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
@@ -4427,6 +4506,26 @@ class TestDataArray:
         )
         assert actual.shape == (7, 4, 5)
         assert_identical(actual, expected)
+
+        ar = xr.DataArray([9], dims="x")
+
+        actual = ar.pad(x=1)
+        expected = xr.DataArray([np.NaN, 9, np.NaN], dims="x")
+        assert_identical(actual, expected)
+
+        actual = ar.pad(x=1, constant_values=1.23456)
+        expected = xr.DataArray([1, 9, 1], dims="x")
+        assert_identical(actual, expected)
+
+        if LooseVersion(np.__version__) >= "1.20":
+            with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
+                ar.pad(x=1, constant_values=np.NaN)
+        else:
+            actual = ar.pad(x=1, constant_values=np.NaN)
+            expected = xr.DataArray(
+                [-9223372036854775808, 9, -9223372036854775808], dims="x"
+            )
+            assert_identical(actual, expected)
 
     def test_pad_coords(self):
         ar = DataArray(
@@ -6292,6 +6391,22 @@ def test_coarsen_keep_attrs():
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
+def test_coarsen_reduce(da, window, name):
+    if da.isnull().sum() > 1 and window == 1:
+        pytest.skip("These parameters lead to all-NaN slices")
+
+    # Use boundary="trim" to accomodate all window sizes used in tests
+    coarsen_obj = da.coarsen(time=window, boundary="trim")
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
+    expected = getattr(coarsen_obj, name)()
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
     rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
@@ -6558,6 +6673,16 @@ def test_ndrolling_reduce(da, center, min_periods, name):
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
+
+    if name in ["mean"]:
+        # test our reimplementation of nanmean using np.nanmean
+        expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+            ["tw", "xw"]
+        )
+        count = rolling_obj.count()
+        if min_periods is None:
+            min_periods = 1
+        assert_allclose(actual, expected.where(count >= min_periods))
 
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))

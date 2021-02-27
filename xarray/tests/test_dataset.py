@@ -1950,6 +1950,16 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_reindex_str_dtype(self, dtype):
+        data = Dataset({"data": ("x", [1, 2]), "x": np.array(["a", "b"], dtype=dtype)})
+
+        actual = data.reindex(x=data.x)
+        expected = data
+
+        assert_identical(expected, actual)
+        assert actual.x.dtype == expected.x.dtype
+
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"foo": 2, "bar": 1}])
     def test_align_fill_value(self, fill_value):
         x = Dataset({"foo": DataArray([1, 2], dims=["x"], coords={"x": [1, 2]})})
@@ -2134,6 +2144,22 @@ class TestDataset:
         y = Dataset({"bar": ("x", [6, 7]), "x": [0, 1]})
         with raises_regex(ValueError, "cannot reindex or align"):
             align(x, y)
+
+    def test_align_str_dtype(self):
+
+        a = Dataset({"foo": ("x", [0, 1]), "x": ["a", "b"]})
+        b = Dataset({"foo": ("x", [1, 2]), "x": ["b", "c"]})
+
+        expected_a = Dataset({"foo": ("x", [0, 1, np.NaN]), "x": ["a", "b", "c"]})
+        expected_b = Dataset({"foo": ("x", [np.NaN, 1, 2]), "x": ["a", "b", "c"]})
+
+        actual_a, actual_b = xr.align(a, b, join="outer")
+
+        assert_identical(expected_a, actual_a)
+        assert expected_a.x.dtype == actual_a.x.dtype
+
+        assert_identical(expected_b, actual_b)
+        assert expected_b.x.dtype == actual_b.x.dtype
 
     def test_broadcast(self):
         ds = Dataset(
@@ -2346,8 +2372,12 @@ class TestDataset:
             data.drop(DataArray(["a", "b", "c"]), dim="x", errors="ignore")
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, "does not have coordinate labels"):
-            data.drop_sel(y=1)
+        actual = data.drop_sel(y=[1])
+        expected = data.isel(y=[0, 2])
+        assert_identical(expected, actual)
+
+        with raises_regex(KeyError, "not found in axis"):
+            data.drop_sel(x=0)
 
     def test_drop_labels_by_keyword(self):
         data = Dataset(
@@ -2384,6 +2414,34 @@ class TestDataset:
         warnings.filterwarnings("ignore", r"\W*drop")
         with pytest.raises(ValueError):
             data.drop(dim="x", x="a")
+
+    def test_drop_labels_by_position(self):
+        data = Dataset(
+            {"A": (["x", "y"], np.random.randn(2, 6)), "x": ["a", "b"], "y": range(6)}
+        )
+        # Basic functionality.
+        assert len(data.coords["x"]) == 2
+
+        actual = data.drop_isel(x=0)
+        expected = data.drop_sel(x="a")
+        assert_identical(expected, actual)
+
+        actual = data.drop_isel(x=[0])
+        expected = data.drop_sel(x=["a"])
+        assert_identical(expected, actual)
+
+        actual = data.drop_isel(x=[0, 1])
+        expected = data.drop_sel(x=["a", "b"])
+        assert_identical(expected, actual)
+        assert actual.coords["x"].size == 0
+
+        actual = data.drop_isel(x=[0, 1], y=range(0, 6, 2))
+        expected = data.drop_sel(x=["a", "b"], y=range(0, 6, 2))
+        assert_identical(expected, actual)
+        assert actual.coords["x"].size == 0
+
+        with pytest.raises(KeyError):
+            data.drop_isel(z=1)
 
     def test_drop_dims(self):
         data = xr.Dataset(
@@ -2689,6 +2747,13 @@ class TestDataset:
             {"y": ("u", list("abc")), "z": 42}, coords={"x": ("u", [1, 2, 3])}
         )
         actual = original.swap_dims({"x": "u"})
+        assert_identical(expected, actual)
+
+        # as kwargs
+        expected = Dataset(
+            {"y": ("u", list("abc")), "z": 42}, coords={"x": ("u", [1, 2, 3])}
+        )
+        actual = original.swap_dims(x="u")
         assert_identical(expected, actual)
 
         # handle multiindex case
@@ -3420,6 +3485,14 @@ class TestDataset:
             {"foo": ("x", [1, 2, 3]), "bar": ("x", [np.nan, 2, 3])}, {"x": [0, 1, 2]}
         )
         assert_identical(ds, expected)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_setitem_str_dtype(self, dtype):
+
+        ds = xr.Dataset(coords={"x": np.array(["x", "y"], dtype=dtype)})
+        ds["foo"] = xr.DataArray(np.array([0, 0]), dims=["x"])
+
+        assert np.issubdtype(ds.x.dtype, dtype)
 
     def test_assign(self):
         ds = Dataset()
@@ -4889,13 +4962,13 @@ class TestDataset:
         # Coordinates involved in the reduction should be removed
         actual = ds.mean(keepdims=True)
         expected = Dataset(
-            {"a": (["x", "y"], np.mean(ds.a, keepdims=True))}, coords={"c": ds.c}
+            {"a": (["x", "y"], np.mean(ds.a, keepdims=True).data)}, coords={"c": ds.c}
         )
         assert_identical(expected, actual)
 
         actual = ds.mean("x", keepdims=True)
         expected = Dataset(
-            {"a": (["x", "y"], np.mean(ds.a, axis=0, keepdims=True))},
+            {"a": (["x", "y"], np.mean(ds.a, axis=0, keepdims=True).data)},
             coords={"y": ds.y, "c": ds.c},
         )
         assert_identical(expected, actual)
@@ -5985,6 +6058,27 @@ def test_coarsen_keep_attrs():
     xr.testing.assert_identical(ds, ds2)
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("ds", (1, 2), indirect=True)
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
+def test_coarsen_reduce(ds, window, name):
+    # Use boundary="trim" to accomodate all window sizes used in tests
+    coarsen_obj = ds.coarsen(time=window, boundary="trim")
+
+    # add nan prefix to numpy methods to get similar behavior as bottleneck
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
+    expected = getattr(coarsen_obj, name)()
+    assert_allclose(actual, expected)
+
+    # make sure the order of data_var are not changed.
+    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
+
+    # Make sure the dimension order is restored
+    for key, src_var in ds.data_vars.items():
+        assert src_var.dims == actual[key].dims
+
+
 @pytest.mark.parametrize(
     "funcname, argument",
     [
@@ -6532,6 +6626,9 @@ def test_integrate(dask):
 
     with pytest.raises(ValueError):
         da.integrate("x2d")
+
+    with pytest.warns(FutureWarning):
+        da.integrate(dim="x")
 
 
 @pytest.mark.parametrize("dask", [True, False])

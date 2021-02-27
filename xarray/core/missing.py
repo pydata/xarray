@@ -154,7 +154,7 @@ class ScipyInterpolator(BaseInterpolator):
             yi,
             kind=self.method,
             fill_value=fill_value,
-            bounds_error=False,
+            bounds_error=bounds_error,
             assume_sorted=assume_sorted,
             copy=copy,
             **self.cons_kwargs,
@@ -216,20 +216,20 @@ def get_clean_interp_index(
     Parameters
     ----------
     arr : DataArray
-      Array to interpolate or fit to a curve.
+        Array to interpolate or fit to a curve.
     dim : str
-      Name of dimension along which to fit.
+        Name of dimension along which to fit.
     use_coordinate : str or bool
-      If use_coordinate is True, the coordinate that shares the name of the
-      dimension along which interpolation is being performed will be used as the
-      x values. If False, the x values are set as an equally spaced sequence.
+        If use_coordinate is True, the coordinate that shares the name of the
+        dimension along which interpolation is being performed will be used as the
+        x values. If False, the x values are set as an equally spaced sequence.
     strict : bool
-      Whether to raise errors if the index is either non-unique or non-monotonic (default).
+        Whether to raise errors if the index is either non-unique or non-monotonic (default).
 
     Returns
     -------
     Variable
-      Numerical values for the x-coordinates.
+        Numerical values for the x-coordinates.
 
     Notes
     -----
@@ -589,16 +589,16 @@ def interp(var, indexes_coords, method, **kwargs):
 
     Parameters
     ----------
-    var: Variable
-    index_coords:
+    var : Variable
+    indexes_coords
         Mapping from dimension name to a pair of original and new coordinates.
         Original coordinates should be sorted in strictly ascending order.
         Note that all the coordinates should be Variable objects.
-    method: string
+    method : string
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
-    **kwargs:
+    **kwargs
         keyword arguments to be passed to scipy.interpolate
 
     Returns
@@ -658,17 +658,17 @@ def interp_func(var, x, new_x, method, kwargs):
 
     Parameters
     ----------
-    var: np.ndarray or dask.array.Array
+    var : np.ndarray or dask.array.Array
         Array to be interpolated. The final dimension is interpolated.
-    x: a list of 1d array.
+    x : a list of 1d array.
         Original coordinates. Should not contain NaN.
-    new_x: a list of 1d array
+    new_x : a list of 1d array
         New coordinates. Should not contain NaN.
-    method: string
+    method : string
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
         1-dimensional interpolation.
         {'linear', 'nearest'} for multidimensional interpolation
-    **kwargs:
+    **kwargs
         Optional keyword arguments to be passed to scipy.interpolator
 
     Returns
@@ -676,8 +676,8 @@ def interp_func(var, x, new_x, method, kwargs):
     interpolated: array
         Interpolated array
 
-    Note
-    ----
+    Notes
+    -----
     This requiers scipy installed.
 
     See Also
@@ -730,6 +730,13 @@ def interp_func(var, x, new_x, method, kwargs):
         # if usefull, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
+        # scipy.interpolate.interp1d always forces to float.
+        # Use the same check for blockwise as well:
+        if not issubclass(var.dtype.type, np.inexact):
+            dtype = np.float_
+        else:
+            dtype = var.dtype
+
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
@@ -738,7 +745,7 @@ def interp_func(var, x, new_x, method, kwargs):
             interp_kwargs=kwargs,
             localize=localize,
             concatenate=True,
-            dtype=var.dtype,
+            dtype=dtype,
             new_axes=new_axes,
         )
 
