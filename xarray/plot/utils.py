@@ -159,12 +159,12 @@ def _determine_cmap_params(
     Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
-    ==========
-    plot_data: Numpy array
+    ----------
+    plot_data : Numpy array
         Doesn't handle xarray objects
 
     Returns
-    =======
+    -------
     cmap_params : dict
         Use depends on the type of the plotting function
     """
@@ -291,6 +291,12 @@ def _determine_cmap_params(
         cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
         norm = newnorm if norm is None else norm
 
+    # vmin & vmax needs to be None if norm is passed
+    # TODO: always return a norm with vmin and vmax
+    if norm is not None:
+        vmin = None
+        vmax = None
+
     return dict(
         vmin=vmin, vmax=vmax, cmap=cmap, extend=extend, levels=levels, norm=norm
     )
@@ -395,7 +401,7 @@ def _assert_valid_xy(darray, xy, name):
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = set([darray._level_coords[lc] for lc in darray._level_coords])
+    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
 
     valid_xy = (
         set(darray.dims) | set(darray.coords) | set(darray._level_coords)
@@ -415,9 +421,9 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     if figsize is not None:
         if ax is not None:
-            raise ValueError("cannot provide both `figsize` and " "`ax` arguments")
+            raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
-            raise ValueError("cannot provide both `figsize` and " "`size` arguments")
+            raise ValueError("cannot provide both `figsize` and `size` arguments")
         _, ax = plt.subplots(figsize=figsize)
     elif size is not None:
         if ax is not None:
@@ -440,8 +446,8 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def label_from_attrs(da, extra=""):
-    """ Makes informative labels if variable metadata (attrs) follows
-        CF conventions. """
+    """Makes informative labels if variable metadata (attrs) follows
+    CF conventions."""
 
     if da.attrs.get("long_name"):
         name = da.attrs["long_name"]
@@ -454,6 +460,8 @@ def label_from_attrs(da, extra=""):
 
     if da.attrs.get("units"):
         units = " [{}]".format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = " [{}]".format(da.attrs["unit"])
     else:
         units = ""
 
@@ -497,26 +505,32 @@ def _interval_to_double_bound_points(xarray, yarray):
     return xarray, yarray
 
 
-def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
+def _resolve_intervals_1dplot(xval, yval, kwargs):
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
     points which double the length.
     """
+    x_suffix = ""
+    y_suffix = ""
 
     # Is it a step plot? (see matplotlib.Axes.step)
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
+        remove_drawstyle = False
         # Convert intervals to double points
         if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
             raise TypeError("Can't step plot intervals against intervals.")
         if _valid_other_type(xval, [pd.Interval]):
             xval, yval = _interval_to_double_bound_points(xval, yval)
+            remove_drawstyle = True
         if _valid_other_type(yval, [pd.Interval]):
             yval, xval = _interval_to_double_bound_points(yval, xval)
+            remove_drawstyle = True
 
         # Remove steps-* to be sure that matplotlib is not confused
-        del kwargs["drawstyle"]
+        if remove_drawstyle:
+            del kwargs["drawstyle"]
 
     # Is it another kind of plot?
     else:
@@ -524,13 +538,13 @@ def _resolve_intervals_1dplot(xval, yval, xlabel, ylabel, kwargs):
         # Convert intervals to mid points and adjust labels
         if _valid_other_type(xval, [pd.Interval]):
             xval = _interval_to_mid_points(xval)
-            xlabel += "_center"
+            x_suffix = "_center"
         if _valid_other_type(yval, [pd.Interval]):
             yval = _interval_to_mid_points(yval)
-            ylabel += "_center"
+            y_suffix = "_center"
 
     # return converted arguments
-    return xval, yval, xlabel, ylabel, kwargs
+    return xval, yval, x_suffix, y_suffix, kwargs
 
 
 def _resolve_intervals_2dplot(val, func_name):
@@ -619,6 +633,10 @@ def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
         cbar_kwargs.setdefault("ax", ax)
     else:
         cbar_kwargs.setdefault("cax", cbar_ax)
+
+    # dont pass extend as kwarg if it is in the mappable
+    if hasattr(primitive, "extend"):
+        cbar_kwargs.pop("extend")
 
     fig = ax.get_figure()
     cbar = fig.colorbar(primitive, **cbar_kwargs)
@@ -773,15 +791,14 @@ def _process_cmap_cbar_kwargs(
 ):
     """
     Parameters
-    ==========
+    ----------
     func : plotting function
     data : ndarray,
         Data values
 
     Returns
-    =======
+    -------
     cmap_params
-
     cbar_kwargs
     """
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
@@ -824,3 +841,12 @@ def _process_cmap_cbar_kwargs(
         }
 
     return cmap_params, cbar_kwargs
+
+
+def _get_nice_quiver_magnitude(u, v):
+    import matplotlib as mpl
+
+    ticker = mpl.ticker.MaxNLocator(3)
+    mean = np.mean(np.hypot(u.values, v.values))
+    magnitude = ticker.tick_values(0, mean)[-2]
+    return magnitude

@@ -78,7 +78,7 @@ def netcdf_and_hdf5_versions():
 
 
 def show_versions(file=sys.stdout):
-    """ print the versions of xarray and its dependencies
+    """print the versions of xarray and its dependencies
 
     Parameters
     ----------

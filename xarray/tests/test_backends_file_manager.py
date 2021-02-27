@@ -148,9 +148,9 @@ def test_file_manager_write_consecutive(tmpdir, file_cache):
     manager1.close()
     manager2.close()
 
-    with open(path1, "r") as f:
+    with open(path1) as f:
         assert f.read() == "foobaz"
-    with open(path2, "r") as f:
+    with open(path2) as f:
         assert f.read() == "bar"
 
 
@@ -170,7 +170,7 @@ def test_file_manager_write_concurrent(tmpdir, file_cache):
     f3.flush()
     manager.close()
 
-    with open(path, "r") as f:
+    with open(path) as f:
         assert f.read() == "foobarbaz"
 
 
@@ -186,7 +186,7 @@ def test_file_manager_write_pickle(tmpdir, file_cache):
     manager2.close()
     manager.close()
 
-    with open(path, "r") as f:
+    with open(path) as f:
         assert f.read() == "foobar"
 
 
@@ -200,11 +200,6 @@ def test_file_manager_read(tmpdir, file_cache):
     f = manager.acquire()
     assert f.read() == "foobar"
     manager.close()
-
-
-def test_file_manager_invalid_kwargs():
-    with pytest.raises(TypeError):
-        CachingFileManager(open, "dummy", mode="w", invalid=True)
 
 
 def test_file_manager_acquire_context(tmpdir, file_cache):

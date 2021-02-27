@@ -34,7 +34,7 @@ class LRUCache(MutableMapping[K, V]):
         ----------
         maxsize : int
             Integer maximum number of items to hold in the cache.
-        on_evict: callable, optional
+        on_evict : callable, optional
             Function to call like ``on_evict(key, value)`` when items are
             evicted.
         """
@@ -55,8 +55,7 @@ class LRUCache(MutableMapping[K, V]):
             return value
 
     def _enforce_size_limit(self, capacity: int) -> None:
-        """Shrink the cache if necessary, evicting the oldest items.
-        """
+        """Shrink the cache if necessary, evicting the oldest items."""
         while len(self._cache) > capacity:
             key, value = self._cache.popitem(last=False)
             if self._on_evict is not None:

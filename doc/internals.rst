@@ -10,6 +10,17 @@ stack, NumPy and pandas. It is written in pure Python (no C or Cython
 extensions), which makes it easy to develop and extend. Instead, we push
 compiled code to :ref:`optional dependencies<installing>`.
 
+.. ipython:: python
+    :suppress:
+
+    import dask.array as da
+    import numpy as np
+    import pandas as pd
+    import sparse
+    import xarray as xr
+
+    np.random.seed(123456)
+
 Variable objects
 ----------------
 
@@ -42,17 +53,56 @@ xarray objects via the (readonly) :py:attr:`Dataset.variables
 <xarray.Dataset.variables>` and
 :py:attr:`DataArray.variable <xarray.DataArray.variable>` attributes.
 
-Extending xarray
-----------------
+
+.. _internals.duck_arrays:
+
+Integrating with duck arrays
+----------------------------
+
+.. warning::
+
+    This is a experimental feature.
+
+xarray can wrap custom :term:`duck array` objects as long as they define numpy's
+``shape``, ``dtype`` and ``ndim`` properties and the ``__array__``,
+``__array_ufunc__`` and ``__array_function__`` methods.
+
+In certain situations (e.g. when printing the collapsed preview of
+variables of a ``Dataset``), xarray will display the repr of a :term:`duck array`
+in a single line, truncating it to a certain number of characters. If that
+would drop too much information, the :term:`duck array` may define a
+``_repr_inline_`` method that takes ``max_width`` (number of characters) as an
+argument:
+
+.. code:: python
+
+    class MyDuckArray:
+        ...
+
+        def _repr_inline_(self, max_width):
+            """ format to a single line with at most max_width characters """
+            ...
+
+        ...
+
+To avoid duplicated information, this method must omit information about the shape and
+:term:`dtype`. For example, the string representation of a ``dask`` array or a
+``sparse`` matrix would be:
 
 .. ipython:: python
-    :suppress:
 
-    import numpy as np
-    import pandas as pd
-    import xarray as xr
+    a = da.linspace(0, 1, 20, chunks=2)
+    a
 
-    np.random.seed(123456)
+    b = np.eye(10)
+    b[[5, 7, 3, 0], [6, 8, 2, 9]] = 2
+    b = sparse.COO.from_numpy(b)
+    b
+
+    xr.Dataset({"a": ("x", a), "b": (("y", "z"), b)})
+
+Extending xarray
+----------------
 
 xarray is designed as a general purpose library, and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
@@ -82,6 +132,10 @@ write a custom "geo" accessor implementing a geography specific extension to
 xarray:
 
 .. literalinclude:: examples/_code/accessor_example.py
+
+In general, the only restriction on the accessor class is that the ``__init__`` method
+must have a single parameter: the ``Dataset`` or ``DataArray`` object it is supposed
+to work on.
 
 This achieves the same result as if the ``Dataset`` class had a cached property
 defined that returns an instance of your class:
@@ -138,6 +192,11 @@ To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
 for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
+
+To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
+easier, you can use `sphinx-autosummary-accessors`_.
+
+.. _sphinx-autosummary-accessors: https://sphinx-autosummary-accessors.readthedocs.io/
 
 .. _zarr_encoding:
 

@@ -10,6 +10,7 @@ from typing import (
     Any,
     Dict,
     Hashable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -33,7 +34,12 @@ from .indexing import (
 )
 from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
-from .pycompat import dask_array_type, integer_types
+from .pycompat import (
+    cupy_array_type,
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+)
 from .utils import (
     OrderedSet,
     _default,
@@ -42,12 +48,18 @@ from .utils import (
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     infix_dims,
+    is_duck_array,
+    maybe_coerce_to_str,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.ExplicitlyIndexed,
-    pd.Index,
-) + dask_array_type
+    (
+        indexing.ExplicitlyIndexed,
+        pd.Index,
+    )
+    + dask_array_type
+    + cupy_array_type
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
@@ -65,8 +77,7 @@ Usage::
 
 
 class MissingDimensionsError(ValueError):
-    """Error class used when we can't safely guess a dimension name.
-    """
+    """Error class used when we can't safely guess a dimension name."""
 
     # inherits from ValueError for backward compatibility
     # TODO: move this to an xarray.exceptions module?
@@ -109,6 +120,16 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
+        if isinstance(obj[1], DataArray):
+            # TODO: change into TypeError
+            warnings.warn(
+                (
+                    "Using a DataArray object to construct a variable is"
+                    " ambiguous, please extract the data using the .data property."
+                    " This will raise a TypeError in 0.19.0."
+                ),
+                DeprecationWarning,
+            )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
@@ -168,7 +189,9 @@ def _maybe_wrap_data(data):
 
 def _possibly_convert_objects(values):
     """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
+    datetime64 and timedelta64, according to the pandas convention. Also used for
+    validating that datetime64 and timedelta64 objects are within the valid date
+    range for ns precision, as pandas will raise an error if they are not.
     """
     return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
@@ -205,7 +228,8 @@ def as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    data = getattr(data, "values", data)
+    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
+        data = data.values
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -229,16 +253,16 @@ def as_compatible_data(data, fastpath=False):
                     '"1"'
                 )
 
-    # validate whether the data is valid data types
+    # validate whether the data is valid data types.
     data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == "O":
             data = _possibly_convert_objects(data)
         elif data.dtype.kind == "M":
-            data = np.asarray(data, "datetime64[ns]")
+            data = _possibly_convert_objects(data)
         elif data.dtype.kind == "m":
-            data = np.asarray(data, "timedelta64[ns]")
+            data = _possibly_convert_objects(data)
 
     return _maybe_wrap_data(data)
 
@@ -257,7 +281,10 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = np.asarray(data)
+    if isinstance(data, cupy_array_type):
+        data = data.get()
+    else:
+        data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -341,9 +368,7 @@ class Variable(
 
     @property
     def data(self):
-        if hasattr(self._data, "__array_function__") or isinstance(
-            self._data, dask_array_type
-        ):
+        if is_duck_array(self._data):
             return self._data
         else:
             return self.values
@@ -357,6 +382,81 @@ class Variable(
                 f"replacement data has shape {data.shape}; Variable has shape {self.shape}"
             )
         self._data = data
+
+    def astype(
+        self: VariableType,
+        dtype,
+        *,
+        order=None,
+        casting=None,
+        subok=None,
+        copy=None,
+        keep_attrs=True,
+    ) -> VariableType:
+        """
+        Copy of the Variable object, with data cast to a specified type.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        order : {'C', 'F', 'A', 'K'}, optional
+            Controls the memory layout order of the result. ‘C’ means C order,
+            ‘F’ means Fortran order, ‘A’ means ‘F’ order if all the arrays are
+            Fortran contiguous, ‘C’ order otherwise, and ‘K’ means as close to
+            the order the array elements appear in memory as possible.
+        casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+            Controls what kind of data casting may occur.
+
+            * 'no' means the data types should not be cast at all.
+            * 'equiv' means only byte-order changes are allowed.
+            * 'safe' means only casts which can preserve values are allowed.
+            * 'same_kind' means only safe casts or casts within a kind,
+              like float64 to float32, are allowed.
+            * 'unsafe' means any data conversions may be done.
+        subok : bool, optional
+            If True, then sub-classes will be passed-through, otherwise the
+            returned array will be forced to be a base-class array.
+        copy : bool, optional
+            By default, astype always returns a newly allocated array. If this
+            is set to False and the `dtype` requirement is satisfied, the input
+            array is returned instead of a copy.
+        keep_attrs : bool, optional
+            By default, astype keeps attributes. Set to False to remove
+            attributes in the returned object.
+
+        Returns
+        -------
+        out : same as object
+            New object with data cast to the specified type.
+
+        Notes
+        -----
+        The ``order``, ``casting``, ``subok`` and ``copy`` arguments are only passed
+        through to the ``astype`` method of the underlying array when a value
+        different than ``None`` is supplied.
+        Make sure to only supply these arguments if the underlying array class
+        supports them.
+
+        See Also
+        --------
+        numpy.ndarray.astype
+        dask.array.Array.astype
+        sparse.COO.astype
+        """
+        from .computation import apply_ufunc
+
+        kwargs = dict(order=order, casting=casting, subok=subok, copy=copy)
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+
+        return apply_ufunc(
+            duck_array_ops.astype,
+            self,
+            dtype,
+            kwargs=kwargs,
+            keep_attrs=keep_attrs,
+            dask="allowed",
+        )
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
@@ -375,9 +475,9 @@ class Variable(
         --------
         dask.array.compute
         """
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             self._data = as_compatible_data(self._data.compute(**kwargs))
-        elif not hasattr(self._data, "__array_function__"):
+        elif not is_duck_array(self._data):
             self._data = np.asarray(self._data)
         return self
 
@@ -410,7 +510,7 @@ class Variable(
         return normalize_token((type(self), self._dims, self.data, self._attrs))
 
     def __dask_graph__(self):
-        if isinstance(self._data, dask_array_type):
+        if is_duck_dask_array(self._data):
             return self._data.__dask_graph__()
         else:
             return None
@@ -445,9 +545,6 @@ class Variable(
 
     @staticmethod
     def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        if isinstance(results, dict):  # persist case
-            name = array_args[0]
-            results = {k: v for k, v in results.items() if k[0] == name}
         data = array_func(results, *array_args)
         return Variable(dims, data, attrs=attrs, encoding=encoding)
 
@@ -491,8 +588,7 @@ class Variable(
 
     @property
     def dims(self):
-        """Tuple of dimension names with which this variable is associated.
-        """
+        """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
@@ -520,15 +616,15 @@ class Variable(
         """Prepare an indexing key for an indexing operation.
 
         Parameters
-        -----------
-        key: int, slice, array, dict or tuple of integer, slices and arrays
+        ----------
+        key : int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
         -------
-        dims: tuple
+        dims : tuple
             Dimension of the resultant variable.
-        indexers: IndexingTuple subclass
+        indexers : IndexingTuple subclass
             Tuple of integer, array-like, or slices to use when indexing
             self._data. The type of this argument indicates the type of
             indexing to perform, either basic, outer or vectorized.
@@ -718,8 +814,7 @@ class Variable(
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
-        """Used by IndexVariable to return IndexVariable objects when possible.
-        """
+        """Used by IndexVariable to return IndexVariable objects when possible."""
         return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
@@ -738,7 +833,7 @@ class Variable(
         dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-            if isinstance(self._data, dask_array_type):
+            if is_duck_dask_array(self._data):
                 # dask's indexing is faster this way; also vindex does not
                 # support negative indices yet:
                 # https://github.com/dask/dask/pull/2967
@@ -795,8 +890,7 @@ class Variable(
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
-        """Dictionary of local attributes on this variable.
-        """
+        """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -807,8 +901,7 @@ class Variable(
 
     @property
     def encoding(self):
-        """Dictionary of encodings on this variable.
-        """
+        """Dictionary of encodings on this variable."""
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
@@ -846,7 +939,6 @@ class Variable(
 
         Examples
         --------
-
         Shallow copy versus deep copy
 
         >>> var = xr.Variable(data=[1, 2, 3], dims="x")
@@ -868,7 +960,7 @@ class Variable(
 
         >>> var.copy(data=[0.1, 0.2, 0.3])
         <xarray.Variable (x: 3)>
-        array([ 0.1,  0.2,  0.3])
+        array([0.1, 0.2, 0.3])
         >>> var
         <xarray.Variable (x: 3)>
         array([7, 2, 3])
@@ -885,13 +977,8 @@ class Variable(
                 data = indexing.MemoryCachedArray(data.array)
 
             if deep:
-                if hasattr(data, "__array_function__") or isinstance(
-                    data, dask_array_type
-                ):
-                    data = data.copy()
-                elif not isinstance(data, PandasIndexAdapter):
-                    # pandas.Index is immutable
-                    data = np.array(data)
+                data = copy.deepcopy(data)
+
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
@@ -940,7 +1027,7 @@ class Variable(
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -970,14 +1057,19 @@ class Variable(
         import dask
         import dask.array as da
 
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
+
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
 
-        if chunks is None:
-            chunks = self.chunks or self.shape
-
         data = self._data
-        if isinstance(data, da.Array):
+        if is_duck_dask_array(data):
             data = data.rechunk(chunks)
         else:
             if isinstance(data, indexing.ExplicitlyIndexed):
@@ -1014,7 +1106,7 @@ class Variable(
         """
         import sparse
 
-        # TODO  what to do if dask-backended?
+        # TODO: what to do if dask-backended?
         if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
@@ -1023,9 +1115,9 @@ class Variable(
         if sparse_format is _default:
             sparse_format = "coo"
         try:
-            as_sparse = getattr(sparse, "as_{}".format(sparse_format.lower()))
+            as_sparse = getattr(sparse, f"as_{sparse_format.lower()}")
         except AttributeError:
-            raise ValueError("{} is not a valid sparse format".format(sparse_format))
+            raise ValueError(f"{sparse_format} is not a valid sparse format")
 
         data = as_sparse(self.data.astype(dtype), fill_value=fill_value)
         return self._replace(data=data)
@@ -1051,10 +1143,10 @@ class Variable(
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
-        missing_dims : {"raise", "warn", "ignore"}, default "raise"
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             DataArray:
-            - "exception": raise an exception
+            - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
@@ -1124,7 +1216,7 @@ class Variable(
             constant_values=fill_value,
         )
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1142,9 +1234,9 @@ class Variable(
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
-        **shifts_kwargs:
+        **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -1192,26 +1284,27 @@ class Variable(
 
         Parameters
         ----------
-        pad_width: Mapping with the form of {dim: (pad_before, pad_after)}
-            Number of values padded along each dimension.
+        pad_width : mapping of hashable to tuple of int
+            Mapping with the form of {dim: (pad_before, pad_after)}
+            describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode: (str)
+        mode : str, default: "constant"
             See numpy / Dask docs
-        stat_length : int, tuple or mapping of the form {dim: tuple}
+        stat_length : int, tuple or mapping of hashable to tuple
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
-        constant_values : scalar, tuple or mapping of the form {dim: tuple}
+        constant_values : scalar, tuple or mapping of hashable to tuple
             Used in 'constant'.  The values to set the padded values for each
             axis.
-        end_values : scalar, tuple or mapping of the form {dim: tuple}
+        end_values : scalar, tuple or mapping of hashable to tuple
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
-        reflect_type : {'even', 'odd'}, optional
-            Used in 'reflect', and 'symmetric'.  The 'even' style is the
+        reflect_type : {"even", "odd"}, optional
+            Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
-            the 'odd' style, the extended part of the array is created by
+            the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
-        **pad_width_kwargs:
+        **pad_width_kwargs
             One of pad_width or pad_width_kwargs must be provided.
 
         Returns
@@ -1239,7 +1332,7 @@ class Variable(
         if isinstance(end_values, dict):
             end_values = self._pad_options_dim_to_index(end_values)
 
-        # workaround for bug in Dask's default value of stat_length  https://github.com/dask/dask/issues/5303
+        # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
             stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
@@ -1282,7 +1375,7 @@ class Variable(
 
         data = duck_array_ops.concatenate(arrays, axis)
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             # chunked data should come out with the same chunks; this makes
             # it feasible to combine shifted and unshifted data
             # TODO: remove this once dask.array automatically aligns chunks
@@ -1296,11 +1389,11 @@ class Variable(
 
         Parameters
         ----------
-        shifts : mapping of the form {dim: offset}
+        shifts : mapping of hashable to int
             Integer offset to roll along each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
-        **shifts_kwargs:
+        **shifts_kwargs
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -1405,7 +1498,7 @@ class Variable(
         )
         return expanded_var.transpose(*dims)
 
-    def _stack_once(self, dims, new_dim):
+    def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
             raise ValueError("invalid existing dimensions: %s" % dims)
 
@@ -1438,10 +1531,11 @@ class Variable(
 
         Parameters
         ----------
-        dimensions : Mapping of form new_name=(dim1, dim2, ...)
-            Names of new dimensions, and the existing dimensions that they
-            replace.
-        **dimensions_kwargs:
+        dimensions : mapping of hashable to tuple of hashable
+            Mapping of form new_name=(dim1, dim2, ...) describing the
+            names of new dimensions, and the existing dimensions that
+            they replace.
+        **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
 
@@ -1450,7 +1544,7 @@ class Variable(
         stacked : Variable
             Variable with the same attributes but stacked data.
 
-        See also
+        See Also
         --------
         Variable.unstack
         """
@@ -1460,7 +1554,15 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once(self, dims, old_dim):
+    def _unstack_once_full(
+        self, dims: Mapping[Hashable, int], old_dim: Hashable
+    ) -> "Variable":
+        """
+        Unstacks the variable without needing an index.
+
+        Unlike `_unstack_once`, this function requires the existing dimension to
+        contain the full product of the new dimensions.
+        """
         new_dim_names = tuple(dims.keys())
         new_dim_sizes = tuple(dims.values())
 
@@ -1489,6 +1591,53 @@ class Variable(
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
+    def _unstack_once(
+        self,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        fill_value=dtypes.NA,
+    ) -> "Variable":
+        """
+        Unstacks this variable given an index to unstack and the name of the
+        dimension to which the index refers.
+        """
+
+        reordered = self.transpose(..., dim)
+
+        new_dim_sizes = [lev.size for lev in index.levels]
+        new_dim_names = index.names
+        indexer = index.codes
+
+        # Potentially we could replace `len(other_dims)` with just `-1`
+        other_dims = [d for d in self.dims if d != dim]
+        new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
+        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+
+        if fill_value is dtypes.NA:
+            is_missing_values = np.prod(new_shape) > np.prod(self.shape)
+            if is_missing_values:
+                dtype, fill_value = dtypes.maybe_promote(self.dtype)
+            else:
+                dtype = self.dtype
+                fill_value = dtypes.get_fill_value(dtype)
+        else:
+            dtype = self.dtype
+
+        # Currently fails on sparse due to https://github.com/pydata/sparse/issues/422
+        data = np.full_like(
+            self.data,
+            fill_value=fill_value,
+            shape=new_shape,
+            dtype=dtype,
+        )
+
+        # Indexer is a list of lists of locations. Each list is the locations
+        # on the new dimension. This is robust to the data being sparse; in that
+        # case the destinations will be NaN / zero.
+        data[(..., *indexer)] = reordered
+
+        return self._replace(dims=new_dims, data=data)
+
     def unstack(self, dimensions=None, **dimensions_kwargs):
         """
         Unstack an existing dimension into multiple new dimensions.
@@ -1496,12 +1645,17 @@ class Variable(
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
 
+        Note that unlike ``DataArray.unstack`` and ``Dataset.unstack``, this
+        method requires the existing dimension to contain the full product of
+        the new dimensions.
+
         Parameters
         ----------
-        dimensions : mapping of the form old_dim={dim1: size1, ...}
-            Names of existing dimensions, and the new dimensions and sizes
+        dimensions : mapping of hashable to mapping of hashable to int
+            Mapping of the form old_dim={dim1: size1, ...} describing the
+            names of existing dimensions, and the new dimensions and sizes
             that they map to.
-        **dimensions_kwargs:
+        **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
 
@@ -1510,14 +1664,16 @@ class Variable(
         unstacked : Variable
             Variable with the same attributes but unstacked data.
 
-        See also
+        See Also
         --------
         Variable.stack
+        DataArray.unstack
+        Dataset.unstack
         """
         dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "unstack")
         result = self
         for old_dim, dims in dimensions.items():
-            result = result._unstack_once(dims, old_dim)
+            result = result._unstack_once_full(dims, old_dim)
         return result
 
     def fillna(self, value):
@@ -1533,14 +1689,13 @@ class Variable(
         axis=None,
         keep_attrs=None,
         keepdims=False,
-        allow_lazy=None,
         **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
         ----------
-        func : function
+        func : callable
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
@@ -1555,7 +1710,7 @@ class Variable(
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        keepdims : bool, default False
+        keepdims : bool, default: False
             If True, the dimensions which are reduced are left in the result
             as dimensions of size one
         **kwargs : dict
@@ -1575,20 +1730,14 @@ class Variable(
         if dim is not None:
             axis = self.get_axis_num(dim)
 
-        if allow_lazy is not None:
-            warnings.warn(
-                "allow_lazy is deprecated and will be removed in version 0.16.0. It is now True by default.",
-                DeprecationWarning,
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
-        else:
-            allow_lazy = True
-
-        input_data = self.data if allow_lazy else self.values
-
-        if axis is not None:
-            data = func(input_data, axis=axis, **kwargs)
-        else:
-            data = func(input_data, **kwargs)
+            if axis is not None:
+                data = func(self.data, axis=axis, **kwargs)
+            else:
+                data = func(self.data, **kwargs)
 
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
@@ -1625,7 +1774,7 @@ class Variable(
 
         Parameters
         ----------
-        variables : iterable of Array
+        variables : iterable of Variable
             Arrays to stack together. Each variable is expected to have
             matching dimensions and shape except for along the stacked
             dimension.
@@ -1635,7 +1784,7 @@ class Variable(
             existing dimension name, in which case the location of the
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
-        positions : None or list of integer arrays, optional
+        positions : None or list of array-like, optional
             List of integer arrays which specifies the integer positions to
             which to assign each dataset along the concatenated dimension.
             If not supplied, objects are concatenated in the provided order.
@@ -1717,8 +1866,7 @@ class Variable(
         return self.equals(other, equiv=equiv)
 
     def identical(self, other, equiv=duck_array_ops.array_equiv):
-        """Like equals, but also checks attributes.
-        """
+        """Like equals, but also checks attributes."""
         try:
             return utils.dict_equiv(self.attrs, other.attrs) and self.equals(
                 other, equiv=equiv
@@ -1744,12 +1892,12 @@ class Variable(
 
         Parameters
         ----------
-        q : float in range of [0,1] (or sequence of floats)
+        q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
             This optional parameter specifies the interpolation method to
             use when the desired quantile lies between two data points
             ``i < j``:
@@ -1761,7 +1909,6 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1778,7 +1925,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
         """
 
@@ -1810,7 +1957,7 @@ class Variable(
             exclude_dims=set(dim),
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
-            output_sizes={"quantile": len(q)},
+            dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
             kwargs={"q": q, "axis": axis, "interpolation": interpolation},
         )
@@ -1853,7 +2000,7 @@ class Variable(
 
         data = self.data
 
-        if isinstance(data, dask_array_type):
+        if is_duck_dask_array(data):
             raise TypeError(
                 "rank does not work for arrays stored as dask "
                 "arrays. Load the data via .compute() or .load() "
@@ -1880,16 +2027,19 @@ class Variable(
 
         Parameters
         ----------
-        dim: str
-            Dimension over which to compute rolling_window
-        window: int
+        dim : str
+            Dimension over which to compute rolling_window.
+            For nd-rolling, should be list of dimensions.
+        window : int
             Window size of the rolling
-        window_dim: str
+            For nd-rolling, should be list of integers.
+        window_dim : str
             New name of the window dimension.
-        center: boolean. default False.
+            For nd-rolling, should be list of integers.
+        center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
-        fill_value:
+        fill_value
             value to be filled.
 
         Returns
@@ -1902,15 +2052,29 @@ class Variable(
         Examples
         --------
         >>> v = Variable(("a", "b"), np.arange(8).reshape((2, 4)))
-        >>> v.rolling_window(x, "b", 3, "window_dim")
+        >>> v.rolling_window("b", 3, "window_dim")
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan,  0.],
+                [nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.]],
+        <BLANKLINE>
+               [[nan, nan,  4.],
+                [nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.]]])
 
-        >>> v.rolling_window(x, "b", 3, "window_dim", center=True)
+        >>> v.rolling_window("b", 3, "window_dim", center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
-               [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
+        array([[[nan,  0.,  1.],
+                [ 0.,  1.,  2.],
+                [ 1.,  2.,  3.],
+                [ 2.,  3., nan]],
+        <BLANKLINE>
+               [[nan,  4.,  5.],
+                [ 4.,  5.,  6.],
+                [ 5.,  6.,  7.],
+                [ 6.,  7., nan]]])
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
@@ -1919,19 +2083,27 @@ class Variable(
             dtype = self.dtype
             array = self.data
 
-        new_dims = self.dims + (window_dim,)
+        if isinstance(dim, list):
+            assert len(dim) == len(window)
+            assert len(dim) == len(window_dim)
+            assert len(dim) == len(center)
+        else:
+            dim = [dim]
+            window = [window]
+            window_dim = [window_dim]
+            center = [center]
+        axis = [self.get_axis_num(d) for d in dim]
+        new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
             duck_array_ops.rolling_window(
-                array,
-                axis=self.get_axis_num(dim),
-                window=window,
-                center=center,
-                fill_value=fill_value,
+                array, axis=axis, window=window, center=center, fill_value=fill_value
             ),
         )
 
-    def coarsen(self, windows, func, boundary="exact", side="left", **kwargs):
+    def coarsen(
+        self, windows, func, boundary="exact", side="left", keep_attrs=None, **kwargs
+    ):
         """
         Apply reduction function.
         """
@@ -1939,13 +2111,22 @@ class Variable(
         if not windows:
             return self.copy()
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        if keep_attrs:
+            _attrs = self.attrs
+        else:
+            _attrs = None
+
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:
                 raise NameError(f"{name} is not a valid method.")
-        return self._replace(data=func(reshaped, axis=axes, **kwargs))
+
+        return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
     def _coarsen_reshape(self, windows, boundary, side):
         """
@@ -2010,10 +2191,75 @@ class Variable(
             else:
                 shape.append(variable.shape[i])
 
-        keep_attrs = _get_keep_attrs(default=False)
-        variable.attrs = variable._attrs if keep_attrs else {}
-
         return variable.data.reshape(shape), tuple(axes)
+
+    def isnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is a missing value.
+
+        Returns
+        -------
+        isnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.isnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.isnull()
+        <xarray.Variable (x: 3)>
+        array([False,  True, False])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
+
+    def notnull(self, keep_attrs: bool = None):
+        """Test each value in the array for whether it is not a missing value.
+
+        Returns
+        -------
+        notnull : Variable
+            Same type and shape as object, but the dtype of the data is bool.
+
+        See Also
+        --------
+        pandas.notnull
+
+        Examples
+        --------
+        >>> var = xr.Variable("x", [1, np.nan, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([ 1., nan,  3.])
+        >>> var.notnull()
+        <xarray.Variable (x: 3)>
+        array([ True, False,  True])
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
+        return apply_ufunc(
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
+        )
 
     @property
     def real(self):
@@ -2030,8 +2276,14 @@ class Variable(
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
+            keep_attrs = kwargs.pop("keep_attrs", None)
+            if keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
             with np.errstate(all="ignore"):
-                return self.__array_wrap__(f(self.data, *args, **kwargs))
+                result = self.__array_wrap__(f(self.data, *args, **kwargs))
+                if keep_attrs:
+                    result.attrs = self.attrs
+                return result
 
         return func
 
@@ -2063,7 +2315,7 @@ class Variable(
                 raise TypeError("cannot add a Dataset to a Variable in-place")
             self_data, other_data, dims = _broadcast_compat_data(self, other)
             if dims != self.dims:
-                raise ValueError("dimensions cannot change for in-place " "operations")
+                raise ValueError("dimensions cannot change for in-place operations")
             with np.errstate(all="ignore"):
                 self.values = f(self_data, other_data)
             return self
@@ -2071,7 +2323,7 @@ class Variable(
         return func
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
-        """ A (private) method to convert datetime array to numeric dtype
+        """A (private) method to convert datetime array to numeric dtype
         See duck_array_ops.datetime_to_numeric
         """
         numeric_array = duck_array_ops.datetime_to_numeric(
@@ -2122,7 +2374,7 @@ class Variable(
         newdimname = "_unravel_argminmax_dim_0"
         count = 1
         while newdimname in self.dims:
-            newdimname = "_unravel_argminmax_dim_{}".format(count)
+            newdimname = f"_unravel_argminmax_dim_{count}"
             count += 1
 
         stacked = self.stack({newdimname: dim})
@@ -2188,7 +2440,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmin, DataArray.idxmin
         """
@@ -2233,7 +2485,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmax, DataArray.idxmax
         """
@@ -2290,7 +2542,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks=None, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
@@ -2341,6 +2593,9 @@ class IndexVariable(Variable):
             if positions is not None:
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
+
+        # keep as str if possible as pandas.Index uses object (converts to numpy array)
+        data = maybe_coerce_to_str(data, variables)
 
         attrs = dict(first_var.attrs)
         if not shortcut:
@@ -2526,7 +2781,7 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
 
     Parameters
     ----------
-    variables : iterable of Array
+    variables : iterable of Variable
         Arrays to stack together. Each variable is expected to have
         matching dimensions and shape except for along the stacked
         dimension.
@@ -2536,7 +2791,7 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
         existing dimension name, in which case the location of the
         dimension is unchanged. Where to insert the new dimension is
         determined by the first variable.
-    positions : None or list of integer arrays, optional
+    positions : None or list of array-like, optional
         List of integer arrays which specifies the integer positions to which
         to assign each dataset along the concatenated dimension. If not
         supplied, objects are concatenated in the provided order.

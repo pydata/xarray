@@ -10,6 +10,7 @@ from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
+from .core.pycompat import dask_array_type
 
 cdms2_ignored_attrs = {"name", "tileIndex"}
 iris_forbidden_keys = {
@@ -55,14 +56,12 @@ def encode(var):
 
 
 def _filter_attrs(attrs, ignored_attrs):
-    """ Return attrs that are not in ignored_attrs
-    """
+    """Return attrs that are not in ignored_attrs"""
     return {k: v for k, v in attrs.items() if k not in ignored_attrs}
 
 
 def from_cdms2(variable):
-    """Convert a cdms2 variable into an DataArray
-    """
+    """Convert a cdms2 variable into an DataArray"""
     values = np.asarray(variable)
     name = variable.id
     dims = variable.getAxisIds()
@@ -89,8 +88,7 @@ def from_cdms2(variable):
 
 
 def to_cdms2(dataarray, copy=True):
-    """Convert a DataArray into a cdms2 variable
-    """
+    """Convert a DataArray into a cdms2 variable"""
     # we don't want cdms2 to be a hard dependency
     import cdms2
 
@@ -151,14 +149,12 @@ def to_cdms2(dataarray, copy=True):
 
 
 def _pick_attrs(attrs, keys):
-    """ Return attrs with keys in keys list
-    """
+    """Return attrs with keys in keys list"""
     return {k: v for k, v in attrs.items() if k in keys}
 
 
 def _get_iris_args(attrs):
-    """ Converts the xarray attrs into args that can be passed into Iris
-    """
+    """Converts the xarray attrs into args that can be passed into Iris"""
     # iris.unit is deprecated in Iris v1.9
     import cf_units
 
@@ -172,8 +168,7 @@ def _get_iris_args(attrs):
 
 # TODO: Add converting bounds from xarray to Iris and back
 def to_iris(dataarray):
-    """ Convert a DataArray into a Iris Cube
-    """
+    """Convert a DataArray into a Iris Cube"""
     # Iris not a hard dependency
     import iris
     from iris.fileformats.netcdf import parse_cell_methods
@@ -213,8 +208,7 @@ def to_iris(dataarray):
 
 
 def _iris_obj_to_attrs(obj):
-    """ Return a dictionary of attrs when given a Iris object
-    """
+    """Return a dictionary of attrs when given a Iris object"""
     attrs = {"standard_name": obj.standard_name, "long_name": obj.long_name}
     if obj.units.calendar:
         attrs["calendar"] = obj.units.calendar
@@ -225,8 +219,7 @@ def _iris_obj_to_attrs(obj):
 
 
 def _iris_cell_methods_to_str(cell_methods_obj):
-    """ Converts a Iris cell methods into a string
-    """
+    """Converts a Iris cell methods into a string"""
     cell_methods = []
     for cell_method in cell_methods_obj:
         names = "".join(f"{n}: " for n in cell_method.coord_names)
@@ -242,7 +235,7 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 
 
 def _name(iris_obj, default="unknown"):
-    """ Mimicks `iris_obj.name()` but with different name resolution order.
+    """Mimicks `iris_obj.name()` but with different name resolution order.
 
     Similar to iris_obj.name() method, but using iris_obj.var_name first to
     enable roundtripping.
@@ -251,10 +244,8 @@ def _name(iris_obj, default="unknown"):
 
 
 def from_iris(cube):
-    """ Convert a Iris cube into an DataArray
-    """
+    """Convert a Iris cube into an DataArray"""
     import iris.exceptions
-    from xarray.core.pycompat import dask_array_type
 
     name = _name(cube)
     if name == "unknown":

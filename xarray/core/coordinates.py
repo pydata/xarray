@@ -13,6 +13,7 @@ from typing import (
     cast,
 )
 
+import numpy as np
 import pandas as pd
 
 from . import formatting, indexing
@@ -107,8 +108,49 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             return self._data.get_index(dim)  # type: ignore
         else:
             indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
-            names = list(ordered_dims)
-            return pd.MultiIndex.from_product(indexes, names=names)
+
+            # compute the sizes of the repeat and tile for the cartesian product
+            # (taken from pandas.core.reshape.util)
+            index_lengths = np.fromiter(
+                (len(index) for index in indexes), dtype=np.intp
+            )
+            cumprod_lengths = np.cumproduct(index_lengths)
+
+            if cumprod_lengths[-1] != 0:
+                # sizes of the repeats
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
+            else:
+                # if any factor is empty, the cartesian product is empty
+                repeat_counts = np.zeros_like(cumprod_lengths)
+
+            # sizes of the tiles
+            tile_counts = np.roll(cumprod_lengths, 1)
+            tile_counts[0] = 1
+
+            # loop over the indexes
+            # for each MultiIndex or Index compute the cartesian product of the codes
+
+            code_list = []
+            level_list = []
+            names = []
+
+            for i, index in enumerate(indexes):
+                if isinstance(index, pd.MultiIndex):
+                    codes, levels = index.codes, index.levels
+                else:
+                    code, level = pd.factorize(index)
+                    codes = [code]
+                    levels = [level]
+
+                # compute the cartesian product
+                code_list += [
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    for code in codes
+                ]
+                level_list += levels
+                names += index.names
+
+            return pd.MultiIndex(level_list, code_list, names=names)
 
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
@@ -214,9 +256,10 @@ class DatasetCoordinates(Coordinates):
         return cast("DataArray", self._data[key])
 
     def to_dataset(self) -> "Dataset":
-        """Convert these coordinates into a new Dataset
-        """
-        return self._data._copy_listed(self._names)
+        """Convert these coordinates into a new Dataset"""
+
+        names = [name for name in self._data._variables if name in self._names]
+        return self._data._copy_listed(names)
 
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
@@ -322,29 +365,6 @@ class DataArrayCoordinates(Coordinates):
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython. """
         return self._data._ipython_key_completions_()
-
-
-class LevelCoordinatesSource(Mapping[Hashable, Any]):
-    """Iterator for MultiIndex level coordinates.
-
-    Used for attribute style lookup with AttrAccessMixin. Not returned directly
-    by any public methods.
-    """
-
-    __slots__ = ("_data",)
-
-    def __init__(self, data_object: "Union[DataArray, Dataset]"):
-        self._data = data_object
-
-    def __getitem__(self, key):
-        # not necessary -- everything here can already be found in coords.
-        raise KeyError()
-
-    def __iter__(self) -> Iterator[Hashable]:
-        return iter(self._data._level_coords)
-
-    def __len__(self) -> int:
-        return len(self._data._level_coords)
 
 
 def assert_coordinate_consistent(

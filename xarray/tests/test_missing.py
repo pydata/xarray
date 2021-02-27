@@ -365,8 +365,23 @@ def test_interpolate_dask():
 def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
-    with raises_regex(ValueError, "dask='parallelized' consists of multiple"):
+    # this checks for ValueError in dask.array.apply_gufunc
+    with raises_regex(ValueError, "consists of multiple chunks"):
         da.interpolate_na("time")
+
+
+@requires_dask
+@requires_scipy
+@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+def test_interpolate_dask_expected_dtype(dtype, method):
+    da = xr.DataArray(
+        data=np.array([0, 1], dtype=dtype),
+        dims=["time"],
+        coords=dict(time=np.array([0, 1])),
+    ).chunk(dict(time=2))
+    da = da.interp(time=np.array([0, 0.5, 1, 2]), method=method)
+
+    assert da.dtype == da.compute().dtype
 
 
 @requires_bottleneck

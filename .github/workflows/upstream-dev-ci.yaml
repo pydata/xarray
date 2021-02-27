@@ -1,0 +1,174 @@
+name: CI Upstream
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: "0 0 * * *" # Daily “At 00:00” UTC
+  workflow_dispatch: # allows you to trigger the workflow run manually
+
+jobs:
+  detect-ci-trigger:
+    name: detect upstream-dev ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: xarray-contrib/ci-trigger@v1
+        id: detect-trigger
+        with:
+          keyword: "[test-upstream]"
+
+  upstream-dev:
+    name: upstream-dev
+    runs-on: ubuntu-latest
+    needs: detect-ci-trigger
+    if: |
+      always()
+      && github.repository == 'pydata/xarray'
+      && (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        || needs.detect-ci-trigger.outputs.triggered == 'true'
+      )
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8"]
+    outputs:
+      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: ${{ matrix.python-version }}
+      - name: Set up conda environment
+        run: |
+          mamba env update -f ci/requirements/environment.yml
+          bash ci/install-upstream-wheels.sh
+      - name: Version info
+        run: |
+          conda info -a
+          conda list
+          python xarray/util/print_versions.py
+      - name: import xarray
+        run: |
+          python -c 'import xarray'
+      - name: Run Tests
+        if: success()
+        id: status
+        run: |
+          set -euo pipefail
+          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
+              echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
+          )
+      - name: Upload artifacts
+        if: |
+          failure()
+          && steps.status.outcome == 'failure'
+          && github.event_name == 'schedule'
+          && github.repository == 'pydata/xarray'
+        uses: actions/upload-artifact@v2
+        with:
+          name: output-${{ matrix.python-version }}-log
+          path: output-${{ matrix.python-version }}-log
+          retention-days: 5
+
+  report:
+    name: report
+    needs: upstream-dev
+    if: |
+      always()
+      && github.event_name == 'schedule'
+      && github.repository == 'pydata/xarray'
+      && needs.upstream-dev.outputs.artifacts_availability == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - uses: actions/download-artifact@v2
+        with:
+          path: /tmp/workspace/logs
+      - name: Move all log files into a single directory
+        run: |
+          rsync -a /tmp/workspace/logs/output-*/ ./logs
+          ls -R ./logs
+      - name: Parse logs
+        run: |
+          shopt -s globstar
+          python .github/workflows/parse_logs.py logs/**/*-log
+      - name: Report failures
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const pytest_logs = fs.readFileSync('pytest-logs.txt', 'utf8');
+            const title = "⚠️ Nightly upstream-dev CI failed ⚠️"
+            const workflow_url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+            const issue_body = `[Workflow Run URL](${workflow_url})\n${pytest_logs}`
+
+            // Run GraphQL query against GitHub API to find the most recent open issue used for reporting failures
+            const query = `query($owner:String!, $name:String!, $creator:String!, $label:String!){
+              repository(owner: $owner, name: $name) {
+                issues(first: 1, states: OPEN, filterBy: {createdBy: $creator, labels: [$label]}, orderBy: {field: CREATED_AT, direction: DESC}) {
+                  edges {
+                    node {
+                      body
+                      id
+                      number
+                    }
+                  }
+                }
+              }
+            }`;
+
+            const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                label: 'CI',
+                creator: "github-actions[bot]"
+            }
+            const result = await github.graphql(query, variables)
+
+            // If no issue is open, create a new issue,
+            // else update the body of the existing issue.
+            if (result.repository.issues.edges.length === 0) {
+                github.issues.create({
+                    owner: variables.owner,
+                    repo: variables.name,
+                    body: issue_body,
+                    title: title,
+                    labels: [variables.label]
+                })
+            } else {
+                github.issues.update({
+                    owner: variables.owner,
+                    repo: variables.name,
+                    issue_number: result.repository.issues.edges[0].node.number,
+                    body: issue_body
+                })
+            }

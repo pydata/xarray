@@ -46,7 +46,7 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-xarray supports four kind of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
+xarray supports four kinds of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
 
 .. ipython:: python
 
@@ -153,7 +153,7 @@ Visualizing your datasets is quick and convenient:
     data.plot()
 
 Note the automatic labeling with names and units. Our effort in adding metadata attributes has paid off! Many aspects of these figures are customizable: see :ref:`plotting`.
-    
+
 pandas
 ------
 

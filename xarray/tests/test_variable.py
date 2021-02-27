@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
+from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
@@ -294,6 +294,19 @@ class VariableSubclassobjects:
         actual = self.cls("x", data)
         assert actual.dtype == data.dtype
 
+    def test_datetime64_valid_range(self):
+        data = np.datetime64("1250-01-01", "us")
+        pderror = pd.errors.OutOfBoundsDatetime
+        with raises_regex(pderror, "Out of bounds nanosecond"):
+            self.cls(["t"], [data])
+
+    @pytest.mark.xfail(reason="pandas issue 36615")
+    def test_timedelta64_valid_range(self):
+        data = np.timedelta64("200000", "D")
+        pderror = pd.errors.OutOfBoundsTimedelta
+        with raises_regex(pderror, "Out of bounds nanosecond"):
+            self.cls(["t"], [data])
+
     def test_pandas_data(self):
         v = self.cls(["x"], pd.Series([0, 1, 2], index=[3, 2, 1]))
         assert_identical(v, v[[0, 1, 2]])
@@ -329,7 +342,8 @@ class VariableSubclassobjects:
         assert_array_equal(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(["x"], x, {"units": "meters"})
-        assert_identical(base_v, +v2)
+        with set_options(keep_attrs=False):
+            assert_identical(base_v, +v2)
         # binary ops with all variables
         assert_array_equal(v + v, 2 * v)
         w = self.cls(["x"], y, {"foo": "bar"})
@@ -821,6 +835,9 @@ class VariableSubclassobjects:
         ],
     )
     @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.filterwarnings(
+        r"ignore:dask.array.pad.+? converts integers to floats."
+    )
     def test_pad(self, mode, xr_arg, np_arg):
         data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
         v = self.cls(["x", "y", "z"], data)
@@ -1064,6 +1081,9 @@ class TestVariable(VariableSubclassobjects):
         td = np.array([timedelta(days=x) for x in range(10)])
         assert as_variable(td, "time").dtype.kind == "m"
 
+        with pytest.warns(DeprecationWarning):
+            as_variable(("x", DataArray([])))
+
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         expected = dedent(
@@ -1256,13 +1276,13 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(time=[]), v[[]])
         with raises_regex(
             ValueError,
-            r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0)
         with pytest.warns(
             UserWarning,
-            match=r"dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0, missing_dims="warn")
@@ -1378,7 +1398,7 @@ class TestVariable(VariableSubclassobjects):
         ]:
             variable = Variable([], value)
             actual = variable.transpose()
-            assert actual.identical(variable)
+            assert_identical(actual, variable)
 
     def test_squeeze(self):
         v = Variable(["x", "y"], [[1]])
@@ -1431,7 +1451,7 @@ class TestVariable(VariableSubclassobjects):
         for i in range(3):
             exp_values[i] = ("a", 1)
         expected = Variable(["x"], exp_values)
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
 
     def test_stack(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]], {"foo": "bar"})
@@ -1557,10 +1577,6 @@ class TestVariable(VariableSubclassobjects):
 
         with raises_regex(ValueError, "cannot supply both"):
             v.mean(dim="x", axis=0)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=True)
-        with pytest.warns(DeprecationWarning, match="allow_lazy is deprecated"):
-            v.mean(dim="x", allow_lazy=False)
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
@@ -1588,7 +1604,8 @@ class TestVariable(VariableSubclassobjects):
     def test_quantile_chunked_dim_error(self):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
-        with raises_regex(ValueError, "dimension 'x'"):
+        # this checks for ValueError in dask.array.apply_gufunc
+        with raises_regex(ValueError, "consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -1948,7 +1965,10 @@ class TestVariable(VariableSubclassobjects):
         # Test kept attrs
         with set_options(keep_attrs=True):
             new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left"
+                windows={"coord": 1},
+                func=test_func,
+                boundary="exact",
+                side="left",
             )
         assert new.attrs == _attrs
 
@@ -2061,12 +2081,12 @@ class TestIndexVariable(VariableSubclassobjects):
         coords = [IndexVariable("t", periods[:5]), IndexVariable("t", periods[5:])]
         expected = IndexVariable("t", periods)
         actual = IndexVariable.concat(coords, dim="t")
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
         positions = [list(range(5)), list(range(5, 10))]
         actual = IndexVariable.concat(coords, dim="t", positions=positions)
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
     def test_concat_multiindex(self):
@@ -2074,8 +2094,19 @@ class TestIndexVariable(VariableSubclassobjects):
         coords = [IndexVariable("x", idx[:2]), IndexVariable("x", idx[2:])]
         expected = IndexVariable("x", idx)
         actual = IndexVariable.concat(coords, dim="x")
-        assert actual.identical(expected)
+        assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_concat_str_dtype(self, dtype):
+
+        a = IndexVariable("x", np.array(["a"], dtype=dtype))
+        b = IndexVariable("x", np.array(["b"], dtype=dtype))
+        expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
+
+        actual = IndexVariable.concat([a, b])
+        assert actual.identical(expected)
+        assert np.issubdtype(actual.dtype, dtype)
 
     def test_coordinate_alias(self):
         with pytest.warns(Warning, match="deprecated"):
@@ -2217,6 +2248,9 @@ class TestAsCompatibleData:
         with raises_regex(ValueError, "must be scalar"):
             full_like(orig, [1.0, 2.0])
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(orig, True, dtype={"x": bool})
+
     @requires_dask
     def test_full_like_dask(self):
         orig = Variable(
@@ -2272,6 +2306,11 @@ class TestAsCompatibleData:
         class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
             pass
 
+        # Type with data stored in values attribute
+        class CustomWithValuesAttr:
+            def __init__(self, array):
+                self.values = array
+
         array = CustomArray(np.arange(3))
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
@@ -2279,6 +2318,10 @@ class TestAsCompatibleData:
         array = CustomIndexable(np.arange(3))
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, CustomIndexable)
+
+        array = CustomWithValuesAttr(np.arange(3))
+        orig = Variable(dims=(), data=array)
+        assert isinstance(orig._data.item(), CustomWithValuesAttr)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

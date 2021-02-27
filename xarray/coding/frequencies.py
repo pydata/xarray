@@ -61,9 +61,9 @@ def infer_freq(index):
 
     Parameters
     ----------
-    index : CFTimeIndex, DataArray, pd.DatetimeIndex, pd.TimedeltaIndex, pd.Series
-      If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
-      If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
+    index : CFTimeIndex, DataArray, DatetimeIndex, TimedeltaIndex, Series
+        If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
+        If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
 
     Returns
     -------

@@ -7,6 +7,7 @@ from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _get_nice_quiver_magnitude,
     _is_numeric,
     _process_cmap_cbar_kwargs,
     get_axis,
@@ -17,7 +18,7 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
+def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
     error_msg = " must be one of ({:s})".format(", ".join(dvars))
 
@@ -38,7 +39,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
 
         if not hue_is_numeric and (hue_style == "continuous"):
             raise ValueError(
-                "Cannot create a colorbar for a non numeric" " coordinate: " + hue
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
             )
 
         if add_guide is None or add_guide is True:
@@ -48,15 +49,26 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True:
+        if add_guide is True and funcname != "quiver":
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
 
+    if (add_guide or add_guide is None) and funcname == "quiver":
+        add_quiverkey = True
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver"
+                )
+    else:
+        add_quiverkey = False
+
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError(
-            "hue_style must be either None, 'discrete' " "or 'continuous'."
-        )
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
 
     if hue:
         hue_label = label_from_attrs(ds[hue])
@@ -68,6 +80,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide):
     return {
         "add_colorbar": add_colorbar,
         "add_legend": add_legend,
+        "add_quiverkey": add_quiverkey,
         "hue_label": hue_label,
         "hue_style": hue_style,
         "xlabel": label_from_attrs(ds[x]),
@@ -131,7 +144,7 @@ def _parse_size(data, norm):
     elif isinstance(norm, tuple):
         norm = mpl.colors.Normalize(*norm)
     elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, " "or Normalize object."
+        err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
     norm.clip = True
@@ -170,14 +183,16 @@ def _dsplot(plotfunc):
     ----------
 
     ds : Dataset
-    x, y : string
+    x, y : str
         Variable names for x, y axis.
+    u, v : str, optional
+        Variable names for quiver plots
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
         Can be either 'discrete' (legend) or 'continuous' (color bar).
-    markersize: str, optional (scatter only)
-        Variably by which to vary size of scattered points
+    markersize: str, optional
+        scatter only. Variable by which to vary size of scattered points.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
     add_guide: bool, optional
@@ -185,13 +200,13 @@ def _dsplot(plotfunc):
             - for "discrete", build a legend.
               This is the default for non-numeric `hue` variables.
             - for "continuous",  build a colorbar
-    row : string, optional
+    row : str, optional
         If passed, make row faceted plots on this dimension name
-    col : string, optional
+    col : str, optional
         If passed, make column faceted plots on this dimension name
-    col_wrap : integer, optional
+    col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes, optional
+    ax : matplotlib axes object, optional
         If None, uses the current axis. Not applicable when using facets.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
@@ -205,21 +220,23 @@ def _dsplot(plotfunc):
     norm : ``matplotlib.colors.Normalize`` instance, optional
         If the ``norm`` has vmin or vmax specified, the corresponding kwarg
         must be None.
-    vmin, vmax : floats, optional
+    vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
         setting one of these values will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : matplotlib colormap name or object, optional
-        The mapping from data values to color space. If not provided, this
-        will be either be ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
-        color palette. If ``cmap`` is seaborn color palette and the plot type
-        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
-    colors : discrete colors to plot, optional
+    cmap : str or colormap, optional
+        The mapping from data values to color space. Either a
+        matplotlib colormap name or object. If not provided, this will
+        be either ``viridis`` (if the function infers a sequential
+        dataset) or ``RdBu_r`` (if the function infers a diverging
+        dataset).  When `Seaborn` is installed, ``cmap`` may also be a
+        `seaborn` color palette. If ``cmap`` is seaborn color palette
+        and the plot type is not ``contour`` or ``contourf``, ``levels``
+        must also be specified.
+    colors : color-like or list of color-like, optional
         A single color or a list of colors. If the plot type is not ``contour``
         or ``contourf``, the ``levels`` argument is required.
     center : float, optional
@@ -229,7 +246,7 @@ def _dsplot(plotfunc):
     robust : bool, optional
         If True and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {'neither', 'both', 'min', 'max'}, optional
+    extend : {"neither", "both", "min", "max"}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, extend is inferred from vmin, vmax and the data limits.
     levels : int or list-like object, optional
@@ -250,6 +267,8 @@ def _dsplot(plotfunc):
         ds,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -282,7 +301,9 @@ def _dsplot(plotfunc):
         if _is_facetgrid:  # facetgrid call
             meta_data = kwargs.pop("meta_data")
         else:
-            meta_data = _infer_meta_data(ds, x, y, hue, hue_style, add_guide)
+            meta_data = _infer_meta_data(
+                ds, x, y, hue, hue_style, add_guide, funcname=plotfunc.__name__
+            )
 
         hue_style = meta_data["hue_style"]
 
@@ -291,7 +312,7 @@ def _dsplot(plotfunc):
             allargs = locals().copy()
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             allargs["data"] = ds
-            # TODO dcherian: why do I need to remove kwargs?
+            # remove kwargs to avoid passing the information twice
             for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
 
@@ -317,13 +338,18 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
+        if (u is not None or v is not None) and plotfunc.__name__ != "quiver":
+            raise ValueError("u, v are only allowed for quiver plots.")
+
         primitive = plotfunc(
             ds=ds,
             x=x,
             y=y,
+            ax=ax,
+            u=u,
+            v=v,
             hue=hue,
             hue_style=hue_style,
-            ax=ax,
             cmap_params=cmap_params_subset,
             **kwargs,
         )
@@ -337,16 +363,31 @@ def _dsplot(plotfunc):
             ax.set_ylabel(meta_data.get("ylabel"))
 
         if meta_data["add_legend"]:
-            ax.legend(
-                handles=primitive,
-                labels=list(meta_data["hue"].values),
-                title=meta_data.get("hue_label", None),
-            )
+            ax.legend(handles=primitive, title=meta_data.get("hue_label", None))
         if meta_data["add_colorbar"]:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if "label" not in cbar_kwargs:
                 cbar_kwargs["label"] = meta_data.get("hue_label", None)
             _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+
+        if meta_data["add_quiverkey"]:
+            magnitude = _get_nice_quiver_magnitude(ds[u], ds[v])
+            units = ds[u].attrs.get("units", "")
+            ax.quiverkey(
+                primitive,
+                X=0.85,
+                Y=0.9,
+                U=magnitude,
+                label=f"{magnitude}\n{units}",
+                labelpos="E",
+                coordinates="figure",
+            )
+
+        if plotfunc.__name__ == "quiver":
+            title = ds[u]._title_for_slice()
+        else:
+            title = ds[x]._title_for_slice()
+        ax.set_title(title)
 
         return primitive
 
@@ -355,6 +396,8 @@ def _dsplot(plotfunc):
         _PlotMethods_obj,
         x=None,
         y=None,
+        u=None,
+        v=None,
         hue=None,
         hue_style=None,
         col=None,
@@ -402,7 +445,7 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
+def scatter(ds, x, y, ax, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
     """
@@ -426,7 +469,10 @@ def scatter(ds, x, y, ax, **kwargs):
 
     if hue_style == "discrete":
         primitive = []
-        for label in np.unique(data["hue"].values):
+        # use pd.unique instead of np.unique because that keeps the order of the labels,
+        # which is important to keep them in sync with the ones used in
+        # FacetGrid.add_legend
+        for label in pd.unique(data["hue"].values.ravel()):
             mask = data["hue"] == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
@@ -451,3 +497,32 @@ def scatter(ds, x, y, ax, **kwargs):
         )
 
     return primitive
+
+
+@_dsplot
+def quiver(ds, x, y, ax, u, v, **kwargs):
+    """ Quiver plot with Dataset variables."""
+    import matplotlib as mpl
+
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for quiver plots.")
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    cmap_params = kwargs.pop("cmap_params")
+
+    if hue:
+        args.append(ds[hue].values)
+
+        # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+        if not cmap_params["norm"]:
+            cmap_params["norm"] = mpl.colors.Normalize(
+                cmap_params.pop("vmin"), cmap_params.pop("vmax")
+            )
+
+    kwargs.pop("hue_style")
+    kwargs.setdefault("pivot", "middle")
+    hdl = ax.quiver(*args, **kwargs, **cmap_params)
+    return hdl

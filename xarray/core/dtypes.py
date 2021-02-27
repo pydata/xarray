@@ -78,7 +78,7 @@ def maybe_promote(dtype):
     return np.dtype(dtype), fill_value
 
 
-NAT_TYPES = (np.datetime64("NaT"), np.timedelta64("NaT"))
+NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
 def get_fill_value(dtype):
@@ -96,19 +96,27 @@ def get_fill_value(dtype):
     return fill_value
 
 
-def get_pos_infinity(dtype):
+def get_pos_infinity(dtype, max_for_int=False):
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
     ----------
     dtype : np.dtype
+    max_for_int : bool
+        Return np.iinfo(dtype).max instead of np.inf
 
     Returns
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, (np.floating, np.integer)):
+    if issubclass(dtype.type, np.floating):
         return np.inf
+
+    if issubclass(dtype.type, np.integer):
+        if max_for_int:
+            return np.iinfo(dtype).max
+        else:
+            return np.inf
 
     if issubclass(dtype.type, np.complexfloating):
         return np.inf + 1j * np.inf
@@ -116,19 +124,27 @@ def get_pos_infinity(dtype):
     return INF
 
 
-def get_neg_infinity(dtype):
+def get_neg_infinity(dtype, min_for_int=False):
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
     ----------
     dtype : np.dtype
+    min_for_int : bool
+        Return np.iinfo(dtype).min instead of -np.inf
 
     Returns
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, (np.floating, np.integer)):
+    if issubclass(dtype.type, np.floating):
         return -np.inf
+
+    if issubclass(dtype.type, np.integer):
+        if min_for_int:
+            return np.iinfo(dtype).min
+        else:
+            return -np.inf
 
     if issubclass(dtype.type, np.complexfloating):
         return -np.inf - 1j * np.inf
@@ -137,8 +153,7 @@ def get_neg_infinity(dtype):
 
 
 def is_datetime_like(dtype):
-    """Check if a dtype is a subclass of the numpy datetime types
-    """
+    """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
 
 

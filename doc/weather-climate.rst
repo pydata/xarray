@@ -12,6 +12,36 @@ Weather and climate data
 
 .. _Climate and Forecast (CF) conventions: http://cfconventions.org
 
+.. _cf_variables:
+
+Related Variables
+-----------------
+
+Several CF variable attributes contain lists of other variables
+associated with the variable with the attribute.  A few of these are
+now parsed by XArray, with the attribute value popped to encoding on
+read and the variables in that value interpreted as non-dimension
+coordinates:
+
+- ``coordinates``
+- ``bounds``
+- ``grid_mapping``
+- ``climatology``
+- ``geometry``
+- ``node_coordinates``
+- ``node_count``
+- ``part_node_count``
+- ``interior_ring``
+- ``cell_measures``
+- ``formula_terms``
+
+This decoding is controlled by the ``decode_coords`` kwarg to
+:py:func:`open_dataset` and :py:func:`open_mfdataset`.
+
+The CF attribute ``ancillary_variables`` was not included in the list
+due to the variables listed there being associated primarily with the
+variable with the attribute, rather than with the dimensions.
+
 .. _metpy_accessor:
 
 CF-compliant coordinate variables
@@ -85,7 +115,7 @@ infer the sampling frequency of a :py:class:`~xarray.CFTimeIndex` or a 1-D
 
 With :py:meth:`~xarray.CFTimeIndex.strftime` we can also easily generate formatted strings from
 the datetime values of a :py:class:`~xarray.CFTimeIndex` directly or through the
-:py:meth:`~xarray.DataArray.dt` accessor for a :py:class:`~xarray.DataArray`
+``dt`` accessor for a :py:class:`~xarray.DataArray`
 using the same formatting as the standard `datetime.strftime`_ convention .
 
 .. _datetime.strftime: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
@@ -97,13 +127,24 @@ using the same formatting as the standard `datetime.strftime`_ convention .
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
-- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
-  datetime strings:
+- `Partial datetime string indexing`_:
 
 .. ipython:: python
 
     da.sel(time="0001")
     da.sel(time=slice("0001-05", "0002-02"))
+
+.. note::
+
+
+   For specifying full or partial datetime strings in cftime
+   indexing, xarray supports two versions of the `ISO 8601 standard`_, the
+   basic pattern (YYYYMMDDhhmmss) or the extended pattern
+   (YYYY-MM-DDThh:mm:ss), as well as the default cftime string format
+   (YYYY-MM-DD hh:mm:ss).  This is somewhat more restrictive than pandas;
+   in other words, some datetime strings that would be valid for a
+   :py:class:`pandas.DatetimeIndex` are not valid for an
+   :py:class:`~xarray.CFTimeIndex`.
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
@@ -125,7 +166,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     da.time.dt.ceil("3D")
     da.time.dt.floor("5D")
     da.time.dt.round("2D")
-   
+
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
 
@@ -195,6 +236,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    and silent errors due to the difference in calendar types between the dates
    encoded in your data and the dates stored in memory.
 
-.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
-.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
-.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing
+.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
+.. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
+.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#partial-string-indexing

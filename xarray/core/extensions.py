@@ -69,7 +69,7 @@ def register_dataarray_accessor(name):
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
 
-    See also
+    See Also
     --------
     register_dataset_accessor
     """
@@ -87,38 +87,34 @@ def register_dataset_accessor(name):
 
     Examples
     --------
+    In your library code:
 
-    In your library code::
-
-        import xarray as xr
-
-        @xr.register_dataset_accessor('geo')
-        class GeoAccessor:
-            def __init__(self, xarray_obj):
-                self._obj = xarray_obj
-
-            @property
-            def center(self):
-                # return the geographic center point of this dataset
-                lon = self._obj.latitude
-                lat = self._obj.longitude
-                return (float(lon.mean()), float(lat.mean()))
-
-            def plot(self):
-                # plot this array's data on a map, e.g., using Cartopy
-                pass
+    >>> @xr.register_dataset_accessor("geo")
+    ... class GeoAccessor:
+    ...     def __init__(self, xarray_obj):
+    ...         self._obj = xarray_obj
+    ...
+    ...     @property
+    ...     def center(self):
+    ...         # return the geographic center point of this dataset
+    ...         lon = self._obj.latitude
+    ...         lat = self._obj.longitude
+    ...         return (float(lon.mean()), float(lat.mean()))
+    ...
+    ...     def plot(self):
+    ...         # plot this array's data on a map, e.g., using Cartopy
+    ...         pass
 
     Back in an interactive IPython session:
 
-        >>> ds = xarray.Dataset(
-        ...     {"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)}
-        ... )
-        >>> ds.geo.center
-        (5.0, 10.0)
-        >>> ds.geo.plot()
-        # plots data on a map
+    >>> ds = xr.Dataset(
+    ...     {"longitude": np.linspace(0, 10), "latitude": np.linspace(0, 20)}
+    ... )
+    >>> ds.geo.center
+    (10.0, 5.0)
+    >>> ds.geo.plot()  # plots data on a map
 
-    See also
+    See Also
     --------
     register_dataarray_accessor
     """

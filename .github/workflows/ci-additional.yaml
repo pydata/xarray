@@ -1,0 +1,233 @@
+name: CI Additional
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch: # allows you to trigger manually
+
+jobs:
+  detect-ci-trigger:
+    name: detect ci trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: xarray-contrib/ci-trigger@v1
+        id: detect-trigger
+        with:
+          keyword: "[skip-ci]"
+
+  test:
+    name: ${{ matrix.os }} ${{ matrix.env }}
+    runs-on: ${{ matrix.os }}
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        env:
+          [
+            "py37-bare-minimum",
+            "py37-min-all-deps",
+            "py37-min-nep18",
+            "py38-all-but-dask",
+            "py38-backend-api-v2",
+            "py38-flaky",
+          ]
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+
+      - name: Set environment variables
+        run: |
+          if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
+          then
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            echo "XARRAY_BACKEND_API=v2" >> $GITHUB_ENV
+
+          elif [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          then
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+            echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+
+          else
+            echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+          fi
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-${{ matrix.env }}-${{
+            hashFiles('ci/requirements/**.yml') }}
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: 3.8
+          use-only-tar-bz2: true
+
+      - name: Install conda dependencies
+        run: |
+          mamba env update -f $CONDA_ENV_FILE
+
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+
+      - name: Version info
+        run: |
+          conda info -a
+          conda list
+          python xarray/util/print_versions.py
+      - name: Import xarray
+        run: |
+          python -c "import xarray"
+      - name: Run tests
+        run: |
+          python -m pytest -n 4 \
+             --cov=xarray \
+             --cov-report=xml \
+             $PYTEST_EXTRA_FLAGS
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          flags: unittests,${{ matrix.env }}
+          env_vars: RUNNER_OS
+          name: codecov-umbrella
+          fail_ci_if_error: false
+  doctest:
+    name: Doctests
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: "3.8"
+
+      - name: Install conda dependencies
+        run: |
+          mamba env update -f ci/requirements/environment.yml
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+      - name: Version info
+        run: |
+          conda info -a
+          conda list
+          python xarray/util/print_versions.py
+      - name: Run doctests
+        run: |
+          python -m pytest --doctest-modules xarray --ignore xarray/tests
+
+  typing:
+    name: Type checking (mypy)
+    runs-on: "ubuntu-latest"
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: xarray-tests
+          auto-update-conda: false
+          python-version: "3.8"
+
+      - name: Install conda dependencies
+        run: |
+          mamba env update -f ci/requirements/environment.yml
+      - name: Install mypy
+        run: |
+          mamba install --file ci/requirements/mypy_only
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
+      - name: Version info
+        run: |
+          conda info -a
+          conda list
+          python xarray/util/print_versions.py
+      - name: Run mypy
+        run: |
+          python -m mypy xarray
+
+  min-version-policy:
+    name: Minimum Version Policy
+    runs-on: "ubuntu-latest"
+    needs: detect-ci-trigger
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          auto-update-conda: false
+          python-version: "3.8"
+
+      - name: minimum versions policy
+        run: |
+          mamba install -y pyyaml conda python-dateutil
+          python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
