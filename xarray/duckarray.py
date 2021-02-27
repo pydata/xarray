@@ -70,8 +70,9 @@ def duckarray_module(name, create, global_marks=None, marks=None):
                 actual = getattr(ds, method)()
                 xr.testing.assert_identical(actual, expected)
 
-    for name, marks_ in marks.items():
-        apply_marks(TestModule, name, marks_)
+    if marks is not None:
+        for name, marks_ in marks.items():
+            apply_marks(TestModule, name, marks_)
 
     TestModule.__name__ = f"Test{name.title()}"
     TestModule.__qualname__ = f"Test{name.title()}"
