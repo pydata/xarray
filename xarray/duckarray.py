@@ -44,7 +44,7 @@ def duckarray_module(name, create, global_marks=None, marks=None):
     import pytest
 
     class TestModule:
-        pytestmarks = global_marks
+        pytestmark = global_marks
 
         class TestDataset:
             @pytest.mark.parametrize(
