@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
-from pandas.testing import assert_index_equal
 from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
@@ -3830,9 +3829,11 @@ class TestDataset:
 
         # Our use of `loffset` may change if we align our API with pandas' changes.
         # ref https://github.com/pydata/xarray/pull/4537
-        actual = ds.resample(time="24H", loffset="-12H").mean()
-        expected = ds.bar.to_series().resample("24H").mean().index + to_offset("-12H")
-        assert_index_equal(actual, expected)
+        actual = ds.resample(time="24H", loffset="-12H").mean().bar
+        expected_ = ds.bar.to_series().resample("24H").mean()
+        expected_.index += to_offset("-12H")
+        expected = DataArray.from_series(expected_)
+        assert_identical(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
