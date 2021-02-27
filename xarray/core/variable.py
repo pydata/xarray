@@ -120,6 +120,16 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
+        if isinstance(obj[1], DataArray):
+            # TODO: change into TypeError
+            warnings.warn(
+                (
+                    "Using a DataArray object to construct a variable is"
+                    " ambiguous, please extract the data using the .data property."
+                    " This will raise a TypeError in 0.19.0."
+                ),
+                DeprecationWarning,
+            )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
@@ -218,7 +228,8 @@ def as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    data = getattr(data, "values", data)
+    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
+        data = data.values
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)

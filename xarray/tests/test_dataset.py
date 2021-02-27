@@ -4959,13 +4959,13 @@ class TestDataset:
         # Coordinates involved in the reduction should be removed
         actual = ds.mean(keepdims=True)
         expected = Dataset(
-            {"a": (["x", "y"], np.mean(ds.a, keepdims=True))}, coords={"c": ds.c}
+            {"a": (["x", "y"], np.mean(ds.a, keepdims=True).data)}, coords={"c": ds.c}
         )
         assert_identical(expected, actual)
 
         actual = ds.mean("x", keepdims=True)
         expected = Dataset(
-            {"a": (["x", "y"], np.mean(ds.a, axis=0, keepdims=True))},
+            {"a": (["x", "y"], np.mean(ds.a, axis=0, keepdims=True).data)},
             coords={"y": ds.y, "c": ds.c},
         )
         assert_identical(expected, actual)
@@ -6053,6 +6053,27 @@ def test_coarsen_keep_attrs():
 
     # Test kept attrs in original object
     xr.testing.assert_identical(ds, ds2)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("ds", (1, 2), indirect=True)
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
+def test_coarsen_reduce(ds, window, name):
+    # Use boundary="trim" to accomodate all window sizes used in tests
+    coarsen_obj = ds.coarsen(time=window, boundary="trim")
+
+    # add nan prefix to numpy methods to get similar behavior as bottleneck
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
+    expected = getattr(coarsen_obj, name)()
+    assert_allclose(actual, expected)
+
+    # make sure the order of data_var are not changed.
+    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
+
+    # Make sure the dimension order is restored
+    for key, src_var in ds.data_vars.items():
+        assert src_var.dims == actual[key].dims
 
 
 @pytest.mark.parametrize(

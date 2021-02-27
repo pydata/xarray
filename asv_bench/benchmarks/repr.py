@@ -4,7 +4,7 @@ import xarray as xr
 
 
 class ReprMultiIndex:
-    def setup(self, key):
+    def setup(self):
         index = pd.MultiIndex.from_product(
             [range(10000), range(10000)], names=("level_0", "level_1")
         )

@@ -1233,7 +1233,7 @@ def test_map_blocks_to_array(map_ds):
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
         lambda x: x.expand_dims(k=3),
-        lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
+        lambda x: x.assign_coords(new_coord=("y", x.y.data * 2)),
         lambda x: x.astype(np.int32),
         lambda x: x.x,
     ],
