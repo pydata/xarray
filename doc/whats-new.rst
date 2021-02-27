@@ -22,7 +22,8 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- apply ``combine_attrs`` recursively (:pull:`4902`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
