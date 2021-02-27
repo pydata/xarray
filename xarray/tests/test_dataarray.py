@@ -7,7 +7,6 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.testing import assert_index_equal
 from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
