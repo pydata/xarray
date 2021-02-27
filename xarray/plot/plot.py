@@ -263,7 +263,11 @@ def _infer_meta_data(darray, x, z, hue, hue_style, size):
 
 # copied from seaborn
 def _parse_size(data, norm, width):
-    """Parse sizes."""
+    """
+    Determine what type of data it is. Then normalize is it to width.
+
+    If the data is categorical, normalize it to numbers.
+    """
     plt = import_matplotlib_pyplot()
 
     if data is None:
@@ -272,8 +276,11 @@ def _parse_size(data, norm, width):
     data = data.values.flatten()
 
     if not _is_numeric(data):
-        levels = np.unique(data)
-        numbers = np.arange(1, 1 + len(levels))[::-1]
+        # Data is categorical.
+        # Use pd.unique instead of np.unique because that keeps
+        # the order of the labels:
+        levels = pd.unique(data)
+        numbers = np.arange(1, 1 + len(levels))
     else:
         levels = numbers = np.sort(np.unique(data))
 
