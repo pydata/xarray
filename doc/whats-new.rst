@@ -14,6 +14,35 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.17.1:
+
+v0.17.1 (unreleased)
+---------------------
+
+
+New Features
+~~~~~~~~~~~~
+- Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
 
 .. _whats-new.0.17.0:
 
@@ -106,8 +135,6 @@ New Features
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add ``"drop_conflicts"`` to the strategies supported by the ``combine_attrs`` kwarg
   (:issue:`4749`, :pull:`4827`).
-  By `Justus Magin <https://github.com/keewis>`_.
-- Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
