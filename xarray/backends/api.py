@@ -741,6 +741,7 @@ def open_mfdataset(
     parallel=False,
     join="outer",
     attrs_file=None,
+    combine_attrs="drop",
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -960,7 +961,7 @@ def open_mfdataset(
                 coords=coords,
                 ids=ids,
                 join=join,
-                combine_attrs="drop",
+                combine_attrs=combine_attrs,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
@@ -971,7 +972,7 @@ def open_mfdataset(
                 data_vars=data_vars,
                 coords=coords,
                 join=join,
-                combine_attrs="drop",
+                combine_attrs=combine_attrs,
             )
         else:
             raise ValueError(
