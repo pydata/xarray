@@ -1,8 +1,8 @@
-import pint
 import pytest
 
 from xarray.duckarray import duckarray_module
 
+pint = pytest.importorskip("pint")
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
 
