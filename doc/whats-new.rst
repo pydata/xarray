@@ -14,15 +14,36 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.unreleased:
+.. _whats-new.0.17.1:
 
-unreleased
-----------
+v0.17.1 (unreleased)
+---------------------
+
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
 
 Bug fixes
 ~~~~~~~~~
 - Decode values as signed if attribute `_Unsigned = "false"` (:issue:`4954`)
   By `Tobias Kölling <https://github.com/d70-t>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
 
 .. _whats-new.0.17.0:
 
