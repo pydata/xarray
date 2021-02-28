@@ -44,8 +44,6 @@ def duckarray_module(name, create, global_marks=None, marks=None):
     import pytest
 
     class TestModule:
-        pytestmark = global_marks
-
         class TestDataset:
             @pytest.mark.parametrize(
                 "method",
@@ -69,6 +67,9 @@ def duckarray_module(name, create, global_marks=None, marks=None):
                 expected = xr.Dataset({"a": reduced_a, "b": reduced_b})
                 actual = getattr(ds, method)()
                 xr.testing.assert_identical(actual, expected)
+
+    if global_marks is not None:
+        TestModule.pytestmark = global_marks
 
     if marks is not None:
         for name, marks_ in marks.items():
