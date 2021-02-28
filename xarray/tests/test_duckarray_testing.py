@@ -20,4 +20,7 @@ TestPint = duckarray_module(
     marks={
         "TestDataset.test_reduce": [pytest.mark.skip(reason="not implemented yet")],
     },
+    global_marks=[
+        pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
+    ],
 )
