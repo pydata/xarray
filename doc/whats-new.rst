@@ -152,7 +152,7 @@ Bug fixes
 - Allow converting :py:class:`Dataset` or :py:class:`DataArray` objects with a ``MultiIndex``
   and at least one other dimension to a ``pandas`` object (:issue:`3008`, :pull:`4442`).
   By `ghislainp <https://github.com/ghislainp>`_.
-- don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
+- Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
