@@ -5798,6 +5798,24 @@ class TestDataset:
         np.testing.assert_equal(padded["var1"].isel(dim2=[0, -1]).data, 42)
         np.testing.assert_equal(padded["dim2"][[0, -1]].data, np.nan)
 
+    def test_pad_index(self):
+        ds = create_test_data(seed=1)
+        padded = ds.pad(dim2=([0, 1, 2], 0), constant_values=42)
+
+        assert padded["dim2"].shape == (12,)
+        assert padded["var1"].shape == (8, 12)
+        assert padded["var2"].shape == (8, 12)
+        assert padded["var3"].shape == (10, 8)
+        assert dict(padded.dims) == {"dim1": 8, "dim2": 12, "dim3": 10, "time": 20}
+        assert np.nan not in padded["dim2"]
+
+        padded = ds.pad(dim2=(0, [0, 1, 2]), constant_values=42)
+        assert np.nan not in padded["dim2"]
+
+        padded = ds.pad(dim2=([0, 1], [0, 1, 2]), constant_values=42)
+        assert np.nan not in padded["dim2"]
+
+
     def test_astype_attrs(self):
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"

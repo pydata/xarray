@@ -3788,7 +3788,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Hashable, Union[int, Tuple[Union[int, Iterable], Union[int, Iterable]]]] = None,
         mode: str = "constant",
         stat_length: Union[
             int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -3818,6 +3818,11 @@ class DataArray(AbstractArray, DataWithCoords):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
+            Note that having np.nan in IndexVariable loses most of the useful 
+            functionalities of xarray. To avoid this problem, an iterable, 
+            such as a list or np.array, can be used for either pad_before or pad_after.
+            In this case, these values will be used for an IndexVariable and preventing 
+            from the loss of functionalities.
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs)
 
@@ -3942,6 +3947,18 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 nan 0.0 1.0 nan
           * y        (y) int64 10 20 30 40
             z        (x) float64 nan 100.0 200.0 nan
+
+        >>> da.pad(x=([-2, -1], [2])) 
+        <xarray.DataArray (x: 5, y: 4)>
+        array([[nan, nan, nan, nan],
+            [nan, nan, nan, nan],
+            [ 0.,  1.,  2.,  3.],
+            [10., 11., 12., 13.],
+            [nan, nan, nan, nan]])
+        Coordinates:
+          * x        (x) int64 -2 -1 0 1 2
+          * y        (y) int64 10 20 30 40
+            z        (x) float64 nan nan 100.0 200.0 nan
         """
         ds = self._to_temp_dataset().pad(
             pad_width=pad_width,

@@ -3016,9 +3016,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return variables, coord_names, dims, indexes
 
     def rename(
-        self,
-        name_dict: Mapping[Hashable, Hashable] = None,
-        **names: Hashable,
+        self, name_dict: Mapping[Hashable, Hashable] = None, **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
 
@@ -3440,9 +3438,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reset_index(
-        self,
-        dims_or_levels: Union[Hashable, Sequence[Hashable]],
-        drop: bool = False,
+        self, dims_or_levels: Union[Hashable, Sequence[Hashable]], drop: bool = False,
     ) -> "Dataset":
         """Reset the specified index(es) or multi-index level(s).
 
@@ -6496,7 +6492,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[
+            Hashable, Union[int, Tuple[Union[int, Iterable], Union[int, Iterable]]]
+        ] = None,
         mode: str = "constant",
         stat_length: Union[
             int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
@@ -6522,10 +6520,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        pad_width : mapping of hashable to tuple of int
+        pad_width : mapping of hashable to tuple of int or Iterable.
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
+            Note that having np.nan in IndexVariable loses most of the useful 
+            functionalities of xarray. To avoid this problem, an iterable, 
+            such as a list or np.array, can be used for either pad_before or pad_after.
+            In this case, these values will be used for an IndexVariable and preventing 
+            from the loss of functionalities.
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
@@ -6622,6 +6625,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Dimensions without coordinates: x
         Data variables:
             foo      (x) float64 nan 0.0 1.0 2.0 3.0 4.0 nan nan
+        >>> ds = xr.Dataset({"foo": ("x", range(3))}, coords={"x": [0, 1, 2]})
+        >>> ds.pad(x=([-1], [3]))
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+        * x        (x) int64 -1 0 1 2 3
+        Data variables:
+            foo      (x) float64 nan 0.0 1.0 2.0 nan
         """
         pad_width = either_dict_or_kwargs(pad_width, pad_width_kwargs, "pad")
 
@@ -6638,8 +6649,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coord_pad_options = {}
 
         variables = {}
+
+        # standarize pad_width
+        pad_width_standarized = {}
+        for k, v in pad_width.items():
+            if not isinstance(v, int):
+                # if pad_width is a tuple of iterable, we use its length for
+                # pad_width_standarized
+                pad_width_standarized[k] = [
+                    len(v1) if hasattr(v1, "__len__") else v1 for v1 in v
+                ]
+            else:  # just an int
+                pad_width_standarized[k] = [v, v]
+
         for name, var in self.variables.items():
-            var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
+            var_pad_width = {
+                k: v for k, v in pad_width_standarized.items() if k in var.dims
+            }
             if not var_pad_width:
                 variables[name] = var
             elif name in self.data_vars:
@@ -6651,6 +6677,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     end_values=end_values,
                     reflect_type=reflect_type,
                 )
+            elif name in var_pad_width.keys() and not isinstance(
+                var_pad_width[name], int
+            ):  # dimension coordinates
+                w0, w1 = pad_width[name]
+                fill_value_ind = dtypes.get_fill_value(var.dtype)
+                if isinstance(w0, int):
+                    w0 = IndexVariable(name, [fill_value_ind] * w0)
+                else:
+                    w0 = IndexVariable(name, w0)
+                if isinstance(w1, int):
+                    w1 = IndexVariable(name, [fill_value_ind] * w1)
+                else:
+                    w1 = IndexVariable(name, w1)
+                variables[name] = var.concat([w0, var, w1], dim=name)
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
