@@ -207,12 +207,11 @@ def sliding_window_view(x, window_shape, axis=None):
         new_axis=range(x.ndim, x.ndim + len(axis)),
         chunks=newchunks,
         trim=False,
-        align_arrays=False,
         window_shape=window_shape,
         axis=axis,
     )
     # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
     if LooseVersion(dask_version) > "2.18.0":
-        return map_overlap(_np_sliding_window_view, x, **kwargs)
+        return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)
     else:
         return map_overlap(x, _np_sliding_window_view, **kwargs)
