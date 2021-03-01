@@ -35,15 +35,25 @@ def parse_selector(selector):
     return components, variant
 
 
+def apply_marks_normal(test, marks):
+    for mark in marks:
+        test = mark(test)
+    return test
+
+
+def apply_marks_variant(test, variant, marks):
+    raise NotImplementedError("variants are not supported, yet")
+
+
 def apply_marks(module, name, marks):
     components, variant = parse_selector(name)
+    parent, test, test_name = get_test(module, components)
     if variant is not None:
-        raise ValueError("variants are not supported, yet")
+        marked_test = apply_marks_variant(test, variant, marks)
     else:
-        parent, test, test_name = get_test(module, components)
-        for mark in marks:
-            test = mark(test)
-        setattr(parent, test_name, test)
+        marked_test = apply_marks_normal(test, marks)
+
+    setattr(parent, test_name, marked_test)
 
 
 def duckarray_module(name, create, global_marks=None, marks=None):

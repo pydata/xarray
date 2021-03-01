@@ -53,3 +53,28 @@ def test_get_test(components, expected):
     module = Module
     actual = duckarray.get_test(module, components)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "marks",
+    (
+        pytest.param([pytest.mark.skip(reason="arbitrary")], id="single mark"),
+        pytest.param(
+            [
+                pytest.mark.filterwarnings("error"),
+                pytest.mark.parametrize("a", (0, 1, 2)),
+            ],
+            id="multiple marks",
+        ),
+    ),
+)
+def test_apply_marks_normal(marks):
+    def func():
+        pass
+
+    expected = [m.mark for m in marks]
+
+    marked = duckarray.apply_marks_normal(func, marks)
+    actual = marked.pytestmark
+
+    assert actual == expected
