@@ -88,4 +88,7 @@ TestPint = duckarray_module(
 TestSparse = duckarray_module(
     "sparse",
     create_sparse,
+    marks={
+        "TestDataset.test_reduce": [pytest.mark.skip(reason="not implemented, yet")],
+    },
 )
