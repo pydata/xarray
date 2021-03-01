@@ -21,7 +21,6 @@ from xarray.core.duck_array_ops import (
     np_timedelta64_to_float,
     pd_timedelta_to_float,
     py_timedelta_to_float,
-    rolling_window,
     stack,
     timedelta_to_numeric,
     where,

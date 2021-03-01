@@ -895,6 +895,59 @@ class VariableSubclassobjects:
             with pytest.raises(ValueError):
                 v_loaded[0] = 1.0
 
+    def test_rolling_1d(self):
+        x = self.cls("x", np.array([1, 2, 3, 4], dtype=float))
+
+        kwargs = dict(dim="x", window=3, window_dim="xw")
+        actual = x.rolling_window(**kwargs, center=True, fill_value=np.nan)
+        expected = Variable(
+            ("x", "xw"),
+            np.array(
+                [[np.nan, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, np.nan]], dtype=float
+            ),
+        )
+        assert_equal(actual, expected)
+
+        actual = x.rolling_window(**kwargs, center=False, fill_value=0.0)
+        expected = self.cls(
+            ("x", "xw"),
+            np.array([[0, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4]], dtype=float),
+        )
+        assert_equal(actual, expected)
+
+        x = self.cls(("y", "x"), np.stack([x, x * 1.1]))
+        actual = x.rolling_window(**kwargs, center=False, fill_value=0.0)
+        expected = self.cls(
+            ("y", "x", "xw"), np.stack([expected.data, expected.data * 1.1], axis=0)
+        )
+        assert_equal(actual, expected)
+
+    @pytest.mark.parametrize("center", [[True, True], [False, False]])
+    @pytest.mark.parametrize("dims", [("x", "y"), ("y", "z"), ("z", "x")])
+    def test_nd_rolling(self, center, dims):
+        x = self.cls(
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+        )
+        window = [3, 3]
+        actual = x.rolling_window(
+            dim=dims,
+            window=window,
+            window_dim=[f"{k}w" for k in dims],
+            center=center,
+            fill_value=np.nan,
+        )
+        expected = x
+        for dim, win, cent in zip(dims, window, center):
+            expected = expected.rolling_window(
+                dim=dim,
+                window=win,
+                window_dim=f"{dim}w",
+                center=cent,
+                fill_value=np.nan,
+            )
+        assert_equal(actual, expected)
+
 
 class TestVariable(VariableSubclassobjects):
     cls = staticmethod(Variable)
@@ -2188,6 +2241,14 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.xfail
     def test_rolling_window(self):
         super().test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_rolling_1d(self):
+        super().test_rolling_1d()
+
+    @pytest.mark.xfail
+    def test_nd_rolling(self):
+        super().test_nd_rolling()
 
     @pytest.mark.xfail
     def test_coarsen_2d(self):

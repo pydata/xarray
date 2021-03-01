@@ -2035,7 +2035,7 @@ class Variable(
             For nd-rolling, should be list of integers.
         window_dim : str
             New name of the window dimension.
-            For nd-rolling, should be list of integers.
+            For nd-rolling, should be list of strings.
         center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -2083,15 +2083,17 @@ class Variable(
             dtype = self.dtype
             var = self
 
-        if isinstance(dim, list):
-            assert len(dim) == len(window)
-            assert len(dim) == len(window_dim)
-            assert len(dim) == len(center)
-        else:
+        if utils.is_scalar(dim):
+            for arg in [window, window_dim, center]:
+                assert utils.is_scalar(arg)
             dim = [dim]
             window = [window]
             window_dim = [window_dim]
             center = [center]
+        else:
+            assert len(dim) == len(window)
+            assert len(dim) == len(window_dim)
+            assert len(dim) == len(center)
 
         pads = {}
         for d, win, cent in zip(dim, window, center):
