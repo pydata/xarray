@@ -96,6 +96,8 @@ Bug fixes
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
+- Facet-scatter plots of datasets use a common colorbar. (:issue:`4975`, :pull:`4978`)
+  By `David Schwörer <https://github.com/dschwoerer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
