@@ -3016,7 +3016,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return variables, coord_names, dims, indexes
 
     def rename(
-        self, name_dict: Mapping[Hashable, Hashable] = None, **names: Hashable,
+        self,
+        name_dict: Mapping[Hashable, Hashable] = None,
+        **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
 
@@ -3438,7 +3440,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reset_index(
-        self, dims_or_levels: Union[Hashable, Sequence[Hashable]], drop: bool = False,
+        self,
+        dims_or_levels: Union[Hashable, Sequence[Hashable]],
+        drop: bool = False,
     ) -> "Dataset":
         """Reset the specified index(es) or multi-index level(s).
 
@@ -6524,10 +6528,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-            Note that having np.nan in IndexVariable loses most of the useful 
-            functionalities of xarray. To avoid this problem, an iterable, 
+            Note that having np.nan in IndexVariable loses most of the useful
+            functionalities of xarray. To avoid this problem, an iterable,
             such as a list or np.array, can be used for either pad_before or pad_after.
-            In this case, these values will be used for an IndexVariable and preventing 
+            In this case, these values will be used for an IndexVariable and preventing
             from the loss of functionalities.
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
@@ -6651,13 +6655,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
 
         # standarize pad_width
-        pad_width_standarized = {}
+        pad_width_standarized = {}  # type: Mapping[Hashable, Tuple[int, int]]
         for k, v in pad_width.items():
             if not isinstance(v, int):
                 # if pad_width is a tuple of iterable, we use its length for
                 # pad_width_standarized
                 pad_width_standarized[k] = [
-                    len(v1) if hasattr(v1, "__len__") else v1 for v1 in v
+                    len(v1) if isinstance(v1, Iterable) else v1 for v1 in v
                 ]
             else:  # just an int
                 pad_width_standarized[k] = [v, v]

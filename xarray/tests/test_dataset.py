@@ -5815,7 +5815,6 @@ class TestDataset:
         padded = ds.pad(dim2=([0, 1], [0, 1, 2]), constant_values=42)
         assert np.nan not in padded["dim2"]
 
-
     def test_astype_attrs(self):
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
