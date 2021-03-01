@@ -294,6 +294,11 @@ def _dsplot(plotfunc):
             # remove kwargs to avoid passing the information twice
             for arg in ["meta_data", "kwargs", "ds"]:
                 del allargs[arg]
+            if hue is not None:
+                if vmin is None:
+                    allargs["vmin"] = ds[hue].min()
+                if vmax is None:
+                    allargs["vmax"] = ds[hue].max()
 
             return _easy_facetgrid(kind="dataset", **allargs, **kwargs)
 
