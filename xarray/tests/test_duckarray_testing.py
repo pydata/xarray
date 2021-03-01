@@ -26,6 +26,25 @@ class Module:
 
 class TestUtils:
     @pytest.mark.parametrize(
+        ["selector", "expected"],
+        (
+            ("test_function", (["test_function"], None)),
+            (
+                "TestGroup.TestSubgroup.test_function",
+                (["TestGroup", "TestSubgroup", "test_function"], None),
+            ),
+            ("test_function[variant]", (["test_function"], "variant")),
+            (
+                "TestGroup.test_function[variant]",
+                (["TestGroup", "test_function"], "variant"),
+            ),
+        ),
+    )
+    def test_parse_selector(self, selector, expected):
+        actual = duckarray.parse_selector(selector)
+        assert actual == expected
+
+    @pytest.mark.parametrize(
         ["components", "expected"],
         (
             (["module_test1"], (Module, Module.module_test1, "module_test1")),

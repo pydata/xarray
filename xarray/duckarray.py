@@ -22,8 +22,8 @@ def get_test(module, components):
     return parent, test, name
 
 
-def apply_marks(module, name, marks):
-    match = variant_re.match(name)
+def parse_selector(selector):
+    match = variant_re.match(selector)
     if match is not None:
         groups = match.groupdict()
         variant = groups["variant"]
@@ -32,6 +32,11 @@ def apply_marks(module, name, marks):
         raise ValueError(f"invalid test name: {name!r}")
 
     components = name.split(".")
+    return components, variant
+
+
+def apply_marks(module, name, marks):
+    components, variant = parse_selector(name)
     if variant is not None:
         raise ValueError("variants are not supported, yet")
     else:
