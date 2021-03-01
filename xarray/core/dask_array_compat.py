@@ -200,9 +200,7 @@ def sliding_window_view(x, window_shape, axis=None):
         (window,) for window in window_shape
     )
 
-    return map_overlap(
-        _np_sliding_window_view,
-        x,
+    kwargs = dict(
         depth=tuple((0, d) for d in depths),  # Overlap on +ve side only
         boundary="none",
         meta=x._meta,
@@ -213,3 +211,8 @@ def sliding_window_view(x, window_shape, axis=None):
         window_shape=window_shape,
         axis=axis,
     )
+    # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
+    if LooseVersion(dask_version) > "2.18.0":
+        return map_overlap(_np_sliding_window_view, x, **kwargs)
+    else:
+        return map_overlap(x, _np_sliding_window_view, **kwargs)
