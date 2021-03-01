@@ -291,6 +291,63 @@ class TestFormatting:
         except AssertionError:
             assert actual == expected.replace(", dtype=int64", "")
 
+        # test with check_dtype=True
+
+        da_a_dtype = xr.DataArray(
+            np.array([1], int), dims="x", coords=dict(x=np.array([1], int))
+        )
+        da_b_dtype = xr.DataArray(
+            np.array([1], float), dims="x", coords=dict(x=np.array([1], float))
+        )
+
+        expected = dedent(
+            """\
+        Left and right DataArray objects are not identical
+
+        Differing values or dtype:
+        L
+            array([1], dtype=int64)
+        R
+            array([1.], dtype=float64)
+        Differing coordinates (values and/ or dtype):
+        L * x        (x) int64 1
+        R * x        (x) float64 1.0
+        """
+        )
+
+        actual = formatting.diff_array_repr(
+            da_a_dtype, da_b_dtype, "identical", check_dtype=True
+        )
+
+        try:
+            assert actual == expected
+        except AssertionError:
+            expected = expected.replace(", dtype=int64", "")
+            expected = expected.replace(", dtype=float64", "")
+            assert actual == expected
+
+        expected = dedent(
+            """\
+        Left and right Variable objects are not identical
+
+        Differing values or dtype:
+        L
+            array([1])
+        R
+            array([1.])
+        """
+        )
+
+        actual = formatting.diff_array_repr(
+            da_a_dtype.variable, da_b_dtype.variable, "identical", check_dtype=True
+        )
+        try:
+            assert actual == expected
+        except AssertionError:
+            expected = expected.replace(", dtype=int64", "")
+            expected = expected.replace(", dtype=float64", "")
+            assert actual == expected
+
     @pytest.mark.filterwarnings("error")
     def test_diff_attrs_repr_with_array(self):
         attrs_a = {"attr": np.array([0, 1])}
@@ -379,6 +436,33 @@ class TestFormatting:
         )
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, "identical")
+        assert actual == expected
+
+        ds_a_dtype = xr.Dataset(
+            data_vars={"a": ("x", np.array([1], int))},
+            coords=dict(x=np.array([1], int)),
+        )
+        ds_b_dtype = xr.Dataset(
+            data_vars={"a": ("x", np.array([1], float))},
+            coords=dict(x=np.array([1], float)),
+        )
+
+        expected = dedent(
+            """\
+        Left and right Dataset objects are not identical
+
+        Differing coordinates (values and/ or dtype):
+        L * x        (x) int64 1
+        R * x        (x) float64 1.0
+        Differing data variables (values and/ or dtype):
+        L   a        (x) int64 1
+        R   a        (x) float64 1.0
+        """
+        )
+
+        actual = formatting.diff_dataset_repr(
+            ds_a_dtype, ds_b_dtype, "identical", check_dtype=True
+        )
         assert actual == expected
 
     def test_array_repr(self):
