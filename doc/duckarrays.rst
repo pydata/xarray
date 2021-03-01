@@ -44,8 +44,6 @@ the code will still cast to ``numpy`` arrays:
     addition to not supporting duck arrays in dimension coordinates
   * :py:meth:`Dataset.rolling_exp` and :py:meth:`DataArray.rolling_exp` (uses
     ``numbagg``)
-  * :py:meth:`Dataset.rolling` and :py:meth:`DataArray.rolling` (uses internal functions
-    of ``numpy``)
   * :py:meth:`Dataset.interpolate_na` and :py:meth:`DataArray.interpolate_na` (uses
     :py:class:`numpy.vectorize`)
   * :py:func:`apply_ufunc` with ``vectorize=True`` (uses :py:class:`numpy.vectorize`)
