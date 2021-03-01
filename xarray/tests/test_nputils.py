@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from numpy.testing import assert_array_equal
 
 from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous
