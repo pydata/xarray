@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index
+from numpy.core.multiarray import normalize_axis_index  # type: ignore
 
 try:
     import bottleneck as bn
@@ -160,7 +160,7 @@ def _rolling_window(a, window, axis=-1):
     ----------
     a : array_like
         Array to add rolling window to
-    axis: int
+    axis : int
         axis position along which rolling window will be applied.
     window : int
         Size of rolling window

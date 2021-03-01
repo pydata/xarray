@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.8
   - black
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
@@ -12,15 +13,12 @@ dependencies:
   - cfgrib
   - cftime
   - coveralls
-  - flake8
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
-  - isort
   - lxml    # Optional dep of pydap
   - matplotlib-base
-  - mypy=0.790  # Must match .pre-commit-config.yaml
   - nc-time-axis
   - netcdf4
   - numba
