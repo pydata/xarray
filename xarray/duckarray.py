@@ -10,18 +10,19 @@ variant_re = re.compile(
 )
 
 
+def get_test(module, components):
+    *parent_names, name = components
+
+    parent = module
+    for parent_name in parent_names:
+        parent = getattr(parent, parent_name)
+
+    test = getattr(parent, name)
+
+    return parent, test, name
+
+
 def apply_marks(module, name, marks):
-    def get_test(module, components):
-        *parent_names, name = components
-
-        parent = module
-        for parent_name in parent_names:
-            parent = getattr(parent, parent_name)
-
-        test = getattr(parent, name)
-
-        return parent, test, name
-
     match = variant_re.match(name)
     if match is not None:
         groups = match.groupdict()
