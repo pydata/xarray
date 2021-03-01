@@ -19,37 +19,37 @@ class Module:
             pass
 
 
-class TestUtils:
-    @pytest.mark.parametrize(
-        ["selector", "expected"],
+@pytest.mark.parametrize(
+    ["selector", "expected"],
+    (
+        ("test_function", (["test_function"], None)),
         (
-            ("test_function", (["test_function"], None)),
-            (
-                "TestGroup.TestSubgroup.test_function",
-                (["TestGroup", "TestSubgroup", "test_function"], None),
-            ),
-            ("test_function[variant]", (["test_function"], "variant")),
-            (
-                "TestGroup.test_function[variant]",
-                (["TestGroup", "test_function"], "variant"),
-            ),
+            "TestGroup.TestSubgroup.test_function",
+            (["TestGroup", "TestSubgroup", "test_function"], None),
         ),
-    )
-    def test_parse_selector(self, selector, expected):
-        actual = duckarray.parse_selector(selector)
-        assert actual == expected
+        ("test_function[variant]", (["test_function"], "variant")),
+        (
+            "TestGroup.test_function[variant]",
+            (["TestGroup", "test_function"], "variant"),
+        ),
+    ),
+)
+def test_parse_selector(selector, expected):
+    actual = duckarray.parse_selector(selector)
+    assert actual == expected
 
-    @pytest.mark.parametrize(
-        ["components", "expected"],
+
+@pytest.mark.parametrize(
+    ["components", "expected"],
+    (
+        (["module_test1"], (Module, Module.module_test1, "module_test1")),
         (
-            (["module_test1"], (Module, Module.module_test1, "module_test1")),
-            (
-                ["Submodule", "submodule_test"],
-                (Module.Submodule, Module.Submodule.submodule_test, "submodule_test"),
-            ),
+            ["Submodule", "submodule_test"],
+            (Module.Submodule, Module.Submodule.submodule_test, "submodule_test"),
         ),
-    )
-    def test_get_test(self, components, expected):
-        module = Module
-        actual = duckarray.get_test(module, components)
-        assert actual == expected
+    ),
+)
+def test_get_test(components, expected):
+    module = Module
+    actual = duckarray.get_test(module, components)
+    assert actual == expected
