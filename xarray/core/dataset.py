@@ -6497,7 +6497,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def pad(
         self,
         pad_width: Mapping[
-            Hashable, Union[int, Tuple[Union[int, Iterable], Union[int, Iterable]]]
+            Hashable, Union[int, Tuple[Union[int, Sequence], Union[int, Sequence]]]
         ] = None,
         mode: str = "constant",
         stat_length: Union[
@@ -6655,7 +6655,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables = {}
 
         # standarize pad_width
-        pad_width_standarized = {}  # type: Mapping[Hashable, Tuple[int, int]]
+        pad_width_standardized = {}  # type: Dict[Hashable, Tuple[int, int]]
         for k, v in pad_width.items():
             if not isinstance(v, int):
                 # if pad_width is a tuple of iterable, we use its length for
@@ -6666,7 +6666,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     len(v1) if isinstance(v1, Sequence) else v1 for v1 in v
                 )
             else:  # just an int
-                pad_width_standarized[k] = [v, v]
+                pad_width_standarized[k] = (v, v)
 
         for name, var in self.variables.items():
             var_pad_width = {
@@ -6686,17 +6686,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             elif name in var_pad_width.keys() and not isinstance(
                 var_pad_width[name], int
             ):  # dimension coordinates
-                w0, w1 = pad_width[name]
+                w0, w1 = pad_width[name]  # type: ignore
                 fill_value_ind = dtypes.get_fill_value(var.dtype)
                 if isinstance(w0, int):
-                    w0 = IndexVariable(name, [fill_value_ind] * w0)
+                    w0_ = IndexVariable(name, [fill_value_ind] * w0)
                 else:
-                    w0 = IndexVariable(name, w0)
+                    w0_ = IndexVariable(name, w0)
                 if isinstance(w1, int):
-                    w1 = IndexVariable(name, [fill_value_ind] * w1)
+                    w1_ = IndexVariable(name, [fill_value_ind] * w1)
                 else:
-                    w1 = IndexVariable(name, w1)
-                variables[name] = var.concat([w0, var, w1], dim=name)
+                    w1_ = IndexVariable(name, w1)
+                variables[name] = var.concat([w0_, var, w1_], dim=name)
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
