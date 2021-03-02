@@ -29,6 +29,7 @@ from . import (
     has_scipy,
     requires_zarr,
     requires_cfgrib,
+    requires_tiledb,
 )
 
 # this is to stop isort throwing errors. May have been easier to just use
@@ -181,6 +182,31 @@ def test_dask_distributed_cfgrib_integration_test(loop):
                     assert isinstance(ds["t"].data, da.Array)
                     actual = ds.compute()
                     assert_allclose(actual, expected)
+
+
+@requires_tiledb
+def test_dask_distributed_tiledb_integration_test(loop, create_tiledb_example):
+    array_uri, expected = create_tiledb_example
+    with cluster() as (s, [a, b]):
+        with Client(s["address"], loop=loop):
+            ds = xr.open_dataset(array_uri, chunks={"time": 1}, engine="tiledb")
+            assert isinstance(ds["pressure"].data, da.Array)
+            actual = ds.compute()
+            assert_allclose(actual, expected)
+
+
+@requires_tiledb
+def test_dask_distributed_tiledb_datetime_integration_test(
+    loop,
+    create_tiledb_datetime_example,
+):
+    array_uri, expected = create_tiledb_datetime_example
+    with cluster() as (s, [a, b]):
+        with Client(s["address"], loop=loop):
+            ds = xr.open_dataset(array_uri, chunks={"date": 1}, engine="tiledb")
+            assert isinstance(ds["temperature"].data, da.Array)
+            actual = ds.compute()
+            assert_allclose(actual, expected)
 
 
 @pytest.mark.skipif(

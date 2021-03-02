@@ -14,6 +14,7 @@ from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
+from .tiledb_ import TileDBDataStore
 from .zarr import ZarrStore
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "H5NetCDFStore",
     "ZarrStore",
     "PseudoNetCDFDataStore",
+    "TileDBDataStore",
     "list_engines",
 ]

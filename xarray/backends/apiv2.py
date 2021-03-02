@@ -140,7 +140,7 @@ def open_dataset(
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4". Options are: {"netcdf4", "scipy", "pydap", "h5netcdf",\
-        "pynio", "cfgrib", "pseudonetcdf", "zarr"}.
+        "pynio", "cfgrib", "pseudonetcdf", "zarr", "tiledb"}.
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single

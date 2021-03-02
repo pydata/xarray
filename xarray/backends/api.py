@@ -49,6 +49,7 @@ ENGINES = {
     "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
     "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
+    "tiledb": backends.TileDBDataStore,
 }
 
 
@@ -363,7 +364,7 @@ def open_dataset(
         - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
           other attributes as coordinate variables.
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr", "tiledb"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
