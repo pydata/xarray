@@ -2547,7 +2547,7 @@ class TestH5NetCDFData(NetCDF4Base):
         expected = Dataset({"x": ("y", np.ones(5), {"numpy_bool": np.bool_(True)})})
         save_kwargs = {"invalid_netcdf": True}
         with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
-            assert_equal(expected, actual)
+            assert_identical(expected, actual)
 
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
