@@ -6659,18 +6659,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for k, v in pad_width.items():
             if not isinstance(v, int):
                 # if pad_width is a tuple of iterable, we use its length for
-                # pad_width_standarized
+                # pad_width_standardized
                 # mypy does not know the length here and infers Tuple[int, ...]
                 # see https://github.com/python/mypy/issues/7509
                 pad_width_standardized[k] = tuple(  # type: ignore
                     len(v1) if isinstance(v1, Sequence) else v1 for v1 in v
                 )
             else:  # just an int
-                pad_width_standarized[k] = (v, v)
+                pad_width_standardized[k] = (v, v)
 
         for name, var in self.variables.items():
             var_pad_width = {
-                k: v for k, v in pad_width_standarized.items() if k in var.dims
+                k: v for k, v in pad_width_standardized.items() if k in var.dims
             }
             if not var_pad_width:
                 variables[name] = var
