@@ -201,7 +201,7 @@ def _validate_dataset_names(dataset):
 
 def _validate_attrs(dataset):
     """`attrs` must have a string key and a value which is either: a number,
-    a string, an ndarray or a list/tuple of numbers/strings.
+    a string, an ndarray, a bool/numpy.bool_, or a list/tuple of numbers/strings.
     """
 
     def check_attr(name, value):
