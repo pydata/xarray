@@ -5807,6 +5807,63 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
+    def test_query_single_dim(self):
+        """Test querying a single dimension."""
+
+        # setup test data
+        np.random.seed(42)
+        a = np.arange(0, 10, 1)
+        b = np.random.randint(0, 100, size=10)
+        c = np.linspace(0, 1, 20)
+        d = np.arange(0, 200).reshape(10, 20)
+        ds = Dataset(
+            {"a": ("x", a), "b": ("x", b), "c": ("y", c), "d": (("x", "y"), d)}
+        )
+
+        # query single dim, single variable
+        actual = ds.query(x="a > 5")
+        expect = ds.isel(x=(a > 5))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable, via dict
+        actual = ds.query(dict(x="a > 5"))
+        expect = ds.isel(dict(x=(a > 5)))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = ds.query(x="b > 50")
+        expect = ds.isel(x=(b > 50))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = ds.query(y="c < .5")
+        expect = ds.isel(y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query single dim, multiple variables
+        actual = ds.query(x="(a > 5) & (b > 50)")
+        expect = ds.isel(x=((a > 5) & (b > 50)))
+        assert_identical(expect, actual)
+
+        # support pandas query parser
+        actual = ds.query(x="(a > 5) and (b > 50)")
+        expect = ds.isel(x=((a > 5) & (b > 50)))
+        assert_identical(expect, actual)
+
+        # query multiple dims via kwargs
+        actual = ds.query(x="a > 5", y="c < .5")
+        expect = ds.isel(x=(a > 5), y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query multiple dims via dict
+        actual = ds.query(dict(x="a > 5", y="c < .5"))
+        expect = ds.isel(dict(x=(a > 5), y=(c < 0.5)))
+        assert_identical(expect, actual)
+
+        # TODO test error handling
+
+        # TODO test dask data variables
+
 
 # Py.test tests
 

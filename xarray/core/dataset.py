@@ -6980,5 +6980,36 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def query(
+        self,
+        queries: Mapping[Hashable, Any] = None,
+        parser: str = "pandas",
+        engine: str = None,
+        missing_dims: str = "raise",
+        **queries_kwargs: Any,
+    ) -> "Dataset":
+        """TODO docstring"""
+
+        # allow queries to be given either as a dict or as kwargs
+        queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
+
+        # check queries
+        for dim, expr in queries.items():
+            if not isinstance(expr, str):
+                msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
+                raise ValueError(msg)
+            # TODO check missing dims here, or delegate to isel?
+
+        # evaluate the queries to create the indexers
+        indexers = {
+            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            for dim, expr in queries.items()
+        }
+
+        # TODO any validation of indexers? Or just let isel try to handle it?
+
+        # apply the selection
+        return self.isel(indexers, missing_dims=missing_dims)
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
