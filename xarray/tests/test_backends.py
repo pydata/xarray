@@ -2541,6 +2541,14 @@ class TestH5NetCDFData(NetCDF4Base):
 
         assert recorded_num_warns == num_warns
 
+    def test_numpy_bool_(self):
+        # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
+        # when writing invalid_netcdf datasets in order to support a roundtrip
+        expected = Dataset({"x": ("y", np.ones(5), {"numpy_bool": np.bool_(True)})})
+        save_kwargs = {"invalid_netcdf": True}
+        with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+            assert_equal(expected, actual)
+
     def test_cross_engine_read_write_netcdf4(self):
         # Drop dim3, because its labels include strings. These appear to be
         # not properly read with python-netCDF4, which converts them into

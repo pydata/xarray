@@ -218,7 +218,9 @@ def _validate_attrs(dataset):
                 "serialization to netCDF files"
             )
 
-        if not isinstance(value, (str, Number, np.ndarray, np.number, np.bool_, list, tuple)):
+        if not isinstance(
+            value, (str, Number, np.ndarray, np.number, np.bool_, list, tuple)
+        ):
             raise TypeError(
                 f"Invalid value for attr {name!r}: {value!r} must be a number, "
                 "a string, an ndarray, a bool/numpy.bool_, or a list/tuple of "
