@@ -32,7 +32,8 @@ Coordinates:
   * x        (x) float64 200.0 400.0
   * y        (y) float64 800.0 1e+03
 
->>> da.sel(x=..., y=..., lon=..., lat=...)
+>>> da.sel(lon=..., lat=...)
+>>> da.sel(x=..., y=...)
 ```
 
 We would need one geographic index for the `lat` and `lon` coordinates and two indexes for the `x` and `y` coordinates, respectively.
@@ -51,9 +52,22 @@ There is a variety of features that an xarray index wrapper may or may not suppo
 - orthogonal vs. vectorized indexing, range-based vs. point-wise selection
 - exact vs. inexact lookups
 
-Every `XarrayIndex` subclass must at least implement a method that takes label-based indexers as argument and that returns the corresponding position-based indexers. Whether or not a `XarrayIndex` subclass supports each of the features listed above should be either declared explicitly via a common API or left to the implementation.
+Whether or not a `XarrayIndex` subclass supports each of the features listed above should be either declared explicitly via a common API or left to the implementation. An `XarrayIndex` subclass may encapsulate more than one underlying object used to perform the actual indexing. Such "meta" index would typically support a range of features among those mentioned above and would automatically select the optimal index object for a given indexing operation.
 
-There are potentially other methods that an `XarrayIndex` subclass must/should/may implement, like Xarray coordinate getters (see [Section 2.2.4](#224_Implicit_coodinates)) or `serialize()`/`deserialize()` methods. `XarrayIndex` API may be expanded in the future.
+Every `XarrayIndex` subclass must at least implement two methods:
+
+- One `build` method that takes one or more Dataset/DataArray coordinates and that returns the object(s) that will be used for the actual indexing (e.g., `pandas.Index`, `scipy.spatial.KDTree`, etc.)
+- One `query` method that takes label-based indexers as argument and that returns the corresponding position-based indexers.
+
+These two methods may accept additional keyword arguments passed to the underlying index object constructor or query methods.
+
+There are potentially other methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
+
+- Xarray coordinate getters (see [Section 2.2.4](#224_Implicit_coodinates))
+- A method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
+- `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s)
+
+The `XarrayIndex` API has still to be defined in detail.
 
 Xarray should provide a minimal set of built-in index wrappers (this could be reduced to the indexes currently supported in Xarray, i.e., `pandas.Index` and `pandas.MultiIndex`). Other index wrappers may be implemented in 3rd-party libraries (recommended). The `XarrayIndex` base class should be part of Xarray's public API.
 
@@ -61,11 +75,17 @@ Xarray should provide a minimal set of built-in index wrappers (this could be re
 
 For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something like [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry).
 
+Additionally (or alternatively), new index wrappers may be registered via entry points like it is already the case for storage backends and maybe other backends (plotting) in the future.
+
+`XarrayIndex` subclasses may still be used directly when setting new indexes from DataArray/Dataset coordinates.
+
 ### 2.2 Explicit vs. implicit index creation
 
 #### 2.2.1 Dataset/DataArray's `set_index` method
 
 New indexes can be built from an existing set of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
+
+
 
 TODO: describe API updates needed to provide the kind of index that we want to build from a set of coordinates.
 
