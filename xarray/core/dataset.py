@@ -6660,9 +6660,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if not isinstance(v, int):
                 # if pad_width is a tuple of iterable, we use its length for
                 # pad_width_standarized
-                pad_width_standarized[k] = [
-                    len(v1) if isinstance(v1, Iterable) else v1 for v1 in v
-                ]
+                # mypy does not know the length here and infers Tuple[int, ...]
+                # see https://github.com/python/mypy/issues/7509
+                pad_width_standardized[k] = tuple(  # type: ignore
+                    len(v1) if isinstance(v1, Sequence) else v1 for v1 in v
+                )
             else:  # just an int
                 pad_width_standarized[k] = [v, v]
 
