@@ -3789,7 +3789,7 @@ class DataArray(AbstractArray, DataWithCoords):
     def pad(
         self,
         pad_width: Mapping[
-            Hashable, Union[int, Tuple[Union[int, Iterable], Union[int, Iterable]]]
+            Hashable, Union[int, Tuple[Union[int, Sequence], Union[int, Sequence]]]
         ] = None,
         mode: str = "constant",
         stat_length: Union[
