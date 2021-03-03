@@ -27,9 +27,9 @@ from ..core.combine import (
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
+from . import plugins
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
-from . import plugins
 
 if TYPE_CHECKING:
     try:
@@ -652,7 +652,7 @@ def open_dataarray(
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
-        **kwargs
+        **kwargs,
     )
 
     if len(dataset.data_vars) != 1:
