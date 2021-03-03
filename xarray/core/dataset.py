@@ -6524,7 +6524,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        pad_width : mapping of hashable to tuple of int or Iterable.
+        pad_width : mapping of hashable to int or tuple of int or Sequence.
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
