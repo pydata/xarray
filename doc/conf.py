@@ -239,23 +239,49 @@ pygments_style = "sphinx"
 
 
 # -- Options for HTML output ----------------------------------------------
-
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "pydata_sphinx_theme"
+html_theme = "sphinx_book_theme"
+
+# html_theme = "vaex_theme"
+# html_theme_path = ['_theme']
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "github_url": "https://github.com/pydata/xarray",
-    "twitter_url": "https://twitter.com/xarray_dev",
-    "use_edit_page_button": True,
-    "external_links": [
-        {"name": "Community", "url": "https://github.com/pydata/xarray/discussions"}
-    ],
+html_theme_options = dict(
+    # analytics_id=''  this is configured in rtfd.io
+    # canonical_url="",
+    repository_url="https://github.com/pydata/xarray",
+    use_edit_page_button=True,
+    use_repository_button=True,
+    use_issues_button=True,
+    path_to_docs="doc/",
+    home_page_in_toc=True,
+    extra_navbar="",
+    navbar_footer_text="",
+    extra_footer='Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>',
+    twitter_url="https://twitter.com/xarray_devs",
+)
+
+
+html_sidebars = {
+    "**": ["sbt-sidebar-footer.html", "sbt-sidebar-nav.html", "sidebar-search-bs.html"]
 }
 
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+html_logo = "_static/dataset-diagram-logo.png"
+
+# The name of an image file (within the static path) to use as favicon of the
+# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
+# pixels large.
+html_favicon = "_static/favicon.ico"
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ["_static"]
 
 # redirects = {}
 
@@ -278,19 +304,6 @@ ogp_custom_meta_tags = [
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
 
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-html_logo = "_static/dataset-diagram-logo.png"
-
-# The name of an image file (within the static path) to use as favicon of the
-# docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
-# pixels large.
-html_favicon = "_static/favicon.ico"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733

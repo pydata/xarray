@@ -20,16 +20,17 @@ dependencies:
   - numba
   - numpy>=1.17
   - pandas>=1.0
+  - pip
   - pydata-sphinx-theme>=0.4.3
   - rasterio>=1.1
   - seaborn
   - setuptools
   - sparse
-  - sphinx>=3.3
-  - sphinx-panels
   - sphinx-autosummary-accessors
+  - sphinx-book-theme >= 0.0.38
+  - sphinx-panels
+  - sphinx>=3.3
   - zarr>=2.4
-  - pip
   - pip:
       - sphinx-reredirects
       - sphinxext-opengraph
