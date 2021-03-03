@@ -6634,7 +6634,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         <xarray.Dataset>
         Dimensions:  (x: 5)
         Coordinates:
-        * x        (x) int64 -1 0 1 2 3
+          * x        (x) int64 -1 0 1 2 3
         Data variables:
             foo      (x) float64 nan 0.0 1.0 2.0 nan
         """
