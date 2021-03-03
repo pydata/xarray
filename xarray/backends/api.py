@@ -26,7 +26,7 @@ from ..core.combine import (
 )
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.utils import is_grib_path, is_remote_uri, read_magic_number
+from ..core.utils import is_remote_uri, read_magic_number
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 from . import plugins
@@ -71,26 +71,6 @@ def _get_default_engine_remote_uri():
     return engine
 
 
-def _get_default_engine_grib():
-    msgs = []
-    try:
-        import Nio  # noqa: F401
-
-        msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
-    except ImportError:  # pragma: no cover
-        pass
-    try:
-        import cfgrib  # noqa: F401
-
-        msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
-    except ImportError:  # pragma: no cover
-        pass
-    if msgs:
-        raise ValueError(" or\n".join(msgs))
-    else:
-        raise ValueError("PyNIO or cfgrib is required for accessing GRIB files")
-
-
 def _get_default_engine_gz():
     try:
         import scipy  # noqa: F401
@@ -119,53 +99,14 @@ def _get_default_engine_netcdf():
     return engine
 
 
-def _get_engine_from_magic_number(filename_or_obj):
-    magic_number = read_magic_number(filename_or_obj)
-
-    if magic_number.startswith(b"CDF"):
-        engine = "scipy"
-    elif magic_number.startswith(b"\211HDF\r\n\032\n"):
-        engine = "h5netcdf"
-    else:
-        raise ValueError(
-            "cannot guess the engine, "
-            f"{magic_number} is not the signature of any supported file format "
-            "did you mean to pass a string for a path instead?"
-        )
-    return engine
-
-
 def _get_default_engine(path: str, allow_remote: bool = False):
     if allow_remote and is_remote_uri(path):
         engine = _get_default_engine_remote_uri()
-    elif is_grib_path(path):
-        engine = _get_default_engine_grib()
     elif path.endswith(".gz"):
         engine = _get_default_engine_gz()
     else:
         engine = _get_default_engine_netcdf()
     return engine
-
-
-def _autodetect_engine(filename_or_obj):
-    if isinstance(filename_or_obj, AbstractDataStore):
-        engine = "store"
-    elif isinstance(filename_or_obj, (str, Path)):
-        engine = _get_default_engine(str(filename_or_obj), allow_remote=True)
-    else:
-        engine = _get_engine_from_magic_number(filename_or_obj)
-    return engine
-
-
-def _get_backend_cls(engine, engines=ENGINES):
-    """Select open_dataset method based on current engine"""
-    try:
-        return engines[engine]
-    except KeyError:
-        raise ValueError(
-            "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, list(ENGINES))
-        )
 
 
 def _normalize_path(path):
