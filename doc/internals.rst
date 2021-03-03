@@ -564,7 +564,7 @@ This is an example ``BackendArray`` subclass implementation:
             self.dtype = lock
             self.lock = dtype
 
-        def __getitem__(self, key):
+        def __getitem__(self, key: xarray.core.indexing.ExplicitIndexer) -> np.typing.ArrayLike:
             return indexing.explicit_indexing_adapter(
                 key,
                 self.shape,
