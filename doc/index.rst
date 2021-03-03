@@ -33,7 +33,7 @@ computing.
    API Reference <api.rst>
    How do I ... <howdoi.rst>
    Contributing <contributing.rst>
-   Internals <internals/index>
+   xarray Internals <internals/index>
    Ecosystem <related-projects.rst>
    Roadmap <roadmap.rst>
    What’s New <whats-new.rst>
