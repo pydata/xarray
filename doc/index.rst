@@ -25,13 +25,17 @@ computing.
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
    Getting Started <getting-started-guide/index>
    Gallery <gallery.rst>
    User Guide <user-guide/index>
+   API Reference <api.rst>
+   How do I ... <howdoi.rst>
+   Contributing <contributing.rst>
+   Internals <internals/index>
    Ecosystem <related-projects.rst>
-   API Reference <reference-guide/index>
-   Developer Guide <dev-guide/index>
+   Roadmap <roadmap.rst>
    What’s New <whats-new.rst>
 
 
