@@ -26,7 +26,7 @@ from ..core.combine import (
 )
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.utils import is_remote_uri, read_magic_number
+from ..core.utils import is_remote_uri
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 from . import plugins
