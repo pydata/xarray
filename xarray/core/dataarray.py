@@ -3953,10 +3953,10 @@ class DataArray(AbstractArray, DataWithCoords):
         >>> da.pad(x=([-2, -1], [2]))
         <xarray.DataArray (x: 5, y: 4)>
         array([[nan, nan, nan, nan],
-              [nan, nan, nan, nan],
-              [ 0.,  1.,  2.,  3.],
-              [10., 11., 12., 13.],
-              [nan, nan, nan, nan]])
+               [nan, nan, nan, nan],
+               [ 0.,  1.,  2.,  3.],
+               [10., 11., 12., 13.],
+               [nan, nan, nan, nan]])
         Coordinates:
           * x        (x) int64 -2 -1 0 1 2
           * y        (y) int64 10 20 30 40
