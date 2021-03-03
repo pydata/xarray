@@ -6684,7 +6684,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     reflect_type=reflect_type,
                 )
             elif name in var_pad_width.keys() and not isinstance(
-                var_pad_width[name], int
+                pad_width[name], int
             ):  # dimension coordinates
                 w0, w1 = pad_width[name]  # type: ignore
                 fill_value_ind = dtypes.get_fill_value(var.dtype)
