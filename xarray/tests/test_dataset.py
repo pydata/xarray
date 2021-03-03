@@ -5816,6 +5816,22 @@ class TestDataset:
         padded = ds.pad(dim2=([0, 1], [0, 1, 2]), constant_values=42)
         assert np.nan not in padded["dim2"]
 
+        padded = ds.pad(dim2=([0, 1], [2]), constant_values=42)
+        assert np.nan not in padded["dim2"]
+
+    def test_pad_index_doc(self):
+        ds = xr.Dataset({"foo": ("x", range(3))}, coords={"x": [0, 1, 2]})
+        padded = ds.pad(x=([-1], [3]))
+        assert np.nan not in padded["x"]
+
+        da = xr.DataArray(
+            [[0, 1, 2, 3], [10, 11, 12, 13]],
+            dims=["x", "y"],
+            coords={"x": [0, 1], "y": [10, 20, 30, 40], "z": ("x", [100, 200])},
+        )
+        padded = da.pad(x=([-2, -1], [2]))
+        assert np.nan not in padded["x"]
+
     def test_astype_attrs(self):
         data = create_test_data(seed=123)
         data.attrs["foo"] = "bar"
