@@ -28,8 +28,8 @@ computing.
    :hidden:
 
    Getting Started <getting-started-guide/index>
-   Gallery <gallery.rst>
    User Guide <user-guide/index>
+   Gallery <gallery.rst>
    API Reference <api.rst>
    How do I ... <howdoi.rst>
    Contributing <contributing.rst>

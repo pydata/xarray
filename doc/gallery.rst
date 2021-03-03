@@ -3,7 +3,7 @@ Gallery
 
 Here's a list of examples on how to use xarray. We will be adding more examples soon.
 Contributions are highly welcomed and appreciated. So, if you are interested in contributing, please consult the
-:doc:`dev-guide/contributing` guide.
+:doc:`contributing` guide.
 
 
 

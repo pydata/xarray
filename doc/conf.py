@@ -94,12 +94,12 @@ extlinks = {
 
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
-nbsphinx_prolog = """
-{% set docname = env.doc2path(env.docname, base=None) %}
-You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
-.. |Binder| image:: https://mybinder.org/badge.svg
-   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
-"""
+# nbsphinx_prolog = """
+# {% set docname = env.doc2path(env.docname, base=None) %}
+# You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+# .. |Binder| image:: https://mybinder.org/badge.svg
+#    :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+# """
 
 
 autosummary_generate = True
@@ -236,6 +236,7 @@ html_theme_options = dict(
     navbar_footer_text="",
     extra_footer='Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>',
     twitter_url="https://twitter.com/xarray_devs",
+    launch_buttons={"binderhub_url": "https://mybinder.org", "thebe": True},
 )
 
 
