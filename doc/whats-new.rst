@@ -23,7 +23,7 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - Now :py:meth:`DataArray.pad` and :py:meth:`Dataset.pad` accept a tuple of indexes
-  as its arguments. In this case, these values will be used as the newly extended parts
+  as its arguments. In this case, these values will be used as the newly extended coordinate labels
   of the IndexVariable.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 

@@ -6529,9 +6529,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
             Note that having np.nan in IndexVariable loses most of the useful
-            functionalities of xarray. To avoid this problem, an iterable,
+            functionalities of xarray. To avoid this problem, a sequence,
             such as a list or np.array, can be used for either pad_before or pad_after.
-            In this case, these values will be used for an IndexVariable and preventing
+            In this case, these values will be used for an IndexVariable preventing
             from the loss of functionalities.
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
