@@ -15,7 +15,6 @@ dependencies:
   - iris>=2.3
   - jupyter_client
   - matplotlib-base
-  - myst-nb
   - nbsphinx
   - netcdf4>=1.5
   - numba

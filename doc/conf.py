@@ -78,7 +78,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
-    "myst_nb",
+    "nbsphinx",
     "sphinx_autosummary_accessors",
     "scanpydoc.rtd_github_links",
     "sphinx_panels",
@@ -90,23 +90,17 @@ extlinks = {
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
 }
 
-# myst-nb configurations
-# https://myst-nb.readthedocs.io/en/latest/use/start.html
+# nbsphinx configurations
 
-jupyter_execute_notebooks = "cache"
-execution_allow_errors = True
-execution_timeout = 600
+nbsphinx_timeout = 600
+nbsphinx_execute = "always"
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+"""
 
-
-# nbsphinx_execute = "always"
-# nbsphinx_prolog = """
-# {% set docname = env.doc2path(env.docname, base=None) %}
-
-# You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
-
-# .. |Binder| image:: https://mybinder.org/badge.svg
-#    :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
-# """
 
 autosummary_generate = True
 
