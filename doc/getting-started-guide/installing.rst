@@ -98,10 +98,10 @@ Minimum dependency versions
 xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 42 months
+- **Python:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **setuptools:** 42 months (but no older than 40.4)
-- **numpy:** 24 months
+- **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **dask and dask.distributed:** 12 months (but no older than 2.9)
 - **sparse, pint** and other libraries that rely on
@@ -111,9 +111,9 @@ dependencies:
   numpy >=1.17.
 - **all other libraries:** 12 months
 
-The above should be interpreted as *the minor version (X.Y) initially published no more
-than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available
-at the moment of publishing the xarray release is guaranteed to work.
+This means the latest minor (X.Y) version from N months prior. Patch versions (x.y.Z)
+are not pinned, and only the latest available at the moment of publishing the xarray
+release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
