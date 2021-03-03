@@ -23,90 +23,18 @@ computing.
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 
 
-.. panels::
-    :container: full-width
-    :column: text-center col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
-    :card: +my-2
-    :body: d-none
-
-    ---
-    :fa:`walking, fa-9x`
-
-    Getting started guide
-    ^^^^^^^^^^^^^^^^^^^^^
-    +++
-    The getting started guide aims to get you using xarray productively as quickly as possible.
-    It is designed as an entry point for new users, and it provided an introduction to xarray's main concepts.
-
-    .. link-button:: getting-started-guide/index
-        :type: ref
-        :text: To the getting started guide
-        :classes: btn-outline-dark btn-block stretched-link
-
-    ---
-    :fa:`book-reader, fa-9x`
-
-    User guide
-    ^^^^^^^^^^
-
-    +++
-    In this user guide, you will find detailed descriptions and
-    examples that describe many common tasks that you can accomplish with xarray.
-
-    .. link-button:: user-guide/index
-        :type: ref
-        :text: To the user guide
-        :classes: btn-outline-dark btn-block stretched-link
-
-    ---
-    :fa:`laptop-code, fa-9x`
-
-    Developer guide
-    ^^^^^^^^^^^^^^^
-
-    +++
-    Contributions are highly welcomed and appreciated. Every little help counts, so do not hesitate!
-    The contribution guide explains how to structure your contributions.
-
-    .. link-button:: reference-guide/index
-        :type: ref
-        :text: To the development guide
-        :classes: btn-outline-dark btn-block stretched-link
-
-
 .. toctree::
-   :maxdepth: 1
-   :caption: Documentation
-   :hidden:
+   :maxdepth: 2
 
    Getting Started <getting-started-guide/index>
    Gallery <gallery.rst>
    User Guide <user-guide/index>
    Ecosystem <related-projects.rst>
    API Reference <reference-guide/index>
-   Development <dev-guide/index>
+   Developer Guide <dev-guide/index>
+   What’s New <whats-new.rst>
 
 
-See also
---------
-
-- `Xarray's Tutorial`_ presented at the 2020 SciPy Conference (`video recording`_).
-- Stephan Hoyer and Joe Hamman's `Journal of Open Research Software paper`_ describing the xarray project.
-- The `UW eScience Institute's Geohackweek`_ tutorial on xarray for geospatial data scientists.
-- Stephan Hoyer's `SciPy2015 talk`_ introducing xarray to a general audience.
-- Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
-  xarray to users familiar with netCDF.
-- `Nicolas Fauchereau's tutorial`_ on xarray for netCDF users.
-
-.. _Xarray's Tutorial: https://xarray-contrib.github.io/xarray-tutorial/
-.. _video recording: https://youtu.be/mecN-Ph_-78
-.. _Journal of Open Research Software paper: http://doi.org/10.5334/jors.148
-.. _UW eScience Institute's Geohackweek : https://geohackweek.github.io/nDarrays/
-.. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-.. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
-.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
-.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
-.. _Nicolas Fauchereau's tutorial: http://nbviewer.iPython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------

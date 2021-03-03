@@ -2,10 +2,13 @@
 User Guide
 ###########
 
-This guide is an overview and explains the important features.
+In this user guide, you will find detailed descriptions and
+examples that describe many common tasks that you can accomplish with xarray.
+
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :hidden:
 
    terminology
    data-structures

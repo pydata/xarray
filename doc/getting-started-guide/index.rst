@@ -2,13 +2,15 @@
 Getting Started
 ################
 
-This guide provides a quick overview and showcases some example notebooks.
-
+The getting started guide aims to get you using xarray productively as quickly as possible.
+It is designed as an entry point for new users, and it provided an introduction to xarray's main concepts.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :hidden:
 
    why-xarray
    faq
    quick-overview
+   tutorials
    installing
