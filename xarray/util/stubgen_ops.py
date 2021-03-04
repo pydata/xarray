@@ -21,7 +21,7 @@ stub_info = defaultdict(list)
 METHOD_TEMPLATE_UNOPS = "    def {method}(self: T_Self) -> T_Self: ..."
 
 method_template_binops = """\
-    def {method}(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...{override_misc}"""
+    def {method}(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...{override_misc}"""
 stub_info["TypedDatasetOps"].append((METHOD_TEMPLATE_UNOPS, unary_ops))
 stub_info["TypedDatasetOps"].append((method_template_binops, binary_ops))
 
@@ -42,7 +42,7 @@ method_template_binops = """\
     @overload
     def {method}(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...{misc}
     @overload
-    def {method}(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...{misc}"""
+    def {method}(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...{misc}"""
 stub_info["TypedDataArrayOps"].append((METHOD_TEMPLATE_UNOPS, unary_ops))
 stub_info["TypedDataArrayOps"].append((method_template_binops, binary_ops))
 
@@ -53,7 +53,7 @@ method_template_binops = """\
     @overload
     def {method}(self, other: T_DataArray) -> T_DataArray: ...{misc}
     @overload
-    def {method}(self: T_Variable, other: T_VarOther) -> T_Variable: ...{misc}"""
+    def {method}(self: T_Variable, other: VarCompatible) -> T_Variable: ...{misc}"""
 stub_info["TypedVariableOps"].append((METHOD_TEMPLATE_UNOPS, unary_ops))
 stub_info["TypedVariableOps"].append((method_template_binops, binary_ops))
 
@@ -64,7 +64,7 @@ method_template_binops = """\
     @overload
     def {method}(self, other: DataArray) -> Dataset: ...{misc}
     @overload
-    def {method}(self, other: T_GroupByIncompatible) -> NoReturn: ..."""
+    def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_info["TypedDatasetGroupByOps"].append((method_template_binops, binary_ops))
 
 # TypedDataArrayGroupByOps
@@ -74,7 +74,7 @@ method_template_binops = """\
     @overload
     def {method}(self, other: T_DataArray) -> T_DataArray: ...{misc}
     @overload
-    def {method}(self, other: T_GroupByIncompatible) -> NoReturn: ..."""
+    def {method}(self, other: GroupByIncompatible) -> NoReturn: ..."""
 stub_info["TypedDataArrayGroupByOps"].append((method_template_binops, binary_ops))
 
 
@@ -119,13 +119,13 @@ T_DataArray = TypeVar("T_DataArray", bound=DataArray)
 T_Variable = TypeVar("T_Variable", bound=Variable)
 T_Self = TypeVar("T_Self")
 
-# Note: T_Other (and types involving T_Other) is to be used last in overloads,
+# Note: ScalarOrArray (and types involving ScalarOrArray) is to be used last in overloads,
 # since nd.ndarray is typed as Any for older versions of numpy.
-T_Other = Union[complex, bytes, str, np.ndarray, np.generic, DaskArray]
-T_DsOther = Union[Dataset, DataArray, Variable, T_Other, GroupBy]
-T_DaOther = Union[DataArray, Variable, T_Other]
-T_VarOther = Union[Variable, T_Other]
-T_GroupByIncompatible = Union[Variable, GroupBy, T_Other]'''
+ScalarOrArray = Union[complex, bytes, str, np.generic, np.ndarray, DaskArray]
+DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
+DaCompatible = Union[DataArray, Variable, ScalarOrArray]
+VarCompatible = Union[Variable, ScalarOrArray]
+GroupByIncompatible = Union[Variable, GroupBy]'''
 
 
 # Render stub file

@@ -21,45 +21,45 @@ T_DataArray = TypeVar("T_DataArray", bound=DataArray)
 T_Variable = TypeVar("T_Variable", bound=Variable)
 T_Self = TypeVar("T_Self")
 
-# Note: T_Other (and types involving T_Other) is to be used last in overloads,
+# Note: ScalarOrArray (and types involving ScalarOrArray) is to be used last in overloads,
 # since nd.ndarray is typed as Any for older versions of numpy.
-T_Other = Union[complex, bytes, str, np.ndarray, np.generic, DaskArray]
-T_DsOther = Union[Dataset, DataArray, Variable, T_Other, GroupBy]
-T_DaOther = Union[DataArray, Variable, T_Other]
-T_VarOther = Union[Variable, T_Other]
-T_GroupByIncompatible = Union[Variable, GroupBy, T_Other]
+ScalarOrArray = Union[complex, bytes, str, np.generic, np.ndarray, DaskArray]
+DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
+DaCompatible = Union[DataArray, Variable, ScalarOrArray]
+VarCompatible = Union[Variable, ScalarOrArray]
+GroupByIncompatible = Union[Variable, GroupBy]
 
 class TypedDatasetOps:
     def __neg__(self: T_Self) -> T_Self: ...
     def __pos__(self: T_Self) -> T_Self: ...
     def __abs__(self: T_Self) -> T_Self: ...
     def __invert__(self: T_Self) -> T_Self: ...
-    def __eq__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[override, misc]
-    def __ne__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[override, misc]
-    def __lt__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __le__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __gt__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __ge__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __add__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __sub__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __mul__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __pow__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __truediv__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __floordiv__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __mod__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __radd__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rsub__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rmul__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rpow__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rtruediv__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rfloordiv__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rmod__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __and__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __xor__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __or__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rand__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __rxor__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
-    def __ror__(self: T_Dataset, other: T_DsOther) -> T_Dataset: ...  # type: ignore[misc]
+    def __eq__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[override, misc]
+    def __ne__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[override, misc]
+    def __lt__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __le__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __gt__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __ge__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __add__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __sub__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __mul__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __pow__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __truediv__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __floordiv__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __mod__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __radd__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rsub__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rmul__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rpow__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rtruediv__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rfloordiv__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rmod__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __and__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __xor__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __or__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rand__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __rxor__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
+    def __ror__(self: T_Dataset, other: DsCompatible) -> T_Dataset: ...  # type: ignore[misc]
 
 class TypedDataArrayOps:
     def __neg__(self: T_Self) -> T_Self: ...
@@ -73,7 +73,7 @@ class TypedDataArrayOps:
     @overload
     def __eq__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __eq__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __eq__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload  # type: ignore[override]
     def __ne__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -81,7 +81,7 @@ class TypedDataArrayOps:
     @overload
     def __ne__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ne__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __ne__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __lt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -89,7 +89,7 @@ class TypedDataArrayOps:
     @overload
     def __lt__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __lt__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __lt__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __le__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -97,7 +97,7 @@ class TypedDataArrayOps:
     @overload
     def __le__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __le__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __le__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __gt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -105,7 +105,7 @@ class TypedDataArrayOps:
     @overload
     def __gt__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __gt__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __gt__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __ge__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -113,7 +113,7 @@ class TypedDataArrayOps:
     @overload
     def __ge__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ge__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __ge__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __add__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -121,7 +121,7 @@ class TypedDataArrayOps:
     @overload
     def __add__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __add__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __add__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __sub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -129,7 +129,7 @@ class TypedDataArrayOps:
     @overload
     def __sub__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __sub__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __sub__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __mul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -137,7 +137,7 @@ class TypedDataArrayOps:
     @overload
     def __mul__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mul__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __mul__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __pow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -145,7 +145,7 @@ class TypedDataArrayOps:
     @overload
     def __pow__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __pow__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __pow__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __truediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -153,7 +153,7 @@ class TypedDataArrayOps:
     @overload
     def __truediv__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __truediv__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __truediv__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __floordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -161,7 +161,7 @@ class TypedDataArrayOps:
     @overload
     def __floordiv__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __floordiv__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __floordiv__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __mod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -169,7 +169,7 @@ class TypedDataArrayOps:
     @overload
     def __mod__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mod__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __mod__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __radd__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -177,7 +177,7 @@ class TypedDataArrayOps:
     @overload
     def __radd__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __radd__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __radd__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rsub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -185,7 +185,7 @@ class TypedDataArrayOps:
     @overload
     def __rsub__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rsub__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rsub__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rmul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -193,7 +193,7 @@ class TypedDataArrayOps:
     @overload
     def __rmul__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmul__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rmul__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rpow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -201,7 +201,7 @@ class TypedDataArrayOps:
     @overload
     def __rpow__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rpow__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rpow__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rtruediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -209,7 +209,7 @@ class TypedDataArrayOps:
     @overload
     def __rtruediv__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rtruediv__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rtruediv__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rfloordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -217,7 +217,7 @@ class TypedDataArrayOps:
     @overload
     def __rfloordiv__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rfloordiv__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rfloordiv__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rmod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -225,7 +225,7 @@ class TypedDataArrayOps:
     @overload
     def __rmod__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmod__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rmod__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __and__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -233,7 +233,7 @@ class TypedDataArrayOps:
     @overload
     def __and__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __and__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __and__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __xor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -241,7 +241,7 @@ class TypedDataArrayOps:
     @overload
     def __xor__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __xor__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __xor__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __or__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -249,7 +249,7 @@ class TypedDataArrayOps:
     @overload
     def __or__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __or__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __or__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rand__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -257,7 +257,7 @@ class TypedDataArrayOps:
     @overload
     def __rand__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rand__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rand__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __rxor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -265,7 +265,7 @@ class TypedDataArrayOps:
     @overload
     def __rxor__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rxor__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __rxor__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
     @overload
     def __ror__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
@@ -273,7 +273,7 @@ class TypedDataArrayOps:
     @overload
     def __ror__(self: T_DataArray, other: DataArrayGroupBy) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ror__(self: T_DataArray, other: T_DaOther) -> T_DataArray: ...  # type: ignore[misc]
+    def __ror__(self: T_DataArray, other: DaCompatible) -> T_DataArray: ...  # type: ignore[misc]
 
 class TypedVariableOps:
     def __neg__(self: T_Self) -> T_Self: ...
@@ -285,157 +285,157 @@ class TypedVariableOps:
     @overload
     def __eq__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __eq__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __eq__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload  # type: ignore[override]
     def __ne__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ne__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ne__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __ne__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __lt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __lt__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __lt__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __lt__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __le__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __le__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __le__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __le__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __gt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __gt__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __gt__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __gt__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __ge__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ge__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ge__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __ge__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __add__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __add__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __add__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __add__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __sub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __sub__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __sub__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __sub__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __mul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mul__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mul__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __mul__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __pow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __pow__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __pow__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __pow__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __truediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __truediv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __truediv__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __truediv__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __floordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __floordiv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __floordiv__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __floordiv__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __mod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mod__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mod__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __mod__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __radd__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __radd__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __radd__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __radd__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rsub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rsub__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rsub__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rsub__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rmul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmul__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmul__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rmul__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rpow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rpow__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rpow__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rpow__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rtruediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rtruediv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rtruediv__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rtruediv__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rfloordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rfloordiv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rfloordiv__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rfloordiv__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rmod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmod__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmod__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rmod__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __and__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __and__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __and__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __and__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __xor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __xor__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __xor__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __xor__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __or__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __or__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __or__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __or__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rand__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rand__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rand__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rand__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __rxor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rxor__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rxor__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __rxor__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
     @overload
     def __ror__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ror__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ror__(self: T_Variable, other: T_VarOther) -> T_Variable: ...  # type: ignore[misc]
+    def __ror__(self: T_Variable, other: VarCompatible) -> T_Variable: ...  # type: ignore[misc]
 
 class TypedDatasetGroupByOps:
     @overload  # type: ignore[override]
@@ -443,157 +443,157 @@ class TypedDatasetGroupByOps:
     @overload
     def __eq__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __eq__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __eq__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload  # type: ignore[override]
     def __ne__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ne__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __ne__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ne__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __lt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __lt__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __lt__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __lt__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __le__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __le__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __le__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __le__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __gt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __gt__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __gt__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __gt__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __ge__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ge__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __ge__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ge__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __add__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __add__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __add__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __add__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __sub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __sub__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __sub__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __sub__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __mul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mul__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __mul__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __mul__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __pow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __pow__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __pow__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __pow__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __truediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __truediv__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __truediv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __truediv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __floordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __floordiv__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __floordiv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __floordiv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __mod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mod__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __mod__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __mod__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __radd__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __radd__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __radd__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __radd__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rsub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rsub__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rsub__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rsub__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rmul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmul__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rmul__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rmul__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rpow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rpow__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rpow__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rpow__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rtruediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rtruediv__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rtruediv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rtruediv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rfloordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rfloordiv__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rfloordiv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rfloordiv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rmod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmod__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rmod__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rmod__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __and__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __and__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __and__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __and__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __xor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __xor__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __xor__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __xor__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __or__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __or__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __or__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __or__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rand__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rand__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rand__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rand__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rxor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rxor__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __rxor__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rxor__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __ror__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ror__(self, other: DataArray) -> Dataset: ...  # type: ignore[misc]
     @overload
-    def __ror__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ror__(self, other: GroupByIncompatible) -> NoReturn: ...
 
 class TypedDataArrayGroupByOps:
     @overload  # type: ignore[override]
@@ -601,154 +601,154 @@ class TypedDataArrayGroupByOps:
     @overload
     def __eq__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __eq__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __eq__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload  # type: ignore[override]
     def __ne__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ne__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ne__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ne__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __lt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __lt__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __lt__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __lt__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __le__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __le__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __le__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __le__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __gt__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __gt__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __gt__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __gt__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __ge__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ge__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ge__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ge__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __add__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __add__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __add__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __add__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __sub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __sub__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __sub__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __sub__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __mul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mul__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mul__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __mul__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __pow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __pow__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __pow__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __pow__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __truediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __truediv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __truediv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __truediv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __floordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __floordiv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __floordiv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __floordiv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __mod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __mod__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __mod__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __mod__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __radd__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __radd__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __radd__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __radd__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rsub__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rsub__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rsub__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rsub__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rmul__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmul__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmul__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rmul__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rpow__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rpow__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rpow__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rpow__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rtruediv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rtruediv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rtruediv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rtruediv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rfloordiv__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rfloordiv__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rfloordiv__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rfloordiv__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rmod__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rmod__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rmod__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rmod__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __and__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __and__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __and__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __and__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __xor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __xor__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __xor__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __xor__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __or__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __or__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __or__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __or__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rand__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rand__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rand__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rand__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __rxor__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __rxor__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __rxor__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __rxor__(self, other: GroupByIncompatible) -> NoReturn: ...
     @overload
     def __ror__(self, other: T_Dataset) -> T_Dataset: ...  # type: ignore[misc]
     @overload
     def __ror__(self, other: T_DataArray) -> T_DataArray: ...  # type: ignore[misc]
     @overload
-    def __ror__(self, other: T_GroupByIncompatible) -> NoReturn: ...
+    def __ror__(self, other: GroupByIncompatible) -> NoReturn: ...
