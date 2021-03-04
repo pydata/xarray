@@ -643,7 +643,7 @@ combining multiple input list with ``itertools.product()``:
 
 **OUTER_1VECTOR**
 
-The ``OUTER_1VECTOR`` indexing shall supports number, slices and at least one
+The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 If you support more complex indexing as `explicit indexing` or
