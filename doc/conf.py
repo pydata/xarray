@@ -83,6 +83,7 @@ extensions = [
     "scanpydoc.rtd_github_links",
     "sphinx_panels",
     "sphinxext.opengraph",
+    "sphinx_copybutton",
 ]
 
 extlinks = {
