@@ -84,6 +84,7 @@ extensions = [
     "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
+    "sphinx_reredirects",
 ]
 
 extlinks = {
@@ -239,7 +240,9 @@ html_theme_options = dict(
     home_page_in_toc=False,
     extra_navbar="",
     navbar_footer_text="",
-    extra_footer='Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>',
+    extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
+    a nonprofit dedicated to supporting the open-source scientific computing community.</p><br>
+    Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>""",
     twitter_url="https://twitter.com/xarray_devs",
     launch_buttons={"binderhub_url": "https://mybinder.org"},
 )
@@ -274,16 +277,24 @@ ogp_custom_meta_tags = [
     '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
 ]
 
-# myst_enable_extensions = [
-#     "amsmath",
-#     "colon_fence",
-#     "deflist",
-#     "dollarmath",
-#     "html_image",
-# ]
-# myst_url_schemes = ("http", "https", "mailto")
-# panels_add_bootstrap_css = False
-
+# Redirects for pages that were moved to new locations
+redirects = {
+    "terminology": "user-guide/terminology.html",
+    "data-structures.html": "user-guide/data-structures.html",
+    "indexing.html": "user-guide/indexing.html",
+    "interpolation.html": "user-guide/interpolation.html",
+    "computation.html": "user-guide/computation.html",
+    "groupby.html": "user-guide/groupby.html",
+    "reshaping.html": "user-guide/reshaping.html",
+    "combining.html": "user-guide/combining.html",
+    "time-series.html": "user-guide/time-series.html",
+    "weather-climate.html": "user-guide/weather-climate.html",
+    "pandas.html": "user-guide/pandas.html",
+    "io.html": "user-guide/io.html",
+    "dask.html": "user-guide/dask.html",
+    "plotting.html": "user-guide/plotting.html",
+    "duckarrays.html": "user-guide/duckarrays.html",
+}
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
@@ -325,4 +336,4 @@ def escape_underscores(string):
 
 def setup(app):
     DEFAULT_FILTERS["escape_underscores"] = escape_underscores
-    return dict(version=version, parallel_read_safe=False, parallel_write_safe=True)
+    return dict(version=version, parallel_read_safe=True, parallel_write_safe=True)
