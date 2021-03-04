@@ -820,7 +820,7 @@
    core.indexing.BasicIndexer
    core.indexing.OuterIndexer
    core.indexing.VectorizedIndexer
-   core.indexing.LazilyOuterIndexedArray
+   core.indexing.LazilyIndexedArray
    core.indexing.LazilyVectorizedIndexedArray
 
    conventions.decode_cf_variables

@@ -388,7 +388,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later

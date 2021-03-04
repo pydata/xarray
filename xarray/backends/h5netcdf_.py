@@ -182,7 +182,7 @@ class H5NetCDFStore(WritableCFDataStore):
         import h5py
 
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(H5NetCDFArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
         attrs = _read_attributes(var)
 
         # netCDF4 specific encoding

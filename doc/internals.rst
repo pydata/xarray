@@ -515,12 +515,12 @@ See the example below:
 .. code-block:: python
 
     backend_array = MyBackendArray()
-    data = indexing.LazilyOuterIndexedArray(backend_array)
+    data = indexing.LazilyIndexedArray(backend_array)
     var = xr.Variable(dims, data, attrs=attrs, encoding=encoding)
 
 Where:
 
-- :py:class:`~xarray.core.indexing.LazilyOuterIndexedArray` is a class
+- :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a class
   provided by Xarray that manages the lazy loading.
 - ``MyBackendArray`` shall be implemented by the backend and shall inherit
   from :py:class:`~xarray.backends.common.BackendArray`.
@@ -564,7 +564,9 @@ This is an example ``BackendArray`` subclass implementation:
             self.dtype = lock
             self.lock = dtype
 
-        def __getitem__(self, key: xarray.core.indexing.ExplicitIndexer) -> np.typing.ArrayLike:
+        def __getitem__(
+            self, key: xarray.core.indexing.ExplicitIndexer
+        ) -> np.typing.ArrayLike:
             return indexing.explicit_indexing_adapter(
                 key,
                 self.shape,
