@@ -49,6 +49,7 @@ ENGINES = {
     "pseudonetcdf": backends.PseudoNetCDFDataStore.open,
     "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
+    "protocol": backends.LazyNetCDF4DataStore,
 }
 
 
@@ -549,7 +550,7 @@ def open_dataset(
             overwrite_encoded_chunks = backend_kwargs.pop(
                 "overwrite_encoded_chunks", None
             )
-
+        print(f"ENGINE {engine}")
         opener = _get_backend_cls(engine)
         store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
 

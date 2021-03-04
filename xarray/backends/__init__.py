@@ -9,6 +9,7 @@ from .file_manager import CachingFileManager, DummyFileManager, FileManager
 from .h5netcdf_ import H5NetCDFStore
 from .memory import InMemoryDataStore
 from .netCDF4_ import NetCDF4DataStore
+from .netCDF4_protocol import LazyNetCDF4DataStore
 from .plugins import list_engines
 from .pseudonetcdf_ import PseudoNetCDFDataStore
 from .pydap_ import PydapDataStore
@@ -30,5 +31,6 @@ __all__ = [
     "H5NetCDFStore",
     "ZarrStore",
     "PseudoNetCDFDataStore",
+    "ExampleDataStore",
     "list_engines",
 ]
