@@ -32,7 +32,6 @@ dependencies:
   - sphinx>=3.3
   - zarr>=2.4
   - pip:
-      - sphinx-thebe
       - sphinx-reredirects
       - sphinxext-opengraph
       - scanpydoc

@@ -83,7 +83,6 @@ extensions = [
     "scanpydoc.rtd_github_links",
     "sphinx_panels",
     "sphinxext.opengraph",
-    "sphinx_thebe",
 ]
 
 extlinks = {
@@ -237,7 +236,7 @@ html_theme_options = dict(
     navbar_footer_text="",
     extra_footer='Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>',
     twitter_url="https://twitter.com/xarray_devs",
-    launch_buttons={"binderhub_url": "https://mybinder.org", "thebe": True},
+    launch_buttons={"binderhub_url": "https://mybinder.org"},
 )
 
 
