@@ -11,7 +11,6 @@ Notebook Examples
 -----------------
 
 .. panels::
-    :container: full-width
     :column: text-center col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
     :card: +my-2
     :img-top-cls: w-75 m-auto p-2
@@ -101,7 +100,6 @@ External Examples
 
 
 .. panels::
-    :container: full-width
     :column: text-center col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
     :card: +my-2
     :img-top-cls: w-75 m-auto p-2
