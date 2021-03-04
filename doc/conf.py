@@ -100,14 +100,14 @@ copybutton_prompt_is_regexp = True
 
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
-nbsphinx_prolog = """
-{% set docname = env.doc2path(env.docname, base=None) %}
+# nbsphinx_prolog = """
+# {% set docname = env.doc2path(env.docname, base=None) %}
 
-You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+# You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
 
-.. |Binder| image:: https://mybinder.org/badge.svg
-   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
-"""
+# .. |Binder| image:: https://mybinder.org/badge.svg
+#    :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+# """
 
 
 autosummary_generate = True
@@ -235,10 +235,11 @@ html_theme_options = dict(
     # analytics_id=''  this is configured in rtfd.io
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
+    repository_branch="master",
+    path_to_docs="doc/",
     use_edit_page_button=True,
     use_repository_button=True,
     use_issues_button=True,
-    path_to_docs="doc/",
     home_page_in_toc=False,
     extra_navbar="",
     navbar_footer_text="",
@@ -246,7 +247,10 @@ html_theme_options = dict(
     a nonprofit dedicated to supporting the open-source scientific computing community.<br>
     Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_devs",
-    launch_buttons={"binderhub_url": "https://mybinder.org"},
+    launch_buttons={
+        "binderhub_url": "https://mybinder.org",
+        "notebook_interface": "jupyterlab",
+    },
 )
 
 
