@@ -45,13 +45,13 @@ computing.
    Xarray Internals <internals/index>
    Roadmap <roadmap>
    What’s New <whats-new>
+   GitHub repository <https://github.com/pydata/xarray>
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :caption: Community
 
-   GitHub repository <https://github.com/pydata/xarray>
    GitHub discussions <https://github.com/pydata/xarray/discussions>
    StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
 

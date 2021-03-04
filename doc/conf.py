@@ -84,7 +84,7 @@ extensions = [
     "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
-    "sphinx_reredirects",
+    # "sphinx_reredirects",
 ]
 
 extlinks = {
@@ -100,12 +100,12 @@ copybutton_prompt_is_regexp = True
 
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
-# nbsphinx_prolog = """
-# {% set docname = env.doc2path(env.docname, base=None) %}
-# You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
-# .. |Binder| image:: https://mybinder.org/badge.svg
-#    :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
-# """
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+"""
 
 
 autosummary_generate = True
@@ -241,8 +241,8 @@ html_theme_options = dict(
     extra_navbar="",
     navbar_footer_text="",
     extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
-    a nonprofit dedicated to supporting the open-source scientific computing community.</p><br>
-    Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>""",
+    a nonprofit dedicated to supporting the open-source scientific computing community.<br>
+    Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
     twitter_url="https://twitter.com/xarray_devs",
     launch_buttons={"binderhub_url": "https://mybinder.org"},
 )
@@ -278,23 +278,26 @@ ogp_custom_meta_tags = [
 ]
 
 # Redirects for pages that were moved to new locations
-redirects = {
-    "terminology": "user-guide/terminology.html",
-    "data-structures.html": "user-guide/data-structures.html",
-    "indexing.html": "user-guide/indexing.html",
-    "interpolation.html": "user-guide/interpolation.html",
-    "computation.html": "user-guide/computation.html",
-    "groupby.html": "user-guide/groupby.html",
-    "reshaping.html": "user-guide/reshaping.html",
-    "combining.html": "user-guide/combining.html",
-    "time-series.html": "user-guide/time-series.html",
-    "weather-climate.html": "user-guide/weather-climate.html",
-    "pandas.html": "user-guide/pandas.html",
-    "io.html": "user-guide/io.html",
-    "dask.html": "user-guide/dask.html",
-    "plotting.html": "user-guide/plotting.html",
-    "duckarrays.html": "user-guide/duckarrays.html",
-}
+# Enable this once there's a workaround for the following warning
+# WARNING: the sphinx_reredirects extension does not declare if it is safe for parallel reading, assuming it isn't - please ask the extension author to check and make it explicit
+
+# redirects = {
+#     "terminology": "user-guide/terminology.html",
+#     "data-structures.html": "user-guide/data-structures.html",
+#     "indexing.html": "user-guide/indexing.html",
+#     "interpolation.html": "user-guide/interpolation.html",
+#     "computation.html": "user-guide/computation.html",
+#     "groupby.html": "user-guide/groupby.html",
+#     "reshaping.html": "user-guide/reshaping.html",
+#     "combining.html": "user-guide/combining.html",
+#     "time-series.html": "user-guide/time-series.html",
+#     "weather-climate.html": "user-guide/weather-climate.html",
+#     "pandas.html": "user-guide/pandas.html",
+#     "io.html": "user-guide/io.html",
+#     "dask.html": "user-guide/dask.html",
+#     "plotting.html": "user-guide/plotting.html",
+#     "duckarrays.html": "user-guide/duckarrays.html",
+# }
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
