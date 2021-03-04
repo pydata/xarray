@@ -572,7 +572,7 @@ This is an example ``BackendArray`` subclass implementation:
                 self._raw_indexing_method,
             )
 
-        def _raw_indexing_method(self, key):
+        def _raw_indexing_method(self, key: tuple) -> np.typing.ArrayLike:
             # thread safe method that access to data on disk
             with self.lock:
                 ...
