@@ -4665,6 +4665,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if "axis" in kwargs:
+            raise ValueError(
+                "passing 'axis' to Dataset reduce methods is ambiguous."
+                " Please use 'dim' instead."
+            )
+
         if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
@@ -6854,7 +6860,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
         )
 
-    def argmin(self, dim=None, axis=None, **kwargs):
+    def argmin(self, dim=None, **kwargs):
         """Indices of the minima of the member variables.
 
         If there are multiple minima, the indices of the first one found will be
@@ -6868,9 +6874,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             this is deprecated, in future will be an error, since DataArray.argmin will
             return a dict with indices for all dimensions, which does not make sense for
             a Dataset.
-        axis : int, optional
-            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
-            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -6888,28 +6891,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         DataArray.argmin
-
         """
-        if dim is None and axis is None:
+        if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
-                "neither dim nor axis argument changes to return a dict of indices of "
-                "each dimension, for consistency it will be an error to call "
-                "Dataset.argmin() with no argument, since we don't return a dict of "
-                "Datasets.",
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "dim changes to return a dict of indices of each dimension, for "
+                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "since we don't return a dict of Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
         if (
             dim is None
-            or axis is not None
             or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmin_func = getattr(duck_array_ops, "argmin")
-            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
+            return self.reduce(argmin_func, dim=dim, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -6917,7 +6917,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
-    def argmax(self, dim=None, axis=None, **kwargs):
+    def argmax(self, dim=None, **kwargs):
         """Indices of the maxima of the member variables.
 
         If there are multiple maxima, the indices of the first one found will be
@@ -6931,9 +6931,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             this is deprecated, in future will be an error, since DataArray.argmax will
             return a dict with indices for all dimensions, which does not make sense for
             a Dataset.
-        axis : int, optional
-            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
-            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -6953,26 +6950,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.argmax
 
         """
-        if dim is None and axis is None:
+        if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
-                "neither dim nor axis argument changes to return a dict of indices of "
-                "each dimension, for consistency it will be an error to call "
-                "Dataset.argmax() with no argument, since we don't return a dict of "
-                "Datasets.",
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "dim changes to return a dict of indices of each dimension, for "
+                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "since we don't return a dict of Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
         if (
             dim is None
-            or axis is not None
             or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmax_func = getattr(duck_array_ops, "argmax")
-            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
+            return self.reduce(argmax_func, dim=dim, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
