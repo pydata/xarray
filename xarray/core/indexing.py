@@ -198,8 +198,10 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                     "MultiIndex variable: " + index_name
                 )
             indexer = get_indexer_nd(index, label, method, tolerance)
-            if np.any(indexer < 0):
+            if np.any(indexer < 0) and tolerance is None:
                 raise KeyError(f"not all values found in index {index_name!r}")
+            elif np.any(indexer < 0) and tolerance is not None:
+                indexer = indexer[indexer >= 0]
     return indexer, new_index
 
 
