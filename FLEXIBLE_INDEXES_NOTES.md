@@ -61,11 +61,14 @@ Every `XarrayIndex` subclass must at least implement two methods:
 
 These two methods may accept additional keyword arguments passed to the underlying index object constructor or query methods.
 
-There are potentially other methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
+There are potentially other properties / methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
 
-- Xarray coordinate getters (see [Section 2.2.4](#224_Implicit_coodinates))
+- An `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass.
+- `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
+- Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
 - A method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
-- `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s)
+- `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s) (see [Section 2.8](#28-index-encoding))
+- One or more "non-standard" methods or properties that could be leveraged in Xarray 3rd-party extensions like Dataset/DataArray accessors (see [Section 2.7](#27-using-indexes-for-other-purposes))
 
 The `XarrayIndex` API has still to be defined in detail.
 
@@ -73,7 +76,7 @@ Xarray should provide a minimal set of built-in index wrappers (this could be re
 
 #### 2.1.1 Index discoverability
 
-For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something like [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry).
+For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something lire [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry).
 
 Additionally (or alternatively), new index wrappers may be registered via entry points like it is already the case for storage backends and maybe other backends (plotting) in the future.
 
@@ -91,7 +94,19 @@ TODO: describe API updates needed to provide the kind of index that we want to b
 
 #### 2.2.2 Dataset/DataArray's `indexes` constructor argument
 
-TODO
+The new `indexes` argument of Dataset/DataArray constructors may be used to specify which kind of index to bind to which coordinate(s). It would consist of a mapping where, for each item, the key is one coordinate name (or a sequence of coordinate names) that must be given in `coords` and the value is the type of the index to build from this (these) coordinate(s) (it could also be an `XarrayIndex` instance, so the index does not need to be built).
+
+Currently index objects like `pandas.MultiIndex` can be passed directly to `coords`, which in this specific case results in the implicit creation of virtual coordinates. With the new `indexes` argument this behavior may become even more confusing than it currently is. For the sake of clarity, it would be appropriate to drop support for this specific behavior and treat any given mapping value given in `coords` as an array that can be wrapped into an Xarray variable, i.e., in the case of a multi-index:
+
+```python
+>>> xr.DataArray([1.0, 2.0], dims='x', coords={'x': midx})
+<xarray.DataArray (x: 2)>
+array([1., 2.])
+Coordinates:
+    x        (x) object ('a', 0) ('b', 1)
+```
+
+A possible solution to reuse a `pandas.MultiIndex` in a DataArray/Dataset with levels exposed as coordinates is proposed in [Section 2.2.4](#224-implicit-coordinates).
 
 #### 2.2.3 Implicit default indexes
 
@@ -107,11 +122,67 @@ When to create it?
 - A. each time when a new Dataset/DataArray is created
 - B. only when we need it (i.e., when calling `.sel()` or `indexes`)
 
+Options A and A are what Xarray currently does and may be the best choice considering that indexes could possibly be invalidated by coordinate mutation.
+
+Besides `pandas.Index`, other indexes currently supported in Xarray like `CFTimeIndex` could be built depending on the coordinate data type.
+
 #### 2.2.4 Implicit coordinates
 
-If we want to strictly follow the data model defined in [Section 1](#1_Data_Model), we need to ensure that at least one coordinate exists for each index (generally we need to ensure that the data indexed is properly exposed as one or more coordinates), especially when index objects are given directly to the Dataset/DataArray constructor ([Section 2.2.2](#222_DatasetDataArrays_indexes_constructor_argument)). This means that every `XarrayIndex` subclass must implement a method to get or generate one or more Xarray coordinates.
+Like for the indexes, explicit coordinate creation should be preferred over implicit coordinate creation. However, there may be some situations where we would like to keep creating coordinates implicitly for backwards compatibility.
 
-Additionally, we might want to generate a coordinate that is specific to the index, generally with a composite data type, like a coordinate with n-elements tuple labels for a n-levels `pandas.MultiIndex`. This should be optional, though. An `XarrayIndex` may or may not support this. This coordinate probably shouldn't be created implicitly or by default when setting the new index. Also, this might raise some issues, e.g., what would be the name of this coordinate? For a `pandas.MultiIndex` it would make sense in many (but not all) cases to choose the dimension name as the coordinate name.
+For example, it is currently possible to pass a `pandas.MulitIndex` object as a coordinate to the Dataset/DataArray constructor:
+
+```python
+>>> midx = pd.MultiIndex.from_arrays([['a', 'b'], [0, 1]], names=['lvl1', 'lvl2'])
+>>> da = xr.DataArray([1.0, 2.0], dims='x', coords={'x': midx})
+>>> da
+<xarray.DataArray (x: 2)>
+array([1., 2.])
+Coordinates:
+  * x        (x) MultiIndex
+  - lvl1     (x) object 'a' 'b'
+  - lvl2     (x) int64 0 1
+```
+
+In that case, virtual coordinates are created for each level of the multi-index. After the index refactoring, these coordinates would become real coordinates bound to the multi-index.
+
+In the example above a coordinate is also created for the `x` dimension:
+
+```python
+>>> da.x
+<xarray.DataArray 'x' (x: 2)>
+array([('a', 0), ('b', 1)], dtype=object)
+Coordinates:
+  * x        (x) MultiIndex
+  - lvl1     (x) object 'a' 'b'
+  - lvl2     (x) int64 0 1
+```
+
+With the new proposed data model, this wouldn't be a requirement anymore: there is no concept of a dimension-index. However, some users might still rely on the `x` coordinate so we could still (temporarily) support it for backwards compatibility.
+
+Besides `pandas.MultiIndex`, there may be other situations where we would like to reuse an existing index in a new Dataset/DataArray (e.g., when the index is very expensive to build), and which would require the implicit creation of coordinates.
+
+The example given here is quite confusing, though: this is not an easily predictable behavior. We could entirely avoid the implicit creation of coordinates, e.g., using a helper function that generates coordinate + index dictionaries that we could then pass directly to the DataArray/Dataset constructor:
+
+```python
+>>> coords_dict, index_dict = create_coords_from_index(midx, dims='x', include_dim_coord=True)
+>>> coords_dict
+{'x': <xarray.Variable (x: 2)>
+ array([('a', 0), ('b', 1)], dtype=object),
+ 'lvl1': <xarray.Variable (x: 2)>
+ array(['a', 'b'], dtype=object),
+ 'lvl2': <xarray.Variable (x: 2)>
+ array([0, 1])}
+>>> index_dict
+{('lvl1', 'lvl2'): midx}
+>>> xr.DataArray([1.0, 2.0], dims='x', coords=coords_dict, indexes=index_dict)
+<xarray.DataArray (x: 2)>
+array([1., 2.])
+Coordinates:
+    x        (x) object ('a', 0) ('b', 1)
+  * lvl1     (x) object 'a' 'b'
+  * lvl2     (x) int64 0 1
+```
 
 ### 2.3 Index access
 
@@ -135,7 +206,15 @@ TODO: `.sel()` would now accept coordinate names as indexer keys.
 
 Indexes that are wrapped as `XarrayIndex` subclasses may provide more selection capabilities than what is currently possible using Dataset/DataArray `sel()`, e.g., radius or region selection, k-nearest neighbors, etc. There's no plan here to expand Xarray's selection API. This could be extended in 3rd-party libraries, e.g., using Dataset/DataArray accessors that would reuse the indexes attached to a Dataset/DataArray object.
 
-### 2.6 Index serialization
+### 2.6 Using indexes for data alignment
+
+TODO
+
+### 2.7 Using indexes for other purposes
+
+TODO
+
+### 2.8 Index encoding
 
 TODO
 
