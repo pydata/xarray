@@ -26,31 +26,51 @@ computing.
 .. toctree::
    :maxdepth: 2
    :hidden:
+   :caption: For users
 
    Getting Started <getting-started-guide/index>
    User Guide <user-guide/index>
-   Gallery <gallery.rst>
-   API Reference <api.rst>
-   How do I ... <howdoi.rst>
-   Contributing <contributing.rst>
-   xarray Internals <internals/index>
-   Ecosystem <related-projects.rst>
-   Roadmap <roadmap.rst>
-   What’s New <whats-new.rst>
+   Gallery <gallery>
+   External Resources <external-resources>
+   API Reference <api>
+   How do I ... <howdoi>
+   Related Projects <related-projects>
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: For developers/contributors
+
+   Contributing Guide <contributing>
+   Xarray Internals <internals/index>
+   Roadmap <roadmap>
+   What’s New <whats-new>
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Community
+
+   GitHub repository <https://github.com/pydata/xarray>
+   GitHub discussions <https://github.com/pydata/xarray/discussions>
+   StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
+
 
 
 
 Get in touch
 ------------
 
-- Ask usage questions ("How do I?") on `StackOverflow`_.
+- If you have a question like "How do I concatenate a list of datasets?", ask on `GitHub discussions`_ or `StackOverflow`_.
+  Please include a self-contained reproducible example if possible.
 - Report bugs, suggest features or view the source code `on GitHub`_.
 - For less well defined questions or ideas, or to announce other projects of
-  interest to xarray users, use the `mailing list`_.
+  interest to xarray users, use `GitHub discussions`_ or the `mailing list`_.
 
-.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _StackOverFlow: https://stackoverflow.com/questions/tagged/python-xarray
+.. _Github discussions: https://github.com/pydata/xarray/discussions
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on GitHub: http://github.com/pydata/xarray
+.. _on GitHub: https://github.com/pydata/xarray
 
 NumFOCUS
 --------

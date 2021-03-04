@@ -91,6 +91,10 @@ extlinks = {
     "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
 }
 
+# sphinx-copybutton configurations
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
+
 # nbsphinx configurations
 
 nbsphinx_timeout = 600
