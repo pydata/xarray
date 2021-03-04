@@ -3635,6 +3635,33 @@ class TestDataArray:
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
 
+    def test_to_dataframe_multiindex(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 3)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert_array_equal(actual["foo"].values, arr_np.flatten())
+        assert_array_equal(actual.index.names, list("ABC"))
+        assert_array_equal(actual.index.levels[0], [1, 2])
+        assert_array_equal(actual.index.levels[1], ["a", "b"])
+        assert_array_equal(actual.index.levels[2], [5, 6, 7])
+
+    def test_to_dataframe_0length(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 0)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert len(actual) == 0
+        assert_array_equal(actual.index.names, list("ABC"))
+
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -4172,6 +4199,9 @@ class TestDataArray:
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, actual)
+
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(da, fill_value=True, dtype={"x": bool})
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
@@ -6356,6 +6386,22 @@ def test_coarsen_keep_attrs():
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
+def test_coarsen_reduce(da, window, name):
+    if da.isnull().sum() > 1 and window == 1:
+        pytest.skip("These parameters lead to all-NaN slices")
+
+    # Use boundary="trim" to accomodate all window sizes used in tests
+    coarsen_obj = da.coarsen(time=window, boundary="trim")
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
+    expected = getattr(coarsen_obj, name)()
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
     rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
@@ -6622,6 +6668,16 @@ def test_ndrolling_reduce(da, center, min_periods, name):
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
+
+    if name in ["mean"]:
+        # test our reimplementation of nanmean using np.nanmean
+        expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+            ["tw", "xw"]
+        )
+        count = rolling_obj.count()
+        if min_periods is None:
+            min_periods = 1
+        assert_allclose(actual, expected.where(count >= min_periods))
 
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))

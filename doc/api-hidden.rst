@@ -47,6 +47,7 @@
    core.rolling.DatasetCoarsen.median
    core.rolling.DatasetCoarsen.min
    core.rolling.DatasetCoarsen.prod
+   core.rolling.DatasetCoarsen.reduce
    core.rolling.DatasetCoarsen.std
    core.rolling.DatasetCoarsen.sum
    core.rolling.DatasetCoarsen.var
@@ -190,6 +191,7 @@
    core.rolling.DataArrayCoarsen.median
    core.rolling.DataArrayCoarsen.min
    core.rolling.DataArrayCoarsen.prod
+   core.rolling.DataArrayCoarsen.reduce
    core.rolling.DataArrayCoarsen.std
    core.rolling.DataArrayCoarsen.sum
    core.rolling.DataArrayCoarsen.var
