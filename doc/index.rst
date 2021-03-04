@@ -44,6 +44,7 @@ computing.
    Contributing Guide <contributing>
    Xarray Internals <internals/index>
    Roadmap <roadmap>
+   Team <team>
    What’s New <whats-new>
    GitHub repository <https://github.com/pydata/xarray>
 
