@@ -75,6 +75,9 @@ class TestIndexers:
             indexing.convert_label_indexer(index, 0)
         with raises_regex(ValueError, "does not have a MultiIndex"):
             indexing.convert_label_indexer(index, {"one": 0})
+        assert indexing.convert_label_indexer(
+            index, [0], method="nearest", tolerance=1
+        ) == (np.array([0]), None)
 
         mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
         with raises_regex(KeyError, "not all values found"):
