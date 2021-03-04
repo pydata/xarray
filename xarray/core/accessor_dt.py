@@ -415,6 +415,10 @@ class DatetimeAccessor(Properties):
         "time", "Timestamps corresponding to datetimes", object
     )
 
+    date = Properties._tslib_field_accessor(
+        "date", "Date corresponding to datetimes", object
+    )
+
     is_month_start = Properties._tslib_field_accessor(
         "is_month_start",
         "Indicates whether the date is the first day of the month.",
