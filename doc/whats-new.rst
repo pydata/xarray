@@ -34,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
