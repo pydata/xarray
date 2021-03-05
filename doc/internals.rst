@@ -485,7 +485,7 @@ You can declare the entrypoint in ``setup.py`` using the following syntax:
     setuptools.setup(
         entry_points={
             "xarray.backends": [
-                "engine_name=your_package.your_module:your_backendentrypoint"
+                "engine_name=your_package.your_module:YourBackendEntryClass"
             ],
         },
     )
@@ -496,7 +496,7 @@ in ``setup.cfg``:
 
     [options.entry_points]
     xarray.backends =
-        engine_name = your_package.your_module:your_backendentrypoint
+        engine_name = your_package.your_module:YourBackendEntryClass
 
 
 See https://packaging.python.org/specifications/entry-points/#data-model
