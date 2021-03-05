@@ -22,7 +22,9 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Support for `dask.graph_manipulation
+  <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
+  By `Guido Imperiale <https://github.com/crusaderky>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
