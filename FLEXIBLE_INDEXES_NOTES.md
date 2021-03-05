@@ -63,7 +63,8 @@ These two methods may accept additional keyword arguments passed to the underlyi
 
 There are potentially other properties / methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
 
-- An `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass.
+- An `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass
+- a `__getitem__()` implementation to propagate the index through DataArray/Dataset indexing operations
 - `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
 - Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
 - A method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
@@ -84,19 +85,34 @@ Additionally (or alternatively), new index wrappers may be registered via entry 
 
 ### 2.2 Explicit vs. implicit index creation
 
-#### 2.2.1 Dataset/DataArray's `set_index` method
+#### 2.2.1 Dataset/DataArray's `indexes` constructor argument
 
-New indexes can be built from an existing set of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
+The new `indexes` argument of Dataset/DataArray constructors may be used to specify which kind of index to bind to which coordinate(s). It would consist of a mapping where, for each item, the key is one coordinate name (or a sequence of coordinate names) that must be given in `coords` and the value is the type of the index to build from this (these) coordinate(s):
 
+```python
+>>> da = xr.DataArray(
+...     data=[[275.2, 273.5], [270.8, 278.6]],
+...     dims=('x', 'y'),
+...     coords={
+...         'lat': (('x', 'y'), [[45.6, 46.5], [50.2, 51.6]]),
+...         'lon': (('x', 'y'), [[5.7, 10.5], [6.2, 12.8]]),
+...     },
+...     indexes={('lat', 'lon'): SpatialIndex},
+... )
+<xarray.DataArray (x: 2, y: 2)>
+array([[275.2, 273.5],
+       [270.8, 278.6]])
+Coordinates:
+  * lat      (x, y) float64 45.6 46.5 50.2 51.6
+  * lon      (x, y) float64 5.7 10.5 6.2 12.8
+```
 
+More formally, `indexes` would accept `Mapping[CoordinateNames, IndexSpec]` where:
 
-TODO: describe API updates needed to provide the kind of index that we want to build from a set of coordinates.
+- `CoordinateNames = Union[CoordinateName, Tuple[CoordinateName, ...]]` and `CoordinateName = Hashable`
+- `IndexSpec = Union[Type[XarrayIndex], Tuple[XarrayIndex, Dict[str, Any]], XarrayIndex]`, so that index instances or index classes + build options could be also passed
 
-#### 2.2.2 Dataset/DataArray's `indexes` constructor argument
-
-The new `indexes` argument of Dataset/DataArray constructors may be used to specify which kind of index to bind to which coordinate(s). It would consist of a mapping where, for each item, the key is one coordinate name (or a sequence of coordinate names) that must be given in `coords` and the value is the type of the index to build from this (these) coordinate(s) (it could also be an `XarrayIndex` instance, so the index does not need to be built).
-
-Currently index objects like `pandas.MultiIndex` can be passed directly to `coords`, which in this specific case results in the implicit creation of virtual coordinates. With the new `indexes` argument this behavior may become even more confusing than it currently is. For the sake of clarity, it would be appropriate to drop support for this specific behavior and treat any given mapping value given in `coords` as an array that can be wrapped into an Xarray variable, i.e., in the case of a multi-index:
+Currently index objects like `pandas.MultiIndex` can be passed directly to `coords`, which in this specific case results in the implicit creation of virtual coordinates. With the new `indexes` argument this behavior may become even more confusing than it currently is. For the sake of clarity, it would be appropriate to eventually drop support for this specific behavior and treat any given mapping value given in `coords` as an array that can be wrapped into an Xarray variable, i.e., in the case of a multi-index:
 
 ```python
 >>> xr.DataArray([1.0, 2.0], dims='x', coords={'x': midx})
@@ -106,7 +122,22 @@ Coordinates:
     x        (x) object ('a', 0) ('b', 1)
 ```
 
-A possible solution to reuse a `pandas.MultiIndex` in a DataArray/Dataset with levels exposed as coordinates is proposed in [Section 2.2.4](#224-implicit-coordinates).
+A possible, more explicit solution to reuse a `pandas.MultiIndex` in a DataArray/Dataset with levels exposed as coordinates is proposed in [Section 2.2.4](#224-implicit-coordinates).
+
+#### 2.2.2 Dataset/DataArray's `set_index` method
+
+New indexes may also be built from existing sets of coordinates or variables in a Dataset/DataArray using the `.set_index()` method.
+
+The [current signature](http://xarray.pydata.org/en/stable/generated/xarray.DataArray.set_index.html#xarray.DataArray.set_index) of `.set_index()` is tailored to `pandas.MultiIndex` and tied to the concept of a dimension-index. It is therefore hardly reusable as-is in the context of flexible indexes proposed here.
+
+The new signature may look like one of these:
+
+- A. `.set_index(coords: CoordinateNames, index: Union[XarrayIndex, Type[XarrayIndex]], **index_kwargs)`: one index is set at a time, index construction options may be passed as keyword arguments
+- B. `.set_index(indexes: Mapping[CoordinateNames, Union[Type[XarrayIndex], Tuple[Type[XarrayIndex], Dict[str, Any]]]])`: multiple indexes may be set at a time from a mapping of coordinate or variable name(s) as keys and `XarrayIndex` subclasses (maybe with a dict of build options) as values. If variable names are given as keys of they will be promoted as coordinates
+
+Option A looks simple and elegant but significantly departs from the current signature. Option B is more consistent with the Dataset/DataArray constructor signature proposed in the previous section and would be easier to adopt in parallel with the current signature that we could still support through some depreciation cycle.
+
+The `append` parameter of the current `.set_index()` is specific to `pandas.MultiIndex`. With option B we could still support it, although we might want to either drop it or move it to the index construction options in the future.
 
 #### 2.2.3 Implicit default indexes
 
@@ -160,7 +191,7 @@ Coordinates:
 
 With the new proposed data model, this wouldn't be a requirement anymore: there is no concept of a dimension-index. However, some users might still rely on the `x` coordinate so we could still (temporarily) support it for backwards compatibility.
 
-Besides `pandas.MultiIndex`, there may be other situations where we would like to reuse an existing index in a new Dataset/DataArray (e.g., when the index is very expensive to build), and which would require the implicit creation of coordinates.
+Besides `pandas.MultiIndex`, there may be other situations where we would like to reuse an existing index in a new Dataset/DataArray (e.g., when the index is very expensive to build), and which might require implicit creation of one or more coordinates.
 
 The example given here is quite confusing, though: this is not an easily predictable behavior. We could entirely avoid the implicit creation of coordinates, e.g., using a helper function that generates coordinate + index dictionaries that we could then pass directly to the DataArray/Dataset constructor:
 
@@ -188,17 +219,32 @@ Coordinates:
 
 #### 2.3.1 Dataset/DataArray's `indexes` property
 
-The `indexes` property would return a mapping, where keys are coordinate name(s) (i.e., either a string or a tuple) and values are index objects (i.e., instances of `XarrayIndex`). If a tuple is used as key, the order of its elements should be consistent with the order in which each coordinate participate to the index (see [Section 1](#1_Data_Model)).
+The `indexes` property would allow easy access to all the indexes used in a Dataset/DataArray. There may be different options for the type returned:
 
-#### 2.3.2 Additional Dataset/DataArray's convenient methods
+A. `Dict[CoordinateName, XarrayIndex]`: keys are coordinate names and values may be duplicated
+B. `Dict[CoordinateNames, XarrayIndex]`: keys may represent one or more coordinate names and values are unique
 
-Using tuples as keys in the `indexes` property has the advantage of providing clear information about the order that was used to build multi-coordinate indexes. For convenience, we could have an additional property `coord_indexes` or an additional method `get_index(coord_name: str)` to easily retrieve the index object that is tied to a specific coordinate.
+Option A allows easy index look-up by coordinate name, while option B allows easy iteration through all the indexes. Option A may be more useful than option B for many tasks and may also be less ambiguous if more complex hashable types than `str` are used for `CoordinateName`.
+
+#### 2.3.2 Additional Dataset/DataArray's properties or methods
+
+Both options A and B in the section above have pros and cons. For convenience, we could maybe add one more property / method to get the indexes in the desired format.
 
 ### 2.4 Propagate indexes through operations
 
-TODO
+#### 2.4.1 Mutable coordinates
 
-- Any operation affecting one coordinate of a multi-coordinate index -> simply drop the index or maybe allow `XarrayIndex` subclasses to optionally generate and return a new or updated index
+Dataset/DataArray coordinates may be replaced (`__setitem__`) or dropped (`__delitem__`) in-place, which may invalidate some of the indexes. A drastic though probably reasonable solution in this case would be to simply drop all indexes bound to those replaced/dropped coordinates. For the case where a 1D basic coordinate that corresponds to a dimension is added/replaced, we could automatically generate a new index (see [Section 2.2.4](#224-implicit-indexes)).
+
+We must also ensure that coordinates having a bound index are immutable, e.g., still wrap them into `IndexVariable` objects (even though the `IndexVariable` class might change substantially after this refactoring).
+
+#### 2.4.2 New Dataset/DataArray with updated coordinates
+
+Xarray provides a variety of Dataset/DataArray operations affecting the coordinates and where simply dropping the index(es) is not desirable. For example:
+
+- Multi-coordinate indexes could be reduced to single coordinate indexes, like in `.reset_index()` or `.sel()` applied on a subset of the levels of a `pandas.MultiIndex` and that internally call `MultiIndex.droplevel` and `MultiIndex.get_loc_level`, respectively. There should be some API for wrapping this functionality in `XarrayIndex`.
+- Indexes may be indexed themselves, like `pandas.Index` implements `__getitem__()`. When indexing their corresponding coordinate(s), e.g., via `.sel()` or `.isel()`, those indexes should be indexed too. This wouldn't be supported by all Xarray indexes, though. Some indexes that can't be indexed could still be automatically (re)built in the new Dataset/DataArray, like for example building a new `KDTree` index from the selection of a subset of an initial collection of data points. This is not always desirable, though, as indexes may be expensive to build. A more reasonable option would be to explicitly re-build the index, e.g., using `.set_index()`.
+- Dataset/DataArray operations involving alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
 
 ### 2.5 Using indexes for data selection
 
