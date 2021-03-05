@@ -2,8 +2,6 @@
 
 Current status: https://github.com/pydata/xarray/projects/1
 
-TODO: check if the project is up-to-date and update it if necessary.
-
 ## 1. Data Model
 
 Indexes are used in Xarray to extract data from Xarray objects using coordinate labels instead of using integer array indices. Although the indexes used in an Xarray object can be accessed (or built on-the-fly) via public methods like `to_index()` or properties like `indexes`, those are mainly used internally.
@@ -21,7 +19,7 @@ Xarray's current data model is already based on the same index-coordinate relati
 
 In the example below, we'd like to select data points based on their x, y values and/or on their latitude/longitude positions:
 
-```
+```python
 >>> da
 <xarray.DataArray (x: 2, y: 2)>
 array([[5.4, 7.8],
@@ -49,7 +47,7 @@ There is a variety of features that an xarray index wrapper may or may not suppo
 - 1-dimensional vs. 2-dimensional vs. n-dimensional coordinate
 - built from a single vs multiple coordinate(s)
 - in-memory vs. out-of-core (dask) index data/coordinates (vs. other array backends)
-- orthogonal vs. vectorized indexing, range-based vs. point-wise selection
+- range-based vs. point-wise selection
 - exact vs. inexact lookups
 
 Whether or not a `XarrayIndex` subclass supports each of the features listed above should be either declared explicitly via a common API or left to the implementation. An `XarrayIndex` subclass may encapsulate more than one underlying object used to perform the actual indexing. Such "meta" index would typically support a range of features among those mentioned above and would automatically select the optimal index object for a given indexing operation.
@@ -248,22 +246,100 @@ Xarray provides a variety of Dataset/DataArray operations affecting the coordina
 
 ### 2.5 Using indexes for data selection
 
-TODO: `.sel()` would now accept coordinate names as indexer keys.
+One main use of indexes is label-based data selection using the DataArray/Dataset `.sel()` method. This refactoring would introduce a number of API changes that could go through some depreciation cycles:
 
-Indexes that are wrapped as `XarrayIndex` subclasses may provide more selection capabilities than what is currently possible using Dataset/DataArray `sel()`, e.g., radius or region selection, k-nearest neighbors, etc. There's no plan here to expand Xarray's selection API. This could be extended in 3rd-party libraries, e.g., using Dataset/DataArray accessors that would reuse the indexes attached to a Dataset/DataArray object.
+- The keys of the mapping given to `indexers` (or the names of `indexer_kwargs`) would not correspond to only dimension names but could be the name of any coordinate that has an index
+- For a `pandas.MultiIndex`, if no dimension-coordinate is created by default (see [Section 2.2.4](#224-implicit-coordinates)), providing dict-like objects as indexers should be depreciated
+- There should be the possibility to provide additional options to the indexes that support specific selection features (e.g., Scikit-learn's `BallTree`'s `dualtree` query option to boost performance). The best API is not trivial here, since `.sel()` may accept indexers passed to several indexes (which should still be supported for convenience and compatibility), and indexes may have similar options with different semantics. We could introduce a new parameter like `index_options: Dict[XarrayIndex, Dict[str, Any]]` to pass options grouped by index.
+- The `method` and `tolerance` parameters are specific to `pandas.Index` and would not be supported by all indexes. Probably best is to eventually pass those arguments as `index_options`.
+
+With the new data model proposed here, once ambiguous situation may occur when indexers are given for several coordinates that share the same dimension but not the same index, e.g., from the example in [Section 1](#1-data-model):
+
+```python
+da.sel(x=..., y=..., lat=..., lon=...)
+```
+
+The easiest solution for this situation would be to raise an error. Alternatively, we could introduce a new parameter to specify how to combine the resulting integer indexers (i.e., union vs intersection), although this could already be achieved by chaining `.sel()` calls or combining `.sel()` with `.merge()` (it may or may not be straightforward).
 
 ### 2.6 Using indexes for data alignment
 
-TODO
+Another main use if indexes is data alignment in various operations. Some considerations regarding alignment and flexible indexes:
+
+- support for alignment should probably be optional for an `XarrayIndex` subclass.
+  - like `pandas.Index`, the index wrapper classes that support it should implement `.equals()`, `.union()` and/or `.intersection()`
+  - support might be partial if that makes sense (outer, inner, left, right, exact...).
+  - index equality might involve more than just the labels: for example a spatial index might be used to check if the coordinate system (CRS) is identical for two sets of coordinates
+  - some indexes might implement inexact alignment, like in [#4489](https://github.com/pydata/xarray/pull/4489) or a `KDTree` index that selects nearest-neighbors within a given tolerance
+  - alignment may be "multi-dimensional", i.e., the `KDTree` example above vs. dimensions aligned independently of each other
+- we need to decide what to do when one dimension has more than one index that supports alignment
+  - we should probably raise unless the user explicitly specify which index to use for the alignment
+- we need to decide what to do when one dimension has one or more index(es) but none support alignment
+  - either we raise or we fail back (silently) to alignment based on dimension size
+- for inexact alignment, the tolerance threshold might be given when building the index and/or when performing the alignment
+- are there cases where we want a specific index to perform alignment and another index to perform selection? It would be tricky to support that unless we allow multiple indexes per coordinate. Alternatively, underlying indexes could be picked internally in a "meta" index for one operation or another, although the risk is to eventually have to deal with an explosion of index wrapper classes with different meta indexes for each combination that we'd like to use.
 
 ### 2.7 Using indexes for other purposes
 
-TODO
+Xarray also provides a number of Dataset/DataArray methods where indexes are used in various ways, e.g.,
+
+- `resample` (`CFTimeIndex` and a `DatetimeIntervalIndex`)
+- `DatetimeAccessor` & `TimedeltaAccessor` properties (`CFTimeIndex` and a `DatetimeIntervalIndex`)
+- `interp` & `interpolate_na`,
+   - with `IntervalIndex`, these become regridding operations. Should we support hooks for these operations?
+- `differentiate`, `integrate`, `polyfit`
+   - raise an error if not a "simple" 1D index?
+- `pad`
+- `coarsen` has to make choices about output index labels.
+- `sortby`
+- `stack`/`unstack`
+- plotting
+    - `plot.pcolormesh` "infers" interval breaks along axes, which are really inferred `bounds` for the appropriate indexes.
+    - `plot.step` again uses `bounds`. In fact, we may even want `step` to be the default 1D plotting function if the axis has `bounds` attached.
+
+It would be reasonable to first restrict those methods to the indexes that are currently available in Xarray, and maybe extend the `XarrayIndex` API later upon request when the opportunity arises.
+
+Conversely, nothing should prevent implementing "non-standard" API in 3rd-party `XarrayIndex` subclasses that could be used in DataArray/Dataset extensions (accessors). For example, we might want to reuse a `KDTree` index to compute k-nearest neighbors (returning a DataArray/Dataset with a new dimension) and/or the distances to the nearest neighbors (returning a DataArray/Dataset with a new data variable).
 
 ### 2.8 Index encoding
 
-TODO
+Indexes don't need to be directly serializable since we could (re)build them from their corresponding coordinate(s). However, we may take advantage that some indexes could be encoded/decoded to/from a set of arrays that would allow optimized reconstruction and/or storage, e.g.,
+
+- `pandas.MultiIndex` -> `index.levels` and `index.codes`
+- Scikit-learn's `KDTree` and `BallTree` that use an array-based representation of an immutable tree structure
 
 ## 3. Index representation in DataArray/Dataset's `repr`
+
+Since indexes would become 1st class citizen of Xarray's data model, they deserve their own section in Dataset/DataArray `repr` that could look like:
+
+```
+<xarray.DataArray (x: 2, y: 2)>
+array([[5.4, 7.8],
+       [6.2, 4.7]])
+Coordinates:
+  * lon      (x, y) float64 10.2 15.2 12.6 17.6
+  * lat      (x, y) float64 40.2 45.6 42.2 47.6
+  * x        (x) float64 200.0 400.0
+  * y        (y) float64 800.0 1e+03
+Indexes:
+  lat, lon     <SpatialIndex coords=(lat, lon) dims=(x, y)>
+  x            <PandasIndexWrapper>
+  y            <PandasIndexWrapper>
+```
+
+To keep the `repr` compact, we could:
+
+- consolidate entries that map to the same index object, and have an short inline repr for `XarrayIndex` object
+- collapse the index section by default in the HTML `repr`
+- maybe omit all trivial indexes for 1D coordinates that match the dimension name
+
+## 4. `IndexVariable`
+
+TODO
+
+## 5. Chunked coordinates and/or indexers
+
+TODO
+
+## 6. Coordinate duck arrays
 
 TODO
