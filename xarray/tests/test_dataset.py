@@ -5801,7 +5801,7 @@ class TestDataset:
 
     def test_pad_index(self):
         ds = create_test_data(seed=1)
-        padded = ds.pad(dim2=([0, 1, 2], 0), constant_values=42)
+        padded = ds.pad(dim2=([0, 1, 2], []), constant_values=42)
 
         assert padded["dim2"].shape == (12,)
         assert padded["var1"].shape == (8, 12)
@@ -5810,7 +5810,7 @@ class TestDataset:
         assert dict(padded.dims) == {"dim1": 8, "dim2": 12, "dim3": 10, "time": 20}
         assert np.nan not in padded["dim2"]
 
-        padded = ds.pad(dim2=(0, [0, 1, 2]), constant_values=42)
+        padded = ds.pad(dim2=([], [0, 1, 2]), constant_values=42)
         assert np.nan not in padded["dim2"]
 
         padded = ds.pad(dim2=([0, 1], [0, 1, 2]), constant_values=42)
@@ -5818,6 +5818,11 @@ class TestDataset:
 
         padded = ds.pad(dim2=([0, 1], [2]), constant_values=42)
         assert np.nan not in padded["dim2"]
+
+    def test_pad_index_error(self):
+        with pytest.raises(TypeError):
+            ds = create_test_data(seed=1)
+            ds.pad(dim2=(0, [1, 2]))
 
     def test_pad_index_doc(self):
         ds = xr.Dataset({"foo": ("x", range(3))}, coords={"x": [0, 1, 2]})

@@ -1362,6 +1362,15 @@ class Variable(
 
         return type(self)(self.dims, array)
 
+    def pad_indexes(self, pad_start: Sequence, pad_end: Sequence):
+        """
+        Return a new (Index)Variable with [pad_start, pad_end] padded at the head and tail
+        of the original array. Used in dataset.pad
+        """
+        start = type(self)(self.dims[0], pad_start)
+        end = type(self)(self.dims[0], pad_end)
+        return type(self).concat([start, self, end], dim=self.dims[0])
+
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 

@@ -6497,7 +6497,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     def pad(
         self,
         pad_width: Mapping[
-            Hashable, Union[int, Tuple[Union[int, Sequence], Union[int, Sequence]]]
+            Hashable,
+            Union[int, Tuple[Union[int], Union[int]], Tuple[Sequence, Sequence]],
         ] = None,
         mode: str = "constant",
         stat_length: Union[
@@ -6529,8 +6530,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
             Note that having np.nan in IndexVariable loses most of the useful
-            functionalities of xarray. To avoid this problem, a sequence,
-            such as a list or np.array, can be used for either pad_before or pad_after.
+            functionalities of xarray. To avoid this problem, sequences,
+            such as lists or np.arrays, can be used for pad_before and pad_after.
             In this case, these values will be used for an IndexVariable preventing
             from the loss of functionalities.
         mode : str, default: "constant"
@@ -6683,20 +6684,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     end_values=end_values,
                     reflect_type=reflect_type,
                 )
-            elif name in var_pad_width.keys() and not isinstance(
-                pad_width[name], int
-            ):  # dimension coordinates
-                w0, w1 = pad_width[name]  # type: ignore
-                fill_value_ind = dtypes.get_fill_value(var.dtype)
-                if isinstance(w0, int):
-                    w0_ = IndexVariable(name, [fill_value_ind] * w0)
-                else:
-                    w0_ = IndexVariable(name, w0)
-                if isinstance(w1, int):
-                    w1_ = IndexVariable(name, [fill_value_ind] * w1)
-                else:
-                    w1_ = IndexVariable(name, w1)
-                variables[name] = var.concat([w0_, var, w1_], dim=name)
+            elif (
+                name in var_pad_width.keys()  # dimension coordinates
+                and isinstance(pad_width[name], Sequence)
+                and (
+                    isinstance(pad_width[name][0], Sequence)  # type: ignore
+                    or isinstance(pad_width[name][1], Sequence)  # type: ignore
+                )
+            ):
+                pad_start, pad_end = pad_width[name]  # type: ignore
+                if isinstance(pad_start, int) or isinstance(pad_end, int):
+                    # do not allow [Sequence, int] as pad_width
+                    raise TypeError(
+                        "({}, {}) is used for pad_width[{}]. Must be either (int, int) or (Sequence, Sequence).".format(
+                            type(pad_start), type(pad_end), name
+                        )
+                    )
+                variables[name] = var.pad_indexes(pad_start=pad_start, pad_end=pad_end)
             else:
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
