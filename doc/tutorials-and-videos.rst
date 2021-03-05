@@ -1,6 +1,6 @@
 
-External Resources
-==================
+Tutorials and Videos
+====================
 
 
 Tutorials

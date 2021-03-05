@@ -31,10 +31,10 @@ computing.
    Getting Started <getting-started-guide/index>
    User Guide <user-guide/index>
    Gallery <gallery>
-   External Resources <external-resources>
+   Tutorials & Videos <tutorials-and-videos>
    API Reference <api>
    How do I ... <howdoi>
-   Related Projects <related-projects>
+   Ecosystem <ecosystem>
 
 .. toctree::
    :maxdepth: 2
