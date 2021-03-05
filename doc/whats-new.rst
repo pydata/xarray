@@ -27,6 +27,9 @@ New Features
   of the IndexVariable.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Support for `dask.graph_manipulation
+  <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
+  By `Guido Imperiale <https://github.com/crusaderky>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -38,7 +41,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~

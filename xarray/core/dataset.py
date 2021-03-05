@@ -863,34 +863,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return da.Array.__dask_scheduler__
 
     def __dask_postcompute__(self):
-        import dask
-
-        info = [
-            (k, None) + v.__dask_postcompute__()
-            if dask.is_dask_collection(v)
-            else (k, v, None, None)
-            for k, v in self._variables.items()
-        ]
-        construct_direct_args = (
-            self._coord_names,
-            self._dims,
-            self._attrs,
-            self._indexes,
-            self._encoding,
-            self._close,
-        )
-        return self._dask_postcompute, (info, construct_direct_args)
+        return self._dask_postcompute, ()
 
     def __dask_postpersist__(self):
+        return self._dask_postpersist, ()
+
+    def _dask_postcompute(self, results: "Iterable[Variable]") -> "Dataset":
         import dask
 
-        info = [
-            (k, None, v.__dask_keys__()) + v.__dask_postpersist__()
-            if dask.is_dask_collection(v)
-            else (k, v, None, None, None)
-            for k, v in self._variables.items()
-        ]
-        construct_direct_args = (
+        variables = {}
+        results_iter = iter(results)
+
+        for k, v in self._variables.items():
+            if dask.is_dask_collection(v):
+                rebuild, args = v.__dask_postcompute__()
+                v = rebuild(next(results_iter), *args)
+            variables[k] = v
+
+        return Dataset._construct_direct(
+            variables,
             self._coord_names,
             self._dims,
             self._attrs,
@@ -898,37 +889,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postpersist, (info, construct_direct_args)
 
-    @staticmethod
-    def _dask_postcompute(results, info, construct_direct_args):
-        variables = {}
-        results_iter = iter(results)
-        for k, v, rebuild, rebuild_args in info:
-            if v is None:
-                variables[k] = rebuild(next(results_iter), *rebuild_args)
-            else:
-                variables[k] = v
-
-        final = Dataset._construct_direct(variables, *construct_direct_args)
-        return final
-
-    @staticmethod
-    def _dask_postpersist(dsk, info, construct_direct_args):
+    def _dask_postpersist(
+        self, dsk: Mapping, *, rename: Mapping[str, str] = None
+    ) -> "Dataset":
+        from dask import is_dask_collection
+        from dask.highlevelgraph import HighLevelGraph
         from dask.optimization import cull
 
         variables = {}
-        # postpersist is called in both dask.optimize and dask.persist
-        # When persisting, we want to filter out unrelated keys for
-        # each Variable's task graph.
-        for k, v, dask_keys, rebuild, rebuild_args in info:
-            if v is None:
-                dsk2, _ = cull(dsk, dask_keys)
-                variables[k] = rebuild(dsk2, *rebuild_args)
-            else:
-                variables[k] = v
 
-        return Dataset._construct_direct(variables, *construct_direct_args)
+        for k, v in self._variables.items():
+            if not is_dask_collection(v):
+                variables[k] = v
+                continue
+
+            if isinstance(dsk, HighLevelGraph):
+                # dask >= 2021.3
+                # __dask_postpersist__() was called by dask.highlevelgraph.
+                # Don't use dsk.cull(), as we need to prevent partial layers:
+                # https://github.com/dask/dask/issues/7137
+                layers = v.__dask_layers__()
+                if rename:
+                    layers = [rename.get(k, k) for k in layers]
+                dsk2 = dsk.cull_layers(layers)
+            elif rename:  # pragma: nocover
+                # At the moment of writing, this is only for forward compatibility.
+                # replace_name_in_key requires dask >= 2021.3.
+                from dask.base import flatten, replace_name_in_key
+
+                keys = [
+                    replace_name_in_key(k, rename) for k in flatten(v.__dask_keys__())
+                ]
+                dsk2, _ = cull(dsk, keys)
+            else:
+                # __dask_postpersist__() was called by dask.optimize or dask.persist
+                dsk2, _ = cull(dsk, v.__dask_keys__())
+
+            rebuild, args = v.__dask_postpersist__()
+            # rename was added in dask 2021.3
+            kwargs = {"rename": rename} if rename else {}
+            variables[k] = rebuild(dsk2, *args, **kwargs)
+
+        return Dataset._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def compute(self, **kwargs) -> "Dataset":
         """Manually trigger loading and/or computation of this dataset's data
@@ -4665,6 +4676,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if "axis" in kwargs:
+            raise ValueError(
+                "passing 'axis' to Dataset reduce methods is ambiguous."
+                " Please use 'dim' instead."
+            )
+
         if dim is None or dim is ...:
             dims = set(self.dims)
         elif isinstance(dim, str) or not isinstance(dim, Iterable):
@@ -6904,7 +6921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             )
         )
 
-    def argmin(self, dim=None, axis=None, **kwargs):
+    def argmin(self, dim=None, **kwargs):
         """Indices of the minima of the member variables.
 
         If there are multiple minima, the indices of the first one found will be
@@ -6918,9 +6935,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             this is deprecated, in future will be an error, since DataArray.argmin will
             return a dict with indices for all dimensions, which does not make sense for
             a Dataset.
-        axis : int, optional
-            Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
-            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -6938,28 +6952,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         DataArray.argmin
-
         """
-        if dim is None and axis is None:
+        if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmin() and Variable.argmin() with "
-                "neither dim nor axis argument changes to return a dict of indices of "
-                "each dimension, for consistency it will be an error to call "
-                "Dataset.argmin() with no argument, since we don't return a dict of "
-                "Datasets.",
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "dim changes to return a dict of indices of each dimension, for "
+                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "since we don't return a dict of Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
         if (
             dim is None
-            or axis is not None
             or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmin_func = getattr(duck_array_ops, "argmin")
-            return self.reduce(argmin_func, dim=dim, axis=axis, **kwargs)
+            return self.reduce(argmin_func, dim=dim, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -6967,7 +6978,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
-    def argmax(self, dim=None, axis=None, **kwargs):
+    def argmax(self, dim=None, **kwargs):
         """Indices of the maxima of the member variables.
 
         If there are multiple maxima, the indices of the first one found will be
@@ -6981,9 +6992,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             this is deprecated, in future will be an error, since DataArray.argmax will
             return a dict with indices for all dimensions, which does not make sense for
             a Dataset.
-        axis : int, optional
-            Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
-            can be supplied.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -7003,26 +7011,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         DataArray.argmax
 
         """
-        if dim is None and axis is None:
+        if dim is None:
             warnings.warn(
-                "Once the behaviour of DataArray.argmax() and Variable.argmax() with "
-                "neither dim nor axis argument changes to return a dict of indices of "
-                "each dimension, for consistency it will be an error to call "
-                "Dataset.argmax() with no argument, since we don't return a dict of "
-                "Datasets.",
+                "Once the behaviour of DataArray.argmin() and Variable.argmin() without "
+                "dim changes to return a dict of indices of each dimension, for "
+                "consistency it will be an error to call Dataset.argmin() with no argument,"
+                "since we don't return a dict of Datasets.",
                 DeprecationWarning,
                 stacklevel=2,
             )
         if (
             dim is None
-            or axis is not None
             or (not isinstance(dim, Sequence) and dim is not ...)
             or isinstance(dim, str)
         ):
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmax_func = getattr(duck_array_ops, "argmax")
-            return self.reduce(argmax_func, dim=dim, axis=axis, **kwargs)
+            return self.reduce(argmax_func, dim=dim, **kwargs)
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
