@@ -49,12 +49,14 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True and funcname != "quiver":
+        if add_guide is True and not (funcname == "quiver" or funcname == "streamplot"):
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
 
-    if (add_guide or add_guide is None) and funcname == "quiver":
+    if (add_guide or add_guide is None) and (
+        funcname == "quiver" or funcname == "streamplot"
+    ):
         add_quiverkey = True
         if hue:
             add_colorbar = True
@@ -62,7 +64,8 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
                 hue_style = "continuous"
             elif hue_style != "continuous":
                 raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver"
+                    "hue_style must be 'continuous' or None for .plot.quiver or "
+                    ".plot.streamplot"
                 )
     else:
         add_quiverkey = False
@@ -186,7 +189,7 @@ def _dsplot(plotfunc):
     x, y : str
         Variable names for x, y axis.
     u, v : str, optional
-        Variable names for quiver plots
+        Variable names for quiver or streamplot plots
     hue: str, optional
         Variable by which to color scattered points
     hue_style: str, optional
@@ -338,8 +341,10 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
-        if (u is not None or v is not None) and plotfunc.__name__ != "quiver":
-            raise ValueError("u, v are only allowed for quiver plots.")
+        if (u is not None or v is not None) and not (
+            plotfunc.__name__ == "quiver" or plotfunc.__name__ == "streamplot"
+        ):
+            raise ValueError("u, v are only allowed for quiver or streamplot plots.")
 
         primitive = plotfunc(
             ds=ds,
@@ -383,7 +388,7 @@ def _dsplot(plotfunc):
                 coordinates="figure",
             )
 
-        if plotfunc.__name__ == "quiver":
+        if plotfunc.__name__ == "quiver" or plotfunc.__name__ == "streamplot":
             title = ds[u]._title_for_slice()
         else:
             title = ds[x]._title_for_slice()
@@ -526,3 +531,54 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
     kwargs.setdefault("pivot", "middle")
     hdl = ax.quiver(*args, **kwargs, **cmap_params)
     return hdl
+
+
+@_dsplot
+def streamplot(ds, x, y, ax, u, v, **kwargs):
+    """ Quiver plot with Dataset variables."""
+    import matplotlib as mpl
+
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for streamplot plots.")
+
+    # Matplotlib's streamplot has strong restrictions on what x and y can be, so need to
+    # get arrays transposed the 'right' way around. 'x' cannot vary within 'rows', so
+    # the dimension of x must be the second dimension. 'y' cannot vary with 'columns' so
+    # the dimension of y must be the first dimension. If x and y are both 2d, assume the
+    # user has got them right already.
+    if len(ds[x].dims) == 1:
+        xdim = ds[x].dims[0]
+    if len(ds[y].dims) == 1:
+        ydim = ds[y].dims[0]
+    if xdim is not None and ydim is None:
+        ydim = set(ds[y].dims) - set([xdim])
+    if ydim is not None and xdim is None:
+        xdim = set(ds[x].dims) - set([ydim])
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    if xdim is not None and ydim is not None:
+        # Need to ensure the arrays are transposed correctly
+        x = x.transpose(ydim, xdim)
+        y = y.transpose(ydim, xdim)
+        u = u.transpose(ydim, xdim)
+        v = v.transpose(ydim, xdim)
+
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    cmap_params = kwargs.pop("cmap_params")
+
+    if hue:
+        kwargs["color"] = ds[hue].values
+
+        # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+        if not cmap_params["norm"]:
+            cmap_params["norm"] = mpl.colors.Normalize(
+                cmap_params.pop("vmin"), cmap_params.pop("vmax")
+            )
+
+    kwargs.pop("hue_style")
+    hdl = ax.streamplot(*args, **kwargs, **cmap_params)
+
+    # Return .lines so colorbar creation works properly
+    return hdl.lines
