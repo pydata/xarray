@@ -2084,19 +2084,33 @@ class Variable(
             var = self
 
         if utils.is_scalar(dim):
-            for arg in [window, window_dim, center]:
-                assert utils.is_scalar(arg)
+            for name, arg in zip(
+                ["window", "window_dim", "center"], [window, window_dim, center]
+            ):
+                if not utils.is_scalar(arg):
+                    raise ValueError(
+                        f"Expected {name}={arg!r} to be a scalar like 'dim'."
+                    )
             dim = [dim]
-            window = [window]
-            window_dim = [window_dim]
-            center = [center]
-        else:
-            if len(dim) != len(window):
-                raise ValueError(
-                    "'dim', 'window', 'window_dim', and 'center' must be the same length. "
-                    f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
-                    f" and center={center!r}."
-                )
+
+        # dim is now a list
+        nroll = len(dim)
+        if utils.is_scalar(window):
+            window = [window] * nroll
+        if utils.is_scalar(window_dim):
+            window_dim = [window_dim] * nroll
+        if utils.is_scalar(center):
+            center = [center] * nroll
+        if (
+            len(dim) != len(window)
+            or len(dim) != len(window_dim)
+            or len(dim) != len(center)
+        ):
+            raise ValueError(
+                "'dim', 'window', 'window_dim', and 'center' must be the same length. "
+                f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
+                f" and center={center!r}."
+            )
 
         pads = {}
         for d, win, cent in zip(dim, window, center):

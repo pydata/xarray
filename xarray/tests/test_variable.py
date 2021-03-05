@@ -948,6 +948,27 @@ class VariableSubclassobjects:
             )
         assert_equal(actual, expected)
 
+    @pytest.mark.parametrize(
+        ("dim, window, window_dim, center"),
+        [
+            ("x", [3, 3], "x_w", True),
+            ("x", 3, ("x_w", "x_w"), True),
+            ("x", 3, "x_w", [True, True]),
+        ],
+    )
+    def test_rolling_window_errors(self, dim, window, window_dim, center):
+        x = self.cls(
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+        )
+        with pytest.raises(ValueError):
+            x.rolling_window(
+                dim=dim,
+                window=window,
+                window_dim=window_dim,
+                center=center,
+            )
+
 
 class TestVariable(VariableSubclassobjects):
     cls = staticmethod(Variable)
@@ -2198,23 +2219,23 @@ class TestIndexVariable(VariableSubclassobjects):
 
     # These tests make use of multi-dimensional variables, which are not valid
     # IndexVariable objects:
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_error(self):
         super().test_getitem_error()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_advanced(self):
         super().test_getitem_advanced()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_fancy(self):
         super().test_getitem_fancy()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_uint(self):
         super().test_getitem_fancy()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.parametrize(
         "mode",
         [
@@ -2233,24 +2254,27 @@ class TestIndexVariable(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
-    @pytest.mark.xfail
-    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.skip
     def test_pad_constant_values(self, xr_arg, np_arg):
         super().test_pad_constant_values(xr_arg, np_arg)
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_rolling_window(self):
         super().test_rolling_window()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_rolling_1d(self):
         super().test_rolling_1d()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_nd_rolling(self):
         super().test_nd_rolling()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
+    def test_rolling_window_errors(self):
+        super().test_rolling_window_errors()
+
+    @pytest.mark.skip
     def test_coarsen_2d(self):
         super().test_coarsen_2d()
 
