@@ -341,7 +341,7 @@ def _dataset_from_backend_dataset(
 
 def open_dataset(
     filename_or_obj,
-    *,
+    *args,
     engine=None,
     chunks=None,
     cache=None,
@@ -469,6 +469,11 @@ def open_dataset(
     --------
     open_mfdataset
     """
+    if len(args) > 0:
+        raise TypeError(
+            "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
+            "all other options must be passed as keyword arguments"
+        )
 
     if cache is None:
         cache = chunks is None
