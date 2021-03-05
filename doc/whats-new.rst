@@ -25,6 +25,9 @@ New Features
 - Support for `dask.graph_manipulation
   <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Add :py:meth:`Dataset.plot.streamplot` for streamplot plots with :py:class:`Dataset`
+  variables (:pull:`5003`).
+  By `John Omotani <https://github.com/johnomotani>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
