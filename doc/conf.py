@@ -176,11 +176,6 @@ napoleon_type_aliases = {
 }
 
 
-# Numpydoc configurations
-
-numpydoc_class_members_toctree = True
-numpydoc_show_class_members = False
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
