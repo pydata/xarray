@@ -151,33 +151,6 @@ else:
             That is, ``view.shape = x_shape_trimmed + window_shape``, where
             ``x_shape_trimmed`` is ``x.shape`` with every entry reduced by one less
             than the corresponding window size.
-
-        See Also
-        --------
-        lib.stride_tricks.as_strided: A lower-level and less safe routine for
-            creating arbitrary views from custom shape and strides.
-        broadcast_to: broadcast an array to a given shape.
-
-        Notes
-        -----
-        For many applications using a sliding window view can be convenient, but
-        potentially very slow. Often specialized solutions exist, for example:
-
-        - `scipy.signal.fftconvolve`
-
-        - filtering functions in `scipy.ndimage`
-
-        - moving window functions provided by
-          `bottleneck <https://github.com/pydata/bottleneck>`_.
-
-        As a rough estimate, a sliding window approach with an input size of `N`
-        and a window size of `W` will scale as `O(N*W)` where frequently a special
-        algorithm can achieve `O(N)`. That means that the sliding window variant
-        for a window size of 100 can be a 100 times slower than a more specialized
-        version.
-
-        Nevertheless, for small window sizes, when no custom algorithm exists, or
-        as a prototyping and developing tool, this function can be a good solution.
         """
         window_shape = (
             tuple(window_shape) if np.iterable(window_shape) else (window_shape,)

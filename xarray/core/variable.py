@@ -2091,14 +2091,17 @@ class Variable(
             window_dim = [window_dim]
             center = [center]
         else:
-            assert len(dim) == len(window)
-            assert len(dim) == len(window_dim)
-            assert len(dim) == len(center)
+            if len(dim) != len(window):
+                raise ValueError(
+                    "'dim', 'window', 'window_dim', and 'center' must be the same length. "
+                    f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
+                    f" and center={center!r}."
+                )
 
         pads = {}
         for d, win, cent in zip(dim, window, center):
             if cent:
-                start = int(win / 2)  # 10 -> 5,  9 -> 4
+                start = win // 2  # 10 -> 5,  9 -> 4
                 end = win - 1 - start
                 pads[d] = (start, end)
             else:

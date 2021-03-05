@@ -42,6 +42,7 @@ the code will still cast to ``numpy`` arrays:
     :py:meth:`DataArray.interp` and :py:meth:`DataArray.interp_like` (uses ``scipy``):
     duck arrays in data variables and non-dimension coordinates will be casted in
     addition to not supporting duck arrays in dimension coordinates
+  * :py:meth:`Dataset.rolling` and :py:meth:`DataArray.rolling` (requires ``numpy>=1.20``)
   * :py:meth:`Dataset.rolling_exp` and :py:meth:`DataArray.rolling_exp` (uses
     ``numbagg``)
   * :py:meth:`Dataset.interpolate_na` and :py:meth:`DataArray.interpolate_na` (uses
