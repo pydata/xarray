@@ -366,7 +366,7 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-   engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -436,23 +436,22 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs:
-        Additional keyword arguments passed on to the engine open function.
+    backend_kwargs: dict
+        Additional keyword arguments passed on to the engine open function,
+        equivalent to `**kwargs`.
     **kwargs: dict
         Additional keyword arguments passed on to the engine open function.
         For example:
 
         - 'group': path to the netCDF4 group in the given file to open given as
-        a str,supported by "netcdf4", "h5netcdf", "zarr".
-
+          a str,supported by "netcdf4", "h5netcdf", "zarr".
         - 'lock': resource lock to use when reading data from disk. Only
-        relevant when using dask or another form of parallelism. By default,
-        appropriate locks are chosen to safely read and write files with the
-        currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-        "pynio", "pseudonetcdf", "cfgrib".
+          relevant when using dask or another form of parallelism. By default,
+          appropriate locks are chosen to safely read and write files with the
+          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
+          "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
-
 
     Returns
     -------
@@ -546,7 +545,7 @@ def open_dataarray(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-   engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
         "pseudonetcdf", "zarr"}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
@@ -616,20 +615,22 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
-    backend_kwargs:
-        Additional keyword arguments passed on to the engine open function.
+    backend_kwargs: dict
+        Additional keyword arguments passed on to the engine open function,
+        equivalent to `**kwargs`.
     **kwargs: dict
         Additional keyword arguments passed on to the engine open function.
         For example:
 
         - 'group': path to the netCDF4 group in the given file to open given as
-        a str,supported by "netcdf4", "h5netcdf", "zarr".
-
+          a str,supported by "netcdf4", "h5netcdf", "zarr".
         - 'lock': resource lock to use when reading data from disk. Only
-        relevant when using dask or another form of parallelism. By default,
-        appropriate locks are chosen to safely read and write files with the
-        currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-        "pynio", "pseudonetcdf", "cfgrib".
+          relevant when using dask or another form of parallelism. By default,
+          appropriate locks are chosen to safely read and write files with the
+          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
+          "pynio", "pseudonetcdf", "cfgrib".
+
+        See engine open function for kwargs accepted by each specific engine.
 
     Notes
     -----
