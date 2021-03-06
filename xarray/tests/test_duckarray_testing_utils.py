@@ -69,14 +69,15 @@ def test_get_test(components, expected):
     ),
 )
 def test_apply_marks_normal(marks):
-    if hasattr(Module.module_test1, "pytestmark"):
-        del Module.module_test1.pytestmark
+    class Module:
+        def module_test(self):
+            pass
 
     module = Module
-    components = ["module_test1"]
+    components = ["module_test"]
 
     duckarray_testing_utils.apply_marks(module, components, marks)
-    marked = Module.module_test1
+    marked = Module.module_test
     actual = marked.pytestmark
     expected = [m.mark for m in marks]
 
