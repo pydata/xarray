@@ -42,7 +42,17 @@ import re
 import textwrap
 from functools import reduce
 from operator import or_ as set_union
-from typing import Any, Callable, Hashable, Mapping, Optional, Pattern, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Hashable,
+    Mapping,
+    Optional,
+    Pattern,
+    Tuple,
+    Type,
+    Union,
+)
 from unicodedata import normalize
 
 import numpy as np
@@ -215,7 +225,7 @@ class StringAccessor:
         self,
         *,
         func: Callable,
-        dtype: Union[str, np.dtype] = None,
+        dtype: Union[str, np.dtype, Type] = None,
         output_core_dims: Union[list, tuple] = ((),),
         output_sizes: Mapping[Hashable, int] = None,
         func_args: Tuple = (),
