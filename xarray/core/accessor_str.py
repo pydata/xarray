@@ -130,7 +130,7 @@ def _apply_str_ufunc(
 
 
 class StringAccessor:
-    """Vectorized string functions for string-like arrays.
+    r"""Vectorized string functions for string-like arrays.
 
     Similar to pandas, fields can be accessed through the `.str` attribute
     for applicable DataArrays.
@@ -187,7 +187,7 @@ class StringAccessor:
             >>> da2 = xr.DataArray([1, 2, 3], dims=["Y"])
             >>> da1 % {"a": da2}
             <xarray.DataArray (X: 1)>
-            array(['<xarray.DataArray (Y: 3)>\\narray([1, 2, 3])\\nDimensions without coordinates: Y'],
+            array(['<xarray.DataArray (Y: 3)>\narray([1, 2, 3])\nDimensions without coordinates: Y'],
                   dtype=object)
             Dimensions without coordinates: X
     """
@@ -1631,7 +1631,7 @@ class StringAccessor:
         case: bool = None,
         flags: int = 0,
     ) -> Any:
-        """
+        r"""
         Extract the first match of capture groups in the regex pat as a new
         dimension in a DataArray.
 
@@ -1697,7 +1697,7 @@ class StringAccessor:
 
         Extract matches
 
-        >>> value.str.extract(r"(\\w+)_Xy_(\\d*)", dim="match")
+        >>> value.str.extract(r"(\w+)_Xy_(\d*)", dim="match")
         <xarray.DataArray (X: 2, Y: 3, match: 2)>
         array([[['a', '0'],
                 ['bab', '110'],
@@ -1776,7 +1776,7 @@ class StringAccessor:
         case: bool = None,
         flags: int = 0,
     ) -> Any:
-        """
+        r"""
         Extract all matches of capture groups in the regex pat as new
         dimensions in a DataArray.
 
@@ -1847,7 +1847,7 @@ class StringAccessor:
         Extract matches
 
         >>> value.str.extractall(
-        ...     r"(\\w+)_Xy_(\\d*)", group_dim="group", match_dim="match"
+        ...     r"(\w+)_Xy_(\d*)", group_dim="group", match_dim="match"
         ... )
         <xarray.DataArray (X: 2, Y: 3, group: 3, match: 2)>
         array([[[['a', '0'],
@@ -1949,7 +1949,7 @@ class StringAccessor:
         case: bool = None,
         flags: int = 0,
     ) -> Any:
-        """
+        r"""
         Find all occurrences of pattern or regular expression in the DataArray.
 
         Equivalent to applying re.findall() to all the elements in the DataArray.
@@ -2009,7 +2009,7 @@ class StringAccessor:
 
         Extract matches
 
-        >>> value.str.findall(r"(\\w+)_Xy_(\\d*)")
+        >>> value.str.findall(r"(\w+)_Xy_(\d*)")
         <xarray.DataArray (X: 2, Y: 3)>
         array([[list([('a', '0')]), list([('bab', '110'), ('baab', '1100')]),
                 list([('abc', '01'), ('cbc', '2210')])],
@@ -2199,7 +2199,7 @@ class StringAccessor:
         sep: Union[str, bytes, Any] = None,
         maxsplit: int = -1,
     ) -> Any:
-        """
+        r"""
         Split strings in a DataArray around the given separator/delimiter `sep`.
 
         Splits the string in the DataArray from the beginning,
@@ -2230,8 +2230,8 @@ class StringAccessor:
 
         >>> values = xr.DataArray(
         ...     [
-        ...         ["abc def", "spam\\t\\teggs\\tswallow", "red_blue"],
-        ...         ["test0\\ntest1\\ntest2\\n\\ntest3", "", "abra  ka\\nda\\tbra"],
+        ...         ["abc def", "spam\t\teggs\tswallow", "red_blue"],
+        ...         ["test0\ntest1\ntest2\n\ntest3", "", "abra  ka\nda\tbra"],
         ...     ],
         ...     dims=["X", "Y"],
         ... )
@@ -2241,12 +2241,12 @@ class StringAccessor:
         >>> values.str.split(dim="splitted", maxsplit=1)
         <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
         array([[['abc', 'def'],
-                ['spam', 'eggs\\tswallow'],
+                ['spam', 'eggs\tswallow'],
                 ['red_blue', '']],
         <BLANKLINE>
-               [['test0', 'test1\\ntest2\\n\\ntest3'],
+               [['test0', 'test1\ntest2\n\ntest3'],
                 ['', ''],
-                ['abra', 'ka\\nda\\tbra']]], dtype='<U18')
+                ['abra', 'ka\nda\tbra']]], dtype='<U18')
         Dimensions without coordinates: X, Y, splitted
 
         Split as many times as needed and put the results in a new dimension
@@ -2266,10 +2266,10 @@ class StringAccessor:
 
         >>> values.str.split(dim=None, maxsplit=1)
         <xarray.DataArray (X: 2, Y: 3)>
-        array([[list(['abc', 'def']), list(['spam', 'eggs\\tswallow']),
+        array([[list(['abc', 'def']), list(['spam', 'eggs\tswallow']),
                 list(['red_blue'])],
-               [list(['test0', 'test1\\ntest2\\n\\ntest3']), list([]),
-                list(['abra', 'ka\\nda\\tbra'])]], dtype=object)
+               [list(['test0', 'test1\ntest2\n\ntest3']), list([]),
+                list(['abra', 'ka\nda\tbra'])]], dtype=object)
         Dimensions without coordinates: X, Y
 
         Split as many times as needed and put the results in a list
@@ -2287,12 +2287,12 @@ class StringAccessor:
         >>> values.str.split(dim="splitted", sep=" ")
         <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
         array([[['abc', 'def', ''],
-                ['spam\\t\\teggs\\tswallow', '', ''],
+                ['spam\t\teggs\tswallow', '', ''],
                 ['red_blue', '', '']],
         <BLANKLINE>
-               [['test0\\ntest1\\ntest2\\n\\ntest3', '', ''],
+               [['test0\ntest1\ntest2\n\ntest3', '', ''],
                 ['', '', ''],
-                ['abra', '', 'ka\\nda\\tbra']]], dtype='<U24')
+                ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
 
         See Also
@@ -2315,7 +2315,7 @@ class StringAccessor:
         sep: Union[str, bytes, Any] = None,
         maxsplit: Union[int, Any] = -1,
     ) -> Any:
-        """
+        r"""
         Split strings in a DataArray around the given separator/delimiter `sep`.
 
         Splits the string in the DataArray from the end,
@@ -2348,8 +2348,8 @@ class StringAccessor:
 
         >>> values = xr.DataArray(
         ...     [
-        ...         ["abc def", "spam\\t\\teggs\\tswallow", "red_blue"],
-        ...         ["test0\\ntest1\\ntest2\\n\\ntest3", "", "abra  ka\\nda\\tbra"],
+        ...         ["abc def", "spam\t\teggs\tswallow", "red_blue"],
+        ...         ["test0\ntest1\ntest2\n\ntest3", "", "abra  ka\nda\tbra"],
         ...     ],
         ...     dims=["X", "Y"],
         ... )
@@ -2359,12 +2359,12 @@ class StringAccessor:
         >>> values.str.rsplit(dim="splitted", maxsplit=1)
         <xarray.DataArray (X: 2, Y: 3, splitted: 2)>
         array([[['abc', 'def'],
-                ['spam\\t\\teggs', 'swallow'],
+                ['spam\t\teggs', 'swallow'],
                 ['', 'red_blue']],
         <BLANKLINE>
-               [['test0\\ntest1\\ntest2', 'test3'],
+               [['test0\ntest1\ntest2', 'test3'],
                 ['', ''],
-                ['abra  ka\\nda', 'bra']]], dtype='<U17')
+                ['abra  ka\nda', 'bra']]], dtype='<U17')
         Dimensions without coordinates: X, Y, splitted
 
         Split as many times as needed and put the results in a new dimension
@@ -2384,10 +2384,10 @@ class StringAccessor:
 
         >>> values.str.rsplit(dim=None, maxsplit=1)
         <xarray.DataArray (X: 2, Y: 3)>
-        array([[list(['abc', 'def']), list(['spam\\t\\teggs', 'swallow']),
+        array([[list(['abc', 'def']), list(['spam\t\teggs', 'swallow']),
                 list(['red_blue'])],
-               [list(['test0\\ntest1\\ntest2', 'test3']), list([]),
-                list(['abra  ka\\nda', 'bra'])]], dtype=object)
+               [list(['test0\ntest1\ntest2', 'test3']), list([]),
+                list(['abra  ka\nda', 'bra'])]], dtype=object)
         Dimensions without coordinates: X, Y
 
         Split as many times as needed and put the results in a list
@@ -2405,12 +2405,12 @@ class StringAccessor:
         >>> values.str.rsplit(dim="splitted", sep=" ")
         <xarray.DataArray (X: 2, Y: 3, splitted: 3)>
         array([[['', 'abc', 'def'],
-                ['', '', 'spam\\t\\teggs\\tswallow'],
+                ['', '', 'spam\t\teggs\tswallow'],
                 ['', '', 'red_blue']],
         <BLANKLINE>
-               [['', '', 'test0\\ntest1\\ntest2\\n\\ntest3'],
+               [['', '', 'test0\ntest1\ntest2\n\ntest3'],
                 ['', '', ''],
-                ['abra', '', 'ka\\nda\\tbra']]], dtype='<U24')
+                ['abra', '', 'ka\nda\tbra']]], dtype='<U24')
         Dimensions without coordinates: X, Y, splitted
 
         See Also
