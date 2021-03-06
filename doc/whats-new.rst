@@ -25,6 +25,23 @@ New Features
 - Support for `dask.graph_manipulation
   <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Many of the arguments for the :py:attr:`DataArray.str` methods now support
+  providing an array-like input. In this case, the array provided to the
+  arguments is broadcast against the original array and applied elementwise.
+- :py:attr:`DataArray.str` now supports `+`, `*`, and `%` operators. These
+  behave the same as they do for :py:class:`str`, except that they follow
+  array broadcasting rules.
+- A large number of new :py:attr:`DataArray.str` methods were implemented,
+  :py:meth:`DataArray.str.casefold`, :py:meth:`DataArray.str.cat`,
+  :py:meth:`DataArray.str.extract`, :py:meth:`DataArray.str.extractall`,
+  :py:meth:`DataArray.str.findall`, :py:meth:`DataArray.str.format`,
+  :py:meth:`DataArray.str.get_dummies`, :py:meth:`DataArray.str.islower`,
+  :py:meth:`DataArray.str.join`, :py:meth:`DataArray.str.normalize`,
+  :py:meth:`DataArray.str.partition`, :py:meth:`DataArray.str.rpartition`,
+  :py:meth:`DataArray.str.rsplit`, and  :py:meth:`DataArray.str.split`.
+  A number of these methods allow for splitting or joining the strings in an
+  array. (:issue:`4622`)
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
