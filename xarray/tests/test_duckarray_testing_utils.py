@@ -1,6 +1,6 @@
 import pytest
 
-from xarray import duckarray
+from . import duckarray_testing_utils
 
 
 class Module:
@@ -35,7 +35,7 @@ class Module:
     ),
 )
 def test_parse_selector(selector, expected):
-    actual = duckarray.parse_selector(selector)
+    actual = duckarray_testing_utils.parse_selector(selector)
     assert actual == expected
 
 
@@ -51,7 +51,7 @@ def test_parse_selector(selector, expected):
 )
 def test_get_test(components, expected):
     module = Module
-    actual = duckarray.get_test(module, components)
+    actual = duckarray_testing_utils.get_test(module, components)
     assert actual == expected
 
 
@@ -69,12 +69,15 @@ def test_get_test(components, expected):
     ),
 )
 def test_apply_marks_normal(marks):
-    def func():
-        pass
+    if hasattr(Module.module_test1, "pytestmark"):
+        del Module.module_test1.pytestmark
 
-    expected = [m.mark for m in marks]
+    module = Module
+    components = ["module_test1"]
 
-    marked = duckarray.apply_marks_normal(func, marks)
+    duckarray_testing_utils.apply_marks(module, components, marks)
+    marked = Module.module_test1
     actual = marked.pytestmark
+    expected = [m.mark for m in marks]
 
     assert actual == expected
