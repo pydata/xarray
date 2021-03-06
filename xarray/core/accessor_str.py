@@ -112,7 +112,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: Union[str, np.dtype] = None,
+    dtype: Union[str, np.dtype, Type] = None,
     output_core_dims: Union[list, tuple] = ((),),
     output_sizes: Mapping[Hashable, int] = None,
     func_args: Tuple = (),
