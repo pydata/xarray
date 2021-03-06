@@ -23,7 +23,9 @@ TestPint = duckarray_module(
     "pint",
     create_pint,
     marks={
-        "TestDataset.test_reduce": [pytest.mark.skip(reason="not implemented yet")],
+        "TestDataset.test_reduce[prod]": [
+            pytest.mark.skip(reason="not implemented yet")
+        ],
     },
     global_marks=[
         pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
@@ -34,6 +36,10 @@ TestSparse = duckarray_module(
     "sparse",
     create_sparse,
     marks={
-        "TestDataset.test_reduce": [pytest.mark.skip(reason="not implemented, yet")],
+        "TestDataset.test_reduce": {
+            "[median]": [pytest.mark.skip(reason="not implemented, yet")],
+            "[std]": [pytest.mark.skip(reason="not implemented, yet")],
+            "[var]": [pytest.mark.skip(reason="not implemented, yet")],
+        },
     },
 )
