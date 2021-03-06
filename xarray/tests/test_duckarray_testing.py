@@ -1,6 +1,6 @@
 import pytest
 
-from xarray.duckarray import duckarray_module
+from .duckarray import duckarray_module
 
 pint = pytest.importorskip("pint")
 sparse = pytest.importorskip("sparse")
