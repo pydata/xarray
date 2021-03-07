@@ -2921,7 +2921,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # For normal number types do the interpolation:
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
-            elif dtype_kind == "ObU":
+            elif dtype_kind in "ObU":
                 # For types that we do not understand do stepwise
                 # interpolation to avoid modifying the elements.
                 # Use reindex_variables instead because it supports
