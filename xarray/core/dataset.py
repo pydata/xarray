@@ -2935,6 +2935,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # interpolated along:
                 variables[name] = var
 
+        if len(to_reindex) > 0:
+            # Reindex variables:
+            variables_reindex = alignment.reindex_variables(
+                variables=to_reindex,
+                sizes=obj.sizes,
+                indexes=obj.indexes,
+                indexers={k: v[-1] for k, v in validated_indexers.items()},
+                method="nearest",
+            )[0]
+            variables.update(variables_reindex)
+
         # Get the coords that also exist in the variables:
         coord_names = obj._coord_names & variables.keys()
         # Get the indexes that are not being interpolated along:

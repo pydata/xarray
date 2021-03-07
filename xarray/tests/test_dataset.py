@@ -4010,22 +4010,6 @@ class TestDataset:
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
 
-    @requires_scipy
-    def test_ds_interp(self):
-        data_vars = dict(
-            a=("time", np.array([1, 1.25, 2])),
-            b=("time", np.array([True, True, False], dtype=bool)),
-            c=("time", np.array(["start", "start", "end"], dtype=str)),
-        )
-        time = np.array([0, 0.25, 1], dtype=float)
-        expected = xr.Dataset(data_vars, coords=dict(time=time))
-        actual = xr.Dataset(
-            {k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()},
-            coords=dict(time=time[[0, -1]]),
-        )
-        actual = actual.interp(time=time, method="linear")
-        assert_identical(expected, actual)
-
     def test_to_array(self):
         ds = Dataset(
             {"a": 1, "b": ("x", [1, 2, 3])},
