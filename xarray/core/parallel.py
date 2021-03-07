@@ -512,7 +512,7 @@ def map_blocks(
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            gname_l = f"{name}_{gname}"
+            gname_l = f"{name}_after_{gname}"
             var_key_map[name] = gname_l
 
             key: Tuple[Any, ...] = (gname_l,)
