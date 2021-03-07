@@ -33,7 +33,7 @@ dependencies:
   - sphinx>=3.3
   - zarr>=2.4
   - pip:
-      - sphinx-reredirects
+      - sphinxext-rediraffe
       - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..

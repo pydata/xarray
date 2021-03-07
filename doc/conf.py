@@ -83,7 +83,7 @@ extensions = [
     "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
-    # "sphinx_reredirects",
+    "sphinxext.rediraffe",
 ]
 
 extlinks = {
@@ -239,7 +239,7 @@ html_theme_options = dict(
 
 
 # html_sidebars = {
-#     "**": ["sbt-sidebar-footer.html", "sbt-sidebar-nav.html", "sidebar-search-bs.html"]
+#     "**": ["sbt-sidebar-footer.rst", "sbt-sidebar-nav.rst", "sidebar-search-bs.rst"]
 # }
 
 # The name of an image file (relative to this directory) to place at the top
@@ -268,26 +268,24 @@ ogp_custom_meta_tags = [
 ]
 
 # Redirects for pages that were moved to new locations
-# Enable this once there's a workaround for the following warning
-# WARNING: the sphinx_reredirects extension does not declare if it is safe for parallel reading, assuming it isn't - please ask the extension author to check and make it explicit
 
-# redirects = {
-#     "terminology": "user-guide/terminology.html",
-#     "data-structures.html": "user-guide/data-structures.html",
-#     "indexing.html": "user-guide/indexing.html",
-#     "interpolation.html": "user-guide/interpolation.html",
-#     "computation.html": "user-guide/computation.html",
-#     "groupby.html": "user-guide/groupby.html",
-#     "reshaping.html": "user-guide/reshaping.html",
-#     "combining.html": "user-guide/combining.html",
-#     "time-series.html": "user-guide/time-series.html",
-#     "weather-climate.html": "user-guide/weather-climate.html",
-#     "pandas.html": "user-guide/pandas.html",
-#     "io.html": "user-guide/io.html",
-#     "dask.html": "user-guide/dask.html",
-#     "plotting.html": "user-guide/plotting.html",
-#     "duckarrays.html": "user-guide/duckarrays.html",
-# }
+rediraffe_redirects = {
+    "terminology.rst": "user-guide/terminology.rst",
+    "data-structures.rst": "user-guide/data-structures.rst",
+    "indexing.rst": "user-guide/indexing.rst",
+    "interpolation.rst": "user-guide/interpolation.rst",
+    "computation.rst": "user-guide/computation.rst",
+    "groupby.rst": "user-guide/groupby.rst",
+    "reshaping.rst": "user-guide/reshaping.rst",
+    "combining.rst": "user-guide/combining.rst",
+    "time-series.rst": "user-guide/time-series.rst",
+    "weather-climate.rst": "user-guide/weather-climate.rst",
+    "pandas.rst": "user-guide/pandas.rst",
+    "io.rst": "user-guide/io.rst",
+    "dask.rst": "user-guide/dask.rst",
+    "plotting.rst": "user-guide/plotting.rst",
+    "duckarrays.rst": "user-guide/duckarrays.rst",
+}
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
