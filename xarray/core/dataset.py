@@ -2911,6 +2911,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if name in indexers:
                 continue
 
+            if is_duck_dask_array(var.data):
+                use_indexers = dask_indexers
+            else:
+                use_indexers = validated_indexers
+
             dtype_kind = var.dtype.kind
             if dtype_kind in "uifcb":
                 if dtype_kind == "b":
