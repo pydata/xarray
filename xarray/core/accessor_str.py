@@ -2558,19 +2558,16 @@ class StringAccessor:
         ----------
         encoding : str
             The encoding to use.
-            Please see the Python `codecs <encodings>`_ documentation for a list
-            of encodings handlers
+            Please see the Python documentation `codecs standard encoders <https://docs.python.org/3/library/codecs.html#standard-encodings>`_
+            section for a list of encodings handlers.
         errors : str, optional
             The handler for encoding errors.
-            Please see the Python `codecs <handlers>`_ documentation for a list
-            of error handlers
+            Please see the Python documentation `codecs error handlers <https://docs.python.org/3/library/codecs.html#error-handlers>`_
+            for a list of error handlers.
 
         Returns
         -------
         encoded : same type as values
-
-        .. _encodings: https://docs.python.org/3/library/codecs.html#standard-encodings
-        .. _handlers: https://docs.python.org/3/library/codecs.html#error-handlers
         """
         if encoding in _cpython_optimized_encoders:
             func = lambda x: x.encode(encoding, errors)
