@@ -44,6 +44,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- New sphinx theme & rearrangement of the docs (:pull:`4835`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
