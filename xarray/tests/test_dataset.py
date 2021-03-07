@@ -4015,13 +4015,16 @@ class TestDataset:
         data_vars = dict(
             a=("time", np.array([1, 1.25, 2])),
             b=("time", np.array([True, True, False], dtype=bool)),
-            c=("time", np.array(["start", "start", "end"], dtype=str))
+            c=("time", np.array(["start", "start", "end"], dtype=str)),
         )
         time = np.array([0, 0.25, 1], dtype=float)
-        ds = Dataset(data_vars, coords=dict(time=time))
-        ds1 = Dataset({k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()}, coords=dict(time=time[[0, -1]]))
-        ds2 = ds.interp(time=time, method="linear")
-        assert_identical(ds, ds2)
+        expected = Dataset(data_vars, coords=dict(time=time))
+        actual = Dataset(
+            {k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()},
+            coords=dict(time=time[[0, -1]]),
+        )
+        actual = actual.interp(time=time, method="linear")
+        assert_identical(expected, actual)
 
     def test_to_array(self):
         ds = Dataset(
