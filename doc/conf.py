@@ -238,10 +238,6 @@ html_theme_options = dict(
 )
 
 
-# html_sidebars = {
-#     "**": ["sbt-sidebar-footer.rst", "sbt-sidebar-nav.rst", "sidebar-search-bs.rst"]
-# }
-
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 html_logo = "_static/dataset-diagram-logo.png"
@@ -255,8 +251,8 @@ html_favicon = "_static/favicon.ico"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+html_css_files = ["style.css"]
 
-# redirects = {}
 
 # configuration for sphinxext.opengraph
 ogp_site_url = "https://xarray.pydata.org/en/latest/"
@@ -285,6 +281,11 @@ rediraffe_redirects = {
     "dask.rst": "user-guide/dask.rst",
     "plotting.rst": "user-guide/plotting.rst",
     "duckarrays.rst": "user-guide/duckarrays.rst",
+    "related-projects.rst": "ecosystem.rst",
+    "faq.rst": "getting-started-guide/faq.rst",
+    "why-xarray.rst": "getting-started-guide/why-xarray.rst",
+    "installing.rst": "getting-started-guide/installing.rst",
+    "quick-overview.rst": "getting-started-guide/quick-overview.rst",
 }
 
 # Sometimes the savefig directory doesn't exist and needs to be created
