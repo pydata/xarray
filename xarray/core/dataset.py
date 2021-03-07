@@ -2890,18 +2890,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if name in indexers:
                 continue
 
-            if var.dtype.kind in "uifc":
-                var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
-                }
-                variables[name] = missing.interp(var, var_indexers, method, **kwargs)
+            dtype_kind = var.dtype.kind
+            if dtype_kind in "uifcb":
+                if dtype_kind == "b"
+                    # For types that we do not understand do stepwise
+                    # interpolation to avoid modifying the elements:
+                    _method = "nearest"
+                else:
+                    # For normal number types do the interpolation:
+                    _method = method
+
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
+                variables[name] = missing.interp(var, var_indexers, _method, **kwargs)
+            elif dtype_kind == "O":
+                # ds.reindex seems faster than missing.interp and
+                # supports objects but inside this loop there might be
+                # some duplicate code that slows it down, therefore add
+                # these signals together and run it later:
+                reindex[name] = var
             elif all(d not in indexers for d in var.dims):
-                # keep unrelated object array
+                # For anything else we can only keep variables if they
+                # are not dependent on any coords that are being
+                # interpolated along:
                 variables[name] = var
 
+        # Get the coords that also exist in the variables:
         coord_names = obj._coord_names & variables.keys()
+        # Get the indexes that are not being interpolated along:
         indexes = {k: v for k, v in obj.indexes.items() if k not in indexers}
         selected = self._replace_with_new_dims(
             variables.copy(), coord_names, indexes=indexes
@@ -2913,6 +2928,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             assert isinstance(v, Variable)
             if v.dims == (k,):
                 indexes[k] = v.to_index()
+
+        # TODO: Where should this be?
+        # Reindex variables:
+        if len(reindex) > 0:
+            variables_reindex = alignment.reindex_variables(
+                variables=reindex,
+                sizes=obj.sizes,
+                indexes=obj.indexes,
+                indexers={k: v[-1] for k, v in validated_indexers.items()},
+                method="nearest",
+            )[0]
+            variables.update(variables_reindex)
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(coords)
