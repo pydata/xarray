@@ -4018,8 +4018,8 @@ class TestDataset:
             c=("time", np.array(["start", "start", "end"], dtype=str)),
         )
         time = np.array([0, 0.25, 1], dtype=float)
-        expected = Dataset(data_vars, coords=dict(time=time))
-        actual = Dataset(
+        expected = xr.Dataset(data_vars, coords=dict(time=time))
+        actual = xr.Dataset(
             {k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()},
             coords=dict(time=time[[0, -1]]),
         )
