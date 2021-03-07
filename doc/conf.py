@@ -13,14 +13,13 @@
 
 
 import datetime
+import inspect
 import os
-import pathlib
 import subprocess
 import sys
 from contextlib import suppress
 
 import sphinx_autosummary_accessors
-from jinja2.defaults import DEFAULT_FILTERS
 
 import xarray
 
@@ -80,7 +79,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
-    "scanpydoc.rtd_github_links",
+    "sphinx.ext.linkcode",
     "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
@@ -109,13 +108,7 @@ You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/
    :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
 """
 
-
 autosummary_generate = True
-
-# for scanpydoc's jinja filter
-project_dir = pathlib.Path(__file__).parent.parent
-
-
 autodoc_typehints = "none"
 
 # Napoleon configurations
@@ -334,6 +327,61 @@ def escape_underscores(string):
     return string.replace("_", r"\_")
 
 
+# based on numpy doc/source/conf.py
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object
+    """
+    if domain != "py":
+        return None
+
+    modname = info["module"]
+    fullname = info["fullname"]
+
+    submod = sys.modules.get(modname)
+    if submod is None:
+        return None
+
+    obj = submod
+    for part in fullname.split("."):
+        try:
+            obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
+    try:
+        fn = inspect.getsourcefile(inspect.unwrap(obj))
+    except TypeError:
+        fn = None
+    if not fn:
+        return None
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except OSError:
+        lineno = None
+
+    if lineno:
+        linespec = f"#L{lineno}-L{lineno + len(source) - 1}"
+    else:
+        linespec = ""
+
+    fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
+
+    if "+" in xarray.__version__:
+        return f"https://github.com/pydata/xarray/blob/master/xarray/{fn}{linespec}"
+    else:
+        return (
+            f"https://github.com/pydata/xarray/blob/"
+            f"v{xarray.__version__}/xarray/{fn}{linespec}"
+        )
+
+
+def html_page_context(app, pagename, templatename, context, doctree):
+    # Disable edit button for docstring generated pages
+    if "generated" in pagename:
+        context["theme_use_edit_page_button"] = False
+
+
 def setup(app):
-    DEFAULT_FILTERS["escape_underscores"] = escape_underscores
-    return dict(version=version, parallel_read_safe=True, parallel_write_safe=True)
+    app.connect("html-page-context", html_page_context)

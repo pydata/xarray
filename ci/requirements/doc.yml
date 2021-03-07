@@ -35,6 +35,5 @@ dependencies:
   - pip:
       - sphinx-reredirects
       - sphinxext-opengraph
-      - scanpydoc
       # relative to this file. Needs to be editable to be accepted.
       - -e ../..
