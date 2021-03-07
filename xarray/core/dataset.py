@@ -2906,7 +2906,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             }
 
         variables: Dict[Hashable, Variable] = {}
-        reindex: Dict[Hashable, Variable] = {}
+        to_reindex: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -2917,23 +2917,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 use_indexers = validated_indexers
 
             dtype_kind = var.dtype.kind
-            if dtype_kind in "uifcb":
+            if dtype_kind in "uifc":
                 # For normal number types do the interpolation:
-                _method = method
-
-                if dtype_kind == "b":
-                    # For types that we do not understand do stepwise
-                    # interpolation to avoid modifying the elements:
-                    _method = "nearest"
-
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, _method, **kwargs)
-            elif dtype_kind == "O":
-                # ds.reindex seems faster than missing.interp and
-                # supports objects but inside this loop there might be
-                # some duplicate code that slows it down, therefore add
-                # these signals together and run it later:
-                reindex[name] = var
+            elif dtype_kind == "ObU":
+                # For types that we do not understand do stepwise
+                # interpolation to avoid modifying the elements.
+                # Use reindex_variables instead because it supports
+                # booleans and objects and retains the dtype but inside
+                # this loop there might be some duplicate code that slows it
+                # down, therefore add these signals together and run it later:
+                to_reindex[name] = var
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
@@ -2957,9 +2952,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # TODO: Where should this be?
         # Reindex variables:
-        if len(reindex) > 0:
+        if len(to_reindex) > 0:
             variables_reindex = alignment.reindex_variables(
-                variables=reindex,
+                variables=to_reindex,
                 sizes=obj.sizes,
                 indexes=obj.indexes,
                 indexers={k: v[-1] for k, v in validated_indexers.items()},
