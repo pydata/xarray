@@ -2918,13 +2918,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             dtype_kind = var.dtype.kind
             if dtype_kind in "uifcb":
+                # For normal number types do the interpolation:
+                _method = method
+
                 if dtype_kind == "b":
                     # For types that we do not understand do stepwise
                     # interpolation to avoid modifying the elements:
                     _method = "nearest"
-                else:
-                    # For normal number types do the interpolation:
-                    _method = method
 
                 var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, _method, **kwargs)
