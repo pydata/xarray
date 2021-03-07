@@ -2892,7 +2892,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             dtype_kind = var.dtype.kind
             if dtype_kind in "uifcb":
-                if dtype_kind == "b"
+                if dtype_kind == "b":
                     # For types that we do not understand do stepwise
                     # interpolation to avoid modifying the elements:
                     _method = "nearest"
