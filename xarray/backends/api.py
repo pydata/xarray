@@ -521,7 +521,7 @@ def open_dataset(
 
 def open_dataarray(
     filename_or_obj,
-    *,
+    *args,
     engine=None,
     chunks=None,
     cache=None,
@@ -650,6 +650,11 @@ def open_dataarray(
     --------
     open_dataset
     """
+    if len(args) > 0:
+        raise TypeError(
+            "open_dataarray() takes only 1 positional argument starting from version 0.18.0, "
+            "all other options must be passed as keyword arguments"
+        )
 
     dataset = open_dataset(
         filename_or_obj,
