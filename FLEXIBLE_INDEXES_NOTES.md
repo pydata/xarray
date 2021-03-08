@@ -62,6 +62,7 @@ These two methods may accept additional keyword arguments passed to the underlyi
 There are potentially other properties / methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
 
 - An `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass
+- A `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
 - a `__getitem__()` implementation to propagate the index through DataArray/Dataset indexing operations
 - `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
 - Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
@@ -213,6 +214,10 @@ Coordinates:
   * lvl2     (x) int64 0 1
 ```
 
+### 2.2.5 Immutable indexes
+
+Some underlying indexes might be mutable (e.g., a tree-based index structure that allows dynamic addition of data points) while other indexes like `pandas.Index` aren't. To keep things simple, it is probably better to continue considering all indexes in Xarray as immutable (as well as their corresponding coordinates, see [Section 2.4.1](#241-mutable-coordinates)).
+
 ### 2.3 Index access
 
 #### 2.3.1 Dataset/DataArray's `indexes` property
@@ -240,18 +245,30 @@ We must also ensure that coordinates having a bound index are immutable, e.g., s
 
 Xarray provides a variety of Dataset/DataArray operations affecting the coordinates and where simply dropping the index(es) is not desirable. For example:
 
-- Multi-coordinate indexes could be reduced to single coordinate indexes, like in `.reset_index()` or `.sel()` applied on a subset of the levels of a `pandas.MultiIndex` and that internally call `MultiIndex.droplevel` and `MultiIndex.get_loc_level`, respectively. There should be some API for wrapping this functionality in `XarrayIndex`.
-- Indexes may be indexed themselves, like `pandas.Index` implements `__getitem__()`. When indexing their corresponding coordinate(s), e.g., via `.sel()` or `.isel()`, those indexes should be indexed too. This wouldn't be supported by all Xarray indexes, though. Some indexes that can't be indexed could still be automatically (re)built in the new Dataset/DataArray, like for example building a new `KDTree` index from the selection of a subset of an initial collection of data points. This is not always desirable, though, as indexes may be expensive to build. A more reasonable option would be to explicitly re-build the index, e.g., using `.set_index()`.
+- multi-coordinate indexes could be reduced to single coordinate indexes
+  - like in `.reset_index()` or `.sel()` applied on a subset of the levels of a `pandas.MultiIndex` and that internally call `MultiIndex.droplevel` and `MultiIndex.get_loc_level`, respectively
+- indexes may be indexed themselves
+  - like `pandas.Index` implements `__getitem__()`
+  - when indexing their corresponding coordinate(s), e.g., via `.sel()` or `.isel()`, those indexes should be indexed too
+  - this might not be supported by all Xarray indexes, though
+- some indexes that can't be indexed could still be automatically (re)built in the new Dataset/DataArray
+  - like for example building a new `KDTree` index from the selection of a subset of an initial collection of data points
+  - this is not always desirable, though, as indexes may be expensive to build
+  - a more reasonable option would be to explicitly re-build the index, e.g., using `.set_index()`
 - Dataset/DataArray operations involving alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
 
 ### 2.5 Using indexes for data selection
 
 One main use of indexes is label-based data selection using the DataArray/Dataset `.sel()` method. This refactoring would introduce a number of API changes that could go through some depreciation cycles:
 
-- The keys of the mapping given to `indexers` (or the names of `indexer_kwargs`) would not correspond to only dimension names but could be the name of any coordinate that has an index
-- For a `pandas.MultiIndex`, if no dimension-coordinate is created by default (see [Section 2.2.4](#224-implicit-coordinates)), providing dict-like objects as indexers should be depreciated
-- There should be the possibility to provide additional options to the indexes that support specific selection features (e.g., Scikit-learn's `BallTree`'s `dualtree` query option to boost performance). The best API is not trivial here, since `.sel()` may accept indexers passed to several indexes (which should still be supported for convenience and compatibility), and indexes may have similar options with different semantics. We could introduce a new parameter like `index_options: Dict[XarrayIndex, Dict[str, Any]]` to pass options grouped by index.
-- The `method` and `tolerance` parameters are specific to `pandas.Index` and would not be supported by all indexes. Probably best is to eventually pass those arguments as `index_options`.
+- the keys of the mapping given to `indexers` (or the names of `indexer_kwargs`) would not correspond to only dimension names but could be the name of any coordinate that has an index
+- for a `pandas.MultiIndex`, if no dimension-coordinate is created by default (see [Section 2.2.4](#224-implicit-coordinates)), providing dict-like objects as indexers should be depreciated
+- there should be the possibility to provide additional options to the indexes that support specific selection features (e.g., Scikit-learn's `BallTree`'s `dualtree` query option to boost performance).
+  - the best API is not trivial here, since `.sel()` may accept indexers passed to several indexes (which should still be supported for convenience and compatibility), and indexes may have similar options with different semantics
+  - we could introduce a new parameter like `index_options: Dict[XarrayIndex, Dict[str, Any]]` to pass options grouped by index
+- the `method` and `tolerance` parameters are specific to `pandas.Index` and would not be supported by all indexes: probably best is to eventually pass those arguments as `index_options`
+- the list valid indexer types might be extended in order to support new ways of indexing data, e.g., unordered selection of all points within a given range
+  - alternatively, we could reuse existing indexer types with different semantics depending on the index, e.g., using `slice(min, max, None)` for unordered range selection
 
 With the new data model proposed here, once ambiguous situation may occur when indexers are given for several coordinates that share the same dimension but not the same index, e.g., from the example in [Section 1](#1-data-model):
 
@@ -276,7 +293,9 @@ Another main use if indexes is data alignment in various operations. Some consid
 - we need to decide what to do when one dimension has one or more index(es) but none support alignment
   - either we raise or we fail back (silently) to alignment based on dimension size
 - for inexact alignment, the tolerance threshold might be given when building the index and/or when performing the alignment
-- are there cases where we want a specific index to perform alignment and another index to perform selection? It would be tricky to support that unless we allow multiple indexes per coordinate. Alternatively, underlying indexes could be picked internally in a "meta" index for one operation or another, although the risk is to eventually have to deal with an explosion of index wrapper classes with different meta indexes for each combination that we'd like to use.
+- are there cases where we want a specific index to perform alignment and another index to perform selection?
+  - it would be tricky to support that unless we allow multiple indexes per coordinate
+  - alternatively, underlying indexes could be picked internally in a "meta" index for one operation or another, although the risk is to eventually have to deal with an explosion of index wrapper classes with different meta indexes for each combination that we'd like to use.
 
 ### 2.7 Using indexes for other purposes
 
@@ -334,12 +353,44 @@ To keep the `repr` compact, we could:
 
 ## 4. `IndexVariable`
 
-TODO
+`IndexVariable` is currently used to wrap an `pandas.Index` as a variable. Although the main goal of this refactoring is to decouple indexes and variables (coordinates), `IndexVariable` could still be useful to:
+
+- ensure that all coordinates with an index are immutable (see [Section 2.4.1](#241-mutable-coordinates))
+  - do not set values directly, do not (re)chunk (even though it may be already chunked), do not load, do not convert to sparse/dense, etc.
+- directly reuse index's data when that's possible
+  - in the case of a `pandas.Index`, it makes little sense to have duplicate data (e.g., as a NumPy array) for its corresponding coordinate
+
+Converting a variable into a `pandas.Index` using `.to_index()` should probably be kept for backwards compatibility.
+
+`pandas.MultiIndex` specific API like `level_names` and `get_level_variable()` should be dropped.
 
 ## 5. Chunked coordinates and/or indexers
 
-TODO
+We could take opportunity of this refactoring to better leverage chunked coordinates (and/or chunked indexers for data selection). There's two ways to enable it:
+
+A. support for chunked coordinates is left to the index
+B. support for chunked coordinates is index agnostic and is implemented in Xarray
+
+As an example for B, [xoak](https://github.com/ESM-VFC/xoak) supports building an index for each chunk, which is coupled with a two-step data selection process (cross-index queries + brute force "reduction" look-up). There is an example [here](https://xoak.readthedocs.io/en/latest/examples/dask_support.html). This may be tedious to generalize this to other kinds of operations, though. Xoak's Dask support is rather experimental, not super stable (it's quite hard to control index replication and data transfer between Dask workers with the default settings), and depends on whether indexes are thread-safe and/or serializable.
+
+Option A may be more reasonable for now.
 
 ## 6. Coordinate duck arrays
 
-TODO
+Another opportunity of this refactoring is support for duck arrays as index coordinates. Decoupling coordinates and indexes would *de-facto* enable it.
+
+However, support for duck arrays in index-based operations such as data selection or alignment would probably require some protocol extension, e.g.,
+
+```python
+class MyDuckArray:
+    ...
+
+    def _sel_(self, indexer):
+        """Prepare the label-based indexer to conform to this coordinate array."""
+        ...
+        return new_indexer
+
+    ...
+```
+
+For example, a `pint` array would implement `_sel_` to perform indexer unit conversion or raise, warn, or just pass the indexer through if it has no units.
