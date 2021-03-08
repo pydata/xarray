@@ -508,8 +508,9 @@ If you are using [Poetry](https://python-poetry.org/) for your build system, you
 
     [tool.poetry.plugins."xarray_backends"]
     "engine_name" = "your_package.your_module:YourBackendEntryClass"
-    
+
 See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
+
 .. _RST lazy_loading:
 
 How to support Lazy Loading
