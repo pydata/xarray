@@ -249,6 +249,7 @@ re-open it directly with Zarr:
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)
 
+.. _add_a_backend:
 
 How to add a new backend
 ------------------------
