@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Tests for the `str` accessor are derived from the original
 # pandas string accessor tests.
 
