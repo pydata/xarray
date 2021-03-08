@@ -22,7 +22,11 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Support for `dask.graph_manipulation
+  <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
+  By `Guido Imperiale <https://github.com/crusaderky>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -34,7 +38,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
