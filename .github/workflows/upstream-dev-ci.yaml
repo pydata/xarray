@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - uses: ./.github/actions/detect-ci-trigger
+      - uses: xarray-contrib/ci-trigger@v1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
@@ -77,7 +77,7 @@ jobs:
         id: status
         run: |
           set -euo pipefail
-          python -m pytest -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
           )
       - name: Upload artifacts

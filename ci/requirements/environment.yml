@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
@@ -12,7 +13,7 @@ dependencies:
   - dask
   - distributed
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
   - iris
