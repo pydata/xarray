@@ -2961,18 +2961,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if v.dims == (k,):
                 indexes[k] = v.to_index()
 
-        # TODO: Where should this be?
-        # Reindex variables:
-        if len(to_reindex) > 0:
-            variables_reindex = alignment.reindex_variables(
-                variables=to_reindex,
-                sizes=obj.sizes,
-                indexes=obj.indexes,
-                indexers={k: v[-1] for k, v in validated_indexers.items()},
-                method="nearest",
-            )[0]
-            variables.update(variables_reindex)
-
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(coords)
         variables.update(coord_vars)
