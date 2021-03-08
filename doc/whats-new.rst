@@ -40,6 +40,8 @@ Bug fixes
 ~~~~~~~~~
 - Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Convert to IndexVariable or Variable during renaming as appropriate. (:issue:`4107`, :issue:`4417`, :pull:`4108`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -207,8 +209,6 @@ Bug fixes
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
-- Convert to IndexVariable or Variable during renaming as appropriate. (:issue:`4107`, :issue:`4417`, :pull:`4108`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel` (:issue:`4658`, :pull:`4819`). By `Daniel Mesejo <https://github.com/mesejo>`_.
 - Ensure that :py:meth:`Dataset.interp` raises ``ValueError`` when interpolating outside coordinate range and ``bounds_error=True`` (:issue:`4854`, :pull:`4855`).
 - Raise DeprecationWarning when trying to typecast a tuple containing a :py:class:`DataArray`.
