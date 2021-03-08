@@ -102,7 +102,7 @@ def make_meta(obj):
     """
     if isinstance(obj, DataArray):
         obj_array = obj
-        obj = obj._to_temp_dataset()
+        obj = dataarray_to_dataset(obj)
     elif isinstance(obj, Dataset):
         obj_array = None
     else:
@@ -116,7 +116,7 @@ def make_meta(obj):
     meta = meta.set_coords(obj.coords)
 
     if obj_array is not None:
-        return obj_array._from_temp_dataset(meta)
+        return dataset_to_dataarray(meta)
     return meta
 
 
@@ -258,7 +258,7 @@ def map_blocks(
     ...     template=array,
     ... )  # doctest: +ELLIPSIS
     <xarray.DataArray (time: 24)>
-    dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
+    dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
       * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
@@ -448,7 +448,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index[dim]]
 
-                chunk_variable_task = (f"{name}_{gname}-{chunk[0]}",) + chunk_tuple
+                chunk_variable_task = (f"{name}-{gname}-{chunk[0]}",) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
@@ -462,7 +462,7 @@ def map_blocks(
                 }
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (
-                    f"{name}_{gname}-{dask.base.tokenize(subset)}",
+                    f"{name}-{gname}-{dask.base.tokenize(subset)}",
                 ) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
@@ -512,7 +512,7 @@ def map_blocks(
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            gname_l = f"{name}_after_{gname}"
+            gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
             key: Tuple[Any, ...] = (gname_l,)
