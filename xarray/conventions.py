@@ -374,7 +374,7 @@ def decode_cf_variable(
         data = BoolTypeArray(data)
 
     if not is_duck_dask_array(data):
-        data = indexing.LazilyOuterIndexedArray(data)
+        data = indexing.LazilyIndexedArray(data)
 
     return Variable(dimensions, data, attributes, encoding=encoding)
 

@@ -233,14 +233,14 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
+    def guess_can_open(self, filename_or_obj):
         try:
-            return read_magic_number(store_spec).startswith(b"CDF")
+            return read_magic_number(filename_or_obj).startswith(b"CDF")
         except TypeError:
             pass
 
         try:
-            _, ext = os.path.splitext(store_spec)
+            _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
             return False
         return ext in {".nc", ".nc4", ".cdf", ".gz"}

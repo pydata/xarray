@@ -74,7 +74,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
         attrs = {k: getattr(var, k) for k in var.ncattrs()}
         return Variable(var.dimensions, data, attrs)
 

@@ -335,9 +335,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(
-        RasterioArrayWrapper(manager, lock, vrt_params)
-    )
+    data = indexing.LazilyIndexedArray(RasterioArrayWrapper(manager, lock, vrt_params))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)

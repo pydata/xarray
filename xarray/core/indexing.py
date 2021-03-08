@@ -513,7 +513,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
             return result
 
 
-class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
+class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
     __slots__ = ("array", "key")
@@ -619,10 +619,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return _combine_indexers(self.key, self.shape, new_key)
 
     def __getitem__(self, indexer):
-        # If the indexed array becomes a scalar, return LazilyOuterIndexedArray
+        # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
             key = BasicIndexer(tuple(k[indexer.tuple] for k in self.key.tuple))
-            return LazilyOuterIndexedArray(self.array, key)
+            return LazilyIndexedArray(self.array, key)
         return type(self)(self.array, self._updated_key(indexer))
 
     def transpose(self, order):
