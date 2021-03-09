@@ -2928,7 +2928,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore add these signals together and run it later:
-                to_reindex[name] = var
+                if use_indexers.keys() & var.dims:
+                    to_reindex[name] = var
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
