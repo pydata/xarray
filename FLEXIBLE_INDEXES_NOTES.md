@@ -78,7 +78,7 @@ Xarray should provide a minimal set of built-in index wrappers (this could be re
 
 For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something lire [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry).
 
-Additionally (or alternatively), new index wrappers may be registered via entry points like it is already the case for storage backends and maybe other backends (plotting) in the future.
+Additionally (or alternatively), new index wrappers may be registered via entry points as is already the case for storage backends and maybe other backends (plotting) in the future.
 
 `XarrayIndex` subclasses may still be used directly when setting new indexes from DataArray/Dataset coordinates.
 
