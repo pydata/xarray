@@ -229,7 +229,7 @@ B. `Dict[CoordinateNames, XarrayIndex]`: keys may represent one or more coordina
 
 Option A allows easy index look-up by coordinate name, while option B allows easy iteration through all the indexes. Option A may be more useful than option B for many tasks and may also be less ambiguous if more complex hashable types than `str` are used for `CoordinateName`.
 
-#### 2.3.2 Additional Dataset/DataArray's properties or methods
+#### 2.3.2 Additional Dataset/DataArray properties or methods
 
 Both options A and B in the section above have pros and cons. For convenience, we could maybe add one more property / method to get the indexes in the desired format.
 
