@@ -142,6 +142,75 @@ def test_concat_mappings(mappings, use_others, duplicates, expected, error, mess
 
 
 @pytest.mark.parametrize(
+    ["marks", "expected", "error"],
+    (
+        pytest.param(
+            {"test_func": [1, 2]},
+            [(["test_func"], [1, 2])],
+            False,
+            id="single test",
+        ),
+        pytest.param(
+            {"test_func1": [1, 2], "test_func2": [3, 4]},
+            [(["test_func1"], [1, 2]), (["test_func2"], [3, 4])],
+            False,
+            id="multiple tests",
+        ),
+        pytest.param(
+            {"TestGroup": {"test_func1": [1, 2], "test_func2": [3, 4]}},
+            [
+                (["TestGroup", "test_func1"], [1, 2]),
+                (["TestGroup", "test_func2"], [3, 4]),
+            ],
+            False,
+            id="test group dict",
+        ),
+        pytest.param(
+            {"test_func[variant]": [1, 2]},
+            [(["test_func"], {"[variant]": [1, 2]})],
+            False,
+            id="single variant",
+        ),
+        pytest.param(
+            {"test_func[variant]": {"key": [1, 2]}},
+            None,
+            True,
+            id="invalid variant",
+        ),
+        pytest.param(
+            {"test_func": {"[v1]": [1, 2], "[v2]": [3, 4]}},
+            [(["test_func"], {"[v1]": [1, 2], "[v2]": [3, 4]})],
+            False,
+            id="multiple variants combined",
+        ),
+        pytest.param(
+            {"test_func[v1]": [1, 2], "test_func[v2]": [3, 4]},
+            [(["test_func"], {"[v1]": [1, 2], "[v2]": [3, 4]})],
+            False,
+            id="multiple variants separate",
+        ),
+        pytest.param(
+            {"test_func[v1]": [1, 2], "test_func[v2]": [3, 4], "test_func2": [4, 5]},
+            [
+                (["test_func"], {"[v1]": [1, 2], "[v2]": [3, 4]}),
+                (["test_func2"], [4, 5]),
+            ],
+            False,
+            id="multiple variants multiple tests separate",
+        ),
+    ),
+)
+def test_preprocess_marks(marks, expected, error):
+    if error:
+        with pytest.raises(ValueError):
+            duckarray_testing_utils.preprocess_marks(marks)
+    else:
+        actual = duckarray_testing_utils.preprocess_marks(marks)
+
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
     "marks",
     (
         pytest.param([pytest.mark.skip(reason="arbitrary")], id="single mark"),
