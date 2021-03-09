@@ -63,13 +63,24 @@ def process_spec(name, value):
 
 
 def preprocess_marks(marks):
+    def concat_values(values):
+        if len({type(v) for v in values}) != 1:
+            raise ValueError("mixed types are not supported")
+
+        if len(values) == 1:
+            return values[0]
+        elif isinstance(values[0], list):
+            raise ValueError("cannot have multiple mark lists per test")
+        else:
+            return concat_mappings(values)
+
     flattened = itertools.chain.from_iterable(
         process_spec(name, value) for name, value in marks.items()
     )
     key = lambda x: x[0]
     grouped = itertools.groupby(sorted(flattened, key=key), key=key)
     result = [
-        (components, concat_mappings(v for _, v in group))
+        (components, concat_values([v for _, v in group]))
         for components, group in grouped
     ]
     return result
