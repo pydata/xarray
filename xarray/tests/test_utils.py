@@ -233,15 +233,6 @@ def test_is_remote_uri():
     assert not utils.is_remote_uri("example.nc")
 
 
-def test_is_grib_path():
-    assert not utils.is_grib_path("example.nc")
-    assert not utils.is_grib_path("example.grib ")
-    assert utils.is_grib_path("example.grib")
-    assert utils.is_grib_path("example.grib2")
-    assert utils.is_grib_path("example.grb")
-    assert utils.is_grib_path("example.grb2")
-
-
 class Test_is_uniform_and_sorted:
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))

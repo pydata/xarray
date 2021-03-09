@@ -99,6 +99,7 @@ class NioDataStore(AbstractDataStore):
 
 class PynioBackendEntrypoint(BackendEntrypoint):
     def open_dataset(
+        self,
         filename_or_obj,
         mask_and_scale=True,
         decode_times=True,
