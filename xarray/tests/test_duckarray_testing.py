@@ -23,9 +23,12 @@ TestPint = duckarray_module(
     "pint",
     create_pint,
     marks={
-        "TestDataset.test_reduce[prod]": [
-            pytest.mark.skip(reason="not implemented yet")
-        ],
+        "TestVariable.test_reduce": {
+            "[argsort]": [
+                pytest.mark.skip(reason="xarray.Variable.argsort does not support dim")
+            ],
+            "[prod]": [pytest.mark.skip(reason="nanprod drops units")],
+        },
     },
     global_marks=[
         pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
@@ -36,10 +39,15 @@ TestSparse = duckarray_module(
     "sparse",
     create_sparse,
     marks={
-        "TestDataset.test_reduce": {
-            "[median]": [pytest.mark.skip(reason="not implemented, yet")],
-            "[std]": [pytest.mark.skip(reason="not implemented, yet")],
-            "[var]": [pytest.mark.skip(reason="not implemented, yet")],
+        "TestVariable.test_reduce": {
+            "[argmax]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[argmin]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[argsort]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[cumprod]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[cumsum]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[median]": [pytest.mark.skip(reason="not implemented by sparse")],
+            "[std]": [pytest.mark.skip(reason="nanstd not implemented, yet")],
+            "[var]": [pytest.mark.skip(reason="nanvar not implemented, yet")],
         },
     },
 )
