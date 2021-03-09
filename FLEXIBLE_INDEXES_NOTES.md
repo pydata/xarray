@@ -321,7 +321,7 @@ Conversely, nothing should prevent implementing "non-standard" API in 3rd-party 
 
 ### 2.8 Index encoding
 
-Indexes don't need to be directly serializable since we could (re)build them from their corresponding coordinate(s). However, we may take advantage that some indexes could be encoded/decoded to/from a set of arrays that would allow optimized reconstruction and/or storage, e.g.,
+Indexes don't need to be directly serializable since we could (re)build them from their corresponding coordinate(s). However, it would be useful if some indexes could be encoded/decoded to/from a set of arrays that would allow optimized reconstruction and/or storage, e.g.,
 
 - `pandas.MultiIndex` -> `index.levels` and `index.codes`
 - Scikit-learn's `KDTree` and `BallTree` that use an array-based representation of an immutable tree structure
