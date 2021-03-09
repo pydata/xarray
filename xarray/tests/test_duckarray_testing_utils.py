@@ -85,6 +85,63 @@ def test_apply_marks_normal(marks):
 
 
 @pytest.mark.parametrize(
+    ["mappings", "use_others", "duplicates", "expected", "error", "message"],
+    (
+        pytest.param(
+            [{"a": 1}, {"b": 2}],
+            False,
+            False,
+            {"a": 1, "b": 2},
+            False,
+            None,
+            id="iterable",
+        ),
+        pytest.param(
+            [{"a": 1}, {"b": 2}],
+            True,
+            False,
+            {"a": 1, "b": 2},
+            False,
+            None,
+            id="use others",
+        ),
+        pytest.param(
+            [[{"a": 1}], {"b": 2}],
+            True,
+            False,
+            None,
+            True,
+            "cannot pass both a iterable and multiple values",
+            id="iterable and args",
+        ),
+        pytest.param(
+            [{"a": 1}, {"a": 2}],
+            False,
+            "error",
+            None,
+            True,
+            "duplicate keys found: ['a']",
+            id="raise on duplicates",
+        ),
+    ),
+)
+def test_concat_mappings(mappings, use_others, duplicates, expected, error, message):
+    func = duckarray_testing_utils.concat_mappings
+    call = (
+        lambda m: func(*m, duplicates=duplicates)
+        if use_others
+        else func(m, duplicates=duplicates)
+    )
+    if error:
+        with pytest.raises(ValueError):
+            call(mappings)
+    else:
+        actual = call(mappings)
+
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
     "marks",
     (
         pytest.param([pytest.mark.skip(reason="arbitrary")], id="single mark"),

@@ -9,6 +9,26 @@ variant_re = re.compile(
 )
 
 
+def concat_mappings(mapping, *others, duplicates="error"):
+    if not isinstance(mapping, dict):
+        if others:
+            raise ValueError("cannot pass both a iterable and multiple values")
+
+        mapping, *others = mapping
+
+    if duplicates == "error":
+        all_keys = [m.keys() for m in [mapping] + others]
+        if len(set(itertools.chain.from_iterable(all_keys))) != len(all_keys):
+            duplicate_keys = []
+            raise ValueError(f"duplicate keys found: {duplicate_keys!r}")
+
+    result = mapping.copy()
+    for m in others:
+        result.update(m)
+
+    return result
+
+
 def is_variant(k):
     return k.startswith("[") and k.endswith("]")
 
