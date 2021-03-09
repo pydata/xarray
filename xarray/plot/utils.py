@@ -60,6 +60,9 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     import matplotlib as mpl
 
+    if len(levels) == 1:
+        levels = [levels[0], levels[0]]
+
     if not filled:
         # non-filled contour plots
         extend = "max"

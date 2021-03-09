@@ -27,14 +27,24 @@ New Features
 - Support for `dask.graph_manipulation
   <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Thanks to the new pluggable backend infrastructure external packages may now
+  use the ``xarray.backends`` entry point to register additional engines to be used in
+  :py:func:`open_dataset`, see the documentation in :ref:`add_a_backend`
+  (:issue:`4309`, :issue:`4803`, :pull:`4989`, :pull:`4810` and many others).
+  The backend refactor has been sponsored with the "Essential Open Source Software for Science"
+  grant from the `Chan Zuckerberg Initiative <https://chanzuckerberg.com>`_ and
+  developed by `B-Open <https://www.bopen.eu>`_.
+  By `Aureliana Barghini <https://github.com/aurghs>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- :py:func:`open_dataset` and :py:func:`open_dataarray` now accept only the first argument
+  as positional, all others need to be passed are keyword arguments. This is part of the
+  refactor to support external backends (:issue:`4309`, :pull:`4989`).
+  By `Alessandro Amici <https://github.com/alexamici>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -43,6 +53,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- New section on :ref:`add_a_backend` in the "Internals" chapter aimed to backend developers
+  (:issue:`4803`, :pull:`4810`). By `Aureliana Barghini <https://github.com/aurghs>`_.
 
 - New sphinx theme & rearrangement of the docs (:pull:`4835`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_.

@@ -17,3 +17,4 @@ compiled code to :ref:`optional dependencies<installing>`.
    duck-arrays-integration
    extending-xarray
    zarr-encoding-spec
+   how-to-add-new-backend
