@@ -17,6 +17,18 @@ def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=
         for func in funcs:
             func(a, b)
 
+    # TODO:
+    # - find a way to add create args as parametrizations
+    # - add a optional type parameter to the create func spec
+    # - how do we construct the expected values?
+    # - should we check multiple dtypes?
+    # - should we check multiple fill values?
+    # - should we allow duckarray libraries to expect errors (pytest.raises / pytest.warns)?
+    # - low priority: how do we redistribute the apply_marks mechanism?
+
+    # convention: method specs for parametrize: one of
+    # - method name
+    # - tuple of method name, args, kwargs
     class TestModule:
         class TestVariable:
             @pytest.mark.parametrize(
