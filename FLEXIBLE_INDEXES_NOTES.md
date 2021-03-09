@@ -270,7 +270,7 @@ One main use of indexes is label-based data selection using the DataArray/Datase
 - the list valid indexer types might be extended in order to support new ways of indexing data, e.g., unordered selection of all points within a given range
   - alternatively, we could reuse existing indexer types with different semantics depending on the index, e.g., using `slice(min, max, None)` for unordered range selection
 
-With the new data model proposed here, once ambiguous situation may occur when indexers are given for several coordinates that share the same dimension but not the same index, e.g., from the example in [Section 1](#1-data-model):
+With the new data model proposed here, an ambiguous situation may occur when indexers are given for several coordinates that share the same dimension but not the same index, e.g., from the example in [Section 1](#1-data-model):
 
 ```python
 da.sel(x=..., y=..., lat=..., lon=...)
