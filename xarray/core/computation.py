@@ -1021,6 +1021,7 @@ def apply_ufunc(
     numpy.broadcast_arrays
     numba.vectorize
     numba.guvectorize
+    dask.array.apply_gufunc
     xarray.map_blocks
 
     References
