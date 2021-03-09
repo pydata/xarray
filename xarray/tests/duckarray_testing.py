@@ -5,6 +5,22 @@ import xarray as xr
 from .duckarray_testing_utils import apply_marks, preprocess_marks
 
 
+def is_iterable(x):
+    try:
+        iter(x)
+    except TypeError:
+        return False
+
+    return True
+
+
+def always_iterable(x):
+    if is_iterable(x) and not isinstance(x, (str, bytes)):
+        return x
+    else:
+        return [x]
+
+
 def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=None):
     import pytest
 
@@ -12,9 +28,7 @@ def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=
         if extra_asserts is None:
             return
 
-        funcs = [extra_asserts] if callable(extra_asserts) else extra_asserts
-
-        for func in funcs:
+        for func in always_iterable(extra_asserts):
             func(a, b)
 
     # TODO:
