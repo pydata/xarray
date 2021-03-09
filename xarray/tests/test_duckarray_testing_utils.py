@@ -120,7 +120,7 @@ def test_apply_marks_normal(marks):
             "error",
             None,
             True,
-            "duplicate keys found: ['a']",
+            "duplicate keys found",
             id="raise on duplicates",
         ),
     ),
@@ -133,7 +133,7 @@ def test_concat_mappings(mappings, use_others, duplicates, expected, error, mess
         else func(m, duplicates=duplicates)
     )
     if error:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=message):
             call(mappings)
     else:
         actual = call(mappings)

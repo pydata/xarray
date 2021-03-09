@@ -43,7 +43,6 @@ def duckarray_module(name, create, global_marks=None, marks=None):
                 expected = xr.Variable(expected_dims, reduced)
 
                 actual = getattr(var, method)(dim="x")
-
                 xr.testing.assert_allclose(actual, expected)
 
     if global_marks is not None:

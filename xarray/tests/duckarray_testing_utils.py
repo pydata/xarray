@@ -1,3 +1,4 @@
+import collections
 import itertools
 import re
 
@@ -17,10 +18,16 @@ def concat_mappings(mapping, *others, duplicates="error"):
         mapping, *others = mapping
 
     if duplicates == "error":
-        all_keys = [m.keys() for m in [mapping] + others]
-        if len(set(itertools.chain.from_iterable(all_keys))) != len(all_keys):
-            duplicate_keys = []
-            raise ValueError(f"duplicate keys found: {duplicate_keys!r}")
+        all_keys = list(
+            itertools.chain.from_iterable(m.keys() for m in [mapping] + others)
+        )
+        duplicates = {
+            key: value
+            for key, value in collections.Counter(all_keys).items()
+            if value > 1
+        }
+        if duplicates:
+            raise ValueError(f"duplicate keys found: {list(duplicates.keys())!r}")
 
     result = mapping.copy()
     for m in others:
