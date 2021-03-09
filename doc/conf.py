@@ -322,10 +322,6 @@ intersphinx_mapping = {
 }
 
 
-def escape_underscores(string):
-    return string.replace("_", r"\_")
-
-
 # based on numpy doc/source/conf.py
 def linkcode_resolve(domain, info):
     """

@@ -7,125 +7,14 @@ table.docutils td {
     word-wrap: break-word;
 }
 
-/* based on bokeh  sphinx/source/boken/static/custom.css
-*/
+/* Reduce left and right margins */
 
-@media (min-width: 768px) {
-  .bd-sidebar {
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  @supports ((position: -webkit-sticky) or (position: sticky)) {
-    .bd-sidebar {
-      position: -webkit-sticky;
-      position: sticky;
-      top: var(--navbar-height);
-      z-index: 1000;
-      height: calc(100vh - var(--navbar-height));
-    }
-  }
+.container, .container-lg, .container-md, .container-sm, .container-xl {
+  max-width: 1600px !important;
 }
 
-@media (min-width: 1200px) {
-  .bd-sidebar {
-    -ms-flex: 0 1 320px;
-    flex: 0 1 320px;
-  }
-}
+/* Make sidebar sticky */
 
-.bd-links {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  margin-right: -15px;
-  margin-left: -15px;
-}
-
-@media (min-width: 768px) {
-  @supports ((position: -webkit-sticky) or (position: sticky)) {
-    .bd-links {
-      max-height: calc(100vh - 9rem);
-      overflow-y: auto;
-    }
-  }
-}
-
-@media (min-width: 768px) {
-  .bd-links {
-    display: block !important;
-  }
-}
-
-.bd-sidenav {
-  display: none;
-}
-
-.bd-toc-link {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-weight: 400;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.bd-toc-link:hover {
-  color: rgba(0, 0, 0, 0.85);
-  text-decoration: none;
-}
-
-.bd-toc-item.active {
-  margin-bottom: 1rem;
-}
-
-.bd-toc-item.active:not(:first-child) {
-  margin-top: 1rem;
-}
-
-.bd-toc-item.active > .bd-toc-link {
-  color: rgba(0, 0, 0, 0.85);
-}
-
-.bd-toc-item.active > .bd-toc-link:hover {
-  background-color: transparent;
-}
-
-.bd-toc-item.active > .bd-sidenav {
-  display: block;
-}
-
-.bd-sidebar .nav > li > a {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.bd-sidebar .nav > li > a:hover {
-  color: rgba(0, 0, 0, 0.85);
-  text-decoration: none;
-  background-color: transparent;
-}
-
-.bd-sidebar .nav > .active > a,
-.bd-sidebar .nav > .active:hover > a {
-  font-weight: 400;
-  color: #130654;
-  /* adjusted from original
-  color: rgba(0, 0, 0, 0.85);
-  background-color: transparent; */
-}
-
-.bd-sidebar .nav > li > ul {
-  list-style: none;
-  padding: 0.25rem 1.5rem;
-}
-
-.bd-sidebar .nav > li > ul > li > a {
-  display: block;
-  padding: 0.25rem 1.5rem;
-  font-size: 90%;
-  color: rgba(0, 0, 0, 0.65);
-}
-
-.bd-sidebar .nav > li > ul > .active > a,
-.bd-sidebar .nav > li > ul > .active:hover > a {
-  font-weight: 400;
-  color: #542437;
+.bd-sidebar {
+  position: sticky !important;
 }
