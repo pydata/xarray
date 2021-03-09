@@ -13,28 +13,39 @@ The goal of this project is to make those indexes 1st-class citizens of Xarray's
 
 An index may be built from one or more coordinates. However, each coordinate must relate to one index at most. Additionally, a coordinate may not be tied to any index.
 
-The order in which multiple coordinates relate to an index should matter. For example, Scikit-Learn's `BallTree` index with the Haversine metric requires providing latitude and longitude values in that specific order. As another example, the order in which levels are defined in a `pandas.MultiIndex` may affect its lexsort depth.
+The order in which multiple coordinates relate to an index may matter. For example, Scikit-Learn's [`BallTree`](https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.BallTree.html#sklearn.neighbors.BallTree) index with the Haversine metric requires providing latitude and longitude values in that specific order. As another example, the order in which levels are defined in a `pandas.MultiIndex` may affect its lexsort depth (see [MultiIndex sorting](https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#sorting-a-multiindex)).
 
-Xarray's current data model is already based on the same index-coordinate relationships. The current data model also implies a one-to-one relationship between a dimension and an index. This one-to-one relationship works as currently it is not possible to perform label-based data selection in Xarray using multi-dimensional coordinates, but since we want to enable this feature in this proposal, we need the dimension-index relationship to evolve towards many-to-many.
+Xarray's current data model has the same index-coordinate relationships than stated above, although this assumes that multi-index "virtual" coordinates are counted as coordinates (we can consider them as such, with some constraints). More importantly, This refactoring would turn the current one-to-one relationship between a dimension and an index into a many-to-many relationship, which would overcome some current limitations.
 
-In the example below, we'd like to select data points based on their x, y values and/or on their latitude/longitude positions:
+For example, we might want to select data along a dimension which has several coordinates:
 
 ```python
 >>> da
-<xarray.DataArray (x: 2, y: 2)>
-array([[5.4, 7.8],
-       [6.2, 4.7]])
+<xarray.DataArray (river_profile: 100)>
+array([...])
 Coordinates:
-  * lon      (x, y) float64 10.2 15.2 12.6 17.6
-  * lat      (x, y) float64 40.2 45.6 42.2 47.6
-  * x        (x) float64 200.0 400.0
-  * y        (y) float64 800.0 1e+03
-
->>> da.sel(lon=..., lat=...)
->>> da.sel(x=..., y=...)
+  * drainage_area  (river_profile) float64 ...
+  * chi            (river_profile) float64 ...
 ```
 
-We would need one geographic index for the `lat` and `lon` coordinates and two indexes for the `x` and `y` coordinates, respectively.
+In this example, `chi` is a transformation of the `drainage_area` variable that is often used in geomorphology. We'd like to select data along the river profile using either `da.sel(drainage_area=...)` or `da.sel(chi=...)` but that's not currently possible. We could rename the `river_profile` dimension to one of the coordinates, then use `sel` with that coordinate, then call `swap_dims` if we want to use `sel` with the other coordinate, but that's not ideal. We could also build a `pandas.MultiIndex` from `drainage_area` and `chi`, but that's not optimal (there's no hierarchical relationship between these two coordinates).
+
+Let's take another example:
+
+```python
+>>> da
+<xarray.DataArray (x: 200, y: 100)>
+array([[...], [...]])
+Coordinates:
+  * lon      (x, y) float64 ...
+  * lat      (x, y) float64 ...
+  * x        (x) float64 ...
+  * y        (y) float64 ...
+```
+
+This refactoring would allow creating a geographic index for `lat` and `lon` and two simple indexes for `x` and `y` such that we could select data with either `da.sel(lon=..., lat=...)` or  `da.sel(x=..., y=...)`.
+
+Refactoring the dimension -> index one-to-one relationship into many-to-many would also introduce some issues that we'll need to address, e.g., ambiguous cases like `da.sel(chi=..., drainage_area=...)` where multiple indexes may potentially return inconsistent positional indexers along a dimension.
 
 ## 2. Proposed API changes
 
@@ -44,31 +55,26 @@ Every index that is used to select data from Xarray objects should inherit from 
 
 There is a variety of features that an xarray index wrapper may or may not support:
 
-- 1-dimensional vs. 2-dimensional vs. n-dimensional coordinate
-- built from a single vs multiple coordinate(s)
+- 1-dimensional vs. 2-dimensional vs. n-dimensional coordinate (e.g., `pandas.Index` only supports 1-dimensional coordinates while a geographic index could be built from n-dimensional coordinates)
+- built from a single vs multiple coordinate(s) (e.g., `pandas.Index` is built from one coordinate, `pandas.MultiIndex` may be built from an arbitrary number of coordinates and a geographic index would typically require two latitude/longitude coordinates)
 - in-memory vs. out-of-core (dask) index data/coordinates (vs. other array backends)
 - range-based vs. point-wise selection
 - exact vs. inexact lookups
 
 Whether or not a `XarrayIndex` subclass supports each of the features listed above should be either declared explicitly via a common API or left to the implementation. An `XarrayIndex` subclass may encapsulate more than one underlying object used to perform the actual indexing. Such "meta" index would typically support a range of features among those mentioned above and would automatically select the optimal index object for a given indexing operation.
 
-Every `XarrayIndex` subclass must at least implement two methods:
+An `XarrayIndex` subclass must/should/may implement the following properties/methods:
 
-- One `build` method that takes one or more Dataset/DataArray coordinates and that returns the object(s) that will be used for the actual indexing (e.g., `pandas.Index`, `scipy.spatial.KDTree`, etc.)
-- One `query` method that takes label-based indexers as argument and that returns the corresponding position-based indexers.
-
-These two methods may accept additional keyword arguments passed to the underlying index object constructor or query methods.
-
-There are potentially other properties / methods that an `XarrayIndex` subclass must/should/may implement, e.g.,
-
-- An `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass
-- A `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
+- a `build` method that takes one or more Dataset/DataArray coordinates (+ some options) and that returns the object(s) that will be used for the actual indexing (e.g., `pandas.Index`, `scipy.spatial.KDTree`, etc.)
+- a `query` method that takes label-based indexers as argument (+ some options) and that returns the corresponding position-based indexers
+- an `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass
+- a `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
 - a `__getitem__()` implementation to propagate the index through DataArray/Dataset indexing operations
 - `equals()`, `union()` and `intersection()` methods for data alignment (see [Section 2.6](#26-using-indexes-for-data-alignment))
 - Xarray coordinate getters (see [Section 2.2.4](#224-implicit-coodinates))
-- A method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
+- a method that may return a new index and that will be called when one of the corresponding coordinates is dropped from the Dataset/DataArray (multi-coordinate indexes)
 - `encode()`/`decode()` methods that would allow storage-agnostic serialization and fast-path reconstruction of the underlying index object(s) (see [Section 2.8](#28-index-encoding))
-- One or more "non-standard" methods or properties that could be leveraged in Xarray 3rd-party extensions like Dataset/DataArray accessors (see [Section 2.7](#27-using-indexes-for-other-purposes))
+- one or more "non-standard" methods or properties that could be leveraged in Xarray 3rd-party extensions like Dataset/DataArray accessors (see [Section 2.7](#27-using-indexes-for-other-purposes))
 
 The `XarrayIndex` API has still to be defined in detail.
 
@@ -76,11 +82,11 @@ Xarray should provide a minimal set of built-in index wrappers (this could be re
 
 #### 2.1.1 Index discoverability
 
-For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something lire [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry).
+For better discoverability of Xarray-compatible indexes, Xarray could provide some mechanism to register new index wrappers, e.g., something like [xoak's `IndexRegistry`](https://xoak.readthedocs.io/en/latest/_api_generated/xoak.IndexRegistry.html#xoak.IndexRegistry) or [numcodec's registry](https://numcodecs.readthedocs.io/en/stable/registry.html).
 
 Additionally (or alternatively), new index wrappers may be registered via entry points as is already the case for storage backends and maybe other backends (plotting) in the future.
 
-`XarrayIndex` subclasses may still be used directly when setting new indexes from DataArray/Dataset coordinates.
+Registering new indexes either via a custom registry or via entry points should be optional. Xarray should also allow providing `XarrayIndex` subclasses in its API (Dataset/DataArray constructors, `set_index()`, etc.).
 
 ### 2.2 Explicit vs. implicit index creation
 
@@ -109,7 +115,7 @@ Coordinates:
 More formally, `indexes` would accept `Mapping[CoordinateNames, IndexSpec]` where:
 
 - `CoordinateNames = Union[CoordinateName, Tuple[CoordinateName, ...]]` and `CoordinateName = Hashable`
-- `IndexSpec = Union[Type[XarrayIndex], Tuple[XarrayIndex, Dict[str, Any]], XarrayIndex]`, so that index instances or index classes + build options could be also passed
+- `IndexSpec = Union[Type[XarrayIndex], Tuple[Type[XarrayIndex], Dict[str, Any]], XarrayIndex]`, so that index instances or index classes + build options could be also passed
 
 Currently index objects like `pandas.MultiIndex` can be passed directly to `coords`, which in this specific case results in the implicit creation of virtual coordinates. With the new `indexes` argument this behavior may become even more confusing than it currently is. For the sake of clarity, it would be appropriate to eventually drop support for this specific behavior and treat any given mapping value given in `coords` as an array that can be wrapped into an Xarray variable, i.e., in the case of a multi-index:
 
@@ -353,16 +359,17 @@ To keep the `repr` compact, we could:
 
 ## 4. `IndexVariable`
 
-`IndexVariable` is currently used to wrap an `pandas.Index` as a variable. Although the main goal of this refactoring is to decouple indexes and variables (coordinates), `IndexVariable` could still be useful to:
+`IndexVariable` is currently used to wrap a `pandas.Index` as a variable, which would not be relevant after this refactoring since it is aimed at decoupling indexes and variables.
+
+We'll probably need to move elsewhere some of the features implemented in `IndexVariable` to:
 
 - ensure that all coordinates with an index are immutable (see [Section 2.4.1](#241-mutable-coordinates))
   - do not set values directly, do not (re)chunk (even though it may be already chunked), do not load, do not convert to sparse/dense, etc.
 - directly reuse index's data when that's possible
   - in the case of a `pandas.Index`, it makes little sense to have duplicate data (e.g., as a NumPy array) for its corresponding coordinate
+- convert a variable into a `pandas.Index` using `.to_index()` (for backwards compatibility).
 
-Converting a variable into a `pandas.Index` using `.to_index()` should probably be kept for backwards compatibility.
-
-`pandas.MultiIndex` specific API like `level_names` and `get_level_variable()` should be dropped.
+Other `IndexVariable` API like `level_names` and `get_level_variable()` would not useful anymore: it is specific to how we currently deal with `pandas.MultiIndex` and virtual "level" coordinates in Xarray.
 
 ## 5. Chunked coordinates and/or indexers
 
