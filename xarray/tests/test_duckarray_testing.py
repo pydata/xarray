@@ -1,6 +1,7 @@
 import pytest
 
 from .duckarray_testing import duckarray_module
+from .test_units import assert_units_equal
 
 da = pytest.importorskip("dask.array")
 pint = pytest.importorskip("pint")
@@ -28,6 +29,7 @@ def create_sparse(data, method):
 TestPint = duckarray_module(
     "pint",
     create_pint,
+    extra_asserts=assert_units_equal,
     marks={
         "TestVariable.test_reduce": {
             "[argsort]": [
@@ -44,6 +46,7 @@ TestPint = duckarray_module(
 TestPintDask = duckarray_module(
     "pint_dask",
     create_pint_dask,
+    extra_asserts=assert_units_equal,
     marks={
         "TestVariable.test_reduce": {
             "[argsort]": [
@@ -52,6 +55,10 @@ TestPintDask = duckarray_module(
             "[cumsum]": [pytest.mark.skip(reason="nancumsum drops the units")],
             "[median]": [pytest.mark.skip(reason="median does not support dim")],
             "[prod]": [pytest.mark.skip(reason="prod drops the units")],
+            "[cumprod]": [pytest.mark.skip(reason="cumprod drops the units")],
+            "[std]": [pytest.mark.skip(reason="nanstd drops the units")],
+            "[sum]": [pytest.mark.skip(reason="sum drops the units")],
+            "[var]": [pytest.mark.skip(reason="var drops the units")],
         },
     },
     global_marks=[
