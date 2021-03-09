@@ -46,17 +46,26 @@ def process_spec(name, value):
     elif isinstance(value, dict) and all(is_variant(k) for k in value.keys()):
         yield components, value
     else:
-        yield from itertools.chain.from_iterable(
+        processed = itertools.chain.from_iterable(
             process_spec(name, value) for name, value in value.items()
+        )
+
+        yield from (
+            (components + new_components, value) for new_components, value in processed
         )
 
 
 def preprocess_marks(marks):
-    return list(
-        itertools.chain.from_iterable(
-            process_spec(name, value) for name, value in marks.items()
-        )
+    flattened = itertools.chain.from_iterable(
+        process_spec(name, value) for name, value in marks.items()
     )
+    key = lambda x: x[0]
+    grouped = itertools.groupby(sorted(flattened, key=key), key=key)
+    result = [
+        (components, concat_mappings(v for _, v in group))
+        for components, group in grouped
+    ]
+    return result
 
 
 def parse_selector(selector):
