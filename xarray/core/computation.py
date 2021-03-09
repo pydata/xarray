@@ -927,7 +927,9 @@ def apply_ufunc(
     -----
     This function is designed for the more common case where ``func`` can work on numpy
     arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
-    it is possible to use ``map_blocks``.
+    it is possible to use :py:func:`xarray.map_blocks`.
+
+    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
 
     Examples
     --------
