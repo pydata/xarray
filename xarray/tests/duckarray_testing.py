@@ -9,29 +9,42 @@ def duckarray_module(name, create, global_marks=None, marks=None):
     import pytest
 
     class TestModule:
-        class TestDataset:
+        class TestVariable:
             @pytest.mark.parametrize(
                 "method",
                 (
+                    "all",
+                    "any",
+                    "argmax",
+                    "argmin",
+                    "argsort",
+                    "cumprod",
+                    "cumsum",
+                    "max",
                     "mean",
                     "median",
+                    "min",
                     "prod",
-                    "sum",
                     "std",
+                    "sum",
                     "var",
                 ),
             )
             def test_reduce(self, method):
-                a = create(np.linspace(0, 1, 10), method)
-                b = create(np.arange(10), method)
+                data = create(np.linspace(0, 1, 10), method)
 
-                reduced_a = getattr(np, method)(a)
-                reduced_b = getattr(np, method)(b)
+                reduced = getattr(np, method)(data, axis=0)
 
-                ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
-                expected = xr.Dataset({"a": reduced_a, "b": reduced_b})
-                actual = getattr(ds, method)()
-                xr.testing.assert_identical(actual, expected)
+                var = xr.Variable("x", data)
+
+                expected_dims = (
+                    () if method not in ("argsort", "cumsum", "cumprod") else "x"
+                )
+                expected = xr.Variable(expected_dims, reduced)
+
+                actual = getattr(var, method)(dim="x")
+
+                xr.testing.assert_allclose(actual, expected)
 
     if global_marks is not None:
         TestModule.pytestmark = global_marks
