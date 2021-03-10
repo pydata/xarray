@@ -923,6 +923,14 @@ def apply_ufunc(
     Single value or tuple of Dataset, DataArray, Variable, dask.array.Array or
     numpy.ndarray, the first type on that list to appear on an input.
 
+    Notes
+    -----
+    This function is designed for the more common case where ``func`` can work on numpy
+    arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
+    it is possible to use :py:func:`xarray.map_blocks`.
+
+    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
+
     Examples
     --------
     Calculate the vector magnitude of two arguments:
@@ -1015,6 +1023,8 @@ def apply_ufunc(
     numpy.broadcast_arrays
     numba.vectorize
     numba.guvectorize
+    dask.array.apply_gufunc
+    xarray.map_blocks
 
     References
     ----------
