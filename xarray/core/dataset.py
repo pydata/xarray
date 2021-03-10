@@ -6399,6 +6399,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         variables = {}
         skipna_da = skipna
