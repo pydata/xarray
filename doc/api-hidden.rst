@@ -811,3 +811,28 @@
    backends.DummyFileManager.acquire
    backends.DummyFileManager.acquire_context
    backends.DummyFileManager.close
+
+   backends.common.BackendArray
+   backends.common.BackendEntrypoint
+   backends.common.BackendEntrypoint.guess_can_open
+   backends.common.BackendEntrypoint.open_dataset
+
+   core.indexing.IndexingSupport
+   core.indexing.explicit_indexing_adapter
+   core.indexing.BasicIndexer
+   core.indexing.OuterIndexer
+   core.indexing.VectorizedIndexer
+   core.indexing.LazilyIndexedArray
+   core.indexing.LazilyVectorizedIndexedArray
+
+   conventions.decode_cf_variables
+
+   coding.variables.UnsignedIntegerCoder
+   coding.variables.CFMaskCoder
+   coding.variables.CFScaleOffsetCoder
+
+   coding.strings.CharacterArrayCoder
+   coding.strings.EncodedStringCoder
+
+   coding.times.CFTimedeltaCoder
+   coding.times.CFDatetimeCoder

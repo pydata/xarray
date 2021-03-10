@@ -42,7 +42,6 @@ jobs:
             "py37-min-all-deps",
             "py37-min-nep18",
             "py38-all-but-dask",
-            "py38-backend-api-v2",
             "py38-flaky",
           ]
     steps:
@@ -56,12 +55,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
-          then
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-            echo "XARRAY_BACKEND_API=v2" >> $GITHUB_ENV
-
-          elif [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
