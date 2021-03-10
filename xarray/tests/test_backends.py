@@ -2293,6 +2293,20 @@ class ZarrBase(CFEncodedBase):
             ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
+    def test_write_read_select_write(self):
+        # Test for https://github.com/pydata/xarray/issues/4084
+        ds = create_test_data()
+
+        # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
+        with self.create_zarr_target() as initial_store:
+            ds.to_zarr(initial_store, mode="w")
+            ds1 = xr.open_zarr(initial_store)
+
+        # Combination of where+squeeze triggers error on write.
+        ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
+        with self.create_zarr_target() as final_store:
+            ds_sel.to_zarr(final_store, mode="w")
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
