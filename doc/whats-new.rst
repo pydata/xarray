@@ -59,6 +59,7 @@ Documentation
   the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
   (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
 
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 

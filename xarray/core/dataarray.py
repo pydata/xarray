@@ -3782,7 +3782,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         numpy.polyfit
         numpy.polyval
-        DataArray.polyval
+        xarray.DataArray.polyval
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov

@@ -6400,7 +6400,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         --------
         numpy.polyfit
         numpy.polyval
-        Dataset.polyval
+        xarray.Dataset.polyval
         """
         variables = {}
         skipna_da = skipna
