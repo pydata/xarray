@@ -176,7 +176,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
 
         from affine import Affine
         da = xr.open_rasterio('path_to_file.tif')
-        transform = Affine.from_gdal(*da.attrs['transform'])
+        transform = Affine(*da.transform)
         nx, ny = da.sizes['x'], da.sizes['y']
         x, y = np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) * transform
 
