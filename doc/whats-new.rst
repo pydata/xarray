@@ -55,6 +55,9 @@ Documentation
 ~~~~~~~~~~~~~
 - New section on :ref:`add_a_backend` in the "Internals" chapter aimed to backend developers
   (:issue:`4803`, :pull:`4810`). By `Aureliana Barghini <https://github.com/aurghs>`_.
+- Add :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit` under "See also" in
+  the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
+  (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Internal Changes
