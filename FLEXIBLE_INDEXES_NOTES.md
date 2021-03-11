@@ -65,7 +65,7 @@ Whether or not a `XarrayIndex` subclass supports each of the features listed abo
 
 An `XarrayIndex` subclass must/should/may implement the following properties/methods:
 
-- a `build` method that takes one or more Dataset/DataArray coordinates (+ some options) and that returns the object(s) that will be used for the actual indexing (e.g., `pandas.Index`, `scipy.spatial.KDTree`, etc.)
+- a `from_coords` class method that creates a new index wrapper instance from one or more Dataset/DataArray coordinates (+ some options)
 - a `query` method that takes label-based indexers as argument (+ some options) and that returns the corresponding position-based indexers
 - an `indexes` property to access the underlying index object(s) wrapped by the `XarrayIndex` subclass
 - a `data` property to access index's data and map it to coordinate data (see [Section 4](#4-indexvariable))
@@ -228,16 +228,11 @@ Some underlying indexes might be mutable (e.g., a tree-based index structure tha
 
 #### 2.3.1 Dataset/DataArray's `indexes` property
 
-The `indexes` property would allow easy access to all the indexes used in a Dataset/DataArray. There may be different options for the type returned:
-
-A. `Dict[CoordinateName, XarrayIndex]`: keys are coordinate names and values may be duplicated
-B. `Dict[CoordinateNames, XarrayIndex]`: keys may represent one or more coordinate names and values are unique
-
-Option A allows easy index look-up by coordinate name, while option B allows easy iteration through all the indexes. Option A may be more useful than option B for many tasks and may also be less ambiguous if more complex hashable types than `str` are used for `CoordinateName`.
+The `indexes` property would allow easy access to all the indexes used in a Dataset/DataArray. It would return a `Dict[CoordinateName, XarrayIndex]` for easy index lookup from coordinate name.
 
 #### 2.3.2 Additional Dataset/DataArray properties or methods
 
-Both options A and B in the section above have pros and cons. For convenience, we could maybe add one more property / method to get the indexes in the desired format.
+In some cases the format returned by the `indexes` property would not be the best (e.g, it may return duplicate index instances as values). For convenience, we could add one more property / method to get the indexes in the desired format if needed.
 
 ### 2.4 Propagate indexes through operations
 
