@@ -3917,6 +3917,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compat: str = "no_conflicts",
         join: str = "outer",
         fill_value: Any = dtypes.NA,
+        combine_attrs: str = "override",
     ) -> "Dataset":
         """Merge the arrays of two datasets into a single dataset.
 
@@ -3945,7 +3946,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-
         join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -3957,6 +3957,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                        "override"}, default: "override"
+            String indicating how to combine attrs of the objects being merged:
+
+            - "drop": empty attrs on returned Dataset.
+            - "identical": all attrs must be the same on every object.
+            - "no_conflicts": attrs from all objects are combined, any that have
+              the same name must also have the same value.
+            - "drop_conflicts": attrs from all objects are combined, any that have
+              the same name but different values are dropped.
+            - "override": skip comparing and copy attrs from the first dataset to
+              the result.
 
         Returns
         -------
@@ -3976,6 +3988,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             compat=compat,
             join=join,
             fill_value=fill_value,
+            combine_attrs=combine_attrs,
         )
         return self._replace(**merge_result._asdict())
 
@@ -6386,6 +6399,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         variables = {}
         skipna_da = skipna

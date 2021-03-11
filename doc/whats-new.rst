@@ -22,6 +22,8 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Support for `dask.graph_manipulation
   <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
   By `Guido Imperiale <https://github.com/crusaderky>`_
@@ -41,15 +43,25 @@ New Features
   :py:meth:`DataArray.str.rsplit`, and  :py:meth:`DataArray.str.split`.
   A number of these methods allow for splitting or joining the strings in an
   array. (:issue:`4622`)
+- Thanks to the new pluggable backend infrastructure external packages may now
+  use the ``xarray.backends`` entry point to register additional engines to be used in
+  :py:func:`open_dataset`, see the documentation in :ref:`add_a_backend`
+  (:issue:`4309`, :issue:`4803`, :pull:`4989`, :pull:`4810` and many others).
+  The backend refactor has been sponsored with the "Essential Open Source Software for Science"
+  grant from the `Chan Zuckerberg Initiative <https://chanzuckerberg.com>`_ and
+  developed by `B-Open <https://www.bopen.eu>`_.
+  By `Aureliana Barghini <https://github.com/aurghs>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- :py:func:`open_dataset` and :py:func:`open_dataarray` now accept only the first argument
+  as positional, all others need to be passed are keyword arguments. This is part of the
+  refactor to support external backends (:issue:`4309`, :pull:`4989`).
+  By `Alessandro Amici <https://github.com/alexamici>`_.
 
 Deprecations
 ~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -58,6 +70,11 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- New section on :ref:`add_a_backend` in the "Internals" chapter aimed to backend developers
+  (:issue:`4803`, :pull:`4810`). By `Aureliana Barghini <https://github.com/aurghs>`_.
+- Add :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit` under "See also" in
+  the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
+  (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Internal Changes
