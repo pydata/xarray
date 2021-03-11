@@ -324,14 +324,21 @@
    core.accessor_dt.TimedeltaAccessor.seconds
 
    core.accessor_str.StringAccessor.capitalize
+   core.accessor_str.StringAccessor.casefold
+   core.accessor_str.StringAccessor.cat
    core.accessor_str.StringAccessor.center
    core.accessor_str.StringAccessor.contains
    core.accessor_str.StringAccessor.count
    core.accessor_str.StringAccessor.decode
    core.accessor_str.StringAccessor.encode
    core.accessor_str.StringAccessor.endswith
+   core.accessor_str.StringAccessor.extract
+   core.accessor_str.StringAccessor.extractall
    core.accessor_str.StringAccessor.find
+   core.accessor_str.StringAccessor.findall
+   core.accessor_str.StringAccessor.format
    core.accessor_str.StringAccessor.get
+   core.accessor_str.StringAccessor.get_dummies
    core.accessor_str.StringAccessor.index
    core.accessor_str.StringAccessor.isalnum
    core.accessor_str.StringAccessor.isalpha
@@ -342,20 +349,26 @@
    core.accessor_str.StringAccessor.isspace
    core.accessor_str.StringAccessor.istitle
    core.accessor_str.StringAccessor.isupper
+   core.accessor_str.StringAccessor.join
    core.accessor_str.StringAccessor.len
    core.accessor_str.StringAccessor.ljust
    core.accessor_str.StringAccessor.lower
    core.accessor_str.StringAccessor.lstrip
    core.accessor_str.StringAccessor.match
+   core.accessor_str.StringAccessor.normalize
    core.accessor_str.StringAccessor.pad
+   core.accessor_str.StringAccessor.partition
    core.accessor_str.StringAccessor.repeat
    core.accessor_str.StringAccessor.replace
    core.accessor_str.StringAccessor.rfind
    core.accessor_str.StringAccessor.rindex
    core.accessor_str.StringAccessor.rjust
+   core.accessor_str.StringAccessor.rpartition
+   core.accessor_str.StringAccessor.rsplit
    core.accessor_str.StringAccessor.rstrip
    core.accessor_str.StringAccessor.slice
    core.accessor_str.StringAccessor.slice_replace
+   core.accessor_str.StringAccessor.split
    core.accessor_str.StringAccessor.startswith
    core.accessor_str.StringAccessor.strip
    core.accessor_str.StringAccessor.swapcase
