@@ -2927,7 +2927,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # Use reindex_variables instead because it supports
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
-                # down, therefore add these signals together and run it later:
+                # down, therefore collect these signals and run it later:
                 to_reindex[name] = var
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
@@ -2935,7 +2935,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # interpolated along:
                 variables[name] = var
 
-        if len(to_reindex) > 0:
+        if to_reindex:
             # Reindex variables:
             variables_reindex = alignment.reindex_variables(
                 variables=to_reindex,
@@ -2954,7 +2954,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables.copy(), coord_names, indexes=indexes
         )
 
-        # attach indexer as coordinate
+        # Attach indexer as coordinate
         variables.update(indexers)
         for k, v in indexers.items():
             assert isinstance(v, Variable)
