@@ -141,12 +141,21 @@ def _validate_dataset_names(dataset):
         check_name(k)
 
 
-def _validate_attrs(dataset):
+def _validate_attrs(dataset, invalid_netcdf=False):
     """`attrs` must have a string key and a value which is either: a number,
-    a string, an ndarray or a list/tuple of numbers/strings.
+    a string, an ndarray, a list/tuple of numbers/strings, or a numpy.bool_.
+
+    Notes
+    -----
+    A numpy.bool_ is only allowed when using the h5netcdf engine with
+    `invalid_netcdf=True`.
     """
 
-    def check_attr(name, value):
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple)
+    if invalid_netcdf:
+        valid_types += (np.bool_,)
+
+    def check_attr(name, value, valid_types):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
@@ -160,22 +169,21 @@ def _validate_attrs(dataset):
                 "serialization to netCDF files"
             )
 
-        if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
+        if not isinstance(value, valid_types):
             raise TypeError(
-                f"Invalid value for attr {name!r}: {value!r} must be a number, "
-                "a string, an ndarray or a list/tuple of "
-                "numbers/strings for serialization to netCDF "
-                "files"
+                f"Invalid value for attr {name!r}: {value!r}. For serialization to "
+                "netCDF files, its value must be of one of the following types: "
+                f"{', '.join([vtype.__name__ for vtype in valid_types])}"
             )
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():
-        check_attr(k, v)
+        check_attr(k, v, valid_types)
 
     # Check attrs on each variable within the dataset
     for variable in dataset.variables.values():
         for k, v in variable.attrs.items():
-            check_attr(k, v)
+            check_attr(k, v, valid_types)
 
 
 def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
@@ -1019,7 +1027,7 @@ def to_netcdf(
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
+    _validate_attrs(dataset, invalid_netcdf=invalid_netcdf and engine == "h5netcdf")
 
     try:
         store_open = WRITEABLE_STORES[engine]
