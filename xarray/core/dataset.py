@@ -6996,7 +6996,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         queries : dict, optional
-            A dic with keys matching dimensions and values given by strings
+            A dict with keys matching dimensions and values given by strings
             containing Python expressions to be evaluated against the data variables
             in the dataset. The expressions will be evaluated using the pandas
             eval() function, and can contain any valid Python expressions but cannot
