@@ -5876,7 +5876,9 @@ class TestDataset:
 
         # test error handling
         with pytest.raises(ValueError):
-            ds.query("a > 5")  # must be dict
+            ds.query("a > 5")  # must be dict or kwargs
+        with pytest.raises(ValueError):
+            ds.query(x=(a > 5))  # must be query string
         with pytest.raises(IndexError):
             ds.query(y="a > 5")  # wrong length dimension
         with pytest.raises(IndexError):
