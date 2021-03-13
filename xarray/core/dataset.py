@@ -2723,6 +2723,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         coords: Mapping[Hashable, Any] = None,
         method: str = "linear",
+        method_for_non_numerics: str = "nearest",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
         **coords_kwargs: Any,
@@ -2740,6 +2741,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             {"linear", "nearest"} for multidimensional array,
             {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
             for 1-dimensional array. "linear" is used by default.
+        method_for_non_numerics : str, optional
+            Method for non-numerics where modifying the elements is not
+            possible. See Dataset.reindex for options. "nearest" is used by
+            default.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -2942,7 +2947,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 sizes=obj.sizes,
                 indexes=obj.indexes,
                 indexers={k: v[-1] for k, v in validated_indexers.items()},
-                method="nearest",
+                method=method_for_non_numerics,
             )[0]
             variables.update(variables_reindex)
 
