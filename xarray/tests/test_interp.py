@@ -886,9 +886,11 @@ def test_interp1d_bounds_error():
 @requires_scipy
 @pytest.mark.parametrize(
     "x, expected",
-    (2.5, True),
-    (np.array([2.5, 5]), True),
-    ("x", np.array([0, 0.5, 1, 2]), dict(unit="s"), False),
+    [
+        (2.5, True),
+        (np.array([2.5, 5]), True),
+        (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
+    ],
 )
 def test_coord_attrs(x, expected):
     base_attrs = dict(foo="bar")
