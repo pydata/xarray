@@ -241,6 +241,7 @@ Plotting
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
+   Dataset.plot.quiver
 
 DataArray
 =========
@@ -419,38 +420,58 @@ String manipulation
    :toctree: generated/
    :template: autosummary/accessor_method.rst
 
+   DataArray.str._apply
+   DataArray.str._padder
+   DataArray.str._partitioner
+   DataArray.str._re_compile
+   DataArray.str._splitter
+   DataArray.str._stringify
    DataArray.str.capitalize
+   DataArray.str.casefold
+   DataArray.str.cat
    DataArray.str.center
    DataArray.str.contains
    DataArray.str.count
    DataArray.str.decode
    DataArray.str.encode
    DataArray.str.endswith
+   DataArray.str.extract
+   DataArray.str.extractall
    DataArray.str.find
+   DataArray.str.findall
+   DataArray.str.format
    DataArray.str.get
+   DataArray.str.get_dummies
    DataArray.str.index
    DataArray.str.isalnum
    DataArray.str.isalpha
    DataArray.str.isdecimal
    DataArray.str.isdigit
+   DataArray.str.islower
    DataArray.str.isnumeric
    DataArray.str.isspace
    DataArray.str.istitle
    DataArray.str.isupper
+   DataArray.str.join
    DataArray.str.len
    DataArray.str.ljust
    DataArray.str.lower
    DataArray.str.lstrip
    DataArray.str.match
+   DataArray.str.normalize
    DataArray.str.pad
+   DataArray.str.partition
    DataArray.str.repeat
    DataArray.str.replace
    DataArray.str.rfind
    DataArray.str.rindex
    DataArray.str.rjust
+   DataArray.str.rpartition
+   DataArray.str.rsplit
    DataArray.str.rstrip
    DataArray.str.slice
    DataArray.str.slice_replace
+   DataArray.str.split
    DataArray.str.startswith
    DataArray.str.strip
    DataArray.str.swapcase

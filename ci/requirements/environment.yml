@@ -3,16 +3,17 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
   - cdms2
   - cfgrib
   - cftime
-  - dask<2021.02.0
+  - dask
   - distributed
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
   - iris

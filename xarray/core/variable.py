@@ -120,6 +120,16 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
+        if isinstance(obj[1], DataArray):
+            # TODO: change into TypeError
+            warnings.warn(
+                (
+                    "Using a DataArray object to construct a variable is"
+                    " ambiguous, please extract the data using the .data property."
+                    " This will raise a TypeError in 0.19.0."
+                ),
+                DeprecationWarning,
+            )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
@@ -169,7 +179,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -218,7 +228,8 @@ def as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    data = getattr(data, "values", data)
+    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
+        data = data.values
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -403,7 +414,6 @@ class Variable(
             * 'same_kind' means only safe casts or casts within a kind,
               like float64 to float32, are allowed.
             * 'unsafe' means any data conversions may be done.
-
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
@@ -428,7 +438,7 @@ class Variable(
         Make sure to only supply these arguments if the underlying array class
         supports them.
 
-        See also
+        See Also
         --------
         numpy.ndarray.astype
         dask.array.Array.astype
@@ -521,22 +531,15 @@ class Variable(
 
     def __dask_postcompute__(self):
         array_func, array_args = self._data.__dask_postcompute__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
     def __dask_postpersist__(self):
         array_func, array_args = self._data.__dask_postpersist__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
-    @staticmethod
-    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        data = array_func(results, *array_args)
-        return Variable(dims, data, attrs=attrs, encoding=encoding)
+    def _dask_finalize(self, results, array_func, *args, **kwargs):
+        data = array_func(results, *args, **kwargs)
+        return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
     def values(self):
@@ -606,8 +609,8 @@ class Variable(
         """Prepare an indexing key for an indexing operation.
 
         Parameters
-        -----------
-        key: int, slice, array-like, dict or tuple of integer, slice and array-like
+        ----------
+        key : int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
@@ -929,7 +932,6 @@ class Variable(
 
         Examples
         --------
-
         Shallow copy versus deep copy
 
         >>> var = xr.Variable(data=[1, 2, 3], dims="x")
@@ -1225,7 +1227,7 @@ class Variable(
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
         **shifts_kwargs
             The keyword arguments form of ``shifts``.
@@ -1535,7 +1537,7 @@ class Variable(
         stacked : Variable
             Variable with the same attributes but stacked data.
 
-        See also
+        See Also
         --------
         Variable.unstack
         """
@@ -1655,7 +1657,7 @@ class Variable(
         unstacked : Variable
             Variable with the same attributes but unstacked data.
 
-        See also
+        See Also
         --------
         Variable.stack
         DataArray.unstack
@@ -1900,7 +1902,6 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1917,7 +1918,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
         """
 
@@ -2432,7 +2433,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmin, DataArray.idxmin
         """
@@ -2477,7 +2478,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmax, DataArray.idxmax
         """

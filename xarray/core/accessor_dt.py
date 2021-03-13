@@ -9,6 +9,7 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
+from .npcompat import DTypeLike
 from .pycompat import is_duck_dask_array
 
 
@@ -178,8 +179,9 @@ class Properties:
     def __init__(self, obj):
         self._obj = obj
 
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
+    @staticmethod
+    def _tslib_field_accessor(
+        name: str, docstring: str = None, dtype: DTypeLike = None
     ):
         def f(self, dtype=dtype):
             if dtype is None:
@@ -322,8 +324,8 @@ class DatetimeAccessor(Properties):
     def isocalendar(self):
         """Dataset containing ISO year, week number, and weekday.
 
-        Note
-        ----
+        Notes
+        -----
         The iso year and weekday differ from the nominal year and weekday.
         """
 

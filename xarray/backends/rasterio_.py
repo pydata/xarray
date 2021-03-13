@@ -52,9 +52,9 @@ class RasterioArrayWrapper(BackendArray):
     def _get_indexer(self, key):
         """Get indexer for rasterio array.
 
-        Parameter
-        ---------
-        key: tuple of int
+        Parameters
+        ----------
+        key : tuple of int
 
         Returns
         -------
@@ -63,7 +63,7 @@ class RasterioArrayWrapper(BackendArray):
         squeeze_axis: axes to be squeezed
         np_ind: indexer for loaded numpy array
 
-        See also
+        See Also
         --------
         indexing.decompose_indexer
         """
@@ -179,7 +179,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         transform = Affine.from_gdal(*da.attrs['transform'])
         nx, ny = da.sizes['x'], da.sizes['y']
         x, y = np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) * transform
-
 
     Parameters
     ----------
@@ -336,9 +335,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(
-        RasterioArrayWrapper(manager, lock, vrt_params)
-    )
+    data = indexing.LazilyIndexedArray(RasterioArrayWrapper(manager, lock, vrt_params))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
