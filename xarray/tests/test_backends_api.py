@@ -1,6 +1,7 @@
+import xarray as xr
 from xarray.backends.api import _get_default_engine
 
-from . import requires_netCDF4, requires_scipy
+from . import requires_netCDF4, requires_scipy, assert_identical
 
 
 @requires_netCDF4
@@ -14,3 +15,25 @@ def test__get_default_engine():
 
     engine_default = _get_default_engine("/example")
     assert engine_default == "netcdf4"
+
+def test_custom_engine():
+    expected = xr.Dataset(
+        dict(a=2*np.arange(5)),
+        coords={'x': ('x', np.arange(5), base_attrs)}
+    )
+    class CustomBackend:
+        open_dataset_parameters: Union[Tuple, None] = None
+
+        def open_dataset(
+            self,
+            filename_or_obj: str,
+            drop_variables: Tuple[str] = None,
+            **kwargs: Any,
+        ):
+            return expected.copy(deep=True)
+
+        def guess_can_open(self, filename_or_obj):
+            return False
+
+    actual = xr.open_dataset("fake_filename", engine=CustomBackend)
+    assert_identical(expected, actual)

@@ -492,7 +492,10 @@ def open_dataset(
     if engine is None:
         engine = plugins.guess_engine(filename_or_obj)
 
-    backend = plugins.get_backend(engine)
+    if type(engine) is str:
+        backend = plugins.get_backend(engine)
+    else:
+        backend = engine
 
     decoders = _resolve_decoders_kwargs(
         decode_cf,
