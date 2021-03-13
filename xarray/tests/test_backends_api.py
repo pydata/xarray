@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 from xarray.backends.api import _get_default_engine
 
@@ -19,16 +20,17 @@ def test__get_default_engine():
 def test_custom_engine():
     expected = xr.Dataset(
         dict(a=2*np.arange(5)),
-        coords={'x': ('x', np.arange(5), base_attrs)}
+        coords=dict(x=('x', np.arange(5), dict(units="s")))
     )
+
     class CustomBackend:
-        open_dataset_parameters: Union[Tuple, None] = None
+        open_dataset_parameters = None
 
         def open_dataset(
             self,
-            filename_or_obj: str,
-            drop_variables: Tuple[str] = None,
-            **kwargs: Any,
+            filename_or_obj,
+            drop_variables=None,
+            **kwargs,
         ):
             return expected.copy(deep=True)
 
