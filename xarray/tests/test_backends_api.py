@@ -17,9 +17,10 @@ def test__get_default_engine():
     engine_default = _get_default_engine("/example")
     assert engine_default == "netcdf4"
 
+
 def test_custom_engine():
     expected = xr.Dataset(
-        dict(a=2*np.arange(5)),
+        dict(a=2 * np.arange(5)),
         coords=dict(x=('x', np.arange(5), dict(units="s")))
     )
 
