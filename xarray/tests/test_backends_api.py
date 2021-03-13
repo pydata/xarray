@@ -28,7 +28,9 @@ def test_custom_engine():
         open_dataset_parameters = None
 
         def open_dataset(
-            filename_or_obj, drop_variables=None, **kwargs,
+            filename_or_obj,
+            drop_variables=None,
+            **kwargs,
         ):
             return expected.copy(deep=True)
 
