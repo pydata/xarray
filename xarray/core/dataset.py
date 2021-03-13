@@ -2723,9 +2723,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         coords: Mapping[Hashable, Any] = None,
         method: str = "linear",
-        method_for_non_numerics: str = "nearest",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
+        method_for_non_numerics: str = "nearest",
         **coords_kwargs: Any,
     ) -> "Dataset":
         """Multidimensional interpolation of Dataset.
