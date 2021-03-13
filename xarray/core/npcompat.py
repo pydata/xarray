@@ -105,6 +105,7 @@ else:
     from numpy.core.numeric import normalize_axis_tuple
     from numpy.lib.stride_tricks import as_strided
 
+    # copied from numpy.lib.stride_tricks
     def sliding_window_view(
         x, window_shape, axis=None, *, subok=False, writeable=False
     ):
