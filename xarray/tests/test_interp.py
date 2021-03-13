@@ -881,3 +881,20 @@ def test_interp1d_bounds_error():
 
     # default is to fill with nans, so this should pass
     da.interp(time=3.5)
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "x, expected",
+    (2.5, True),
+    (np.array([2.5, 5]), True),
+    ("x", np.array([0, 0.5, 1, 2]), dict(unit="s"), False),
+)
+def test_coord_attrs(x, expected):
+    base_attrs = dict(foo="bar")
+    ds = xr.Dataset(
+        data_vars=dict(a=2 * np.arange(5)),
+        coords={"x": ("x", np.arange(5), base_attrs)},
+    )
+
+    actual = ds.interp(x=x).x.attrs == base_attrs
+    assert expected == actual
