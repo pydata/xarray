@@ -2723,8 +2723,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         coords: Mapping[Hashable, Any] = None,
         method: str = "linear",
-        method_for_non_numerics: str = "nearest",
-        assume_sorted: bool = False,
+c        assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
         **coords_kwargs: Any,
     ) -> "Dataset":
@@ -2741,10 +2740,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             {"linear", "nearest"} for multidimensional array,
             {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
             for 1-dimensional array. "linear" is used by default.
-        method_for_non_numerics : str, optional
-            Method for non-numerics where modifying the elements is not
-            possible. See Dataset.reindex for options. "nearest" is used by
-            default.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -2754,6 +2749,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
+        method_for_non_numerics : str, optional
+            Method for non-numerics where modifying the elements is not
+            possible. See Dataset.reindex for options. "nearest" is used by
+            default.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -2980,6 +2979,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
+        method_for_non_numerics: str = "nearest",
     ) -> "Dataset":
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
@@ -3001,6 +3001,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             values.
         kwargs : dict, optional
             Additional keyword passed to scipy's interpolator.
+        method_for_non_numerics : str, optional
+            Method for non-numerics where modifying the elements is not
+            possible. See Dataset.reindex for options. "nearest" is used by
+            default.
 
         Returns
         -------
@@ -3036,7 +3040,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             # We do not support interpolation along object coordinate.
             # reindex instead.
             ds = self.reindex(object_coords)
-        return ds.interp(numeric_coords, method, assume_sorted, kwargs)
+        return ds.interp(
+            coords=numeric_coords,
+            method=method,
+            assume_sorted=assume_sorted,
+            kwargs=kwargs
+            method_for_non_numerics=method_for_non_numerics,
+        )
 
     # Helper methods for rename()
     def _rename_vars(self, name_dict, dims_dict):
