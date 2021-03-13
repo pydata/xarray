@@ -882,6 +882,7 @@ def test_interp1d_bounds_error():
     # default is to fill with nans, so this should pass
     da.interp(time=3.5)
 
+
 @requires_scipy
 @pytest.mark.parametrize(
     "x, expected",
