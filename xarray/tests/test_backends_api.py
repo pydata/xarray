@@ -28,14 +28,11 @@ def test_custom_engine():
         open_dataset_parameters = None
 
         def open_dataset(
-            self,
-            filename_or_obj,
-            drop_variables=None,
-            **kwargs,
+            filename_or_obj, drop_variables=None, **kwargs,
         ):
             return expected.copy(deep=True)
 
-        def guess_can_open(self, filename_or_obj):
+        def guess_can_open(filename_or_obj):
             return False
 
     actual = xr.open_dataset("fake_filename", engine=CustomBackend)
