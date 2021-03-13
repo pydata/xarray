@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 from xarray.backends.api import _get_default_engine
 
-from . import requires_netCDF4, requires_scipy, assert_identical
+from . import assert_identical, requires_netCDF4, requires_scipy
 
 
 @requires_netCDF4
@@ -20,8 +20,7 @@ def test__get_default_engine():
 
 def test_custom_engine():
     expected = xr.Dataset(
-        dict(a=2 * np.arange(5)),
-        coords=dict(x=('x', np.arange(5), dict(units="s")))
+        dict(a=2 * np.arange(5)), coords=dict(x=("x", np.arange(5), dict(units="s")))
     )
 
     class CustomBackend:
