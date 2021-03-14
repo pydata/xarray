@@ -885,19 +885,19 @@ def test_interp1d_bounds_error():
 
 @requires_scipy
 @pytest.mark.parametrize(
-    "x, expected",
+    "x, expect_same_attrs",
     [
         (2.5, True),
         (np.array([2.5, 5]), True),
         (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
     ],
 )
-def test_coord_attrs(x, expected):
+def test_coord_attrs(x, expect_same_attrs):
     base_attrs = dict(foo="bar")
     ds = xr.Dataset(
         data_vars=dict(a=2 * np.arange(5)),
         coords={"x": ("x", np.arange(5), base_attrs)},
     )
 
-    actual = ds.interp(x=x).x.attrs == base_attrs
-    assert expected == actual
+    has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
+    assert expect_same_attrs == has_same_attrs
