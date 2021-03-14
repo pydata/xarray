@@ -112,9 +112,14 @@ def guess_engine(store_spec):
 
 def get_backend(engine):
     """Select open_dataset method based on current engine"""
-    engines = list_engines()
-    if engine not in engines:
-        raise ValueError(
-            f"unrecognized engine {engine} must be one of: {list(engines)}"
-        )
-    return engines[engine]
+    if hasattr(engine, "open_dataset"):
+        backend = engine
+    else
+        engines = list_engines()
+        if engine not in engines:
+            raise ValueError(
+                f"unrecognized engine {engine} must be one of: {list(engines)}"
+            )
+        backend = engines[engine]
+
+    return backend
