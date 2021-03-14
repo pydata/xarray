@@ -114,7 +114,7 @@ def get_backend(engine):
     """Select open_dataset method based on current engine"""
     if hasattr(engine, "open_dataset"):
         backend = engine
-    else
+    else:
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
