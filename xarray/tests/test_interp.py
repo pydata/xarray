@@ -899,5 +899,6 @@ def test_coord_attrs(x, expected):
         coords={"x": ("x", np.arange(5), base_attrs)},
     )
 
-    actual = ds.interp(x=x).x.attrs == base_attrs
-    assert expected == actual
+    actual = ds.interp(x=x)
+    expected = ds
+    assert_identical(expected, actual)
