@@ -5818,18 +5818,20 @@ class TestDataset:
         a = np.arange(0, 10, 1)
         b = np.random.randint(0, 100, size=10)
         c = np.linspace(0, 1, 20)
-        d = np.arange(0, 200).reshape(10, 20)
-        e = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
+        d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
             object
         )
+        e = np.arange(0, 10 * 20).reshape(10, 20)
+        f = np.random.normal(0, 1, size=(10, 20, 30))
         if backend == "numpy":
             ds = Dataset(
                 {
                     "a": ("x", a),
                     "b": ("x", b),
                     "c": ("y", c),
-                    "d": (("x", "y"), d),
-                    "e": ("z", e),
+                    "d": ("z", d),
+                    "e": (("x", "y"), e),
+                    "f": (("x", "y", "z"), f),
                 }
             )
         elif backend == "dask":
@@ -5838,8 +5840,9 @@ class TestDataset:
                     "a": ("x", da.from_array(a, chunks=3)),
                     "b": ("x", da.from_array(b, chunks=3)),
                     "c": ("y", da.from_array(c, chunks=7)),
-                    "d": (("x", "y"), da.from_array(d, chunks=(3, 7))),
-                    "e": ("z", da.from_array(e, chunks=12)),
+                    "d": ("z", da.from_array(d, chunks=12)),
+                    "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
+                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
                 }
             )
 
@@ -5864,10 +5867,11 @@ class TestDataset:
         assert_identical(expect, actual)
 
         # query single dim, single string variable
-        # N.B., this query raises NotImplemented for the Python parser, not clear why (same behaviour in pandas)
         if parser == "pandas":
-            actual = ds.query(z='e == "foo"', engine=engine, parser=parser)
-            expect = ds.isel(z=(e == "foo"))
+            # N.B., this query currently only works with the pandas parser
+            # xref https://github.com/pandas-dev/pandas/issues/40436
+            actual = ds.query(z='d == "bar"', engine=engine, parser=parser)
+            expect = ds.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
         # query single dim, multiple variables
@@ -5875,7 +5879,7 @@ class TestDataset:
         expect = ds.isel(x=((a > 5) & (b > 50)))
         assert_identical(expect, actual)
 
-        # check pandas query parser
+        # check pandas query syntax is supported
         if parser == "pandas":
             actual = ds.query(x="(a > 5) and (b > 50)", engine=engine, parser=parser)
             expect = ds.isel(x=((a > 5) & (b > 50)))
@@ -5889,9 +5893,9 @@ class TestDataset:
         # query multiple dims via kwargs
         if parser == "pandas":
             actual = ds.query(
-                x="a > 5", y="c < .5", z="e == 'foo'", engine=engine, parser=parser
+                x="a > 5", y="c < .5", z="d == 'bar'", engine=engine, parser=parser
             )
-            expect = ds.isel(x=(a > 5), y=(c < 0.5), z=(e == "foo"))
+            expect = ds.isel(x=(a > 5), y=(c < 0.5), z=(d == "bar"))
             assert_identical(expect, actual)
 
         # query multiple dims via dict
@@ -5902,11 +5906,11 @@ class TestDataset:
         # query multiple dims via dict
         if parser == "pandas":
             actual = ds.query(
-                dict(x="a > 5", y="c < .5", z="e == 'foo'"),
+                dict(x="a > 5", y="c < .5", z="d == 'bar'"),
                 engine=engine,
                 parser=parser,
             )
-            expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(e == "foo")))
+            expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(d == "bar")))
             assert_identical(expect, actual)
 
         # test error handling
@@ -5919,7 +5923,7 @@ class TestDataset:
         with pytest.raises(IndexError):
             ds.query(x="c < .5")  # wrong length dimension
         with pytest.raises(IndexError):
-            ds.query(x="d > 100")  # wrong number of dimensions
+            ds.query(x="e > 100")  # wrong number of dimensions
 
 
 # Py.test tests
