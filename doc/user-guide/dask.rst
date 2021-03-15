@@ -21,7 +21,7 @@ and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 What is a Dask array?
 ---------------------
 
-.. image:: _static/dask_array.png
+.. image:: ../_static/dask_array.png
    :width: 40 %
    :align: right
    :alt: A Dask array

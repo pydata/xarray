@@ -179,7 +179,7 @@ For example, if you want to interpolate a two dimensional array along a particul
 you can pass two 1-dimensional :py:class:`~xarray.DataArray` s with
 a common dimension as new coordinate.
 
-.. image:: _static/advanced_selection_interpolation.svg
+.. image:: ../_static/advanced_selection_interpolation.svg
     :height: 200px
     :width: 400 px
     :alt: advanced indexing and interpolation

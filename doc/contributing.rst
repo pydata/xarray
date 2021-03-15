@@ -4,8 +4,6 @@
 Contributing to xarray
 **********************
 
-.. contents:: Table of contents:
-   :local:
 
 .. note::
 

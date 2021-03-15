@@ -1,4 +1,4 @@
-.. _related-projects:
+.. _ecosystem:
 
 Xarray related projects
 -----------------------

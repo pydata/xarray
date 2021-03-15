@@ -621,7 +621,7 @@ over the network until we look at particular values:
     # the data is downloaded automatically when we make the plot
     In [6]: tmax[0].plot()
 
-.. image:: _static/opendap-prism-tmax.png
+.. image:: ../_static/opendap-prism-tmax.png
 
 Some servers require authentication before we can access the data. For this
 purpose we can explicitly create a :py:class:`backends.PydapDataStore`

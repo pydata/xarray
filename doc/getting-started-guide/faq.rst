@@ -185,7 +185,7 @@ for more details.
 What other projects leverage xarray?
 ------------------------------------
 
-See section :ref:`related-projects`.
+See section :ref:`ecosystem`.
 
 How should I cite xarray?
 -------------------------
