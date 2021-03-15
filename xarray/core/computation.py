@@ -421,8 +421,7 @@ def apply_dataset_vfunc(
             "dataset_fill_value argument."
         )
 
-    if keep_attrs:
-        first_obj = _first_of_type(args, Dataset)
+    objs = _all_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
@@ -442,13 +441,13 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for ds in out:
-                # This is adding attrs in place
-                ds._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for ds in out:
+            ds.attrs = attrs
+    else:
+        out.attrs = attrs
+
     return out
 
 
