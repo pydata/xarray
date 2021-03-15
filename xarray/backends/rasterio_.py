@@ -177,7 +177,9 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         >>> from affine import Affine
         >>> import xarray as xr
         >>> import numpy as np
-        >>> da = xr.open_rasterio('https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif')
+        >>> da = xr.open_rasterio(
+        ...     "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif"
+        ... )
         >>> da
         <xarray.DataArray (band: 3, y: 718, x: 791)>
         [1703814 values with dtype=uint8]
@@ -198,8 +200,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
         >>> transform
         Affine(300.0379266750948, 0.0, 101985.0,
                0.0, -300.041782729805, 2826915.0)
-        >>> nx, ny = da.sizes['x'], da.sizes['y']
-        >>> x, y = transform * np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5)
+        >>> nx, ny = da.sizes["x"], da.sizes["y"]
+        >>> x, y = transform * np.meshgrid(np.arange(nx) + 0.5, np.arange(ny) + 0.5)
         >>> x
         array([[102135.01896334, 102435.05689001, 102735.09481669, ...,
                 338564.90518331, 338864.94310999, 339164.98103666],
