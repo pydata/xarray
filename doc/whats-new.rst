@@ -22,7 +22,8 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.date` added (:issue:`4983`, :pull:`4994`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
