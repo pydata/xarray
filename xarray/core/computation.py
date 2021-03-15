@@ -1213,17 +1213,24 @@ def call_on_dataset(func, obj, *args, **kwargs):
     Coordinates:
       * x        (x) int64 0 1
     """
-    from .dataarray import DataArray
+    from .dataarray import _THIS_ARRAY, DataArray
+    from .parallel import dataarray_to_dataset, dataset_to_dataarray
 
-    ds = obj._to_temp_dataset() if isinstance(obj, DataArray) else obj
+    if isinstance(obj, DataArray):
+        ds = dataarray_to_dataset(obj)
+        if obj.name is None:
+            ds = ds.rename({_THIS_ARRAY: None})
+    else:
+        ds = obj
 
     result = func(ds, *args, **kwargs)
 
-    return (
-        obj._from_temp_dataset(result, name=obj.name)
-        if isinstance(obj, DataArray)
-        else result
-    )
+    if isinstance(obj, DataArray):
+        result = dataset_to_dataarray(result)
+        if obj.name is None:
+            result = result.rename(None)
+
+    return result
 
 
 def cov(da_a, da_b, dim=None, ddof=1):
