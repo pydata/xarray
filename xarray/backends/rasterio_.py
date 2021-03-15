@@ -194,7 +194,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             scales:         (1.0, 1.0, 1.0)
             offsets:        (0.0, 0.0, 0.0)
             AREA_OR_POINT:  Area
-        >>> transform = Affine(*da.transform)
+        >>> transform = Affine(*da.attrs["transform"])
         >>> transform
         Affine(300.0379266750948, 0.0, 101985.0,
                0.0, -300.041782729805, 2826915.0)
