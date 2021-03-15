@@ -863,34 +863,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return da.Array.__dask_scheduler__
 
     def __dask_postcompute__(self):
-        import dask
-
-        info = [
-            (k, None) + v.__dask_postcompute__()
-            if dask.is_dask_collection(v)
-            else (k, v, None, None)
-            for k, v in self._variables.items()
-        ]
-        construct_direct_args = (
-            self._coord_names,
-            self._dims,
-            self._attrs,
-            self._indexes,
-            self._encoding,
-            self._close,
-        )
-        return self._dask_postcompute, (info, construct_direct_args)
+        return self._dask_postcompute, ()
 
     def __dask_postpersist__(self):
+        return self._dask_postpersist, ()
+
+    def _dask_postcompute(self, results: "Iterable[Variable]") -> "Dataset":
         import dask
 
-        info = [
-            (k, None, v.__dask_keys__()) + v.__dask_postpersist__()
-            if dask.is_dask_collection(v)
-            else (k, v, None, None, None)
-            for k, v in self._variables.items()
-        ]
-        construct_direct_args = (
+        variables = {}
+        results_iter = iter(results)
+
+        for k, v in self._variables.items():
+            if dask.is_dask_collection(v):
+                rebuild, args = v.__dask_postcompute__()
+                v = rebuild(next(results_iter), *args)
+            variables[k] = v
+
+        return Dataset._construct_direct(
+            variables,
             self._coord_names,
             self._dims,
             self._attrs,
@@ -898,37 +889,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             self._encoding,
             self._close,
         )
-        return self._dask_postpersist, (info, construct_direct_args)
 
-    @staticmethod
-    def _dask_postcompute(results, info, construct_direct_args):
-        variables = {}
-        results_iter = iter(results)
-        for k, v, rebuild, rebuild_args in info:
-            if v is None:
-                variables[k] = rebuild(next(results_iter), *rebuild_args)
-            else:
-                variables[k] = v
-
-        final = Dataset._construct_direct(variables, *construct_direct_args)
-        return final
-
-    @staticmethod
-    def _dask_postpersist(dsk, info, construct_direct_args):
+    def _dask_postpersist(
+        self, dsk: Mapping, *, rename: Mapping[str, str] = None
+    ) -> "Dataset":
+        from dask import is_dask_collection
+        from dask.highlevelgraph import HighLevelGraph
         from dask.optimization import cull
 
         variables = {}
-        # postpersist is called in both dask.optimize and dask.persist
-        # When persisting, we want to filter out unrelated keys for
-        # each Variable's task graph.
-        for k, v, dask_keys, rebuild, rebuild_args in info:
-            if v is None:
-                dsk2, _ = cull(dsk, dask_keys)
-                variables[k] = rebuild(dsk2, *rebuild_args)
-            else:
-                variables[k] = v
 
-        return Dataset._construct_direct(variables, *construct_direct_args)
+        for k, v in self._variables.items():
+            if not is_dask_collection(v):
+                variables[k] = v
+                continue
+
+            if isinstance(dsk, HighLevelGraph):
+                # dask >= 2021.3
+                # __dask_postpersist__() was called by dask.highlevelgraph.
+                # Don't use dsk.cull(), as we need to prevent partial layers:
+                # https://github.com/dask/dask/issues/7137
+                layers = v.__dask_layers__()
+                if rename:
+                    layers = [rename.get(k, k) for k in layers]
+                dsk2 = dsk.cull_layers(layers)
+            elif rename:  # pragma: nocover
+                # At the moment of writing, this is only for forward compatibility.
+                # replace_name_in_key requires dask >= 2021.3.
+                from dask.base import flatten, replace_name_in_key
+
+                keys = [
+                    replace_name_in_key(k, rename) for k in flatten(v.__dask_keys__())
+                ]
+                dsk2, _ = cull(dsk, keys)
+            else:
+                # __dask_postpersist__() was called by dask.optimize or dask.persist
+                dsk2, _ = cull(dsk, v.__dask_keys__())
+
+            rebuild, args = v.__dask_postpersist__()
+            # rename was added in dask 2021.3
+            kwargs = {"rename": rename} if rename else {}
+            variables[k] = rebuild(dsk2, *args, **kwargs)
+
+        return Dataset._construct_direct(
+            variables,
+            self._coord_names,
+            self._dims,
+            self._attrs,
+            self._indexes,
+            self._encoding,
+            self._close,
+        )
 
     def compute(self, **kwargs) -> "Dataset":
         """Manually trigger loading and/or computation of this dataset's data
@@ -3906,6 +3917,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         compat: str = "no_conflicts",
         join: str = "outer",
         fill_value: Any = dtypes.NA,
+        combine_attrs: str = "override",
     ) -> "Dataset":
         """Merge the arrays of two datasets into a single dataset.
 
@@ -3934,7 +3946,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-
         join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -3946,6 +3957,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                        "override"}, default: "override"
+            String indicating how to combine attrs of the objects being merged:
+
+            - "drop": empty attrs on returned Dataset.
+            - "identical": all attrs must be the same on every object.
+            - "no_conflicts": attrs from all objects are combined, any that have
+              the same name must also have the same value.
+            - "drop_conflicts": attrs from all objects are combined, any that have
+              the same name but different values are dropped.
+            - "override": skip comparing and copy attrs from the first dataset to
+              the result.
 
         Returns
         -------
@@ -3965,6 +3988,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             compat=compat,
             join=join,
             fill_value=fill_value,
+            combine_attrs=combine_attrs,
         )
         return self._replace(**merge_result._asdict())
 
@@ -6375,6 +6399,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         variables = {}
         skipna_da = skipna
