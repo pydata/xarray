@@ -49,7 +49,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True and not (funcname == "quiver" or funcname == "streamplot"):
+        if add_guide is True and funcname not in ("quiver", "streamplot"):
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
@@ -350,8 +350,8 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
-        if (u is not None or v is not None) and not (
-            plotfunc.__name__ == "quiver" or plotfunc.__name__ == "streamplot"
+        if (u is not None or v is not None) and plotfunc.__name__ not in (
+            "quiver", "streamplot"
         ):
             raise ValueError("u, v are only allowed for quiver or streamplot plots.")
 
@@ -397,7 +397,7 @@ def _dsplot(plotfunc):
                 coordinates="figure",
             )
 
-        if plotfunc.__name__ == "quiver" or plotfunc.__name__ == "streamplot":
+        if plotfunc.__name__ in ("quiver", "streamplot"):
             title = ds[u]._title_for_slice()
         else:
             title = ds[x]._title_for_slice()
