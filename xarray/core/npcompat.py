@@ -102,7 +102,7 @@ IS_NEP18_ACTIVE = _is_nep18_active()
 if LooseVersion(np.__version__) >= "1.20.0":
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
-    from numpy.core.numeric import normalize_axis_tuple
+    from numpy.core.numeric import normalize_axis_tuple  # type: ignore
     from numpy.lib.stride_tricks import as_strided
 
     # copied from numpy.lib.stride_tricks
