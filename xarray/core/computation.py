@@ -1172,8 +1172,8 @@ def call_on_dataset(func, obj, *args, **kwargs):
     Notes
     -----
     DataArray objects without a name (or named ``None``) will be renamed to
-    ``"<this-array>"`` before being passed to ``func``. The name will be restored for
-    the result of the call.
+    ``"<this-array>"`` before being passed to ``func``. The empty name will be restored
+    for the result of the call.
 
     See Also
     --------
