@@ -59,6 +59,8 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
+            "date",
+            "time",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -144,6 +146,8 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
+            "date",
+            "time",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -428,6 +432,16 @@ def test_isocalendar_cftime(data):
         AttributeError, "'CFTimeIndex' object has no attribute 'isocalendar'"
     ):
         data.time.dt.isocalendar()
+
+
+@requires_cftime
+def test_date_cftime(data):
+
+    with raises_regex(
+        AttributeError,
+        r"'CFTimeIndex' object has no attribute `date`. Consider using `floor\('D'\)` instead.",
+    ):
+        data.time.dt.date()
 
 
 @requires_cftime
