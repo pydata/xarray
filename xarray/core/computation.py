@@ -740,16 +740,9 @@ def apply_variable_ufunc(
         )
 
     objs = _all_of_type(args, Variable)
-    if keep_attrs is None:
-        keep_attrs = _get_keep_attrs(default=False)
-
-    if isinstance(keep_attrs, bool):
-        combine_attrs = "override" if keep_attrs else "drop"
-    else:
-        combine_attrs = keep_attrs
     attrs = merge_attrs(
         [obj.attrs for obj in objs],
-        combine_attrs=combine_attrs,
+        combine_attrs=keep_attrs,
     )
 
     output = []
@@ -816,7 +809,7 @@ def apply_ufunc(
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: bool = False,
+    keep_attrs: Union[bool, str, None] = False,
     kwargs: Mapping = None,
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
@@ -1105,6 +1098,12 @@ def apply_ufunc(
 
     if kwargs:
         func = functools.partial(func, **kwargs)
+
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
+
+    if isinstance(keep_attrs, bool):
+        keep_attrs = "override" if keep_attrs else "drop"
 
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
