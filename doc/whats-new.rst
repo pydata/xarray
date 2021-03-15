@@ -55,6 +55,9 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add :py:func:`call_on_dataset` as a way to apply functions expecting
+  :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes
@@ -201,9 +204,6 @@ New Features
 - :py:meth:`DataArray.swap_dims` & :py:meth:`Dataset.swap_dims` now accept dims
   in the form of kwargs as well as a dict, like most similar methods.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Add :py:func:`apply_to_dataset` as a way to apply functions expecting
-  :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
-  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
