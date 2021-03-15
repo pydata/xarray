@@ -175,8 +175,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     You can generate 2D coordinates from the file's attributes with::
 
         >>> from affine import Affine
-        >>> import xarray as xr
-        >>> import numpy as np
         >>> da = xr.open_rasterio(
         ...     "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif"
         ... )
