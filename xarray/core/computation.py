@@ -1141,7 +1141,7 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def apply_to_dataset(func, obj, *args, **kwargs):
+def call_on_dataset(func, obj, *args, **kwargs):
     """apply a function expecting a Dataset to a xarray object
 
     Parameters
@@ -1197,7 +1197,7 @@ def apply_to_dataset(func, obj, *args, **kwargs):
         b        (x) int64 -1 1
     Attributes:
         attr:     value
-    >>> xr.apply_to_dataset(f, ds)
+    >>> xr.call_on_dataset(f, ds)
     <xarray.Dataset>
     Dimensions:  (x: 2)
     Coordinates:
@@ -1207,7 +1207,7 @@ def apply_to_dataset(func, obj, *args, **kwargs):
         b        (x) float64 -1.5 1.5
     Attributes:
         attr:     value
-    >>> xr.apply_to_dataset(f, ds.a)
+    >>> xr.call_on_dataset(f, ds.a)
     <xarray.DataArray 'a' (x: 2)>
     array([1.5, 2. ])
     Coordinates:

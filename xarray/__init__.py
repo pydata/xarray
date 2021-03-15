@@ -19,8 +19,8 @@ from .core.alignment import align, broadcast
 from .core.combine import combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
 from .core.computation import (
-    apply_to_dataset,
     apply_ufunc,
+    call_on_dataset,
     corr,
     cov,
     dot,
@@ -54,7 +54,7 @@ __all__ = (
     # Top-level functions
     "align",
     "apply_ufunc",
-    "apply_to_dataset",
+    "call_on_dataset",
     "as_variable",
     "broadcast",
     "cftime_range",

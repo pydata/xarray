@@ -500,7 +500,7 @@ def test_apply_groupby_add():
         ),
     ),
 )
-def test_apply_to_dataset(obj, expected):
+def test_call_on_dataset(obj, expected):
     def clear_all_attrs(ds):
         new_ds = ds.copy()
         for var in new_ds.variables.values():
@@ -508,7 +508,8 @@ def test_apply_to_dataset(obj, expected):
         new_ds.attrs.clear()
         return new_ds
 
-    assert_identical(expected, xr.apply_to_dataset(clear_all_attrs, obj))
+    actual = xr.call_on_dataset(clear_all_attrs, obj)
+    assert_identical(actual, expected)
 
 
 def test_unified_dim_sizes():
