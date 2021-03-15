@@ -29,6 +29,7 @@ dask = pytest.importorskip("dask")
 
 def assert_identical(a, b):
     """ A version of this function which accepts numpy arrays """
+    __tracebackhide__ = True
     from xarray.testing import assert_identical as assert_identical_
 
     if hasattr(a, "identical"):
