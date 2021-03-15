@@ -1169,11 +1169,6 @@ def call_on_dataset(func, obj, *args, **kwargs):
     DataArray or Dataset
         The result of ``func(obj, *args, **kwargs)`` with the same type as ``obj``.
 
-    Notes
-    -----
-    If a ``DataArray``, the data variable of the temporary ``Dataset`` will have a
-    generic name. The original name will be restored for the result of the call.
-
     See Also
     --------
     Dataset.map
