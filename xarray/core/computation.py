@@ -265,11 +265,14 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs:
+    objs = _all_of_type(args, DataArray)
+
+    # TODO: fix the default value, now that keep_attrs always is a str
+    if keep_attrs in (False, "drop"):
+        name = result_name(args)
+    else:
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
-    else:
-        name = result_name(args)
     result_coords = build_output_coords(args, signature, exclude_dims)
 
     data_vars = [getattr(a, "variable", a) for a in args]
@@ -284,13 +287,12 @@ def apply_dataarray_vfunc(
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for da in out:
-                # This is adding attrs in place
-                da._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for da in out:
+            da.attrs = attrs
+    else:
+        out.attrs = attrs
 
     return out
 
