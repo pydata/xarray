@@ -1218,13 +1218,11 @@ def call_on_dataset(func, obj, *args, **kwargs):
     Coordinates:
       * x        (x) int64 0 1
     """
-    from .dataarray import _THIS_ARRAY, DataArray
+    from .dataarray import DataArray
     from .parallel import dataarray_to_dataset, dataset_to_dataarray
 
     if isinstance(obj, DataArray):
         ds = dataarray_to_dataset(obj)
-        if obj.name is None:
-            ds = ds.rename({_THIS_ARRAY: None})
     else:
         ds = obj
 
