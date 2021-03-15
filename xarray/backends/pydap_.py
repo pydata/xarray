@@ -92,7 +92,7 @@ class PydapDataStore(AbstractDataStore):
         return cls(ds)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyOuterIndexedArray(PydapArrayWrapper(var))
+        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data, _fix_attributes(var.attributes))
 
     def get_variables(self):
@@ -108,16 +108,16 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
-        return isinstance(store_spec, str) and is_remote_uri(store_spec)
+    def guess_can_open(self, filename_or_obj):
+        return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,

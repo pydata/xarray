@@ -4,7 +4,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Iterable, Sequence, Tuple, Union
+from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -513,7 +513,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
             return result
 
 
-class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
+class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
     __slots__ = ("array", "key")
@@ -619,10 +619,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return _combine_indexers(self.key, self.shape, new_key)
 
     def __getitem__(self, indexer):
-        # If the indexed array becomes a scalar, return LazilyOuterIndexedArray
+        # If the indexed array becomes a scalar, return LazilyIndexedArray
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
             key = BasicIndexer(tuple(k[indexer.tuple] for k in self.key.tuple))
-            return LazilyOuterIndexedArray(self.array, key)
+            return LazilyIndexedArray(self.array, key)
         return type(self)(self.array, self._updated_key(indexer))
 
     def transpose(self, order):
@@ -1010,7 +1010,7 @@ def _decompose_outer_indexer(
         return indexer, BasicIndexer(())
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
-    backend_indexer = []
+    backend_indexer: List[Any] = []
     np_indexer = []
     # make indexer positive
     pos_indexer = []
@@ -1397,17 +1397,17 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             elif hasattr(array, "categories"):
                 # category isn't a real numpy dtype
-                dtype = array.categories.dtype
+                dtype_ = array.categories.dtype
             elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype = np.dtype("O")
+                dtype_ = np.dtype("O")
             else:
-                dtype = array.dtype
+                dtype_ = array.dtype
         else:
-            dtype = np.dtype(dtype)
-        self._dtype = dtype
+            dtype_ = np.dtype(dtype)
+        self._dtype = dtype_
 
     @property
     def dtype(self) -> np.dtype:

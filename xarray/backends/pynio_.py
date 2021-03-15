@@ -74,7 +74,7 @@ class NioDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -99,11 +99,12 @@ class NioDataStore(AbstractDataStore):
 
 class PynioBackendEntrypoint(BackendEntrypoint):
     def open_dataset(
+        self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,

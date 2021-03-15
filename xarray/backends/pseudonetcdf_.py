@@ -74,7 +74,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
         attrs = {k: getattr(var, k) for k in var.ncattrs()}
         return Variable(var.dimensions, data, attrs)
 
@@ -121,9 +121,9 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj,
         mask_and_scale=False,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
