@@ -840,15 +840,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     def __dask_postpersist__(self):
         func, args = self._to_temp_dataset().__dask_postpersist__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     @staticmethod
-    def _dask_finalize(results, func, args, name):
-        ds = func(results, *args)
+    def _dask_finalize(results, name, func, *args, **kwargs):
+        ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
@@ -3782,6 +3782,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov

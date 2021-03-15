@@ -414,10 +414,19 @@ class GroupBy:
 
     @property
     def groups(self):
+        """
+        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
+
+    def __getitem__(self, key):
+        """
+        Get DataArray or Dataset corresponding to a particular group label.
+        """
+        return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self):
         return self._unique_coord.size

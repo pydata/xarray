@@ -224,7 +224,7 @@ class TestLazyArray:
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
         v = Variable(["i", "j", "k"], original)
-        lazy = indexing.LazilyOuterIndexedArray(x)
+        lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(["i", "j", "k"], lazy)
         arr = ReturnItem()
         # test orthogonally applied indexers
@@ -244,9 +244,7 @@ class TestLazyArray:
                     ]:
                         assert expected.shape == actual.shape
                         assert_array_equal(expected, actual)
-                        assert isinstance(
-                            actual._data, indexing.LazilyOuterIndexedArray
-                        )
+                        assert isinstance(actual._data, indexing.LazilyIndexedArray)
 
                         # make sure actual.key is appropriate type
                         if all(
@@ -282,18 +280,18 @@ class TestLazyArray:
                     actual._data,
                     (
                         indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyOuterIndexedArray,
+                        indexing.LazilyIndexedArray,
                     ),
                 )
 
-            assert isinstance(actual._data, indexing.LazilyOuterIndexedArray)
+            assert isinstance(actual._data, indexing.LazilyIndexedArray)
             assert isinstance(actual._data.array, indexing.NumpyIndexingAdapter)
 
     def test_vectorized_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
         v_eager = Variable(["i", "j", "k"], x)
-        lazy = indexing.LazilyOuterIndexedArray(x)
+        lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(["i", "j", "k"], lazy)
         arr = ReturnItem()
 
@@ -306,7 +304,7 @@ class TestLazyArray:
                     actual._data,
                     (
                         indexing.LazilyVectorizedIndexedArray,
-                        indexing.LazilyOuterIndexedArray,
+                        indexing.LazilyIndexedArray,
                     ),
                 )
                 assert_array_equal(expected, actual)
@@ -364,19 +362,19 @@ class TestCopyOnWriteArray:
 
 class TestMemoryCachedArray:
     def test_wrapper(self):
-        original = indexing.LazilyOuterIndexedArray(np.arange(10))
+        original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         assert_array_equal(wrapped, np.arange(10))
         assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
-        original = indexing.LazilyOuterIndexedArray(np.arange(10))
+        original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
-        assert isinstance(wrapped.array, indexing.LazilyOuterIndexedArray)
+        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
 
     def test_setitem(self):
         original = np.arange(10)
