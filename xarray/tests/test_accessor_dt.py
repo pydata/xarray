@@ -439,7 +439,7 @@ def test_date_cftime(data):
 
     with raises_regex(
         AttributeError,
-        r"'CFTimeIndex' object has no attribute `date`. Consider using `floor\('D'\)` instead.",
+        r"'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor\('D'\)`.",
     ):
         data.time.dt.date()
 

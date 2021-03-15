@@ -33,7 +33,7 @@ def _access_through_cftimeindex(values, name):
         field_values = _season_from_months(months)
     elif name == "date":
         raise AttributeError(
-            "'CFTimeIndex' object has no attribute `date`. Consider using `floor('D')` instead."
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
         )
     else:
         field_values = getattr(values_as_cftimeindex, name)
