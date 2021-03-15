@@ -1,5 +1,4 @@
 import datetime
-import functools
 import warnings
 
 import numpy as np
@@ -473,16 +472,11 @@ class GroupBy:
             coord = None
         return coord, dim, positions
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            g = f if not reflexive else lambda x, y: f(y, x)
-            applied = self._yield_binary_applied(g, other)
-            combined = self._combine(applied)
-            return combined
-
-        return func
+    def _binary_op(self, other, f, reflexive=False):
+        g = f if not reflexive else lambda x, y: f(y, x)
+        applied = self._yield_binary_applied(g, other)
+        combined = self._combine(applied)
+        return combined
 
     def _yield_binary_applied(self, func, other):
         dummy = None

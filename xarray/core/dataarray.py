@@ -1,5 +1,4 @@
 import datetime
-import functools
 import warnings
 from numbers import Number
 from typing import (
@@ -2971,82 +2970,67 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         # compatible with matmul
         return computation.dot(other, self)
 
-    @staticmethod
-    def _unary_op(f: Callable[..., Any]) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-                warnings.filterwarnings(
-                    "ignore", r"Mean of empty slice", category=RuntimeWarning
-                )
-                with np.errstate(all="ignore"):
-                    da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
-                if keep_attrs:
-                    da.attrs = self.attrs
-                return da
-
-        return func
-
-    @staticmethod
-    def _binary_op(
-        f: Callable[..., Any],
-        reflexive: bool = False,
-        join: str = None,  # see xarray.align
-        **ignored_kwargs,
-    ) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, (Dataset, groupby.GroupBy)):
-                return NotImplemented
-            if isinstance(other, DataArray):
-                align_type = OPTIONS["arithmetic_join"] if join is None else join
-                self, other = align(self, other, join=align_type, copy=False)
-            other_variable = getattr(other, "variable", other)
-            other_coords = getattr(other, "coords", None)
-
-            variable = (
-                f(self.variable, other_variable)
-                if not reflexive
-                else f(other_variable, self.variable)
+    def _unary_op(self, f: Callable, *args, **kwargs):
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
-            coords, indexes = self.coords._merge_raw(other_coords, reflexive)
-            name = self._result_name(other)
+            with np.errstate(all="ignore"):
+                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            if keep_attrs:
+                da.attrs = self.attrs
+            return da
 
-            return self._replace(variable, coords, name, indexes=indexes)
+    def _binary_op(
+        self,
+        other,
+        f: Callable,
+        reflexive: bool = False,
+    ):
+        if isinstance(other, (Dataset, groupby.GroupBy)):
+            return NotImplemented
+        if isinstance(other, DataArray):
+            align_type = OPTIONS["arithmetic_join"]
+            self, other = align(self, other, join=align_type, copy=False)
+        other_variable = getattr(other, "variable", other)
+        other_coords = getattr(other, "coords", None)
 
-        return func
+        variable = (
+            f(self.variable, other_variable)
+            if not reflexive
+            else f(other_variable, self.variable)
+        )
+        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        name = self._result_name(other)
 
-    @staticmethod
-    def _inplace_binary_op(f: Callable) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, groupby.GroupBy):
-                raise TypeError(
-                    "in-place operations between a DataArray and "
-                    "a grouped object are not permitted"
-                )
-            # n.b. we can't align other to self (with other.reindex_like(self))
-            # because `other` may be converted into floats, which would cause
-            # in-place arithmetic to fail unpredictably. Instead, we simply
-            # don't support automatic alignment with in-place arithmetic.
-            other_coords = getattr(other, "coords", None)
-            other_variable = getattr(other, "variable", other)
-            try:
-                with self.coords._merge_inplace(other_coords):
-                    f(self.variable, other_variable)
-            except MergeError as exc:
-                raise MergeError(
-                    "Automatic alignment is not supported for in-place operations.\n"
-                    "Consider aligning the indices manually or using a not-in-place operation.\n"
-                    "See https://github.com/pydata/xarray/issues/3910 for more explanations."
-                ) from exc
-            return self
+        return self._replace(variable, coords, name, indexes=indexes)
 
-        return func
+    def _inplace_binary_op(self, other, f: Callable):
+        if isinstance(other, groupby.GroupBy):
+            raise TypeError(
+                "in-place operations between a DataArray and "
+                "a grouped object are not permitted"
+            )
+        # n.b. we can't align other to self (with other.reindex_like(self))
+        # because `other` may be converted into floats, which would cause
+        # in-place arithmetic to fail unpredictably. Instead, we simply
+        # don't support automatic alignment with in-place arithmetic.
+        other_coords = getattr(other, "coords", None)
+        other_variable = getattr(other, "variable", other)
+        try:
+            with self.coords._merge_inplace(other_coords):
+                f(self.variable, other_variable)
+        except MergeError as exc:
+            raise MergeError(
+                "Automatic alignment is not supported for in-place operations.\n"
+                "Consider aligning the indices manually or using a not-in-place operation.\n"
+                "See https://github.com/pydata/xarray/issues/3910 for more explanations."
+            ) from exc
+        return self
 
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs

@@ -10,7 +10,6 @@ import operator
 import numpy as np
 
 from . import dtypes, duck_array_ops
-from .nputils import array_eq, array_ne
 
 try:
     import bottleneck as bn
@@ -22,8 +21,6 @@ except ImportError:
     has_bottleneck = False
 
 
-UNARY_OPS = ["neg", "pos", "abs", "invert"]
-CMP_BINARY_OPS = ["lt", "le", "ge", "gt"]
 NUM_BINARY_OPS = [
     "add",
     "sub",
@@ -40,9 +37,7 @@ NUM_BINARY_OPS = [
 # methods which pass on the numpy return value unchanged
 # be careful not to list methods that we would want to wrap later
 NUMPY_SAME_METHODS = ["item", "searchsorted"]
-# methods which don't modify the data shape, so the result should still be
-# wrapped in an Variable/DataArray
-NUMPY_UNARY_METHODS = ["argsort", "clip", "conj", "conjugate"]
+
 # methods which remove an axis
 REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
@@ -294,35 +289,12 @@ def inplace_to_noninplace_op(f):
     return NON_INPLACE_OP[f]
 
 
-def inject_binary_ops(cls):
-
-    for name in CMP_BINARY_OPS + NUM_BINARY_OPS:
-        setattr(cls, op_str(name), cls._binary_op(get_op(name)))
-
-    for name, f in [("eq", array_eq), ("ne", array_ne)]:
-        setattr(cls, op_str(name), cls._binary_op(f))
-
-    for name in NUM_BINARY_OPS:
-        # only numeric operations have reflexive variants
-        setattr(cls, op_str("r" + name), cls._binary_op(get_op(name), reflexive=True))
-
-
-def inject_inplace_binary_ops(cls):
-    for name in NUM_BINARY_OPS:
-        setattr(cls, op_str("i" + name), cls._inplace_binary_op(get_op("i" + name)))
-
-
-def inject_unary_ops_and_methods(cls):
-    for name in UNARY_OPS:
-        setattr(cls, op_str(name), cls._unary_op(get_op(name)))
-
-    # patch in numpy/pandas methods
-    for name in NUMPY_UNARY_METHODS:
-        setattr(cls, name, cls._unary_op(_method_wrapper(name)))
-
-    # round_method
-    f = _func_slash_method_wrapper(duck_array_ops.around, name="round")
-    setattr(cls, "round", cls._unary_op(f))
+# _typed_ops.py uses the following wrapped functions as a kind of unary operator
+argsort = _method_wrapper("argsort")
+clip = _method_wrapper("clip")
+conj = _method_wrapper("conj")
+conjugate = _method_wrapper("conjugate")
+round_ = _func_slash_method_wrapper(duck_array_ops.around, name="round")
 
 
 def inject_numpy_same(cls):
@@ -330,16 +302,6 @@ def inject_numpy_same(cls):
     # don't try to patch these in for Dataset objects
     for name in NUMPY_SAME_METHODS:
         setattr(cls, name, _values_method_wrapper(name))
-
-
-class IncludeBinaryOps:
-    __slots__ = ()
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        if getattr(cls, "_binary_op", None):
-            inject_binary_ops(cls)
 
 
 class IncludeReduceMethods:
@@ -352,27 +314,20 @@ class IncludeReduceMethods:
             inject_reduce_methods(cls)
 
 
-class IncludeMostOpsAndReduceMethods(IncludeBinaryOps, IncludeReduceMethods):
+class IncludeCumMethods:
     __slots__ = ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-
-        if getattr(cls, "_unary_op", None):
-            inject_unary_ops_and_methods(cls)
-
-        if getattr(cls, "_inplace_binary_op", None):
-            inject_inplace_binary_ops(cls)
 
         if getattr(cls, "_reduce_method", None):
             inject_cum_methods(cls)
 
 
-class IncludeAllOpsAndReduceMethods(IncludeMostOpsAndReduceMethods):
+class IncludeNumpySameMethods:
     __slots__ = ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        if getattr(cls, "_reduce_method", None):
-            inject_numpy_same(cls)  # some methods not applicable to Dataset objects
+        inject_numpy_same(cls)  # some methods not applicable to Dataset objects
