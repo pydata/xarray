@@ -1169,6 +1169,12 @@ def call_on_dataset(func, obj, *args, **kwargs):
     DataArray or Dataset
         The result of ``func(obj, *args, **kwargs)`` with the same type as ``obj``.
 
+    Notes
+    -----
+    DataArray objects without a name (or named ``None``) will be renamed to
+    ``"<this-array>"`` before being passed to ``func``. The name will be restored for
+    the result of the call.
+
     See Also
     --------
     Dataset.map
@@ -1218,17 +1224,21 @@ def call_on_dataset(func, obj, *args, **kwargs):
     Coordinates:
       * x        (x) int64 0 1
     """
-    from .dataarray import DataArray
+    from .dataarray import _THIS_ARRAY, DataArray
     from .parallel import dataarray_to_dataset, dataset_to_dataarray
 
     if isinstance(obj, DataArray):
         ds = dataarray_to_dataset(obj)
+        if obj.name is None:
+            ds = ds.rename({_THIS_ARRAY: "<this-array>"})
     else:
         ds = obj
 
     result = func(ds, *args, **kwargs)
 
     if isinstance(obj, DataArray):
+        if obj.name is None:
+            result = result.rename({"<this-array>": _THIS_ARRAY})
         result = dataset_to_dataarray(result)
 
     return result
