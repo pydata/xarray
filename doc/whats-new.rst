@@ -84,6 +84,8 @@ Documentation
   the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
   (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
 
+- New sphinx theme & rearrangement of the docs (:pull:`4835`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -111,6 +113,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6
 
+  The minimum versions of some other dependencies were changed:
   The minimum version policy was changed to also apply to projects with irregular
   releases. As a result, the minimum versions of some dependencies have changed:
 
@@ -513,7 +516,7 @@ New Features
   By `Aaron Spring <https://github.com/aaronspring>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
-  document the new method in :doc:`internals`. (:pull:`4248`).
+  document the new method in :doc:`internals/index`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow per-variable fill values in most functions. (:pull:`4237`).
   By `Justus Magin <https://github.com/keewis>`_.
@@ -2516,7 +2519,7 @@ non-standard calendars used in climate modeling.
 Documentation
 ~~~~~~~~~~~~~
 
-- New FAQ entry, :ref:`related-projects`.
+- New FAQ entry, :ref:`ecosystem`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :ref:`assigning_values` now includes examples on how to select and assign
   values to a :py:class:`~xarray.DataArray` with ``.loc``.
@@ -4561,11 +4564,11 @@ Highlights
 ~~~~~~~~~~
 
 The headline feature in this release is experimental support for out-of-core
-computing (data that doesn't fit into memory) with dask_. This includes a new
+computing (data that doesn't fit into memory) with :doc:`user-guide/dask`. This includes a new
 top-level function ``xray.open_mfdataset`` that makes it easy to open
 a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
-documentation section :doc:`dask`.
+documentation section :doc:`user-guide/dask`.
 
 .. _blog post introducing xray + dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
 
