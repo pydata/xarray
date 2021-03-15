@@ -549,4 +549,17 @@ def test_groupby_none_group_name():
     assert "group" in mean.dims
 
 
+def test_groupby_getitem(dataset):
+
+    assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
+    assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+
+    assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
+    assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+
+    actual = dataset.groupby("boo")["f"].unstack().transpose("x", "y", "z")
+    expected = dataset.sel(y=[1], z=[1, 2]).transpose("x", "y", "z")
+    assert_identical(expected, actual)
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

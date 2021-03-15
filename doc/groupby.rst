@@ -63,6 +63,12 @@ You can also iterate over groups in ``(label, group)`` pairs:
 
     list(ds.groupby("letters"))
 
+You can index out a particular group:
+
+.. ipython:: python
+
+    ds.groupby("letters")["b"]
+
 Just like in pandas, creating a GroupBy object is cheap: it does not actually
 split the data until you access particular values.
 

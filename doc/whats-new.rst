@@ -51,6 +51,10 @@ New Features
   grant from the `Chan Zuckerberg Initiative <https://chanzuckerberg.com>`_ and
   developed by `B-Open <https://www.bopen.eu>`_.
   By `Aureliana Barghini <https://github.com/aurghs>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
+- Implement ``__getitem__`` for both :py:class:`~core.groupby.DatasetGroupBy` and
+  :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
+  :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Breaking changes
