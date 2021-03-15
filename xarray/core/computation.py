@@ -1232,8 +1232,6 @@ def call_on_dataset(func, obj, *args, **kwargs):
 
     if isinstance(obj, DataArray):
         result = dataset_to_dataarray(result)
-        if obj.name is None:
-            result = result.rename(None)
 
     return result
 
