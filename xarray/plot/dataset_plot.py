@@ -351,7 +351,8 @@ def _dsplot(plotfunc):
             cmap_params_subset = {}
 
         if (u is not None or v is not None) and plotfunc.__name__ not in (
-            "quiver", "streamplot"
+            "quiver",
+            "streamplot",
         ):
             raise ValueError("u, v are only allowed for quiver or streamplot plots.")
 
