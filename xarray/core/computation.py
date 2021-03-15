@@ -27,8 +27,8 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
-from .merge import merge_coordinates_without_align
-from .options import OPTIONS
+from .merge import merge_attrs, merge_coordinates_without_align
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
@@ -48,6 +48,11 @@ def _first_of_type(args, kind):
         if isinstance(arg, kind):
             return arg
     raise ValueError("This should be unreachable.")
+
+
+def _all_of_type(args, kind):
+    """Return all objects of type 'kind'"""
+    return [arg for arg in args if isinstance(arg, kind)]
 
 
 class _UFuncSignature:
@@ -615,8 +620,6 @@ def apply_variable_ufunc(
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
-    first_obj = _first_of_type(args, Variable)
-
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
     )
@@ -736,6 +739,19 @@ def apply_variable_ufunc(
             )
         )
 
+    objs = _all_of_type(args, Variable)
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
+
+    if isinstance(keep_attrs, bool):
+        combine_attrs = "override" if keep_attrs else "drop"
+    else:
+        combine_attrs = keep_attrs
+    attrs = merge_attrs(
+        [obj.attrs for obj in objs],
+        combine_attrs=combine_attrs,
+    )
+
     output = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
@@ -758,8 +774,7 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs:
-            var.attrs.update(first_obj.attrs)
+        var.attrs = attrs
         output.append(var)
 
     if signature.num_outputs == 1:

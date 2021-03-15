@@ -567,6 +567,13 @@ def test_keep_attrs():
     ["strategy", "attrs", "expected", "error"],
     (
         pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
             False,
             [{"a": 1}, {"a": 2}, {"a": 3}],
             {},
