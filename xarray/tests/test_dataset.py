@@ -46,6 +46,7 @@ from . import (
     requires_numbagg,
     requires_scipy,
     requires_sparse,
+    requires_numexpr,
     source_ndarray,
 )
 
@@ -5807,6 +5808,8 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
+    @requires_dask
+    @requires_numexpr
     @pytest.mark.parametrize("parser", ["pandas", "python"])
     @pytest.mark.parametrize("engine", ["python", "numexpr", None])
     @pytest.mark.parametrize("backend", ["numpy", "dask"])
