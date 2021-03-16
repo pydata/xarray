@@ -5809,11 +5809,13 @@ class TestDataset:
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
 
-    @requires_dask
-    @requires_numexpr
     @pytest.mark.parametrize("parser", ["pandas", "python"])
-    @pytest.mark.parametrize("engine", ["python", "numexpr", None])
-    @pytest.mark.parametrize("backend", ["numpy", "dask"])
+    @pytest.mark.parametrize(
+        "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
+    )
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
+    )
     def test_query(self, backend, engine, parser):
         """Test querying a dataset."""
 
