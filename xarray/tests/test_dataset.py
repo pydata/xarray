@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
+from pandas.core.computation.ops import UndefinedVariableError
 
 import xarray as xr
 from xarray import (
@@ -5882,6 +5883,11 @@ class TestDataset:
         expect = ds.isel(x=((a > 5) & (b > 50)))
         assert_identical(expect, actual)
 
+        # query single dim, multiple variables with computation
+        actual = ds.query(x="(a * b) > 250", engine=engine, parser=parser)
+        expect = ds.isel(x=(a * b) > 250)
+        assert_identical(expect, actual)
+
         # check pandas query syntax is supported
         if parser == "pandas":
             actual = ds.query(x="(a > 5) and (b > 50)", engine=engine, parser=parser)
@@ -5927,6 +5933,8 @@ class TestDataset:
             ds.query(x="c < .5")  # wrong length dimension
         with pytest.raises(IndexError):
             ds.query(x="e > 100")  # wrong number of dimensions
+        with pytest.raises(UndefinedVariableError):
+            ds.query(x="spam > 50")  # name not present
 
 
 # Py.test tests
