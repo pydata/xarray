@@ -6,8 +6,8 @@ from textwrap import dedent
 
 import numpy as np
 import pandas as pd
-from pandas.core.computation.ops import UndefinedVariableError
 import pytest
+from pandas.core.computation.ops import UndefinedVariableError
 from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
@@ -40,9 +40,9 @@ from xarray.tests import (
     requires_dask,
     requires_iris,
     requires_numbagg,
+    requires_numexpr,
     requires_scipy,
     requires_sparse,
-    requires_numexpr,
     source_ndarray,
 )
 
@@ -4646,6 +4646,7 @@ class TestDataArray:
 
         elif backend == "dask":
             import dask.array as da
+
             aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
             bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
             cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")

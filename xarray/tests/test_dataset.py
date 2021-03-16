@@ -8,8 +8,8 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.core.computation.ops import UndefinedVariableError
+from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
@@ -46,9 +46,9 @@ from . import (
     requires_cftime,
     requires_dask,
     requires_numbagg,
+    requires_numexpr,
     requires_scipy,
     requires_sparse,
-    requires_numexpr,
     source_ndarray,
 )
 

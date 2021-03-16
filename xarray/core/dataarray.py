@@ -4354,10 +4354,6 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace_maybe_drop_dims(result)
 
-    # this needs to be at the end, or mypy will confuse with `str`
-    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = utils.UncachedAccessor(StringAccessor)
-
     def query(
         self,
         queries: Mapping[Hashable, Any] = None,
@@ -4413,8 +4409,18 @@ class DataArray(AbstractArray, DataWithCoords):
         """
 
         ds = self._to_dataset_whole(shallow_copy=True)
-        ds = ds.query(queries=queries, parser=parser, engine=engine, missing_dims=missing_dims, **queries_kwargs)
+        ds = ds.query(
+            queries=queries,
+            parser=parser,
+            engine=engine,
+            missing_dims=missing_dims,
+            **queries_kwargs,
+        )
         return ds[self.name]
+
+    # this needs to be at the end, or mypy will confuse with `str`
+    # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
+    str = utils.UncachedAccessor(StringAccessor)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
