@@ -23,6 +23,10 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
+  of datasets and data arrays by evaluating query expressions against the values of the
+  data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
