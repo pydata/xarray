@@ -7036,7 +7036,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
 
         # allow queries to be given either as a dict or as kwargs
-        queries = either_dict_or_kwargs(queries, queries_kwargs, "queries")
+        queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
 
         # check queries
         for dim, expr in queries.items():
