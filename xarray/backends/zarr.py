@@ -336,7 +336,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
         attributes = dict(attributes)
         encoding = {

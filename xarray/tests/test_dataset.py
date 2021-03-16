@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.core.computation.ops import UndefinedVariableError
+from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import (
@@ -189,7 +190,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         def lazy_inaccessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyOuterIndexedArray(InaccessibleArray(v.values))
+            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
 
         return {k: lazy_inaccessible(k, v) for k, v in self._variables.items()}
@@ -3901,11 +3902,13 @@ class TestDataset:
         )
         ds.attrs["dsmeta"] = "dsdata"
 
-        actual = ds.resample(time="24H", loffset="-12H").mean("time").time
-        expected = xr.DataArray(
-            ds.bar.to_series().resample("24H", loffset="-12H").mean()
-        ).time
-        assert_identical(expected, actual)
+        # Our use of `loffset` may change if we align our API with pandas' changes.
+        # ref https://github.com/pydata/xarray/pull/4537
+        actual = ds.resample(time="24H", loffset="-12H").mean().bar
+        expected_ = ds.bar.to_series().resample("24H").mean()
+        expected_.index += to_offset("-12H")
+        expected = DataArray.from_series(expected_)
+        assert_identical(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -4748,6 +4751,9 @@ class TestDataset:
 
         assert_equal(data.mean(dim=[]), data)
 
+        with pytest.raises(ValueError):
+            data.mean(axis=0)
+
     def test_reduce_coords(self):
         # regression test for GH1470
         data = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"b": 4})
@@ -4928,9 +4934,6 @@ class TestDataset:
         with raises_regex(TypeError, "missing 1 required positional argument: 'axis'"):
             ds.reduce(mean_only_one_axis)
 
-        with raises_regex(TypeError, "non-integer axis"):
-            ds.reduce(mean_only_one_axis, axis=["x", "y"])
-
     def test_reduce_no_axis(self):
         def total_sum(x):
             return np.sum(x.flatten())
@@ -4939,9 +4942,6 @@ class TestDataset:
         expected = Dataset({"a": ((), 10)})
         actual = ds.reduce(total_sum)
         assert_identical(expected, actual)
-
-        with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
-            ds.reduce(total_sum, axis=0)
 
         with raises_regex(TypeError, "unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim="x")
