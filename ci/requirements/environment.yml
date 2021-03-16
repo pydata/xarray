@@ -22,6 +22,7 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
+  - numexpr
   - numpy
   - pandas
   - pint

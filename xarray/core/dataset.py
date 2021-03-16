@@ -7001,5 +7001,78 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def query(
+        self,
+        queries: Mapping[Hashable, Any] = None,
+        parser: str = "pandas",
+        engine: str = None,
+        missing_dims: str = "raise",
+        **queries_kwargs: Any,
+    ) -> "Dataset":
+        """Return a new dataset with each array indexed along the specified
+        dimension(s), where the indexers are given as strings containing
+        Python expressions to be evaluated against the data variables in the
+        dataset.
+
+        Parameters
+        ----------
+        queries : dict, optional
+            A dict with keys matching dimensions and values given by strings
+            containing Python expressions to be evaluated against the data variables
+            in the dataset. The expressions will be evaluated using the pandas
+            eval() function, and can contain any valid Python expressions but cannot
+            contain any Python statements.
+        parser : {"pandas", "python"}, default: "pandas"
+            The parser to use to construct the syntax tree from the expression.
+            The default of 'pandas' parses code slightly different than standard
+            Python. Alternatively, you can parse an expression using the 'python'
+            parser to retain strict Python semantics.
+        engine: {"python", "numexpr", None}, default: None
+            The engine used to evaluate the expression. Supported engines are:
+            - None: tries to use numexpr, falls back to python
+            - "numexpr": evaluates expressions using numexpr
+            - "python": performs operations as if you had eval’d in top level python
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+        **queries_kwargs : {dim: query, ...}, optional
+            The keyword arguments form of ``queries``.
+            One of queries or queries_kwargs must be provided.
+
+        Returns
+        -------
+        obj : Dataset
+            A new Dataset with the same contents as this dataset, except each
+            array and dimension is indexed by the results of the appropriate
+            queries.
+
+        See Also
+        --------
+        Dataset.isel
+        pandas.eval
+
+        """
+
+        # allow queries to be given either as a dict or as kwargs
+        queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
+
+        # check queries
+        for dim, expr in queries.items():
+            if not isinstance(expr, str):
+                msg = f"expr for dim {dim} must be a string to be evaluated, {type(expr)} given"
+                raise ValueError(msg)
+
+        # evaluate the queries to create the indexers
+        indexers = {
+            dim: pd.eval(expr, resolvers=[self], parser=parser, engine=engine)
+            for dim, expr in queries.items()
+        }
+
+        # apply the selection
+        return self.isel(indexers, missing_dims=missing_dims)
+
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
