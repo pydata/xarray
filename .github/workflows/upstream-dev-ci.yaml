@@ -48,6 +48,8 @@ jobs:
       artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
