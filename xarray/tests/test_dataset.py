@@ -1716,8 +1716,6 @@ class TestDataset:
         assert_identical(expected, actual)
         with raises_regex(TypeError, "can only lookup dict"):
             data.loc["a"]
-        with pytest.raises(TypeError):
-            data.loc[dict(dim3="a")] = 0
 
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
@@ -3382,8 +3380,29 @@ class TestDataset:
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
 
-        with pytest.raises(NotImplementedError):
-            data1[{"x": 0}] = 0
+        # test assignment with positional and label-based indexing
+        err_msg = "can only set locations defined by dictionaries from Dataset.loc"
+        with raises_regex(TypeError, err_msg):
+            data1.loc["a"] = 0
+        data3 = data1.copy()
+        data3[{"dim2": 0}] = 0.0
+        data3[{"dim2": 1}] = data1[{"dim2": 2}]
+        data3.loc[{"dim2": 1.5}] = 1.0
+        data3.loc[{"dim2": 2.0}] = data1.loc[{"dim2": 2.5}]
+        for v, dat1 in data1.items():
+            dat3 = data3[v]
+            if "dim2" in dat1.dims:
+                assert_array_equal(dat3[{"dim2": 0}], 0.0)
+                assert_array_equal(dat3[{"dim2": 1}], dat1[{"dim2": 2}])
+                assert_array_equal(dat3.loc[{"dim2": 1.5}], 1.0)
+                assert_array_equal(dat3.loc[{"dim2": 2.0}], dat1.loc[{"dim2": 2.5}])
+                unchanged = [1.0, 2.5, 3.0, 3.5, 4.0]
+                assert_identical(
+                    dat3.loc[{"dim2": unchanged}], dat1.loc[{"dim2": unchanged}]
+                )
+            else:
+                # these variables should be unchanged
+                assert_identical(dat3, dat1)
 
     def test_setitem_pandas(self):
 

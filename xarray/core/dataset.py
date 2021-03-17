@@ -508,6 +508,22 @@ class _LocIndexer:
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
+    def __setitem__(self, key, value) -> None:
+        if not utils.is_dict_like(key):
+            raise TypeError(
+                "can only set locations defined by dictionaries from Dataset.loc"
+            )
+
+        # loop over dataset variables
+        for var, da in self.dataset.items():
+            val = value
+            if type(value) == xr.core.dataset.Dataset:
+                val = value[var]
+            # only set value if all dimensions are present
+            if all([k in da.dims for k in key.keys()]):
+                pos_indexers, _ = remap_label_indexers(da, key)
+                da[pos_indexers] = val
+
 
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """A multi-dimensional, in memory, array database.
@@ -1421,8 +1437,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             return self._copy_listed(np.asarray(key))
 
-    def __setitem__(self, key: Hashable, value) -> None:
+    def __setitem__(self, key: Any, value) -> None:
         """Add an array to this dataset.
+
+        If key is a dictionary, update all variables in the dataset
+        one by one with the given value at the given location. Skip variables
+        that do not possess all of the dimensions given in the location key.
+        If the given value is also a dataset, select corresponding variables
+        in the given value and in the dataset to be changed.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
@@ -1433,11 +1455,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable.
         """
         if utils.is_dict_like(key):
-            raise NotImplementedError(
-                "cannot yet use a dictionary as a key to set Dataset values"
-            )
-
-        self.update({key: value})
+            # loop over dataset variables
+            for var, da in self.items():
+                val = value
+                if type(value) == xr.core.dataset.Dataset:
+                    val = value[var]
+                # only set value if all dimensions are present
+                if all([k in da.dims for k in key.keys()]):
+                    da[key] = val
+        else:
+            self.update({key: value})
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
