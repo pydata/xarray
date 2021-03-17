@@ -15,7 +15,8 @@ conda uninstall -y --force \
     rasterio \
     pint \
     bottleneck \
-    sparse
+    sparse \
+    xarray
 # to limit the runtime of Upstream CI
 python -m pip install pytest-timeout
 python -m pip install \
