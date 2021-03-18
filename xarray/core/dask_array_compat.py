@@ -99,6 +99,7 @@ if LooseVersion(dask_version) > LooseVersion("2.30.0"):
     ensure_minimum_chunksize = da.overlap.ensure_minimum_chunksize
 else:
 
+    # copied from dask
     def ensure_minimum_chunksize(size, chunks):
         """Determine new chunks to ensure that every chunk >= size
 
@@ -153,7 +154,7 @@ else:
 
 def sliding_window_view(x, window_shape, axis=None):
     from dask.array.overlap import map_overlap
-    from numpy.core.numeric import normalize_axis_tuple
+    from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 
     from .npcompat import sliding_window_view as _np_sliding_window_view
 
