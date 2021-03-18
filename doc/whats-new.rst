@@ -22,11 +22,31 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
+  of datasets and data arrays by evaluating query expressions against the values of the
+  data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
 - Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Support for `dask.graph_manipulation
   <https://docs.dask.org/en/latest/graph_manipulation.html>`_ (requires dask >=2021.3)
   By `Guido Imperiale <https://github.com/crusaderky>`_
+- Many of the arguments for the :py:attr:`DataArray.str` methods now support
+  providing an array-like input. In this case, the array provided to the
+  arguments is broadcast against the original array and applied elementwise.
+- :py:attr:`DataArray.str` now supports `+`, `*`, and `%` operators. These
+  behave the same as they do for :py:class:`str`, except that they follow
+  array broadcasting rules.
+- A large number of new :py:attr:`DataArray.str` methods were implemented,
+  :py:meth:`DataArray.str.casefold`, :py:meth:`DataArray.str.cat`,
+  :py:meth:`DataArray.str.extract`, :py:meth:`DataArray.str.extractall`,
+  :py:meth:`DataArray.str.findall`, :py:meth:`DataArray.str.format`,
+  :py:meth:`DataArray.str.get_dummies`, :py:meth:`DataArray.str.islower`,
+  :py:meth:`DataArray.str.join`, :py:meth:`DataArray.str.normalize`,
+  :py:meth:`DataArray.str.partition`, :py:meth:`DataArray.str.rpartition`,
+  :py:meth:`DataArray.str.rsplit`, and  :py:meth:`DataArray.str.split`.
+  A number of these methods allow for splitting or joining the strings in an
+  array. (:issue:`4622`)
 - Thanks to the new pluggable backend infrastructure external packages may now
   use the ``xarray.backends`` entry point to register additional engines to be used in
   :py:func:`open_dataset`, see the documentation in :ref:`add_a_backend`
@@ -35,6 +55,12 @@ New Features
   grant from the `Chan Zuckerberg Initiative <https://chanzuckerberg.com>`_ and
   developed by `B-Open <https://www.bopen.eu>`_.
   By `Aureliana Barghini <https://github.com/aurghs>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
+- :py:attr:`~core.accessor_dt.DatetimeAccessor.date` added (:issue:`4983`, :pull:`4994`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
+- Implement ``__getitem__`` for both :py:class:`~core.groupby.DatasetGroupBy` and
+  :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
+  :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -48,8 +74,13 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
+- Added support for `numpy.bool_` attributes in roundtrips using `h5netcdf` engine with `invalid_netcdf=True` [which casts `bool`s to `numpy.bool_`] (:issue:`4981`, :pull:`4986`).
+  By `Victor Negîrneac <https://github.com/caenrigen>`_.
 - Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Decode values as signed if attribute `_Unsigned = "false"` (:issue:`4954`)
+  By `Tobias Kölling <https://github.com/d70-t>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -59,6 +90,8 @@ Documentation
   the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
   (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
 
+- New sphinx theme & rearrangement of the docs (:pull:`4835`).
+  By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -86,6 +119,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6
 
+  The minimum versions of some other dependencies were changed:
   The minimum version policy was changed to also apply to projects with irregular
   releases. As a result, the minimum versions of some dependencies have changed:
 
@@ -488,7 +522,7 @@ New Features
   By `Aaron Spring <https://github.com/aaronspring>`_.
 - Use a wrapped array's ``_repr_inline_`` method to construct the collapsed ``repr``
   of :py:class:`DataArray` and :py:class:`Dataset` objects and
-  document the new method in :doc:`internals`. (:pull:`4248`).
+  document the new method in :doc:`internals/index`. (:pull:`4248`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow per-variable fill values in most functions. (:pull:`4237`).
   By `Justus Magin <https://github.com/keewis>`_.
@@ -2491,7 +2525,7 @@ non-standard calendars used in climate modeling.
 Documentation
 ~~~~~~~~~~~~~
 
-- New FAQ entry, :ref:`related-projects`.
+- New FAQ entry, :ref:`ecosystem`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - :ref:`assigning_values` now includes examples on how to select and assign
   values to a :py:class:`~xarray.DataArray` with ``.loc``.
@@ -4536,11 +4570,11 @@ Highlights
 ~~~~~~~~~~
 
 The headline feature in this release is experimental support for out-of-core
-computing (data that doesn't fit into memory) with dask_. This includes a new
+computing (data that doesn't fit into memory) with :doc:`user-guide/dask`. This includes a new
 top-level function ``xray.open_mfdataset`` that makes it easy to open
 a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
-documentation section :doc:`dask`.
+documentation section :doc:`user-guide/dask`.
 
 .. _blog post introducing xray + dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
 
