@@ -79,6 +79,9 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     (0, "microseconds since 2000-01-01T00:00:00"),
     (np.int32(788961600), "seconds since 1981-01-01"),  # GH2002
     (12300 + np.arange(5), "hour since 1680-01-01 00:00:00.500000"),
+    (164375, "days since 1850-01-01 00:00:00"),
+    (164374.5, "days since 1850-01-01 00:00:00"),
+    ([164374.5, 168360.5], "days since 1850-01-01 00:00:00"),
 ]
 _CF_DATETIME_TESTS = [
     num_dates_units + (calendar,)
