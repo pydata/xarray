@@ -8,6 +8,7 @@ import numpy as np
 from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
+from .npcompat import ArrayLike
 from .variable import Variable
 
 try:
@@ -15,13 +16,12 @@ try:
 except ImportError:
     DaskArray = np.ndarray
 
+# DatasetOpsMixin etc. are parent classes of Dataset etc.
 T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
 T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
 
-Scalar = Union[int, float, complex, bytes, str, np.generic]
-ArrayLike = Union[np.ndarray, DaskArray]
-ScalarOrArray = Union[Scalar, ArrayLike]
+ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
 DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
 DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
 VarCompatible = Union[Variable, ScalarOrArray]

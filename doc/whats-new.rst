@@ -55,7 +55,11 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-
+- Add typing information to unary and binary arithmetic operators operating on
+  :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
+  :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
+  :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
