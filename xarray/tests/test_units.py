@@ -3681,7 +3681,7 @@ class TestDataArray:
         (
             method("diff", dim="x"),
             method("differentiate", coord="x"),
-            method("integrate", dim="x"),
+            method("integrate", coord="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
@@ -3972,35 +3972,6 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            function("all"),
-            function("any"),
-            pytest.param(
-                function("argmax"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmax as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            pytest.param(
-                function("argmin"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmin as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            function("max"),
-            function("min"),
-            function("mean"),
-            pytest.param(
-                function("median"),
-                marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
-            ),
-            function("sum"),
-            function("prod"),
-            function("std"),
-            function("var"),
-            function("cumsum"),
-            function("cumprod"),
             method("all"),
             method("any"),
             method("argmax", dim="x"),

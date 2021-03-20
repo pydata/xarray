@@ -415,10 +415,19 @@ class GroupBy(SupportsArithmetic):
 
     @property
     def groups(self):
+        """
+        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
+
+    def __getitem__(self, key):
+        """
+        Get DataArray or Dataset corresponding to a particular group label.
+        """
+        return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self):
         return self._unique_coord.size
@@ -541,7 +550,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.fillna
         DataArray.fillna
@@ -590,12 +599,11 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
@@ -672,7 +680,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.where
         """
@@ -698,7 +706,7 @@ class GroupBy(SupportsArithmetic):
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
-        See also
+        See Also
         --------
         Dataset.assign_coords
         Dataset.swap_dims
@@ -996,7 +1004,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def assign(self, **kwargs):
         """Assign data variables by group.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """

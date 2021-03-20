@@ -10,6 +10,7 @@ from typing import (
     Any,
     Dict,
     Hashable,
+    List,
     Mapping,
     Optional,
     Sequence,
@@ -48,6 +49,7 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
+    maybe_coerce_to_str,
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
@@ -118,6 +120,16 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
+        if isinstance(obj[1], DataArray):
+            # TODO: change into TypeError
+            warnings.warn(
+                (
+                    "Using a DataArray object to construct a variable is"
+                    " ambiguous, please extract the data using the .data property."
+                    " This will raise a TypeError in 0.19.0."
+                ),
+                DeprecationWarning,
+            )
         try:
             obj = Variable(*obj)
         except (TypeError, ValueError) as error:
@@ -167,7 +179,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -216,7 +228,8 @@ def as_compatible_data(data, fastpath=False):
         data = np.timedelta64(getattr(data, "value", data), "ns")
 
     # we don't want nested self-described arrays
-    data = getattr(data, "values", data)
+    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
+        data = data.values
 
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
@@ -401,7 +414,6 @@ class Variable(
             * 'same_kind' means only safe casts or casts within a kind,
               like float64 to float32, are allowed.
             * 'unsafe' means any data conversions may be done.
-
         subok : bool, optional
             If True, then sub-classes will be passed-through, otherwise the
             returned array will be forced to be a base-class array.
@@ -426,7 +438,7 @@ class Variable(
         Make sure to only supply these arguments if the underlying array class
         supports them.
 
-        See also
+        See Also
         --------
         numpy.ndarray.astype
         dask.array.Array.astype
@@ -519,22 +531,15 @@ class Variable(
 
     def __dask_postcompute__(self):
         array_func, array_args = self._data.__dask_postcompute__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
     def __dask_postpersist__(self):
         array_func, array_args = self._data.__dask_postpersist__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
-    @staticmethod
-    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        data = array_func(results, *array_args)
-        return Variable(dims, data, attrs=attrs, encoding=encoding)
+    def _dask_finalize(self, results, array_func, *args, **kwargs):
+        data = array_func(results, *args, **kwargs)
+        return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
     def values(self):
@@ -604,8 +609,8 @@ class Variable(
         """Prepare an indexing key for an indexing operation.
 
         Parameters
-        -----------
-        key: int, slice, array-like, dict or tuple of integer, slice and array-like
+        ----------
+        key : int, slice, array-like, dict or tuple of integer, slice and array-like
             Any valid input for indexing.
 
         Returns
@@ -927,7 +932,6 @@ class Variable(
 
         Examples
         --------
-
         Shallow copy versus deep copy
 
         >>> var = xr.Variable(data=[1, 2, 3], dims="x")
@@ -1223,7 +1227,7 @@ class Variable(
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
-        fill_value: scalar, optional
+        fill_value : scalar, optional
             Value to use for newly missing values
         **shifts_kwargs
             The keyword arguments form of ``shifts``.
@@ -1487,7 +1491,7 @@ class Variable(
         )
         return expanded_var.transpose(*dims)
 
-    def _stack_once(self, dims, new_dim):
+    def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
             raise ValueError("invalid existing dimensions: %s" % dims)
 
@@ -1533,7 +1537,7 @@ class Variable(
         stacked : Variable
             Variable with the same attributes but stacked data.
 
-        See also
+        See Also
         --------
         Variable.unstack
         """
@@ -1543,7 +1547,15 @@ class Variable(
             result = result._stack_once(dims, new_dim)
         return result
 
-    def _unstack_once(self, dims, old_dim):
+    def _unstack_once_full(
+        self, dims: Mapping[Hashable, int], old_dim: Hashable
+    ) -> "Variable":
+        """
+        Unstacks the variable without needing an index.
+
+        Unlike `_unstack_once`, this function requires the existing dimension to
+        contain the full product of the new dimensions.
+        """
         new_dim_names = tuple(dims.keys())
         new_dim_sizes = tuple(dims.values())
 
@@ -1572,12 +1584,63 @@ class Variable(
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
+    def _unstack_once(
+        self,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        fill_value=dtypes.NA,
+    ) -> "Variable":
+        """
+        Unstacks this variable given an index to unstack and the name of the
+        dimension to which the index refers.
+        """
+
+        reordered = self.transpose(..., dim)
+
+        new_dim_sizes = [lev.size for lev in index.levels]
+        new_dim_names = index.names
+        indexer = index.codes
+
+        # Potentially we could replace `len(other_dims)` with just `-1`
+        other_dims = [d for d in self.dims if d != dim]
+        new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
+        new_dims = reordered.dims[: len(other_dims)] + new_dim_names
+
+        if fill_value is dtypes.NA:
+            is_missing_values = np.prod(new_shape) > np.prod(self.shape)
+            if is_missing_values:
+                dtype, fill_value = dtypes.maybe_promote(self.dtype)
+            else:
+                dtype = self.dtype
+                fill_value = dtypes.get_fill_value(dtype)
+        else:
+            dtype = self.dtype
+
+        # Currently fails on sparse due to https://github.com/pydata/sparse/issues/422
+        data = np.full_like(
+            self.data,
+            fill_value=fill_value,
+            shape=new_shape,
+            dtype=dtype,
+        )
+
+        # Indexer is a list of lists of locations. Each list is the locations
+        # on the new dimension. This is robust to the data being sparse; in that
+        # case the destinations will be NaN / zero.
+        data[(..., *indexer)] = reordered
+
+        return self._replace(dims=new_dims, data=data)
+
     def unstack(self, dimensions=None, **dimensions_kwargs):
         """
         Unstack an existing dimension into multiple new dimensions.
 
         New dimensions will be added at the end, and the order of the data
         along each new dimension will be in contiguous (C) order.
+
+        Note that unlike ``DataArray.unstack`` and ``Dataset.unstack``, this
+        method requires the existing dimension to contain the full product of
+        the new dimensions.
 
         Parameters
         ----------
@@ -1594,14 +1657,16 @@ class Variable(
         unstacked : Variable
             Variable with the same attributes but unstacked data.
 
-        See also
+        See Also
         --------
         Variable.stack
+        DataArray.unstack
+        Dataset.unstack
         """
         dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs, "unstack")
         result = self
         for old_dim, dims in dimensions.items():
-            result = result._unstack_once(dims, old_dim)
+            result = result._unstack_once_full(dims, old_dim)
         return result
 
     def fillna(self, value):
@@ -1837,7 +1902,6 @@ class Variable(
                 * higher: ``j``.
                 * nearest: ``i`` or ``j``, whichever is nearest.
                 * midpoint: ``(i + j) / 2``.
-
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -1854,7 +1918,7 @@ class Variable(
 
         See Also
         --------
-        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
         """
 
@@ -2369,7 +2433,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmin, DataArray.idxmin
         """
@@ -2414,7 +2478,7 @@ class Variable(
         -------
         result : Variable or dict of Variable
 
-        See also
+        See Also
         --------
         DataArray.argmax, DataArray.idxmax
         """
@@ -2522,6 +2586,9 @@ class IndexVariable(Variable):
             if positions is not None:
                 indices = nputils.inverse_permutation(np.concatenate(positions))
                 data = data.take(indices)
+
+        # keep as str if possible as pandas.Index uses object (converts to numpy array)
+        data = maybe_coerce_to_str(data, variables)
 
         attrs = dict(first_var.attrs)
         if not shortcut:

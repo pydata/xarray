@@ -8,14 +8,14 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
+from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
     DaskIndexingAdapter,
-    LazilyOuterIndexedArray,
+    LazilyIndexedArray,
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
@@ -1081,6 +1081,9 @@ class TestVariable(VariableSubclassobjects):
         td = np.array([timedelta(days=x) for x in range(10)])
         assert as_variable(td, "time").dtype.kind == "m"
 
+        with pytest.warns(DeprecationWarning):
+            as_variable(("x", DataArray([])))
+
     def test_repr(self):
         v = Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
         expected = dedent(
@@ -1095,9 +1098,9 @@ class TestVariable(VariableSubclassobjects):
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
-        v = Variable("x", LazilyOuterIndexedArray(np.arange(2e5)))
+        v = Variable("x", LazilyIndexedArray(np.arange(2e5)))
         assert "200000 values with dtype" in repr(v)
-        assert isinstance(v._data, LazilyOuterIndexedArray)
+        assert isinstance(v._data, LazilyIndexedArray)
 
     def test_detect_indexer_type(self):
         """ Tests indexer type was correctly detected. """
@@ -2094,6 +2097,17 @@ class TestIndexVariable(VariableSubclassobjects):
         assert_identical(actual, expected)
         assert isinstance(actual.to_index(), pd.MultiIndex)
 
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_concat_str_dtype(self, dtype):
+
+        a = IndexVariable("x", np.array(["a"], dtype=dtype))
+        b = IndexVariable("x", np.array(["b"], dtype=dtype))
+        expected = IndexVariable("x", np.array(["a", "b"], dtype=dtype))
+
+        actual = IndexVariable.concat([a, b])
+        assert actual.identical(expected)
+        assert np.issubdtype(actual.dtype, dtype)
+
     def test_coordinate_alias(self):
         with pytest.warns(Warning, match="deprecated"):
             x = Coordinate("x", [1, 2, 3])
@@ -2158,7 +2172,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2234,6 +2248,9 @@ class TestAsCompatibleData:
         with raises_regex(ValueError, "must be scalar"):
             full_like(orig, [1.0, 2.0])
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(orig, True, dtype={"x": bool})
+
     @requires_dask
     def test_full_like_dask(self):
         orig = Variable(
@@ -2289,6 +2306,11 @@ class TestAsCompatibleData:
         class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
             pass
 
+        # Type with data stored in values attribute
+        class CustomWithValuesAttr:
+            def __init__(self, array):
+                self.values = array
+
         array = CustomArray(np.arange(3))
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
@@ -2296,6 +2318,10 @@ class TestAsCompatibleData:
         array = CustomIndexable(np.arange(3))
         orig = Variable(dims=("x"), data=array, attrs={"foo": "bar"})
         assert isinstance(orig._data, CustomIndexable)
+
+        array = CustomWithValuesAttr(np.arange(3))
+        orig = Variable(dims=(), data=array)
+        assert isinstance(orig._data.item(), CustomWithValuesAttr)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
@@ -2329,19 +2355,19 @@ class TestBackendIndexing:
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
 
-    def test_LazilyOuterIndexedArray(self):
-        v = Variable(dims=("x", "y"), data=LazilyOuterIndexedArray(self.d))
+    def test_LazilyIndexedArray(self):
+        v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
-            data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)),
+            data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping
         v = Variable(
-            dims=("x", "y"), data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d))
+            dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
         self.check_orthogonal_indexing(v)
 
@@ -2350,9 +2376,7 @@ class TestBackendIndexing:
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(
-            dims=("x", "y"), data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d))
-        )
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 
