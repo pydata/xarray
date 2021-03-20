@@ -65,6 +65,7 @@ def _infer_line_data(darray, x, y, hue):
             raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
+            _assert_valid_xy(darray, hue, "hue")
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
             xplt = darray[xname]
             if xplt.ndim > 1:
