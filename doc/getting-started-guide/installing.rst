@@ -98,10 +98,10 @@ Minimum dependency versions
 xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
-- **Python:** 42 months
+- **Python:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **setuptools:** 42 months (but no older than 40.4)
-- **numpy:** 24 months
+- **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **dask and dask.distributed:** 12 months (but no older than 2.9)
 - **sparse, pint** and other libraries that rely on
@@ -111,9 +111,9 @@ dependencies:
   numpy >=1.17.
 - **all other libraries:** 12 months
 
-The above should be interpreted as *the minor version (X.Y) initially published no more
-than N months ago*. Patch versions (x.y.Z) are not pinned, and only the latest available
-at the moment of publishing the xarray release is guaranteed to work.
+This means the latest minor (X.Y) version from N months prior. Patch versions (x.y.Z)
+are not pinned, and only the latest available at the moment of publishing the xarray
+release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
@@ -144,15 +144,15 @@ being updated in the default channel.
 If you don't use conda, be sure you have the required dependencies (numpy and
 pandas) installed first. Then, install xarray with pip::
 
-    $ pip install xarray
+    $ python -m pip install xarray
 
 We also maintain other dependency sets for different subsets of functionality::
 
-    $ pip install "xarray[io]"        # Install optional dependencies for handling I/O
-    $ pip install "xarray[accel]"     # Install optional dependencies for accelerating xarray
-    $ pip install "xarray[parallel]"  # Install optional dependencies for dask arrays
-    $ pip install "xarray[viz]"       # Install optional dependencies for visualization
-    $ pip install "xarray[complete]"  # Install all the above
+    $ python -m pip install "xarray[io]"        # Install optional dependencies for handling I/O
+    $ python -m pip install "xarray[accel]"     # Install optional dependencies for accelerating xarray
+    $ python -m pip install "xarray[parallel]"  # Install optional dependencies for dask arrays
+    $ python -m pip install "xarray[viz]"       # Install optional dependencies for visualization
+    $ python -m pip install "xarray[complete]"  # Install all the above
 
 The above commands should install most of the `optional dependencies`_. However,
 some packages which are either not listed on PyPI or require extra
@@ -160,7 +160,7 @@ installation steps are excluded. To know which dependencies would be
 installed, take a look at the ``[options.extras_require]`` section in
 ``setup.cfg``:
 
-.. literalinclude:: ../setup.cfg
+.. literalinclude:: ../../setup.cfg
    :language: ini
    :start-at: [options.extras_require]
    :end-before: [options.package_data]

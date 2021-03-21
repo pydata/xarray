@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1
+      - uses: xarray-contrib/ci-trigger@v1.1
         id: detect-trigger
         with:
           keyword: "[test-upstream]"
@@ -43,15 +43,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
     outputs:
       artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
@@ -64,6 +62,9 @@ jobs:
         run: |
           mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
+      - name: Install xarray
+        run: |
+          python -m pip install --no-deps -e .
       - name: Version info
         run: |
           conda info -a
@@ -77,7 +78,7 @@ jobs:
         id: status
         run: |
           set -euo pipefail
-          python -m pytest -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
           )
       - name: Upload artifacts
