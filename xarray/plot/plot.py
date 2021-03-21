@@ -797,7 +797,6 @@ def scatter(
     yticks=None,
     xlim=None,
     ylim=None,
-    add_guide=None,
     add_legend=None,
     add_colorbar=None,
     cbar_kwargs=None,
@@ -929,7 +928,7 @@ def scatter(
 
     _data = _infer_meta_data(darray, x, z, hue, hue_style, _sizes)
 
-    # add_guide = kwargs.pop("add_guide", None)
+    add_guide = kwargs.pop("add_guide", None)
     if add_legend is not None:
         pass
     elif add_guide is None or add_guide is True:

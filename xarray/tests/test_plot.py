@@ -2594,14 +2594,18 @@ def test_get_axis_cartopy():
 
 @requires_matplotlib
 @pytest.mark.parametrize(
-    "x, y, hue, markersize, add_legend, add_colorbar",
+    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
     [
-        ("A", "B", None, None, None, None),
-        ("B", "A", "w", None, True, None),
-        ("A", "B", "y", "z", True, True),
+        ("A", "B", None, None, None, None, None, None, None),
+        ("B", "A", None, "w", None, None, None, True, None),
+        ("A", "B", None, "y", "x", None, None, True, True),
+        ("A", "B", "z", None, None, None, None, None, None),
+        ("B", "A", "z", "w", None, None, None, True, None),
+        ("A", "B", "z", "y", "x", None, None, True, True),
+        ("A", "B", "z", "y", "x", "w", None, True, True),
     ],
 )
-def test_datarray_scatter(x, y, hue, markersize, add_legend, add_colorbar):
+def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_colorbar):
     """Test datarray scatter. Merge with TestPlot1D eventually."""
     ds = xr.tutorial.scatter_example_dataset()
 
@@ -2618,6 +2622,7 @@ def test_datarray_scatter(x, y, hue, markersize, add_legend, add_colorbar):
     with figure_context():
         darray.plot.scatter(
             x=x,
+            z=z,
             hue=hue,
             markersize=markersize,
             add_legend=add_legend,
