@@ -923,7 +923,14 @@ def scatter(
     # need to infer size_mapping with full dataset
     _data.update(
         _infer_scatter_data(
-            darray, x, z, hue, _sizes, size_norm, size_mapping, _MARKERSIZE_RANGE,
+            darray,
+            x,
+            z,
+            hue,
+            _sizes,
+            size_norm,
+            size_mapping,
+            _MARKERSIZE_RANGE,
         )
     )
 
