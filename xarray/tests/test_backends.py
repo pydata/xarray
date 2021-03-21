@@ -1901,7 +1901,7 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError):
+        with raises_regex(NotImplementedError, "named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
 
