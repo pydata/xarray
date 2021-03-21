@@ -32,7 +32,6 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
@@ -242,16 +241,7 @@ def as_compatible_data(data, fastpath=False):
 
     if not isinstance(data, np.ndarray):
         if hasattr(data, "__array_function__"):
-            if IS_NEP18_ACTIVE:
-                return data
-            else:
-                raise TypeError(
-                    "Got an NumPy-like array type providing the "
-                    "__array_function__ protocol but NEP18 is not enabled. "
-                    "Check that numpy >= v1.16 and that the environment "
-                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
-                    '"1"'
-                )
+            return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
