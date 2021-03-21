@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.alignment import broadcast
+from ..core.options import OPTIONS
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
@@ -882,13 +883,13 @@ def scatter(
         Additional keyword arguments to matplotlib
     """
     # Handle facetgrids first
+    _is_facetgrid = kwargs.pop("_is_facetgrid", False)
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop("kwargs"))
         allargs.pop("darray")
         return _easy_facetgrid(darray, scatter, kind="dataarray", **allargs)
 
-    # _is_facetgrid = kwargs.pop("_is_facetgrid", False)
     _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
@@ -941,7 +942,7 @@ def scatter(
         kwargs.update(c=_data["colors"].values.ravel())
 
         if cmap is None and _data["hue_style"] == "discrete":
-            cmap = "tab10"
+            cmap = OPTIONS["cmap_discrete"]
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             scatter, _data["colors"].values, **locals()
         )
