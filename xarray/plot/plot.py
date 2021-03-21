@@ -797,8 +797,21 @@ def scatter(
     yticks=None,
     xlim=None,
     ylim=None,
+    add_guide=None,
     add_legend=None,
     add_colorbar=None,
+    cbar_kwargs=None,
+    cbar_ax=None,
+    vmin=None,
+    vmax=None,
+    norm=None,
+    infer_intervals=None,
+    center=None,
+    levels=None,
+    robust=None,
+    colors=None,
+    extend=None,
+    cmap=None,
     _labels=True,
     **kwargs,
 ):
@@ -883,19 +896,29 @@ def scatter(
         Additional keyword arguments to matplotlib
     """
     # Handle facetgrids first
-    _is_facetgrid = kwargs.pop("_is_facetgrid", False)
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop("kwargs"))
         allargs.pop("darray")
-        return _easy_facetgrid(darray, scatter, kind="dataarray", **allargs)
+        subplot_kws = dict(projection="3d") if z is not None else {}
+        return _easy_facetgrid(
+            darray, scatter, kind="dataarray", subplot_kws=subplot_kws, **allargs
+        )
+
+    # Further
+    _is_facetgrid = kwargs.pop("_is_facetgrid", False)
+    if _is_facetgrid:
+        # Why do I need to pop these here?
+        kwargs.pop("y", None)
+        kwargs.pop("args", None)
+        kwargs.pop("add_labels", None)
 
     _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-    cbar_ax = kwargs.pop("cbar_ax", None)
-    cbar_kwargs = kwargs.pop("cbar_kwargs", None)
-    cmap = kwargs.pop("cmap", None)
+    # cbar_ax = kwargs.pop("cbar_ax", None)
+    # cbar_kwargs = kwargs.pop("cbar_kwargs", None)
+    # cmap = kwargs.pop("cmap", None)
     cmap_params = kwargs.pop("cmap_params", None)
 
     figsize = kwargs.pop("figsize", None)
@@ -906,7 +929,7 @@ def scatter(
 
     _data = _infer_meta_data(darray, x, z, hue, hue_style, _sizes)
 
-    add_guide = kwargs.pop("add_guide", None)
+    # add_guide = kwargs.pop("add_guide", None)
     if add_legend is not None:
         pass
     elif add_guide is None or add_guide is True:
@@ -935,7 +958,9 @@ def scatter(
         )
     )
 
-    # Plot the data:
+    # Plot the data. 3d plots has the z value in upward direction
+    # instead of y. To make jumping between 2d and 3d easy and intuitive
+    # switch the order so that z is shown in the depthwise direction:
     axis_order = ["x", "z", "y"]
     cmap_params_subset = {}
     if _data["hue"] is not None:
@@ -967,7 +992,7 @@ def scatter(
 
     # Set x, y, z labels:
     i = 0
-    set_label = [ax.set_xlabel, ax.set_ylabel, getattr(ax, "set_zlabel", [])]
+    set_label = [ax.set_xlabel, ax.set_ylabel, getattr(ax, "set_zlabel", None)]
     for v in axis_order:
         if _data.get(f"{v}label", None) is not None:
             set_label[i](_data[f"{v}label"])
@@ -1034,7 +1059,9 @@ def scatter(
         ]:
             if subtitle:
                 # Get legend handles and labels that displays the
-                # values correctly:
+                # values correctly. Order might be different because
+                # legend_elements uses np.unique instead of pd.unique,
+                # FacetGrid.add_legend might have troubles with this:
                 hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
                 hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
                 handles += hdl
