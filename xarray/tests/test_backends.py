@@ -1871,6 +1871,10 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(badenc) as actual:
                 pass
 
+        # unless...
+        with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+            pass
+
         badenc.var1.encoding["chunks"] = (2,)
         with pytest.raises(ValueError, match=r"Specified Zarr chunk encoding"):
             with self.roundtrip(badenc) as actual:

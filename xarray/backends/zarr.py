@@ -1,6 +1,7 @@
 import os
 import pathlib
 from distutils.version import LooseVersion
+import warnings
 
 import numpy as np
 
@@ -176,7 +177,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                         )
                     else:
-                        warnings.warn(RuntimeWarning, base_error)
+                        warnings.warn(base_error)
             if dchunks[-1] > zchunk:
                 base_error = (
                     "Final chunk of Zarr array must be the same size or "
@@ -193,7 +194,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                     )
                 else:
-                    warnings.warn(RuntimeWarning, base_error)
+                    warnings.warn(base_error)
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
