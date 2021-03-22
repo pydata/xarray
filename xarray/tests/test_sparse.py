@@ -227,6 +227,10 @@ def test_variable_method(func, sparse_output):
     ret_s = func(var_s)
     ret_d = func(var_d)
 
+    # TODO: figure out how to verify the results of each method
+    if isinstance(ret_d, xr.Variable) and isinstance(ret_d.data, sparse.SparseArray):
+        ret_d = ret_d.copy(data=ret_d.data.todense())
+
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)

@@ -5,7 +5,10 @@ For internal xarray development use only.
 Usage:
     python xarray/util/generate_ops.py --module > xarray/core/_typed_ops.py
     python xarray/util/generate_ops.py --stubs > xarray/core/_typed_ops.pyi
+
 """
+# Note: the comments in https://github.com/pydata/xarray/pull/4904 provide some
+# background to some of the design choices made here.
 
 import sys
 
