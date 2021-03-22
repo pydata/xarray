@@ -74,6 +74,7 @@ has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
+has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
@@ -82,6 +83,7 @@ has_sparse, requires_sparse = _importorskip("sparse")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 # Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
 has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
+has_numexpr, requires_numexpr = _importorskip("numexpr")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

@@ -62,7 +62,7 @@ class CfGribDataStore(AbstractDataStore):
             data = var.data
         else:
             wrapped_array = CfGribArrayWrapper(self, var.data)
-            data = indexing.LazilyOuterIndexedArray(wrapped_array)
+            data = indexing.LazilyIndexedArray(wrapped_array)
 
         encoding = self.ds.encoding.copy()
         encoding["original_shape"] = var.data.shape
@@ -87,9 +87,9 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
+    def guess_can_open(self, filename_or_obj):
         try:
-            _, ext = os.path.splitext(store_spec)
+            _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
             return False
         return ext in {".grib", ".grib2", ".grb", ".grb2"}
@@ -99,9 +99,9 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         filename_or_obj,
         *,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,

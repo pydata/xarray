@@ -60,6 +60,9 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     import matplotlib as mpl
 
+    if len(levels) == 1:
+        levels = [levels[0], levels[0]]
+
     if not filled:
         # non-filled contour plots
         extend = "max"
@@ -841,3 +844,12 @@ def _process_cmap_cbar_kwargs(
         }
 
     return cmap_params, cbar_kwargs
+
+
+def _get_nice_quiver_magnitude(u, v):
+    import matplotlib as mpl
+
+    ticker = mpl.ticker.MaxNLocator(3)
+    mean = np.mean(np.hypot(u.values, v.values))
+    magnitude = ticker.tick_values(0, mean)[-2]
+    return magnitude

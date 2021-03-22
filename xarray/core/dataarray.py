@@ -839,15 +839,15 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     def __dask_postpersist__(self):
         func, args = self._to_temp_dataset().__dask_postpersist__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     @staticmethod
-    def _dask_finalize(results, func, args, name):
-        ds = func(results, *args)
+    def _dask_finalize(results, name, func, *args, **kwargs):
+        ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
@@ -1094,6 +1094,26 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel
         DataArray.sel
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
+        >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> da = da.isel(x=tgt_x, y=tgt_y)
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1202,6 +1222,34 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.sel
         DataArray.isel
 
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(5), "y": np.arange(5)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
+        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
@@ -1449,6 +1497,26 @@ class DataArray(AbstractArray, DataWithCoords):
         reindexed : DataArray
             Another dataset array, with this array's data but replaced
             coordinates.
+
+        Examples
+        --------
+        Reverse latitude:
+
+        >>> da = xr.DataArray(
+        ...     np.arange(4),
+        ...     coords=[np.array([90, 89, 88, 87])],
+        ...     dims="lat",
+        ... )
+        >>> da
+        <xarray.DataArray (lat: 4)>
+        array([0, 1, 2, 3])
+        Coordinates:
+          * lat      (lat) int64 90 89 88 87
+        >>> da.reindex(lat=da.lat[::-1])
+        <xarray.DataArray (lat: 4)>
+        array([3, 2, 1, 0])
+        Coordinates:
+          * lat      (lat) int64 87 88 89 90
 
         See Also
         --------
@@ -3713,6 +3781,8 @@ class DataArray(AbstractArray, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -4283,6 +4353,70 @@ class DataArray(AbstractArray, DataWithCoords):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    def query(
+        self,
+        queries: Mapping[Hashable, Any] = None,
+        parser: str = "pandas",
+        engine: str = None,
+        missing_dims: str = "raise",
+        **queries_kwargs: Any,
+    ) -> "DataArray":
+        """Return a new data array indexed along the specified
+        dimension(s), where the indexers are given as strings containing
+        Python expressions to be evaluated against the values in the array.
+
+        Parameters
+        ----------
+        queries : dict, optional
+            A dict with keys matching dimensions and values given by strings
+            containing Python expressions to be evaluated against the data variables
+            in the dataset. The expressions will be evaluated using the pandas
+            eval() function, and can contain any valid Python expressions but cannot
+            contain any Python statements.
+        parser : {"pandas", "python"}, default: "pandas"
+            The parser to use to construct the syntax tree from the expression.
+            The default of 'pandas' parses code slightly different than standard
+            Python. Alternatively, you can parse an expression using the 'python'
+            parser to retain strict Python semantics.
+        engine: {"python", "numexpr", None}, default: None
+            The engine used to evaluate the expression. Supported engines are:
+            - None: tries to use numexpr, falls back to python
+            - "numexpr": evaluates expressions using numexpr
+            - "python": performs operations as if you had eval’d in top level python
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+        **queries_kwargs : {dim: query, ...}, optional
+            The keyword arguments form of ``queries``.
+            One of queries or queries_kwargs must be provided.
+
+        Returns
+        -------
+        obj : DataArray
+            A new DataArray with the same contents as this dataset, indexed by
+            the results of the appropriate queries.
+
+        See Also
+        --------
+        DataArray.isel
+        Dataset.query
+        pandas.eval
+
+        """
+
+        ds = self._to_dataset_whole(shallow_copy=True)
+        ds = ds.query(
+            queries=queries,
+            parser=parser,
+            engine=engine,
+            missing_dims=missing_dims,
+            **queries_kwargs,
+        )
+        return ds[self.name]
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

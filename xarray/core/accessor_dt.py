@@ -9,6 +9,7 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
+from .npcompat import DTypeLike
 from .pycompat import is_duck_dask_array
 
 
@@ -30,6 +31,10 @@ def _access_through_cftimeindex(values, name):
     if name == "season":
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
+    elif name == "date":
+        raise AttributeError(
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+        )
     else:
         field_values = getattr(values_as_cftimeindex, name)
     return field_values.reshape(values.shape)
@@ -178,8 +183,9 @@ class Properties:
     def __init__(self, obj):
         self._obj = obj
 
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
+    @staticmethod
+    def _tslib_field_accessor(
+        name: str, docstring: str = None, dtype: DTypeLike = None
     ):
         def f(self, dtype=dtype):
             if dtype is None:
@@ -411,6 +417,10 @@ class DatetimeAccessor(Properties):
 
     time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
+    )
+
+    date = Properties._tslib_field_accessor(
+        "date", "Date corresponding to datetimes", object
     )
 
     is_month_start = Properties._tslib_field_accessor(
