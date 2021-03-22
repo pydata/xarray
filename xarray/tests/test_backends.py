@@ -1908,6 +1908,9 @@ class ZarrBase(CFEncodedBase):
         with raises_regex(NotImplementedError, "named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
+        # override option
+        with self.roundtrip(ds_chunk4, save_kwargs={"safe_chunks": False}) as actual:
+            pass
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
