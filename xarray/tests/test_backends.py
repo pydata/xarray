@@ -1857,6 +1857,8 @@ class ZarrBase(CFEncodedBase):
         ds_chunk4 = ds.chunk({"x": 4})
         with self.roundtrip(ds_chunk4) as actual:
             assert (4,) == actual["var1"].encoding["chunks"]
+            rechunked = actual.chunk(5)
+            assert "chunks" not in rechunked["var1"].encoding
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({"x": (5, 4, 3)})
@@ -1874,6 +1876,7 @@ class ZarrBase(CFEncodedBase):
         # unless...
         with pytest.warns(UserWarning):
             with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+                # don't actually check equality because the data could be corrupted
                 pass
 
         badenc.var1.encoding["chunks"] = (2,)
@@ -1914,6 +1917,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(
                 ds_chunk4, save_kwargs={"safe_chunks": False}
             ) as actual:
+                # don't actually check equality because the data could be corrupted
                 pass
 
     def test_hidden_zarr_keys(self):
