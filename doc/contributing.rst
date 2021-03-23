@@ -684,8 +684,12 @@ This will display stderr from the benchmarks, and use your local
 Information on how to write a benchmark and how to use asv can be found in the
 `asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
 
-The *xarray* benchmarking suite is run remotely and the results are
-available `here <http://pandas.pydata.org/speed/xarray/>`_.
+..
+   TODO: uncomment once we have a working setup
+         see https://github.com/pydata/xarray/pull/5066
+
+   The *xarray* benchmarking suite is run remotely and the results are
+   available `here <http://pandas.pydata.org/speed/xarray/>`_.
 
 Documenting your code
 ---------------------
