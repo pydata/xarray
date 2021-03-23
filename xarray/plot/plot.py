@@ -251,7 +251,7 @@ def _infer_meta_data(darray, x, z, hue, hue_style, size):
     )
 
     # Add styles and labels for the dataarrays:
-    for type_, a, style, in [("hue", hue, hue_style), ("size", size, None)]:
+    for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
         tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
         if a:
             out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
