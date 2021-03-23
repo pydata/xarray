@@ -95,7 +95,6 @@ def test_interpolate_pd_compat():
     methods = [
         "linear",
         "nearest",
-        # "nearest-up",
         "zero",
         "slinear",
         "quadratic",
@@ -308,7 +307,6 @@ def test_interpolate_methods():
         "slinear",
         "quadratic",
         "cubic",
-        "nearest-up",
         "previous",
         "next",
     ]:

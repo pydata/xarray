@@ -460,7 +460,6 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
         "quadratic",
         "cubic",
         "polynomial",
-        "nearest-up",
         "previous",
         "next",
     ]
@@ -598,7 +597,7 @@ def interp(var, indexes_coords, method, **kwargs):
         Original coordinates should be sorted in strictly ascending order.
         Note that all the coordinates should be Variable objects.
     method : string
-        One of {'linear', 'nearest', 'nearest-up', 'zero', 'slinear', 'quadratic',
+        One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic', 'previous', 'next'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
     **kwargs
