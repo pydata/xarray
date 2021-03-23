@@ -598,8 +598,8 @@ def interp(var, indexes_coords, method, **kwargs):
         Original coordinates should be sorted in strictly ascending order.
         Note that all the coordinates should be Variable objects.
     method : string
-        One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
-        'cubic'}. For multidimensional interpolation, only
+        One of {'linear', 'nearest', 'nearest-up', 'zero', 'slinear', 'quadratic',
+        'cubic', 'previous', 'next'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
     **kwargs
         keyword arguments to be passed to scipy.interpolate
