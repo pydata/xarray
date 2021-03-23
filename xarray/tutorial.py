@@ -53,8 +53,7 @@ def open_dataset(
     Parameters
     ----------
     name : str
-        Name of the file containing the dataset. If no suffix is given, assumed
-        to be netCDF ('.nc' is appended)
+        Name of the file containing the dataset.
         e.g. 'air_temperature'
     cache_dir : path-like, optional
         The directory in which to search for and write cached data.
@@ -62,6 +61,17 @@ def open_dataset(
         If True, then cache data locally for use on subsequent calls
     kws : dict, optional
         Passed to xarray.open_dataset
+
+    Notes
+    -----
+    Available datasets:
+
+    * ``"air_temperature"``
+    * ``"rasm"``
+    * ``"ROMS_example"``
+    * ``"tiny"``
+    * ``"era5-2mt-2019-03-uk.grib"``
+    * ``"RGB.byte"``: example rasterio file from https://github.com/mapbox/rasterio
 
     See Also
     --------
