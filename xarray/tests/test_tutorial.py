@@ -30,6 +30,6 @@ class TestLoadDataset:
         assert_identical(ds_cache, ds_nocache)
 
     def test_download_rasterio_from_github_load_without_cache(self):
-        ds_nocache = tutorial.open_rasterio("RGB.byte", cache=False).load()
-        ds_cache = tutorial.open_rasterio("RGB.byte", cache=True).load()
+        ds_nocache = tutorial.open_dataset("RGB.byte", cache=False).load()
+        ds_cache = tutorial.open_dataset("RGB.byte", cache=True).load()
         assert_identical(ds_cache, ds_nocache)
