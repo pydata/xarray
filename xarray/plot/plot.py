@@ -233,50 +233,32 @@ def _infer_meta_data(darray, x, z, hue, hue_style, size):
             array_style = "continuous" if array_is_numeric else "discrete"
         elif array_style not in ["discrete", "continuous"]:
             raise ValueError(
-                "hue_style must be either None, 'discrete' or 'continuous'."
-            )
-
-        if not array_is_numeric and (array_style == "continuous"):
-            raise ValueError(
-                f"Cannot create a colorbar for a non numeric coordinate: {name}"
+                f"The style '{array_style}' is not valid, "
+                "valid options are None, 'discrete' or 'continuous'."
             )
 
         array_label = label_from_attrs(array)
 
         return array, array_style, array_label
 
-    # if x is not None and y is not None:
-    #     raise ValueError("Cannot specify both x and y kwargs for line plots.")
-
-    label = dict(y=label_from_attrs(darray))
-    label.update(
+    # Add nice looking labels:
+    out = dict(ylabel=label_from_attrs(darray))
+    out.update(
         {
             k: label_from_attrs(darray[v]) if v in darray.coords else None
-            for k, v in [("x", x), ("z", z)]
+            for k, v in [("xlabel", x), ("zlabel", z)]
         }
     )
 
-    if hue:
-        hue, hue_style, hue_label = _determine_array(darray, hue, hue_style)
-    else:
-        hue, hue_style, hue_label = None, None, None
+    # Add styles and labels for the dataarrays:
+    for type_, a, style, in [("hue", hue, hue_style), ("size", size, None)]:
+        tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
+        if a:
+            out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
+        else:
+            out[tp], out[stl], out[lbl] = None, None, None
 
-    if size:
-        size, size_style, size_label = _determine_array(darray, size, None)
-    else:
-        size, size_style, size_label = None, None, None
-
-    return dict(
-        xlabel=label["x"],
-        ylabel=label["y"],
-        zlabel=label["z"],
-        hue=hue,
-        hue_label=hue_label,
-        hue_style=hue_style,
-        size=size,
-        size_label=size_label,
-        size_style=size_style,
-    )
+    return out
 
 
 # copied from seaborn
@@ -338,42 +320,29 @@ def _infer_scatter_data(
     to_broadcast.update(
         {
             key: darray[value]
-            for key, value in dict(hue=hue, sizes=size).items()
+            for key, value in dict(hue=hue, size=size).items()
             if value in darray.dims
         }
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
-    broadcasted.update(
-        hue=broadcasted.pop("hue", None), sizes=broadcasted.pop("sizes", None)
-    )
 
-    if hue:
-        # if hue_mapping is None:
-        hue_mapping = _parse_size(broadcasted["hue"], None, [0, 1])
+    # Normalize hue and size and create lookup tables:
+    for type_, mapping, norm, width in [
+        ("hue", None, None, [0, 1]),
+        ("size", size_mapping, size_norm, size_range),
+    ]:
+        broadcasted_type = broadcasted.get(type_, None)
+        if broadcasted_type is not None:
+            if mapping is None:
+                mapping = _parse_size(broadcasted_type, norm, width)
 
-        broadcasted["colors"] = broadcasted["hue"].copy(
-            data=np.reshape(
-                hue_mapping.loc[broadcasted["hue"].values.ravel()].values,
-                broadcasted["hue"].shape,
+            broadcasted[type_] = broadcasted_type.copy(
+                data=np.reshape(
+                    mapping.loc[broadcasted_type.values.ravel()].values,
+                    broadcasted_type.shape,
+                )
             )
-        )
-        broadcasted["colors_to_labels"] = pd.Series(
-            hue_mapping.index, index=hue_mapping
-        )
-
-    if size:
-        if size_mapping is None:
-            size_mapping = _parse_size(broadcasted["sizes"], size_norm, size_range)
-
-        broadcasted["sizes"] = broadcasted["sizes"].copy(
-            data=np.reshape(
-                size_mapping.loc[broadcasted["sizes"].values.ravel()].values,
-                broadcasted["sizes"].shape,
-            )
-        )
-        broadcasted["sizes_to_labels"] = pd.Series(
-            size_mapping.index, index=size_mapping
-        )
+            broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
 
     return broadcasted
 
@@ -915,9 +884,6 @@ def scatter(
     _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-    # cbar_ax = kwargs.pop("cbar_ax", None)
-    # cbar_kwargs = kwargs.pop("cbar_kwargs", None)
-    # cmap = kwargs.pop("cmap", None)
     cmap_params = kwargs.pop("cmap_params", None)
 
     figsize = kwargs.pop("figsize", None)
@@ -963,12 +929,12 @@ def scatter(
     axis_order = ["x", "z", "y"]
     cmap_params_subset = {}
     if _data["hue"] is not None:
-        kwargs.update(c=_data["colors"].values.ravel())
+        kwargs.update(c=_data["hue"].values.ravel())
 
         if cmap is None and _data["hue_style"] == "discrete":
             cmap = OPTIONS["cmap_discrete"]
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            scatter, _data["colors"].values, **locals()
+            scatter, _data["hue"].values, **locals()
         )
 
         # subset that can be passed to scatter, hist2d
@@ -976,8 +942,8 @@ def scatter(
             vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
         }
 
-    if _data["sizes"] is not None:
-        kwargs.update(s=_data["sizes"].values.ravel())
+    if _data["size"] is not None:
+        kwargs.update(s=_data["size"].values.ravel())
 
     primitive = ax.scatter(
         *[
@@ -1053,8 +1019,8 @@ def scatter(
 
         handles, labels = [], []
         for subtitle, prop, func in [
-            (_data["hue_label"], "colors", to_label(_data, "colors_to_labels")),
-            (_data["size_label"], "sizes", to_label(_data, "sizes_to_labels")),
+            (_data["hue_label"], "colors", to_label(_data, "hue_to_label")),
+            (_data["size_label"], "sizes", to_label(_data, "size_to_label")),
         ]:
             if subtitle:
                 # Get legend handles and labels that displays the
