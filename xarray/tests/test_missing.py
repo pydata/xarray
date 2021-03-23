@@ -92,7 +92,17 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345, non_uniform=False
 def test_interpolate_pd_compat():
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
     frac_nans = [0, 0.5, 1]
-    methods = ["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+    methods = [
+        "linear",
+        "nearest",
+        "nearest-up",
+        "zero",
+        "slinear",
+        "quadratic",
+        "cubic",
+        "next",
+        "previous",
+    ]
 
     for (shape, frac_nan, method) in itertools.product(shapes, frac_nans, methods):
 

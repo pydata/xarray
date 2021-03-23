@@ -460,6 +460,9 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
         "quadratic",
         "cubic",
         "polynomial",
+        "nearest-up",
+        "previous",
+        "next",
     ]
     valid_methods = interp1d_methods + [
         "barycentric",
