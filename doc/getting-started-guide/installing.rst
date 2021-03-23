@@ -169,8 +169,12 @@ repository.
 Performance Monitoring
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A fixed-point performance monitoring of (a part of) our code can be seen on
-`this page <https://pandas.pydata.org/speed/xarray/>`__.
+..
+   TODO: uncomment once we have a working setup
+         see https://github.com/pydata/xarray/pull/5066
+
+   A fixed-point performance monitoring of (a part of) our code can be seen on
+   `this page <https://pandas.pydata.org/speed/xarray/>`__.
 
 To run these benchmark tests in a local machine, first install
 
