@@ -8,8 +8,8 @@ Required dependencies
 
 - Python (3.7 or later)
 - setuptools (40.4 or later)
-- `numpy <http://www.numpy.org/>`__ (1.15 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.25 or later)
+- `numpy <http://www.numpy.org/>`__ (1.17 or later)
+- `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
 .. _optional-dependencies:
 
@@ -77,14 +77,6 @@ Alternative data containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - `sparse <https://sparse.pydata.org/>`_: for sparse arrays
 - `pint <https://pint.readthedocs.io/>`_: for units of measure
-
-  .. note::
-
-    At the moment of writing, xarray requires a `highly experimental version of pint
-    <https://github.com/andrewgsavage/pint/pull/6>`_ (install with
-    ``pip install git+https://github.com/andrewgsavage/pint.git@refs/pull/6/head)``.
-    Even with it, interaction with non-numpy array libraries, e.g. dask or sparse, is broken.
-
 - Any numpy-like objects that support
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_.
   Note that while such libraries theoretically should work, they are untested.
@@ -177,8 +169,12 @@ repository.
 Performance Monitoring
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A fixed-point performance monitoring of (a part of) our codes can be seen on
-`this page <https://tomaugspurger.github.io/asv-collection/xarray/>`__.
+..
+   TODO: uncomment once we have a working setup
+         see https://github.com/pydata/xarray/pull/5066
+
+   A fixed-point performance monitoring of (a part of) our code can be seen on
+   `this page <https://pandas.pydata.org/speed/xarray/>`__.
 
 To run these benchmark tests in a local machine, first install
 
