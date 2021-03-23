@@ -8,6 +8,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.computation.ops import UndefinedVariableError
 from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.tseries.frequencies import to_offset
 
@@ -45,6 +46,7 @@ from . import (
     requires_cftime,
     requires_dask,
     requires_numbagg,
+    requires_numexpr,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -188,7 +190,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         def lazy_inaccessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyOuterIndexedArray(InaccessibleArray(v.values))
+            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
 
         return {k: lazy_inaccessible(k, v) for k, v in self._variables.items()}
@@ -5806,6 +5808,135 @@ class TestDataset:
         assert data.var1.attrs == data.astype(float).var1.attrs
         assert not data.astype(float, keep_attrs=False).attrs
         assert not data.astype(float, keep_attrs=False).var1.attrs
+
+    @pytest.mark.parametrize("parser", ["pandas", "python"])
+    @pytest.mark.parametrize(
+        "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
+    )
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
+    )
+    def test_query(self, backend, engine, parser):
+        """Test querying a dataset."""
+
+        # setup test data
+        np.random.seed(42)
+        a = np.arange(0, 10, 1)
+        b = np.random.randint(0, 100, size=10)
+        c = np.linspace(0, 1, 20)
+        d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
+            object
+        )
+        e = np.arange(0, 10 * 20).reshape(10, 20)
+        f = np.random.normal(0, 1, size=(10, 20, 30))
+        if backend == "numpy":
+            ds = Dataset(
+                {
+                    "a": ("x", a),
+                    "b": ("x", b),
+                    "c": ("y", c),
+                    "d": ("z", d),
+                    "e": (("x", "y"), e),
+                    "f": (("x", "y", "z"), f),
+                }
+            )
+        elif backend == "dask":
+            ds = Dataset(
+                {
+                    "a": ("x", da.from_array(a, chunks=3)),
+                    "b": ("x", da.from_array(b, chunks=3)),
+                    "c": ("y", da.from_array(c, chunks=7)),
+                    "d": ("z", da.from_array(d, chunks=12)),
+                    "e": (("x", "y"), da.from_array(e, chunks=(3, 7))),
+                    "f": (("x", "y", "z"), da.from_array(f, chunks=(3, 7, 12))),
+                }
+            )
+
+        # query single dim, single variable
+        actual = ds.query(x="a > 5", engine=engine, parser=parser)
+        expect = ds.isel(x=(a > 5))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable, via dict
+        actual = ds.query(dict(x="a > 5"), engine=engine, parser=parser)
+        expect = ds.isel(dict(x=(a > 5)))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = ds.query(x="b > 50", engine=engine, parser=parser)
+        expect = ds.isel(x=(b > 50))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = ds.query(y="c < .5", engine=engine, parser=parser)
+        expect = ds.isel(y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query single dim, single string variable
+        if parser == "pandas":
+            # N.B., this query currently only works with the pandas parser
+            # xref https://github.com/pandas-dev/pandas/issues/40436
+            actual = ds.query(z='d == "bar"', engine=engine, parser=parser)
+            expect = ds.isel(z=(d == "bar"))
+            assert_identical(expect, actual)
+
+        # query single dim, multiple variables
+        actual = ds.query(x="(a > 5) & (b > 50)", engine=engine, parser=parser)
+        expect = ds.isel(x=((a > 5) & (b > 50)))
+        assert_identical(expect, actual)
+
+        # query single dim, multiple variables with computation
+        actual = ds.query(x="(a * b) > 250", engine=engine, parser=parser)
+        expect = ds.isel(x=(a * b) > 250)
+        assert_identical(expect, actual)
+
+        # check pandas query syntax is supported
+        if parser == "pandas":
+            actual = ds.query(x="(a > 5) and (b > 50)", engine=engine, parser=parser)
+            expect = ds.isel(x=((a > 5) & (b > 50)))
+            assert_identical(expect, actual)
+
+        # query multiple dims via kwargs
+        actual = ds.query(x="a > 5", y="c < .5", engine=engine, parser=parser)
+        expect = ds.isel(x=(a > 5), y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query multiple dims via kwargs
+        if parser == "pandas":
+            actual = ds.query(
+                x="a > 5", y="c < .5", z="d == 'bar'", engine=engine, parser=parser
+            )
+            expect = ds.isel(x=(a > 5), y=(c < 0.5), z=(d == "bar"))
+            assert_identical(expect, actual)
+
+        # query multiple dims via dict
+        actual = ds.query(dict(x="a > 5", y="c < .5"), engine=engine, parser=parser)
+        expect = ds.isel(dict(x=(a > 5), y=(c < 0.5)))
+        assert_identical(expect, actual)
+
+        # query multiple dims via dict
+        if parser == "pandas":
+            actual = ds.query(
+                dict(x="a > 5", y="c < .5", z="d == 'bar'"),
+                engine=engine,
+                parser=parser,
+            )
+            expect = ds.isel(dict(x=(a > 5), y=(c < 0.5), z=(d == "bar")))
+            assert_identical(expect, actual)
+
+        # test error handling
+        with pytest.raises(ValueError):
+            ds.query("a > 5")  # must be dict or kwargs
+        with pytest.raises(ValueError):
+            ds.query(x=(a > 5))  # must be query string
+        with pytest.raises(IndexError):
+            ds.query(y="a > 5")  # wrong length dimension
+        with pytest.raises(IndexError):
+            ds.query(x="c < .5")  # wrong length dimension
+        with pytest.raises(IndexError):
+            ds.query(x="e > 100")  # wrong number of dimensions
+        with pytest.raises(UndefinedVariableError):
+            ds.query(x="spam > 50")  # name not present
 
 
 # Py.test tests
