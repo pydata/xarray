@@ -41,6 +41,7 @@ overrides = {
 # idea borrowed from Seaborn
 def open_dataset(
     name,
+    engine=None,
     cache=True,
     cache_dir=None,
     **kws,
@@ -55,6 +56,8 @@ def open_dataset(
     name : str
         Name of the file containing the dataset.
         e.g. 'air_temperature'
+    engine : str, optional
+        The engine to use.
     cache_dir : path-like, optional
         The directory in which to search for and write cached data.
     cache : bool, optional
@@ -88,7 +91,9 @@ def open_dataset(
         cache_dir = pooch.os_cache(_default_cache_dir_name)
 
     if name in external_urls:
-        engine, url = external_urls[name]
+        engine_, url = external_urls[name]
+        if engine is None:
+            engine = engine_
     else:
         # process the name
         default_extension = ".nc"
@@ -96,7 +101,6 @@ def open_dataset(
         if not path.suffix:
             path = path.with_suffix(default_extension)
 
-        engine = None
         url = f"{base_url}/raw/{version}/{path.name}"
 
     _open = overrides.get(engine, _open_dataset)
