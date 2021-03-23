@@ -15,6 +15,8 @@ from .core.dataarray import DataArray
 from .core.dataset import Dataset
 
 _default_cache_dir_name = "xarray_tutorial_data"
+base_url = "https://github.com/pydata/xarray-data"
+version = "master"
 
 external_urls = {
     "RGB.byte": "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
@@ -26,8 +28,6 @@ def open_dataset(
     name,
     cache=True,
     cache_dir=None,
-    github_url="https://github.com/pydata/xarray-data",
-    branch="master",
     **kws,
 ):
     """
@@ -45,10 +45,6 @@ def open_dataset(
         The directory in which to search for and write cached data.
     cache : bool, optional
         If True, then cache data locally for use on subsequent calls
-    github_url : str
-        Github repository where the data is stored
-    branch : str
-        The git branch to download from
     kws : dict, optional
         Passed to xarray.open_dataset
 
@@ -76,7 +72,7 @@ def open_dataset(
 
     # retrieve the file
     filepath = pooch.retrieve(
-        url=f"{github_url}/raw/{branch}/{path.name}",
+        url=f"{base_url}/raw/{version}/{path.name}",
         known_hash=None,
         path=cache_dir,
     )
