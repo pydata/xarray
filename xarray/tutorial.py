@@ -86,6 +86,11 @@ def open_rasterio(
     return ds
 
 
+external_urls = {
+    "RGB.byte": "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
+}
+
+
 # idea borrowed from Seaborn
 def open_dataset(
     name,
