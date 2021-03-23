@@ -66,8 +66,6 @@ def open_dataset(
     See Also
     --------
     xarray.open_dataset
-    xarray.tutorial.open_rasterio
-
     """
     try:
         import pooch
