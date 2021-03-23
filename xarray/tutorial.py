@@ -33,7 +33,7 @@ external_urls = {
         "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
     ),
 }
-engine_overrides = {
+overrides = {
     "rasterio": _open_rasterio,
 }
 
@@ -85,11 +85,11 @@ def open_dataset(
         path = pathlib.Path(name)
         if not path.suffix:
             path = path.with_suffix(default_extension)
-        engine = None
 
+        engine = None
         url = f"{base_url}/raw/{version}/{path.name}"
 
-    _open = engine_overrides.get(engine, _open_dataset)
+    _open = overrides.get(engine, _open_dataset)
     # retrieve the file
     filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
     ds = _open(filepath, engine=engine, **kws)
