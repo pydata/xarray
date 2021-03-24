@@ -49,6 +49,17 @@ def open_dataset(
 
     If a local copy is found then always use that to avoid network traffic.
 
+    Available datasets:
+
+    * ``"air_temperature"``: float32 (time x lat x lon)
+    * ``"rasm"``: float64 (time × y × x)
+    * ``"ROMS_example"``:
+
+      - float64 (ocean_time × s_rho × eta_rho × xi_rho)
+      - float64 (ocean_time × eta_rho × xi_rho)
+    * ``"tiny"``: int32 (dim_0)
+    * ``"era5-2mt-2019-03-uk.grib"``: float32 (time × latitude × longitude)
+
     Parameters
     ----------
     name : str
@@ -60,16 +71,6 @@ def open_dataset(
         If True, then cache data locally for use on subsequent calls
     **kws : dict, optional
         Passed to xarray.open_dataset
-
-    Notes
-    -----
-    Available datasets:
-
-    * ``"air_temperature"``
-    * ``"rasm"``
-    * ``"ROMS_example"``
-    * ``"tiny"``
-    * ``"era5-2mt-2019-03-uk.grib"``
 
     See Also
     --------
@@ -116,7 +117,7 @@ def open_rasterio(
 
     Available datasets:
 
-    * ``"RGB.byte"``: example rasterio file from https://github.com/mapbox/rasterio
+    * ``"RGB.byte"``: uint8 (band × y × x)
 
     Parameters
     ----------
