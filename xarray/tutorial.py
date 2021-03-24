@@ -5,33 +5,45 @@ Useful for:
 * building tutorials in the documentation.
 
 """
-import hashlib
-import os as _os
-from urllib.request import urlretrieve
+import os
+import pathlib
 
 import numpy as np
 
 from .backends.api import open_dataset as _open_dataset
+from .backends.rasterio_ import open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 
-_default_cache_dir = _os.sep.join(("~", ".xarray_tutorial_data"))
+
+def _open_rasterio(path, engine=None, **kwargs):
+    data = open_rasterio(path, **kwargs)
+    name = data.name if data.name is not None else "data"
+    return data.to_dataset(name=name)
 
 
-def file_md5_checksum(fname):
-    hash_md5 = hashlib.md5()
-    with open(fname, "rb") as f:
-        hash_md5.update(f.read())
-    return hash_md5.hexdigest()
+_default_cache_dir_name = "xarray_tutorial_data"
+base_url = "https://github.com/pydata/xarray-data"
+version = "master"
+
+
+external_urls = {
+    "RGB.byte": (
+        "rasterio",
+        "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
+    ),
+}
+overrides = {
+    "rasterio": _open_rasterio,
+}
 
 
 # idea borrowed from Seaborn
 def open_dataset(
     name,
+    engine=None,
     cache=True,
-    cache_dir=_default_cache_dir,
-    github_url="https://github.com/pydata/xarray-data",
-    branch="master",
+    cache_dir=None,
     **kws,
 ):
     """
@@ -42,61 +54,62 @@ def open_dataset(
     Parameters
     ----------
     name : str
-        Name of the file containing the dataset. If no suffix is given, assumed
-        to be netCDF ('.nc' is appended)
+        Name of the file containing the dataset.
         e.g. 'air_temperature'
-    cache_dir : str, optional
+    engine : str, optional
+        The engine to use.
+    cache_dir : path-like, optional
         The directory in which to search for and write cached data.
     cache : bool, optional
         If True, then cache data locally for use on subsequent calls
-    github_url : str
-        Github repository where the data is stored
-    branch : str
-        The git branch to download from
     kws : dict, optional
         Passed to xarray.open_dataset
+
+    Notes
+    -----
+    Available datasets:
+
+    * ``"air_temperature"``
+    * ``"rasm"``
+    * ``"ROMS_example"``
+    * ``"tiny"``
+    * ``"era5-2mt-2019-03-uk.grib"``
+    * ``"RGB.byte"``: example rasterio file from https://github.com/mapbox/rasterio
 
     See Also
     --------
     xarray.open_dataset
-
     """
-    root, ext = _os.path.splitext(name)
-    if not ext:
-        ext = ".nc"
-    fullname = root + ext
-    longdir = _os.path.expanduser(cache_dir)
-    localfile = _os.sep.join((longdir, fullname))
-    md5name = fullname + ".md5"
-    md5file = _os.sep.join((longdir, md5name))
+    try:
+        import pooch
+    except ImportError:
+        raise ImportError("using the tutorial data requires pooch")
 
-    if not _os.path.exists(localfile):
+    if isinstance(cache_dir, pathlib.Path):
+        cache_dir = os.fspath(cache_dir)
+    elif cache_dir is None:
+        cache_dir = pooch.os_cache(_default_cache_dir_name)
 
-        # This will always leave this directory on disk.
-        # May want to add an option to remove it.
-        if not _os.path.isdir(longdir):
-            _os.mkdir(longdir)
+    if name in external_urls:
+        engine_, url = external_urls[name]
+        if engine is None:
+            engine = engine_
+    else:
+        # process the name
+        default_extension = ".nc"
+        path = pathlib.Path(name)
+        if not path.suffix:
+            path = path.with_suffix(default_extension)
 
-        url = "/".join((github_url, "raw", branch, fullname))
-        urlretrieve(url, localfile)
-        url = "/".join((github_url, "raw", branch, md5name))
-        urlretrieve(url, md5file)
+        url = f"{base_url}/raw/{version}/{path.name}"
 
-        localmd5 = file_md5_checksum(localfile)
-        with open(md5file) as f:
-            remotemd5 = f.read()
-        if localmd5 != remotemd5:
-            _os.remove(localfile)
-            msg = """
-            MD5 checksum does not match, try downloading dataset again.
-            """
-            raise OSError(msg)
-
-    ds = _open_dataset(localfile, **kws)
-
+    _open = overrides.get(engine, _open_dataset)
+    # retrieve the file
+    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
+    ds = _open(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()
-        _os.remove(localfile)
+        pathlib.Path(filepath).unlink()
 
     return ds
 
