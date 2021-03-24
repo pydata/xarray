@@ -1,3 +1,4 @@
+import hypothesis.strategies as st
 import pytest
 
 from .duckarray_testing import duckarray_module
@@ -9,21 +10,44 @@ sparse = pytest.importorskip("sparse")
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
 
-def create_pint(data, method):
+def units():
+    # preserve the order so these will be reduced to
+    units = ["m", "cm", "s", "ms"]
+    return st.sampled_from(units)
+
+
+@st.composite
+def create_pint(draw, data, method):
     if method in ("cumprod",):
-        units = "dimensionless"
+        units_ = st.just("dimensionless")
     else:
-        units = "m"
-    return ureg.Quantity(data, units)
+        units_ = units()
+    x = draw(data)
+    u = draw(units_)
+
+    if u is not None:
+        q = ureg.Quantity(x, u)
+    else:
+        q = x
+
+    return q
+
+
+@st.composite
+def create_dask(draw, data, method):
+    x = draw(data)
+    return da.from_array(x, chunks=(2,))
 
 
 def create_pint_dask(data, method):
-    data = da.from_array(data, chunks=(2,))
-    return create_pint(data, method)
+    x = create_dask(data, method)
+    return create_pint(x, method)
 
 
-def create_sparse(data, method):
-    return sparse.COO.from_numpy(data)
+@st.composite
+def create_sparse(draw, data, method):
+    x = draw(data)
+    return sparse.COO.from_numpy(x)
 
 
 TestPint = duckarray_module(

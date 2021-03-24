@@ -21,15 +21,25 @@ def always_iterable(x):
         return [x]
 
 
-def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=None):
+def duckarray_module(
+    name, create_data, extra_asserts=None, global_marks=None, marks=None
+):
+    # create_data: partial builds target
+    import hypothesis.extra.numpy as npst
+    import hypothesis.strategies as st
     import pytest
+    from hypothesis import given
 
     def extra_assert(a, b):
+        __tracebackhide__ = True
         if extra_asserts is None:
             return
 
         for func in always_iterable(extra_asserts):
             func(a, b)
+
+    def numpy_data(shape, dtype):
+        return npst.arrays(shape=shape, dtype=dtype)
 
     # TODO:
     # - find a way to add create args as parametrizations
@@ -45,6 +55,7 @@ def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=
     # - tuple of method name, args, kwargs
     class TestModule:
         class TestVariable:
+            @given(st.data(), npst.floating_dtypes() | npst.integer_dtypes())
             @pytest.mark.parametrize(
                 "method",
                 (
@@ -65,16 +76,21 @@ def duckarray_module(name, create, extra_asserts=None, global_marks=None, marks=
                     "var",
                 ),
             )
-            def test_reduce(self, method):
-                data = create(np.linspace(0, 1, 10), method)
+            def test_reduce(self, method, data, dtype):
+                shape = (10,)
+                x = data.draw(create_data(numpy_data(shape, dtype), method))
 
-                reduced = getattr(np, method)(data, axis=0)
+                func = getattr(np, method)
+                if x.dtype.kind in "cf":
+                    # nan values possible
+                    func = getattr(np, f"nan{method}", func)
+                reduced = func(x, axis=0)
                 expected_dims = (
                     () if method not in ("argsort", "cumsum", "cumprod") else "x"
                 )
                 expected = xr.Variable(expected_dims, reduced)
 
-                var = xr.Variable("x", data)
+                var = xr.Variable("x", x)
                 actual = getattr(var, method)(dim="x")
 
                 extra_assert(actual, expected)
