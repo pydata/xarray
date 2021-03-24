@@ -40,7 +40,6 @@ external_rasterio_urls = {
 # idea borrowed from Seaborn
 def open_dataset(
     name,
-    engine=None,
     cache=True,
     cache_dir=None,
     **kws,
@@ -55,8 +54,6 @@ def open_dataset(
     name : str
         Name of the file containing the dataset.
         e.g. 'air_temperature'
-    engine : str, optional
-        The engine to use.
     cache_dir : path-like, optional
         The directory in which to search for and write cached data.
     cache : bool, optional
@@ -97,7 +94,7 @@ def open_dataset(
 
     # retrieve the file
     filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    ds = _open_dataset(filepath, engine=engine, **kws)
+    ds = _open_dataset(filepath, **kws)
     if not cache:
         ds = ds.load()
         pathlib.Path(filepath).unlink()
