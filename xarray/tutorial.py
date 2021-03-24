@@ -57,7 +57,7 @@ def open_dataset(
 
       - float64 (ocean_time × s_rho × eta_rho × xi_rho)
       - float64 (ocean_time × eta_rho × xi_rho)
-    * ``"tiny"``: int32 (dim_0)
+    * ``"tiny"``: small synthetic dataset with a 1D data variable
     * ``"era5-2mt-2019-03-uk.grib"``: float32 (time × latitude × longitude)
 
     Parameters
