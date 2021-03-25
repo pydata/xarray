@@ -859,6 +859,7 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
+   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
