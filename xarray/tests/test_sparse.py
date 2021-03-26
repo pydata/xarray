@@ -8,18 +8,12 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import sparse_array_type
 
 from . import assert_equal, assert_identical, requires_dask
 
 param = pytest.param
 xfail = pytest.mark.xfail
-
-if not IS_NEP18_ACTIVE:
-    pytest.skip(
-        "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled", allow_module_level=True
-    )
 
 sparse = pytest.importorskip("sparse")
 

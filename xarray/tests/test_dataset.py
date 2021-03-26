@@ -28,7 +28,6 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import is_scalar
 
@@ -320,7 +319,6 @@ class TestDataset:
         actual = str(data)
         assert expected == actual
 
-    @pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
     def test_repr_nep18(self):
         class Array:
             def __init__(self):
