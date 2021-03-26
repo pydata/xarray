@@ -3714,7 +3714,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array
         ... )  # doctest: +ELLIPSIS
         <xarray.DataArray (time: 24)>
-        dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
+        dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
             month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
