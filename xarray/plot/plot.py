@@ -132,11 +132,7 @@ def _infer_scatter_data(
         {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
     )
     to_broadcast.update(
-        {
-            key: darray[value]
-            for key, value in dict(hue=hue, size=size).items()
-            if value in darray.dims
-        }
+        {k: darray[v] for k, v in dict(hue=hue, size=size).items() if v in darray.dims}
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
@@ -776,7 +772,7 @@ def scatter(
 
     if add_legend:
 
-        def to_label(x, data, key):
+        def to_label(data, key, x):
             """Map prop values back to its original values."""
             if key in data:
                 # Use reindex to be less sensitive to float errors.
@@ -791,12 +787,12 @@ def scatter(
             (
                 _data["hue_label"],
                 "colors",
-                functools.partial(to_label, data=_data, key="hue_to_label"),
+                functools.partial(to_label, _data, "hue_to_label"),
             ),
             (
                 _data["size_label"],
                 "sizes",
-                functools.partial(to_label, data=_data, key="size_to_label"),
+                functools.partial(to_label, _data, "size_to_label"),
             ),
         ]:
             if subtitle:
