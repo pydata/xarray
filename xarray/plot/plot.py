@@ -776,24 +776,28 @@ def scatter(
 
     if add_legend:
 
-        def to_label(d, key):
+        def to_label(x, data, key):
             """Map prop values back to its original values."""
-
-            def _to_label(x):
-                if key in d:
-                    # Use reindex to be less sensitive to float errors.
-                    # Return as numpy array since legend_elements
-                    # seems to require that:
-                    return d[key].reindex(x, method="nearest").to_numpy()
-                else:
-                    return x
-
-            return _to_label
+            if key in data:
+                # Use reindex to be less sensitive to float errors.
+                # Return as numpy array since legend_elements
+                # seems to require that:
+                return data[key].reindex(x, method="nearest").to_numpy()
+            else:
+                return x
 
         handles, labels = [], []
         for subtitle, prop, func in [
-            (_data["hue_label"], "colors", to_label(_data, "hue_to_label")),
-            (_data["size_label"], "sizes", to_label(_data, "size_to_label")),
+            (
+                _data["hue_label"],
+                "colors",
+                functools.partial(to_label, data=_data, key="hue_to_label"),
+            ),
+            (
+                _data["size_label"],
+                "sizes",
+                functools.partial(to_label, data=_data, key="size_to_label"),
+            ),
         ]:
             if subtitle:
                 # Get legend handles and labels that displays the
