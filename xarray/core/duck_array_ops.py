@@ -614,15 +614,15 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, axis, window, center, fill_value):
+def sliding_window_view(array, window_shape, axis):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
-    else:  # np.ndarray
-        return nputils.rolling_window(array, axis, window, center, fill_value)
+        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+    else:
+        return npcompat.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
