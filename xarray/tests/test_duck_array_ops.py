@@ -21,7 +21,6 @@ from xarray.core.duck_array_ops import (
     np_timedelta64_to_float,
     pd_timedelta_to_float,
     py_timedelta_to_float,
-    rolling_window,
     stack,
     timedelta_to_numeric,
     where,
@@ -529,32 +528,6 @@ def test_isnull_with_dask():
     da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
     assert isinstance(da.isnull().data, dask_array_type)
     assert_equal(da.isnull().load(), da.load().isnull())
-
-
-@pytest.mark.skipif(not has_dask, reason="This is for dask.")
-@pytest.mark.parametrize("axis", [0, -1])
-@pytest.mark.parametrize("window", [3, 8, 11])
-@pytest.mark.parametrize("center", [True, False])
-def test_dask_rolling(axis, window, center):
-    import dask.array as da
-
-    x = np.array(np.random.randn(100, 40), dtype=float)
-    dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
-
-    expected = rolling_window(
-        x, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    actual = rolling_window(
-        dx, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    assert isinstance(actual, da.Array)
-    assert_array_equal(actual, expected)
-    assert actual.shape == expected.shape
-
-    # we need to take care of window size if chunk size is small
-    # window/2 should be smaller than the smallest chunk size.
-    with pytest.raises(ValueError):
-        rolling_window(dx, axis=axis, window=100, center=center, fill_value=np.nan)
 
 
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")

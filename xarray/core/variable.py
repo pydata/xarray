@@ -2028,7 +2028,7 @@ class Variable(
             For nd-rolling, should be list of integers.
         window_dim : str
             New name of the window dimension.
-            For nd-rolling, should be list of integers.
+            For nd-rolling, should be list of strings.
         center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -2071,26 +2071,56 @@ class Variable(
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            array = self.astype(dtype, copy=False).data
+            var = self.astype(dtype, copy=False)
         else:
             dtype = self.dtype
-            array = self.data
+            var = self
 
-        if isinstance(dim, list):
-            assert len(dim) == len(window)
-            assert len(dim) == len(window_dim)
-            assert len(dim) == len(center)
-        else:
+        if utils.is_scalar(dim):
+            for name, arg in zip(
+                ["window", "window_dim", "center"], [window, window_dim, center]
+            ):
+                if not utils.is_scalar(arg):
+                    raise ValueError(
+                        f"Expected {name}={arg!r} to be a scalar like 'dim'."
+                    )
             dim = [dim]
-            window = [window]
-            window_dim = [window_dim]
-            center = [center]
+
+        # dim is now a list
+        nroll = len(dim)
+        if utils.is_scalar(window):
+            window = [window] * nroll
+        if utils.is_scalar(window_dim):
+            window_dim = [window_dim] * nroll
+        if utils.is_scalar(center):
+            center = [center] * nroll
+        if (
+            len(dim) != len(window)
+            or len(dim) != len(window_dim)
+            or len(dim) != len(center)
+        ):
+            raise ValueError(
+                "'dim', 'window', 'window_dim', and 'center' must be the same length. "
+                f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
+                f" and center={center!r}."
+            )
+
+        pads = {}
+        for d, win, cent in zip(dim, window, center):
+            if cent:
+                start = win // 2  # 10 -> 5,  9 -> 4
+                end = win - 1 - start
+                pads[d] = (start, end)
+            else:
+                pads[d] = (win - 1, 0)
+
+        padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
-            duck_array_ops.rolling_window(
-                array, axis=axis, window=window, center=center, fill_value=fill_value
+            duck_array_ops.sliding_window_view(
+                padded.data, window_shape=window, axis=axis
             ),
         )
 

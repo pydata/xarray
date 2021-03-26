@@ -6510,6 +6510,15 @@ def test_rolling_repr(da):
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(center)]"
 
 
+@requires_dask
+def test_repeated_rolling_rechunks():
+
+    # regression test for GH3277, GH2514
+    dat = DataArray(np.random.rand(7653, 300), dims=("day", "item"))
+    dat_chunk = dat.chunk({"item": 20})
+    dat_chunk.rolling(day=10).mean().rolling(day=250).std()
+
+
 def test_rolling_doc(da):
     rolling_obj = da.rolling(time=7)
 
