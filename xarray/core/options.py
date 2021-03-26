@@ -1,7 +1,6 @@
 import warnings
 
 ARITHMETIC_JOIN = "arithmetic_join"
-CMAP_DISCRETE = "cmap_discrete"
 CMAP_DIVERGENT = "cmap_divergent"
 CMAP_SEQUENTIAL = "cmap_sequential"
 DISPLAY_MAX_ROWS = "display_max_rows"
@@ -15,7 +14,6 @@ WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
 
 OPTIONS = {
     ARITHMETIC_JOIN: "inner",
-    CMAP_DISCRETE: "tab10",
     CMAP_DIVERGENT: "RdBu_r",
     CMAP_SEQUENTIAL: "viridis",
     DISPLAY_MAX_ROWS: 12,
@@ -97,9 +95,6 @@ class set_options:
     - ``warn_for_unclosed_files``: whether or not to issue a warning when
       unclosed files are deallocated (default False). This is mostly useful
       for debugging.
-    - ``cmap_discrete``: colormap to use for discrete data plots.
-      Default: ``tab10``. If string, must be matplotlib built-in colormap.
-      Can also be a Colormap object (e.g. mpl.cm.magma)
     - ``cmap_sequential``: colormap to use for nondivergent data plots.
       Default: ``viridis``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)

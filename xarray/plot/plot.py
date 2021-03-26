@@ -930,9 +930,6 @@ def scatter(
     cmap_params_subset = {}
     if _data["hue"] is not None:
         kwargs.update(c=_data["hue"].values.ravel())
-
-        if cmap is None and _data["hue_style"] == "discrete":
-            cmap = OPTIONS["cmap_discrete"]
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             scatter, _data["hue"].values, **locals()
         )
