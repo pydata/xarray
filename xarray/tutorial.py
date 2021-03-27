@@ -118,10 +118,12 @@ def open_rasterio(
 
     Available datasets:
 
-    * ``"RGB.byte"``: uint8 (band × y × x)
-    * ``"shade"``: derived from from USGS SRTM 90 data
-                   From https://github.com/mapbox/rasterio
-                   Licensed as CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+    * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
+                      From [1]_, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+    * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
+                   From [1]_, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+
+    .. [1]: https://github.com/mapbox/rasterio
 
     Parameters
     ----------
