@@ -45,13 +45,22 @@ def default_expect_error(method, data, *args, **kwargs):
 
 
 def duckarray_module(
-    name, create_data, extra_asserts=None, global_marks=None, marks=None
+    name,
+    create,
+    *,
+    expect_error=None,
+    extra_asserts=None,
+    global_marks=None,
+    marks=None,
 ):
-    # create_data: partial builds target
     import hypothesis.extra.numpy as npst
     import hypothesis.strategies as st
     import pytest
     from hypothesis import given
+
+    dtypes = (
+        npst.floating_dtypes() | npst.integer_dtypes() | npst.complex_number_dtypes()
+    )
 
     def extra_assert(a, b):
         __tracebackhide__ = True
@@ -61,8 +70,8 @@ def duckarray_module(
         for func in always_iterable(extra_asserts):
             func(a, b)
 
-    def numpy_data(shape, dtype):
-        return npst.arrays(shape=shape, dtype=dtype)
+    def numpy_data(shape):
+        return npst.arrays(shape=shape, dtype=dtypes)
 
     # TODO:
     # - find a way to add create args as parametrizations
@@ -78,7 +87,7 @@ def duckarray_module(
     # - tuple of method name, args, kwargs
     class TestModule:
         class TestVariable:
-            @given(st.data(), npst.floating_dtypes() | npst.integer_dtypes())
+            @given(st.data())
             @pytest.mark.parametrize(
                 "method",
                 (
@@ -99,9 +108,9 @@ def duckarray_module(
                     "var",
                 ),
             )
-            def test_reduce(self, method, data, dtype):
+            def test_reduce(self, method, data):
                 shape = (10,)
-                x = data.draw(create_data(numpy_data(shape, dtype), method))
+                x = data.draw(create(numpy_data(shape), method))
 
                 var = xr.Variable("x", x)
                 actual = getattr(var, method)(dim="x")
