@@ -34,6 +34,7 @@ def _construct_cache_dir(path):
 external_urls = {}  # type: dict
 external_rasterio_urls = {
     "RGB.byte": "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
+    "shade": "https://github.com/mapbox/rasterio/raw/master/tests/data/shade.tif",
 }
 
 
@@ -118,6 +119,9 @@ def open_rasterio(
     Available datasets:
 
     * ``"RGB.byte"``: uint8 (band × y × x)
+    * ``"shade"``: derived from from USGS SRTM 90 data
+                   From https://github.com/mapbox/rasterio
+                   Licensed as CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
 
     Parameters
     ----------
