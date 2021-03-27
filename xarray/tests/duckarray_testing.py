@@ -103,6 +103,9 @@ def duckarray_module(
                 shape = (10,)
                 x = data.draw(create_data(numpy_data(shape, dtype), method))
 
+                var = xr.Variable("x", x)
+                actual = getattr(var, method)(dim="x")
+
                 func = getattr(np, method)
                 if x.dtype.kind in "cf":
                     # nan values possible
@@ -112,9 +115,6 @@ def duckarray_module(
                     () if method not in ("argsort", "cumsum", "cumprod") else "x"
                 )
                 expected = xr.Variable(expected_dims, reduced)
-
-                var = xr.Variable("x", x)
-                actual = getattr(var, method)(dim="x")
 
                 extra_assert(actual, expected)
                 xr.testing.assert_allclose(actual, expected)
