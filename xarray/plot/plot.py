@@ -701,7 +701,7 @@ def scatter(
     if z is not None and ax is None:
         # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
         # Remove when minimum requirement of matplotlib is 3.2:
-        from mpl_toolkits.mplot3d import Axes3D  # NOQA
+        from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
 
         subplot_kws.update(projection="3d")
     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
