@@ -23,7 +23,8 @@ External Examples
 -----------------
 .. toctree::
     :maxdepth: 2
-
+    
     Managing raster data with rioxarray <https://corteva.github.io/rioxarray/stable/examples/examples.html>
     Xarray with dask <https://examples.dask.org/xarray.html>
     Xarray and dask on the cloud with Pangeo <http://pangeo.io/use_cases/index.html#use-cases>
+    Xarray to calculate air stagnation index, an UCM Project <https://github.com/JavierRuano/ASI_Steady>
