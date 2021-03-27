@@ -1,4 +1,5 @@
 import os
+import sys
 
 import numpy as np
 
@@ -20,7 +21,9 @@ try:
     has_cfgrib = True
 except ModuleNotFoundError:
     has_cfgrib = False
-
+except Exception as e:
+    print("WARNING: failed to load cfgrib, backend disabled", e, file=sys.stderr)
+    has_cfgrib = False
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
