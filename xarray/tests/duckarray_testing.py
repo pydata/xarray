@@ -60,6 +60,7 @@ def duckarray_module(
 
     if expect_error is None:
         expect_error = default_expect_error
+    values = st.just(None) | st.integers() | st.floats() | st.complex_numbers()
     dtypes = (
         npst.floating_dtypes() | npst.integer_dtypes() | npst.complex_number_dtypes()
     )
@@ -129,6 +130,45 @@ def duckarray_module(
 
                 extra_assert(actual, expected)
                 xr.testing.assert_allclose(actual, expected)
+
+            @given(st.data())
+            @pytest.mark.parametrize(
+                ["method", "args", "kwargs"],
+                (
+                    pytest.param(
+                        "clip",
+                        [],
+                        {"min": Label(values), "max": Label(values)},
+                        id="clip",
+                    ),
+                ),
+            )
+            def test_numpy_methods(self, method, args, kwargs, data):
+                # 1. create both numpy and duckarray data and put them into a variable
+                # 2. compute for both
+                # 3. convert the numpy data to duckarray data
+                # 4. compare
+                shape = (10,)
+                x = data.draw(create(numpy_data(shape), method))
+
+                args, kwargs = convert_labels(data.draw, create, args, kwargs)
+
+                var = xr.Variable("x", x)
+
+                error, match = expect_error(method, x, args, kwargs)
+                if error is not None:
+                    with pytest.raises(error, match=match):
+                        getattr(var, method)(*args, dim="x", **kwargs)
+
+                    return
+                else:
+                    actual = getattr(var, method)(*args, dim="x", **kwargs)
+                    expected = xr.Variable(
+                        "x", getattr(np, method)(x, *args, axis=0, **kwargs)
+                    )
+
+                    extra_assert(actual, expected)
+                    xr.testing.assert_allclose(actual, expected)
 
     if global_marks is not None:
         TestModule.pytestmark = global_marks
