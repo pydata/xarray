@@ -78,7 +78,7 @@ def _infer_meta_data(darray, x, z, hue, hue_style, size):
 # copied from seaborn
 def _parse_size(data, norm, width):
     """
-    Determine what type of data it is. Then normalize is it to width.
+    Determine what type of data it is. Then normalize it to width.
 
     If the data is categorical, normalize it to numbers.
     """
@@ -87,7 +87,7 @@ def _parse_size(data, norm, width):
     if data is None:
         return None
 
-    data = data.values.flatten()
+    data = data.values.ravel()
 
     if not _is_numeric(data):
         # Data is categorical.
@@ -699,6 +699,10 @@ def scatter(
     figsize = kwargs.pop("figsize", None)
     subplot_kws = dict()
     if z is not None and ax is None:
+        # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+        # Remove when minimum requirement of matplotlib is 3.2:
+        from mpl_toolkits.mplot3d import Axes3D  # NOQA
+
         subplot_kws.update(projection="3d")
     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
