@@ -123,8 +123,6 @@ def open_rasterio(
     * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
                    From [1]_, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
 
-    .. [1]: https://github.com/mapbox/rasterio
-
     Parameters
     ----------
     name : str
@@ -140,6 +138,10 @@ def open_rasterio(
     See Also
     --------
     xarray.open_rasterio
+
+    References
+    ----------
+    .. [1]: https://github.com/mapbox/rasterio
     """
     try:
         import pooch
