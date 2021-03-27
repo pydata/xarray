@@ -153,12 +153,12 @@ def open_rasterio(
 
     # retrieve the file
     filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    ds = _open_rasterio(filepath, **kws)
+    arr = _open_rasterio(filepath, **kws)
     if not cache:
-        ds = ds.load()
+        arr = arr.load()
         pathlib.Path(filepath).unlink()
 
-    return ds
+    return arr
 
 
 def load_dataset(*args, **kwargs):
