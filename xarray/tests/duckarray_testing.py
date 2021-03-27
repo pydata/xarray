@@ -58,6 +58,8 @@ def duckarray_module(
     import pytest
     from hypothesis import given
 
+    if expect_error is None:
+        expect_error = default_expect_error
     dtypes = (
         npst.floating_dtypes() | npst.integer_dtypes() | npst.complex_number_dtypes()
     )
