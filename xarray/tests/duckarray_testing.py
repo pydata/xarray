@@ -40,6 +40,10 @@ def convert_labels(draw, create, args, kwargs):
     return args, kwargs
 
 
+def default_expect_error(method, data, *args, **kwargs):
+    return None, None
+
+
 def duckarray_module(
     name, create_data, extra_asserts=None, global_marks=None, marks=None
 ):
