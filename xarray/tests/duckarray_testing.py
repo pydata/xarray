@@ -21,6 +21,25 @@ def always_iterable(x):
         return [x]
 
 
+class Label:
+    """mark a parameter as in coordinate space"""
+
+    def __init__(self, value):
+        self.value = value
+
+
+def convert_labels(draw, create, args, kwargs):
+    def convert(value):
+        if not isinstance(value, Label):
+            return value
+        else:
+            return draw(create(value))
+
+    args = [convert(value) for value in args]
+    kwargs = {key: convert(value) for key, value in kwargs.items()}
+    return args, kwargs
+
+
 def duckarray_module(
     name, create_data, extra_asserts=None, global_marks=None, marks=None
 ):
