@@ -119,9 +119,9 @@ def open_rasterio(
     Available datasets:
 
     * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
-                      From [1]_, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+                      From the ``rasterio`` repository [1]_.
     * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
-                   From [1]_, licensed under CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+                   From the ``rasterio`` repository [1]_.
 
     Parameters
     ----------
@@ -141,7 +141,7 @@ def open_rasterio(
 
     References
     ----------
-    .. [1]: https://github.com/mapbox/rasterio
+    .. [1] https://github.com/mapbox/rasterio
     """
     try:
         import pooch
