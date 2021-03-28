@@ -7,6 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.computation.ops import UndefinedVariableError
 from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
@@ -39,6 +40,7 @@ from xarray.tests import (
     requires_dask,
     requires_iris,
     requires_numbagg,
+    requires_numexpr,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -4620,6 +4622,74 @@ class TestDataArray:
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
 
+    @pytest.mark.parametrize("parser", ["pandas", "python"])
+    @pytest.mark.parametrize(
+        "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
+    )
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
+    )
+    def test_query(self, backend, engine, parser):
+        """Test querying a dataset."""
+
+        # setup test data
+        np.random.seed(42)
+        a = np.arange(0, 10, 1)
+        b = np.random.randint(0, 100, size=10)
+        c = np.linspace(0, 1, 20)
+        d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
+            object
+        )
+        if backend == "numpy":
+            aa = DataArray(data=a, dims=["x"], name="a")
+            bb = DataArray(data=b, dims=["x"], name="b")
+            cc = DataArray(data=c, dims=["y"], name="c")
+            dd = DataArray(data=d, dims=["z"], name="d")
+
+        elif backend == "dask":
+            import dask.array as da
+
+            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
+            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
+            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
+            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+
+        # query single dim, single variable
+        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        expect = aa.isel(x=(a > 5))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable, via dict
+        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        expect = aa.isel(dict(x=(a > 5)))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        expect = bb.isel(x=(b > 50))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        expect = cc.isel(y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query single dim, single string variable
+        if parser == "pandas":
+            # N.B., this query currently only works with the pandas parser
+            # xref https://github.com/pandas-dev/pandas/issues/40436
+            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            expect = dd.isel(z=(d == "bar"))
+            assert_identical(expect, actual)
+
+        # test error handling
+        with pytest.raises(ValueError):
+            aa.query("a > 5")  # must be dict or kwargs
+        with pytest.raises(ValueError):
+            aa.query(x=(a > 5))  # must be query string
+        with pytest.raises(UndefinedVariableError):
+            aa.query(x="spam > 50")  # name not present
+
 
 class TestReduce:
     @pytest.fixture(autouse=True)
@@ -6438,6 +6508,15 @@ def test_rolling_repr(da):
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center)]"
     rolling_obj = da.rolling(time=7, x=3, center=True)
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(center)]"
+
+
+@requires_dask
+def test_repeated_rolling_rechunks():
+
+    # regression test for GH3277, GH2514
+    dat = DataArray(np.random.rand(7653, 300), dims=("day", "item"))
+    dat_chunk = dat.chunk({"item": 20})
+    dat_chunk.rolling(day=10).mean().rolling(day=250).std()
 
 
 def test_rolling_doc(da):

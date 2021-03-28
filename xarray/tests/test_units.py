@@ -7,7 +7,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import dtypes
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
 from .test_variable import _PAD_XR_NP_ARGS
@@ -23,9 +22,6 @@ Quantity = unit_registry.Quantity
 
 
 pytestmark = [
-    pytest.mark.skipif(
-        not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
-    ),
     pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
