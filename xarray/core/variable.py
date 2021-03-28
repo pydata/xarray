@@ -32,7 +32,6 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
@@ -179,7 +178,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -242,16 +241,7 @@ def as_compatible_data(data, fastpath=False):
 
     if not isinstance(data, np.ndarray):
         if hasattr(data, "__array_function__"):
-            if IS_NEP18_ACTIVE:
-                return data
-            else:
-                raise TypeError(
-                    "Got an NumPy-like array type providing the "
-                    "__array_function__ protocol but NEP18 is not enabled. "
-                    "Check that numpy >= v1.16 and that the environment "
-                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
-                    '"1"'
-                )
+            return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -531,22 +521,15 @@ class Variable(
 
     def __dask_postcompute__(self):
         array_func, array_args = self._data.__dask_postcompute__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
     def __dask_postpersist__(self):
         array_func, array_args = self._data.__dask_postpersist__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
-    @staticmethod
-    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        data = array_func(results, *array_args)
-        return Variable(dims, data, attrs=attrs, encoding=encoding)
+    def _dask_finalize(self, results, array_func, *args, **kwargs):
+        data = array_func(results, *args, **kwargs)
+        return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
     def values(self):
@@ -2058,7 +2041,7 @@ class Variable(
             For nd-rolling, should be list of integers.
         window_dim : str
             New name of the window dimension.
-            For nd-rolling, should be list of integers.
+            For nd-rolling, should be list of strings.
         center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -2101,26 +2084,56 @@ class Variable(
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            array = self.astype(dtype, copy=False).data
+            var = self.astype(dtype, copy=False)
         else:
             dtype = self.dtype
-            array = self.data
+            var = self
 
-        if isinstance(dim, list):
-            assert len(dim) == len(window)
-            assert len(dim) == len(window_dim)
-            assert len(dim) == len(center)
-        else:
+        if utils.is_scalar(dim):
+            for name, arg in zip(
+                ["window", "window_dim", "center"], [window, window_dim, center]
+            ):
+                if not utils.is_scalar(arg):
+                    raise ValueError(
+                        f"Expected {name}={arg!r} to be a scalar like 'dim'."
+                    )
             dim = [dim]
-            window = [window]
-            window_dim = [window_dim]
-            center = [center]
+
+        # dim is now a list
+        nroll = len(dim)
+        if utils.is_scalar(window):
+            window = [window] * nroll
+        if utils.is_scalar(window_dim):
+            window_dim = [window_dim] * nroll
+        if utils.is_scalar(center):
+            center = [center] * nroll
+        if (
+            len(dim) != len(window)
+            or len(dim) != len(window_dim)
+            or len(dim) != len(center)
+        ):
+            raise ValueError(
+                "'dim', 'window', 'window_dim', and 'center' must be the same length. "
+                f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
+                f" and center={center!r}."
+            )
+
+        pads = {}
+        for d, win, cent in zip(dim, window, center):
+            if cent:
+                start = win // 2  # 10 -> 5,  9 -> 4
+                end = win - 1 - start
+                pads[d] = (start, end)
+            else:
+                pads[d] = (win - 1, 0)
+
+        padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
-            duck_array_ops.rolling_window(
-                array, axis=axis, window=window, center=center, fill_value=fill_value
+            duck_array_ops.sliding_window_view(
+                padded.data, window_shape=window, axis=axis
             ),
         )
 
