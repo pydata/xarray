@@ -702,7 +702,6 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
         assert_identical(actual, expected)
 
 
-@pytest.mark.skip(reason="not implemented, yet")
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
@@ -843,7 +842,6 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
         assert_identical(actual, expected)
 
 
-@pytest.mark.skip(reason="not implemented, yet")
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
