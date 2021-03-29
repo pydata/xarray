@@ -88,11 +88,18 @@ def _infer_concat_order_from_coords(datasets):
                     raise ValueError("Cannot handle size zero dimensions")
                 first_items = pd.Index([index[0] for index in indexes])
 
+                series = first_items.to_series()
+
+                # check that the individual elements can be subtracted - this will
+                # raise a TypeError if series contains cftime elements with different
+                # calendars. Unfortunately this does no longer happen in rank.
+                # See https://github.com/Unidata/cftime/issues/236
+                series.diff()
+
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
-                series = first_items.to_series()
                 rank = series.rank(
                     method="dense", ascending=ascending, numeric_only=False
                 )

@@ -865,5 +865,8 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+    with raises_regex(
+        TypeError,
+        r"cannot compute the time difference between dates with different calendars",
+    ):
         combine_by_coords([da_1, da_2])
