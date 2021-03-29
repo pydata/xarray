@@ -513,7 +513,7 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
 
 .. tip::
 
-   As :py:func:`map_blocks` loads each block, reduce as much as possible objects consumed by user functions.
+   As :py:func:`map_blocks` loads each block into memory, reduce as much as possible objects consumed by user functions.
    For example, drop useless variables before calling ``func`` with :py:func:`map_blocks`.
 
 

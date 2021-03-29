@@ -6274,8 +6274,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
-        subset to each block. Each block is loaded. In the more common case where ``func`` can work
-        on numpy arrays, it is recommended to use ``apply_ufunc``.
+        subset to each block. Each block is loaded into memory. In the more common case where
+        ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
