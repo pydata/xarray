@@ -6845,3 +6845,51 @@ def test_deepcopy_obj_array():
     x0 = Dataset(dict(foo=DataArray(np.array([object()]))))
     x1 = deepcopy(x0)
     assert x0["foo"].values[0] is not x1["foo"].values[0]
+
+
+@pytest.mark.parametrize("keep", ['first', 'last', False])
+def test_drop_duplicates():
+    ds = xr.DataArray(
+        [0, 5, 6, 7], dims='time', coords={'time': [0, 0, 1, 2]}
+    ).to_dataset()
+
+    if keep == 'first':
+        data = [0, 6, 7]
+        time = [0, 1, 2]
+    elif keep == 'last':
+        data = [5, 6, 7]
+        time = [0, 1, 2]
+    else:
+        data = [6, 7]
+        time = [1, 2]
+    expected =  xr.DataArray(data, dims='time', coords={'time': time}).to_dataset()
+    result = ds.drop_duplicates('time', keep=keep)
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize("keep", ['first', 'last', False])
+def test_drop_duplicates_multi_dim():
+    base_data = np.stack([np.arange(0, 5) * i for i in np.arange(0, 5)])
+    ds = xr.DataArray(
+        base_data,
+        coords={'lat': [0, 1, 2, 2, 3], 'lon': [0, 1, 3, 3, 4]},
+        dims=['lat', 'lon'], name='test'
+    ).to_dataset()
+    ds = ds.drop_duplicates(['lat', 'lon'], keep='first')
+
+    if keep == 'first':
+        data = base_data[[0, 1, 2, 4]][:, [0, 1, 2, 4]]
+        lat = [0, 1, 2, 3]
+        lon = [0, 1, 3, 4]
+    elif keep == 'last':
+        data = base_data[[0, 1, 3, 4]][:, [0, 1, 3, 4]]
+        lat = [0, 1, 2, 3]
+        lon = [0, 1, 3, 4]
+    else:
+        data = base_data[[0, 1, 4]][:, [0, 1, 4]]
+        lat = [0, 1, 3]
+        lon = [0, 1, 4]
+    expected =  xr.DataArray(
+        data, dims=['lat', 'lon'], coords={'lat': lat, 'lon': lon}, name='test'
+    ).to_dataset()
+    result = ds.drop_duplicates(['lat', 'lon'], keep=keep)
