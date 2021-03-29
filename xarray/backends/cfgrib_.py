@@ -22,7 +22,7 @@ try:
 except ModuleNotFoundError:
     has_cfgrib = False
 except Exception as e:
-    print("WARNING: failed to load cfgrib, backend disabled", e, file=sys.stderr)
+    warnings.warn("Failed to load cfgrib - most likely eccodes is missing. Try `import cfgrib` to get the error message")
     has_cfgrib = False
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
