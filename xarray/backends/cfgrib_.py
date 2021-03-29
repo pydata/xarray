@@ -21,7 +21,7 @@ try:
     has_cfgrib = True
 except ModuleNotFoundError:
     has_cfgrib = False
-except Exception as e:
+except RuntimeError:
     warnings.warn("Failed to load cfgrib - most likely eccodes is missing. Try `import cfgrib` to get the error message")
     has_cfgrib = False
 
