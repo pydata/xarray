@@ -138,6 +138,7 @@ Indexing
    Dataset.set_index
    Dataset.reset_index
    Dataset.reorder_levels
+   Dataset.query
 
 Missing value handling
 ----------------------
@@ -322,6 +323,7 @@ Indexing
    DataArray.set_index
    DataArray.reset_index
    DataArray.reorder_levels
+   DataArray.query
 
 Missing value handling
 ----------------------
@@ -508,6 +510,7 @@ Datetimelike properties
    DataArray.dt.daysinmonth
    DataArray.dt.season
    DataArray.dt.time
+   DataArray.dt.date
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
