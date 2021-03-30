@@ -866,7 +866,7 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    if LooseVersion(cftime.__version__) > LooseVersion("1.4.0"):
+    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
         error_msg = "Cannot combine along dimension 'time' with mixed types."
     else:
         error_msg = r"cannot compare .* \(different calendars\)"
