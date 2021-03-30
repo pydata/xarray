@@ -62,7 +62,7 @@ New Features
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Implement :py:meth:`DataArray.unique` to return a flattened NumPy array
-  of unique values in the data array; convenient for iteration (:pull:`5090`).
+  of unique values in the data array; convenient for iteration (:pull:`5091`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
 
 Breaking changes
