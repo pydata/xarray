@@ -44,6 +44,18 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
+def _ensure_same_types(series, dim):
+
+    if series.dtype == object:
+        types = set(series.map(type))
+        if len(types) > 1:
+            types = ", ".join(t.__name__ for t in types)
+            raise TypeError(
+                f"Cannot combine along dimension '{dim}' with mixed types."
+                f" Found: {types}."
+            )
+
+
 def _infer_concat_order_from_coords(datasets):
 
     concat_dims = []
@@ -91,14 +103,7 @@ def _infer_concat_order_from_coords(datasets):
                 series = first_items.to_series()
 
                 # ensure series does not contain mixed types, e.g. cftime calendars
-                if series.dtype == object:
-                    types = set(series.map(type))
-                    if len(types) > 1:
-                        types = ", ".join(t.__name__ for t in types)
-                        raise TypeError(
-                            f"Cannot combine along dimension '{dim}' with mixed types."
-                            f" Found: {types}."
-                        )
+                _ensure_same_types(series, dim)
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
