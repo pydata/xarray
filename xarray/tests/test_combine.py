@@ -829,6 +829,31 @@ class TestCombineAuto:
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
 
+    def test_combine_by_coords_with_tolerance(self):
+        x = [0, 1, 2]
+        tol = 1e-7
+
+        x1 = x + tol * np.array([-0.5, 0, 0.5])
+        ds1 = Dataset(
+            {"a": (("time", "x"), [[9, 0, 2]])}, coords={"x": x1, "time": [0]}
+        )
+
+        x2 = x + tol * np.array([+0.4, 0.3, 0.1])
+        ds2 = Dataset(
+            {"a": (("time", "x"), [[6, 8, 3]])}, coords={"x": x2, "time": [1]}
+        )
+
+        # fail if tolerance is not properly implemented
+        combined = combine_by_coords([ds1, ds2], tolerance=tol)
+        # check that x1 was chosen
+        print(combined.x)
+        assert np.all(combined.x == x1)
+        assert len(combined.time) == 2
+
+        # fail if tolerance is not properly implemented
+        combined = combine_by_coords([ds1, ds2], tolerance={"x": tol})
+        assert np.all(combined.x == x1)
+        assert len(combined.time) == 2
 
 @requires_cftime
 def test_combine_by_coords_distant_cftime_dates():
