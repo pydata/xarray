@@ -7076,14 +7076,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def drop_duplicates(
         self,
-        subset: Optional[Union[Hashable, Sequence[Hashable]]] = None,
+        dims: Union[Hashable, Sequence[Hashable]] = None,
         keep: Union[str, bool] = "first"
     ):
         """Returns a new dataset with duplicate dimension values removed.
 
         Parameters
         ----------
-        subset : dimension label or sequence of labels, optional
+        dims : dimension label or sequence of labels, optional
             Only consider certain dimensions for identifying duplicates, by
             default use all of the columns.
         keep : {"first", "last", False}, default: "first"
@@ -7096,27 +7096,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        if subset is None:
-            subset = list(self.coords)
-        elif isinstance(subset, str):
-            subset = [subset]
+        if dims is None:
+            dims = list(self.coords)
+        elif isinstance(dims, str):
+            dims = [dims]
 
-        for dim in subset:
+        for dim in dims:
             if dim not in self.dims:
                 raise ValueError("%s must be a single dataset dimension" % dim)
 
         new = self.copy(deep=False)
-        if len(subset) > 1:
-            new = self.stack({'tmp_dim': subset})
-            subset = 'tmp_dim'
-        else:
-            subset = subset[0]
-
-        index = new.get_index(subset).duplicated(keep=keep)
-        new = new.isel(**{subset: ~index})
-
-        if 'tmp_dim' in new.dims:
-            new = new.unstack('tmp_dim')
+        for dim in new.dims:
+            index = new.get_index(dim).duplicated(keep=keep)
+            new = new.isel(**{dim: ~index})
 
         return new
 

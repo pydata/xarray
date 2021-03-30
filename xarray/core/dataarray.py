@@ -4420,14 +4420,14 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def drop_duplicates(
         self,
-        subset: Optional[Union[Hashable, Sequence[Hashable]]] = None,
+        dims: Union[Hashable, Sequence[Hashable]] = None,
         keep: Union[str, bool,] = "first"
     ):
         """Returns a new data array with duplicate dimension values removed.
 
         Parameters
         ----------
-        subset : dimension label or sequence of labels, optional
+        dims : dimension label or sequence of labels, optional
             Only consider certain dimensions for identifying duplicates, by
             default use all of the columns.
         keep : {"first", "last", False}, default: "first"
@@ -4440,7 +4440,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         DataArray
         """
-        ds = self._to_temp_dataset().drop_duplicates(subset=subset, keep=keep)
+        ds = self._to_temp_dataset().drop_duplicates(dims=dims, keep=keep)
         return self._from_temp_dataset(ds)
 
     # this needs to be at the end, or mypy will confuse with `str`
