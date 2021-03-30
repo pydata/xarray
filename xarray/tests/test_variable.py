@@ -15,7 +15,7 @@ from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
     DaskIndexingAdapter,
-    LazilyOuterIndexedArray,
+    LazilyIndexedArray,
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
@@ -32,6 +32,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    raise_if_dask_computes,
     raises_regex,
     requires_dask,
     requires_sparse,
@@ -873,26 +874,100 @@ class VariableSubclassobjects:
         )
         assert_array_equal(actual, expected)
 
-    def test_rolling_window(self):
+    @pytest.mark.parametrize("d, w", (("x", 3), ("y", 5)))
+    def test_rolling_window(self, d, w):
         # Just a working test. See test_nputils for the algorithm validation
         v = self.cls(["x", "y", "z"], np.arange(40 * 30 * 2).reshape(40, 30, 2))
-        for (d, w) in [("x", 3), ("y", 5)]:
-            v_rolling = v.rolling_window(d, w, d + "_window")
-            assert v_rolling.dims == ("x", "y", "z", d + "_window")
-            assert v_rolling.shape == v.shape + (w,)
+        v_rolling = v.rolling_window(d, w, d + "_window")
+        assert v_rolling.dims == ("x", "y", "z", d + "_window")
+        assert v_rolling.shape == v.shape + (w,)
 
-            v_rolling = v.rolling_window(d, w, d + "_window", center=True)
-            assert v_rolling.dims == ("x", "y", "z", d + "_window")
-            assert v_rolling.shape == v.shape + (w,)
+        v_rolling = v.rolling_window(d, w, d + "_window", center=True)
+        assert v_rolling.dims == ("x", "y", "z", d + "_window")
+        assert v_rolling.shape == v.shape + (w,)
 
-            # dask and numpy result should be the same
-            v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
-            assert_array_equal(v_rolling, v_loaded)
+        # dask and numpy result should be the same
+        v_loaded = v.load().rolling_window(d, w, d + "_window", center=True)
+        assert_array_equal(v_rolling, v_loaded)
 
-            # numpy backend should not be over-written
-            if isinstance(v._data, np.ndarray):
-                with pytest.raises(ValueError):
-                    v_loaded[0] = 1.0
+        # numpy backend should not be over-written
+        if isinstance(v._data, np.ndarray):
+            with pytest.raises(ValueError):
+                v_loaded[0] = 1.0
+
+    def test_rolling_1d(self):
+        x = self.cls("x", np.array([1, 2, 3, 4], dtype=float))
+
+        kwargs = dict(dim="x", window=3, window_dim="xw")
+        actual = x.rolling_window(**kwargs, center=True, fill_value=np.nan)
+        expected = Variable(
+            ("x", "xw"),
+            np.array(
+                [[np.nan, 1, 2], [1, 2, 3], [2, 3, 4], [3, 4, np.nan]], dtype=float
+            ),
+        )
+        assert_equal(actual, expected)
+
+        actual = x.rolling_window(**kwargs, center=False, fill_value=0.0)
+        expected = self.cls(
+            ("x", "xw"),
+            np.array([[0, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, 4]], dtype=float),
+        )
+        assert_equal(actual, expected)
+
+        x = self.cls(("y", "x"), np.stack([x, x * 1.1]))
+        actual = x.rolling_window(**kwargs, center=False, fill_value=0.0)
+        expected = self.cls(
+            ("y", "x", "xw"), np.stack([expected.data, expected.data * 1.1], axis=0)
+        )
+        assert_equal(actual, expected)
+
+    @pytest.mark.parametrize("center", [[True, True], [False, False]])
+    @pytest.mark.parametrize("dims", [("x", "y"), ("y", "z"), ("z", "x")])
+    def test_nd_rolling(self, center, dims):
+        x = self.cls(
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+        )
+        window = [3, 3]
+        actual = x.rolling_window(
+            dim=dims,
+            window=window,
+            window_dim=[f"{k}w" for k in dims],
+            center=center,
+            fill_value=np.nan,
+        )
+        expected = x
+        for dim, win, cent in zip(dims, window, center):
+            expected = expected.rolling_window(
+                dim=dim,
+                window=win,
+                window_dim=f"{dim}w",
+                center=cent,
+                fill_value=np.nan,
+            )
+        assert_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        ("dim, window, window_dim, center"),
+        [
+            ("x", [3, 3], "x_w", True),
+            ("x", 3, ("x_w", "x_w"), True),
+            ("x", 3, "x_w", [True, True]),
+        ],
+    )
+    def test_rolling_window_errors(self, dim, window, window_dim, center):
+        x = self.cls(
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+        )
+        with pytest.raises(ValueError):
+            x.rolling_window(
+                dim=dim,
+                window=window,
+                window_dim=window_dim,
+                center=center,
+            )
 
 
 class TestVariable(VariableSubclassobjects):
@@ -1098,9 +1173,9 @@ class TestVariable(VariableSubclassobjects):
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
-        v = Variable("x", LazilyOuterIndexedArray(np.arange(2e5)))
+        v = Variable("x", LazilyIndexedArray(np.arange(2e5)))
         assert "200000 values with dtype" in repr(v)
-        assert isinstance(v._data, LazilyOuterIndexedArray)
+        assert isinstance(v._data, LazilyIndexedArray)
 
     def test_detect_indexer_type(self):
         """ Tests indexer type was correctly detected. """
@@ -2010,6 +2085,29 @@ class TestVariableWithDask(VariableSubclassobjects):
             self.cls(("x", "y"), [[0, -1], [-1, 2]]),
         )
 
+    @pytest.mark.parametrize("dim", ["x", "y"])
+    @pytest.mark.parametrize("window", [3, 8, 11])
+    @pytest.mark.parametrize("center", [True, False])
+    def test_dask_rolling(self, dim, window, center):
+        import dask
+        import dask.array as da
+
+        dask.config.set(scheduler="single-threaded")
+
+        x = Variable(("x", "y"), np.array(np.random.randn(100, 40), dtype=float))
+        dx = Variable(("x", "y"), da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8]))
+
+        expected = x.rolling_window(
+            dim, window, "window", center=center, fill_value=np.nan
+        )
+        with raise_if_dask_computes():
+            actual = dx.rolling_window(
+                dim, window, "window", center=center, fill_value=np.nan
+            )
+        assert isinstance(actual.data, da.Array)
+        assert actual.shape == expected.shape
+        assert_equal(actual, expected)
+
 
 @requires_sparse
 class TestVariableWithSparse:
@@ -2121,23 +2219,23 @@ class TestIndexVariable(VariableSubclassobjects):
 
     # These tests make use of multi-dimensional variables, which are not valid
     # IndexVariable objects:
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_error(self):
         super().test_getitem_error()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_advanced(self):
         super().test_getitem_advanced()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_fancy(self):
         super().test_getitem_fancy()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_getitem_uint(self):
         super().test_getitem_fancy()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     @pytest.mark.parametrize(
         "mode",
         [
@@ -2156,23 +2254,34 @@ class TestIndexVariable(VariableSubclassobjects):
     def test_pad(self, mode, xr_arg, np_arg):
         super().test_pad(mode, xr_arg, np_arg)
 
-    @pytest.mark.xfail
-    @pytest.mark.parametrize("xr_arg, np_arg", _PAD_XR_NP_ARGS)
+    @pytest.mark.skip
     def test_pad_constant_values(self, xr_arg, np_arg):
         super().test_pad_constant_values(xr_arg, np_arg)
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
     def test_rolling_window(self):
         super().test_rolling_window()
 
-    @pytest.mark.xfail
+    @pytest.mark.skip
+    def test_rolling_1d(self):
+        super().test_rolling_1d()
+
+    @pytest.mark.skip
+    def test_nd_rolling(self):
+        super().test_nd_rolling()
+
+    @pytest.mark.skip
+    def test_rolling_window_errors(self):
+        super().test_rolling_window_errors()
+
+    @pytest.mark.skip
     def test_coarsen_2d(self):
         super().test_coarsen_2d()
 
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2247,6 +2356,9 @@ class TestAsCompatibleData:
         # raise error on non-scalar fill_value
         with raises_regex(ValueError, "must be scalar"):
             full_like(orig, [1.0, 2.0])
+
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(orig, True, dtype={"x": bool})
 
     @requires_dask
     def test_full_like_dask(self):
@@ -2352,19 +2464,19 @@ class TestBackendIndexing:
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )
 
-    def test_LazilyOuterIndexedArray(self):
-        v = Variable(dims=("x", "y"), data=LazilyOuterIndexedArray(self.d))
+    def test_LazilyIndexedArray(self):
+        v = Variable(dims=("x", "y"), data=LazilyIndexedArray(self.d))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(
             dims=("x", "y"),
-            data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)),
+            data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping
         v = Variable(
-            dims=("x", "y"), data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d))
+            dims=("x", "y"), data=LazilyIndexedArray(NumpyIndexingAdapter(self.d))
         )
         self.check_orthogonal_indexing(v)
 
@@ -2373,9 +2485,7 @@ class TestBackendIndexing:
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(
-            dims=("x", "y"), data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d))
-        )
+        v = Variable(dims=("x", "y"), data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 

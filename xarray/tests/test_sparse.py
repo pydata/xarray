@@ -8,18 +8,12 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import sparse_array_type
 
 from . import assert_equal, assert_identical, requires_dask
 
 param = pytest.param
 xfail = pytest.mark.xfail
-
-if not IS_NEP18_ACTIVE:
-    pytest.skip(
-        "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled", allow_module_level=True
-    )
 
 sparse = pytest.importorskip("sparse")
 
@@ -226,6 +220,10 @@ def test_variable_method(func, sparse_output):
     var_d = xr.Variable(var_s.dims, var_s.data.todense())
     ret_s = func(var_s)
     ret_d = func(var_d)
+
+    # TODO: figure out how to verify the results of each method
+    if isinstance(ret_d, xr.Variable) and isinstance(ret_d.data, sparse.SparseArray):
+        ret_d = ret_d.copy(data=ret_d.data.todense())
 
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)

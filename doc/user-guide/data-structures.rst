@@ -251,7 +251,7 @@ quantities that belong in data.
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
-.. image:: _static/dataset-diagram.png
+.. image:: ../_static/dataset-diagram.png
 
 In this example, it would be natural to call ``temperature`` and
 ``precipitation`` "data variables" and all the other arrays "coordinate
