@@ -90,11 +90,15 @@ def _infer_concat_order_from_coords(datasets):
 
                 series = first_items.to_series()
 
-                # check that the individual elements can be subtracted - this will
-                # raise a TypeError if series contains cftime elements with different
-                # calendars. Unfortunately this does no longer happen in rank.
-                # See https://github.com/Unidata/cftime/issues/236
-                series.diff()
+                # ensure series does not contain mixed types, e.g. cftime calendars
+                if series.dtype == object:
+                    types = set(series.map(type))
+                    if len(types) > 1:
+                        types = ", ".join(t.__name__ for t in types)
+                        raise TypeError(
+                            f"Cannot combine along dimension '{dim}' with mixed types."
+                            f" Found: {types}."
+                        )
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
