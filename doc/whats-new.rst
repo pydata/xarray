@@ -99,8 +99,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Enable displaying mypy error codes and add ignore only specific error codes using
-  ``# type: ignore[error-code]`` (:pull:`5095`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Enable displaying mypy error codes and ignore only specific error codes using
+  ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 .. _whats-new.0.17.0:
