@@ -61,7 +61,7 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Disable the `cfgrib` backend if the `eccodes` library is not installed. By `Baudouin Raoult <https://github.com/b8raoult>`_.
+- Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
