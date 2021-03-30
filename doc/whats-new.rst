@@ -61,6 +61,9 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Implement :py:meth:`Dataset.drop_duplicates` and :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5089`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

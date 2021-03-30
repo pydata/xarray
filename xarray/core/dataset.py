@@ -7076,8 +7076,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def drop_duplicates(
         self,
-        dims: Union[Hashable, Sequence[Hashable]] = None,
-        keep: Union[str, bool] = "first"
+        dims: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
+        keep: Union[str, bool] = "first",
     ):
         """Returns a new dataset with duplicate dimension values removed.
 
@@ -7098,15 +7098,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if dims is None:
             dims = list(self.coords)
-        elif isinstance(dims, str):
+        elif isinstance(dims, str) or not isinstance(dims, Iterable):
             dims = [dims]
+        else:
+            dims = list(dims)
 
         for dim in dims:
             if dim not in self.dims:
                 raise ValueError("%s must be a single dataset dimension" % dim)
 
         new = self.copy(deep=False)
-        for dim in new.dims:
+        for dim in dims:
             index = new.get_index(dim).duplicated(keep=keep)
             new = new.isel(**{dim: ~index})
 

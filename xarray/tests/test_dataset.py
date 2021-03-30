@@ -6863,8 +6863,9 @@ def test_drop_duplicates(keep):
         data = [6, 7]
         time = [1, 2]
 
-    expected =  xr.DataArray(
-        data, dims="time", coords={"time": time}, name="test").to_dataset()
+    expected = xr.DataArray(
+        data, dims="time", coords={"time": time}, name="test"
+    ).to_dataset()
     result = ds.drop_duplicates("time", keep=keep)
 
 
@@ -6874,7 +6875,8 @@ def test_drop_duplicates_multi_dim(keep):
     ds = xr.DataArray(
         base_data,
         coords={"lat": [0, 1, 2, 2, 3], "lon": [0, 1, 3, 3, 4]},
-        dims=["lat", "lon"], name="test"
+        dims=["lat", "lon"],
+        name="test",
     ).to_dataset()
 
     if keep == "first":
@@ -6890,7 +6892,7 @@ def test_drop_duplicates_multi_dim(keep):
         lat = [0, 1, 3]
         lon = [0, 1, 4]
 
-    expected =  xr.DataArray(
+    expected = xr.DataArray(
         data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon}, name="test"
     ).to_dataset()
     result = ds.drop_duplicates(["lat", "lon"], keep=keep)
