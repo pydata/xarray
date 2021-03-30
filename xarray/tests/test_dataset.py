@@ -6867,6 +6867,7 @@ def test_drop_duplicates(keep):
         data, dims="time", coords={"time": time}, name="test"
     ).to_dataset()
     result = ds.drop_duplicates("time", keep=keep)
+    assert_equal(expected, result)
 
 
 @pytest.mark.parametrize("keep", ["first", "last", False])

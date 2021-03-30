@@ -4421,7 +4421,10 @@ class DataArray(AbstractArray, DataWithCoords):
     def drop_duplicates(
         self,
         dims: Union[Hashable, Sequence[Hashable]] = None,
-        keep: Union[str, bool,] = "first"
+        keep: Union[
+            str,
+            bool,
+        ] = "first",
     ):
         """Returns a new data array with duplicate dimension values removed.
 
@@ -4446,6 +4449,7 @@ class DataArray(AbstractArray, DataWithCoords):
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
