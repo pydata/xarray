@@ -1396,11 +1396,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     # FIXME https://github.com/python/mypy/issues/7328
     @overload
-    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore
+    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore[misc]
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore[misc]
         ...
 
     @overload
@@ -1450,7 +1450,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     def _all_compat(self, other: "Dataset", compat_str: str) -> bool:
         """Helper function for equals and identical"""
@@ -4350,7 +4350,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))  # type: ignore
+                count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
@@ -4731,7 +4731,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
                         # the former is often more efficient
-                        reduce_dims = None  # type: ignore
+                        reduce_dims = None  # type: ignore[assignment]
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_dims,
@@ -6411,7 +6411,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore
+            rcond = (
+                x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore[attr-defined]
+            )
 
         # Weights:
         if w is not None:
@@ -6687,7 +6689,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=coord_pad_mode,
-                    **coord_pad_options,  # type: ignore
+                    **coord_pad_options,  # type: ignore[arg-type]
                 )
 
         return self._replace_vars_and_dims(variables)

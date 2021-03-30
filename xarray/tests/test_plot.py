@@ -40,9 +40,9 @@ except ImportError:
     pass
 
 try:
-    import cartopy as ctpy  # type: ignore
+    import cartopy
 except ImportError:
-    ctpy = None
+    pass
 
 
 @contextlib.contextmanager
@@ -2650,7 +2650,7 @@ def test_get_axis():
 @requires_cartopy
 def test_get_axis_cartopy():
 
-    kwargs = {"projection": ctpy.crs.PlateCarree()}
+    kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
         ax = get_axis(**kwargs)
-        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
