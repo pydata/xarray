@@ -292,6 +292,7 @@ DataArray contents
    DataArray.drop_vars
    DataArray.reset_coords
    DataArray.copy
+   DataArray.unique
 
 **ndarray methods**:
 :py:attr:`~DataArray.astype`

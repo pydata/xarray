@@ -7259,3 +7259,15 @@ def test_deepcopy_obj_array():
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
     assert x0.values[0] is not x1.values[0]
+
+
+def test_unique_order():
+    expected = np.array([0, 2, 1, 3])
+    result = DataArray([0, 2, 1, 1, 3, 3, 3, 2]).unique()
+    assert (expected == result).all()
+
+
+def test_unique_2d():
+    expected = np.array([0, 2, 1, 3])
+    result = xr.DataArray([[0, 2, 1, 1], [3, 3, 3, 2]]).unique()
+    assert (expected == result).all()

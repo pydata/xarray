@@ -4418,6 +4418,20 @@ class DataArray(AbstractArray, DataWithCoords):
         )
         return ds[self.name]
 
+    def unique(self):
+        """Return a raveled NumPy array of all the unique values in the
+        data array; can be convenient for iteration. Uniques are returned
+        in order of appearance. This does NOT sort.
+
+        Returns
+        -------
+        Returns
+        -------
+        ndarray
+            The unique values returned as a NumPy array..
+        """
+        return pd.unique(self.values.ravel())
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
