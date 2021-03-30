@@ -243,6 +243,7 @@ Plotting
 
    Dataset.plot.scatter
    Dataset.plot.quiver
+   Dataset.plot.streamplot
 
 DataArray
 =========
