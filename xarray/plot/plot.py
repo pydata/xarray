@@ -648,6 +648,17 @@ def _plot2d(plotfunc):
                 darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
+        if subplot_kws is None:
+            subplot_kws = dict()
+
+        if "surface" == plotfunc.__name__ and not kwargs.get("_is_facetgrid", False):
+            # Need to create a "3d" Axes instance for surface plots
+            subplot_kws["projection"] = "3d"
+
+            # In facet grids, shared axis labels don't make sense for surface plots
+            sharex = False
+            sharey = False
+
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
@@ -736,13 +747,6 @@ def _plot2d(plotfunc):
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
-
-        if subplot_kws is None:
-            subplot_kws = dict()
-
-        if "surface" == plotfunc.__name__:
-            # Need to create a "3d" Axes instance for surface plots
-            subplot_kws["projection"] = "3d"
 
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
