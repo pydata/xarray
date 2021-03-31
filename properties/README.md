@@ -3,7 +3,7 @@
 This directory contains property-based tests using a library
 called [Hypothesis](https://github.com/HypothesisWorks/hypothesis-python).
 
-The property tests for Xarray are a work in progress - more are always welcome.
+The property tests for xarray are a work in progress - more are always welcome.
 They are stored in a separate directory because they tend to run more examples
 and thus take longer, and so that local development can run a test suite
 without needing to `pip install hypothesis`.

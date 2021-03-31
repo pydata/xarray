@@ -1,48 +1,42 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import importlib
+import platform
+import re
 import warnings
 from contextlib import contextmanager
-from distutils.version import LooseVersion
-import re
-import importlib
+from distutils import version
+from unittest import mock  # noqa: F401
 
 import numpy as np
-from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
+from numpy.testing import assert_array_equal  # noqa: F401
+from pandas.testing import assert_frame_equal  # noqa: F401
 
+import xarray.testing
 from xarray.core import utils
-from xarray.core.pycompat import PY3
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
-                            assert_allclose)
-from xarray.plot.utils import import_seaborn
-
-try:
-    from pandas.testing import assert_frame_equal
-except ImportError:
-    # old location, for pandas < 0.20
-    from pandas.util.testing import assert_frame_equal  # noqa: F401
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
+from xarray.core.options import set_options
+from xarray.testing import (  # noqa: F401
+    assert_chunks_equal,
+    assert_duckarray_allclose,
+    assert_duckarray_equal,
+)
 
 # import mpl and change the backend before other mpl imports
 try:
     import matplotlib as mpl
+
     # Order of imports is important here.
     # Using a different backend makes Travis CI work
-    mpl.use('Agg')
+    mpl.use("Agg")
 except ImportError:
     pass
+
+
+arm_xfail = pytest.mark.xfail(
+    platform.machine() == "aarch64" or "arm" in platform.machine(),
+    reason="expected failure on ARM",
+)
 
 
 def _importorskip(modname, minversion=None):
@@ -51,114 +45,107 @@ def _importorskip(modname, minversion=None):
         has = True
         if minversion is not None:
             if LooseVersion(mod.__version__) < LooseVersion(minversion):
-                raise ImportError('Minimum version not satisfied')
+                raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
-    func = pytest.mark.skipif(not has, reason='requires {}'.format(modname))
+    func = pytest.mark.skipif(not has, reason=f"requires {modname}")
     return has, func
 
 
-has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
-has_matplotlib2, requires_matplotlib2 = _importorskip('matplotlib',
-                                                      minversion='2')
-has_scipy, requires_scipy = _importorskip('scipy')
-has_pydap, requires_pydap = _importorskip('pydap.client')
-has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
-has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
-has_pynio, requires_pynio = _importorskip('Nio')
-has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
-has_cftime, requires_cftime = _importorskip('cftime')
-has_dask, requires_dask = _importorskip('dask')
-has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
-has_rasterio, requires_rasterio = _importorskip('rasterio')
-has_pathlib, requires_pathlib = _importorskip('pathlib')
-has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
-has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
-has_iris, requires_iris = _importorskip('iris')
+def LooseVersion(vstring):
+    # Our development version is something like '0.10.9+aac7bfc'
+    # This function just ignored the git commit id.
+    vstring = vstring.split("+")[0]
+    return version.LooseVersion(vstring)
+
+
+has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
+has_scipy, requires_scipy = _importorskip("scipy")
+has_pydap, requires_pydap = _importorskip("pydap.client")
+has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
+has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_pynio, requires_pynio = _importorskip("Nio")
+has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
+has_cftime, requires_cftime = _importorskip("cftime")
+has_cftime_1_1_0, requires_cftime_1_1_0 = _importorskip("cftime", minversion="1.1.0.0")
+has_cftime_1_4_1, requires_cftime_1_4_1 = _importorskip("cftime", minversion="1.4.1")
+has_dask, requires_dask = _importorskip("dask")
+has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
+has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
+has_rasterio, requires_rasterio = _importorskip("rasterio")
+has_zarr, requires_zarr = _importorskip("zarr")
+has_fsspec, requires_fsspec = _importorskip("fsspec")
+has_iris, requires_iris = _importorskip("iris")
+has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
+has_numbagg, requires_numbagg = _importorskip("numbagg")
+has_seaborn, requires_seaborn = _importorskip("seaborn")
+has_sparse, requires_sparse = _importorskip("sparse")
+has_cartopy, requires_cartopy = _importorskip("cartopy")
+# Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
+has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
+has_numexpr, requires_numexpr = _importorskip("numexpr")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = pytest.mark.skipif(
-    not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
-has_cftime_or_netCDF4 = has_cftime or has_netCDF4
-requires_cftime_or_netCDF4 = pytest.mark.skipif(
-    not has_cftime_or_netCDF4, reason='requires cftime or netCDF4')
-if not has_pathlib:
-    has_pathlib, requires_pathlib = _importorskip('pathlib2')
+    not has_scipy_or_netCDF4, reason="requires scipy or netCDF4"
+)
+
+# change some global options for tests
+set_options(warn_for_unclosed_files=True)
+
 if has_dask:
     import dask
-    if LooseVersion(dask.__version__) < '0.18':
-        dask.set_options(get=dask.get)
-    else:
-        dask.config.set(scheduler='sync')
-try:
-    import_seaborn()
-    has_seaborn = True
-except ImportError:
-    has_seaborn = False
-requires_seaborn = pytest.mark.skipif(not has_seaborn,
-                                      reason='requires seaborn')
 
-try:
-    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
-    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except (ValueError, AttributeError):
-    # Can't get config from pytest, e.g., because xarray is installed instead
-    # of being run from a development version (and hence conftests.py is not
-    # available). Don't run flaky tests.
-    _SKIP_FLAKY = True
-    _SKIP_NETWORK_TESTS = True
-
-flaky = pytest.mark.skipif(
-    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
-network = pytest.mark.skipif(
-    _SKIP_NETWORK_TESTS,
-    reason="set --run-network-tests option to run tests requiring an "
-    "internet connection")
+    dask.config.set(scheduler="single-threaded")
 
 
-class TestCase(unittest.TestCase):
-    """
-    These functions are all deprecated. Instead, use functions in xr.testing
-    """
-    if PY3:
-        # Python 3 assertCountEqual is roughly equivalent to Python 2
-        # assertItemsEqual
-        def assertItemsEqual(self, first, second, msg=None):
-            __tracebackhide__ = True  # noqa: F841
-            return self.assertCountEqual(first, second, msg)
+class CountingScheduler:
+    """Simple dask scheduler counting the number of computes.
 
-    @contextmanager
-    def assertWarns(self, message):
-        __tracebackhide__ = True  # noqa: F841
-        with warnings.catch_warnings(record=True) as w:
-            warnings.filterwarnings('always', message)
-            yield
-        assert len(w) > 0
-        assert any(message in str(wi.message) for wi in w)
+    Reference: https://stackoverflow.com/questions/53289286/"""
 
-    def assertVariableNotEqual(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert not v1.equals(v2)
+    def __init__(self, max_computes=0):
+        self.total_computes = 0
+        self.max_computes = max_computes
 
-    def assertEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert a1 == a2 or (a1 != a1 and a2 != a2)
+    def __call__(self, dsk, keys, **kwargs):
+        self.total_computes += 1
+        if self.total_computes > self.max_computes:
+            raise RuntimeError(
+                "Too many computes. Total: %d > max: %d."
+                % (self.total_computes, self.max_computes)
+            )
+        return dask.get(dsk, keys, **kwargs)
 
-    def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
-        __tracebackhide__ = True  # noqa: F841
-        assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
+
+@contextmanager
+def dummy_context():
+    yield None
+
+
+def raise_if_dask_computes(max_computes=0):
+    # return a dummy context manager so that this can be used for non-dask objects
+    if not has_dask:
+        return dummy_context()
+    scheduler = CountingScheduler(max_computes)
+    return dask.config.set(scheduler=scheduler)
+
+
+flaky = pytest.mark.flaky
+network = pytest.mark.network
 
 
 @contextmanager
 def raises_regex(error, pattern):
-    __tracebackhide__ = True  # noqa: F841
+    __tracebackhide__ = True
     with pytest.raises(error) as excinfo:
         yield
     message = str(excinfo.value)
     if not re.search(pattern, message):
-        raise AssertionError('exception %r did not match pattern %r'
-                             % (excinfo.value, pattern))
+        raise AssertionError(
+            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
+        )
 
 
 class UnexpectedDataAccess(Exception):
@@ -166,7 +153,6 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
-
     def __init__(self, array):
         self.array = array
 
@@ -174,14 +160,12 @@ class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
         raise UnexpectedDataAccess("Tried accessing data")
 
 
-class ReturnItem(object):
-
+class ReturnItem:
     def __getitem__(self, key):
         return key
 
 
-class IndexerMaker(object):
-
+class IndexerMaker:
     def __init__(self, indexer_cls):
         self._indexer_cls = indexer_cls
 
@@ -196,9 +180,34 @@ def source_ndarray(array):
     object itself.
     """
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', 'DatetimeIndex.base')
-        warnings.filterwarnings('ignore', 'TimedeltaIndex.base')
-        base = getattr(array, 'base', np.asarray(array).base)
+        warnings.filterwarnings("ignore", "DatetimeIndex.base")
+        warnings.filterwarnings("ignore", "TimedeltaIndex.base")
+        base = getattr(array, "base", np.asarray(array).base)
     if base is None:
         base = array
     return base
+
+
+# Internal versions of xarray's test functions that validate additional
+# invariants
+
+
+def assert_equal(a, b):
+    __tracebackhide__ = True
+    xarray.testing.assert_equal(a, b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
+
+
+def assert_identical(a, b):
+    __tracebackhide__ = True
+    xarray.testing.assert_identical(a, b)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)
+
+
+def assert_allclose(a, b, **kwargs):
+    __tracebackhide__ = True
+    xarray.testing.assert_allclose(a, b, **kwargs)
+    xarray.testing._assert_internal_invariants(a)
+    xarray.testing._assert_internal_invariants(b)

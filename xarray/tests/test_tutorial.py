@@ -1,26 +1,37 @@
-from __future__ import absolute_import, division, print_function
-
 import os
 
-from xarray import DataArray, tutorial
-from xarray.core.pycompat import suppress
+import pytest
 
-from . import TestCase, assert_identical, network
+from xarray import DataArray, tutorial
+
+from . import assert_identical, network
 
 
 @network
-class TestLoadDataset(TestCase):
-
+class TestLoadDataset:
+    @pytest.fixture(autouse=True)
     def setUp(self):
-        self.testfile = 'tiny'
-        self.testfilepath = os.path.expanduser(os.sep.join(
-            ('~', '.xarray_tutorial_data', self.testfile)))
-        with suppress(OSError):
-            os.remove('{}.nc'.format(self.testfilepath))
-        with suppress(OSError):
-            os.remove('{}.md5'.format(self.testfilepath))
+        self.testfile = "tiny"
 
-    def test_download_from_github(self):
-        ds = tutorial.load_dataset(self.testfile)
-        tiny = DataArray(range(5), name='tiny').to_dataset()
+    def test_download_from_github(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_CACHE_DIR", os.fspath(tmp_path))
+
+        ds = tutorial.open_dataset(self.testfile).load()
+        tiny = DataArray(range(5), name="tiny").to_dataset()
         assert_identical(ds, tiny)
+
+    def test_download_from_github_load_without_cache(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("XDG_CACHE_DIR", os.fspath(tmp_path))
+
+        ds_nocache = tutorial.open_dataset(self.testfile, cache=False).load()
+        ds_cache = tutorial.open_dataset(self.testfile).load()
+        assert_identical(ds_cache, ds_nocache)
+
+    def test_download_rasterio_from_github_load_without_cache(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setenv("XDG_CACHE_DIR", os.fspath(tmp_path))
+
+        ds_nocache = tutorial.open_dataset("RGB.byte", cache=False).load()
+        ds_cache = tutorial.open_dataset("RGB.byte", cache=True).load()
+        assert_identical(ds_cache, ds_nocache)

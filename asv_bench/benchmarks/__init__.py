@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import itertools
 
 import numpy as np
@@ -13,14 +10,15 @@ def parameterized(names, params):
         func.param_names = names
         func.params = params
         return func
+
     return decorator
 
 
 def requires_dask():
     try:
-        import dask  # noqa
+        import dask  # noqa: F401
     except ImportError:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def randn(shape, frac_nan=None, chunks=None, seed=0):
@@ -29,6 +27,7 @@ def randn(shape, frac_nan=None, chunks=None, seed=0):
         x = rng.standard_normal(shape)
     else:
         import dask.array as da
+
         rng = da.random.RandomState(seed)
         x = rng.standard_normal(shape, chunks=chunks)
 

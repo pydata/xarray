@@ -2,135 +2,91 @@ xarray: N-D labeled arrays and datasets in Python
 =================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
-that aims to bring the labeled data power of pandas_ to the physical sciences,
-by providing N-dimensional variants of the core pandas data structures.
+that makes working with labelled multi-dimensional arrays simple,
+efficient, and fun!
 
-Our goal is to provide a pandas-like and pandas-compatible toolkit for
-analytics on multi-dimensional arrays, rather than the tabular data for which
-pandas excels. Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences:
-``xarray.Dataset`` is an in-memory representation of a netCDF file.
+Xarray introduces labels in the form of dimensions, coordinates and
+attributes on top of raw NumPy_-like arrays, which allows for a more
+intuitive, more concise, and less error-prone developer experience.
+The package includes a large and growing library of domain-agnostic functions
+for advanced analytics and visualization with these data structures.
 
+Xarray is inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
+It is particularly tailored to working with netCDF_ files, which were the
+source of xarray's data model, and integrates tightly with dask_ for parallel
+computing.
+
+.. _NumPy: http://www.numpy.org
 .. _pandas: http://pandas.pydata.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
+.. _dask: http://dask.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _OPeNDAP: http://www.opendap.org/
 
-Documentation
--------------
 
-**Getting Started**
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: For users
 
-* :doc:`why-xarray`
-* :doc:`faq`
-* :doc:`examples`
-* :doc:`installing`
+   Getting Started <getting-started-guide/index>
+   User Guide <user-guide/index>
+   Gallery <gallery>
+   Tutorials & Videos <tutorials-and-videos>
+   API Reference <api>
+   How do I ... <howdoi>
+   Ecosystem <ecosystem>
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: For developers/contributors
+
+   Contributing Guide <contributing>
+   Xarray Internals <internals/index>
+   Development Roadmap <roadmap>
+   Team <team>
+   What’s New <whats-new>
+   GitHub repository <https://github.com/pydata/xarray>
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Getting Started
+   :caption: Community
 
-   why-xarray
-   faq
-   examples
-   installing
+   GitHub discussions <https://github.com/pydata/xarray/discussions>
+   StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
 
-**User Guide**
 
-* :doc:`data-structures`
-* :doc:`indexing`
-* :doc:`interpolation`
-* :doc:`computation`
-* :doc:`groupby`
-* :doc:`reshaping`
-* :doc:`combining`
-* :doc:`time-series`
-* :doc:`pandas`
-* :doc:`io`
-* :doc:`dask`
-* :doc:`plotting`
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: User Guide
-
-   data-structures
-   indexing
-   interpolation
-   computation
-   groupby
-   reshaping
-   combining
-   time-series
-   pandas
-   io
-   dask
-   plotting
-
-**Help & reference**
-
-* :doc:`whats-new`
-* :doc:`api`
-* :doc:`internals`
-* :doc:`roadmap`
-* :doc:`contributing`
-* :doc:`related-projects`
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Help & reference
-
-   whats-new
-   api
-   internals
-   roadmap
-   contributing
-   related-projects
-
-See also
---------
-
-- Stephan Hoyer and Joe Hamman's `Journal of Open Research Software paper`_ describing the xarray project.
-- The `UW eScience Institute's Geohackweek`_ tutorial on xarray for geospatial data scientists.
-- Stephan Hoyer's `SciPy2015 talk`_ introducing xarray to a general audience.
-- Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
-  xarray to users familiar with netCDF.
-- `Nicolas Fauchereau's tutorial`_ on xarray for netCDF users.
-
-.. _Journal of Open Research Software paper: http://doi.org/10.5334/jors.148
-.. _UW eScience Institute's Geohackweek : https://geohackweek.github.io/nDarrays/
-.. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-.. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
-.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
-.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
-.. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------
 
-- Ask usage questions ("How do I?") on `StackOverflow`_.
+- If you have a question like "How do I concatenate a list of datasets?", ask on `GitHub discussions`_ or `StackOverflow`_.
+  Please include a self-contained reproducible example if possible.
 - Report bugs, suggest features or view the source code `on GitHub`_.
 - For less well defined questions or ideas, or to announce other projects of
-  interest to xarray users, use the `mailing list`_.
+  interest to xarray users, use `GitHub discussions`_ or the `mailing list`_.
 
-.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _StackOverFlow: https://stackoverflow.com/questions/tagged/python-xarray
+.. _Github discussions: https://github.com/pydata/xarray/discussions
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on GitHub: http://github.com/pydata/xarray
+.. _on GitHub: https://github.com/pydata/xarray
 
 NumFOCUS
 --------
 
 .. image:: _static/numfocus_logo.png
    :scale: 50 %
+   :target: https://numfocus.org/
 
-Xarray is a fiscally sponsored project of NumFOCUS, a nonprofit dedicated
+Xarray is a fiscally sponsored project of NumFOCUS_, a nonprofit dedicated
 to supporting the open source scientific computing community. If you like
-Xarray and want to support our mission, please consider making a
-[donation](https://www.flipcause.com/secure/cause_pdetails/MjE3OQ==)
+Xarray and want to support our mission, please consider making a donation_
 to support our efforts.
+
+.. _donation: https://numfocus.salsalabs.org/donate-to-xarray/
+
 
 History
 -------

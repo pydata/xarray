@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # xarray documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
@@ -11,12 +10,16 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import absolute_import, division, print_function
+
 
 import datetime
-import importlib
+import inspect
 import os
+import subprocess
 import sys
+from contextlib import suppress
+
+import sphinx_autosummary_accessors
 
 import xarray
 
@@ -24,150 +27,216 @@ allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
-             'cartopy netCDF4 rasterio zarr iris flake8 '
-             'sphinx_gallery cftime').split():
-    try:
-        module = importlib.import_module(name)
-        if name == 'matplotlib':
-            module.use('Agg')
-        fname = module.__file__.rstrip('__init__.py')
-        print("%s: %s, %s" % (name, module.__version__, fname))
-    except ImportError:
-        print("no %s" % name)
-        # neither rasterio nor cartopy should be hard requirements for
-        # the doc build.
-        if name == 'rasterio':
-            allowed_failures.update(['gallery/plot_rasterio_rgb.py',
-                                     'gallery/plot_rasterio.py'])
-        elif name == 'cartopy':
-            allowed_failures.update(['gallery/plot_cartopy_facetgrid.py',
-                                     'gallery/plot_rasterio_rgb.py',
-                                     'gallery/plot_rasterio.py'])
 
-print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
+if "conda" in sys.executable:
+    print("conda environment:")
+    subprocess.run(["conda", "list"])
+else:
+    print("pip environment:")
+    subprocess.run([sys.executable, "-m", "pip", "list"])
+
+print(f"xarray: {xarray.__version__}, {xarray.__file__}")
+
+with suppress(ImportError):
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+try:
+    import rasterio  # noqa: F401
+except ImportError:
+    allowed_failures.update(
+        ["gallery/plot_rasterio_rgb.py", "gallery/plot_rasterio.py"]
+    )
+
+try:
+    import cartopy  # noqa: F401
+except ImportError:
+    allowed_failures.update(
+        [
+            "gallery/plot_cartopy_facetgrid.py",
+            "gallery/plot_rasterio_rgb.py",
+            "gallery/plot_rasterio.py",
+        ]
+    )
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+# needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.extlinks',
-    'sphinx.ext.mathjax',
-    'numpydoc',
-    'IPython.sphinxext.ipython_directive',
-    'IPython.sphinxext.ipython_console_highlighting',
-    'sphinx_gallery.gen_gallery',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
+    "IPython.sphinxext.ipython_directive",
+    "IPython.sphinxext.ipython_console_highlighting",
+    "nbsphinx",
+    "sphinx_autosummary_accessors",
+    "sphinx.ext.linkcode",
+    "sphinx_panels",
+    "sphinxext.opengraph",
+    "sphinx_copybutton",
+    "sphinxext.rediraffe",
 ]
 
-extlinks = {'issue': ('https://github.com/pydata/xarray/issues/%s', 'GH'),
-            'pull': ('https://github.com/pydata/xarray/pull/%s', 'PR'),
-            }
+extlinks = {
+    "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
+    "pull": ("https://github.com/pydata/xarray/pull/%s", "PR"),
+}
 
-sphinx_gallery_conf = {'examples_dirs': 'gallery',
-                       'gallery_dirs': 'auto_gallery',
-                       'backreferences_dir': False,
-                       'expected_failing_examples': list(allowed_failures)
-                       }
+# sphinx-copybutton configurations
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
+
+# nbsphinx configurations
+
+nbsphinx_timeout = 600
+nbsphinx_execute = "always"
+nbsphinx_prolog = """
+{% set docname = env.doc2path(env.docname, base=None) %}
+
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+
+.. |Binder| image:: https://mybinder.org/badge.svg
+   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+"""
 
 autosummary_generate = True
+autodoc_typehints = "none"
 
-numpydoc_class_members_toctree = True
-numpydoc_show_class_members = False
+# Napoleon configurations
+
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_use_param = False
+napoleon_use_rtype = False
+napoleon_preprocess_types = True
+napoleon_type_aliases = {
+    # general terms
+    "sequence": ":term:`sequence`",
+    "iterable": ":term:`iterable`",
+    "callable": ":py:func:`callable`",
+    "dict_like": ":term:`dict-like <mapping>`",
+    "dict-like": ":term:`dict-like <mapping>`",
+    "mapping": ":term:`mapping`",
+    "file-like": ":term:`file-like <file-like object>`",
+    # special terms
+    # "same type as caller": "*same type as caller*",  # does not work, yet
+    # "same type as values": "*same type as values*",  # does not work, yet
+    # stdlib type aliases
+    "MutableMapping": "~collections.abc.MutableMapping",
+    "sys.stdout": ":obj:`sys.stdout`",
+    "timedelta": "~datetime.timedelta",
+    "string": ":class:`string <str>`",
+    # numpy terms
+    "array_like": ":term:`array_like`",
+    "array-like": ":term:`array-like <array_like>`",
+    "scalar": ":term:`scalar`",
+    "array": ":term:`array`",
+    "hashable": ":term:`hashable <name>`",
+    # matplotlib terms
+    "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
+    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
+    "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
+    # objects without namespace
+    "DataArray": "~xarray.DataArray",
+    "Dataset": "~xarray.Dataset",
+    "Variable": "~xarray.Variable",
+    "ndarray": "~numpy.ndarray",
+    "MaskedArray": "~numpy.ma.MaskedArray",
+    "dtype": "~numpy.dtype",
+    "ComplexWarning": "~numpy.ComplexWarning",
+    "Index": "~pandas.Index",
+    "MultiIndex": "~pandas.MultiIndex",
+    "CategoricalIndex": "~pandas.CategoricalIndex",
+    "TimedeltaIndex": "~pandas.TimedeltaIndex",
+    "DatetimeIndex": "~pandas.DatetimeIndex",
+    "Series": "~pandas.Series",
+    "DataFrame": "~pandas.DataFrame",
+    "Categorical": "~pandas.Categorical",
+    "Path": "~~pathlib.Path",
+    # objects with abbreviated namespace (from pandas)
+    "pd.Index": "~pandas.Index",
+    "pd.NaT": "~pandas.NaT",
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+# source_suffix = ".rst"
 
-# The encoding of source files.
-#source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'xarray'
-copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
+project = "xarray"
+copyright = "2014-%s, xarray Developers" % datetime.datetime.now().year
 
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
 # The short X.Y version.
-version = xarray.__version__.split('+')[0]
+version = xarray.__version__.split("+")[0]
 # The full version, including alpha/beta/rc tags.
 release = xarray.__version__
 
-# The language for content autogenerated by Sphinx. Refer to documentation
-# for a list of supported languages.
-#language = None
-
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
-#today = ''
+# today = ''
 # Else, today_fmt is used as the format for a strftime call.
-today_fmt = '%Y-%m-%d'
+today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
-# The reST default role (used for this markup: `text`) to use for all
-# documents.
-#default_role = None
-
-# If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
-
-# If true, the current module name will be prepended to all description
-# unit titles (such as .. function::).
-#add_module_names = True
-
-# If true, sectionauthor and moduleauthor directives will be shown in the
-# output. They are ignored by default.
-#show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
-# A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
-
-# If true, keep warnings as "system message" paragraphs in the built documents.
-#keep_warnings = False
+pygments_style = "sphinx"
 
 
 # -- Options for HTML output ----------------------------------------------
-
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_book_theme"
+html_title = ""
+
+html_context = {
+    "github_user": "pydata",
+    "github_repo": "xarray",
+    "github_version": "master",
+    "doc_path": "doc",
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    'logo_only': True,
-}
+html_theme_options = dict(
+    # analytics_id=''  this is configured in rtfd.io
+    # canonical_url="",
+    repository_url="https://github.com/pydata/xarray",
+    repository_branch="master",
+    path_to_docs="doc",
+    use_edit_page_button=True,
+    use_repository_button=True,
+    use_issues_button=True,
+    home_page_in_toc=False,
+    extra_navbar="",
+    navbar_footer_text="",
+    extra_footer="""<p>Xarray is a fiscally sponsored project of <a href="https://numfocus.org">NumFOCUS</a>,
+    a nonprofit dedicated to supporting the open-source scientific computing community.<br>
+    Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a></p>""",
+    twitter_url="https://twitter.com/xarray_devs",
+)
 
-# Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
-
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-#html_title = None
-
-# A shorter title for the navigation bar.  Default is the same as html_title.
-#html_short_title = None
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -176,156 +245,138 @@ html_logo = "_static/dataset-diagram-logo.png"
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = '_static/favicon.ico'
+html_favicon = "_static/favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
+html_css_files = ["style.css"]
+
+
+# configuration for sphinxext.opengraph
+ogp_site_url = "https://xarray.pydata.org/en/latest/"
+ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
+ogp_custom_meta_tags = [
+    '<meta name="twitter:card" content="summary_large_image" />',
+    '<meta property="twitter:site" content="@xarray_dev />',
+    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
+]
+
+# Redirects for pages that were moved to new locations
+
+rediraffe_redirects = {
+    "terminology.rst": "user-guide/terminology.rst",
+    "data-structures.rst": "user-guide/data-structures.rst",
+    "indexing.rst": "user-guide/indexing.rst",
+    "interpolation.rst": "user-guide/interpolation.rst",
+    "computation.rst": "user-guide/computation.rst",
+    "groupby.rst": "user-guide/groupby.rst",
+    "reshaping.rst": "user-guide/reshaping.rst",
+    "combining.rst": "user-guide/combining.rst",
+    "time-series.rst": "user-guide/time-series.rst",
+    "weather-climate.rst": "user-guide/weather-climate.rst",
+    "pandas.rst": "user-guide/pandas.rst",
+    "io.rst": "user-guide/io.rst",
+    "dask.rst": "user-guide/dask.rst",
+    "plotting.rst": "user-guide/plotting.rst",
+    "duckarrays.rst": "user-guide/duckarrays.rst",
+    "related-projects.rst": "ecosystem.rst",
+    "faq.rst": "getting-started-guide/faq.rst",
+    "why-xarray.rst": "getting-started-guide/why-xarray.rst",
+    "installing.rst": "getting-started-guide/installing.rst",
+    "quick-overview.rst": "getting-started-guide/quick-overview.rst",
+}
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
-# becomes obsolete when we can pin ipython>=5.2; see doc/environment.yml
-ipython_savefig_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   '_build','html','_static')
+# becomes obsolete when we can pin ipython>=5.2; see ci/requirements/doc.yml
+ipython_savefig_dir = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "_build", "html", "_static"
+)
 if not os.path.exists(ipython_savefig_dir):
     os.makedirs(ipython_savefig_dir)
 
-# Add any extra paths that contain custom files (such as robots.txt or
-# .htaccess) here, relative to this directory. These files are copied
-# directly to the root of the documentation.
-#html_extra_path = []
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 html_last_updated_fmt = today_fmt
 
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-#html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
-
-# Additional templates that should be rendered to pages, maps page names to
-# template names.
-#html_additional_pages = {}
-
-# If false, no module index is generated.
-#html_domain_indices = True
-
-# If false, no index is generated.
-# html_use_index = True
-
-# If true, the index is split into individual pages for each letter.
-#html_split_index = False
-
-# If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
-
-# If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-#html_show_sphinx = True
-
-# If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-#html_show_copyright = True
-
-# If true, an OpenSearch description file will be output, and all pages will
-# contain a <link> tag referring to it.  The value of this option must be the
-# base URL from which the finished HTML is served.
-#html_use_opensearch = ''
-
-# This is the file name suffix for HTML files (e.g. ".xhtml").
-#html_file_suffix = None
-
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'xarraydoc'
-
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
-
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
-
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-  ('index', 'xarray.tex', 'xarray Documentation',
-   'xarray Developers', 'manual'),
-]
-
-# The name of an image file (relative to this directory) to place at the top of
-# the title page.
-#latex_logo = None
-
-# For "manual" documents, if this is true, then toplevel headings are parts,
-# not chapters.
-#latex_use_parts = False
-
-# If true, show page references after internal links.
-#latex_show_pagerefs = False
-
-# If true, show URL addresses after external links.
-#latex_show_urls = False
-
-# Documents to append as an appendix to all manuals.
-#latex_appendices = []
-
-# If false, no module index is generated.
-#latex_domain_indices = True
-
-
-# -- Options for manual page output ---------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [
-    ('index', 'xarray', 'xarray Documentation',
-     ['xarray Developers'], 1)
-]
-
-# If true, show URL addresses after external links.
-#man_show_urls = False
-
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-  ('index', 'xarray', 'xarray Documentation',
-   'xarray Developers', 'xarray', 'N-D labeled arrays and datasets in Python.',
-   'Miscellaneous'),
-]
-
-# Documents to append as an appendix to all manuals.
-#texinfo_appendices = []
-
-# If false, no module index is generated.
-#texinfo_domain_indices = True
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#texinfo_show_urls = 'footnote'
-
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-#texinfo_no_detailmenu = False
+htmlhelp_basename = "xarraydoc"
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
-    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
-    'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
-    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
-    'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
-    'matplotlib': ('https://matplotlib.org/', None),
+    "python": ("https://docs.python.org/3/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
+    "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "dask": ("https://docs.dask.org/en/latest", None),
+    "cftime": ("https://unidata.github.io/cftime", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
+    "sparse": ("https://sparse.pydata.org/en/latest/", None),
 }
+
+
+# based on numpy doc/source/conf.py
+def linkcode_resolve(domain, info):
+    """
+    Determine the URL corresponding to Python object
+    """
+    if domain != "py":
+        return None
+
+    modname = info["module"]
+    fullname = info["fullname"]
+
+    submod = sys.modules.get(modname)
+    if submod is None:
+        return None
+
+    obj = submod
+    for part in fullname.split("."):
+        try:
+            obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
+    try:
+        fn = inspect.getsourcefile(inspect.unwrap(obj))
+    except TypeError:
+        fn = None
+    if not fn:
+        return None
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except OSError:
+        lineno = None
+
+    if lineno:
+        linespec = f"#L{lineno}-L{lineno + len(source) - 1}"
+    else:
+        linespec = ""
+
+    fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
+
+    if "+" in xarray.__version__:
+        return f"https://github.com/pydata/xarray/blob/master/xarray/{fn}{linespec}"
+    else:
+        return (
+            f"https://github.com/pydata/xarray/blob/"
+            f"v{xarray.__version__}/xarray/{fn}{linespec}"
+        )
+
+
+def html_page_context(app, pagename, templatename, context, doctree):
+    # Disable edit button for docstring generated pages
+    if "generated" in pagename:
+        context["theme_use_edit_page_button"] = False
+
+
+def setup(app):
+    app.connect("html-page-context", html_page_context)
