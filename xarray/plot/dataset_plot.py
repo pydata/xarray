@@ -208,8 +208,8 @@ def _dsplot(plotfunc):
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
     scale: scalar, optional
-        Quiver only. Number of data units per arrow length unit. 
-        Use this to control the length of the arrows: larger values lead to 
+        Quiver only. Number of data units per arrow length unit.
+        Use this to control the length of the arrows: larger values lead to
         smaller arrows
     add_guide: bool, optional
         Add a guide that depends on hue_style
@@ -252,7 +252,7 @@ def _dsplot(plotfunc):
         `seaborn` color palette. If ``cmap`` is seaborn color palette,
          ``levels`` must also be specified.
     colors : color-like or list of color-like, optional
-        A single color or a list of colors. The ``levels`` argument 
+        A single color or a list of colors. The ``levels`` argument
         is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
