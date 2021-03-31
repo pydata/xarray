@@ -717,7 +717,7 @@ def open_mfdataset(
     parallel=False,
     join="outer",
     attrs_file=None,
-    combine_attrs="drop",
+    combine_attrs="override",
     **kwargs,
 ):
     """Open multiple files as a single dataset.
