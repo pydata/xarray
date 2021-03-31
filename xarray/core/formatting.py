@@ -371,7 +371,7 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
+def _mapping_repr(mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
@@ -379,7 +379,9 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
-        if len_mapping > max_rows:
+        if not OPTIONS[expand_option_name]:
+            summary = [f"{summary[0]} ({len_mapping})"]
+        elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             items = list(mapping.items())
@@ -396,12 +398,12 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
 
 
 data_vars_repr = functools.partial(
-    _mapping_repr, title="Data variables", summarizer=summarize_datavar
+    _mapping_repr, title="Data variables", summarizer=summarize_datavar, expand_option_name="display_expand_data_vars"
 )
 
 
 attrs_repr = functools.partial(
-    _mapping_repr, title="Attributes", summarizer=summarize_attr
+    _mapping_repr, title="Attributes", summarizer=summarize_attr, expand_option_name="display_expand_attrs"
 )
 
 
@@ -409,7 +411,7 @@ def coords_repr(coords, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
     return _mapping_repr(
-        coords, title="Coordinates", summarizer=summarize_coord, col_width=col_width
+        coords, title="Coordinates", summarizer=summarize_coord, expand_option_name="display_expand_coords", col_width=col_width
     )
 
 
@@ -493,9 +495,14 @@ def array_repr(arr):
     else:
         name_str = ""
 
+    if OPTIONS["display_expand_data"]:
+        data_repr = short_data_repr(arr)
+    else:
+        data_repr = inline_variable_array_repr(arr, OPTIONS["display_width"])
+
     summary = [
         "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
-        short_data_repr(arr),
+        data_repr,
     ]
 
     if hasattr(arr, "coords"):

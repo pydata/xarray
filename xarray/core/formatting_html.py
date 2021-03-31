@@ -6,6 +6,7 @@ from html import escape
 import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
+from .options import OPTIONS
 
 STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
@@ -164,9 +165,10 @@ def collapsible_section(
     )
 
 
-def _mapping_section(mapping, name, details_func, max_items_collapse, enabled=True):
+def _mapping_section(mapping, name, details_func, expand_option_name, enabled=True):
     n_items = len(mapping)
-    collapsed = n_items >= max_items_collapse
+    expanded = OPTIONS[expand_option_name]
+    collapsed = not expanded
 
     return collapsible_section(
         name,
@@ -188,7 +190,7 @@ def dim_section(obj):
 def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
-    collapsed = "checked"
+    collapsed = "checked" if OPTIONS["display_expand_data"] else ""
     variable = getattr(obj, "variable", obj)
     preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)
@@ -208,7 +210,7 @@ coord_section = partial(
     _mapping_section,
     name="Coordinates",
     details_func=summarize_coords,
-    max_items_collapse=25,
+    expand_option_name="display_expand_coords",
 )
 
 
@@ -216,7 +218,7 @@ datavar_section = partial(
     _mapping_section,
     name="Data variables",
     details_func=summarize_vars,
-    max_items_collapse=15,
+    expand_option_name="display_expand_data_vars",
 )
 
 
@@ -224,7 +226,7 @@ attr_section = partial(
     _mapping_section,
     name="Attributes",
     details_func=summarize_attrs,
-    max_items_collapse=10,
+    expand_option_name="display_expand_attrs",
 )
 
 

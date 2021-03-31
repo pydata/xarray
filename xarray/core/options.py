@@ -6,6 +6,10 @@ CMAP_SEQUENTIAL = "cmap_sequential"
 DISPLAY_MAX_ROWS = "display_max_rows"
 DISPLAY_STYLE = "display_style"
 DISPLAY_WIDTH = "display_width"
+DISPLAY_EXPAND_ATTRS = "display_expand_attrs"
+DISPLAY_EXPAND_COORDS = "display_expand_coords"
+DISPLAY_EXPAND_DATA_VARS = "display_expand_data_vars"
+DISPLAY_EXPAND_DATA = "display_expand_data"
 ENABLE_CFTIMEINDEX = "enable_cftimeindex"
 FILE_CACHE_MAXSIZE = "file_cache_maxsize"
 KEEP_ATTRS = "keep_attrs"
@@ -19,6 +23,10 @@ OPTIONS = {
     DISPLAY_MAX_ROWS: 12,
     DISPLAY_STYLE: "html",
     DISPLAY_WIDTH: 80,
+    DISPLAY_EXPAND_ATTRS: True,
+    DISPLAY_EXPAND_COORDS: True,
+    DISPLAY_EXPAND_DATA_VARS: True,
+    DISPLAY_EXPAND_DATA: True,
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     KEEP_ATTRS: "default",
@@ -38,6 +46,10 @@ _VALIDATORS = {
     DISPLAY_MAX_ROWS: _positive_integer,
     DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
     DISPLAY_WIDTH: _positive_integer,
+    DISPLAY_EXPAND_ATTRS: lambda value: isinstance(value, bool),
+    DISPLAY_EXPAND_COORDS: lambda value: isinstance(value, bool),
+    DISPLAY_EXPAND_DATA_VARS: lambda value: isinstance(value, bool),
+    DISPLAY_EXPAND_DATA: lambda value: isinstance(value, bool),
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
@@ -108,6 +120,14 @@ class set_options:
       Default: ``'default'``.
     - ``display_style``: display style to use in jupyter for xarray objects.
       Default: ``'text'``. Other options are ``'html'``.
+    - ``display_expand_attrs``: whether to expand the attributes section for
+      display of ``DataArray`` or ``Dataset`` objects. Default: ``True``.
+    - ``display_expand_coords``: whether to expand the coordinates section for
+      display of ``DataArray`` or ``Dataset`` objects. Default: ``True``.
+    - ``display_expand_data``: whether to expand the data section for display
+      of ``DataArray`` objects. Default: ``True``.
+    - ``display_expand_data_vars``: whether to expand the data variables section
+      for display of ``Dataset`` objects. Default: ``True``.
 
 
     You can use ``set_options`` either as a context manager:
