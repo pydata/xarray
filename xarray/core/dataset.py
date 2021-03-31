@@ -1,6 +1,7 @@
 import copy
 import datetime
 import functools
+import inspect
 import sys
 import warnings
 from collections import defaultdict
@@ -454,6 +455,63 @@ def as_dataset(obj: Any) -> "Dataset":
     if not isinstance(obj, Dataset):
         obj = Dataset(obj)
     return obj
+
+
+def _get_func_args(func, param_names):
+    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
+    they are provided by user.
+    """
+    try:
+        func_args = inspect.signature(func).parameters
+    except ValueError:
+        func_args = {}
+        if not param_names:
+            raise ValueError(
+                "Unable to inspect `func` signature, and `param_names` was not provided."
+            )
+    if param_names:
+        params = param_names
+    else:
+        params = list(func_args)[1:]
+        if any(
+            [(p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()]
+        ):
+            raise ValueError(
+                "`param_names` must be provided because `func` takes variable length arguments."
+            )
+    return params, func_args
+
+
+def _initialize_curvefit_params(params, p0, bounds, func_args):
+    """Set initial guess and bounds for curvefit.
+    Priority: 1) passed args 2) func signature 3) scipy defaults
+    """
+
+    def _initialize_feasible(lb, ub):
+        # Mimics functionality of scipy.optimize.minpack._initialize_feasible
+        lb_finite = np.isfinite(lb)
+        ub_finite = np.isfinite(ub)
+        p0 = np.nansum(
+            [
+                0.5 * (lb + ub) * int(lb_finite & ub_finite),
+                (lb + 1) * int(lb_finite & ~ub_finite),
+                (ub - 1) * int(~lb_finite & ub_finite),
+            ]
+        )
+        return p0
+
+    param_defaults = {p: 1 for p in params}
+    bounds_defaults = {p: (-np.inf, np.inf) for p in params}
+    for p in params:
+        if p in func_args and func_args[p].default is not func_args[p].empty:
+            param_defaults[p] = func_args[p].default
+        if p in bounds:
+            bounds_defaults[p] = tuple(bounds[p])
+            if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
+                param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
+        if p in p0:
+            param_defaults[p] = p0[p]
+    return param_defaults, bounds_defaults
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
@@ -6274,8 +6332,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
-        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
-        recommended to use ``apply_ufunc``.
+        subset to each block. Each block is loaded into memory. In the more common case where
+        ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
@@ -7073,6 +7131,181 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # apply the selection
         return self.isel(indexers, missing_dims=missing_dims)
+
+    def curvefit(
+        self,
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
+        func: Callable[..., Any],
+        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
+        skipna: bool = True,
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        param_names: Sequence[str] = None,
+        kwargs: Dict[str, Any] = None,
+    ):
+        """
+        Curve fitting optimization for arbitrary functions.
+
+        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+
+        Parameters
+        ----------
+        coords : DataArray, str or sequence of DataArray, str
+            Independent coordinate(s) over which to perform the curve fitting. Must share
+            at least one dimension with the calling object. When fitting multi-dimensional
+            functions, supply `coords` as a sequence in the same order as arguments in
+            `func`. To fit along existing dimensions of the calling object, `coords` can
+            also be specified as a str or sequence of strs.
+        func : callable
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length `len(x)`. `params` are the fittable parameters which are optimized
+            by scipy curve_fit. `x` can also be specified as a sequence containing multiple
+            coordinates, e.g. `f((x0, x1), *params)`.
+        reduce_dims : str or sequence of str
+            Additional dimension(s) over which to aggregate while fitting. For example,
+            calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
+            aggregate all lat and lon points and fit the specified function along the
+            time dimension.
+        skipna : bool, optional
+            Whether to skip missing values when fitting. Default is True.
+        p0 : dictionary, optional
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dictionary, optional
+            Optional dictionary of parameter names to bounding values passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        param_names: seq, optional
+            Sequence of names for the fittable parameters of `func`. If not supplied,
+            this will be automatically determined by arguments of `func`. `param_names`
+            should be manually supplied when fitting a function that takes a variable
+            number of parameters.
+        kwargs : dictionary
+            Additional keyword arguments to passed to scipy curve_fit.
+
+        Returns
+        -------
+        curvefit_results : Dataset
+            A single dataset which contains:
+
+            [var]_curvefit_coefficients
+                The coefficients of the best fit.
+            [var]_curvefit_covariance
+                The covariance matrix of the coefficient estimates.
+
+        See also
+        --------
+        Dataset.polyfit
+        scipy.optimize.curve_fit
+        """
+        from scipy.optimize import curve_fit
+
+        if p0 is None:
+            p0 = {}
+        if bounds is None:
+            bounds = {}
+        if kwargs is None:
+            kwargs = {}
+
+        if not reduce_dims:
+            reduce_dims_ = []
+        elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):
+            reduce_dims_ = [reduce_dims]
+        else:
+            reduce_dims_ = list(reduce_dims)
+
+        if (
+            isinstance(coords, str)
+            or isinstance(coords, xr.DataArray)
+            or not isinstance(coords, Iterable)
+        ):
+            coords = [coords]
+        coords_ = [self[coord] if isinstance(coord, str) else coord for coord in coords]
+
+        # Determine whether any coords are dims on self
+        for coord in coords_:
+            reduce_dims_ += [c for c in self.dims if coord.equals(self[c])]
+        reduce_dims_ = list(set(reduce_dims_))
+        preserved_dims = list(set(self.dims) - set(reduce_dims_))
+        if not reduce_dims_:
+            raise ValueError(
+                "No arguments to `coords` were identified as a dimension on the calling "
+                "object, and no dims were supplied to `reduce_dims`. This would result "
+                "in fitting on scalar data."
+            )
+
+        # Broadcast all coords with each other
+        coords_ = xr.broadcast(*coords_)
+        coords_ = [
+            coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
+        ]
+
+        params, func_args = _get_func_args(func, param_names)
+        param_defaults, bounds_defaults = _initialize_curvefit_params(
+            params, p0, bounds, func_args
+        )
+        n_params = len(params)
+        kwargs.setdefault("p0", [param_defaults[p] for p in params])
+        kwargs.setdefault(
+            "bounds",
+            [
+                [bounds_defaults[p][0] for p in params],
+                [bounds_defaults[p][1] for p in params],
+            ],
+        )
+
+        def _wrapper(Y, *coords_, **kwargs):
+            # Wrap curve_fit with raveled coordinates and pointwise NaN handling
+            x = np.vstack([c.ravel() for c in coords_])
+            y = Y.ravel()
+            if skipna:
+                mask = np.all([np.any(~np.isnan(x), axis=0), ~np.isnan(y)], axis=0)
+                x = x[:, mask]
+                y = y[mask]
+                if not len(y):
+                    popt = np.full([n_params], np.nan)
+                    pcov = np.full([n_params, n_params], np.nan)
+                    return popt, pcov
+            x = np.squeeze(x)
+            popt, pcov = curve_fit(func, x, y, **kwargs)
+            return popt, pcov
+
+        result = xr.Dataset()
+        for name, da in self.data_vars.items():
+            if name is xr.core.dataarray._THIS_ARRAY:
+                name = ""
+            else:
+                name = f"{str(name)}_"
+
+            popt, pcov = xr.apply_ufunc(
+                _wrapper,
+                da,
+                *coords_,
+                vectorize=True,
+                dask="parallelized",
+                input_core_dims=[reduce_dims_ for d in range(len(coords_) + 1)],
+                output_core_dims=[["param"], ["cov_i", "cov_j"]],
+                dask_gufunc_kwargs={
+                    "output_sizes": {
+                        "param": n_params,
+                        "cov_i": n_params,
+                        "cov_j": n_params,
+                    },
+                },
+                output_dtypes=(np.float64, np.float64),
+                exclude_dims=set(reduce_dims_),
+                kwargs=kwargs,
+            )
+            result[name + "curvefit_coefficients"] = popt
+            result[name + "curvefit_covariance"] = pcov
+
+        result = result.assign_coords(
+            {"param": params, "cov_i": params, "cov_j": params}
+        )
+        result.attrs = self.attrs.copy()
+
+        return result
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

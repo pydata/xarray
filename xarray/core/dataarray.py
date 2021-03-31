@@ -3666,8 +3666,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
-        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
-        recommended to use ``apply_ufunc``.
+        subset to each block. Each block is loaded into memory. In the more common case where
+        ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
@@ -4417,6 +4417,84 @@ class DataArray(AbstractArray, DataWithCoords):
             **queries_kwargs,
         )
         return ds[self.name]
+
+    def curvefit(
+        self,
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
+        func: Callable[..., Any],
+        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
+        skipna: bool = True,
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        param_names: Sequence[str] = None,
+        kwargs: Dict[str, Any] = None,
+    ):
+        """
+        Curve fitting optimization for arbitrary functions.
+
+        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+
+        Parameters
+        ----------
+        coords : DataArray, str or sequence of DataArray, str
+            Independent coordinate(s) over which to perform the curve fitting. Must share
+            at least one dimension with the calling object. When fitting multi-dimensional
+            functions, supply `coords` as a sequence in the same order as arguments in
+            `func`. To fit along existing dimensions of the calling object, `coords` can
+            also be specified as a str or sequence of strs.
+        func : callable
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length `len(x)`. `params` are the fittable parameters which are optimized
+            by scipy curve_fit. `x` can also be specified as a sequence containing multiple
+            coordinates, e.g. `f((x0, x1), *params)`.
+        reduce_dims : str or sequence of str
+            Additional dimension(s) over which to aggregate while fitting. For example,
+            calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
+            aggregate all lat and lon points and fit the specified function along the
+            time dimension.
+        skipna : bool, optional
+            Whether to skip missing values when fitting. Default is True.
+        p0 : dictionary, optional
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dictionary, optional
+            Optional dictionary of parameter names to bounding values passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        param_names: seq, optional
+            Sequence of names for the fittable parameters of `func`. If not supplied,
+            this will be automatically determined by arguments of `func`. `param_names`
+            should be manually supplied when fitting a function that takes a variable
+            number of parameters.
+        kwargs : dictionary
+            Additional keyword arguments to passed to scipy curve_fit.
+
+        Returns
+        -------
+        curvefit_results : Dataset
+            A single dataset which contains:
+
+            [var]_curvefit_coefficients
+                The coefficients of the best fit.
+            [var]_curvefit_covariance
+                The covariance matrix of the coefficient estimates.
+
+        See also
+        --------
+        DataArray.polyfit
+        scipy.optimize.curve_fit
+        """
+        return self._to_temp_dataset().curvefit(
+            coords,
+            func,
+            reduce_dims=reduce_dims,
+            skipna=skipna,
+            p0=p0,
+            bounds=bounds,
+            param_names=param_names,
+            kwargs=kwargs,
+        )
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
