@@ -48,6 +48,7 @@ def duckarray_module(
     name,
     create,
     *,
+    create_label=None,
     expect_error=None,
     extra_asserts=None,
     global_marks=None,
@@ -60,6 +61,10 @@ def duckarray_module(
 
     if expect_error is None:
         expect_error = default_expect_error
+
+    if create_label is None:
+        create_label = create
+
     values = st.just(None) | st.integers() | st.floats() | st.complex_numbers()
     dtypes = (
         npst.floating_dtypes() | npst.integer_dtypes() | npst.complex_number_dtypes()
@@ -77,17 +82,10 @@ def duckarray_module(
         return npst.arrays(shape=shape, dtype=dtypes)
 
     # TODO:
-    # - find a way to add create args as parametrizations
-    # - add a optional type parameter to the create func spec
-    # - how do we construct the expected values?
-    # - should we check multiple dtypes?
-    # - should we check multiple fill values?
-    # - should we allow duckarray libraries to expect errors (pytest.raises / pytest.warns)?
-    # - low priority: how do we redistribute the apply_marks mechanism?
+    # - add a "create_label" kwarg, which defaults to a thin wrapper around "create"
+    # - formalize "expect_error"
+    # - figure out which tests need a separation of data, dims, and coords
 
-    # convention: method specs for parametrize: one of
-    # - method name
-    # - tuple of method name, args, kwargs
     class TestModule:
         class TestVariable:
             @given(st.data())
@@ -151,7 +149,7 @@ def duckarray_module(
                 shape = (10,)
                 x = data.draw(create(numpy_data(shape), method))
 
-                args, kwargs = convert_labels(data.draw, create, args, kwargs)
+                args, kwargs = convert_labels(data.draw, create_label, args, kwargs)
 
                 var = xr.Variable("x", x)
 
