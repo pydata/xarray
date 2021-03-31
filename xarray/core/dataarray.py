@@ -4420,23 +4420,23 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def drop_duplicates(
         self,
-        dims: Union[Hashable, Sequence[Hashable]] = None,
+        dims: Union[Hashable, Iterable[Hashable]] = None,
         keep: Union[
             str,
             bool,
         ] = "first",
     ):
-        """Returns a new data array with duplicate dimension values removed.
+        """Returns a new DataArray with duplicate dimension values removed.
 
         Parameters
         ----------
         dims : dimension label or sequence of labels, optional
             Only consider certain dimensions for identifying duplicates, by
-            default use all of the columns.
+            default use all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
-            - ``first`` : Drop duplicates except for the first occurrence.
-            - ``last`` : Drop duplicates except for the last occurrence.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.
 
         Returns

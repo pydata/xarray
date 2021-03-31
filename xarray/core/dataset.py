@@ -7076,7 +7076,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def drop_duplicates(
         self,
-        dims: Union[None, Hashable, Sequence[Hashable]] = None,
+        dims: Union[Hashable, Iterable[Hashable]] = None,
         keep: Union[str, bool] = "first",
     ):
         """Returns a new dataset with duplicate dimension values removed.
@@ -7085,11 +7085,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         ----------
         dims : dimension label or sequence of labels, optional
             Only consider certain dimensions for identifying duplicates, by
-            default use all of the columns.
+            default use all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
-            - ``first`` : Drop duplicates except for the first occurrence.
-            - ``last`` : Drop duplicates except for the last occurrence.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.
 
         Returns
@@ -7103,14 +7103,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         else:
             dims = list(dims)
 
-        new = self.copy(deep=False)
+        indexes = {}
         for dim in dims:
             if dim not in self.dims:
-                raise ValueError("%s must be a single dataset dimension" % dim)
-            index = new.get_index(dim).duplicated(keep=keep)
-            new = new.isel(**{dim: ~index})
+                raise ValueError(f"'{dim}' not found in dimensions")
+            indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
 
-        return new
-
+        return self.isel(indexes)
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
