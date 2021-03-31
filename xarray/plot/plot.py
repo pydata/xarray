@@ -652,8 +652,9 @@ def _plot2d(plotfunc):
             subplot_kws = dict()
 
         if "surface" == plotfunc.__name__ and not kwargs.get("_is_facetgrid", False):
-            # Need to create a "3d" Axes instance for surface plots
-            subplot_kws["projection"] = "3d"
+            if ax is None:
+                # Need to create a "3d" Axes instance for surface plots
+                subplot_kws["projection"] = "3d"
 
             # In facet grids, shared axis labels don't make sense for surface plots
             sharex = False
@@ -670,6 +671,19 @@ def _plot2d(plotfunc):
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
         plt = import_matplotlib_pyplot()
+
+        if (
+            "surface" == plotfunc.__name__
+            and not kwargs.get("_is_facetgrid", False)
+            and ax is not None
+        ):
+            import mpl_toolkits
+
+            if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
+                raise ValueError(
+                    "If ax is passed to surface(), it must be created with "
+                    'projection="3d"'
+                )
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":
