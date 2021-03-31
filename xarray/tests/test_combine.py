@@ -1,4 +1,5 @@
 from datetime import datetime
+from distutils.version import LooseVersion
 from itertools import product
 
 import numpy as np
@@ -865,5 +866,22 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
+        error_msg = "Cannot combine along dimension 'time' with mixed types."
+    else:
+        error_msg = r"cannot compare .* \(different calendars\)"
+
+    with raises_regex(TypeError, error_msg):
+        combine_by_coords([da_1, da_2])
+
+
+def test_combine_by_coords_raises_for_differing_types():
+
+    # str and byte cannot be compared
+    da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()
+
+    with raises_regex(
+        TypeError, "Cannot combine along dimension 'time' with mixed types."
+    ):
         combine_by_coords([da_1, da_2])
