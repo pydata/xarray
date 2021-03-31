@@ -23,6 +23,9 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
+  surface plots (:issue:`#2235` :issue:`#5084` :pull:`5101`).
+  By `John Omotani <https://github.com/johnomotani>`_.
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
   of datasets and data arrays by evaluating query expressions against the values of the
   data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
