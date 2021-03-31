@@ -250,7 +250,7 @@ def _dsplot(plotfunc):
         dataset) or ``RdBu_r`` (if the function infers a diverging
         dataset).  When `Seaborn` is installed, ``cmap`` may also be a
         `seaborn` color palette. If ``cmap`` is seaborn color palette,
-         ``levels`` must also be specified.
+        ``levels`` must also be specified.
     colors : color-like or list of color-like, optional
         A single color or a list of colors. The ``levels`` argument
         is required.
