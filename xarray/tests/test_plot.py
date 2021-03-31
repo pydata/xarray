@@ -36,6 +36,7 @@ from . import (
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
+    import mpl_toolkits
 except ImportError:
     pass
 
@@ -132,8 +133,8 @@ class PlotTestCase:
         # Remove all matplotlib figures
         plt.close("all")
 
-    def pass_in_axis(self, plotmethod):
-        fig, axes = plt.subplots(ncols=2)
+    def pass_in_axis(self, plotmethod, subplot_kw={}):
+        fig, axes = plt.subplots(ncols=2, subplot_kw=subplot_kw)
         plotmethod(ax=axes[0])
         assert axes[0].has_data()
 
@@ -1794,6 +1795,43 @@ class TestImshow(Common2dMixin, PlotTestCase):
             assert plt.ylim()[0] < 0
 
 
+class TestSurface(Common2dMixin, PlotTestCase):
+
+    plotfunc = staticmethod(xplt.surface)
+
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        assert isinstance(artist, mpl_toolkits.mplot3d.art3d.Poly3DCollection)
+
+    def test_everything_plotted(self):
+        artist = self.plotmethod()
+        assert artist.get_array().size == self.darray.size
+
+    @pytest.mark.slow
+    def test_2d_coord_names(self):
+        self.plotmethod(x="x2d", y="y2d")
+        # make sure labels came out ok
+        ax = plt.gca()
+        assert "x2d" == ax.get_xlabel()
+        assert "y2d" == ax.get_ylabel()
+        assert self.name == ax.get_zlabel()
+
+    def test_xyincrease_false_changes_axes(self):
+        # Does not make sense for surface plots
+        pass
+
+    def test_xyincrease_true_changes_axes(self):
+        # Does not make sense for surface plots
+        pass
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
+
+    def test_default_cmap(self):
+        # Does not make sense for surface plots with default arguments
+        pass
+
+
 class TestFacetGrid(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -2485,6 +2523,9 @@ class TestCFDatetimePlot(PlotTestCase):
     def test_cfdatetime_contour_plot(self):
         self.darray.plot.contour()
 
+    def test_cfdatetime_surface_plot(self):
+        self.darray.plot.surface()
+
 
 @requires_cftime
 @pytest.mark.skipif(has_nc_time_axis, reason="nc_time_axis is installed")
@@ -2578,7 +2619,7 @@ class TestAxesKwargs:
 
 
 @requires_matplotlib
-@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour"])
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour", "surface"])
 def test_plot_transposed_nondim_coord(plotfunc):
     x = np.linspace(0, 10, 101)
     h = np.linspace(3, 7, 101)
