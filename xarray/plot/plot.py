@@ -633,7 +633,9 @@ def _plot2d(plotfunc):
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
-            add_colorbar = plotfunc.__name__ != "contour"
+            add_colorbar = plotfunc.__name__ != "contour" and not (
+                plotfunc.__name__ == "surface" and cmap is None
+            )
         imshow_rgb = plotfunc.__name__ == "imshow" and darray.ndim == (
             3 + (row is not None) + (col is not None)
         )
@@ -674,9 +676,10 @@ def _plot2d(plotfunc):
         xval = darray[xlab]
         yval = darray[ylab]
 
-        if xval.ndim > 1 or yval.ndim > 1:
+        if xval.ndim > 1 or yval.ndim > 1 or plotfunc.__name__ == "surface":
             # Passing 2d coordinate values, need to ensure they are transposed the same
-            # way as darray
+            # way as darray.
+            # Also surface plots always need 2d coordinates
             xval = xval.broadcast_like(darray)
             yval = yval.broadcast_like(darray)
             dims = darray.dims
@@ -736,6 +739,11 @@ def _plot2d(plotfunc):
 
         if subplot_kws is None:
             subplot_kws = dict()
+
+        if "surface" == plotfunc.__name__:
+            # Need to create a "3d" Axes instance for surface plots
+            subplot_kws["projection"] = "3d"
+
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
@@ -755,6 +763,8 @@ def _plot2d(plotfunc):
             ax.set_xlabel(label_from_attrs(darray[xlab], xlab_extra))
             ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
+            if plotfunc.__name__ == "surface":
+                ax.set_zlabel(label_from_attrs(darray))
 
         if add_colorbar:
             if add_labels and "label" not in cbar_kwargs:
@@ -986,4 +996,15 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])
 
+    return primitive
+
+
+@_plot2d
+def surface(x, y, z, ax, **kwargs):
+    """
+    Surface plot of 2d DataArray
+
+    Wraps :func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`
+    """
+    primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive
