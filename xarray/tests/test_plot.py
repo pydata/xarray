@@ -2653,7 +2653,6 @@ def test_get_axis_cartopy():
     kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
         ax = get_axis(**kwargs)
-        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
         assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
 
 
