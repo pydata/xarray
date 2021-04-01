@@ -2654,6 +2654,7 @@ def test_get_axis_cartopy():
     with figure_context():
         ax = get_axis(**kwargs)
         assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
 
 
 @requires_matplotlib
@@ -2692,4 +2693,3 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
-        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
