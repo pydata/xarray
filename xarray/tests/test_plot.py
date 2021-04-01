@@ -1802,14 +1802,16 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
 # The try/except/else is needed for the matplotlib version check, to handle the case
 # when matplotlib is not installed. It should be possible to remove it once we require
-# matplotlib>=3.2.0
+# matplotlib>=3.2.0.
+# Note, importing as mpl2 to avoid redefining mpl, which is a flake8 error.
 try:
-    import matplotlib as mpl
+    import matplotlib as mpl2
 except ImportError:
     pass
 else:
+
     @pytest.mark.skipif(
-        LooseVersion(mpl.__version__) < "3.2.0",
+        LooseVersion(mpl2.__version__) < "3.2.0",
         reason="surface plot requires newer matplotlib",
     )
     class TestSurface(Common2dMixin, PlotTestCase):
