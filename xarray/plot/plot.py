@@ -652,6 +652,16 @@ def _plot2d(plotfunc):
             subplot_kws = dict()
 
         if "surface" == plotfunc.__name__ and not kwargs.get("_is_facetgrid", False):
+            # Check we have new enough version of matplotlib
+            from distutils.version import LooseVersion
+
+            import matplotlib as mpl
+
+            if LooseVersion(mpl.__version__) < "3.2.0":
+                raise ValueError("surface plot requires at least matplotlib-3.2.0")
+            del LooseVersion
+            del mpl
+
             if ax is None:
                 # Need to create a "3d" Axes instance for surface plots
                 subplot_kws["projection"] = "3d"

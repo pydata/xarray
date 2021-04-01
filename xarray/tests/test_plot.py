@@ -2,6 +2,7 @@ import contextlib
 import inspect
 from copy import copy
 from datetime import datetime
+from distutils.version import LooseVersion
 from typing import Any, Dict
 
 import numpy as np
@@ -1799,6 +1800,10 @@ class TestImshow(Common2dMixin, PlotTestCase):
             assert plt.ylim()[0] < 0
 
 
+@pytest.mark.skipif(
+    LooseVersion(mpl.__version__) < "3.2.0",
+    reason="surface plot requires newer matplotlib",
+)
 class TestSurface(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(xplt.surface)
@@ -1870,6 +1875,34 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert ax.has_data()
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
+
+    @pytest.mark.skipif(
+        LooseVersion(mpl.__version__) < "3.3.0",
+        reason="this feature of surface plot requires newer matplotlib",
+    )
+    def test_viridis_cmap(self):
+        return super().test_viridis_cmap()
+
+    @pytest.mark.skipif(
+        LooseVersion(mpl.__version__) < "3.3.0",
+        reason="this feature of surface plot requires newer matplotlib",
+    )
+    def test_can_change_default_cmap(self):
+        return super().test_can_change_default_cmap()
+
+    @pytest.mark.skipif(
+        LooseVersion(mpl.__version__) < "3.3.0",
+        reason="this feature of surface plot requires newer matplotlib",
+    )
+    def test_colorbar_default_label(self):
+        return super().test_colorbar_default_label()
+
+    @pytest.mark.skipif(
+        LooseVersion(mpl.__version__) < "3.3.0",
+        reason="this feature of surface plot requires newer matplotlib",
+    )
+    def test_facetgrid_map_only_appends_mappables(self):
+        return super().test_facetgrid_map_only_appends_mappables()
 
 
 class TestFacetGrid(PlotTestCase):
@@ -2657,6 +2690,10 @@ class TestAxesKwargs:
 
 @requires_matplotlib
 @pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour", "surface"])
+@pytest.mark.skipif(
+    "plotfunc" == "surface" and LooseVersion(mpl.__version__) <= "3.2.0",
+    reason="surface plot requires newer matplotlib",
+)
 def test_plot_transposed_nondim_coord(plotfunc):
     x = np.linspace(0, 10, 101)
     h = np.linspace(3, 7, 101)
