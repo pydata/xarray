@@ -111,7 +111,9 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name: str, fillna, rolling_agg_func: Callable = None) -> Callable:  # type: ignore
+    def _reduce_method(  # type: ignore[misc]
+        name: str, fillna, rolling_agg_func: Callable = None
+    ) -> Callable:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
         a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
         if rolling_agg_func:

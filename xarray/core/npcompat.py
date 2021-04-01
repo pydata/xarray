@@ -81,13 +81,13 @@ try:
     from numpy.typing import DTypeLike
 except ImportError:
     # fall back for numpy < 1.20
-    DTypeLike = Union[np.dtype, str]  # type: ignore
+    DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
 
 if LooseVersion(np.__version__) >= "1.20.0":
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
-    from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+    from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]
     from numpy.lib.stride_tricks import as_strided
 
     # copied from numpy.lib.stride_tricks

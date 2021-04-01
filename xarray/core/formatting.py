@@ -189,7 +189,7 @@ def format_array_flat(array, max_width: int):
         (max_possibly_relevant < array.size) or (cum_len > max_width).any()
     ):
         padding = " ... "
-        max_len = max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)  # type: ignore
+        max_len = max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)  # type: ignore[type-var]
         count = min(array.size, max_len)
     else:
         count = array.size

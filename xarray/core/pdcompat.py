@@ -46,7 +46,7 @@ if LooseVersion(pd.__version__) < "0.25.0":
     Panel = pd.Panel
 else:
 
-    class Panel:  # type: ignore
+    class Panel:  # type: ignore[no-redef]
         pass
 
 
