@@ -1844,6 +1844,11 @@ class TestSurface(Common2dMixin, PlotTestCase):
         # Does not make sense for surface plots with default arguments
         pass
 
+    def test_seaborn_palette_as_cmap(self):
+        # seaborn does not work with mpl_toolkits.mplot3d
+        with pytest.raises(ValueError):
+            super().test_seaborn_palette_as_cmap()
+
     # Need to modify this test for surface(), because all subplots should have labels,
     # not just left and bottom
     @pytest.mark.filterwarnings("ignore:tight_layout cannot")
