@@ -1800,110 +1800,117 @@ class TestImshow(Common2dMixin, PlotTestCase):
             assert plt.ylim()[0] < 0
 
 
-@requires_matplotlib
-@pytest.mark.skipif(
-    LooseVersion(mpl.__version__) < "3.2.0",
-    reason="surface plot requires newer matplotlib",
-)
-class TestSurface(Common2dMixin, PlotTestCase):
-
-    plotfunc = staticmethod(xplt.surface)
-    subplot_kws = {"projection": "3d"}
-
-    def test_primitive_artist_returned(self):
-        artist = self.plotmethod()
-        assert isinstance(artist, mpl_toolkits.mplot3d.art3d.Poly3DCollection)
-
-    @pytest.mark.slow
-    def test_2d_coord_names(self):
-        self.plotmethod(x="x2d", y="y2d")
-        # make sure labels came out ok
-        ax = plt.gca()
-        assert "x2d" == ax.get_xlabel()
-        assert "y2d" == ax.get_ylabel()
-        assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
-
-    def test_xyincrease_false_changes_axes(self):
-        # Does not make sense for surface plots
-        pass
-
-    def test_xyincrease_true_changes_axes(self):
-        # Does not make sense for surface plots
-        pass
-
-    def test_can_pass_in_axis(self):
-        self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
-
-    def test_default_cmap(self):
-        # Does not make sense for surface plots with default arguments
-        pass
-
-    def test_diverging_color_limits(self):
-        # Does not make sense for surface plots with default arguments
-        pass
-
-    def test_colorbar_kwargs(self):
-        # Does not make sense for surface plots with default arguments
-        pass
-
-    def test_cmap_and_color_both(self):
-        # Does not make sense for surface plots with default arguments
-        pass
-
-    def test_seaborn_palette_as_cmap(self):
-        # seaborn does not work with mpl_toolkits.mplot3d
-        with pytest.raises(ValueError):
-            super().test_seaborn_palette_as_cmap()
-
-    # Need to modify this test for surface(), because all subplots should have labels,
-    # not just left and bottom
-    @pytest.mark.filterwarnings("ignore:tight_layout cannot")
-    def test_convenient_facetgrid(self):
-        a = easy_array((10, 15, 4))
-        d = DataArray(a, dims=["y", "x", "z"])
-        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
-
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
-            assert ax.has_data()
-            assert "y" == ax.get_ylabel()
-            assert "x" == ax.get_xlabel()
-
-        # Infering labels
-        g = self.plotfunc(d, col="z", col_wrap=2)
-        assert_array_equal(g.axes.shape, [2, 2])
-        for (y, x), ax in np.ndenumerate(g.axes):
-            assert ax.has_data()
-            assert "y" == ax.get_ylabel()
-            assert "x" == ax.get_xlabel()
-
+# The try/except/else is needed for the matplotlib version check, to handle the case
+# when matplotlib is not installed. It should be possible to remove it once we require
+# matplotlib>=3.2.0
+try:
+    import matplotlib as mpl
+except ImportError:
+    pass
+else:
     @pytest.mark.skipif(
-        LooseVersion(mpl.__version__) < "3.3.0",
-        reason="this feature of surface plot requires newer matplotlib",
+        LooseVersion(mpl.__version__) < "3.2.0",
+        reason="surface plot requires newer matplotlib",
     )
-    def test_viridis_cmap(self):
-        return super().test_viridis_cmap()
+    class TestSurface(Common2dMixin, PlotTestCase):
 
-    @pytest.mark.skipif(
-        LooseVersion(mpl.__version__) < "3.3.0",
-        reason="this feature of surface plot requires newer matplotlib",
-    )
-    def test_can_change_default_cmap(self):
-        return super().test_can_change_default_cmap()
+        plotfunc = staticmethod(xplt.surface)
+        subplot_kws = {"projection": "3d"}
 
-    @pytest.mark.skipif(
-        LooseVersion(mpl.__version__) < "3.3.0",
-        reason="this feature of surface plot requires newer matplotlib",
-    )
-    def test_colorbar_default_label(self):
-        return super().test_colorbar_default_label()
+        def test_primitive_artist_returned(self):
+            artist = self.plotmethod()
+            assert isinstance(artist, mpl_toolkits.mplot3d.art3d.Poly3DCollection)
 
-    @pytest.mark.skipif(
-        LooseVersion(mpl.__version__) < "3.3.0",
-        reason="this feature of surface plot requires newer matplotlib",
-    )
-    def test_facetgrid_map_only_appends_mappables(self):
-        return super().test_facetgrid_map_only_appends_mappables()
+        @pytest.mark.slow
+        def test_2d_coord_names(self):
+            self.plotmethod(x="x2d", y="y2d")
+            # make sure labels came out ok
+            ax = plt.gca()
+            assert "x2d" == ax.get_xlabel()
+            assert "y2d" == ax.get_ylabel()
+            assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
+
+        def test_xyincrease_false_changes_axes(self):
+            # Does not make sense for surface plots
+            pass
+
+        def test_xyincrease_true_changes_axes(self):
+            # Does not make sense for surface plots
+            pass
+
+        def test_can_pass_in_axis(self):
+            self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
+
+        def test_default_cmap(self):
+            # Does not make sense for surface plots with default arguments
+            pass
+
+        def test_diverging_color_limits(self):
+            # Does not make sense for surface plots with default arguments
+            pass
+
+        def test_colorbar_kwargs(self):
+            # Does not make sense for surface plots with default arguments
+            pass
+
+        def test_cmap_and_color_both(self):
+            # Does not make sense for surface plots with default arguments
+            pass
+
+        def test_seaborn_palette_as_cmap(self):
+            # seaborn does not work with mpl_toolkits.mplot3d
+            with pytest.raises(ValueError):
+                super().test_seaborn_palette_as_cmap()
+
+        # Need to modify this test for surface(), because all subplots should have labels,
+        # not just left and bottom
+        @pytest.mark.filterwarnings("ignore:tight_layout cannot")
+        def test_convenient_facetgrid(self):
+            a = easy_array((10, 15, 4))
+            d = DataArray(a, dims=["y", "x", "z"])
+            g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+
+            assert_array_equal(g.axes.shape, [2, 2])
+            for (y, x), ax in np.ndenumerate(g.axes):
+                assert ax.has_data()
+                assert "y" == ax.get_ylabel()
+                assert "x" == ax.get_xlabel()
+
+            # Infering labels
+            g = self.plotfunc(d, col="z", col_wrap=2)
+            assert_array_equal(g.axes.shape, [2, 2])
+            for (y, x), ax in np.ndenumerate(g.axes):
+                assert ax.has_data()
+                assert "y" == ax.get_ylabel()
+                assert "x" == ax.get_xlabel()
+
+        @pytest.mark.skipif(
+            LooseVersion(mpl.__version__) < "3.3.0",
+            reason="this feature of surface plot requires newer matplotlib",
+        )
+        def test_viridis_cmap(self):
+            return super().test_viridis_cmap()
+
+        @pytest.mark.skipif(
+            LooseVersion(mpl.__version__) < "3.3.0",
+            reason="this feature of surface plot requires newer matplotlib",
+        )
+        def test_can_change_default_cmap(self):
+            return super().test_can_change_default_cmap()
+
+        @pytest.mark.skipif(
+            LooseVersion(mpl.__version__) < "3.3.0",
+            reason="this feature of surface plot requires newer matplotlib",
+        )
+        def test_colorbar_default_label(self):
+            return super().test_colorbar_default_label()
+
+        @pytest.mark.skipif(
+            LooseVersion(mpl.__version__) < "3.3.0",
+            reason="this feature of surface plot requires newer matplotlib",
+        )
+        def test_facetgrid_map_only_appends_mappables(self):
+            return super().test_facetgrid_map_only_appends_mappables()
 
 
 class TestFacetGrid(PlotTestCase):
