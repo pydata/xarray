@@ -1080,6 +1080,9 @@ class Common2dMixin:
     Should have the same name as the method.
     """
 
+    # Needs to be overridden in TestSurface for facet grid plots
+    subplot_kws = {}
+
     @pytest.fixture(autouse=True)
     def setUp(self):
         da = DataArray(
@@ -1395,7 +1398,7 @@ class Common2dMixin:
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))
         d = DataArray(a, dims=["y", "x", "z"])
-        g = xplt.FacetGrid(d, col="z")
+        g = xplt.FacetGrid(d, col="z", subplot_kws=self.subplot_kws)
         g.map_dataarray(self.plotfunc, "x", "y")
         for ax in g.axes.flat:
             assert ax.has_data()
@@ -1798,14 +1801,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
 class TestSurface(Common2dMixin, PlotTestCase):
 
     plotfunc = staticmethod(xplt.surface)
+    subplot_kws = {"projection": "3d"}
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
         assert isinstance(artist, mpl_toolkits.mplot3d.art3d.Poly3DCollection)
-
-    def test_everything_plotted(self):
-        artist = self.plotmethod()
-        assert artist.get_array().size == self.darray.size
 
     @pytest.mark.slow
     def test_2d_coord_names(self):
@@ -1814,7 +1814,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
         ax = plt.gca()
         assert "x2d" == ax.get_xlabel()
         assert "y2d" == ax.get_ylabel()
-        assert self.name == ax.get_zlabel()
+        assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
 
     def test_xyincrease_false_changes_axes(self):
         # Does not make sense for surface plots
@@ -1830,6 +1830,40 @@ class TestSurface(Common2dMixin, PlotTestCase):
     def test_default_cmap(self):
         # Does not make sense for surface plots with default arguments
         pass
+
+    def test_diverging_color_limits(self):
+        # Does not make sense for surface plots with default arguments
+        pass
+
+    def test_colorbar_kwargs(self):
+        # Does not make sense for surface plots with default arguments
+        pass
+
+    def test_cmap_and_color_both(self):
+        # Does not make sense for surface plots with default arguments
+        pass
+
+    # Need to modify this test for surface(), because all subplots should have labels,
+    # not just left and bottom
+    @pytest.mark.filterwarnings("ignore:tight_layout cannot")
+    def test_convenient_facetgrid(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+
+        assert_array_equal(g.axes.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axes):
+            assert ax.has_data()
+            assert "y" == ax.get_ylabel()
+            assert "x" == ax.get_xlabel()
+
+        # Infering labels
+        g = self.plotfunc(d, col="z", col_wrap=2)
+        assert_array_equal(g.axes.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axes):
+            assert ax.has_data()
+            assert "y" == ax.get_ylabel()
+            assert "x" == ax.get_xlabel()
 
 
 class TestFacetGrid(PlotTestCase):
