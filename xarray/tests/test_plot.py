@@ -2699,11 +2699,7 @@ class TestAxesKwargs:
 
 
 @requires_matplotlib
-@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour", "surface"])
-@pytest.mark.skipif(
-    "plotfunc" == "surface" and LooseVersion(mpl.__version__) <= "3.2.0",
-    reason="surface plot requires newer matplotlib",
-)
+@pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour"])
 def test_plot_transposed_nondim_coord(plotfunc):
     x = np.linspace(0, 10, 101)
     h = np.linspace(3, 7, 101)
