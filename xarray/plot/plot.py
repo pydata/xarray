@@ -193,6 +193,8 @@ def _infer_line_data(darray, x, y, hue):
             raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
+            if hue is not None:
+                _assert_valid_xy(darray, hue, "hue")
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
             xplt = darray[xname]
             if xplt.ndim > 1:
@@ -840,7 +842,7 @@ class _PlotMethods:
 
     # we can't use functools.wraps here since that also modifies the name / qualname
     __doc__ = __call__.__doc__ = plot.__doc__
-    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
     __call__.__annotations__ = plot.__annotations__
 
     @functools.wraps(hist)
