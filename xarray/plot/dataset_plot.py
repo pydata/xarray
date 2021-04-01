@@ -198,15 +198,19 @@ def _dsplot(plotfunc):
     x, y : str
         Variable names for x, y axis.
     u, v : str, optional
-        Variable names for quiver or streamplot plots
+        Variable names for quiver or streamplot plots only
     hue: str, optional
-        Variable by which to color scattered points
+        Variable by which to color scattered points or arrows
     hue_style: str, optional
         Can be either 'discrete' (legend) or 'continuous' (color bar).
     markersize: str, optional
         scatter only. Variable by which to vary size of scattered points.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
+    scale: scalar, optional
+        Quiver only. Number of data units per arrow length unit.
+        Use this to control the length of the arrows: larger values lead to
+        smaller arrows
     add_guide: bool, optional
         Add a guide that depends on hue_style
             - for "discrete", build a legend.
@@ -245,12 +249,11 @@ def _dsplot(plotfunc):
         be either ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging
         dataset).  When `Seaborn` is installed, ``cmap`` may also be a
-        `seaborn` color palette. If ``cmap`` is seaborn color palette
-        and the plot type is not ``contour`` or ``contourf``, ``levels``
-        must also be specified.
+        `seaborn` color palette. If ``cmap`` is seaborn color palette,
+        ``levels`` must also be specified.
     colors : color-like or list of color-like, optional
-        A single color or a list of colors. If the plot type is not ``contour``
-        or ``contourf``, the ``levels`` argument is required.
+        A single color or a list of colors. The ``levels`` argument
+        is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
