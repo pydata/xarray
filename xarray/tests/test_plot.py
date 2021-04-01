@@ -1800,6 +1800,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
             assert plt.ylim()[0] < 0
 
 
+@requires_matplotlib
 @pytest.mark.skipif(
     LooseVersion(mpl.__version__) < "3.2.0",
     reason="surface plot requires newer matplotlib",
