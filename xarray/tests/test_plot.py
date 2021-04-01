@@ -37,7 +37,7 @@ from . import (
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
-    import mpl_toolkits
+    import mpl_toolkits  # type: ignore
 except ImportError:
     pass
 

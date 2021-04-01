@@ -677,7 +677,7 @@ def _plot2d(plotfunc):
             and not kwargs.get("_is_facetgrid", False)
             and ax is not None
         ):
-            import mpl_toolkits
+            import mpl_toolkits  # type: ignore
 
             if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
                 raise ValueError(
