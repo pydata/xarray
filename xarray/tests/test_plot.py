@@ -2563,9 +2563,6 @@ class TestCFDatetimePlot(PlotTestCase):
     def test_cfdatetime_contour_plot(self):
         self.darray.plot.contour()
 
-    def test_cfdatetime_surface_plot(self):
-        self.darray.plot.surface()
-
 
 @requires_cftime
 @pytest.mark.skipif(has_nc_time_axis, reason="nc_time_axis is installed")
