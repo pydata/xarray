@@ -25,13 +25,8 @@ import pandas as pd
 import xarray as xr  # only for Dataset and DataArray
 
 from . import arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils
-from .indexing import (
-    BasicIndexer,
-    OuterIndexer,
-    PandasIndexAdapter,
-    VectorizedIndexer,
-    as_indexable,
-)
+from .indexes import PandasIndexAdapter
+from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,

@@ -1,12 +1,165 @@
 import collections.abc
-from typing import Any, Dict, Hashable, Iterable, Mapping, Optional, Tuple, Union
+from contextlib import suppress
+from datetime import timedelta
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 
-from . import formatting
+from . import formatting, utils
+from .indexing import ExplicitlyIndexedNDArrayMixin, NumpyIndexingAdapter
+from .npcompat import DTypeLike
 from .utils import is_scalar
-from .variable import Variable
+
+if TYPE_CHECKING:
+    from .variable import Variable
+
+
+class IndexAdapter:
+    """Base class inherited by all xarray-compatible indexes."""
+
+    __slots__ = "coord_names"
+
+    def __init__(self, coord_names: Union[Hashable, Iterable[Hashable]]):
+        if isinstance(coord_names, Iterable) and not isinstance(coord_names, str):
+            self.coord_names = tuple(coord_names)
+        else:
+            self.coord_names = tuple([coord_names])
+
+    @classmethod
+    def from_variables(
+        cls, variables: Dict[Hashable, "Variable"], **kwargs
+    ):  # pragma: no cover
+        raise NotImplementedError()
+
+
+class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
+
+    __slots__ = ("array", "_dtype")
+
+    def __init__(
+        self, array: Any, dtype: DTypeLike = None, coord_name: Optional[Hashable] = None
+    ):
+        self.array = utils.safe_cast_to_index(array)
+
+        if dtype is None:
+            if isinstance(array, pd.PeriodIndex):
+                dtype_ = np.dtype("O")
+            elif hasattr(array, "categories"):
+                # category isn't a real numpy dtype
+                dtype_ = array.categories.dtype
+            elif not utils.is_valid_numpy_dtype(array.dtype):
+                dtype_ = np.dtype("O")
+            else:
+                dtype_ = array.dtype
+        else:
+            dtype_ = np.dtype(dtype)
+        self._dtype = dtype_
+
+        if coord_name is None:
+            coord_name = tuple()
+        super().__init__(coord_name)
+
+    @classmethod
+    def from_variables(cls, variables: Dict[Hashable, "Variable"], **kwargs):
+        if len(variables) > 1:
+            raise ValueError("Cannot set a pandas.Index from more than one variable")
+
+        varname, var = list(variables.items())[0]
+        return cls(var.data, dtype=var.dtype, coord_name=varname)
+
+    @property
+    def dtype(self) -> np.dtype:
+        return self._dtype
+
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        if dtype is None:
+            dtype = self.dtype
+        array = self.array
+        if isinstance(array, pd.PeriodIndex):
+            with suppress(AttributeError):
+                # this might not be public API
+                array = array.astype("object")
+        return np.asarray(array.values, dtype=dtype)
+
+    @property
+    def shape(self) -> Tuple[int]:
+        return (len(self.array),)
+
+    def __getitem__(
+        self, indexer
+    ) -> Union[
+        "PandasIndexAdapter",
+        NumpyIndexingAdapter,
+        np.ndarray,
+        np.datetime64,
+        np.timedelta64,
+    ]:
+        key = indexer.tuple
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+
+        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
+            return NumpyIndexingAdapter(self.array.values)[indexer]
+
+        result = self.array[key]
+
+        if isinstance(result, pd.Index):
+            result = PandasIndexAdapter(result, dtype=self.dtype)
+        else:
+            # result is a scalar
+            if result is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                result = np.datetime64("NaT", "ns")
+            elif isinstance(result, timedelta):
+                result = np.timedelta64(getattr(result, "value", result), "ns")
+            elif isinstance(result, pd.Timestamp):
+                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+                result = np.asarray(result.to_datetime64())
+            elif self.dtype != object:
+                result = np.asarray(result, dtype=self.dtype)
+
+            # as for numpy.ndarray indexing, we always want the result to be
+            # a NumPy array.
+            result = utils.to_0d_array(result)
+
+        return result
+
+    def transpose(self, order) -> pd.Index:
+        return self.array  # self.array should be always one-dimensional
+
+    def __repr__(self) -> str:
+        return "{}(array={!r}, dtype={!r})".format(
+            type(self).__name__, self.array, self.dtype
+        )
+
+    def copy(self, deep: bool = True) -> "PandasIndexAdapter":
+        # Not the same as just writing `self.array.copy(deep=deep)`, as
+        # shallow copies of the underlying numpy.ndarrays become deep ones
+        # upon pickling
+        # >>> len(pickle.dumps((self.array, self.array)))
+        # 4000281
+        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
+        # 8000341
+        array = self.array.copy(deep=True) if deep else self.array
+        return PandasIndexAdapter(array, self._dtype)
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
@@ -68,7 +221,7 @@ class Indexes(collections.abc.Mapping):
 
 
 def default_indexes(
-    coords: Mapping[Any, Variable], dims: Iterable
+    coords: Mapping[Any, "Variable"], dims: Iterable
 ) -> Dict[Hashable, pd.Index]:
     """Default indexes for a Dataset/DataArray.
 
@@ -89,11 +242,13 @@ def default_indexes(
 
 def isel_variable_and_index(
     name: Hashable,
-    variable: Variable,
+    variable: "Variable",
     index: pd.Index,
-    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, Variable]],
-) -> Tuple[Variable, Optional[pd.Index]]:
+    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
+) -> Tuple["Variable", Optional[pd.Index]]:
     """Index a Variable and pandas.Index together."""
+    from .variable import Variable
+
     if not indexers:
         # nothing to index
         return variable.copy(deep=False), index

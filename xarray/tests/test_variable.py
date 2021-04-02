@@ -11,6 +11,7 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.indexes import PandasIndexAdapter
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -19,7 +20,6 @@ from xarray.core.indexing import (
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
-    PandasIndexAdapter,
     VectorizedIndexer,
 )
 from xarray.core.pycompat import dask_array_type
