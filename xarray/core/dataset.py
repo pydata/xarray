@@ -64,7 +64,9 @@ from .coordinates import (
 )
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
+    IndexAdapter,
     Indexes,
+    PandasIndexAdapter,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
@@ -638,7 +640,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _indexes: Optional[Dict[Hashable, IndexAdapter]]
     _variables: Dict[Hashable, Variable]
 
     __slots__ = (
@@ -1033,7 +1035,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Any, pd.Index], None, Default] = _default,
+        indexes: Union[Dict[Any, IndexAdapter], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1082,7 +1084,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Hashable, pd.Index], None, Default] = _default,
+        indexes: Union[Dict[Hashable, IndexAdapter], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -1110,7 +1112,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             variables, coord_names, dims, attrs, indexes=None, inplace=inplace
         )
 
-    def _overwrite_indexes(self, indexes: Mapping[Any, pd.Index]) -> "Dataset":
+    def _overwrite_indexes(self, indexes: Mapping[Any, IndexAdapter]) -> "Dataset":
         if not indexes:
             return self
 
@@ -1124,8 +1126,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # switch from dimension to level names, if necessary
         dim_names: Dict[Hashable, str] = {}
         for dim, idx in indexes.items():
-            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
-                dim_names[dim] = idx.name
+            pd_idx = idx.array
+            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
+                dim_names[dim] = pd_idx.name
         if dim_names:
             obj = obj.rename(dim_names)
         return obj
@@ -1261,7 +1264,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coordinate name.
         """
         level_coords: Dict[str, Hashable] = {}
-        for name, index in self.indexes.items():
+        for name, index_adapter in self.indexes.items():
+            index = index_adapter
             if isinstance(index, pd.MultiIndex):
                 level_names = index.names
                 (dim,) = self.variables[name].dims
@@ -2111,7 +2115,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     continue
                 if indexes and var_name in indexes:
                     if var_value.ndim == 1:
-                        indexes[var_name] = var_value.to_index()
+                        indexes[var_name] = PandasIndexAdapter(var_value.data)
                     else:
                         del indexes[var_name]
             variables[var_name] = var_value
@@ -2139,7 +2143,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexers_list = list(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, pd.Index] = {}
+        indexes: Dict[Hashable, IndexAdapter] = {}
 
         for name, var in self.variables.items():
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
@@ -3009,15 +3013,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             return None
         indexes = {}
         for k, v in self.indexes.items():
+            index = v.array
             new_name = name_dict.get(k, k)
             if new_name not in dims_set:
                 continue
-            if isinstance(v, pd.MultiIndex):
-                new_names = [name_dict.get(k, k) for k in v.names]
-                index = v.rename(names=new_names)
+            if isinstance(index, pd.MultiIndex):
+                new_names = [name_dict.get(k, k) for k in index.names]
+                new_index = index.rename(names=new_names)
             else:
-                index = v.rename(new_name)
-            indexes[new_name] = index
+                new_index = index.rename(new_name)
+            indexes[new_name] = PandasIndexAdapter(new_index)
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3234,7 +3239,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
         variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, pd.Index] = {}
+        indexes: Dict[Hashable, IndexAdapter] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
@@ -3246,7 +3251,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = new_index
+                    indexes[k] = PandasIndexAdapter(new_index)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3517,7 +3522,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = new_index
+            indexes[dim] = PandasIndexAdapter(new_index)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3545,7 +3550,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.indexes.items() if k not in dims}
-        indexes[new_dim] = idx
+        indexes[new_dim] = PandasIndexAdapter(idx)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -3732,7 +3737,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         for name, lev in zip(index.names, index.levels):
             variables[name] = IndexVariable(name, lev)
-            indexes[name] = lev
+            indexes[name] = PandasIndexAdapter(lev)
 
         coord_names = set(self._coord_names) - {dim} | set(index.names)
 
@@ -3771,7 +3776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         for name, lev in zip(new_dim_names, index.levels):
             variables[name] = IndexVariable(name, lev)
-            indexes[name] = lev
+            indexes[name] = PandasIndexAdapter(lev)
 
         coord_names = set(self._coord_names) - {dim} | set(new_dim_names)
 

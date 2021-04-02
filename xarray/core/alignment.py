@@ -17,7 +17,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes, utils
+from xarray.core.indexes import PandasIndexAdapter
+
+from . import dtypes
+from .indexes import IndexAdapter
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str
 from .variable import IndexVariable, Variable
@@ -30,11 +33,11 @@ if TYPE_CHECKING:
     DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
 
-def _get_joiner(join):
+def _get_joiner(join, index_cls):
     if join == "outer":
-        return functools.partial(functools.reduce, pd.Index.union)
+        return functools.partial(functools.reduce, index_cls.union)
     elif join == "inner":
-        return functools.partial(functools.reduce, pd.Index.intersection)
+        return functools.partial(functools.reduce, index_cls.intersection)
     elif join == "left":
         return operator.itemgetter(0)
     elif join == "right":
@@ -298,16 +301,15 @@ def align(
     # - It ensures it's possible to do operations that don't require alignment
     #   on indexes with duplicate values (which cannot be reindexed with
     #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
-    joiner = _get_joiner(join)
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
-            index = utils.safe_cast_to_index(indexes[dim])
+            index = PandasIndexAdapter(indexes[dim])
             if (
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = indexes[dim]
+                joined_indexes[dim] = index
         else:
             if (
                 any(
@@ -318,6 +320,7 @@ def align(
             ):
                 if join == "exact":
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
+                joiner = _get_joiner(join, type(matching_indexes[0]))
                 index = joiner(matching_indexes)
                 # make sure str coords are not cast to object
                 index = maybe_coerce_to_str(index, all_coords[dim])
@@ -487,14 +490,14 @@ def reindex_like_indexers(
 def reindex_variables(
     variables: Mapping[Any, Variable],
     sizes: Mapping[Any, int],
-    indexes: Mapping[Any, pd.Index],
+    indexes: Mapping[Any, IndexAdapter],
     indexers: Mapping,
     method: Optional[str] = None,
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
     sparse: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, IndexAdapter]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -559,10 +562,11 @@ def reindex_variables(
                 "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
-        target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
+        target = new_indexes[dim] = PandasIndexAdapter(np.asarray(indexers[dim]))
 
         if dim in indexes:
-            index = indexes[dim]
+            # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
+            index = indexes[dim].array
 
             if not index.is_unique:
                 raise ValueError(

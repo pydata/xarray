@@ -551,6 +551,11 @@ class Variable(
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
+    def _to_index_adpater(self):
+        # temporary function used internally as a replacement of to_index()
+        # returns an IndexAdpater instance instead of a pd.Index instance
+        return PandasIndexAdapter(self.to_index())
+
     def to_index(self):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()

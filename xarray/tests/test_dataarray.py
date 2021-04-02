@@ -1630,7 +1630,7 @@ class TestDataArray:
         assert_identical(expected, actual)
         for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.indexes[dim_name].array, actual.indexes[dim_name].array
             )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
@@ -1660,7 +1660,7 @@ class TestDataArray:
         assert_identical(expected, actual)
         for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.indexes[dim_name].array, actual.indexes[dim_name].array
             )
 
     def test_expand_dims_error(self):

@@ -386,7 +386,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.indexes[key]
+            return self.indexes[key].array
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
@@ -1140,7 +1140,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            if isinstance(self.indexes[dim_name], CFTimeIndex):
+            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an IndexAdpater subclass
+            if isinstance(self.indexes[dim_name].array, CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)

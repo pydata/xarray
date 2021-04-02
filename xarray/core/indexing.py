@@ -108,6 +108,8 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     dimension. If `index` is a pandas.MultiIndex and depending on `label`,
     return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
+    from .indexes import PandasIndexAdapter
+
     new_index = None
 
     if isinstance(label, slice):
@@ -197,6 +199,10 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             indexer = get_indexer_nd(index, label, method, tolerance)
             if np.any(indexer < 0):
                 raise KeyError(f"not all values found in index {index_name!r}")
+
+    if new_index is not None:
+        new_index = PandasIndexAdapter(new_index)
+
     return indexer, new_index
 
 
@@ -251,7 +257,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     dim_indexers = get_dim_indexers(data_obj, indexers)
     for dim, label in dim_indexers.items():
         try:
-            index = data_obj.indexes[dim]
+            index = data_obj.indexes[dim].array
         except KeyError:
             # no index for this dimension: reuse the provided labels
             if method is not None or tolerance is not None:

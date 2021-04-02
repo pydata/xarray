@@ -36,10 +36,24 @@ class IndexAdapter:
         else:
             self.coord_names = tuple([coord_names])
 
+        # TODO (benbovy - flexible indexes): remove
+        # temporarly avoid mypy errors: the `array` attribute is used in many places
+        # to access the underlying pandas.Index objects from xarray_obj.indexes
+        self.array = pd.Index([])
+
     @classmethod
     def from_variables(
         cls, variables: Dict[Hashable, "Variable"], **kwargs
     ):  # pragma: no cover
+        raise NotImplementedError()
+
+    def equals(self, other):  # pragma: no cover
+        raise NotImplementedError()
+
+    def union(self, other):  # pragma: no cover
+        raise NotImplementedError()
+
+    def intersection(self, other):  # pragma: no cover
         raise NotImplementedError()
 
 
@@ -51,6 +65,10 @@ class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
     def __init__(
         self, array: Any, dtype: DTypeLike = None, coord_name: Optional[Hashable] = None
     ):
+        if coord_name is None:
+            coord_name = tuple()
+        super().__init__(coord_name)
+
         self.array = utils.safe_cast_to_index(array)
 
         if dtype is None:
@@ -66,10 +84,6 @@ class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
         else:
             dtype_ = np.dtype(dtype)
         self._dtype = dtype_
-
-        if coord_name is None:
-            coord_name = tuple()
-        super().__init__(coord_name)
 
     @classmethod
     def from_variables(cls, variables: Dict[Hashable, "Variable"], **kwargs):
@@ -96,6 +110,24 @@ class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
     @property
     def shape(self) -> Tuple[int]:
         return (len(self.array),)
+
+    def equals(self, other):
+        if isinstance(other, pd.Index):
+            return self.array.equals(other)
+        else:
+            return self.array.equals(other.array)
+
+    def union(self, other):
+        if isinstance(other, pd.Index):
+            return self.array.union(other)
+        else:
+            return self.array.union(other.array)
+
+    def intersection(self, other):
+        if isinstance(other, pd.Index):
+            return self.array.intersection(other)
+        else:
+            return self.array.intersection(other.array)
 
     def __getitem__(
         self, indexer
@@ -222,7 +254,7 @@ class Indexes(collections.abc.Mapping):
 
 def default_indexes(
     coords: Mapping[Any, "Variable"], dims: Iterable
-) -> Dict[Hashable, pd.Index]:
+) -> Dict[Hashable, IndexAdapter]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -237,15 +269,15 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return {key: coords[key].to_index() for key in dims if key in coords}
+    return {key: coords[key]._to_index_adpater() for key in dims if key in coords}
 
 
 def isel_variable_and_index(
     name: Hashable,
     variable: "Variable",
-    index: pd.Index,
+    index: IndexAdapter,
     indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
-) -> Tuple["Variable", Optional[pd.Index]]:
+) -> Tuple["Variable", Optional[IndexAdapter]]:
     """Index a Variable and pandas.Index together."""
     from .variable import Variable
 
@@ -269,7 +301,7 @@ def isel_variable_and_index(
     indexer = indexers[dim]
     if isinstance(indexer, Variable):
         indexer = indexer.data
-    new_index = index[indexer]
+    new_index = PandasIndexAdapter(index.array[indexer])
     return new_variable, new_index
 
 
@@ -283,8 +315,8 @@ def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
 
 
 def propagate_indexes(
-    indexes: Optional[Dict[Hashable, pd.Index]], exclude: Optional[Any] = None
-) -> Optional[Dict[Hashable, pd.Index]]:
+    indexes: Optional[Dict[Hashable, IndexAdapter]], exclude: Optional[Any] = None
+) -> Optional[Dict[Hashable, IndexAdapter]]:
     """Creates new indexes dict from existing dict optionally excluding some dimensions."""
     if exclude is None:
         exclude = ()

@@ -51,7 +51,13 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, default_indexes, propagate_indexes
+from .indexes import (
+    IndexAdapter,
+    Indexes,
+    PandasIndexAdapter,
+    default_indexes,
+    propagate_indexes,
+)
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -345,7 +351,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _indexes: Optional[Dict[Hashable, IndexAdapter]]
     _name: Optional[Hashable]
     _variable: Variable
 
@@ -990,7 +996,10 @@ class DataArray(AbstractArray, DataWithCoords):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
+            indexes = {
+                k: PandasIndexAdapter(v.array.copy(deep=deep))
+                for k, v in self._indexes.items()
+            }
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
