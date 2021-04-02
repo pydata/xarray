@@ -227,7 +227,7 @@ from the time and assign it as a non-dimension coordinate:
     :okwarning:
 
     decimal_day = (air1d.time - air1d.time[0]) / pd.Timedelta("1d")
-    air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day))
+    air1d_multi = air1d.assign_coords(decimal_day=("time", decimal_day.data))
     air1d_multi
 
 To use ``'decimal_day'`` as x coordinate it must be explicitly specified:
@@ -786,6 +786,26 @@ where ``u`` and ``v`` denote the x and y direction components of the arrow vecto
     ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
 
 ``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
+
+Streamplot
+~~~~~~~~~~
+
+Visualizing vector fields is also supported with streamline plots:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_simple_streamplot.png
+    ds.isel(w=1, z=1).plot.streamplot(x="x", y="y", u="A", v="B")
+
+
+where ``u`` and ``v`` denote the x and y direction components of the vectors tangent to the streamlines. Again, faceting is also possible:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_streamplot.png
+    ds.plot.streamplot(x="x", y="y", u="A", v="B", col="w", row="z")
 
 .. _plot-maps:
 

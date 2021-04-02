@@ -50,7 +50,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
             add_colorbar = False
             add_legend = False
     else:
-        if add_guide is True and funcname != "quiver":
+        if add_guide is True and funcname not in ("quiver", "streamplot"):
             raise ValueError("Cannot set add_guide when hue is None.")
         add_legend = False
         add_colorbar = False
@@ -63,10 +63,22 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
                 hue_style = "continuous"
             elif hue_style != "continuous":
                 raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver"
+                    "hue_style must be 'continuous' or None for .plot.quiver or "
+                    ".plot.streamplot"
                 )
     else:
         add_quiverkey = False
+
+    if (add_guide or add_guide is None) and funcname == "streamplot":
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver or "
+                    ".plot.streamplot"
+                )
 
     if hue_style is not None and hue_style not in ["discrete", "continuous"]:
         raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
@@ -187,15 +199,19 @@ def _dsplot(plotfunc):
     x, y : str
         Variable names for x, y axis.
     u, v : str, optional
-        Variable names for quiver plots
+        Variable names for quiver or streamplot plots only
     hue: str, optional
-        Variable by which to color scattered points
+        Variable by which to color scattered points or arrows
     hue_style: str, optional
         Can be either 'discrete' (legend) or 'continuous' (color bar).
     markersize: str, optional
         scatter only. Variable by which to vary size of scattered points.
     size_norm: optional
         Either None or 'Norm' instance to normalize the 'markersize' variable.
+    scale: scalar, optional
+        Quiver only. Number of data units per arrow length unit.
+        Use this to control the length of the arrows: larger values lead to
+        smaller arrows
     add_guide: bool, optional
         Add a guide that depends on hue_style
             - for "discrete", build a legend.
@@ -234,12 +250,11 @@ def _dsplot(plotfunc):
         be either ``viridis`` (if the function infers a sequential
         dataset) or ``RdBu_r`` (if the function infers a diverging
         dataset).  When `Seaborn` is installed, ``cmap`` may also be a
-        `seaborn` color palette. If ``cmap`` is seaborn color palette
-        and the plot type is not ``contour`` or ``contourf``, ``levels``
-        must also be specified.
+        `seaborn` color palette. If ``cmap`` is seaborn color palette,
+        ``levels`` must also be specified.
     colors : color-like or list of color-like, optional
-        A single color or a list of colors. If the plot type is not ``contour``
-        or ``contourf``, the ``levels`` argument is required.
+        A single color or a list of colors. The ``levels`` argument
+        is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -339,8 +354,11 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
-        if (u is not None or v is not None) and plotfunc.__name__ != "quiver":
-            raise ValueError("u, v are only allowed for quiver plots.")
+        if (u is not None or v is not None) and plotfunc.__name__ not in (
+            "quiver",
+            "streamplot",
+        ):
+            raise ValueError("u, v are only allowed for quiver or streamplot plots.")
 
         primitive = plotfunc(
             ds=ds,
@@ -384,7 +402,7 @@ def _dsplot(plotfunc):
                 coordinates="figure",
             )
 
-        if plotfunc.__name__ == "quiver":
+        if plotfunc.__name__ in ("quiver", "streamplot"):
             title = ds[u]._title_for_slice()
         else:
             title = ds[x]._title_for_slice()
@@ -527,6 +545,57 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
     kwargs.setdefault("pivot", "middle")
     hdl = ax.quiver(*args, **kwargs, **cmap_params)
     return hdl
+
+
+@_dsplot
+def streamplot(ds, x, y, ax, u, v, **kwargs):
+    """ Quiver plot with Dataset variables."""
+    import matplotlib as mpl
+
+    if x is None or y is None or u is None or v is None:
+        raise ValueError("Must specify x, y, u, v for streamplot plots.")
+
+    # Matplotlib's streamplot has strong restrictions on what x and y can be, so need to
+    # get arrays transposed the 'right' way around. 'x' cannot vary within 'rows', so
+    # the dimension of x must be the second dimension. 'y' cannot vary with 'columns' so
+    # the dimension of y must be the first dimension. If x and y are both 2d, assume the
+    # user has got them right already.
+    if len(ds[x].dims) == 1:
+        xdim = ds[x].dims[0]
+    if len(ds[y].dims) == 1:
+        ydim = ds[y].dims[0]
+    if xdim is not None and ydim is None:
+        ydim = set(ds[y].dims) - set([xdim])
+    if ydim is not None and xdim is None:
+        xdim = set(ds[x].dims) - set([ydim])
+
+    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+
+    if xdim is not None and ydim is not None:
+        # Need to ensure the arrays are transposed correctly
+        x = x.transpose(ydim, xdim)
+        y = y.transpose(ydim, xdim)
+        u = u.transpose(ydim, xdim)
+        v = v.transpose(ydim, xdim)
+
+    args = [x.values, y.values, u.values, v.values]
+    hue = kwargs.pop("hue")
+    cmap_params = kwargs.pop("cmap_params")
+
+    if hue:
+        kwargs["color"] = ds[hue].values
+
+        # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
+        if not cmap_params["norm"]:
+            cmap_params["norm"] = mpl.colors.Normalize(
+                cmap_params.pop("vmin"), cmap_params.pop("vmax")
+            )
+
+    kwargs.pop("hue_style")
+    hdl = ax.streamplot(*args, **kwargs, **cmap_params)
+
+    # Return .lines so colorbar creation works properly
+    return hdl.lines
 
 
 def _attach_to_plot_class(plotfunc):

@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import numpy as np
 
@@ -20,7 +21,12 @@ try:
     has_cfgrib = True
 except ModuleNotFoundError:
     has_cfgrib = False
-
+# cfgrib throws a RuntimeError if eccodes is not installed
+except RuntimeError:
+    warnings.warn(
+        "Failed to load cfgrib - most likely eccodes is missing. Try `import cfgrib` to get the error message"
+    )
+    has_cfgrib = False
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -62,7 +68,7 @@ class CfGribDataStore(AbstractDataStore):
             data = var.data
         else:
             wrapped_array = CfGribArrayWrapper(self, var.data)
-            data = indexing.LazilyOuterIndexedArray(wrapped_array)
+            data = indexing.LazilyIndexedArray(wrapped_array)
 
         encoding = self.ds.encoding.copy()
         encoding["original_shape"] = var.data.shape
@@ -87,9 +93,9 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
+    def guess_can_open(self, filename_or_obj):
         try:
-            _, ext = os.path.splitext(store_spec)
+            _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
             return False
         return ext in {".grib", ".grib2", ".grb", ".grb2"}

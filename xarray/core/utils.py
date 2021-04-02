@@ -4,7 +4,6 @@ import contextlib
 import functools
 import io
 import itertools
-import os.path
 import re
 import warnings
 from enum import Enum
@@ -504,7 +503,7 @@ class SortedKeysDict(MutableMapping[K, V]):
 
     def __iter__(self) -> Iterator[K]:
         # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore
+        return iter(sorted(self.mapping))  # type: ignore[type-var]
 
     def __len__(self) -> int:
         return len(self.mapping)
@@ -669,11 +668,6 @@ def read_magic_number(filename_or_obj, count=8):
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
     return magic_number
-
-
-def is_grib_path(path: str) -> bool:
-    _, ext = os.path.splitext(path)
-    return ext in [".grib", ".grb", ".grib2", ".grb2"]
 
 
 def is_uniform_spaced(arr, **kwargs) -> bool:
