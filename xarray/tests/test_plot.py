@@ -40,9 +40,9 @@ except ImportError:
     pass
 
 try:
-    import cartopy as ctpy  # type: ignore
+    import cartopy
 except ImportError:
-    ctpy = None
+    pass
 
 
 @contextlib.contextmanager
@@ -266,6 +266,15 @@ class TestPlot(PlotTestCase):
 
         line = da.plot(y="time", hue="x")[0]
         assert_array_equal(line.get_ydata(), da.coords["time"].values)
+
+    def test_line_plot_wrong_hue(self):
+        da = xr.DataArray(
+            data=np.array([[0, 1], [5, 9]]),
+            dims=["x", "t"],
+        )
+
+        with pytest.raises(ValueError, match="hue must be one of"):
+            da.plot(x="t", hue="wrong_coord")
 
     def test_2d_line(self):
         with raises_regex(ValueError, "hue"):
@@ -2213,6 +2222,61 @@ class TestDatasetQuiverPlots(PlotTestCase):
 
 
 @requires_matplotlib
+class TestDatasetStreamplotPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        das = [
+            DataArray(
+                np.random.randn(3, 3, 2, 2),
+                dims=["x", "y", "row", "col"],
+                coords=[range(k) for k in [3, 3, 2, 2]],
+            )
+            for _ in [1, 2]
+        ]
+        ds = Dataset({"u": das[0], "v": das[1]})
+        ds.x.attrs["units"] = "xunits"
+        ds.y.attrs["units"] = "yunits"
+        ds.col.attrs["units"] = "colunits"
+        ds.row.attrs["units"] = "rowunits"
+        ds.u.attrs["units"] = "uunits"
+        ds.v.attrs["units"] = "vunits"
+        ds["mag"] = np.hypot(ds.u, ds.v)
+        self.ds = ds
+
+    def test_streamline(self):
+        with figure_context():
+            hdl = self.ds.isel(row=0, col=0).plot.streamplot(x="x", y="y", u="u", v="v")
+            assert isinstance(hdl, mpl.collections.LineCollection)
+        with raises_regex(ValueError, "specify x, y, u, v"):
+            self.ds.isel(row=0, col=0).plot.streamplot(x="x", y="y", u="u")
+
+        with raises_regex(ValueError, "hue_style"):
+            self.ds.isel(row=0, col=0).plot.streamplot(
+                x="x", y="y", u="u", v="v", hue="mag", hue_style="discrete"
+            )
+
+    def test_facetgrid(self):
+        with figure_context():
+            fg = self.ds.plot.streamplot(
+                x="x", y="y", u="u", v="v", row="row", col="col", hue="mag"
+            )
+            for handle in fg._mappables:
+                assert isinstance(handle, mpl.collections.LineCollection)
+
+        with figure_context():
+            fg = self.ds.plot.streamplot(
+                x="x",
+                y="y",
+                u="u",
+                v="v",
+                row="row",
+                col="col",
+                hue="mag",
+                add_guide=False,
+            )
+
+
+@requires_matplotlib
 class TestDatasetScatterPlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -2586,7 +2650,7 @@ def test_get_axis():
 @requires_cartopy
 def test_get_axis_cartopy():
 
-    kwargs = {"projection": ctpy.crs.PlateCarree()}
+    kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
         ax = get_axis(**kwargs)
-        assert isinstance(ax, ctpy.mpl.geoaxes.GeoAxesSubplot)
+        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
