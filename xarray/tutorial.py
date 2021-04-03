@@ -52,14 +52,12 @@ def open_dataset(
 
     Available datasets:
 
-    * ``"air_temperature"``: float32 (time x lat x lon)
-    * ``"rasm"``: float64 (time × y × x)
-    * ``"ROMS_example"``:
-
-      - float64 (ocean_time × s_rho × eta_rho × xi_rho)
-      - float64 (ocean_time × eta_rho × xi_rho)
+    * ``"air_temperature"``: NCEP reanalysis subset
+    * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
+    * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
     * ``"tiny"``: small synthetic dataset with a 1D data variable
     * ``"era5-2mt-2019-03-uk.grib"``: float32 (time × latitude × longitude)
+    * ``"eraint_uvz"``: data from ERA-Interim reanalysis, monthly averages of upper level data
 
     Parameters
     ----------
