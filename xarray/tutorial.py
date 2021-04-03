@@ -117,9 +117,9 @@ def open_rasterio(
     Available datasets:
 
     * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
-                      From the ``rasterio`` repository [1]_.
     * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
-                   From the ``rasterio`` repository [1]_.
+
+    ``RGB.byte`` and ``shade`` are downloaded from the ``rasterio`` repository [1]_.
 
     Parameters
     ----------
