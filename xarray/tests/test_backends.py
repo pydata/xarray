@@ -3004,6 +3004,60 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
 
+    @pytest.mark.parametrize(
+        ["combine_attrs", "attrs", "expected", "expect_error"],
+        (
+            pytest.param("drop", [{"a": 1}, {"a": 2}], {}, False, id="drop"),
+            pytest.param(
+                "override", [{"a": 1}, {"a": 2}], {"a": 1}, False, id="override"
+            ),
+            pytest.param(
+                "no_conflicts", [{"a": 1}, {"a": 2}], None, True, id="no_conflicts"
+            ),
+            pytest.param(
+                "identical",
+                [{"a": 1, "b": 2}, {"a": 1, "c": 3}],
+                None,
+                True,
+                id="identical",
+            ),
+            pytest.param(
+                "drop_conflicts",
+                [{"a": 1, "b": 2}, {"b": -1, "c": 3}],
+                {"a": 1, "c": 3},
+                False,
+                id="drop_conflicts",
+            ),
+        ),
+    )
+    def test_open_mfdataset_dataset_combine_attrs(
+        self, combine_attrs, attrs, expected, expect_error
+    ):
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # Give the files an inconsistent attribute
+            for i, f in enumerate(files):
+                ds = open_dataset(f).load()
+                ds.attrs = attrs[i]
+                ds.close()
+                ds.to_netcdf(f)
+
+            if expect_error:
+                with pytest.raises(xr.MergeError):
+                    xr.open_mfdataset(
+                        files,
+                        combine="by_coords",
+                        concat_dim="t",
+                        combine_attrs=combine_attrs,
+                    )
+            else:
+                with xr.open_mfdataset(
+                    files,
+                    combine="by_coords",
+                    concat_dim="t",
+                    combine_attrs=combine_attrs,
+                ) as ds:
+                    assert ds.attrs == expected
+
     def test_open_mfdataset_dataset_attr_by_coords(self):
         """
         Case when an attribute differs across the multiple files
