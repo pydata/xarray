@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import has_dask
 
@@ -99,10 +98,6 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
         pytest.param(
             np.array,
             id="numpy",
-            marks=pytest.mark.skipif(
-                not IS_NEP18_ACTIVE,
-                reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled",
-            ),
         ),
         pytest.param(
             dask_from_array,
@@ -148,7 +143,7 @@ def test_ensure_warnings_not_elevated(func):
 
     # define a custom Variable class that raises a warning in assert_*
     class WarningVariable(xr.Variable):
-        @property  # type: ignore
+        @property  # type: ignore[misc]
         def dims(self):
             warnings.warn("warning in test")
             return super().dims
