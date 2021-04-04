@@ -1,6 +1,5 @@
 import copy
 import datetime
-import functools
 import inspect
 import sys
 import warnings
@@ -7115,7 +7114,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         # apply the selection
         return self.isel(indexers, missing_dims=missing_dims)
-      
+
     def curvefit(
         self,
         coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
