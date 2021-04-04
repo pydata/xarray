@@ -270,7 +270,7 @@ def apply_dataarray_vfunc(
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
 
-    if signature.num_outputs > 1:
+    if signature.num_outputs != 1:
         out = tuple(
             DataArray(variable, coords, name=name, fastpath=True)
             for variable, coords in zip(result_var, result_coords)

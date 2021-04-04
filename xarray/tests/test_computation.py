@@ -1184,6 +1184,17 @@ def test_vectorize_dask_new_output_dims():
         )
 
 
+def test_output_empty_tuple():
+    variable = xr.DataArray(np.arange(10), dims=["x"])
+
+    def empty_tuple(x):
+        return ()
+
+    expected = ()
+    actual = apply_ufunc(empty_tuple, variable, output_core_dims=[])
+    assert actual == expected
+
+
 def test_output_wrong_number():
     variable = xr.Variable("x", np.arange(10))
 
