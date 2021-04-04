@@ -1369,7 +1369,7 @@ Enhancements
 - ``core.groupby.GroupBy`` enhancements. By `Deepak Cherian <https://github.com/dcherian>`_.
 
   - Added a repr (:pull:`3344`). Example::
-   da.groupby("time.season")
+      >>> da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
