@@ -67,7 +67,11 @@ New Features
 - Implement :py:meth:`Dataset.drop_duplicate_coords` and :py:meth:`DataArray.drop_duplicate_coords`
   to remove duplicate coordinate values (:pull:`5089`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
+- Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
+- Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -102,6 +106,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Enable displaying mypy error codes and ignore only specific error codes using
+  ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 .. _whats-new.0.17.0:
 
@@ -1363,7 +1370,9 @@ Enhancements
 
   - Added a repr (:pull:`3344`). Example::
 
-      >>> da.groupby("time.season")
+      
+      
+   da.groupby("time.season")
       DataArrayGroupBy, grouped over 'season'
       4 groups with labels 'DJF', 'JJA', 'MAM', 'SON'
 
