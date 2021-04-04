@@ -7317,9 +7317,7 @@ def test_deepcopy_obj_array():
 
 @pytest.mark.parametrize("keep", ["first", "last", False])
 def drop_duplicate_coords_dim(keep):
-    da = xr.DataArray(
-        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}
-    )
+    da = xr.DataArray([0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]})
 
     if keep == "first":
         data = [0, 6, 7]
@@ -7331,9 +7329,7 @@ def drop_duplicate_coords_dim(keep):
         data = [6, 7]
         time = [1, 2]
 
-    expected = xr.DataArray(
-        data, dims="time", coords={"time": time}
-    )
+    expected = xr.DataArray(data, dims="time", coords={"time": time})
     result = da.drop_duplicate_coords("time", keep=keep)
     assert_equal(expected, result)
 
@@ -7360,9 +7356,7 @@ def test_drop_duplicate_coords_dims(keep):
         lat = [0, 1, 3]
         lon = [0, 1, 4]
 
-    expected = xr.DataArray(
-        data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon}
-    )
+    expected = xr.DataArray(data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon})
     result = da.drop_duplicate_coords(["lat", "lon"], keep=keep)
     assert_equal(expected, result)
 
