@@ -103,7 +103,7 @@ Dataset contents
    Dataset.expand_dims
    Dataset.drop_vars
    Dataset.drop_dims
-   Dataset.drop_duplicates
+   Dataset.drop_duplicate_coords
    Dataset.set_coords
    Dataset.reset_coords
 
@@ -292,7 +292,7 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
-   DataArray.drop_duplicates
+   DataArray.drop_duplicate_coords
    DataArray.reset_coords
    DataArray.copy
 

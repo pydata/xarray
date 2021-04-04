@@ -7074,18 +7074,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # apply the selection
         return self.isel(indexers, missing_dims=missing_dims)
 
-    def drop_duplicates(
+    def drop_duplicate_coords(
         self,
-        dims: Union[Hashable, Iterable[Hashable]] = None,
+        coords: Union[Hashable, Iterable[Hashable]] = ...,
         keep: Union[str, bool] = "first",
     ):
-        """Returns a new dataset with duplicate dimension values removed.
+        """Returns a new dataset with duplicate coordinate values removed.
 
         Parameters
         ----------
-        dims : dimension label or sequence of labels, optional
-            Only consider certain dimensions for identifying duplicates, by
-            default use all dimensions.
+        coords : coordinate label or sequence of labels, optional
+            Only consider certain coordinates for identifying duplicates, by
+            default use all dimensions (NOT coordinates).
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
             - ``"first"`` : Drop duplicates except for the first occurrence.
@@ -7096,20 +7096,57 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         Dataset
         """
-        if dims is None:
-            dims = list(self.coords)
-        elif isinstance(dims, str) or not isinstance(dims, Iterable):
-            dims = [dims]
-        else:
-            dims = list(dims)
+        if coords is ...:
+            coords = self.dims
+        # the Iterable check is required for mypy
+        elif utils.is_scalar(coords) or not isinstance(coords, Iterable):
+            coords = [coords]
 
-        indexes = {}
-        for dim in dims:
-            if dim not in self.dims:
-                raise ValueError(f"'{dim}' not found in dimensions")
-            indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
+        new = self.copy()
+        for coord in coords:
+            if coord not in new.coords:
+                raise ValueError(
+                    f"'{coord}' not found in dataset's coords: {new.coords}"
+                )
+            elif coord not in new.dims:
+                dims = new[coord].dims
+                for dim in dims:
+                    if any(new.get_index(dim).duplicated()):
+                        raise ValueError(
+                            f"Cannot have duplicate dimension values in "
+                            f"'{dim}' when dropping duplicate coordinate "
+                            f"values for '{coord}' due to ambiguity "
+                            f"in unstack."
+                        )
 
-        return self.isel(indexes)
+                # stack the coord's dimensions
+                tmp_dim = "__tmp_dim__"
+                new = new.stack({tmp_dim: dims})
+
+                # preserve the stacked coord indices for to use unstack() later
+                stacked_coord_indices = new[tmp_dim]
+
+                # replace tmp_dim with actual coord values so duplicated()
+                # can actually find duplicates
+                new[tmp_dim] = new[coord].values.ravel()
+
+                # replace coord with tmp_dim for use with get_index()
+                # as to not repeat the same call in the dimension clause
+                coord = tmp_dim
+
+                unstack_tmp_dim = True
+            else:
+                unstack_tmp_dim = False
+
+            index = new.get_index(coord).duplicated(keep=keep)
+            new = new.isel({coord: ~index})
+
+            if unstack_tmp_dim:
+                # return everything to normal
+                new[coord] = stacked_coord_indices.isel({coord: ~index})
+                new = new.unstack(coord)
+
+        return new
 
 
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

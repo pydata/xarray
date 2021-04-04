@@ -64,8 +64,8 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Implement :py:meth:`Dataset.drop_duplicates` and :py:meth:`DataArray.drop_duplicates`
-  to remove duplicate dimension values (:pull:`5089`).
+- Implement :py:meth:`Dataset.drop_duplicate_coords` and :py:meth:`DataArray.drop_duplicate_coords`
+  to remove duplicate coordinate values (:pull:`5089`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
 
