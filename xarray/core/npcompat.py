@@ -31,8 +31,8 @@
 import builtins
 import operator
 import sys
-from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 from distutils.version import LooseVersion
+from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
 
