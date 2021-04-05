@@ -23,6 +23,8 @@ How do I ...
      - :py:meth:`Dataset.set_coords`
    * - change the order of dimensions
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
+   * - reshape dimensions
+     - :py:meth:`DataArray.stack`, :py:meth:`Dataset.stack`
    * - remove a variable from my object
      - :py:meth:`Dataset.drop_vars`, :py:meth:`DataArray.drop_vars`
    * - remove dimensions of length 1 or 0
@@ -34,7 +36,9 @@ How do I ...
    * - rename a variable, dimension or coordinate
      - :py:meth:`Dataset.rename`, :py:meth:`DataArray.rename`, :py:meth:`Dataset.rename_vars`, :py:meth:`Dataset.rename_dims`,
    * - convert a DataArray to Dataset or vice versa
-     - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_array`
+     - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_array`, :py:meth:`Dataset.to_stacked_array`, :py:meth:`DataArray.to_unstacked_dataset`
+   * - extract variables that have certain attributes
+     - :py:meth:`Dataset.filter_by_attrs`
    * - extract the underlying array (e.g. numpy or Dask arrays)
      - :py:attr:`DataArray.data`
    * - convert to and extract the underlying numpy array
@@ -43,6 +47,8 @@ How do I ...
      - :py:func:`dask.is_dask_collection`
    * - know how much memory my object requires
      - :py:attr:`DataArray.nbytes`, :py:attr:`Dataset.nbytes`
+   * - Get axis number for a dimension
+     - :py:meth:`DataArray.get_axis_num`
    * - convert a possibly irregularly sampled timeseries to a regularly sampled timeseries
      - :py:meth:`DataArray.resample`, :py:meth:`Dataset.resample` (see :ref:`resampling` for more)
    * - apply a function on all data variables in a Dataset
@@ -59,3 +65,9 @@ How do I ...
      - ``obj.dt.ceil``, ``obj.dt.floor``, ``obj.dt.round``. See :ref:`dt_accessor` for more.
    * - make a mask that is ``True`` where an object contains any of the values in a array
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
+   * - Index using a boolean mask
+     - :py:meth:`Dataset.query`, :py:meth:`DataArray.query`, :py:meth:`Dataset.where`, :py:meth:`DataArray.where`
+   * - preserve ``attrs`` during xarray operations
+     - ``xr.set_options(keep_attrs=True)``
+   * - Make sure my datasets have values at the same coordinate locations
+     - ``xr.align(dataset_1, dataset_2, join="exact")``
