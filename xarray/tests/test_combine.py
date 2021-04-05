@@ -680,8 +680,8 @@ class TestCombineAuto:
         with raises_regex(ValueError, "Every dimension needs a coordinate"):
             combine_by_coords(objs)
 
-        def test_empty_input(self):
-            assert_identical(Dataset(), combine_by_coords([]))
+    def test_empty_input(self):
+        assert_identical(Dataset(), combine_by_coords([]))
 
     @pytest.mark.parametrize(
         "join, expected",
