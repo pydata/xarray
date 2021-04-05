@@ -180,6 +180,7 @@ Computation
    Dataset.integrate
    Dataset.map_blocks
    Dataset.polyfit
+   Dataset.curvefit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -244,6 +245,7 @@ Plotting
 
    Dataset.plot.scatter
    Dataset.plot.quiver
+   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -375,7 +377,7 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.map_blocks
-
+   DataArray.curvefit
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
