@@ -7195,7 +7195,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
             if base_coord is not None:
                 # remove tmp_dim
-                new = new.swap_dims({tmp_dim: base_coord}).drop(tmp_dim)
+                new = new.swap_dims({tmp_dim: base_coord}).drop_vars(tmp_dim)
 
                 # get associated coordinates with the stacked dim
                 tmp_index = stacked_coord_indices.isel({coord: ~index}).indexes[tmp_dim]
