@@ -7398,8 +7398,8 @@ def test_drop_duplicate_coords(keep):
 @pytest.mark.parametrize("keep", ["first", "last", False])
 def test_drop_duplicate_coords_duplicate_dims(keep):
     da = xr.DataArray(
-        [["a", "b", "c"], ["d", "e", "f"]],
-        coords={"init": [0, 0], "tau": [1, 2, 3]},  # duplicate inits
+        [[1, 2, 3], [4, 5, 6]],
+        coords={"init": [0, 0], "tau": [1, 2, 3]},
         dims=["init", "tau"],
     )
     da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
