@@ -7428,6 +7428,7 @@ def test_drop_duplicate_coords_duplicate_dims(keep):
     )
     assert_equal(expected, result)
 
+
 @pytest.mark.parametrize("keep", ["first", "last", False])
 def test_drop_duplicate_coords_missing(keep):
     da = xr.DataArray(
