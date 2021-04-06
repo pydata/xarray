@@ -761,8 +761,8 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 for coord_name in variable_coordinates[name]
                 if coord_name not in not_technically_coordinates
             )
-        if "coordinates" in attrs and len(attrs.get("coordinates")) == 0:
-            attrs.pop("coordinates")
+            if "coordinates" in attrs and len(attrs.get("coordinates")) == 0:
+                attrs.pop("coordinates")
         if "coordinates" in attrs:
             written_coords.update(attrs["coordinates"].split())
 
