@@ -589,6 +589,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return f"{type(self).__name__}(array={self.array!r}, key={self.key!r})"
 
 
+# keep an alias to the old name for external backends pydata/xarray#5111
+LazilyOuterIndexedArray = LazilyIndexedArray
+
+
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make vectorized indexing lazy."""
 
