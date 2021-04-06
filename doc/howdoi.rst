@@ -57,6 +57,8 @@ How do I ...
      - :py:func:`Dataset.to_netcdf`, :py:func:`DataArray.to_netcdf` specifying ``engine="h5netcdf", invalid_netcdf=True``
    * - make xarray objects look like other xarray objects
      - :py:func:`~xarray.ones_like`, :py:func:`~xarray.zeros_like`, :py:func:`~xarray.full_like`, :py:meth:`Dataset.reindex_like`, :py:meth:`Dataset.interp_like`, :py:meth:`Dataset.broadcast_like`, :py:meth:`DataArray.reindex_like`, :py:meth:`DataArray.interp_like`, :py:meth:`DataArray.broadcast_like`
+   * - Make sure my datasets have values at the same coordinate locations
+     - ``xr.align(dataset_1, dataset_2, join="exact")``
    * - replace NaNs with other values
      - :py:meth:`Dataset.fillna`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill`, :py:meth:`Dataset.interpolate_na`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.interpolate_na`
    * - extract the year, month, day or similar from a DataArray of time values
@@ -69,5 +71,3 @@ How do I ...
      - :py:meth:`Dataset.query`, :py:meth:`DataArray.query`, :py:meth:`Dataset.where`, :py:meth:`DataArray.where`
    * - preserve ``attrs`` during xarray operations
      - ``xr.set_options(keep_attrs=True)``
-   * - Make sure my datasets have values at the same coordinate locations
-     - ``xr.align(dataset_1, dataset_2, join="exact")``
