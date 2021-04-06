@@ -67,7 +67,7 @@ How do I ...
      - :py:meth:`Dataset.isin`, :py:meth:`DataArray.isin`
    * - Index using a boolean mask
      - :py:meth:`Dataset.query`, :py:meth:`DataArray.query`, :py:meth:`Dataset.where`, :py:meth:`DataArray.where`
-   * - preserve ``attrs`` during xarray operations
+   * - preserve ``attrs`` during (most) xarray operations
      - ``xr.set_options(keep_attrs=True)``
    * - Make sure my datasets have values at the same coordinate locations
      - ``xr.align(dataset_1, dataset_2, join="exact")``
