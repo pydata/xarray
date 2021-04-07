@@ -614,7 +614,7 @@ def open_zarr(
         values according to the formula `original_values * scale_factor +
         add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
         taken from variable attributes (if they exist).  If the `_FillValue` or
-            `missing_value` attribute contains multiple values a warning will be
+        `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA.
     decode_times : bool, optional
