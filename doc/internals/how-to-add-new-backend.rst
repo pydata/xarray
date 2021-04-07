@@ -34,6 +34,7 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
     from xarray.backends import BackendEntrypoint
 
+
     class MyBackendEntrypoint(BackendEntrypoint):
         def open_dataset(
             self,
@@ -252,9 +253,7 @@ You can declare the entrypoint in ``setup.py`` using the following syntax:
 
     setuptools.setup(
         entry_points={
-            "xarray.backends": [
-                "my_engine=my_package.my_module:MyBackendEntryClass"
-            ],
+            "xarray.backends": ["my_engine=my_package.my_module:MyBackendEntryClass"],
         },
     )
 
@@ -330,6 +329,7 @@ This is an example ``BackendArray`` subclass implementation:
 .. code-block:: python
 
     from xarray.backends import BackendArray
+
 
     class MyBackendArray(BackendArray):
         def __init__(
