@@ -371,7 +371,9 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None):
+def _mapping_repr(
+    mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None
+):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
@@ -398,12 +400,18 @@ def _mapping_repr(mapping, title, summarizer, expand_option_name, col_width=None
 
 
 data_vars_repr = functools.partial(
-    _mapping_repr, title="Data variables", summarizer=summarize_datavar, expand_option_name="display_expand_data_vars"
+    _mapping_repr,
+    title="Data variables",
+    summarizer=summarize_datavar,
+    expand_option_name="display_expand_data_vars",
 )
 
 
 attrs_repr = functools.partial(
-    _mapping_repr, title="Attributes", summarizer=summarize_attr, expand_option_name="display_expand_attrs"
+    _mapping_repr,
+    title="Attributes",
+    summarizer=summarize_attr,
+    expand_option_name="display_expand_attrs",
 )
 
 
@@ -411,7 +419,11 @@ def coords_repr(coords, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
     return _mapping_repr(
-        coords, title="Coordinates", summarizer=summarize_coord, expand_option_name="display_expand_coords", col_width=col_width
+        coords,
+        title="Coordinates",
+        summarizer=summarize_coord,
+        expand_option_name="display_expand_coords",
+        col_width=col_width,
     )
 
 

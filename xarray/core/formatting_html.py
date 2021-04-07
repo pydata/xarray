@@ -6,7 +6,7 @@ from html import escape
 import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
-from .options import OPTIONS, _get_boolean_with_default
+from .options import _get_boolean_with_default
 
 STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
@@ -165,9 +165,13 @@ def collapsible_section(
     )
 
 
-def _mapping_section(mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True):
+def _mapping_section(
+    mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
+):
     n_items = len(mapping)
-    expanded = _get_boolean_with_default(expand_option_name, n_items < max_items_collapse)
+    expanded = _get_boolean_with_default(
+        expand_option_name, n_items < max_items_collapse
+    )
     collapsed = not expanded
 
     return collapsible_section(
@@ -190,7 +194,11 @@ def dim_section(obj):
 def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
-    collapsed = "checked" if _get_boolean_with_default("display_expand_data", default=True) else ""
+    collapsed = (
+        "checked"
+        if _get_boolean_with_default("display_expand_data", default=True)
+        else ""
+    )
     variable = getattr(obj, "variable", obj)
     preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)

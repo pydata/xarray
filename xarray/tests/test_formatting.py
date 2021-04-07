@@ -504,7 +504,11 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
 
-    with xr.set_options(display_expand_coords=False, display_expand_data_vars=False, display_expand_attrs=False):
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
         actual = formatting.dataset_repr(ds)
         expected = dedent(
             f"""\
