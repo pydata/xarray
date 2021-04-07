@@ -23,10 +23,10 @@ OPTIONS = {
     DISPLAY_MAX_ROWS: 12,
     DISPLAY_STYLE: "html",
     DISPLAY_WIDTH: 80,
-    DISPLAY_EXPAND_ATTRS: True,
-    DISPLAY_EXPAND_COORDS: True,
-    DISPLAY_EXPAND_DATA_VARS: True,
-    DISPLAY_EXPAND_DATA: True,
+    DISPLAY_EXPAND_ATTRS: "default",
+    DISPLAY_EXPAND_COORDS: "default",
+    DISPLAY_EXPAND_DATA_VARS: "default",
+    DISPLAY_EXPAND_DATA: "default",
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     KEEP_ATTRS: "default",
@@ -46,10 +46,10 @@ _VALIDATORS = {
     DISPLAY_MAX_ROWS: _positive_integer,
     DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
     DISPLAY_WIDTH: _positive_integer,
-    DISPLAY_EXPAND_ATTRS: lambda value: isinstance(value, bool),
-    DISPLAY_EXPAND_COORDS: lambda value: isinstance(value, bool),
-    DISPLAY_EXPAND_DATA_VARS: lambda value: isinstance(value, bool),
-    DISPLAY_EXPAND_DATA: lambda value: isinstance(value, bool),
+    DISPLAY_EXPAND_ATTRS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_COORDS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_DATA_VARS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_DATA: lambda choice: choice in [True, False, "default"],
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
@@ -77,8 +77,8 @@ _SETTERS = {
 }
 
 
-def _get_keep_attrs(default):
-    global_choice = OPTIONS["keep_attrs"]
+def _get_boolean_with_default(option, default):
+    global_choice = OPTIONS[option]
 
     if global_choice == "default":
         return default
@@ -86,8 +86,12 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of True, False or 'default'."
+            f"The global option f{option} must be one of True, False or 'default'."
         )
+
+
+def _get_keep_attrs(default):
+    return _get_boolean_with_default("keep_attrs", default)
 
 
 class set_options:
@@ -121,13 +125,21 @@ class set_options:
     - ``display_style``: display style to use in jupyter for xarray objects.
       Default: ``'text'``. Other options are ``'html'``.
     - ``display_expand_attrs``: whether to expand the attributes section for
-      display of ``DataArray`` or ``Dataset`` objects. Default: ``True``.
+      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
     - ``display_expand_coords``: whether to expand the coordinates section for
-      display of ``DataArray`` or ``Dataset`` objects. Default: ``True``.
+      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
     - ``display_expand_data``: whether to expand the data section for display
-      of ``DataArray`` objects. Default: ``True``.
+      of ``DataArray`` objects. Can be ``True`` to always expand, ``False`` to
+      always collapse, or ``default`` to expand unless over a pre-defined limit.
+      Default: ``default``.
     - ``display_expand_data_vars``: whether to expand the data variables section
-      for display of ``Dataset`` objects. Default: ``True``.
+      for display of ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
 
 
     You can use ``set_options`` either as a context manager:

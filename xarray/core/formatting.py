@@ -11,7 +11,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
-from .options import OPTIONS
+from .options import OPTIONS, _get_boolean_with_default
 from .pycompat import dask_array_type, sparse_array_type
 from .utils import is_duck_array
 
@@ -379,7 +379,7 @@ def _mapping_repr(mapping, title, summarizer, expand_option_name, col_width=None
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
-        if not OPTIONS[expand_option_name]:
+        if not _get_boolean_with_default(expand_option_name, default=True):
             summary = [f"{summary[0]} ({len_mapping})"]
         elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
@@ -495,7 +495,7 @@ def array_repr(arr):
     else:
         name_str = ""
 
-    if OPTIONS["display_expand_data"]:
+    if _get_boolean_with_default("display_expand_data", default=True):
         data_repr = short_data_repr(arr)
     else:
         data_repr = inline_variable_array_repr(arr, OPTIONS["display_width"])
