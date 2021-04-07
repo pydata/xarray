@@ -105,9 +105,9 @@ else:
 
         Parameters
         ----------
-        size: int
+        size : int
             The maximum size of any chunk.
-        chunks: tuple
+        chunks : tuple
             Chunks along one axis, e.g. ``(3, 3, 2)``
 
         Examples

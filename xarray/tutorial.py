@@ -62,7 +62,7 @@ def open_dataset(
         The directory in which to search for and write cached data.
     cache : bool, optional
         If True, then cache data locally for use on subsequent calls
-    kws : dict, optional
+    **kws : dict, optional
         Passed to xarray.open_dataset
 
     Notes

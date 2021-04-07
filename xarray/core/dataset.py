@@ -4568,7 +4568,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        kwargs : dict, optional
+        **kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
         Returns
@@ -7087,7 +7087,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             The default of 'pandas' parses code slightly different than standard
             Python. Alternatively, you can parse an expression using the 'python'
             parser to retain strict Python semantics.
-        engine: {"python", "numexpr", None}, default: None
+        engine : {"python", "numexpr", None}, default: None
             The engine used to evaluate the expression. Supported engines are:
             - None: tries to use numexpr, falls back to python
             - "numexpr": evaluates expressions using numexpr
@@ -7178,7 +7178,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names: seq, optional
+        param_names : seq, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
@@ -7196,7 +7196,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             [var]_curvefit_covariance
                 The covariance matrix of the coefficient estimates.
 
-        See also
+        See Also
         --------
         Dataset.polyfit
         scipy.optimize.curve_fit
