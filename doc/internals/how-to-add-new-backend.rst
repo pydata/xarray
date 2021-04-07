@@ -32,6 +32,8 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
 .. code-block:: python
 
+    from xarray.backends import BackendEntrypoint
+
     class MyBackendEntrypoint(BackendEntrypoint):
         def open_dataset(
             self,
@@ -39,9 +41,9 @@ This is what a ``BackendEntrypoint`` subclass should look like:
             *,
             drop_variables=None,
             # other backend specific keyword arguments
+            # `chunks` and `cache` DO NOT go here, they are handled by xarray
         ):
-            ...
-            return ds
+            return my_open_dataset(filename_or_obj, drop_variables=drop_variables)
 
         open_dataset_parameters = ["filename_or_obj", "drop_variables"]
 
@@ -50,7 +52,7 @@ This is what a ``BackendEntrypoint`` subclass should look like:
                 _, ext = os.path.splitext(filename_or_obj)
             except TypeError:
                 return False
-            return ext in {...}
+            return ext in {".my_format", ".my_fmt"}
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -74,20 +76,19 @@ The following is an example of the high level processing steps:
         decode_times=True,
         decode_timedelta=True,
         decode_coords=True,
-        my_backend_param=None,
+        my_backend_option=None,
     ):
         vars, attrs, coords = my_reader(
             filename_or_obj,
             drop_variables=drop_variables,
-            my_backend_param=my_backend_param,
+            my_backend_option=my_backend_option,
         )
         vars, attrs, coords = my_decode_variables(
             vars, attrs, decode_times, decode_timedelta, decode_coords
         )  #  see also conventions.decode_cf_variables
 
-        ds = xr.Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coords)
-        ds.set_close(store.close)
+        ds = xr.Dataset(vars, attrs=attrs, coords=coords)
+        ds.set_close(my_close_method)
 
         return ds
 
@@ -98,9 +99,9 @@ method shall be set by using :py:meth:`~xarray.Dataset.set_close`.
 
 
 The input of ``open_dataset`` method are one argument
-(``filename``) and one keyword argument (``drop_variables``):
+(``filename_or_obj``) and one keyword argument (``drop_variables``):
 
-- ``filename``: can be a string containing a path or an instance of
+- ``filename_or_obj``: can be any object but usually it is a string containing a path or an instance of
   :py:class:`pathlib.Path`.
 - ``drop_variables``: can be `None` or an iterable containing the variable
   names to be dropped when reading the data.
@@ -117,7 +118,7 @@ should implement in its interface the following boolean keyword arguments, calle
 - ``decode_coords``
 
 Note: all the supported decoders shall be declared explicitly
-in backend ``open_dataset`` signature.
+in backend ``open_dataset`` signature and adding a ``**kargs`` is not allowed.
 
 These keyword arguments are explicitly defined in Xarray
 :py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
@@ -241,7 +242,7 @@ How to register a backend
 
 Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
 
-- group: ``xarray.backend``
+- group: ``xarray.backends``
 - name: the name to be passed to :py:meth:`~xarray.open_dataset`  as ``engine``
 - object reference: the reference of the class that you have implemented.
 
@@ -252,7 +253,7 @@ You can declare the entrypoint in ``setup.py`` using the following syntax:
     setuptools.setup(
         entry_points={
             "xarray.backends": [
-                "engine_name=your_package.your_module:YourBackendEntryClass"
+                "my_engine=my_package.my_module:MyBackendEntryClass"
             ],
         },
     )
@@ -263,7 +264,7 @@ in ``setup.cfg``:
 
     [options.entry_points]
     xarray.backends =
-        engine_name = your_package.your_module:YourBackendEntryClass
+        my_engine = my_package.my_module:MyBackendEntryClass
 
 
 See https://packaging.python.org/specifications/entry-points/#data-model
@@ -274,7 +275,7 @@ If you are using [Poetry](https://python-poetry.org/) for your build system, you
 .. code-block:: toml
 
     [tool.poetry.plugins."xarray_backends"]
-    "engine_name" = "your_package.your_module:YourBackendEntryClass"
+    "my_engine" = "my_package.my_module:MyBackendEntryClass"
 
 See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
 
@@ -327,6 +328,8 @@ which is interpreted correctly by your backend.
 This is an example ``BackendArray`` subclass implementation:
 
 .. code-block:: python
+
+    from xarray.backends import BackendArray
 
     class MyBackendArray(BackendArray):
         def __init__(
