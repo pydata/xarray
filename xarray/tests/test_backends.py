@@ -1867,7 +1867,7 @@ class ZarrBase(CFEncodedBase):
         # should fail if encoding["chunks"] clashes with dask_chunks
         badenc = ds.chunk({"x": 4})
         badenc.var1.encoding["chunks"] = (6,)
-        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
+        with raises_regex(NotImplementedError, "named 'var1' would overlap"):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -1878,13 +1878,13 @@ class ZarrBase(CFEncodedBase):
                 pass
 
         badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(ValueError, match=r"Specified Zarr chunk encoding"):
+        with raises_regex(NotImplementedError, "Specified Zarr chunk encoding"):
             with self.roundtrip(badenc) as actual:
                 pass
 
         badenc = badenc.chunk({"x": (3, 3, 6)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(ValueError, match=r"incompatible with this encoding"):
+        with raises_regex(NotImplementedError, "incompatible with this encoding"):
             with self.roundtrip(badenc) as actual:
                 pass
 

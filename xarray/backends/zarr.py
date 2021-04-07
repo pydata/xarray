@@ -1,7 +1,7 @@
 import os
 import pathlib
-from distutils.version import LooseVersion
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -171,9 +171,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                         f"Writing this array in parallel with dask could lead to corrupted data. "
                     )
                     if safe_chunks:
-                        raise ValueError(
-                            base_error +
-                            "Consider either rechunking using `chunk()`, deleting "
+                        raise NotImplementedError(
+                            base_error
+                            + "Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                         )
                     else:
@@ -188,9 +188,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                     "incompatible with this encoding. "
                 )
                 if safe_chunks:
-                    raise ValueError(
-                        base_error +
-                        "Consider either rechunking using `chunk()`, deleting "
+                    raise NotImplementedError(
+                        base_error
+                        + "Consider either rechunking using `chunk()`, deleting "
                         "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                     )
                 else:
@@ -216,7 +216,9 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     return dimensions, attributes
 
 
-def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None, safe_chunks=True):
+def extract_zarr_variable_encoding(
+    variable, raise_on_invalid=False, name=None, safe_chunks=True
+):
     """
     Extract zarr encoding dictionary from xarray Variable
 
@@ -298,7 +300,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_read_only",
         "_synchronizer",
         "_write_region",
-        "_safe_chunks"
+        "_safe_chunks",
     )
 
     @classmethod
@@ -314,7 +316,7 @@ class ZarrStore(AbstractWritableDataStore):
         storage_options=None,
         append_dim=None,
         write_region=None,
-        safe_chunks=True
+        safe_chunks=True,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
@@ -338,11 +340,17 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close, append_dim, write_region, safe_chunks)
+        return cls(
+            zarr_group, consolidate_on_close, append_dim, write_region, safe_chunks
+        )
 
     def __init__(
-        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None,
-        safe_chunks=True
+        self,
+        zarr_group,
+        consolidate_on_close=False,
+        append_dim=None,
+        write_region=None,
+        safe_chunks=True,
     ):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
