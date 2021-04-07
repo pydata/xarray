@@ -1776,7 +1776,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         consolidated: bool = False,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
-        safe_chunks: bool = True
+        safe_chunks: bool = True,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
@@ -1845,9 +1845,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
               the reference documentation for full details.
         safe_chunks : bool, optional
             If True, only allow writes to when there is a many-to-one relationship
-            between Zarr chunks and Dask chunks. Set False to override this
-            restriction; however, data may become corrupted if Zarr arrays
-            are written in paralle.
+            between Zarr chunks (specified in encoding) and Dask chunks.
+            Set False to override this restriction; however, data may become corrupted
+            if Zarr arrays are written in parallel. This option may be useful in combination
+            with ``compute=False`` to initialize a Zarr from an existing
+            Dataset with aribtrary chunk structure.
 
         References
         ----------
@@ -1884,7 +1886,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             consolidated=consolidated,
             append_dim=append_dim,
             region=region,
-            safe_chunks=safe_chunks
+            safe_chunks=safe_chunks,
         )
 
     def __repr__(self) -> str:
