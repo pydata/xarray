@@ -1355,7 +1355,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays : DataArray or Variable
+    *arrays : DataArray or Variable
         Arrays to compute.
     dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
