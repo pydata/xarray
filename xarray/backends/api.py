@@ -1432,7 +1432,7 @@ def to_zarr(
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
-        safe_chunks=safe_chunks
+        safe_chunks=safe_chunks,
     )
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
