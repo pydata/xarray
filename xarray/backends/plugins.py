@@ -58,7 +58,7 @@ def backends_dict_from_pkg(pkg_entrypoints):
             backend = pkg_ep.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
-            warnings.warn(f"Engine {name} loading failed:\n{ex}", RuntimeWarning)
+            warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
     return backend_entrypoints
 
 
