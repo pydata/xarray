@@ -269,7 +269,7 @@ in ``setup.cfg``:
 See https://packaging.python.org/specifications/entry-points/#data-model
 for more information
 
-If you are using [Poetry](https://python-poetry.org/) for your build system, you can accomplish the same thing using "plugins". In this case you would need to add the following to your ``pyproject.toml`` file:
+If you are using `Poetry <https://python-poetry.org/>`_ for your build system, you can accomplish the same thing using "plugins". In this case you would need to add the following to your ``pyproject.toml`` file:
 
 .. code-block:: toml
 
