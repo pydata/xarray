@@ -55,8 +55,11 @@ def backends_dict_from_pkg(pkg_entrypoints):
     backend_entrypoints = {}
     for pkg_ep in pkg_entrypoints:
         name = pkg_ep.name
-        backend = pkg_ep.load()
-        backend_entrypoints[name] = backend
+        try:
+            backend = pkg_ep.load()
+            backend_entrypoints[name] = backend
+        except Exception as ex:
+            warnings.warn(f"Engine {name} loading failed: \n {ex}", RuntimeWarning)
     return backend_entrypoints
 
 
