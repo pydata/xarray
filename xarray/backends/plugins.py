@@ -1,7 +1,6 @@
 import functools
 import inspect
 import itertools
-import logging
 import warnings
 
 import pkg_resources
@@ -59,7 +58,7 @@ def backends_dict_from_pkg(pkg_entrypoints):
             backend = pkg_ep.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
-            warnings.warn(f"Engine {name} loading failed: \n {ex}", RuntimeWarning)
+            warnings.warn(f"Engine {name} loading failed:\n{ex}", RuntimeWarning)
     return backend_entrypoints
 
 
@@ -108,7 +107,7 @@ def guess_engine(store_spec):
             if backend.guess_can_open and backend.guess_can_open(store_spec):
                 return engine
         except Exception:
-            logging.exception(f"{engine!r} fails while guessing")
+            warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     raise ValueError("cannot guess the engine, try passing one explicitly")
 
