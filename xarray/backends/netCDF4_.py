@@ -542,6 +542,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
     ):
 
+        if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
+            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
             mode=mode,

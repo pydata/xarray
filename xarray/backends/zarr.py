@@ -701,6 +701,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
     ):
+
+        if isinstance(filename_or_obj, str):
+            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
             group=group,

@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from ..core import indexing
@@ -131,6 +133,9 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         lock=None,
         **format_kwargs,
     ):
+
+        if isinstance(filename_or_obj, str):
+            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )

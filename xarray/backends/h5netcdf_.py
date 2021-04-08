@@ -366,6 +366,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
     ):
 
+        if isinstance(filename_or_obj, str):
+            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,

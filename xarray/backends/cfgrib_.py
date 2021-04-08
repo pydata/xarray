@@ -120,6 +120,7 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         time_dims=("time", "step"),
     ):
 
+        filename_or_obj = os.path.expanduser(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,
             indexpath=indexpath,

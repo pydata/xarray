@@ -262,6 +262,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
 
+        if isinstance(filename_or_obj, str):
+            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )
