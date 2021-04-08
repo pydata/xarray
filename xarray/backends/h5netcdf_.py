@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
+from .api import _normalize_path
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
@@ -366,8 +367,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
     ):
 
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = os.path.expanduser(filename_or_obj)
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,

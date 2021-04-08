@@ -1,5 +1,6 @@
 import numpy as np
 
+from .api import _normalize_path
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
@@ -117,6 +118,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
             lock=lock,
         )
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(

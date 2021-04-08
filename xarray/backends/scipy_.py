@@ -2,6 +2,7 @@ import io
 import os
 
 import numpy as np
+from .api import _normalize_path
 
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
@@ -262,8 +263,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
 
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = os.path.expanduser(filename_or_obj)
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )

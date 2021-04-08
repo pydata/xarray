@@ -4,6 +4,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
+from .api import _normalize_path
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
@@ -702,6 +703,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         storage_options=None,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         if isinstance(filename_or_obj, str):
             filename_or_obj = os.path.expanduser(filename_or_obj)
         store = ZarrStore.open_group(

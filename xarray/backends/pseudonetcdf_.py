@@ -2,6 +2,7 @@ import os.path
 
 import numpy as np
 
+from .api import _normalize_path
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
@@ -134,6 +135,7 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         **format_kwargs,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         if isinstance(filename_or_obj, str):
             filename_or_obj = os.path.expanduser(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
