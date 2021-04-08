@@ -53,7 +53,7 @@ def test_broken_plugin():
         _ = plugins.build_engines([broken_backend])
     assert len(record) == 1
     message = str(record[0].message)
-    assert "Engine broken_backend" in message
+    assert "Engine 'broken_backend'" in message
 
 
 def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
