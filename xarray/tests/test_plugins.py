@@ -56,7 +56,6 @@ def test_broken_plugin():
     assert "Engine broken_backend" in message
 
 
-
 def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
 
     with pytest.warns(RuntimeWarning) as record:
