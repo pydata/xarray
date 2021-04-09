@@ -5,7 +5,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .api import _normalize_path
+from .common import _normalize_path
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable

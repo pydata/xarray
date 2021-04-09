@@ -4,7 +4,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .api import _normalize_path
+from .common import _normalize_path
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types

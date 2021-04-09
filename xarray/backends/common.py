@@ -1,4 +1,6 @@
+import os
 import logging
+from pathlib import Path
 import time
 import traceback
 from typing import Any, Dict, Tuple, Type, Union
@@ -8,13 +10,23 @@ import numpy as np
 from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin
+from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _normalize_path(path):
+    if isinstance(path, Path):
+        path = str(path)
+
+    if isinstance(path, str) and not is_remote_uri(path):
+        path = os.path.abspath(os.path.expanduser(path))
+
+    return path
 
 
 def _encode_variable_name(name):

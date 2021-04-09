@@ -2,7 +2,7 @@ import io
 import os
 
 import numpy as np
-from .api import _normalize_path
+from .common import _normalize_path
 
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
