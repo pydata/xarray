@@ -3,7 +3,6 @@ import warnings
 
 import numpy as np
 
-from .common import _normalize_path
 from ..core import indexing
 from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
@@ -12,6 +11,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint

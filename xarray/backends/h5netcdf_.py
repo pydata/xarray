@@ -5,7 +5,6 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .common import _normalize_path
 from ..core import indexing
 from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
 from ..core.variable import Variable
@@ -13,6 +12,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
 )
 from .file_manager import CachingFileManager, DummyFileManager

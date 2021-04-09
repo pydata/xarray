@@ -2,7 +2,6 @@ import io
 import os
 
 import numpy as np
-from .common import _normalize_path
 
 from ..core.indexing import NumpyIndexingAdapter
 from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
@@ -12,6 +11,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
