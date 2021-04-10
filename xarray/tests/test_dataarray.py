@@ -7,6 +7,8 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.core.computation.ops import UndefinedVariableError
+from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import (
@@ -38,6 +40,7 @@ from xarray.tests import (
     requires_dask,
     requires_iris,
     requires_numbagg,
+    requires_numexpr,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -2990,9 +2993,13 @@ class TestDataArray:
         actual = array.resample(time="24H").reduce(np.mean)
         assert_identical(expected, actual)
 
+        # Our use of `loffset` may change if we align our API with pandas' changes.
+        # ref https://github.com/pydata/xarray/pull/4537
         actual = array.resample(time="24H", loffset="-12H").mean()
-        expected = DataArray(array.to_series().resample("24H", loffset="-12H").mean())
-        assert_identical(expected, actual)
+        expected_ = array.to_series().resample("24H").mean()
+        expected_.index += to_offset("-12H")
+        expected = DataArray.from_series(expected_)
+        assert_identical(actual, expected)
 
         with raises_regex(ValueError, "index must be monotonic"):
             array[[2, 0, 1]].resample(time="1D")
@@ -3635,6 +3642,33 @@ class TestDataArray:
         with raises_regex(ValueError, "unnamed"):
             arr.to_dataframe()
 
+    def test_to_dataframe_multiindex(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 3)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [5, 6, 7])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert_array_equal(actual["foo"].values, arr_np.flatten())
+        assert_array_equal(actual.index.names, list("ABC"))
+        assert_array_equal(actual.index.levels[0], [1, 2])
+        assert_array_equal(actual.index.levels[1], ["a", "b"])
+        assert_array_equal(actual.index.levels[2], [5, 6, 7])
+
+    def test_to_dataframe_0length(self):
+        # regression test for #3008
+        arr_np = np.random.randn(4, 0)
+
+        mindex = pd.MultiIndex.from_product([[1, 2], list("ab")], names=["A", "B"])
+
+        arr = DataArray(arr_np, [("MI", mindex), ("C", [])], name="foo")
+
+        actual = arr.to_dataframe()
+        assert len(actual) == 0
+        assert_array_equal(actual.index.names, list("ABC"))
+
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
@@ -4173,6 +4207,9 @@ class TestDataArray:
         assert expect.dtype == bool
         assert_identical(expect, actual)
 
+        with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
+            full_like(da, fill_value=True, dtype={"x": bool})
+
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
         y = np.linspace(-3, 3, 5)
@@ -4584,6 +4621,128 @@ class TestDataArray:
 
         assert actual.shape == (7, 4, 9)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("parser", ["pandas", "python"])
+    @pytest.mark.parametrize(
+        "engine", ["python", None, pytest.param("numexpr", marks=[requires_numexpr])]
+    )
+    @pytest.mark.parametrize(
+        "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
+    )
+    def test_query(self, backend, engine, parser):
+        """Test querying a dataset."""
+
+        # setup test data
+        np.random.seed(42)
+        a = np.arange(0, 10, 1)
+        b = np.random.randint(0, 100, size=10)
+        c = np.linspace(0, 1, 20)
+        d = np.random.choice(["foo", "bar", "baz"], size=30, replace=True).astype(
+            object
+        )
+        if backend == "numpy":
+            aa = DataArray(data=a, dims=["x"], name="a")
+            bb = DataArray(data=b, dims=["x"], name="b")
+            cc = DataArray(data=c, dims=["y"], name="c")
+            dd = DataArray(data=d, dims=["z"], name="d")
+
+        elif backend == "dask":
+            import dask.array as da
+
+            aa = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name="a")
+            bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
+            cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
+            dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+
+        # query single dim, single variable
+        actual = aa.query(x="a > 5", engine=engine, parser=parser)
+        expect = aa.isel(x=(a > 5))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable, via dict
+        actual = aa.query(dict(x="a > 5"), engine=engine, parser=parser)
+        expect = aa.isel(dict(x=(a > 5)))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = bb.query(x="b > 50", engine=engine, parser=parser)
+        expect = bb.isel(x=(b > 50))
+        assert_identical(expect, actual)
+
+        # query single dim, single variable
+        actual = cc.query(y="c < .5", engine=engine, parser=parser)
+        expect = cc.isel(y=(c < 0.5))
+        assert_identical(expect, actual)
+
+        # query single dim, single string variable
+        if parser == "pandas":
+            # N.B., this query currently only works with the pandas parser
+            # xref https://github.com/pandas-dev/pandas/issues/40436
+            actual = dd.query(z='d == "bar"', engine=engine, parser=parser)
+            expect = dd.isel(z=(d == "bar"))
+            assert_identical(expect, actual)
+
+        # test error handling
+        with pytest.raises(ValueError):
+            aa.query("a > 5")  # must be dict or kwargs
+        with pytest.raises(ValueError):
+            aa.query(x=(a > 5))  # must be query string
+        with pytest.raises(UndefinedVariableError):
+            aa.query(x="spam > 50")  # name not present
+
+    @requires_scipy
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_curvefit(self, use_dask):
+        if use_dask and not has_dask:
+            pytest.skip("requires dask")
+
+        def exp_decay(t, n0, tau=1):
+            return n0 * np.exp(-t / tau)
+
+        t = np.arange(0, 5, 0.5)
+        da = DataArray(
+            np.stack([exp_decay(t, 3, 3), exp_decay(t, 5, 4), np.nan * t], axis=-1),
+            dims=("t", "x"),
+            coords={"t": t, "x": [0, 1, 2]},
+        )
+        da[0, 0] = np.nan
+
+        expected = DataArray(
+            [[3, 3], [5, 4], [np.nan, np.nan]],
+            dims=("x", "param"),
+            coords={"x": [0, 1, 2], "param": ["n0", "tau"]},
+        )
+
+        if use_dask:
+            da = da.chunk({"x": 1})
+
+        fit = da.curvefit(
+            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": [2, 6]}
+        )
+        assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
+
+        da = da.compute()
+        fit = da.curvefit(coords="t", func=np.power, reduce_dims="x", param_names=["a"])
+        assert "a" in fit.param
+        assert "x" not in fit.dims
+
+    def test_curvefit_helpers(self):
+        def exp_decay(t, n0, tau=1):
+            return n0 * np.exp(-t / tau)
+
+        params, func_args = xr.core.dataset._get_func_args(exp_decay, [])
+        assert params == ["n0", "tau"]
+        param_defaults, bounds_defaults = xr.core.dataset._initialize_curvefit_params(
+            params, {"n0": 4}, {"tau": [5, np.inf]}, func_args
+        )
+        assert param_defaults == {"n0": 4, "tau": 6}
+        assert bounds_defaults == {"n0": (-np.inf, np.inf), "tau": (5, np.inf)}
+
+        param_names = ["a"]
+        params, func_args = xr.core.dataset._get_func_args(np.power, param_names)
+        assert params == param_names
+        with pytest.raises(ValueError):
+            xr.core.dataset._get_func_args(np.power, [])
 
 
 class TestReduce:
@@ -6356,6 +6515,22 @@ def test_coarsen_keep_attrs():
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
+def test_coarsen_reduce(da, window, name):
+    if da.isnull().sum() > 1 and window == 1:
+        pytest.skip("These parameters lead to all-NaN slices")
+
+    # Use boundary="trim" to accomodate all window sizes used in tests
+    coarsen_obj = da.coarsen(time=window, boundary="trim")
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
+    expected = getattr(coarsen_obj, name)()
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
 def test_rolling_iter(da):
     rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
@@ -6387,6 +6562,15 @@ def test_rolling_repr(da):
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center)]"
     rolling_obj = da.rolling(time=7, x=3, center=True)
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(center)]"
+
+
+@requires_dask
+def test_repeated_rolling_rechunks():
+
+    # regression test for GH3277, GH2514
+    dat = DataArray(np.random.rand(7653, 300), dims=("day", "item"))
+    dat_chunk = dat.chunk({"item": 20})
+    dat_chunk.rolling(day=10).mean().rolling(day=250).std()
 
 
 def test_rolling_doc(da):
@@ -6622,6 +6806,16 @@ def test_ndrolling_reduce(da, center, min_periods, name):
 
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
+
+    if name in ["mean"]:
+        # test our reimplementation of nanmean using np.nanmean
+        expected = getattr(rolling_obj.construct({"time": "tw", "x": "xw"}), name)(
+            ["tw", "xw"]
+        )
+        count = rolling_obj.count()
+        if min_periods is None:
+            min_periods = 1
+        assert_allclose(actual, expected.where(count >= min_periods))
 
 
 @pytest.mark.parametrize("center", (True, False, (True, False)))

@@ -44,6 +44,18 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
+def _ensure_same_types(series, dim):
+
+    if series.dtype == object:
+        types = set(series.map(type))
+        if len(types) > 1:
+            types = ", ".join(t.__name__ for t in types)
+            raise TypeError(
+                f"Cannot combine along dimension '{dim}' with mixed types."
+                f" Found: {types}."
+            )
+
+
 def _infer_concat_order_from_coords(datasets):
 
     concat_dims = []
@@ -88,11 +100,15 @@ def _infer_concat_order_from_coords(datasets):
                     raise ValueError("Cannot handle size zero dimensions")
                 first_items = pd.Index([index[0] for index in indexes])
 
+                series = first_items.to_series()
+
+                # ensure series does not contain mixed types, e.g. cftime calendars
+                _ensure_same_types(series, dim)
+
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
-                series = first_items.to_series()
                 rank = series.rank(
                     method="dense", ascending=ascending, numeric_only=False
                 )
@@ -412,14 +428,16 @@ def combine_nested(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                    default: "drop"
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "drop"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
         - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
@@ -625,14 +643,16 @@ def combine_by_coords(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                    default: "drop"
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "drop"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
         - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 

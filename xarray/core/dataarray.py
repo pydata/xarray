@@ -758,7 +758,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
-        self.variable.attrs = value  # type: ignore
+        self.variable.attrs = value  # type: ignore[assignment]
 
     @property
     def encoding(self) -> Dict[Hashable, Any]:
@@ -839,15 +839,15 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     def __dask_postpersist__(self):
         func, args = self._to_temp_dataset().__dask_postpersist__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     @staticmethod
-    def _dask_finalize(results, func, args, name):
-        ds = func(results, *args)
+    def _dask_finalize(results, name, func, *args, **kwargs):
+        ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
@@ -1003,7 +1003,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
@@ -1094,6 +1094,26 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel
         DataArray.sel
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
+        >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> da = da.isel(x=tgt_x, y=tgt_y)
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1202,6 +1222,34 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.sel
         DataArray.isel
 
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(5), "y": np.arange(5)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
+        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
@@ -1449,6 +1497,26 @@ class DataArray(AbstractArray, DataWithCoords):
         reindexed : DataArray
             Another dataset array, with this array's data but replaced
             coordinates.
+
+        Examples
+        --------
+        Reverse latitude:
+
+        >>> da = xr.DataArray(
+        ...     np.arange(4),
+        ...     coords=[np.array([90, 89, 88, 87])],
+        ...     dims="lat",
+        ... )
+        >>> da
+        <xarray.DataArray (lat: 4)>
+        array([0, 1, 2, 3])
+        Coordinates:
+          * lat      (lat) int64 90 89 88 87
+        >>> da.reindex(lat=da.lat[::-1])
+        <xarray.DataArray (lat: 4)>
+        array([3, 2, 1, 0])
+        Coordinates:
+          * lat      (lat) int64 87 88 89 90
 
         See Also
         --------
@@ -3598,8 +3666,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
-        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
-        recommended to use ``apply_ufunc``.
+        subset to each block. Each block is loaded into memory. In the more common case where
+        ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
@@ -3646,7 +3714,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array
         ... )  # doctest: +ELLIPSIS
         <xarray.DataArray (time: 24)>
-        dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
+        dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
             month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
@@ -3713,6 +3781,8 @@ class DataArray(AbstractArray, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -4283,6 +4353,148 @@ class DataArray(AbstractArray, DataWithCoords):
             return {k: self._replace_maybe_drop_dims(v) for k, v in result.items()}
         else:
             return self._replace_maybe_drop_dims(result)
+
+    def query(
+        self,
+        queries: Mapping[Hashable, Any] = None,
+        parser: str = "pandas",
+        engine: str = None,
+        missing_dims: str = "raise",
+        **queries_kwargs: Any,
+    ) -> "DataArray":
+        """Return a new data array indexed along the specified
+        dimension(s), where the indexers are given as strings containing
+        Python expressions to be evaluated against the values in the array.
+
+        Parameters
+        ----------
+        queries : dict, optional
+            A dict with keys matching dimensions and values given by strings
+            containing Python expressions to be evaluated against the data variables
+            in the dataset. The expressions will be evaluated using the pandas
+            eval() function, and can contain any valid Python expressions but cannot
+            contain any Python statements.
+        parser : {"pandas", "python"}, default: "pandas"
+            The parser to use to construct the syntax tree from the expression.
+            The default of 'pandas' parses code slightly different than standard
+            Python. Alternatively, you can parse an expression using the 'python'
+            parser to retain strict Python semantics.
+        engine: {"python", "numexpr", None}, default: None
+            The engine used to evaluate the expression. Supported engines are:
+            - None: tries to use numexpr, falls back to python
+            - "numexpr": evaluates expressions using numexpr
+            - "python": performs operations as if you had eval’d in top level python
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+        **queries_kwargs : {dim: query, ...}, optional
+            The keyword arguments form of ``queries``.
+            One of queries or queries_kwargs must be provided.
+
+        Returns
+        -------
+        obj : DataArray
+            A new DataArray with the same contents as this dataset, indexed by
+            the results of the appropriate queries.
+
+        See Also
+        --------
+        DataArray.isel
+        Dataset.query
+        pandas.eval
+
+        """
+
+        ds = self._to_dataset_whole(shallow_copy=True)
+        ds = ds.query(
+            queries=queries,
+            parser=parser,
+            engine=engine,
+            missing_dims=missing_dims,
+            **queries_kwargs,
+        )
+        return ds[self.name]
+
+    def curvefit(
+        self,
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
+        func: Callable[..., Any],
+        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
+        skipna: bool = True,
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        param_names: Sequence[str] = None,
+        kwargs: Dict[str, Any] = None,
+    ):
+        """
+        Curve fitting optimization for arbitrary functions.
+
+        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+
+        Parameters
+        ----------
+        coords : DataArray, str or sequence of DataArray, str
+            Independent coordinate(s) over which to perform the curve fitting. Must share
+            at least one dimension with the calling object. When fitting multi-dimensional
+            functions, supply `coords` as a sequence in the same order as arguments in
+            `func`. To fit along existing dimensions of the calling object, `coords` can
+            also be specified as a str or sequence of strs.
+        func : callable
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length `len(x)`. `params` are the fittable parameters which are optimized
+            by scipy curve_fit. `x` can also be specified as a sequence containing multiple
+            coordinates, e.g. `f((x0, x1), *params)`.
+        reduce_dims : str or sequence of str
+            Additional dimension(s) over which to aggregate while fitting. For example,
+            calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
+            aggregate all lat and lon points and fit the specified function along the
+            time dimension.
+        skipna : bool, optional
+            Whether to skip missing values when fitting. Default is True.
+        p0 : dictionary, optional
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dictionary, optional
+            Optional dictionary of parameter names to bounding values passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        param_names: seq, optional
+            Sequence of names for the fittable parameters of `func`. If not supplied,
+            this will be automatically determined by arguments of `func`. `param_names`
+            should be manually supplied when fitting a function that takes a variable
+            number of parameters.
+        kwargs : dictionary
+            Additional keyword arguments to passed to scipy curve_fit.
+
+        Returns
+        -------
+        curvefit_results : Dataset
+            A single dataset which contains:
+
+            [var]_curvefit_coefficients
+                The coefficients of the best fit.
+            [var]_curvefit_covariance
+                The covariance matrix of the coefficient estimates.
+
+        See also
+        --------
+        DataArray.polyfit
+        scipy.optimize.curve_fit
+        """
+        return self._to_temp_dataset().curvefit(
+            coords,
+            func,
+            reduce_dims=reduce_dims,
+            skipna=skipna,
+            p0=p0,
+            bounds=bounds,
+            param_names=param_names,
+            kwargs=kwargs,
+        )
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

@@ -67,3 +67,44 @@ class RollingDask(Rolling):
         super().setup(**kwargs)
         self.ds = self.ds.chunk({"x": 100, "y": 50, "t": 50})
         self.da_long = self.da_long.chunk({"x": 10000})
+
+
+class RollingMemory:
+    def setup(self, *args, **kwargs):
+        self.ds = xr.Dataset(
+            {
+                "var1": (("x", "y"), randn_xy),
+                "var2": (("x", "t"), randn_xt),
+                "var3": (("t",), randn_t),
+            },
+            coords={
+                "x": np.arange(nx),
+                "y": np.linspace(0, 1, ny),
+                "t": pd.date_range("1970-01-01", periods=nt, freq="D"),
+                "x_coords": ("x", np.linspace(1.1, 2.1, nx)),
+            },
+        )
+
+
+class DataArrayRollingMemory(RollingMemory):
+    @parameterized("func", ["sum", "max", "mean"])
+    def peakmem_ndrolling_reduce(self, func):
+        roll = self.ds.var1.rolling(x=10, y=4)
+        getattr(roll, func)()
+
+    @parameterized("func", ["sum", "max", "mean"])
+    def peakmem_1drolling_reduce(self, func):
+        roll = self.ds.var3.rolling(t=100)
+        getattr(roll, func)()
+
+
+class DatasetRollingMemory(RollingMemory):
+    @parameterized("func", ["sum", "max", "mean"])
+    def peakmem_ndrolling_reduce(self, func):
+        roll = self.ds.rolling(x=10, y=4)
+        getattr(roll, func)()
+
+    @parameterized("func", ["sum", "max", "mean"])
+    def peakmem_1drolling_reduce(self, func):
+        roll = self.ds.rolling(t=100)
+        getattr(roll, func)()

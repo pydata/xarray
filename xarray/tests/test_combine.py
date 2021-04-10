@@ -1,4 +1,5 @@
 from datetime import datetime
+from distutils.version import LooseVersion
 from itertools import product
 
 import numpy as np
@@ -732,6 +733,17 @@ class TestCombineAuto:
                 objs, concat_dim="x", join="outer", combine_attrs="identical"
             )
 
+    def test_combine_nested_combine_attrs_drop_conflicts(self):
+        objs = [
+            Dataset({"x": [0], "y": [0]}, attrs={"a": 1, "b": 2, "c": 3}),
+            Dataset({"x": [1], "y": [1]}, attrs={"a": 1, "b": 0, "d": 3}),
+        ]
+        expected = Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "c": 3, "d": 3})
+        actual = combine_nested(
+            objs, concat_dim="x", join="outer", combine_attrs="drop_conflicts"
+        )
+        assert_identical(expected, actual)
+
     def test_infer_order_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
@@ -854,5 +866,22 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
+        error_msg = "Cannot combine along dimension 'time' with mixed types."
+    else:
+        error_msg = r"cannot compare .* \(different calendars\)"
+
+    with raises_regex(TypeError, error_msg):
+        combine_by_coords([da_1, da_2])
+
+
+def test_combine_by_coords_raises_for_differing_types():
+
+    # str and byte cannot be compared
+    da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()
+
+    with raises_regex(
+        TypeError, "Cannot combine along dimension 'time' with mixed types."
+    ):
         combine_by_coords([da_1, da_2])

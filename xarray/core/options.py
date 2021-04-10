@@ -85,6 +85,7 @@ class set_options:
 
     - ``display_width``: maximum display width for ``repr`` on xarray objects.
       Default: ``80``.
+    - ``display_max_rows``: maximum display rows. Default: ``12``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's

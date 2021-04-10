@@ -58,13 +58,13 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
 
 
 @mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=None))
-def test_create_engines_dict():
+def test_backends_dict_from_pkg():
     specs = [
         "engine1 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
     ]
     entrypoints = [pkg_resources.EntryPoint.parse(spec) for spec in specs]
-    engines = plugins.create_engines_dict(entrypoints)
+    engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
     assert engines.keys() == set(("engine1", "engine2"))
 
@@ -111,8 +111,38 @@ def test_build_engines():
         "cfgrib = xarray.tests.test_plugins:backend_1"
     )
     backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
+
     assert isinstance(backend_entrypoints["cfgrib"], DummyBackendEntrypoint1)
     assert backend_entrypoints["cfgrib"].open_dataset_parameters == (
         "filename_or_obj",
         "decoder",
     )
+
+
+@mock.patch(
+    "pkg_resources.EntryPoint.load",
+    mock.MagicMock(return_value=DummyBackendEntrypoint1),
+)
+def test_build_engines_sorted():
+    dummy_pkg_entrypoints = [
+        pkg_resources.EntryPoint.parse(
+            "dummy2 = xarray.tests.test_plugins:backend_1",
+        ),
+        pkg_resources.EntryPoint.parse(
+            "dummy1 = xarray.tests.test_plugins:backend_1",
+        ),
+    ]
+    backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
+    backend_entrypoints = list(backend_entrypoints)
+
+    indices = []
+    for be in plugins.STANDARD_BACKENDS_ORDER:
+        try:
+            index = backend_entrypoints.index(be)
+            backend_entrypoints.pop(index)
+            indices.append(index)
+        except ValueError:
+            pass
+
+    assert set(indices) < {0, -1}
+    assert list(backend_entrypoints) == sorted(backend_entrypoints)
