@@ -2863,7 +2863,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @classmethod
     def from_dask_series(cls, series, sparse: bool = False) -> "DataArray":
-        """Convert a pandas.Series into an xarray.DataArray.
+        """Convert a dask.dataframe.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
         tensor product of one-dimensional coordinates (filling in missing
@@ -2875,7 +2875,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         See also
         --------
-        xarray.Dataset.from_dataframe
+        xarray.DataArray.from_series
         """
         temp_name = "__temporary_name"
         df = series.to_frame(name=temp_name)
