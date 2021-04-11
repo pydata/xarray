@@ -206,25 +206,9 @@ In order to lower this adoption barrier, we propose to:
 -  Write a basic glossary that defines terms that might not be familiar to all
    (e.g. "lazy", "labeled", "serialization", "indexing", "backend").
 
+
 Administrative
 --------------
-
-Current core developers
-~~~~~~~~~~~~~~~~~~~~~~~
-
--  Stephan Hoyer
--  Ryan Abernathey
--  Joe Hamman
--  Benoit Bovy
--  Fabien Maussion
--  Keisuke Fujii
--  Maximilian Roos
--  Deepak Cherian
--  Spencer Clark
--  Tom Nicholas
--  Guido Imperiale
--  Justus Magin
--  Mathias Hauser
 
 NumFOCUS
 ~~~~~~~~

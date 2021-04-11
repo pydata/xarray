@@ -27,7 +27,7 @@ try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None  # type: ignore
+    dask_array = None
 
 
 def _dask_or_eager_func(
@@ -158,7 +158,7 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def astype(data, **kwargs):
+def astype(data, dtype, **kwargs):
     try:
         import sparse
     except ImportError:
@@ -177,7 +177,7 @@ def astype(data, **kwargs):
         )
         kwargs.pop("casting")
 
-    return data.astype(**kwargs)
+    return data.astype(dtype, **kwargs)
 
 
 def asarray(data, xp=np):
@@ -405,21 +405,21 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     Parameters
     ----------
-    da : array-like
-      Input data
-    offset: None, datetime or cftime.datetime
-      Datetime offset. If None, this is set by default to the array's minimum
-      value to reduce round off errors.
-    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      If not None, convert output to a given datetime unit. Note that some
-      conversions are not allowed due to non-linear relationships between units.
-    dtype: dtype
-      Output dtype.
+    array : array-like
+        Input data
+    offset : None, datetime or cftime.datetime
+        Datetime offset. If None, this is set by default to the array's minimum
+        value to reduce round off errors.
+    datetime_unit : {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+        If not None, convert output to a given datetime unit. Note that some
+        conversions are not allowed due to non-linear relationships between units.
+    dtype : dtype
+        Output dtype.
 
     Returns
     -------
     array
-      Numerical representation of datetime object relative to an offset.
+        Numerical representation of datetime object relative to an offset.
 
     Notes
     -----
@@ -463,12 +463,12 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     Parameters
     ----------
     value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
-      Time delta representation.
+        Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      The time units of the output values. Note that some conversions are not allowed due to
-      non-linear relationships between units.
+        The time units of the output values. Note that some conversions are not allowed due to
+        non-linear relationships between units.
     dtype : type
-      The output data type.
+        The output data type.
 
     """
     import datetime as dt
@@ -564,7 +564,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True  # type: ignore
+mean.numeric_only = True  # type: ignore[attr-defined]
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
@@ -614,15 +614,15 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, axis, window, center, fill_value):
+def sliding_window_view(array, window_shape, axis):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
-    else:  # np.ndarray
-        return nputils.rolling_window(array, axis, window, center, fill_value)
+        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+    else:
+        return npcompat.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):

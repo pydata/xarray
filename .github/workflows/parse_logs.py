@@ -18,7 +18,7 @@ def extract_short_test_summary_info(lines):
     )
     up_to_section_content = itertools.islice(up_to_start_of_section, 1, None)
     section_content = itertools.takewhile(
-        lambda l: l.startswith("FAILED"), up_to_section_content
+        lambda l: l.startswith("FAILED") or l.startswith("ERROR"), up_to_section_content
     )
     content = "\n".join(section_content)
 
@@ -30,16 +30,20 @@ def format_log_message(path):
     summary = f"Python {py_version} Test Summary Info"
     with open(path) as f:
         data = extract_short_test_summary_info(line.rstrip() for line in f)
-    message = textwrap.dedent(
-        f"""\
-        <details><summary>{summary}</summary>
+    message = (
+        textwrap.dedent(
+            """\
+            <details><summary>{summary}</summary>
 
-        ```
-        {data}
-        ```
+            ```
+            {data}
+            ```
 
-        </details>
-        """
+            </details>
+            """
+        )
+        .rstrip()
+        .format(summary=summary, data=data)
     )
 
     return message

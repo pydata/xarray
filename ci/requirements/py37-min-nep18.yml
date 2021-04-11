@@ -1,0 +1,22 @@
+name: xarray-tests
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # Optional dependencies that require NEP18, such as sparse and pint,
+  # require drastically newer packages than everything else
+  - python=3.7
+  - coveralls
+  - dask=2.9
+  - distributed=2.9
+  - numpy=1.17
+  - pandas=0.25
+  - pint=0.15
+  - pip
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - pytest-xdist
+  - scipy=1.3
+  - setuptools=40.4
+  - sparse=0.8

@@ -1,5 +1,7 @@
 import functools
 import operator
+import os
+import pathlib
 from contextlib import suppress
 
 import numpy as np
@@ -7,10 +9,12 @@ import numpy as np
 from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.utils import FrozenDict, close_on_error, is_remote_uri
 from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     BackendArray,
+    BackendEntrypoint,
     WritableCFDataStore,
     find_root_and_group,
     robust_getitem,
@@ -18,6 +22,15 @@ from .common import (
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from .store import StoreBackendEntrypoint
+
+try:
+    import netCDF4
+
+    has_netcdf4 = True
+except ModuleNotFoundError:
+    has_netcdf4 = False
+
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -294,7 +307,6 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
@@ -331,7 +343,9 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4
+
+        if isinstance(filename, pathlib.Path):
+            filename = os.fspath(filename)
 
         if not isinstance(filename, str):
             raise ValueError(
@@ -374,7 +388,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
@@ -496,3 +510,64 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+class NetCDF4BackendEntrypoint(BackendEntrypoint):
+    def guess_can_open(self, filename_or_obj):
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+            return True
+        try:
+            _, ext = os.path.splitext(filename_or_obj)
+        except TypeError:
+            return False
+        return ext in {".nc", ".nc4", ".cdf"}
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
+    ):
+
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            mode=mode,
+            format=format,
+            group=group,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
+
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
+
+
+if has_netcdf4:
+    BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint

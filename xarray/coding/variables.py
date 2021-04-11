@@ -270,9 +270,9 @@ class CFScaleOffsetCoder(VariableCoder):
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
             dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
             if np.ndim(scale_factor) > 0:
-                scale_factor = scale_factor.item()
+                scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
-                add_offset = add_offset.item()
+                add_offset = np.asarray(add_offset).item()
             transform = partial(
                 _scale_offset_decoding,
                 scale_factor=scale_factor,
@@ -315,6 +315,14 @@ class UnsignedIntegerCoder(VariableCoder):
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
                     if "_FillValue" in attrs:
                         new_fill = unsigned_dtype.type(attrs["_FillValue"])
+                        attrs["_FillValue"] = new_fill
+            elif data.dtype.kind == "u":
+                if unsigned == "false":
+                    signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+                    transform = partial(np.asarray, dtype=signed_dtype)
+                    data = lazy_elemwise_func(data, transform, signed_dtype)
+                    if "_FillValue" in attrs:
+                        new_fill = signed_dtype.type(attrs["_FillValue"])
                         attrs["_FillValue"] = new_fill
             else:
                 warnings.warn(

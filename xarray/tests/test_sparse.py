@@ -8,18 +8,12 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 from xarray.core.pycompat import sparse_array_type
 
 from . import assert_equal, assert_identical, requires_dask
 
 param = pytest.param
 xfail = pytest.mark.xfail
-
-if not IS_NEP18_ACTIVE:
-    pytest.skip(
-        "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled", allow_module_level=True
-    )
 
 sparse = pytest.importorskip("sparse")
 
@@ -62,7 +56,13 @@ class do:
         self.kwargs = kwargs
 
     def __call__(self, obj):
-        return getattr(obj, self.meth)(*self.args, **self.kwargs)
+
+        # cannot pass np.sum when using pytest-xdist
+        kwargs = self.kwargs.copy()
+        if "func" in self.kwargs:
+            kwargs["func"] = getattr(np, kwargs["func"])
+
+        return getattr(obj, self.meth)(*self.args, **kwargs)
 
     def __repr__(self):
         return f"obj.{self.meth}(*{self.args}, **{self.kwargs})"
@@ -94,7 +94,7 @@ def test_variable_property(prop):
         (do("any"), False),
         (do("astype", dtype=int), True),
         (do("clip", min=0, max=1), True),
-        (do("coarsen", windows={"x": 2}, func=np.sum), True),
+        (do("coarsen", windows={"x": 2}, func="sum"), True),
         (do("compute"), True),
         (do("conj"), True),
         (do("copy"), True),
@@ -191,7 +191,7 @@ def test_variable_property(prop):
             marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
-            do("reduce", func=np.sum, dim="x"),
+            do("reduce", func="sum", dim="x"),
             True,
             marks=xfail(reason="Coercion to dense"),
         ),
@@ -220,6 +220,10 @@ def test_variable_method(func, sparse_output):
     var_d = xr.Variable(var_s.dims, var_s.data.todense())
     ret_s = func(var_s)
     ret_d = func(var_d)
+
+    # TODO: figure out how to verify the results of each method
+    if isinstance(ret_d, xr.Variable) and isinstance(ret_d.data, sparse.SparseArray):
+        ret_d = ret_d.copy(data=ret_d.data.todense())
 
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
@@ -359,7 +363,7 @@ def test_dataarray_property(prop):
         (do("sel", x=[0, 1, 2]), True),
         (do("shift"), True),
         (do("sortby", "x", ascending=False), True),
-        (do("stack", z={"x", "y"}), True),
+        (do("stack", z=["x", "y"]), True),
         (do("transpose"), True),
         # TODO
         # set_index
@@ -450,7 +454,7 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Missing implementation for np.nanmedian"),
         ),
         (do("notnull"), True),
-        (do("pipe", np.sum, axis=1), True),
+        (do("pipe", func="sum", axis=1), True),
         (do("prod"), False),
         param(
             do("quantile", q=0.5),
@@ -463,7 +467,7 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Only implemented for NumPy arrays (via bottleneck)"),
         ),
         param(
-            do("reduce", np.sum, dim="x"),
+            do("reduce", func="sum", dim="x"),
             False,
             marks=xfail(reason="Coercion to dense"),
         ),
@@ -645,7 +649,7 @@ class TestSparseDataArrayAndDataset:
         assert_equal(expected, stacked)
 
         roundtripped = stacked.unstack()
-        assert arr.identical(roundtripped)
+        assert_identical(arr, roundtripped)
 
     @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_ufuncs(self):

@@ -1,8 +1,8 @@
 xarray: N-D labeled arrays and datasets
 =======================================
 
-.. image:: https://dev.azure.com/xarray/xarray/_apis/build/status/pydata.xarray?branchName=master
-   :target: https://dev.azure.com/xarray/xarray/_build/latest?definitionId=1&branchName=master
+.. image:: https://github.com/pydata/xarray/workflows/CI/badge.svg?branch=master
+   :target: https://github.com/pydata/xarray/actions?query=workflow%3ACI
 .. image:: https://codecov.io/gh/pydata/xarray/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
@@ -13,6 +13,8 @@ xarray: N-D labeled arrays and datasets
    :target: https://pypi.python.org/pypi/xarray/
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/python/black
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.598201.svg
+   :target: https://doi.org/10.5281/zenodo.598201
 
 
 **xarray** (formerly **xray**) is an open source project and Python package

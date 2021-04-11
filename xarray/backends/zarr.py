@@ -1,12 +1,30 @@
+import os
+import pathlib
+from distutils.version import LooseVersion
+
 import numpy as np
 
 from .. import coding, conventions
 from ..core import indexing
-from ..core.dataset import Dataset
 from ..core.pycompat import integer_types
 from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractWritableDataStore, BackendArray, _encode_variable_name
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractWritableDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    _encode_variable_name,
+)
+from .store import StoreBackendEntrypoint
+
+try:
+    import zarr
+
+    has_zarr = True
+except ModuleNotFoundError:
+    has_zarr = False
+
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -278,12 +296,24 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None,
         append_dim=None,
         write_region=None,
     ):
-        import zarr
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        # zarr doesn't support pathlib.Path objects yet. zarr-python#601
+        if isinstance(store, pathlib.Path):
+            store = os.fspath(store)
+
+        open_kwargs = dict(
+            mode=mode,
+            synchronizer=synchronizer,
+            path=group,
+        )
+        if LooseVersion(zarr.__version__) >= "2.5.0":
+            open_kwargs["storage_options"] = storage_options
+        elif storage_options:
+            raise ValueError("Storage options only compatible with zarr>=2.5.0")
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
 
@@ -306,11 +336,12 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
+            "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
             "compressor": zarr_array.compressor,
             "filters": zarr_array.filters,
         }
@@ -396,7 +427,6 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-        import zarr
 
         existing_variables = {
             vn for vn in variables if _encode_variable_name(vn) in self.ds
@@ -442,7 +472,7 @@ class ZarrStore(AbstractWritableDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
-        writer :
+        writer
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
@@ -517,6 +547,7 @@ def open_zarr(
     consolidated=False,
     overwrite_encoded_chunks=False,
     chunk_store=None,
+    storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
     **kwargs,
@@ -546,7 +577,7 @@ def open_zarr(
         based on the variable's zarr chunks. If `chunks=None`, zarr array
         data will lazily convert to numpy arrays upon access. This accepts
         all the chunk specifications as Dask does.
-    overwrite_encoded_chunks: bool, optional
+    overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
@@ -585,7 +616,7 @@ def open_zarr(
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
@@ -611,6 +642,14 @@ def open_zarr(
     """
     from .api import open_dataset
 
+    if chunks == "auto":
+        try:
+            import dask.array  # noqa
+
+            chunks = {}
+        except ImportError:
+            chunks = None
+
     if kwargs:
         raise TypeError(
             "open_zarr() got unexpected keyword arguments " + ",".join(kwargs.keys())
@@ -621,6 +660,7 @@ def open_zarr(
         "consolidated": consolidated,
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
+        "storage_options": storage_options,
     }
 
     ds = open_dataset(
@@ -642,53 +682,50 @@ def open_zarr(
     return ds
 
 
-def open_backend_dataset_zarr(
-    filename_or_obj,
-    mask_and_scale=True,
-    decode_times=None,
-    concat_characters=None,
-    decode_coords=None,
-    drop_variables=None,
-    use_cftime=None,
-    decode_timedelta=None,
-    group=None,
-    mode="r",
-    synchronizer=None,
-    consolidated=False,
-    consolidate_on_close=False,
-    chunk_store=None,
-):
-
-    store = ZarrStore.open_group(
+class ZarrBackendEntrypoint(BackendEntrypoint):
+    def open_dataset(
+        self,
         filename_or_obj,
-        group=group,
-        mode=mode,
-        synchronizer=synchronizer,
-        consolidated=consolidated,
-        consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_store,
-    )
-
-    with close_on_error(store):
-        vars, attrs = store.load()
-        file_obj = store
-        encoding = store.get_encoding()
-
-        vars, attrs, coord_names = conventions.decode_cf_variables(
-            vars,
-            attrs,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        synchronizer=None,
+        consolidated=False,
+        consolidate_on_close=False,
+        chunk_store=None,
+        storage_options=None,
+    ):
+        store = ZarrStore.open_group(
+            filename_or_obj,
+            group=group,
+            mode=mode,
+            synchronizer=synchronizer,
+            consolidated=consolidated,
+            consolidate_on_close=consolidate_on_close,
+            chunk_store=chunk_store,
+            storage_options=storage_options,
         )
 
-        ds = Dataset(vars, attrs=attrs)
-        ds = ds.set_coords(coord_names.intersection(vars))
-        ds._file_obj = file_obj
-        ds.encoding = encoding
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
 
-    return ds
+
+if has_zarr:
+    BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint

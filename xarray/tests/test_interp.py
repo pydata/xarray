@@ -190,7 +190,7 @@ def test_interpolate_vectorize(use_dask):
             "w": xdest["w"],
             "z2": xdest["z2"],
             "y": da["y"],
-            "x": (("z", "w"), xdest),
+            "x": (("z", "w"), xdest.data),
             "x2": (("z", "w"), func(da["x2"], "x", xdest)),
         },
     )
@@ -816,7 +816,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 
                 assert_identical(actual, expected)
 
-                # all the combinations are usualy not necessary
+                # all the combinations are usually not necessary
                 break
             break
         break
@@ -866,3 +866,18 @@ def test_interpolate_chunk_advanced(method):
     z = z.chunk(3)
     actual = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp1d_bounds_error():
+    """Ensure exception on bounds error is raised if requested"""
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    with pytest.raises(ValueError):
+        da.interp(time=3.5, kwargs=dict(bounds_error=True))
+
+    # default is to fill with nans, so this should pass
+    da.interp(time=3.5)

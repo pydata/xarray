@@ -39,6 +39,33 @@ def test_safe_cast_to_index():
         assert expected.dtype == actual.dtype
 
 
+@pytest.mark.parametrize(
+    "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
+)
+def test_maybe_coerce_to_str(a, b, expected):
+
+    a = np.array([a])
+    b = np.array([b])
+    index = pd.Index(a).append(pd.Index(b))
+
+    actual = utils.maybe_coerce_to_str(index, [a, b])
+
+    assert_array_equal(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+def test_maybe_coerce_to_str_minimal_str_dtype():
+
+    a = np.array(["a", "a_long_string"])
+    index = pd.Index(["a"])
+
+    actual = utils.maybe_coerce_to_str(index, [a])
+    expected = np.array("a")
+
+    assert_array_equal(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
 @requires_cftime
 def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
@@ -204,15 +231,6 @@ def test_is_remote_uri():
     assert utils.is_remote_uri("https://example.com")
     assert not utils.is_remote_uri(" http://example.com")
     assert not utils.is_remote_uri("example.nc")
-
-
-def test_is_grib_path():
-    assert not utils.is_grib_path("example.nc")
-    assert not utils.is_grib_path("example.grib ")
-    assert utils.is_grib_path("example.grib")
-    assert utils.is_grib_path("example.grib2")
-    assert utils.is_grib_path("example.grb")
-    assert utils.is_grib_path("example.grb2")
 
 
 class Test_is_uniform_and_sorted:

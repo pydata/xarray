@@ -7,7 +7,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import dtypes
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 
 from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
 from .test_variable import _PAD_XR_NP_ARGS
@@ -23,9 +22,6 @@ Quantity = unit_registry.Quantity
 
 
 pytestmark = [
-    pytest.mark.skipif(
-        not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
-    ),
     pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
@@ -364,7 +360,7 @@ class function:
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -397,7 +393,7 @@ def test_apply_ufunc_dataarray(variant, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -452,7 +448,7 @@ def test_apply_ufunc_dataset(variant, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -556,7 +552,7 @@ def test_align_dataarray(value, variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -718,7 +714,7 @@ def test_broadcast_dataset(dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -795,7 +791,7 @@ def test_combine_by_coords(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -901,7 +897,7 @@ def test_combine_nested(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -969,7 +965,7 @@ def test_concat_dataarray(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -1035,7 +1031,7 @@ def test_concat_dataset(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -1139,7 +1135,7 @@ def test_merge_dataarray(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -1216,7 +1212,7 @@ def test_merge_dataset(variant, unit, error, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -1252,7 +1248,7 @@ def test_replication_dataarray(func, variant, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         "coords",
     ),
@@ -1297,7 +1293,7 @@ def test_replication_dataset(func, variant, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         pytest.param(
             "coords",
@@ -1340,7 +1336,7 @@ def test_replication_full_like_dataarray(variant, dtype):
     (
         "data",
         pytest.param(
-            "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+            "dims", marks=pytest.mark.skip(reason="indexes don't support units")
         ),
         pytest.param(
             "coords",
@@ -1509,10 +1505,7 @@ class TestVariable:
             method("mean"),
             method("median"),
             method("min"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint"),
-            ),
+            method("prod"),
             method("std"),
             method("sum"),
             method("var"),
@@ -1520,6 +1513,9 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -1976,7 +1972,7 @@ class TestVariable:
             method("quantile", q=[0.25, 0.75]),
             pytest.param(
                 method("rank", dim="x"),
-                marks=pytest.mark.xfail(reason="rank not implemented for non-ndarray"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
             ),
             method("roll", {"x": 2}),
             pytest.param(
@@ -2173,12 +2169,7 @@ class TestVariable:
             "median",
             "reflect",
             "edge",
-            pytest.param(
-                "linear_ramp",
-                marks=pytest.mark.xfail(
-                    reason="pint bug: https://github.com/hgrecco/pint/issues/1026"
-                ),
-            ),
+            "linear_ramp",
             "maximum",
             "minimum",
             "symmetric",
@@ -2244,7 +2235,7 @@ class TestDataArray:
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             "with_coords",
             "without_coords",
@@ -2281,7 +2272,7 @@ class TestDataArray:
         (
             pytest.param(
                 "with_dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             pytest.param("with_coords"),
             pytest.param("without_coords"),
@@ -2333,10 +2324,7 @@ class TestDataArray:
                 ),
             ),
             function("min"),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            function("prod"),
             function("sum"),
             function("std"),
             function("var"),
@@ -2350,10 +2338,7 @@ class TestDataArray:
             method("mean"),
             method("median"),
             method("min"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="not implemented by pint yet"),
-            ),
+            method("prod"),
             method("sum"),
             method("std"),
             method("var"),
@@ -2363,6 +2348,9 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2428,10 +2416,6 @@ class TestDataArray:
             pytest.param(
                 operator.eq,
                 id="equal",
-                marks=pytest.mark.xfail(
-                    # LooseVersion(pint.__version__) < "0.14",
-                    reason="inconsistencies in the return values of pint's eq",
-                ),
             ),
         ),
     )
@@ -2980,7 +2964,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="units in indexes not supported")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3057,7 +3041,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3147,7 +3131,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3161,7 +3145,7 @@ class TestDataArray:
             method("rename", u="v"),
             pytest.param(
                 method("swap_dims", {"x": "u"}),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             pytest.param(
                 method(
@@ -3169,7 +3153,7 @@ class TestDataArray:
                     dim={"z": np.linspace(10, 20, 12) * unit_registry.s},
                     axis=1,
                 ),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             method("drop_vars", "x"),
             method("reset_coords", names="u"),
@@ -3257,7 +3241,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3302,7 +3286,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3347,7 +3331,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -3471,7 +3455,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3547,7 +3531,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -3615,7 +3599,7 @@ class TestDataArray:
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
         array = (
             np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype)
@@ -3646,6 +3630,10 @@ class TestDataArray:
             method("stack", a=("x", "y")),
             method("set_index", x="x2"),
             method("shift", x=2),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
+            ),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
@@ -3679,7 +3667,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3689,7 +3677,7 @@ class TestDataArray:
         (
             method("diff", dim="x"),
             method("differentiate", coord="x"),
-            method("integrate", dim="x"),
+            method("integrate", coord="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
@@ -3733,7 +3721,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3808,7 +3796,7 @@ class TestDataArray:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3879,7 +3867,7 @@ class TestDataset:
         (
             "nothing",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -3946,7 +3934,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             "coords",
         ),
@@ -3980,38 +3968,6 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            function("all"),
-            function("any"),
-            pytest.param(
-                function("argmax"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmax as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            pytest.param(
-                function("argmin"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmin as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            function("max"),
-            function("min"),
-            function("mean"),
-            pytest.param(
-                function("median"),
-                marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
-            ),
-            function("sum"),
-            pytest.param(
-                function("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
-            ),
-            function("std"),
-            function("var"),
-            function("cumsum"),
-            function("cumprod"),
             method("all"),
             method("any"),
             method("argmax", dim="x"),
@@ -4021,10 +3977,7 @@ class TestDataset:
             method("mean"),
             method("median"),
             method("sum"),
-            pytest.param(
-                method("prod"),
-                marks=pytest.mark.xfail(reason="prod does not work with dataset yet"),
-            ),
+            method("prod"),
             method("std"),
             method("var"),
             method("cumsum"),
@@ -4033,6 +3986,9 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
+        if func.name == "prod" and dtype.kind == "f":
+            pytest.xfail(reason="nanprod is not supported, yet")
+
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
@@ -4412,7 +4368,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4474,7 +4430,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -4568,7 +4524,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4660,7 +4616,7 @@ class TestDataset:
             "data",
             pytest.param(
                 "dims",
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4726,6 +4682,10 @@ class TestDataset:
             method("stack", u=("x", "y")),
             method("set_index", x="x2"),
             method("shift", x=2),
+            pytest.param(
+                method("rank", dim="x"),
+                marks=pytest.mark.skip(reason="rank not implemented for non-ndarray"),
+            ),
             method("roll", x=2, roll_coords=False),
             method("sortby", "x2"),
         ),
@@ -4783,7 +4743,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -4836,7 +4796,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -4889,7 +4849,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "raw_values",
         (
@@ -4956,7 +4916,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5070,7 +5030,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -5145,7 +5105,7 @@ class TestDataset:
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
 
-    @pytest.mark.xfail(reason="indexes don't support units")
+    @pytest.mark.skip(reason="indexes don't support units")
     @pytest.mark.parametrize(
         "unit,error",
         (
@@ -5202,7 +5162,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5261,7 +5221,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5298,7 +5258,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5351,7 +5311,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5406,7 +5366,7 @@ class TestDataset:
                 method(
                     "expand_dims", v=np.linspace(10, 20, 12) * unit_registry.s, axis=1
                 ),
-                marks=pytest.mark.xfail(reason="indexes don't support units"),
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             method("drop_vars", "x"),
             method("drop_dims", "z"),
@@ -5421,7 +5381,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),
@@ -5492,7 +5452,7 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.xfail(reason="indexes don't support units")
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
             ),
             "coords",
         ),

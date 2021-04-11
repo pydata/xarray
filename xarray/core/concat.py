@@ -142,14 +142,16 @@ def concat(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                    default: "override"
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "override"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
         - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
@@ -160,7 +162,53 @@ def concat(
     See also
     --------
     merge
-    auto_combine
+
+    Examples
+    --------
+    >>> da = xr.DataArray(
+    ...     np.arange(6).reshape(2, 3), [("x", ["a", "b"]), ("y", [10, 20, 30])]
+    ... )
+    >>> da
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(y=slice(0, 1)), da.isel(y=slice(1, None))], dim="y")
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "x")
+    <xarray.DataArray (x: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+      * x        (x) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], "new_dim")
+    <xarray.DataArray (new_dim: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+    Dimensions without coordinates: new_dim
+
+    >>> xr.concat([da.isel(x=0), da.isel(x=1)], pd.Index([-90, -100], name="new_dim"))
+    <xarray.DataArray (new_dim: 2, y: 3)>
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    Coordinates:
+        x        (new_dim) <U1 'a' 'b'
+      * y        (y) int64 10 20 30
+      * new_dim  (new_dim) int64 -90 -100
     """
     # TODO: add ignore_index arguments copied from pandas.concat
     # TODO: support concatenating scalar coordinates even if the concatenated
@@ -457,7 +505,7 @@ def _dataset_concat(
     for k in datasets[0].variables:
         if k in concat_over:
             try:
-                vars = ensure_common_dims([ds.variables[k] for ds in datasets])
+                vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
                 raise ValueError("%r is not present in all datasets." % k)
             combined = concat_vars(vars, dim, positions)

@@ -1,6 +1,7 @@
 import logging
 import time
 import traceback
+from typing import Any, Dict, Tuple, Type, Union
 
 import numpy as np
 
@@ -340,3 +341,45 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {k: self.encode_variable(v) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
+
+
+class BackendEntrypoint:
+    """
+    ``BackendEntrypoint`` is a class container and it is the main interface
+    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    It shall implement:
+
+    - ``open_dataset`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~xarray.Dataset`.
+      It shall take in input at least ``filename_or_obj`` argument and
+      ``drop_variables`` keyword argument.
+      For more details see :ref:`RST open_dataset`.
+    - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
+      ``filename_or_obj``, ``False`` otherwise. The implementation of this
+      method is not mandatory.
+    """
+
+    open_dataset_parameters: Union[Tuple, None] = None
+    """list of ``open_dataset`` method parameters"""
+
+    def open_dataset(
+        self,
+        filename_or_obj: str,
+        drop_variables: Tuple[str] = None,
+        **kwargs: Any,
+    ):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        raise NotImplementedError
+
+    def guess_can_open(self, filename_or_obj):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        return False
+
+
+BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}

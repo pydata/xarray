@@ -1,5 +1,4 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -27,7 +26,8 @@ from ..core.combine import (
 )
 from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
-from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.utils import is_remote_uri
+from . import plugins
 from .common import AbstractDataStore, ArrayWriter
 from .locks import _get_scheduler
 
@@ -71,26 +71,6 @@ def _get_default_engine_remote_uri():
     return engine
 
 
-def _get_default_engine_grib():
-    msgs = []
-    try:
-        import Nio  # noqa: F401
-
-        msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
-    except ImportError:  # pragma: no cover
-        pass
-    try:
-        import cfgrib  # noqa: F401
-
-        msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
-    except ImportError:  # pragma: no cover
-        pass
-    if msgs:
-        raise ValueError(" or\n".join(msgs))
-    else:
-        raise ValueError("PyNIO or cfgrib is required for accessing GRIB files")
-
-
 def _get_default_engine_gz():
     try:
         import scipy  # noqa: F401
@@ -119,60 +99,14 @@ def _get_default_engine_netcdf():
     return engine
 
 
-def _get_engine_from_magic_number(filename_or_obj):
-    # check byte header to determine file type
-    if isinstance(filename_or_obj, bytes):
-        magic_number = filename_or_obj[:8]
-    else:
-        if filename_or_obj.tell() != 0:
-            raise ValueError(
-                "file-like object read/write pointer not at zero "
-                "please close and reopen, or use a context manager"
-            )
-        magic_number = filename_or_obj.read(8)
-        filename_or_obj.seek(0)
-
-    if magic_number.startswith(b"CDF"):
-        engine = "scipy"
-    elif magic_number.startswith(b"\211HDF\r\n\032\n"):
-        engine = "h5netcdf"
-    else:
-        raise ValueError(
-            f"{magic_number} is not the signature of any supported file format "
-            "did you mean to pass a string for a path instead?"
-        )
-    return engine
-
-
-def _get_default_engine(path, allow_remote=False):
+def _get_default_engine(path: str, allow_remote: bool = False):
     if allow_remote and is_remote_uri(path):
         engine = _get_default_engine_remote_uri()
-    elif is_grib_path(path):
-        engine = _get_default_engine_grib()
     elif path.endswith(".gz"):
         engine = _get_default_engine_gz()
     else:
         engine = _get_default_engine_netcdf()
     return engine
-
-
-def _autodetect_engine(filename_or_obj):
-    if isinstance(filename_or_obj, str):
-        engine = _get_default_engine(filename_or_obj, allow_remote=True)
-    else:
-        engine = _get_engine_from_magic_number(filename_or_obj)
-    return engine
-
-
-def _get_backend_cls(engine, engines=ENGINES):
-    """Select open_dataset method based on current engine"""
-    try:
-        return engines[engine]
-    except KeyError:
-        raise ValueError(
-            "unrecognized engine for open_dataset: {}\n"
-            "must be one of: {}".format(engine, list(ENGINES))
-        )
 
 
 def _normalize_path(path):
@@ -207,12 +141,21 @@ def _validate_dataset_names(dataset):
         check_name(k)
 
 
-def _validate_attrs(dataset):
+def _validate_attrs(dataset, invalid_netcdf=False):
     """`attrs` must have a string key and a value which is either: a number,
-    a string, an ndarray or a list/tuple of numbers/strings.
+    a string, an ndarray, a list/tuple of numbers/strings, or a numpy.bool_.
+
+    Notes
+    -----
+    A numpy.bool_ is only allowed when using the h5netcdf engine with
+    `invalid_netcdf=True`.
     """
 
-    def check_attr(name, value):
+    valid_types = (str, Number, np.ndarray, np.number, list, tuple)
+    if invalid_netcdf:
+        valid_types += (np.bool_,)
+
+    def check_attr(name, value, valid_types):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
@@ -226,22 +169,46 @@ def _validate_attrs(dataset):
                 "serialization to netCDF files"
             )
 
-        if not isinstance(value, (str, Number, np.ndarray, np.number, list, tuple)):
+        if not isinstance(value, valid_types):
             raise TypeError(
-                f"Invalid value for attr {name!r}: {value!r} must be a number, "
-                "a string, an ndarray or a list/tuple of "
-                "numbers/strings for serialization to netCDF "
-                "files"
+                f"Invalid value for attr {name!r}: {value!r}. For serialization to "
+                "netCDF files, its value must be of one of the following types: "
+                f"{', '.join([vtype.__name__ for vtype in valid_types])}"
             )
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():
-        check_attr(k, v)
+        check_attr(k, v, valid_types)
 
     # Check attrs on each variable within the dataset
     for variable in dataset.variables.values():
         for k, v in variable.attrs.items():
-            check_attr(k, v)
+            check_attr(k, v, valid_types)
+
+
+def _resolve_decoders_kwargs(decode_cf, open_backend_dataset_parameters, **decoders):
+    for d in list(decoders):
+        if decode_cf is False and d in open_backend_dataset_parameters:
+            decoders[d] = False
+        if decoders[d] is None:
+            decoders.pop(d)
+    return decoders
+
+
+def _get_mtime(filename_or_obj):
+    # if passed an actual file path, augment the token with
+    # the file modification time
+    mtime = None
+
+    try:
+        path = os.fspath(filename_or_obj)
+    except TypeError:
+        path = None
+
+    if path and not is_remote_uri(path):
+        mtime = os.path.getmtime(filename_or_obj)
+
+    return mtime
 
 
 def _protect_dataset_variables_inplace(dataset, cache):
@@ -312,23 +279,90 @@ def load_dataarray(filename_or_obj, **kwargs):
         return da.load()
 
 
+def _chunk_ds(
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    overwrite_encoded_chunks,
+    **extra_tokens,
+):
+    from dask.base import tokenize
+
+    mtime = _get_mtime(filename_or_obj)
+    token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
+    name_prefix = "open_dataset-%s" % token
+
+    variables = {}
+    for name, var in backend_ds.variables.items():
+        var_chunks = _get_chunk(var, chunks)
+        variables[name] = _maybe_chunk(
+            name,
+            var,
+            var_chunks,
+            overwrite_encoded_chunks=overwrite_encoded_chunks,
+            name_prefix=name_prefix,
+            token=token,
+        )
+    ds = backend_ds._replace(variables)
+    return ds
+
+
+def _dataset_from_backend_dataset(
+    backend_ds,
+    filename_or_obj,
+    engine,
+    chunks,
+    cache,
+    overwrite_encoded_chunks,
+    **extra_tokens,
+):
+    if not (isinstance(chunks, (int, dict)) or chunks is None):
+        if chunks != "auto":
+            raise ValueError(
+                "chunks must be an int, dict, 'auto', or None. "
+                "Instead found %s. " % chunks
+            )
+
+    _protect_dataset_variables_inplace(backend_ds, cache)
+    if chunks is None:
+        ds = backend_ds
+    else:
+        ds = _chunk_ds(
+            backend_ds,
+            filename_or_obj,
+            engine,
+            chunks,
+            overwrite_encoded_chunks,
+            **extra_tokens,
+        )
+
+    ds.set_close(backend_ds._close)
+
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if "source" not in ds.encoding:
+        if isinstance(filename_or_obj, str):
+            ds.encoding["source"] = filename_or_obj
+
+    return ds
+
+
 def open_dataset(
     filename_or_obj,
-    group=None,
-    decode_cf=True,
-    mask_and_scale=None,
-    decode_times=True,
-    autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
+    *args,
     engine=None,
     chunks=None,
-    lock=None,
     cache=None,
+    decode_cf=None,
+    mask_and_scale=None,
+    decode_times=None,
+    decode_timedelta=None,
+    use_cftime=None,
+    concat_characters=None,
+    decode_coords=None,
     drop_variables=None,
     backend_kwargs=None,
-    use_cftime=None,
-    decode_timedelta=None,
+    **kwargs,
 ):
     """Open and decode a dataset from a file or file-like object.
 
@@ -340,9 +374,26 @@ def open_dataset(
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    group : str, optional
-        Path to the netCDF4 group in the given file to open (only works for
-        netCDF4 files).
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf", "zarr"}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
+        "netcdf4".
+    chunks : int or dict, optional
+        If chunks is provided, it is used to load the new dataset into dask
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -354,53 +405,17 @@ def open_dataset(
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA. mask_and_scale defaults to True except for the
-        pseudonetcdf backend.
+        pseudonetcdf backend. This keyword may not be supported by all the backends.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
-        Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4".
-    chunks : int or dict, optional
-        If chunks is provided, it is used to load the new dataset into dask
-        arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. When using ``engine="zarr"``, setting
-        ``chunks='auto'`` will create dask chunks based on the variable's zarr
-        chunks.
-    lock : False or lock-like, optional
-        Resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler.
-    cache : bool, optional
-        If True, cache data loaded from the underlying datastore in memory as
-        NumPy arrays when accessed to avoid reading from the underlying data-
-        store multiple times. Defaults to True unless you specify the `chunks`
-        argument to use dask, in which case it defaults to False. Does not
-        change the behavior of coordinates corresponding to dimensions, which
-        always load their data from disk into a ``pandas.Index``.
-    drop_variables: str or iterable, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
-    backend_kwargs: dict, optional
-        A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        This keyword may not be supported by all the backends.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
+        This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -410,12 +425,41 @@ def open_dataset(
         ``cftime.datetime`` objects, regardless of whether or not they can be
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error.
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        raise an error. This keyword may not be supported by all the backends.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
+        This keyword may not be supported by all the backends.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
+    drop_variables: str or iterable, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
+    backend_kwargs: dict
+        Additional keyword arguments passed on to the engine open function,
+        equivalent to `**kwargs`.
+    **kwargs: dict
+        Additional keyword arguments passed on to the engine open function.
+        For example:
+
+        - 'group': path to the netCDF4 group in the given file to open given as
+          a str,supported by "netcdf4", "h5netcdf", "zarr".
+        - 'lock': resource lock to use when reading data from disk. Only
+          relevant when using dask or another form of parallelism. By default,
+          appropriate locks are chosen to safely read and write files with the
+          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
+          "pynio", "pseudonetcdf", "cfgrib".
+
+        See engine open function for kwargs accepted by each specific engine.
 
     Returns
     -------
@@ -433,172 +477,72 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if os.environ.get("XARRAY_BACKEND_API", "v1") == "v2":
-        kwargs = locals().copy()
-        from . import apiv2, plugins
-
-        if engine in plugins.ENGINES:
-            return apiv2.open_dataset(**kwargs)
-
-    if autoclose is not None:
-        warnings.warn(
-            "The autoclose argument is no longer used by "
-            "xarray.open_dataset() and is now ignored; it will be removed in "
-            "a future version of xarray. If necessary, you can control the "
-            "maximum number of simultaneous open files with "
-            "xarray.set_options(file_cache_maxsize=...).",
-            FutureWarning,
-            stacklevel=2,
+    if len(args) > 0:
+        raise TypeError(
+            "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
+            "all other options must be passed as keyword arguments"
         )
-
-    if mask_and_scale is None:
-        mask_and_scale = not engine == "pseudonetcdf"
-
-    if not decode_cf:
-        mask_and_scale = False
-        decode_times = False
-        concat_characters = False
-        decode_coords = False
-        decode_timedelta = False
 
     if cache is None:
         cache = chunks is None
 
-    if backend_kwargs is None:
-        backend_kwargs = {}
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
 
-    def maybe_decode_store(store, chunks):
-        ds = conventions.decode_cf(
-            store,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            concat_characters=concat_characters,
-            decode_coords=decode_coords,
-            drop_variables=drop_variables,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+    if engine is None:
+        engine = plugins.guess_engine(filename_or_obj)
 
-        _protect_dataset_variables_inplace(ds, cache)
+    backend = plugins.get_backend(engine)
 
-        if chunks is not None and engine != "zarr":
-            from dask.base import tokenize
+    decoders = _resolve_decoders_kwargs(
+        decode_cf,
+        open_backend_dataset_parameters=backend.open_dataset_parameters,
+        mask_and_scale=mask_and_scale,
+        decode_times=decode_times,
+        decode_timedelta=decode_timedelta,
+        concat_characters=concat_characters,
+        use_cftime=use_cftime,
+        decode_coords=decode_coords,
+    )
 
-            # if passed an actual file path, augment the token with
-            # the file modification time
-            if isinstance(filename_or_obj, str) and not is_remote_uri(filename_or_obj):
-                mtime = os.path.getmtime(filename_or_obj)
-            else:
-                mtime = None
-            token = tokenize(
-                filename_or_obj,
-                mtime,
-                group,
-                decode_cf,
-                mask_and_scale,
-                decode_times,
-                concat_characters,
-                decode_coords,
-                engine,
-                chunks,
-                drop_variables,
-                use_cftime,
-                decode_timedelta,
-            )
-            name_prefix = "open_dataset-%s" % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
-
-        elif engine == "zarr":
-            # adapted from Dataset.Chunk() and taken from open_zarr
-            if not (isinstance(chunks, (int, dict)) or chunks is None):
-                if chunks != "auto":
-                    raise ValueError(
-                        "chunks must be an int, dict, 'auto', or None. "
-                        "Instead found %s. " % chunks
-                    )
-
-            if chunks == "auto":
-                try:
-                    import dask.array  # noqa
-                except ImportError:
-                    chunks = None
-
-            # auto chunking needs to be here and not in ZarrStore because
-            # the variable chunks does not survive decode_cf
-            # return trivial case
-            if chunks is None:
-                return ds
-
-            if isinstance(chunks, int):
-                chunks = dict.fromkeys(ds.dims, chunks)
-
-            variables = {
-                k: _maybe_chunk(
-                    k,
-                    v,
-                    _get_chunk(k, v, chunks),
-                    overwrite_encoded_chunks=overwrite_encoded_chunks,
-                )
-                for k, v in ds.variables.items()
-            }
-            ds2 = ds._replace(variables)
-
-        else:
-            ds2 = ds
-        ds2._file_obj = ds._file_obj
-        return ds2
-
-    filename_or_obj = _normalize_path(filename_or_obj)
-
-    if isinstance(filename_or_obj, AbstractDataStore):
-        store = filename_or_obj
-    else:
-        if engine is None:
-            engine = _autodetect_engine(filename_or_obj)
-
-        extra_kwargs = {}
-        if group is not None:
-            extra_kwargs["group"] = group
-        if lock is not None:
-            extra_kwargs["lock"] = lock
-
-        if engine == "zarr":
-            backend_kwargs = backend_kwargs.copy()
-            overwrite_encoded_chunks = backend_kwargs.pop(
-                "overwrite_encoded_chunks", None
-            )
-
-        opener = _get_backend_cls(engine)
-        store = opener(filename_or_obj, **extra_kwargs, **backend_kwargs)
-
-    with close_on_error(store):
-        ds = maybe_decode_store(store, chunks)
-
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+    overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+    backend_ds = backend.open_dataset(
+        filename_or_obj,
+        drop_variables=drop_variables,
+        **decoders,
+        **kwargs,
+    )
+    ds = _dataset_from_backend_dataset(
+        backend_ds,
+        filename_or_obj,
+        engine,
+        chunks,
+        cache,
+        overwrite_encoded_chunks,
+        drop_variables=drop_variables,
+        **decoders,
+        **kwargs,
+    )
 
     return ds
 
 
 def open_dataarray(
     filename_or_obj,
-    group=None,
-    decode_cf=True,
-    mask_and_scale=None,
-    decode_times=True,
-    autoclose=None,
-    concat_characters=True,
-    decode_coords=True,
+    *args,
     engine=None,
     chunks=None,
-    lock=None,
     cache=None,
+    decode_cf=None,
+    mask_and_scale=None,
+    decode_times=None,
+    decode_timedelta=None,
+    use_cftime=None,
+    concat_characters=None,
+    decode_coords=None,
     drop_variables=None,
     backend_kwargs=None,
-    use_cftime=None,
-    decode_timedelta=None,
+    **kwargs,
 ):
     """Open an DataArray from a file or file-like object containing a single
     data variable.
@@ -609,14 +553,31 @@ def open_dataarray(
     Parameters
     ----------
     filename_or_obj : str, Path, file-like or DataStore
-        Strings and Paths are interpreted as a path to a netCDF file or an
-        OpenDAP URL and opened with python-netCDF4, unless the filename ends
-        with .gz, in which case the file is gunzipped and opened with
+        Strings and Path objects are interpreted as a path to a netCDF file
+        or an OpenDAP URL and opened with python-netCDF4, unless the filename
+        ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
-    group : str, optional
-        Path to the netCDF4 group in the given file to open (only works for
-        netCDF4 files).
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf", "zarr"}, optional
+        Engine to use when reading files. If not provided, the default engine
+        is chosen based on available dependencies, with a preference for
+        "netcdf4".
+    chunks : int or dict, optional
+        If chunks is provided, it is used to load the new dataset into dask
+        arrays. ``chunks=-1`` loads the dataset with dask using a single
+        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays.
+        ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
+        engine preferred chunks. See dask chunking for more details.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -628,46 +589,17 @@ def open_dataarray(
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
         be replaced by NA. mask_and_scale defaults to True except for the
-        pseudonetcdf backend.
+        pseudonetcdf backend. This keyword may not be supported by all the backends.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    concat_characters : bool, optional
-        If True, concatenate along the last dimension of character arrays to
-        form string arrays. Dimensions will only be concatenated over (and
-        removed) if they have no corresponding variable and if they are only
-        used as the last dimension of character arrays.
-    decode_coords : bool, optional
-        If True, decode the 'coordinates' attribute to identify coordinates in
-        the resulting dataset.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib"}, \
-        optional
-        Engine to use when reading files. If not provided, the default engine
-        is chosen based on available dependencies, with a preference for
-        "netcdf4".
-    chunks : int or dict, optional
-        If chunks is provided, it used to load the new dataset into dask
-        arrays.
-    lock : False or lock-like, optional
-        Resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler.
-    cache : bool, optional
-        If True, cache data loaded from the underlying datastore in memory as
-        NumPy arrays when accessed to avoid reading from the underlying data-
-        store multiple times. Defaults to True unless you specify the `chunks`
-        argument to use dask, in which case it defaults to False. Does not
-        change the behavior of coordinates corresponding to dimensions, which
-        always load their data from disk into a ``pandas.Index``.
-    drop_variables: str or iterable, optional
-        A variable or list of variables to exclude from being parsed from the
-        dataset. This may be useful to drop variables with problems or
-        inconsistent values.
-    backend_kwargs: dict, optional
-        A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or
-        allow user control of dataset processing.
+        This keyword may not be supported by all the backends.
+    decode_timedelta : bool, optional
+        If True, decode variables and coordinates with time units in
+        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
+        into timedelta objects. If False, leave them encoded as numbers.
+        If None (default), assume the same value of decode_time.
+        This keyword may not be supported by all the backends.
     use_cftime: bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
@@ -677,12 +609,41 @@ def open_dataarray(
         ``cftime.datetime`` objects, regardless of whether or not they can be
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
-        raise an error.
-    decode_timedelta : bool, optional
-        If True, decode variables and coordinates with time units in
-        {"days", "hours", "minutes", "seconds", "milliseconds", "microseconds"}
-        into timedelta objects. If False, leave them encoded as numbers.
-        If None (default), assume the same value of decode_time.
+        raise an error. This keyword may not be supported by all the backends.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
+        This keyword may not be supported by all the backends.
+    decode_coords : bool or {"coordinates", "all"}, optional
+        Controls which variables are set as coordinate variables:
+
+        - "coordinates" or True: Set variables referred to in the
+          ``'coordinates'`` attribute of the datasets or individual variables
+          as coordinate variables.
+        - "all": Set variables referred to in  ``'grid_mapping'``, ``'bounds'`` and
+          other attributes as coordinate variables.
+    drop_variables: str or iterable, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
+    backend_kwargs: dict
+        Additional keyword arguments passed on to the engine open function,
+        equivalent to `**kwargs`.
+    **kwargs: dict
+        Additional keyword arguments passed on to the engine open function.
+        For example:
+
+        - 'group': path to the netCDF4 group in the given file to open given as
+          a str,supported by "netcdf4", "h5netcdf", "zarr".
+        - 'lock': resource lock to use when reading data from disk. Only
+          relevant when using dask or another form of parallelism. By default,
+          appropriate locks are chosen to safely read and write files with the
+          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
+          "pynio", "pseudonetcdf", "cfgrib".
+
+        See engine open function for kwargs accepted by each specific engine.
 
     Notes
     -----
@@ -697,24 +658,27 @@ def open_dataarray(
     --------
     open_dataset
     """
+    if len(args) > 0:
+        raise TypeError(
+            "open_dataarray() takes only 1 positional argument starting from version 0.18.0, "
+            "all other options must be passed as keyword arguments"
+        )
 
     dataset = open_dataset(
         filename_or_obj,
-        group=group,
         decode_cf=decode_cf,
         mask_and_scale=mask_and_scale,
         decode_times=decode_times,
-        autoclose=autoclose,
         concat_characters=concat_characters,
         decode_coords=decode_coords,
         engine=engine,
         chunks=chunks,
-        lock=lock,
         cache=cache,
         drop_variables=drop_variables,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
+        **kwargs,
     )
 
     if len(dataset.data_vars) != 1:
@@ -726,7 +690,7 @@ def open_dataarray(
     else:
         (data_array,) = dataset.data_vars.values()
 
-    data_array._file_obj = dataset._file_obj
+    data_array.set_close(dataset._close)
 
     # Reset names if they were changed during saving
     # to ensure that we can 'roundtrip' perfectly
@@ -740,17 +704,6 @@ def open_dataarray(
     return data_array
 
 
-class _MultiFileCloser:
-    __slots__ = ("file_objs",)
-
-    def __init__(self, file_objs):
-        self.file_objs = file_objs
-
-    def close(self):
-        for f in self.file_objs:
-            f.close()
-
-
 def open_mfdataset(
     paths,
     chunks=None,
@@ -758,14 +711,13 @@ def open_mfdataset(
     compat="no_conflicts",
     preprocess=None,
     engine=None,
-    lock=None,
     data_vars="all",
     coords="different",
     combine="by_coords",
-    autoclose=None,
     parallel=False,
     join="outer",
     attrs_file=None,
+    combine_attrs="override",
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -829,11 +781,6 @@ def open_mfdataset(
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
-    lock : False or lock-like, optional
-        Resource lock to use when reading data from disk. Only relevant when
-        using dask or another form of parallelism. By default, appropriate
-        locks are chosen to safely read and write files with the currently
-        active dask scheduler.
     data_vars : {"minimal", "different", "all"} or list of str, optional
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
@@ -906,14 +853,33 @@ def open_mfdataset(
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
-        if is_remote_uri(paths):
+        if is_remote_uri(paths) and engine == "zarr":
+            try:
+                from fsspec.core import get_fs_token_paths
+            except ImportError as e:
+                raise ImportError(
+                    "The use of remote URLs for opening zarr requires the package fsspec"
+                ) from e
+
+            fs, _, _ = get_fs_token_paths(
+                paths,
+                mode="rb",
+                storage_options=kwargs.get("backend_kwargs", {}).get(
+                    "storage_options", {}
+                ),
+                expand=False,
+            )
+            paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+            paths = [fs.get_mapper(path) for path in paths]
+        elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs: "
                 "{!r}. Instead, supply paths as an explicit list of strings.".format(
                     paths
                 )
             )
-        paths = sorted(glob(paths))
+        else:
+            paths = sorted(glob(_normalize_path(paths)))
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
@@ -929,9 +895,7 @@ def open_mfdataset(
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
-    open_kwargs = dict(
-        engine=engine, chunks=chunks or {}, lock=lock, autoclose=autoclose, **kwargs
-    )
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
     if parallel:
         import dask
@@ -946,14 +910,14 @@ def open_mfdataset(
         getattr_ = getattr
 
     datasets = [open_(p, **open_kwargs) for p in paths]
-    file_objs = [getattr_(ds, "_file_obj") for ds in datasets]
+    closers = [getattr_(ds, "_close") for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
     if parallel:
         # calling compute here will return the datasets/file_objs lists,
         # the underlying datasets will still be stored as dask arrays
-        datasets, file_objs = dask.compute(datasets, file_objs)
+        datasets, closers = dask.compute(datasets, closers)
 
     # Combine all datasets, closing them in case of a ValueError
     try:
@@ -968,7 +932,7 @@ def open_mfdataset(
                 coords=coords,
                 ids=ids,
                 join=join,
-                combine_attrs="drop",
+                combine_attrs=combine_attrs,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
@@ -979,7 +943,7 @@ def open_mfdataset(
                 data_vars=data_vars,
                 coords=coords,
                 join=join,
-                combine_attrs="drop",
+                combine_attrs=combine_attrs,
             )
         else:
             raise ValueError(
@@ -991,15 +955,17 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined._file_obj = _MultiFileCloser(file_objs)
+    def multi_file_closer():
+        for closer in closers:
+            closer()
+
+    combined.set_close(multi_file_closer)
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
         if isinstance(attrs_file, Path):
             attrs_file = str(attrs_file)
         combined.attrs = datasets[paths.index(attrs_file)].attrs
-    else:
-        combined.attrs = datasets[0].attrs
 
     return combined
 
@@ -1060,7 +1026,7 @@ def to_netcdf(
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
+    _validate_attrs(dataset, invalid_netcdf=invalid_netcdf and engine == "h5netcdf")
 
     try:
         store_open = WRITEABLE_STORES[engine]
@@ -1414,10 +1380,11 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
-    if isinstance(store, Path):
-        store = str(store)
-    if isinstance(chunk_store, Path):
-        chunk_store = str(store)
+
+    # expand str and Path arguments
+    store = _normalize_path(store)
+    chunk_store = _normalize_path(chunk_store)
+
     if encoding is None:
         encoding = {}
 
@@ -1446,9 +1413,6 @@ def to_zarr(
             "Instead, set consolidated=True when writing to zarr with "
             "compute=False before writing data."
         )
-
-    if isinstance(store, Path):
-        store = str(store)
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)

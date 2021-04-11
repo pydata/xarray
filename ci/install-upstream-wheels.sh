@@ -12,7 +12,10 @@ conda uninstall -y --force \
     rasterio \
     pint \
     bottleneck \
-    sparse
+    sparse \
+    xarray
+# to limit the runtime of Upstream CI
+python -m pip install pytest-timeout
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
     --no-deps \
@@ -36,4 +39,5 @@ python -m pip install \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck
+    git+https://github.com/pydata/bottleneck \
+    git+https://github.com/pydata/sparse

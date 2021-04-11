@@ -885,11 +885,11 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: bool, optional
+    keep_attrs : bool, optional
         Whether to copy attributes from the first argument to the output.
-    kwargs: dict, optional
+    kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
+    dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
@@ -923,9 +923,16 @@ def apply_ufunc(
     Single value or tuple of Dataset, DataArray, Variable, dask.array.Array or
     numpy.ndarray, the first type on that list to appear on an input.
 
+    Notes
+    -----
+    This function is designed for the more common case where ``func`` can work on numpy
+    arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
+    it is possible to use :py:func:`xarray.map_blocks`.
+
+    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
+
     Examples
     --------
-
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
@@ -1011,11 +1018,13 @@ def apply_ufunc(
     works well with numba's vectorize and guvectorize. Further explanation with
     examples are provided in the xarray documentation [3]_.
 
-    See also
+    See Also
     --------
     numpy.broadcast_arrays
     numba.vectorize
     numba.guvectorize
+    dask.array.apply_gufunc
+    xarray.map_blocks
 
     References
     ----------
@@ -1148,24 +1157,24 @@ def cov(da_a, da_b, dim=None, ddof=1):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
     dim : str, optional
         The dimension along which the covariance will be computed
-    ddof: int, optional
+    ddof : int, optional
         If ddof=1, covariance is normalized by N-1, giving an unbiased estimate,
         else normalization is by N.
 
     Returns
     -------
-    covariance: DataArray
+    covariance : DataArray
 
-    See also
+    See Also
     --------
-    pandas.Series.cov: corresponding pandas function
-    xr.corr: respective function to calculate correlation
+    pandas.Series.cov : corresponding pandas function
+    xarray.corr : respective function to calculate correlation
 
     Examples
     --------
@@ -1229,21 +1238,21 @@ def corr(da_a, da_b, dim=None):
 
     Parameters
     ----------
-    da_a: DataArray
+    da_a : DataArray
         Array to compute.
-    da_b: DataArray
+    da_b : DataArray
         Array to compute.
-    dim: str, optional
+    dim : str, optional
         The dimension along which the correlation will be computed
 
     Returns
     -------
     correlation: DataArray
 
-    See also
+    See Also
     --------
-    pandas.Series.corr: corresponding pandas function
-    xr.cov: underlying covariance function
+    pandas.Series.corr : corresponding pandas function
+    xarray.cov : underlying covariance function
 
     Examples
     --------
@@ -1346,7 +1355,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays : DataArray or Variable
+    *arrays : DataArray or Variable
         Arrays to compute.
     dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
@@ -1361,7 +1370,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-
     >>> import numpy as np
     >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
@@ -1496,7 +1504,6 @@ def where(cond, x, y):
     All dimension coordinates on `x` and `y`  must be aligned with each
     other and with `cond`.
 
-
     Parameters
     ----------
     cond : scalar, array, Variable, DataArray or Dataset
@@ -1566,10 +1573,11 @@ def where(cond, x, y):
            [0, 0]])
     Dimensions without coordinates: x, y
 
-    See also
+    See Also
     --------
     numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where : equivalent methods
+    Dataset.where, DataArray.where :
+        equivalent methods
     """
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1595,7 +1603,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
-    See also
+    See Also
     --------
     xarray.DataArray.polyfit
     numpy.polyval

@@ -102,7 +102,7 @@ def make_meta(obj):
     """
     if isinstance(obj, DataArray):
         obj_array = obj
-        obj = obj._to_temp_dataset()
+        obj = dataarray_to_dataset(obj)
     elif isinstance(obj, Dataset):
         obj_array = None
     else:
@@ -116,7 +116,7 @@ def make_meta(obj):
     meta = meta.set_coords(obj.coords)
 
     if obj_array is not None:
-        return obj_array._from_temp_dataset(meta)
+        return dataset_to_dataarray(meta)
     return meta
 
 
@@ -183,7 +183,6 @@ def map_blocks(
         This function must return either a single DataArray or a single Dataset.
 
         This function cannot add a new chunked dimension.
-
     obj : DataArray, Dataset
         Passed to the function as its first argument, one block at a time.
     args : sequence
@@ -201,7 +200,6 @@ def map_blocks(
         When provided, ``attrs`` on variables in `template` are copied over to the result. Any
         ``attrs`` set by ``func`` will be ignored.
 
-
     Returns
     -------
     A single DataArray or Dataset with dask backend, reassembled from the outputs of the
@@ -210,20 +208,19 @@ def map_blocks(
     Notes
     -----
     This function is designed for when ``func`` needs to manipulate a whole xarray object
-    subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
-    recommended to use ``apply_ufunc``.
+    subset to each block. Each block is loaded into memory. In the more common case where
+    ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
     If none of the variables in ``obj`` is backed by dask arrays, calling this function is
     equivalent to calling ``func(obj, *args, **kwargs)``.
 
     See Also
     --------
-    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks,
+    dask.array.map_blocks, xarray.apply_ufunc, xarray.Dataset.map_blocks
     xarray.DataArray.map_blocks
 
     Examples
     --------
-
     Calculate an anomaly from climatology using ``.groupby()``. Using
     ``xr.map_blocks()`` allows for parallel operations with knowledge of ``xarray``,
     its indices, and its methods like ``.groupby()``.
@@ -261,7 +258,7 @@ def map_blocks(
     ...     template=array,
     ... )  # doctest: +ELLIPSIS
     <xarray.DataArray (time: 24)>
-    dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
+    dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
     Coordinates:
       * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
         month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
@@ -382,7 +379,9 @@ def map_blocks(
         # template xarray object has been provided with proper sizes and chunk shapes
         indexes = dict(template.indexes)
         if isinstance(template, DataArray):
-            output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
+            output_chunks = dict(
+                zip(template.dims, template.chunks)  # type: ignore[arg-type]
+            )
         else:
             output_chunks = dict(template.chunks)
 
@@ -451,7 +450,7 @@ def map_blocks(
                 for dim in variable.dims:
                     chunk = chunk[chunk_index[dim]]
 
-                chunk_variable_task = (f"{gname}-{name}-{chunk[0]}",) + chunk_tuple
+                chunk_variable_task = (f"{name}-{gname}-{chunk[0]}",) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
                     [variable.dims, chunk, variable.attrs],
@@ -465,7 +464,7 @@ def map_blocks(
                 }
                 subset = variable.isel(subsetter)
                 chunk_variable_task = (
-                    "{}-{}".format(gname, dask.base.tokenize(subset)),
+                    f"{name}-{gname}-{dask.base.tokenize(subset)}",
                 ) + chunk_tuple
                 graph[chunk_variable_task] = (
                     tuple,
@@ -500,8 +499,8 @@ def map_blocks(
         expected["shapes"] = {
             k: output_chunks[k][v] for k, v in chunk_index.items() if k in output_chunks
         }
-        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore
-        expected["coords"] = set(template.coords.keys())  # type: ignore
+        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
+        expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
         expected["indexes"] = {
             dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
             for dim in indexes
@@ -515,7 +514,7 @@ def map_blocks(
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
-            gname_l = f"{gname}-{name}"
+            gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
             key: Tuple[Any, ...] = (gname_l,)
@@ -574,5 +573,5 @@ def map_blocks(
     if result_is_array:
         da = dataset_to_dataarray(result)
         da.name = template_name
-        return da  # type: ignore
-    return result  # type: ignore
+        return da  # type: ignore[return-value]
+    return result  # type: ignore[return-value]

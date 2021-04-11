@@ -731,11 +731,13 @@ class TestDataArrayAndDataset(DaskTestCase):
 class TestToDaskDataFrame:
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
-        x = da.from_array(np.random.randn(10), chunks=4)
+        x = np.random.randn(10)
         y = np.arange(10, dtype="uint8")
         t = list("abcdefghij")
 
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        ds = Dataset(
+            {"a": ("t", da.from_array(x, chunks=4)), "b": ("t", y), "t": ("t", t)}
+        )
 
         expected_pd = pd.DataFrame({"a": x, "b": y}, index=pd.Index(t, name="t"))
 
@@ -758,8 +760,8 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
-        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
-        ds = Dataset({"w": (("x", "y"), w)})
+        w = np.random.randn(2, 3)
+        ds = Dataset({"w": (("x", "y"), da.from_array(w, chunks=(1, 2)))})
         ds["x"] = ("x", np.array([0, 1], np.int64))
         ds["y"] = ("y", list("abc"))
 
@@ -791,10 +793,15 @@ class TestToDaskDataFrame:
 
     def test_to_dask_dataframe_coordinates(self):
         # Test if coordinate is also a dask array
-        x = da.from_array(np.random.randn(10), chunks=4)
-        t = da.from_array(np.arange(10) * 2, chunks=4)
+        x = np.random.randn(10)
+        t = np.arange(10) * 2
 
-        ds = Dataset({"a": ("t", x), "t": ("t", t)})
+        ds = Dataset(
+            {
+                "a": ("t", da.from_array(x, chunks=4)),
+                "t": ("t", da.from_array(t, chunks=4)),
+            }
+        )
 
         expected_pd = pd.DataFrame({"a": x}, index=pd.Index(t, name="t"))
         expected = dd.from_pandas(expected_pd, chunksize=4)
@@ -1226,7 +1233,7 @@ def test_map_blocks_to_array(map_ds):
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
         lambda x: x.expand_dims(k=3),
-        lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
+        lambda x: x.assign_coords(new_coord=("y", x.y.data * 2)),
         lambda x: x.astype(np.int32),
         lambda x: x.x,
     ],
@@ -1592,3 +1599,38 @@ def test_optimize():
     arr = xr.DataArray(a).chunk(5)
     (arr2,) = dask.optimize(arr)
     arr2.compute()
+
+
+# The graph_manipulation module is in dask since 2021.2 but it became usable with
+# xarray only since 2021.3
+@pytest.mark.skipif(LooseVersion(dask.__version__) <= "2021.02.0", reason="new module")
+def test_graph_manipulation():
+    """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
+    function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
+    a HighLevelGraph whereas with dask.persist() and dask.optimize() it's a plain dict.
+    """
+    import dask.graph_manipulation as gm
+
+    v = Variable(["x"], [1, 2]).chunk(-1).chunk(1) * 2
+    da = DataArray(v)
+    ds = Dataset({"d1": v[0], "d2": v[1], "d3": ("x", [3, 4])})
+
+    v2, da2, ds2 = gm.clone(v, da, ds)
+
+    assert_equal(v2, v)
+    assert_equal(da2, da)
+    assert_equal(ds2, ds)
+
+    for a, b in ((v, v2), (da, da2), (ds, ds2)):
+        assert a.__dask_layers__() != b.__dask_layers__()
+        assert len(a.__dask_layers__()) == len(b.__dask_layers__())
+        assert a.__dask_graph__().keys() != b.__dask_graph__().keys()
+        assert len(a.__dask_graph__()) == len(b.__dask_graph__())
+        assert a.__dask_graph__().layers.keys() != b.__dask_graph__().layers.keys()
+        assert len(a.__dask_graph__().layers) == len(b.__dask_graph__().layers)
+
+    # Above we performed a slice operation; adding the two slices back together creates
+    # a diamond-shaped dependency graph, which in turn will trigger a collision in layer
+    # names if we were to use HighLevelGraph.cull() instead of
+    # HighLevelGraph.cull_layers() in Dataset.__dask_postpersist__().
+    assert_equal(ds2.d1 + ds2.d2, ds.d1 + ds.d2)
