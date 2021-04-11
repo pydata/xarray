@@ -852,52 +852,6 @@ class DataArray(AbstractArray, DataWithCoords):
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
 
-    @classmethod
-    def from_dask_dataframe(cls, ddf, index_name: str = "", columns_name: str = ""):
-        """Convert a pandas.DataFrame into an xarray.DataArray
-
-        This method will produce a DataArray from a Dask DataFrame.
-        Dimensions are loaded into memory but the data itself remains
-        a Dask Array. The dataframe you pass can contain only one data-type.
-
-        Parameters
-        ----------
-        ddf: DataFrame
-            Dask DataFrame from which to copy data and indices.
-        index_name: str
-            Name of the dimension that will be created from the index
-        columns_name: str
-            Name of the dimension that will be created from the columns
-
-        Returns
-        -------
-        New DataArray.
-
-        See also
-        --------
-        xarray.DataSet.from_dataframe
-        xarray.DataArray.from_series
-        pandas.DataFrame.to_xarray
-        """
-        assert len(set(ddf.dtypes)) == 1, "Each variable can include only one data-type"
-
-        def extract_dim_name(df, dim="index"):
-            if getattr(ddf, dim).name is None:
-                getattr(ddf, dim).name = dim
-
-            dim_name = getattr(ddf, dim).name
-
-            return dim_name
-
-        if index_name == "":
-            index_name = extract_dim_name(ddf, "index")
-        if columns_name == "":
-            columns_name = extract_dim_name(ddf, "columns")
-
-        da = cls(ddf, coords=[ddf.index, ddf.columns], dims=[index_name, columns_name])
-
-        return da
-
     def load(self, **kwargs) -> "DataArray":
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
