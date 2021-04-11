@@ -5226,6 +5226,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
 
+        # TODO: stop computing once dask.dataframe.Index objects are supported
         idx = remove_unused_levels_categories(dataframe.index.compute())
 
         if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
