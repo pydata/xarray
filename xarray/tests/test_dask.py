@@ -729,6 +729,9 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 class TestToFromDaskDataFrame:
+    @pytest.mark.skipif(
+        LooseVersion(dask.__version__) < "2.23.0", reason="requires DataFrame.items"
+    )
     def test_from_dask_dataframe(self):
         a = np.linspace(0, 1, 10)
         b = np.arange(10, dtype="uint8")
@@ -760,6 +763,9 @@ class TestToFromDaskDataFrame:
 
         assert_identical(actual, expected)
 
+    @pytest.mark.skipif(
+        LooseVersion(dask.__version__) < "2.23.0", reason="requires DataFrame.items"
+    )
     def test_to_and_from_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = np.linspace(0, 1, 10)
