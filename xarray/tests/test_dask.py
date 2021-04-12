@@ -728,7 +728,57 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert dask.base.tokenize(data_array) == token
 
 
-class TestToDaskDataFrame:
+class TestToFromDaskDataFrame:
+    def test_from_dask_dataframe(self):
+        a = np.linspace(0, 1, 10)
+        b = np.arange(10, dtype="uint8")
+        c = pd.date_range("2000-01-01", freq="M", periods=10)
+        t = list("abcdefghij")
+
+        df = pd.DataFrame(
+            {
+                "a": a,
+                "b": b,
+                "c": c,
+            },
+            index=pd.Index(t, name="t"),
+        )
+        dask_df = dd.from_pandas(df, chunksize=4)
+
+        # computes the index and the chunksize of the variables
+        max_computes = len(df.keys()) + 1
+        with raise_if_dask_computes(max_computes):
+            actual = Dataset.from_dask_dataframe(dask_df)
+        expected = Dataset(
+            {
+                "a": ("t", da.from_array(a, chunks=4)),
+                "b": ("t", da.from_array(b, chunks=4)),
+                "c": ("t", da.from_array(c, chunks=4)),
+            },
+            coords={"t": t},
+        )
+
+        assert_identical(actual, expected)
+
+    def test_to_and_from_dask_dataframe(self):
+        # Test conversion of Datasets to dask DataFrames
+        x = np.linspace(0, 1, 10)
+        y = np.arange(10, dtype="uint8")
+        t = list("abcdefghij")
+
+        ds = Dataset(
+            {
+                "a": ("t", da.from_array(x, chunks=4)),
+                "b": ("t", da.from_array(y, chunks=4)),
+                "t": ("t", t),
+            }
+        )
+
+        df = ds.to_dask_dataframe(set_index=True)
+        actual = Dataset.from_dask_dataframe(df)
+
+        assert_identical(actual, ds)
+
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = np.random.randn(10)

@@ -40,12 +40,10 @@ from . import (
     assert_identical,
     has_cftime,
     has_dask,
-    raise_if_dask_computes,
     raises_regex,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
-    requires_dask_dataframe,
     requires_numbagg,
     requires_numexpr,
     requires_scipy,
@@ -4241,41 +4239,6 @@ class TestDataset:
         # np.asarray
         expected = df.apply(np.asarray)
         assert roundtripped.equals(expected)
-
-    @requires_dask_dataframe
-    def test_from_dask_dataframe(self):
-        import dask.dataframe as ddf
-
-        index = pd.Index(list("abcdefghij"), name="x")
-        df = pd.DataFrame(
-            {
-                "a": range(10),
-                "b": np.linspace(0, 1, 10),
-                "c": pd.date_range("2000-01-01", freq="M", periods=10),
-            },
-            index=index,
-        )
-        dask_df = ddf.from_pandas(df, chunksize=2)
-
-        # computes the index and the chunksize of the variables
-        max_computes = len(df.keys()) + 1
-        with raise_if_dask_computes(max_computes):
-            actual = Dataset.from_dask_dataframe(dask_df)
-        expected = Dataset.from_dataframe(df).chunk({"x": 2})
-
-        assert_identical(actual, expected)
-
-    @requires_dask_dataframe
-    def test_to_and_from_dask_dataframe(self):
-        x = np.random.randn(10)
-        y = np.random.randn(10)
-        t = list("abcdefghij")
-        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)}).chunk({"t": 2})
-
-        df = ds.to_dask_dataframe(set_index=True)
-        actual = Dataset.from_dask_dataframe(df)
-
-        assert_identical(actual, ds)
 
     def test_to_and_from_dict(self):
         # <xarray.Dataset>
