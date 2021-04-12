@@ -688,6 +688,7 @@ Dataset methods
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
+   Dataset.from_dask_dataframe
    Dataset.from_dataframe
    Dataset.from_dict
    Dataset.close
@@ -718,6 +719,7 @@ DataArray methods
    DataArray.to_iris
    DataArray.from_iris
    DataArray.to_dict
+   DataArray.from_dask_series
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
