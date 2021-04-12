@@ -5232,7 +5232,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         Parameters
         ----------
         dataframe : dask.dataframe.DataFrame
-            Dask DataFrame from which to copy data and indices.
+            Dask DataFrame from which to copy data and index.
 
         Returns
         -------
