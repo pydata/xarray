@@ -22,9 +22,10 @@ try:
 except ModuleNotFoundError:
     has_cfgrib = False
 # cfgrib throws a RuntimeError if eccodes is not installed
-except RuntimeError:
+except (ImportError, RuntimeError):
     warnings.warn(
-        "Failed to load cfgrib - most likely eccodes is missing. Try `import cfgrib` to get the error message"
+        "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
+        "Try `import cfgrib` to get the full error message"
     )
     has_cfgrib = False
 
