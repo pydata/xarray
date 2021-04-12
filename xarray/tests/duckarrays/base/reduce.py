@@ -30,9 +30,6 @@ class VariableReduceTests:
         (
             "all",
             "any",
-            "argmax",
-            "argmin",
-            "argsort",
             "cumprod",
             "cumsum",
             "max",
