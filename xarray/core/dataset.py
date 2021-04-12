@@ -5223,11 +5223,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def from_dask_dataframe(cls, dataframe):
-        import dask.dataframe as ddf
+        import dask.dataframe as dd
 
         if not dataframe.columns.is_unique:
             raise ValueError("cannot convert DataFrame with non-unique columns")
-        if not isinstance(dataframe, ddf.DataFrame):
+        if not isinstance(dataframe, dd.DataFrame):
             raise ValueError("cannot convert non-dask dataframe objects")
 
         # TODO: stop computing once dask.dataframe.Index objects are supported
