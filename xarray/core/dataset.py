@@ -5223,6 +5223,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     @classmethod
     def from_dask_dataframe(cls, dataframe):
+        """Convert a dask.dataframe.DataFrame into an xarray.Dataset
+
+        This method will produce a Dataset from a dask DataFrame.
+        Dimensions are loaded into memory but the data itself remains
+        a dask array.
+
+        Parameters
+        ----------
+        dataframe : dask.dataframe.DataFrame
+            Dask DataFrame from which to copy data and indices.
+
+        Returns
+        -------
+        Dataset
+            The converted Dataset
+
+        See also
+        --------
+        xarray.DataArray.from_dask_series
+        xarray.Dataset.from_dataframe
+        xarray.DataArray.from_series
+        """
         import dask.dataframe as dd
 
         if not dataframe.columns.is_unique:
