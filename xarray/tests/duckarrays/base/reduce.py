@@ -6,7 +6,7 @@ from hypothesis import given, note
 import xarray as xr
 
 from ... import assert_identical
-from .utils import create_dimension_names, numpy_array, valid_axes, valid_dims_from_axes
+from .utils import create_dimension_names, numpy_array, valid_axis, valid_dims_from_axes
 
 
 class VariableReduceTests:
@@ -48,7 +48,7 @@ class VariableReduceTests:
         dims = create_dimension_names(raw.ndim)
         var = xr.Variable(dims, raw)
 
-        reduce_axes = data.draw(valid_axes(raw.ndim))
+        reduce_axes = data.draw(valid_axis(raw.ndim))
         reduce_dims = valid_dims_from_axes(dims, reduce_axes)
 
         self.check_reduce(var, method, dim=reduce_dims)
