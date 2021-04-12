@@ -45,6 +45,7 @@ from . import (
     requires_bottleneck,
     requires_cftime,
     requires_dask,
+    requires_dask_dataframe,
     requires_numbagg,
     requires_numexpr,
     requires_scipy,
@@ -4241,8 +4242,9 @@ class TestDataset:
         expected = df.apply(np.asarray)
         assert roundtripped.equals(expected)
 
+    @requires_dask_dataframe
     def test_from_dask_dataframe(self):
-        ddf = pytest.importorskip("dask.dataframe")
+        import dask.dataframe as ddf
 
         index = pd.Index(list("abcdefghij"), name="x")
         df = pd.DataFrame(
@@ -4263,6 +4265,7 @@ class TestDataset:
 
         assert_identical(actual, expected)
 
+    @requires_dask_dataframe
     def test_to_and_from_dask_dataframe(self):
         x = np.random.randn(10)
         y = np.random.randn(10)
