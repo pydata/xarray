@@ -69,6 +69,10 @@ New Features
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
 - Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Add :py:meth:`Dataset.from_dask_dataframe` and :py:meth:`DataArray.from_dask_series`
+  for converting :py:class:`dask.dataframe.DataFrame` and :py:class:`dask.dataframe.Series`
+  objects to ``xarray``.
+  By `Ayrton Bourn <https://github.com/AyrtonB>`_ and `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
