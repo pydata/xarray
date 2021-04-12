@@ -1,13 +1,26 @@
 import hypothesis.strategies as st
+import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import given, note
 
 import xarray as xr
 
+from ... import assert_identical
 from .utils import create_dimension_names, numpy_array, valid_axes, valid_dims_from_axes
 
 
-class ReduceMethodTests:
+class VariableReduceTests:
+    def check_reduce(self, obj, op, *args, **kwargs):
+        actual = getattr(obj, op)(*args, **kwargs)
+
+        data = np.asarray(obj.data)
+        expected = getattr(obj.copy(data=data), op)(*args, **kwargs)
+
+        note(f"actual:\n{actual}")
+        note(f"expected:\n{expected}")
+
+        assert_identical(actual, expected)
+
     @staticmethod
     def create(op):
         return numpy_array
@@ -41,7 +54,4 @@ class ReduceMethodTests:
         reduce_axes = data.draw(valid_axes(raw.ndim))
         reduce_dims = valid_dims_from_axes(dims, reduce_axes)
 
-        actual = getattr(var, method)(dim=reduce_dims)
-        print(actual)
-
-        assert False
+        self.check_reduce(var, method, dim=reduce_dims)

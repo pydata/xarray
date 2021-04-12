@@ -1,5 +1,5 @@
-from .reduce import ReduceMethodTests
+from .reduce import VariableReduceTests
 
 __all__ = [
-    "ReduceMethodTests",
+    "VariableReduceTests",
 ]
