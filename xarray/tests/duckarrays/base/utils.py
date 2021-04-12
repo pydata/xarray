@@ -17,8 +17,12 @@ def create_dimension_names(ndim):
     return [f"dim_{n}" for n in range(ndim)]
 
 
+def valid_axis(ndim):
+    return st.none() | st.integers(-ndim, ndim - 1)
+
+
 def valid_axes(ndim):
-    return st.none() | st.integers(-ndim, ndim - 1) | npst.valid_tuple_axes(ndim)
+    return valid_axis(ndim) | npst.valid_tuple_axes(ndim)
 
 
 def valid_dims_from_axes(dims, axes):
