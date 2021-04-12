@@ -28,4 +28,4 @@ def valid_dims_from_axes(dims, axes):
     if isinstance(axes, int):
         return dims[axes]
 
-    return type(axes)(dims[axis] for axis in axes)
+    return [dims[axis] for axis in axes]
