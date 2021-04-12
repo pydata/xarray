@@ -5231,12 +5231,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             raise ValueError("cannot convert non-dask dataframe objects")
 
         # TODO: stop computing once dask.dataframe.Index objects are supported
-        idx = remove_unused_levels_categories(dataframe.index.compute())
-
-        if isinstance(idx, pd.MultiIndex) and not idx.is_unique:
-            raise ValueError(
-                "cannot convert a DataFrame with a non-unique MultiIndex into xarray"
-            )
+        idx = dataframe.index.compute()
 
         # Cast to a NumPy array first, in case the Series is a pandas Extension
         # array (which doesn't have a valid NumPy dtype)
@@ -5246,19 +5241,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         obj = cls()
 
-        if isinstance(idx, pd.MultiIndex):
-            dims = tuple(
-                name if name is not None else "level_%i" % n
-                for n, name in enumerate(idx.names)
-            )
-            for dim, lev in zip(dims, idx.levels):
-                obj[dim] = (dim, lev)
-        else:
-            index_name = idx.name if idx.name is not None else "index"
-            dims = (index_name,)
-            obj[index_name] = (dims, idx)
+        # dask.dataframe does not support MultiIndex objects so no need to special-case here
+        index_name = idx.name if idx.name is not None else "index"
+        dims = (index_name,)
+        obj[index_name] = (dims, idx)
 
-        obj._set_numpy_data_from_dataframe(idx, arrays, dims)
+        for name, values in arrays:
+            obj[name] = (dims, values)
 
         return obj
 
