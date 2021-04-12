@@ -33,3 +33,12 @@ def valid_dims_from_axes(dims, axes):
         return dims[axes]
 
     return [dims[axis] for axis in axes]
+
+
+def valid_axes_from_dims(all_dims, dims):
+    if dims is None:
+        return None
+    elif isinstance(dims, list):
+        return [all_dims.index(dim) for dim in dims]
+    else:
+        return all_dims.index(dims)
