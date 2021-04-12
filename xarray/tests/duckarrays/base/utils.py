@@ -3,9 +3,9 @@ import hypothesis.strategies as st
 
 shapes = npst.array_shapes()
 dtypes = (
-    npst.floating_dtypes()
-    | npst.integer_dtypes()
+    npst.integer_dtypes()
     | npst.unsigned_integer_dtypes()
+    | npst.floating_dtypes()
     | npst.complex_number_dtypes()
 )
 
