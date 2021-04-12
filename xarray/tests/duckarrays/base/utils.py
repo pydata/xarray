@@ -1,3 +1,6 @@
+import warnings
+from contextlib import contextmanager
+
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 
@@ -8,6 +11,14 @@ dtypes = (
     | npst.floating_dtypes()
     | npst.complex_number_dtypes()
 )
+
+
+@contextmanager
+def suppress_warning(category, message=""):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=category, message=message)
+
+        yield
 
 
 numpy_array = npst.arrays(dtype=dtypes, shape=shapes)
