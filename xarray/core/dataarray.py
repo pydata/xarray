@@ -2862,19 +2862,26 @@ class DataArray(AbstractArray, DataWithCoords):
         return result
 
     @classmethod
-    def from_dask_series(cls, series, sparse: bool = False) -> "DataArray":
+    def from_dask_series(cls, series) -> "DataArray":
         """Convert a dask.dataframe.Series into an xarray.DataArray.
 
-        If the series's index is a MultiIndex, it will be expanded into a
-        tensor product of one-dimensional coordinates (filling in missing
-        values with NaN). Thus this operation should be the inverse of the
-        `to_series` method.
+        This method will produce a DataArray from a dask Series.
+        Dimensions are loaded into memory but the data itself remains
+        a dask array.
 
-        If sparse=True, creates a sparse array instead of a dense NumPy array.
-        Requires the pydata/sparse package.
+        Parameters
+        ----------
+        series : dask.dataframe.Series
+            dask Series from which to copy data and index.
+
+        Returns
+        -------
+        DataArray
+            The converted DataArray
 
         See also
         --------
+        xarray.Dataset.from_dask_dataframe
         xarray.DataArray.from_series
         """
         temp_name = "__temporary_name"
