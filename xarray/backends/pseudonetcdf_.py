@@ -136,8 +136,6 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )

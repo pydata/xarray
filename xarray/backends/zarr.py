@@ -704,8 +704,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
-        if isinstance(filename_or_obj, str):
-            filename_or_obj = os.path.expanduser(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
             group=group,
