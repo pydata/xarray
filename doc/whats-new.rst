@@ -23,6 +23,10 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add 'cumulative' option to :py:meth:`Dataset.integrate` and
+  :py:meth:`DataArray.integrate` so that result is a cumulative integral, like
+  :py:meth:`scipy.integrate.cumulative_trapezoidal` (:pull:`5153`).
+  By `John Omotani <https://github.com/johnomotani>`_.
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
   of datasets and data arrays by evaluating query expressions against the values of the
   data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
