@@ -15,8 +15,8 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
-    _normalize_path,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
     robust_getitem,
 )
