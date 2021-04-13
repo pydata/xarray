@@ -168,15 +168,17 @@ def test_repr_of_nonstr_dataset(dataset):
 
 
 def test_repr_of_nonstr_dataarray(dataarray):
-    da = dataarray.copy()
+    da = dataarray.rename(dim_0=15)
     da.attrs[1] = "value"
     formatted = fh.array_repr(da)
     assert "<dt><span>1 :</span></dt><dd>value</dd>" in formatted
+    assert "<li><span>15</span>: 4</li>" in formatted
 
 
 def test_nonstr_variable_repr_html():
-    v = xr.Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {22: "bar"})
+    v = xr.Variable(["time", 10], [[1, 2, 3], [4, 5, 6]], {22: "bar"})
     assert hasattr(v, "_repr_html_")
     with xr.set_options(display_style="html"):
         html = v._repr_html_().strip()
     assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
+    assert "<li><span>10</span>: 3</li></ul>" in html

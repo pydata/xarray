@@ -38,7 +38,7 @@ def format_dims(dims, coord_names):
     }
 
     dims_li = "".join(
-        f"<li><span{dim_css_map[dim]}>" f"{escape(dim)}</span>: {size}</li>"
+        f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
         for dim, size in dims.items()
     )
 
