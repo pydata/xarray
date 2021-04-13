@@ -3534,6 +3534,7 @@ class DataArray(AbstractArray, DataWithCoords):
         coord: Union[Hashable, Sequence[Hashable]] = None,
         datetime_unit: str = None,
         *,
+        cumulative: bool = False,
         dim: Union[Hashable, Sequence[Hashable]] = None,
     ) -> "DataArray":
         """Integrate along the given coordinate using the trapezoidal rule.
@@ -3551,6 +3552,12 @@ class DataArray(AbstractArray, DataWithCoords):
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if a datetime coordinate is used.
+        cumulative : bool, default False
+            If set to True, return the cumulative integral along the given coordinate
+            instead of the definite integral over the coordinate. Note that unlike
+            :py:meth:scipy.integrate.cumulative_trapezoidal or :py:meth:numpy.cumsum the
+            cumulative integral always begins with zero, so that the length of the
+            dimension is unchanged, rather than reduced by one.
 
         Returns
         -------
@@ -3599,7 +3606,9 @@ class DataArray(AbstractArray, DataWithCoords):
             )
             warnings.warn(msg, FutureWarning, stacklevel=2)
 
-        ds = self._to_temp_dataset().integrate(coord, datetime_unit)
+        ds = self._to_temp_dataset().integrate(
+            coord, datetime_unit, cumulative=cumulative
+        )
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self) -> "DataArray":

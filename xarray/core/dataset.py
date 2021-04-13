@@ -6033,7 +6033,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace(variables)
 
     def integrate(
-        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
+        *,
+        cumulative: bool = False,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -6048,6 +6052,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if datetime coordinate is used.
+        cumulative : bool, default False
+            If set to True, return the cumulative integral along the given coordinate
+            instead of the definite integral over the coordinate. Note that unlike
+            :py:meth:scipy.integrate.cumulative_trapezoidal or :py:meth:numpy.cumsum the
+            cumulative integral always begins with zero, so that the length of the
+            dimension is unchanged, rather than reduced by one.
 
         Returns
         -------
@@ -6090,10 +6100,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coord = (coord,)
         result = self
         for c in coord:
-            result = result._integrate_one(c, datetime_unit=datetime_unit)
+            result = result._integrate_one(
+                c, datetime_unit=datetime_unit, cumulative=cumulative
+            )
         return result
 
-    def _integrate_one(self, coord, datetime_unit=None):
+    def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
@@ -6120,18 +6132,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         coord_names = set()
         for k, v in self.variables.items():
             if k in self.coords:
-                if dim not in v.dims:
+                if dim not in v.dims or cumulative:
                     variables[k] = v
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
-                    integ = duck_array_ops.trapz(
-                        v.data, coord_var.data, axis=v.get_axis_num(dim)
-                    )
-                    v_dims = list(v.dims)
-                    v_dims.remove(dim)
+                    if cumulative:
+                        integ = duck_array_ops.cumulative_trapezoid(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = v.dims
+                    else:
+                        integ = duck_array_ops.trapz(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = list(v.dims)
+                        v_dims.remove(dim)
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
