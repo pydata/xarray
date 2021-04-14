@@ -57,12 +57,7 @@ from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 CFTIME_REPR_LENGTH = 19
 ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
-
-
-if LooseVersion(pd.__version__) > LooseVersion("1.2.3"):
-    OUT_OF_BOUNDS_TIMEDELTA_ERROR = pd.errors.OutOfBoundsTimedelta
-else:
-    OUT_OF_BOUNDS_TIMEDELTA_ERROR = OverflowError
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 
 
 def named(name, pattern):
@@ -568,7 +563,7 @@ class CFTimeIndex(pd.Index):
         elif _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
-            except OUT_OF_BOUNDS_TIMEDELTA_ERROR:
+            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
                 raise ValueError(
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
@@ -579,7 +574,7 @@ class CFTimeIndex(pd.Index):
     def __rsub__(self, other):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
-        except OUT_OF_BOUNDS_TIMEDELTA_ERROR:
+        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
             raise ValueError(
                 "The time difference exceeds the range of values "
                 "that can be expressed at the nanosecond resolution."
