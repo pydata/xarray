@@ -138,6 +138,7 @@ Indexing
    Dataset.set_index
    Dataset.reset_index
    Dataset.reorder_levels
+   Dataset.query
 
 Missing value handling
 ----------------------
@@ -178,6 +179,7 @@ Computation
    Dataset.integrate
    Dataset.map_blocks
    Dataset.polyfit
+   Dataset.curvefit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -242,6 +244,7 @@ Plotting
 
    Dataset.plot.scatter
    Dataset.plot.quiver
+   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -321,6 +324,7 @@ Indexing
    DataArray.set_index
    DataArray.reset_index
    DataArray.reorder_levels
+   DataArray.query
 
 Missing value handling
 ----------------------
@@ -372,7 +376,7 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.map_blocks
-
+   DataArray.curvefit
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -507,6 +511,7 @@ Datetimelike properties
    DataArray.dt.daysinmonth
    DataArray.dt.season
    DataArray.dt.time
+   DataArray.dt.date
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
