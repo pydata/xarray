@@ -756,11 +756,13 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         # we get support for attrs["coordinates"] for free.
         coords_str = pop_to(encoding, attrs, "coordinates")
         if not coords_str and variable_coordinates[name]:
-            attrs["coordinates"] = " ".join(
+            coordinates_text = " ".join(
                 str(coord_name)
                 for coord_name in variable_coordinates[name]
                 if coord_name not in not_technically_coordinates
             )
+            if coordinates_text:
+                attrs["coordinates"] = coordinates_text
         if "coordinates" in attrs:
             written_coords.update(attrs["coordinates"].split())
 
