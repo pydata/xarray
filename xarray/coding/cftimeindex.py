@@ -61,9 +61,9 @@ REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
 OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
-if LooseVersion(pd.__version__) > LooseVersion("1.1.0"):
+try:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
-else:
+except AttributeError:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError,)
 
 
