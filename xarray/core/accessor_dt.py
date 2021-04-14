@@ -31,6 +31,10 @@ def _access_through_cftimeindex(values, name):
     if name == "season":
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
+    elif name == "date":
+        raise AttributeError(
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+        )
     else:
         field_values = getattr(values_as_cftimeindex, name)
     return field_values.reshape(values.shape)
@@ -413,6 +417,10 @@ class DatetimeAccessor(Properties):
 
     time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
+    )
+
+    date = Properties._tslib_field_accessor(
+        "date", "Date corresponding to datetimes", object
     )
 
     is_month_start = Properties._tslib_field_accessor(

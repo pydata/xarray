@@ -65,10 +65,11 @@ dask-worker-space/
 
 # xarray specific
 doc/_build
-doc/generated
+generated/
 xarray/tests/data/*.grib.*.idx
 
 # Sync tools
 Icon*
 
 .ipynb_checkpoints
+doc/rasm.zarr

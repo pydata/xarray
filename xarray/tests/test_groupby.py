@@ -388,7 +388,7 @@ repr_da = xr.DataArray(
 def test_groupby_repr(obj, dim):
     actual = repr(obj.groupby(dim))
     expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over %r " % dim
+    expected += ", grouped over %r" % dim
     expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
     if dim == "x":
         expected += "1, 2, 3, 4, 5."
@@ -405,7 +405,7 @@ def test_groupby_repr(obj, dim):
 def test_groupby_repr_datetime(obj):
     actual = repr(obj.groupby("t.month"))
     expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over 'month' "
+    expected += ", grouped over 'month'"
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
@@ -547,6 +547,19 @@ def test_groupby_none_group_name():
 
     mean = da.groupby(key).mean()
     assert "group" in mean.dims
+
+
+def test_groupby_getitem(dataset):
+
+    assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
+    assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+
+    assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
+    assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+
+    actual = dataset.groupby("boo")["f"].unstack().transpose("x", "y", "z")
+    expected = dataset.sel(y=[1], z=[1, 2]).transpose("x", "y", "z")
+    assert_identical(expected, actual)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

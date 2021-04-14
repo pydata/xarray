@@ -58,7 +58,7 @@ class ImplementsArrayReduce:
 
         else:
 
-            def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore
+            def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
                 return self.reduce(func, dim, axis, **kwargs)
 
         return wrapped_func
@@ -97,7 +97,7 @@ class ImplementsDatasetReduce:
 
         else:
 
-            def wrapped_func(self, dim=None, **kwargs):  # type: ignore
+            def wrapped_func(self, dim=None, **kwargs):  # type: ignore[misc]
                 return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
 
         return wrapped_func
@@ -490,9 +490,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        args
+        *args
             positional arguments passed into ``attrs.update``.
-        kwargs
+        **kwargs
             keyword arguments passed into ``attrs.update``.
 
         Returns
@@ -527,9 +527,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Alternatively a ``(callable, data_keyword)`` tuple where
             ``data_keyword`` is a string indicating the keyword of
             ``callable`` that expects the xarray object.
-        args
+        *args
             positional arguments passed into ``func``.
-        kwargs
+        **kwargs
             a dictionary of keyword arguments passed into ``func``.
 
         Returns

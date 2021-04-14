@@ -21,7 +21,7 @@ and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 What is a Dask array?
 ---------------------
 
-.. image:: _static/dask_array.png
+.. image:: ../_static/dask_array.png
    :width: 40 %
    :align: right
    :alt: A Dask array
@@ -509,6 +509,13 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     mapped = ds.map_blocks(func, args=[10], kwargs={"b": 10})
     expected = ds + 10 + 10
     mapped.identical(expected)
+
+
+.. tip::
+
+   As :py:func:`map_blocks` loads each block into memory, reduce as much as possible objects consumed by user functions.
+   For example, drop useless variables before calling ``func`` with :py:func:`map_blocks`.
+
 
 
 Chunking and performance
