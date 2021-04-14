@@ -43,6 +43,7 @@ import re
 import warnings
 from datetime import timedelta
 from distutils.version import LooseVersion
+from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -59,6 +60,7 @@ ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
 if LooseVersion(pd.__version__) > LooseVersion("1.1.0"):
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 else:
