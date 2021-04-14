@@ -1,6 +1,5 @@
 import copy
 import datetime
-import functools
 import inspect
 import sys
 import warnings
@@ -53,11 +52,8 @@ from . import (
     weighted,
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
-from .common import (
-    DataWithCoords,
-    ImplementsDatasetReduce,
-    _contains_datetime_like_objects,
-)
+from .arithmetic import DatasetArithmetic
+from .common import DataWithCoords, _contains_datetime_like_objects
 from .coordinates import (
     DatasetCoordinates,
     assert_coordinate_consistent,
@@ -567,7 +563,7 @@ class _LocIndexer:
         return self.dataset.sel(key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
+class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file,
@@ -5395,70 +5391,55 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return obj
 
-    @staticmethod
-    def _unary_op(f):
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            variables = {}
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            for k, v in self._variables.items():
-                if k in self._coord_names:
-                    variables[k] = v
-                else:
-                    variables[k] = f(v, *args, **kwargs)
-                    if keep_attrs:
-                        variables[k].attrs = v._attrs
-            attrs = self._attrs if keep_attrs else None
-            return self._replace_with_new_dims(variables, attrs=attrs)
+    def _unary_op(self, f, *args, **kwargs):
+        variables = {}
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        for k, v in self._variables.items():
+            if k in self._coord_names:
+                variables[k] = v
+            else:
+                variables[k] = f(v, *args, **kwargs)
+                if keep_attrs:
+                    variables[k].attrs = v._attrs
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, attrs=attrs)
 
-        return func
+    def _binary_op(self, other, f, reflexive=False, join=None):
+        from .dataarray import DataArray
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, join=None):
-        @functools.wraps(f)
-        def func(self, other):
-            from .dataarray import DataArray
+        if isinstance(other, groupby.GroupBy):
+            return NotImplemented
+        align_type = OPTIONS["arithmetic_join"] if join is None else join
+        if isinstance(other, (DataArray, Dataset)):
+            self, other = align(self, other, join=align_type, copy=False)
+        g = f if not reflexive else lambda x, y: f(y, x)
+        ds = self._calculate_binary_op(g, other, join=align_type)
+        return ds
 
-            if isinstance(other, groupby.GroupBy):
-                return NotImplemented
-            align_type = OPTIONS["arithmetic_join"] if join is None else join
-            if isinstance(other, (DataArray, Dataset)):
-                self, other = align(self, other, join=align_type, copy=False)
-            g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, join=align_type)
-            return ds
+    def _inplace_binary_op(self, other, f):
+        from .dataarray import DataArray
 
-        return func
-
-    @staticmethod
-    def _inplace_binary_op(f):
-        @functools.wraps(f)
-        def func(self, other):
-            from .dataarray import DataArray
-
-            if isinstance(other, groupby.GroupBy):
-                raise TypeError(
-                    "in-place operations between a Dataset and "
-                    "a grouped object are not permitted"
-                )
-            # we don't actually modify arrays in-place with in-place Dataset
-            # arithmetic -- this lets us automatically align things
-            if isinstance(other, (DataArray, Dataset)):
-                other = other.reindex_like(self, copy=False)
-            g = ops.inplace_to_noninplace_op(f)
-            ds = self._calculate_binary_op(g, other, inplace=True)
-            self._replace_with_new_dims(
-                ds._variables,
-                ds._coord_names,
-                attrs=ds._attrs,
-                indexes=ds._indexes,
-                inplace=True,
+        if isinstance(other, groupby.GroupBy):
+            raise TypeError(
+                "in-place operations between a Dataset and "
+                "a grouped object are not permitted"
             )
-            return self
-
-        return func
+        # we don't actually modify arrays in-place with in-place Dataset
+        # arithmetic -- this lets us automatically align things
+        if isinstance(other, (DataArray, Dataset)):
+            other = other.reindex_like(self, copy=False)
+        g = ops.inplace_to_noninplace_op(f)
+        ds = self._calculate_binary_op(g, other, inplace=True)
+        self._replace_with_new_dims(
+            ds._variables,
+            ds._coord_names,
+            attrs=ds._attrs,
+            indexes=ds._indexes,
+            inplace=True,
+        )
+        return self
 
     def _calculate_binary_op(self, f, other, join="inner", inplace=False):
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
@@ -7308,6 +7289,3 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result.attrs = self.attrs.copy()
 
         return result
-
-
-ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

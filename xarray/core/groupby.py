@@ -1,13 +1,11 @@
 import datetime
-import functools
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
-from .arithmetic import SupportsArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import propagate_indexes
@@ -233,7 +231,7 @@ def _apply_loffset(grouper, result):
     grouper.loffset = None
 
 
-class GroupBy(SupportsArithmetic):
+class GroupBy:
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -474,16 +472,11 @@ class GroupBy(SupportsArithmetic):
             coord = None
         return coord, dim, positions
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            g = f if not reflexive else lambda x, y: f(y, x)
-            applied = self._yield_binary_applied(g, other)
-            combined = self._combine(applied)
-            return combined
-
-        return func
+    def _binary_op(self, other, f, reflexive=False):
+        g = f if not reflexive else lambda x, y: f(y, x)
+        applied = self._yield_binary_applied(g, other)
+        combined = self._combine(applied)
+        return combined
 
     def _yield_binary_applied(self, func, other):
         dummy = None
@@ -724,8 +717,10 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
+class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
+
+    __slots__ = ()
 
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
@@ -891,11 +886,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-ops.inject_reduce_methods(DataArrayGroupBy)
-ops.inject_binary_ops(DataArrayGroupBy)
+class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
+    __slots__ = ()
 
-class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
@@ -1009,7 +1003,3 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
-
-
-ops.inject_reduce_methods(DatasetGroupBy)
-ops.inject_binary_ops(DatasetGroupBy)
