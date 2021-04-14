@@ -6,7 +6,7 @@ import warnings
 
 import pkg_resources
 
-from .common import BACKEND_ENTRYPOINTS
+from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -112,7 +112,7 @@ def guess_engine(store_spec):
 
 def get_backend(engine):
     """Select open_dataset method based on current engine"""
-    if hasattr(engine, "open_dataset"):
+    if issubclass(engine, BackendEntrypoint):
         backend = engine
     else:
         engines = list_engines()

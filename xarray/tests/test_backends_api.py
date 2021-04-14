@@ -24,18 +24,13 @@ def test_custom_engine():
         dict(a=2 * np.arange(5)), coords=dict(x=("x", np.arange(5), dict(units="s")))
     )
 
-    class CustomBackend:
-        open_dataset_parameters = None
-
+    class CustomBackend(xr.BackendEntrypoint):
         def open_dataset(
             filename_or_obj,
             drop_variables=None,
             **kwargs,
         ):
             return expected.copy(deep=True)
-
-        def guess_can_open(filename_or_obj):
-            return False
 
     actual = xr.open_dataset("fake_filename", engine=CustomBackend)
     assert_identical(expected, actual)
