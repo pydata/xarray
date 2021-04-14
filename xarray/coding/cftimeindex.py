@@ -57,7 +57,12 @@ from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 CFTIME_REPR_LENGTH = 19
 ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
-OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
+
+
+if LooseVersion(pd.__version__) > LooseVersion("1.1.0"):
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
+else:
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError, )
 
 
 def named(name, pattern):
