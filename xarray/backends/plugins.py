@@ -122,6 +122,11 @@ def get_backend(engine):
     elif issubclass(type(engine), BackendEntrypoint):
         backend = engine
     else:
-        raise TypeError(f"engine must be a string or BackendEntrypoint: {engine}")
+        raise TypeError(
+            (
+                "engine must be a string or a subclass of "
+                f"xarray.backends.BackendEntrypoint: {engine}"
+            )
+        )
 
     return backend
