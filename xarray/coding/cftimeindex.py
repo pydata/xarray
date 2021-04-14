@@ -62,7 +62,7 @@ REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 if LooseVersion(pd.__version__) > LooseVersion("1.1.0"):
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 else:
-    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError, )
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError,)
 
 
 def named(name, pattern):
