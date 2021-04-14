@@ -111,15 +111,17 @@ def guess_engine(store_spec):
 
 
 def get_backend(engine):
-    """Select open_dataset method based on current engine"""
-    if issubclass(engine, BackendEntrypoint):
-        backend = engine
-    else:
+    """Select open_dataset method based on current engine."""
+    if isinstance(engine, str):
         engines = list_engines()
         if engine not in engines:
             raise ValueError(
                 f"unrecognized engine {engine} must be one of: {list(engines)}"
             )
         backend = engines[engine]
+    elif issubclass(type(engine), BackendEntrypoint):
+        backend = engine
+    else:
+        raise TypeError(f"engine must be a string or BackendEntrypoint: {engine}")
 
     return backend
