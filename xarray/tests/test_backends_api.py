@@ -24,7 +24,7 @@ def test_custom_engine():
         dict(a=2 * np.arange(5)), coords=dict(x=("x", np.arange(5), dict(units="s")))
     )
 
-    class CustomBackend(xr.BackendEntrypoint):
+    class CustomBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
             filename_or_obj,
             drop_variables=None,
