@@ -181,7 +181,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          python -m mypy xarray
+          python -m mypy .
 
   min-version-policy:
     name: Minimum Version Policy
