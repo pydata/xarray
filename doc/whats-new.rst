@@ -64,6 +64,11 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add typing information to unary and binary arithmetic operators operating on
+  :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
+  :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
+  :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.

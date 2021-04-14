@@ -30,8 +30,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import builtins
 import operator
+import sys
 from distutils.version import LooseVersion
-from typing import Union
+from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
 
@@ -78,8 +79,52 @@ def moveaxis(a, source, destination):
 
 # Type annotations stubs
 try:
-    from numpy.typing import DTypeLike
+    from numpy.typing import ArrayLike, DTypeLike
 except ImportError:
+    # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
+    if sys.version_info >= (3, 8):
+        from typing import Protocol
+
+        HAVE_PROTOCOL = True
+    else:
+        try:
+            from typing_extensions import Protocol
+        except ImportError:
+            HAVE_PROTOCOL = False
+        else:
+            HAVE_PROTOCOL = True
+
+    if TYPE_CHECKING or HAVE_PROTOCOL:
+
+        class _SupportsArray(Protocol):
+            def __array__(self) -> np.ndarray:
+                ...
+
+    else:
+        _SupportsArray = Any
+
+    _T = TypeVar("_T")
+    _NestedSequence = Union[
+        _T,
+        Sequence[_T],
+        Sequence[Sequence[_T]],
+        Sequence[Sequence[Sequence[_T]]],
+        Sequence[Sequence[Sequence[Sequence[_T]]]],
+    ]
+    _RecursiveSequence = Sequence[Sequence[Sequence[Sequence[Sequence[Any]]]]]
+    _ArrayLike = Union[
+        _NestedSequence[_SupportsArray],
+        _NestedSequence[_T],
+    ]
+    _ArrayLikeFallback = Union[
+        _ArrayLike[Union[bool, int, float, complex, str, bytes]],
+        _RecursiveSequence,
+    ]
+    # The extra step defining _ArrayLikeFallback and using ArrayLike as a type
+    # alias for it works around an issue with mypy.
+    # The `# type: ignore` below silences the warning of having multiple types
+    # with the same name (ArrayLike and DTypeLike from the try block)
+    ArrayLike = _ArrayLikeFallback  # type: ignore
     # fall back for numpy < 1.20
     DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
