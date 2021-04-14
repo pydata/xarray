@@ -436,7 +436,7 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return "{}, grouped over {!r} \n{!r} groups with labels {}.".format(
+        return "{}, grouped over {!r}\n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
             self._unique_coord.size,
