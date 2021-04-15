@@ -375,10 +375,11 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr"} or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        "netcdf4".
+        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
+        can also be used.
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
