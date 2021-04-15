@@ -557,6 +557,64 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
+def _combine_single_variable_hypercube(
+    datasets,
+    fill_value=dtypes.NA,
+    data_vars="all",
+    coords="different",
+    compat="no_conflicts",
+    join="outer",
+    combine_attrs="no_conflicts"
+):
+    """
+    Attempt to combine a list of Datasets into a hypercube using their
+    coordinates.
+    
+    All provided Datasets must belong to a single variable, ie. must be
+    assigned the same variable name. This precondition is not checked by this
+    function, so the caller is assumed to know what it's doing.
+    
+    This function is NOT part of the public API.
+    """
+    if len(datasets) == 0:
+        raise ValueError(
+            "At least one Dataset is required to resolve variable names "
+            "for combined hypercube.")
+
+    combined_ids, concat_dims = _infer_concat_order_from_coords(
+        list(datasets)
+    )
+
+    if fill_value is None:
+        # check that datasets form complete hypercube
+        _check_shape_tile_ids(combined_ids)
+    else:
+        # check only that all datasets have same dimension depth for these
+        # vars
+        _check_dimension_depth_tile_ids(combined_ids)
+
+    # Concatenate along all of concat_dims one by one to create single ds
+    concatenated = _combine_nd(
+        combined_ids,
+        concat_dims=concat_dims,
+        data_vars=data_vars,
+        coords=coords,
+        compat=compat,
+        fill_value=fill_value,
+        join=join,
+        combine_attrs=combine_attrs,
+    )
+
+    # Check the overall coordinates are monotonically increasing
+    for dim in concat_dims:
+        indexes = concatenated.indexes.get(dim)
+        if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
+            raise ValueError(
+                "Resulting object does not have monotonic"
+                " global indexes along dimension {}".format(dim)
+            )
+        
+    return concatenated
 
 def combine_by_coords(
     datasets,
@@ -768,48 +826,43 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
+    if not datasets:
+        return Dataset()
 
-    # Group by data vars
-    sorted_datasets = sorted(datasets, key=vars_as_keys)
-    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+    if all(isinstance(data_object, DataArray) and data_object.name is None for data_object in datasets):
+        unnamed_arrays = datasets
+        temp_datasets = [data_array._to_temp_dataset() for data_array in unnamed_arrays]
 
-    # Perform the multidimensional combine on each group of data variables
-    # before merging back together
-    concatenated_grouped_by_data_vars = []
-    for vars, datasets_with_same_vars in grouped_by_vars:
-        combined_ids, concat_dims = _infer_concat_order_from_coords(
-            list(datasets_with_same_vars)
-        )
-
-        if fill_value is None:
-            # check that datasets form complete hypercube
-            _check_shape_tile_ids(combined_ids)
-        else:
-            # check only that all datasets have same dimension depth for these
-            # vars
-            _check_dimension_depth_tile_ids(combined_ids)
-
-        # Concatenate along all of concat_dims one by one to create single ds
-        concatenated = _combine_nd(
-            combined_ids,
-            concat_dims=concat_dims,
+        combined_temp_dataset = _combine_single_variable_hypercube(
+            temp_datasets,
+            fill_value=fill_value,
             data_vars=data_vars,
             coords=coords,
             compat=compat,
-            fill_value=fill_value,
             join=join,
-            combine_attrs=combine_attrs,
+            combine_attrs=combine_attrs
         )
+        return DataArray()._from_temp_dataset(combined_temp_dataset)
 
-        # Check the overall coordinates are monotonically increasing
-        for dim in concat_dims:
-            indexes = concatenated.indexes.get(dim)
-            if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
-                raise ValueError(
-                    "Resulting object does not have monotonic"
-                    " global indexes along dimension {}".format(dim)
-                )
-        concatenated_grouped_by_data_vars.append(concatenated)
+    else:
+        # Group by data vars
+        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+
+        # Perform the multidimensional combine on each group of data variables
+        # before merging back together
+        concatenated_grouped_by_data_vars = []
+        for vars, datasets_with_same_vars in grouped_by_vars:
+            concatenated = _combine_single_variable_hypercube(
+                list(datasets_with_same_vars),
+                fill_value=fill_value,
+                data_vars=data_vars,
+                coords=coords,
+                compat=compat,
+                join=join,
+                combine_attrs=combine_attrs
+            )
+            concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(
         concatenated_grouped_by_data_vars,
