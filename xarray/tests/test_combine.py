@@ -641,6 +641,16 @@ class TestNestedCombine:
         expected = DataArray(data=[1.0, 2.0, 3.0, 4.0], coords={'x': [0, 1, 2, 3]}, dims='x')
         assert_identical(expected, actual)
 
+        da1 = DataArray(data=[[0.0]], coords={'x':[0], 'y':[0]}, dims=['x','y'])
+        da2 = DataArray(data=[[1.0]], coords={'x':[0], 'y':[1]}, dims=['x','y'])
+        da3 = DataArray(data=[[2.0]], coords={'x':[1], 'y':[0]}, dims=['x','y'])
+        da4 = DataArray(data=[[3.0]], coords={'x':[1], 'y':[1]}, dims=['x','y'])
+        objs = [[da1, da2], [da3, da4]]
+
+        expected = DataArray(data=[[0.0, 1.0], [2.0, 3.0]], coords={'x': [0, 1], 'y': [0, 1]}, dims=['x', 'y'])
+        actual = combine_nested(objs, concat_dim=['x', 'y'])
+        assert_identical(expected, actual)
+
 class TestCombineAuto:
     def test_combine_by_coords(self):
         objs = [Dataset({"x": [0]}), Dataset({"x": [1]})]
