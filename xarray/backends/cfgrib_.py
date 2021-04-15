@@ -11,6 +11,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
@@ -121,6 +122,7 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         time_dims=("time", "step"),
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,
             indexpath=indexpath,

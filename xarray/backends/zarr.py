@@ -15,6 +15,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
+    _normalize_path,
 )
 from .store import StoreBackendEntrypoint
 
@@ -701,6 +702,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
     ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
             group=group,
