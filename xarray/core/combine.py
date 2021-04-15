@@ -617,7 +617,7 @@ def _combine_single_variable_hypercube(
     return concatenated
 
 def combine_by_coords(
-    datasets,
+    data_objects,
     compat="no_conflicts",
     data_vars="all",
     coords="different",
@@ -626,8 +626,8 @@ def combine_by_coords(
     combine_attrs="no_conflicts",
 ):
     """
-    Attempt to auto-magically combine the given datasets into one by using
-    dimension coordinates.
+    Attempt to auto-magically combine the given datasets (or data arrays)
+    into one by using dimension coordinates.
 
     This method attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
@@ -651,8 +651,8 @@ def combine_by_coords(
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to combine.
+    data_objects : sequence of xarray.Dataset or sequence of xarray.DataArray
+        Data objects to combine.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
@@ -826,11 +826,15 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
-    if not datasets:
+    if not data_objects:
         return Dataset()
 
-    if all(isinstance(data_object, DataArray) and data_object.name is None for data_object in datasets):
-        unnamed_arrays = datasets
+    all_unnamed_data_arrays = all(
+        isinstance(data_object, DataArray) and data_object.name is None
+        for data_object in data_objects
+    )
+    if all_unnamed_data_arrays:
+        unnamed_arrays = data_objects
         temp_datasets = [data_array._to_temp_dataset() for data_array in unnamed_arrays]
 
         combined_temp_dataset = _combine_single_variable_hypercube(
@@ -846,7 +850,7 @@ def combine_by_coords(
 
     else:
         # Group by data vars
-        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        sorted_datasets = sorted(data_objects, key=vars_as_keys)
         grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
         # Perform the multidimensional combine on each group of data variables
