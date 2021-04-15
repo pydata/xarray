@@ -121,7 +121,7 @@ def get_backend(engine):
                 f"unrecognized engine {engine} must be one of: {list(engines)}"
             )
         backend = engines[engine]
-    elif inspect.isclass(engine) and issubclass(engine, BackendEntrypoint):
+    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
         backend = engine
     else:
         raise TypeError(
