@@ -28,7 +28,7 @@ from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .common import AbstractDataStore, ArrayWriter
+from .common import AbstractDataStore, ArrayWriter, _normalize_path
 from .locks import _get_scheduler
 
 if TYPE_CHECKING:
@@ -107,16 +107,6 @@ def _get_default_engine(path: str, allow_remote: bool = False):
     else:
         engine = _get_default_engine_netcdf()
     return engine
-
-
-def _normalize_path(path):
-    if isinstance(path, Path):
-        path = str(path)
-
-    if isinstance(path, str) and not is_remote_uri(path):
-        path = os.path.abspath(os.path.expanduser(path))
-
-    return path
 
 
 def _validate_dataset_names(dataset):
