@@ -557,6 +557,7 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
+
 def _combine_single_variable_hypercube(
     datasets,
     fill_value=dtypes.NA,
@@ -564,26 +565,25 @@ def _combine_single_variable_hypercube(
     coords="different",
     compat="no_conflicts",
     join="outer",
-    combine_attrs="no_conflicts"
+    combine_attrs="no_conflicts",
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
     coordinates.
-    
+
     All provided Datasets must belong to a single variable, ie. must be
     assigned the same variable name. This precondition is not checked by this
     function, so the caller is assumed to know what it's doing.
-    
+
     This function is NOT part of the public API.
     """
     if len(datasets) == 0:
         raise ValueError(
             "At least one Dataset is required to resolve variable names "
-            "for combined hypercube.")
+            "for combined hypercube."
+        )
 
-    combined_ids, concat_dims = _infer_concat_order_from_coords(
-        list(datasets)
-    )
+    combined_ids, concat_dims = _infer_concat_order_from_coords(list(datasets))
 
     if fill_value is None:
         # check that datasets form complete hypercube
@@ -613,8 +613,9 @@ def _combine_single_variable_hypercube(
                 "Resulting object does not have monotonic"
                 " global indexes along dimension {}".format(dim)
             )
-        
+
     return concatenated
+
 
 def combine_by_coords(
     data_objects,
@@ -844,7 +845,7 @@ def combine_by_coords(
             coords=coords,
             compat=compat,
             join=join,
-            combine_attrs=combine_attrs
+            combine_attrs=combine_attrs,
         )
         return DataArray()._from_temp_dataset(combined_temp_dataset)
 
@@ -864,7 +865,7 @@ def combine_by_coords(
                 coords=coords,
                 compat=compat,
                 join=join,
-                combine_attrs=combine_attrs
+                combine_attrs=combine_attrs,
             )
             concatenated_grouped_by_data_vars.append(concatenated)
 
