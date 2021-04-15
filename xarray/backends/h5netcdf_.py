@@ -12,6 +12,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
 )
 from .file_manager import CachingFileManager, DummyFileManager
@@ -366,6 +367,7 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         decode_vlen_strings=True,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = H5NetCDFStore.open(
             filename_or_obj,
             format=format,
