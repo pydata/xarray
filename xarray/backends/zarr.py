@@ -167,12 +167,12 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                     base_error = (
                         f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
                         f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
-                        f"Writing this array in parallel with dask could lead to corrupted data. "
+                        f"Writing this array in parallel with dask could lead to corrupted data."
                     )
                     if safe_chunks:
                         raise NotImplementedError(
                             base_error
-                            + "Consider either rechunking using `chunk()`, deleting "
+                            + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                         )
             if dchunks[-1] > zchunk:
@@ -187,7 +187,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                 if safe_chunks:
                     raise NotImplementedError(
                         base_error
-                        + "Consider either rechunking using `chunk()`, deleting "
+                        + " Consider either rechunking using `chunk()`, deleting "
                         "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                     )
         return enc_chunks_tuple
