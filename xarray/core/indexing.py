@@ -5,7 +5,9 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
 from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
+from distutils.version import LooseVersion
 
+from dask import __version__ as dask_version 
 import numpy as np
 import pandas as pd
 
@@ -1379,14 +1381,22 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                     value = value[(slice(None),) * axis + (subkey,)]
                 return value
 
-    def __setitem__(self, key, value):
-        raise TypeError(
-            "this variable's data is stored in a dask array, "
-            "which does not support item assignment. To "
-            "assign to this variable, you must first load it "
-            "into memory explicitly using the .load() "
-            "method or accessing its .values attribute."
-        )
+    def __setitem__(self, key, newvalue):
+        if LooseVersion(dask_version)>=LooseVersion('2021.04.0+17'):
+            if isinstance(key, BasicIndexer):
+                self.array[key.tuple] = newvalue
+            elif isinstance(key, VectorizedIndexer):
+                self.array.vindex[key.tuple] = newvalue
+            elif isinstance(key, OuterIndexer):
+                self.array[key.tuple] = newvalue
+        else:
+            raise TypeError(
+                "this variable's data is stored in a dask array, "
+                "and the installed dask version does not support item "
+                "assignment. To assign to this variable, you must "
+                "first load it into memory explicitly using the .load() "
+                "method or accessing its .values attribute."
+            )
 
     def transpose(self, order):
         return self.array.transpose(order)
