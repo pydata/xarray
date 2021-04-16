@@ -1846,6 +1846,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             If a DataArray is a dask array, it is written with those chunks.
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
+
+        See Also
+        --------
+        http://xarray.pydata.org/en/stable/io.html#zarr
         """
         from ..backends.api import to_zarr
 
