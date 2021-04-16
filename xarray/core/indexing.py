@@ -4,12 +4,16 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 from distutils.version import LooseVersion
+from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
-from dask import __version__ as dask_version
 import numpy as np
 import pandas as pd
+
+try:
+    from dask import __version__ as dask_version
+except ModuleNotFoundError:
+    pass
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
@@ -1382,7 +1386,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, newvalue):
-        if LooseVersion(dask_version) >= LooseVersion('2021.04.0+17'):
+        if LooseVersion(dask_version) >= LooseVersion("2021.04.0+17"):
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = newvalue
             elif isinstance(key, VectorizedIndexer):
