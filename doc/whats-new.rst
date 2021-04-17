@@ -96,7 +96,7 @@ Bug fixes
   By `Tobias Kölling <https://github.com/d70-t>`_.
 - Ensure standard calendar dates encoded with a calendar attribute with some or
   all uppercase letters can be decoded or encoded to or from
-  ``np.datetime64[ns]`` dates with or without ``cftime`` installed 
+  ``np.datetime64[ns]`` dates with or without ``cftime`` installed
   (:issue:`5093`, :pull:`5180`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 

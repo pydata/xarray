@@ -1059,11 +1059,11 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar):
     attrs = {"calendar": calendar, "units": units}
     variable = Variable(["time"], times, attrs)
     decoded = conventions.decode_cf_variable("time", variable)
+    encoded = conventions.encode_cf_variable(decoded)
 
     # Previously this would erroneously be an array of cftime.datetime
     # objects.  We check here that it is decoded properly to np.datetime64.
     assert np.issubdtype(decoded.dtype, np.datetime64)
-    encoded = conventions.encode_cf_variable(decoded)
 
     # Use assert_identical to ensure that the calendar attribute maintained its
     # original form throughout the roundtripping process, uppercase letters and
