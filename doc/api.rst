@@ -890,6 +890,7 @@ Advanced API
    as_variable
    register_dataset_accessor
    register_dataarray_accessor
+   Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
 
