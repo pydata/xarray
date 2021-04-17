@@ -890,6 +890,8 @@ Advanced API
    as_variable
    register_dataset_accessor
    register_dataarray_accessor
+   backends.BackendArray
+   backends.BackendEntrypoint
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
