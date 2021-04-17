@@ -171,8 +171,6 @@
    DataArray.std
    DataArray.var
 
-   DataArray.str
-
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
    core.coordinates.DataArrayCoordinates.keys
