@@ -1849,7 +1849,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         See Also
         --------
-        http://xarray.pydata.org/en/stable/io.html#zarr
+        :doc:`io.zarr`
         """
         from ..backends.api import to_zarr
 
