@@ -424,12 +424,6 @@ String manipulation
    :toctree: generated/
    :template: autosummary/accessor_method.rst
 
-   DataArray.str._apply
-   DataArray.str._padder
-   DataArray.str._partitioner
-   DataArray.str._re_compile
-   DataArray.str._splitter
-   DataArray.str._stringify
    DataArray.str.capitalize
    DataArray.str.casefold
    DataArray.str.cat
