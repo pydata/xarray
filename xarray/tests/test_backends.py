@@ -920,7 +920,7 @@ class CFEncodedBase(DatasetIOBase):
             with open_dataset(tmp_file, decode_coords=False) as ds:
                 assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
                 assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
-                assert "latlon" not in ds["variable"].attrs["coordinates"]
+                assert "coordinates" not in ds["variable"].attrs
                 assert "coordinates" not in ds.attrs
 
     def test_coordinate_variables_after_dataset_roundtrip(self):

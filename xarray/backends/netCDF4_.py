@@ -16,6 +16,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
     robust_getitem,
 )
@@ -542,6 +543,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
             mode=mode,
