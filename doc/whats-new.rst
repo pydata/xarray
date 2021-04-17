@@ -37,7 +37,7 @@ New Features
 - Many of the arguments for the :py:attr:`DataArray.str` methods now support
   providing an array-like input. In this case, the array provided to the
   arguments is broadcast against the original array and applied elementwise.
-- :py:attr:`DataArray.str` now supports `+`, `*`, and `%` operators. These
+- :py:attr:`DataArray.str` now supports ``+``, ``*``, and ``%`` operators. These
   behave the same as they do for :py:class:`str`, except that they follow
   array broadcasting rules.
 - A large number of new :py:attr:`DataArray.str` methods were implemented,
