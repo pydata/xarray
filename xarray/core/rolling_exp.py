@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar, Union
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -30,6 +31,20 @@ def move_exp_nanmean(array, *, axis, alpha):
         return array.astype(np.float64)
     else:
         return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
+
+
+def move_exp_nansum(array, *, axis, alpha):
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently support for dask-like arrays")
+    import numbagg
+
+    if LooseVersion(numbagg.__version__) < LooseVersion("0.2.0"):
+        raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.0.")
+
+    if axis == ():
+        return array.astype(np.float64)
+    else:
+        return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(comass, span, halflife, alpha):
@@ -98,7 +113,7 @@ class RollingExp(Generic[T_DSorDA]):
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self, keep_attrs: Optional[bool] = None) -> T_DSorDA:
+    def mean(self, keep_attrs: bool = None) -> T_DSorDA:
         """
         Exponentially weighted moving average
 
@@ -123,4 +138,32 @@ class RollingExp(Generic[T_DSorDA]):
 
         return self.obj.reduce(
             move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
+        )
+
+    def sum(self, keep_attrs: bool = None) -> T_DSorDA:
+        """
+        Exponentially weighted moving average
+
+        Parameters
+        ----------
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").sum()
+        <xarray.DataArray (x: 5)>
+        # FIXME @max: replace with result
+        # array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
+        Dimensions without coordinates: x
+        """
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return self.obj.reduce(
+            move_exp_nansum, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
         )
