@@ -1849,7 +1849,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         See Also
         --------
-        :doc:`io.zarr`
+        :ref:`io.zarr`
         """
         from ..backends.api import to_zarr
 
