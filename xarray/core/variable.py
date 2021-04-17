@@ -977,7 +977,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(data=data)
 
     def _replace(
-        self: VariableType, dims=_default, data=_default, attrs=_default, encoding=_default
+        self: VariableType,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+        encoding=_default,
     ) -> VariableType:
         if dims is _default:
             dims = copy.copy(self._dims)
