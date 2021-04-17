@@ -1053,14 +1053,16 @@ def test__encode_datetime_with_cftime():
 
 @pytest.mark.parametrize("calendar", ["gregorian", "Gregorian", "GREGORIAN"])
 def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar):
-    # See GH 5093.  This is primarily relevant for standard calendar times when
-    # cftime is not installed (cftime.num2date already lowers the calendar name
-    # internally).
+    # See GH 5093.
     times = [0, 1]
     units = "days since 2000-01-01"
     attrs = {"calendar": calendar, "units": units}
     variable = Variable(["time"], times, attrs)
     decoded = conventions.decode_cf_variable("time", variable)
+
+    # Previously this would erroneously be an array of cftime.datetime
+    # objects.  We check here that it is decoded properly to np.datetime64.
+    assert np.issubdtype(decoded.dtype, np.datetime64)
     encoded = conventions.encode_cf_variable(decoded)
 
     # Use assert_identical to ensure that the calendar attribute maintained its
