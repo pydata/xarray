@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar, Union
 from distutils.version import LooseVersion
+from typing import TYPE_CHECKING, Generic, Hashable, Mapping, TypeVar, Union
 
 import numpy as np
 
