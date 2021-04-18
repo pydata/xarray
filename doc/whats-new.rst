@@ -234,6 +234,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
+  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
 - Use specific type checks in
   :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
   access to ``values`` attribute (:issue:`2097`)

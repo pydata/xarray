@@ -20,6 +20,7 @@ from xarray.core.duck_array_ops import (
     mean,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
+    push,
     py_timedelta_to_float,
     stack,
     timedelta_to_numeric,
@@ -35,6 +36,7 @@ from . import (
     has_scipy,
     raise_if_dask_computes,
     raises_regex,
+    requires_bottleneck,
     requires_cftime,
     requires_dask,
 )
@@ -859,3 +861,26 @@ def test_least_squares(use_dask, skipna):
 
     np.testing.assert_allclose(coeffs, [1.5, 1.25])
     np.testing.assert_allclose(residuals, [2.0])
+
+
+@requires_dask
+@requires_bottleneck
+def test_push_dask():
+    import bottleneck
+    import dask.array
+
+    array = np.array([np.nan, np.nan, np.nan, 1, 2, 3, np.nan, np.nan, 4, 5, np.nan, 6])
+    expected = bottleneck.push(array, axis=0)
+    for c in range(1, 11):
+        with raise_if_dask_computes():
+            actual = push(dask.array.from_array(array, chunks=c), axis=0, n=None)
+        np.testing.assert_equal(actual, expected)
+
+    # some chunks of size-1 with NaN
+    with raise_if_dask_computes():
+        actual = push(
+            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+            axis=0,
+            n=None,
+        )
+    np.testing.assert_equal(actual, expected)
