@@ -246,6 +246,16 @@ Bug fixes
   calendar dates with time units of nanoseconds (:pull:`4400`).
   By `Spencer Clark <https://github.com/spencerkclark>`_ and `Mark Harfouche
   <http://github.com/hmaarrfk>`_.
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
+- :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
+- By default, when possible, xarray will now always use values of type ``int64`` when encoding
+  and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
+  precision and accuracy are maintained in the round-tripping process
+  (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard calendar
+  dates with time units of nanoseconds (:pull:`4400`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_ and `Mark Harfouche <http://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.astype`, :py:meth:`Dataset.astype` and :py:meth:`Variable.astype` support
   the ``order`` and ``subok`` parameters again. This fixes a regression introduced in version 0.16.1
   (:issue:`4644`, :pull:`4683`).

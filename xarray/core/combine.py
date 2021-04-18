@@ -557,7 +557,6 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
-
 def _combine_single_variable_hypercube(
     datasets,
     fill_value=dtypes.NA,
@@ -616,7 +615,6 @@ def _combine_single_variable_hypercube(
 
     return concatenated
 
-
 def combine_by_coords(
     data_objects,
     compat="no_conflicts",
@@ -654,6 +652,7 @@ def combine_by_coords(
     ----------
     data_objects : sequence of xarray.Dataset or sequence of xarray.DataArray
         Data objects to combine.
+
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
