@@ -80,6 +80,9 @@ def open_dataset(
     except ImportError:
         raise ImportError("using the tutorial data requires pooch")
 
+    logger = pooch.get_logger()
+    logger.setLevel("WARNING")
+
     cache_dir = _construct_cache_dir(cache_dir)
     if name in external_urls:
         url = external_urls[name]
@@ -145,6 +148,9 @@ def open_rasterio(
         import pooch
     except ImportError:
         raise ImportError("using the tutorial data requires pooch")
+
+    logger = pooch.get_logger()
+    logger.setLevel("WARNING")
 
     cache_dir = _construct_cache_dir(cache_dir)
     url = external_rasterio_urls.get(name)
