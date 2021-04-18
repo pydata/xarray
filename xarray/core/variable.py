@@ -1665,6 +1665,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
+    def clip(self, min=None, max=None):
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max)
+
     def reduce(
         self,
         func,

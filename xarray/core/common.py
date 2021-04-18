@@ -380,10 +380,15 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def clip(self, min=None, max=None):
+    def clip(self, min=None, max=None, *, keep_attrs=None):
         from .computation import apply_ufunc
 
-        return apply_ufunc(np.clip, self, min, max)
+        if keep_attrs is None:
+            # When this was a unary func, the default was True, so retaining the
+            # default.
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return apply_ufunc(np.clip, self, min, max, keep_attrs=keep_attrs)
 
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
