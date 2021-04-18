@@ -66,7 +66,6 @@ UNARY_OPS = (
 OTHER_UNARY_METHODS = (
     ("round", "ops.round_"),
     ("argsort", "ops.argsort"),
-    ("clip", "ops.clip"),
     ("conj", "ops.conj"),
     ("conjugate", "ops.conjugate"),
 )

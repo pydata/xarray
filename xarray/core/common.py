@@ -380,6 +380,11 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
+    def clip(self, min=None, max=None):
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max)
+
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
         if key not in self.dims:

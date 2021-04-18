@@ -7313,3 +7313,18 @@ def test_deepcopy_obj_array():
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
     assert x0.values[0] is not x1.values[0]
+
+
+def test_clip(da):
+    result = da.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = da.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = da.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    assert result.dims == da.dims

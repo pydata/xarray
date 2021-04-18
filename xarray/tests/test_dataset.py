@@ -6069,16 +6069,16 @@ def test_dir_unicode(data_set):
 def ds(request):
     if request.param == 1:
         return Dataset(
-            {
-                "z1": (["y", "x"], np.random.randn(2, 8)),
-                "z2": (["time", "y"], np.random.randn(10, 2)),
-            },
-            {
-                "x": ("x", np.linspace(0, 1.0, 8)),
-                "time": ("time", np.linspace(0, 1.0, 10)),
-                "c": ("y", ["a", "b"]),
-                "y": range(2),
-            },
+            dict(
+                z1=(["y", "x"], np.random.randn(2, 8)),
+                z2=(["time", "y"], np.random.randn(10, 2)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 8)),
+                time=("time", np.linspace(0, 1.0, 10)),
+                c=("y", ["a", "b"]),
+                y=range(2),
+            ),
         )
 
     if request.param == 2:
@@ -6845,3 +6845,18 @@ def test_deepcopy_obj_array():
     x0 = Dataset(dict(foo=DataArray(np.array([object()]))))
     x1 = deepcopy(x0)
     assert x0["foo"].values[0] is not x1["foo"].values[0]
+
+
+def test_clip(ds):
+    result = ds.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = ds.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = ds.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
+    assert result.dims == ds.dims
