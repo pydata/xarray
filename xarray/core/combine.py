@@ -557,6 +557,7 @@ def combine_nested(
 def vars_as_keys(ds):
     return tuple(sorted(ds))
 
+
 def _combine_single_variable_hypercube(
     datasets,
     fill_value=dtypes.NA,
@@ -614,6 +615,7 @@ def _combine_single_variable_hypercube(
             )
 
     return concatenated
+
 
 def combine_by_coords(
     data_objects,

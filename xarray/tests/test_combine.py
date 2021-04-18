@@ -698,15 +698,6 @@ class TestCombineAuto:
     def test_empty_input(self):
         assert_identical(Dataset(), combine_by_coords([]))
 
-    def test_combine_coords_unnamed_arrays(self):
-        objs = [
-            DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
-            DataArray([2, 3], dims=("x"), coords=({"x": [2, 3]})),
-        ]
-        expected = Dataset({"_": ("x", [0, 1, 2, 3])}, coords={"x": [0, 1, 2, 3]})
-        actual = combine_by_coords(objs)
-        assert_identical(expected, actual)
-
     def test_combine_coords_mixed_datasets_arrays(self):
         objs = [
             DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
