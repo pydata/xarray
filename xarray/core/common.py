@@ -345,8 +345,6 @@ class DataWithCoords(AttrAccessMixin):
 
     __slots__ = ("_close",)
 
-    _rolling_exp_cls = RollingExp
-
     def squeeze(
         self,
         dim: Union[Hashable, Iterable[Hashable], None] = None,
@@ -908,7 +906,7 @@ class DataWithCoords(AttrAccessMixin):
         """
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return self._rolling_exp_cls(self, window, window_type)
+        return RollingExp(self, window, window_type)
 
     def coarsen(
         self,
