@@ -8,7 +8,7 @@ import xarray.ufuncs as xu
 
 from . import assert_array_equal
 from . import assert_identical as assert_identical_
-from . import mock, raises_regex
+from . import mock
 
 
 def assert_identical(a, b):
@@ -79,7 +79,7 @@ def test_groupby():
     assert_identical(ds.a, np.maximum(arr_grouped, group_mean.a))
     assert_identical(ds.a, np.maximum(group_mean.a, arr_grouped))
 
-    with raises_regex(ValueError, "mismatched lengths for dimension"):
+    with pytest.raises(ValueError, match=r"mismatched lengths for dimension"):
         np.maximum(ds.a.variable, ds_grouped)
 
 
@@ -136,7 +136,7 @@ def test_dask_defers_to_xarray():
 
 def test_gufunc_methods():
     xarray_obj = xr.DataArray([1, 2, 3])
-    with raises_regex(NotImplementedError, "reduce method"):
+    with pytest.raises(NotImplementedError, match=r"reduce method"):
         np.add.reduce(xarray_obj, 1)
 
 
@@ -144,7 +144,7 @@ def test_out():
     xarray_obj = xr.DataArray([1, 2, 3])
 
     # xarray out arguments should raise
-    with raises_regex(NotImplementedError, "`out` argument"):
+    with pytest.raises(NotImplementedError, match=r"`out` argument"):
         np.add(xarray_obj, 1, out=xarray_obj)
 
     # but non-xarray should be OK
@@ -156,7 +156,7 @@ def test_out():
 def test_gufuncs():
     xarray_obj = xr.DataArray([1, 2, 3])
     fake_gufunc = mock.Mock(signature="(n)->()", autospec=np.sin)
-    with raises_regex(NotImplementedError, "generalized ufuncs"):
+    with pytest.raises(NotImplementedError, match=r"generalized ufuncs"):
         xarray_obj.__array_ufunc__(fake_gufunc, "__call__", xarray_obj)
 
 

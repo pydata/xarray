@@ -120,7 +120,7 @@ class VariableSubclassobjects:
         v_new = v[[True, False, True]]
         assert_identical(v[[0, 2]], v_new)
 
-        with raises_regex(IndexError, "Boolean indexer should"):
+        with pytest.raises(IndexError, match=r"Boolean indexer should"):
             ind = Variable(("a",), [True, False, True])
             v[ind]
 
@@ -298,14 +298,14 @@ class VariableSubclassobjects:
     def test_datetime64_valid_range(self):
         data = np.datetime64("1250-01-01", "us")
         pderror = pd.errors.OutOfBoundsDatetime
-        with raises_regex(pderror, "Out of bounds nanosecond"):
+        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
     @pytest.mark.xfail(reason="pandas issue 36615")
     def test_timedelta64_valid_range(self):
         data = np.timedelta64("200000", "D")
         pderror = pd.errors.OutOfBoundsTimedelta
-        with raises_regex(pderror, "Out of bounds nanosecond"):
+        with pytest.raises(pderror, match=r"Out of bounds nanosecond"):
             self.cls(["t"], [data])
 
     def test_pandas_data(self):
@@ -455,7 +455,7 @@ class VariableSubclassobjects:
         assert_identical(
             Variable(["b", "a"], np.array([x, y])), Variable.concat((v, w), "b")
         )
-        with raises_regex(ValueError, "Variable has dimensions"):
+        with pytest.raises(ValueError, match=r"Variable has dimensions"):
             Variable.concat([v, Variable(["c"], y)], "b")
         # test indexers
         actual = Variable.concat(
@@ -470,7 +470,7 @@ class VariableSubclassobjects:
         assert_identical(v, Variable.concat([v[:1], v[1:]], "time"))
         # test dimension order
         assert_identical(v, Variable.concat([v[:, :5], v[:, 5:]], "x"))
-        with raises_regex(ValueError, "all input arrays must have"):
+        with pytest.raises(ValueError, match=r"all input arrays must have"):
             Variable.concat([v[:, 0], v[:, 1:]], "x")
 
     def test_concat_attrs(self):
@@ -546,7 +546,7 @@ class VariableSubclassobjects:
     def test_copy_with_data_errors(self):
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
-        with raises_regex(ValueError, "must match shape of object"):
+        with pytest.raises(ValueError, match=r"must match shape of object"):
             orig.copy(data=new_data)
 
     def test_copy_index_with_data(self):
@@ -559,11 +559,11 @@ class VariableSubclassobjects:
     def test_copy_index_with_data_errors(self):
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 20)
-        with raises_regex(ValueError, "must match shape of object"):
+        with pytest.raises(ValueError, match=r"must match shape of object"):
             orig.copy(data=new_data)
-        with raises_regex(ValueError, "Cannot assign to the .data"):
+        with pytest.raises(ValueError, match=r"Cannot assign to the .data"):
             orig.data = new_data
-        with raises_regex(ValueError, "Cannot assign to the .values"):
+        with pytest.raises(ValueError, match=r"Cannot assign to the .values"):
             orig.values = new_data
 
     def test_replace(self):
@@ -659,12 +659,12 @@ class VariableSubclassobjects:
 
         # with boolean variable with wrong shape
         ind = np.array([True, False])
-        with raises_regex(IndexError, "Boolean array size 2 is "):
+        with pytest.raises(IndexError, match=r"Boolean array size 2 is "):
             v[Variable(("a", "b"), [[0, 1]]), ind]
 
         # boolean indexing with different dimension
         ind = Variable(["a"], [True, False, False])
-        with raises_regex(IndexError, "Boolean indexer should be"):
+        with pytest.raises(IndexError, match=r"Boolean indexer should be"):
             v[dict(y=ind)]
 
     def test_getitem_uint_1d(self):
@@ -794,21 +794,21 @@ class VariableSubclassobjects:
     def test_getitem_error(self):
         v = self.cls(["x", "y"], [[0, 1, 2], [3, 4, 5]])
 
-        with raises_regex(IndexError, "labeled multi-"):
+        with pytest.raises(IndexError, match=r"labeled multi-"):
             v[[[0, 1], [1, 2]]]
 
         ind_x = Variable(["a"], [0, 1, 1])
         ind_y = Variable(["a"], [0, 1])
-        with raises_regex(IndexError, "Dimensions of indexers "):
+        with pytest.raises(IndexError, match=r"Dimensions of indexers "):
             v[ind_x, ind_y]
 
         ind = Variable(["a", "b"], [[True, False], [False, True]])
-        with raises_regex(IndexError, "2-dimensional boolean"):
+        with pytest.raises(IndexError, match=r"2-dimensional boolean"):
             v[dict(x=ind)]
 
         v = Variable(["x", "y", "z"], np.arange(60).reshape(3, 4, 5))
         ind = Variable(["x"], [0, 1])
-        with raises_regex(IndexError, "Dimensions of indexers mis"):
+        with pytest.raises(IndexError, match=r"Dimensions of indexers mis"):
             v[:, ind]
 
     @pytest.mark.parametrize(
@@ -1129,11 +1129,11 @@ class TestVariable(VariableSubclassobjects):
         )
         assert_identical(expected_extra, as_variable(xarray_tuple))
 
-        with raises_regex(TypeError, "tuple of form"):
+        with pytest.raises(TypeError, match=r"tuple of form"):
             as_variable(tuple(data))
-        with raises_regex(ValueError, "tuple of form"):  # GH1016
+        with pytest.raises(ValueError, match=r"tuple of form"):  # GH1016
             as_variable(("five", "six", "seven"))
-        with raises_regex(TypeError, "without an explicit list of dimensions"):
+        with pytest.raises(TypeError, match=r"without an explicit list of dimensions"):
             as_variable(data)
 
         actual = as_variable(data, name="x")
@@ -1145,9 +1145,9 @@ class TestVariable(VariableSubclassobjects):
 
         data = np.arange(9).reshape((3, 3))
         expected = Variable(("x", "y"), data)
-        with raises_regex(ValueError, "without explicit dimension names"):
+        with pytest.raises(ValueError, match=r"without explicit dimension names"):
             as_variable(data, name="x")
-        with raises_regex(ValueError, "has more than 1-dimension"):
+        with pytest.raises(ValueError, match=r"has more than 1-dimension"):
             as_variable(expected, name="x")
 
         # test datetime, timedelta conversion
@@ -1275,7 +1275,7 @@ class TestVariable(VariableSubclassobjects):
         # test iteration
         for n, item in enumerate(v):
             assert_identical(Variable(["y"], data[n]), item)
-        with raises_regex(TypeError, "iteration over a 0-d"):
+        with pytest.raises(TypeError, match=r"iteration over a 0-d"):
             iter(Variable([], 0))
         # test setting
         v.values[:] = 0
@@ -1404,7 +1404,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(expected, v.shift(x=5, fill_value=fill_value))
         assert_identical(expected, v.shift(x=6, fill_value=fill_value))
 
-        with raises_regex(ValueError, "dimension"):
+        with pytest.raises(ValueError, match=r"dimension"):
             v.shift(z=0)
 
         v = Variable("x", [1, 2, 3, 4, 5], {"foo": "bar"})
@@ -1433,7 +1433,7 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(expected, v.roll(x=2))
         assert_identical(expected, v.roll(x=-3))
 
-        with raises_regex(ValueError, "dimension"):
+        with pytest.raises(ValueError, match=r"dimension"):
             v.roll(z=0)
 
     def test_roll_consistency(self):
@@ -1486,7 +1486,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], [[1, 2]])
         assert_identical(Variable(["y"], [1, 2]), v.squeeze())
         assert_identical(Variable(["y"], [1, 2]), v.squeeze("x"))
-        with raises_regex(ValueError, "cannot select a dimension"):
+        with pytest.raises(ValueError, match=r"cannot select a dimension"):
             v.squeeze("y")
 
     def test_get_axis_num(self):
@@ -1495,7 +1495,7 @@ class TestVariable(VariableSubclassobjects):
         assert v.get_axis_num(["x"]) == (0,)
         assert v.get_axis_num(["x", "y"]) == (0, 1)
         assert v.get_axis_num(["z", "y", "x"]) == (2, 1, 0)
-        with raises_regex(ValueError, "not found in array dim"):
+        with pytest.raises(ValueError, match=r"not found in array dim"):
             v.get_axis_num("foobar")
 
     def test_set_dims(self):
@@ -1516,7 +1516,7 @@ class TestVariable(VariableSubclassobjects):
         expected = v
         assert_identical(actual, expected)
 
-        with raises_regex(ValueError, "must be a superset"):
+        with pytest.raises(ValueError, match=r"must be a superset"):
             v.set_dims(["z"])
 
     def test_set_dims_object_dtype(self):
@@ -1548,9 +1548,9 @@ class TestVariable(VariableSubclassobjects):
     def test_stack_errors(self):
         v = Variable(["x", "y"], [[0, 1], [2, 3]], {"foo": "bar"})
 
-        with raises_regex(ValueError, "invalid existing dim"):
+        with pytest.raises(ValueError, match=r"invalid existing dim"):
             v.stack(z=("x1",))
-        with raises_regex(ValueError, "cannot create a new dim"):
+        with pytest.raises(ValueError, match=r"cannot create a new dim"):
             v.stack(x=("x",))
 
     def test_unstack(self):
@@ -1569,11 +1569,11 @@ class TestVariable(VariableSubclassobjects):
 
     def test_unstack_errors(self):
         v = Variable("z", [0, 1, 2, 3])
-        with raises_regex(ValueError, "invalid existing dim"):
+        with pytest.raises(ValueError, match=r"invalid existing dim"):
             v.unstack(foo={"x": 4})
-        with raises_regex(ValueError, "cannot create a new dim"):
+        with pytest.raises(ValueError, match=r"cannot create a new dim"):
             v.stack(z=("z",))
-        with raises_regex(ValueError, "the product of the new dim"):
+        with pytest.raises(ValueError, match=r"the product of the new dim"):
             v.unstack(z={"x": 5})
 
     def test_unstack_2d(self):
@@ -1618,9 +1618,9 @@ class TestVariable(VariableSubclassobjects):
         a = Variable(["x"], np.arange(10))
         b = Variable(["x"], np.arange(5))
         c = Variable(["x", "x"], np.arange(100).reshape(10, 10))
-        with raises_regex(ValueError, "mismatched lengths"):
+        with pytest.raises(ValueError, match=r"mismatched lengths"):
             a + b
-        with raises_regex(ValueError, "duplicate dimensions"):
+        with pytest.raises(ValueError, match=r"duplicate dimensions"):
             a + c
 
     def test_inplace_math(self):
@@ -1633,7 +1633,7 @@ class TestVariable(VariableSubclassobjects):
         assert source_ndarray(v.values) is x
         assert_array_equal(v.values, np.arange(5) + 1)
 
-        with raises_regex(ValueError, "dimensions cannot change"):
+        with pytest.raises(ValueError, match=r"dimensions cannot change"):
             v += Variable("y", np.arange(5))
 
     def test_reduce(self):
@@ -1650,7 +1650,7 @@ class TestVariable(VariableSubclassobjects):
         )
         assert_allclose(v.mean("x"), v.reduce(np.mean, "x"))
 
-        with raises_regex(ValueError, "cannot supply both"):
+        with pytest.raises(ValueError, match=r"cannot supply both"):
             v.mean(dim="x", axis=0)
 
     @pytest.mark.parametrize("skipna", [True, False])
@@ -1680,7 +1680,7 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], self.d).chunk({"x": 2})
 
         # this checks for ValueError in dask.array.apply_gufunc
-        with raises_regex(ValueError, "consists of multiple chunks"):
+        with pytest.raises(ValueError, match=r"consists of multiple chunks"):
             v.quantile(0.5, dim="x")
 
     @pytest.mark.parametrize("q", [-0.1, 1.1, [2], [0.25, 2]])
@@ -1688,14 +1688,16 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x", "y"], self.d)
 
         # escape special characters
-        with raises_regex(ValueError, r"Quantiles must be in the range \[0, 1\]"):
+        with pytest.raises(
+            ValueError, match=r"Quantiles must be in the range \[0, 1\]"
+        ):
             v.quantile(q, dim="x")
 
     @requires_dask
     @requires_bottleneck
     def test_rank_dask_raises(self):
         v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
-        with raises_regex(TypeError, "arrays stored as dask"):
+        with pytest.raises(TypeError, match=r"arrays stored as dask"):
             v.rank("x")
 
     @requires_bottleneck
@@ -1721,7 +1723,7 @@ class TestVariable(VariableSubclassobjects):
         v_expect = Variable(["x"], [0.75, 0.25, np.nan, 0.5, 1.0])
         assert_equal(v.rank("x", pct=True), v_expect)
         # invalid dim
-        with raises_regex(ValueError, "not found"):
+        with pytest.raises(ValueError, match=r"not found"):
             v.rank("y")
 
     def test_big_endian_reduce(self):
@@ -1928,7 +1930,7 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(["x", "y"], [[0, 0], [0, 0], [1, 1]])
         assert_identical(expected, v)
 
-        with raises_regex(ValueError, "shape mismatch"):
+        with pytest.raises(ValueError, match=r"shape mismatch"):
             v[ind, ind] = np.zeros((1, 2, 1))
 
         v = Variable(["x", "y"], [[0, 3, 2], [3, 4, 5]])
@@ -2124,7 +2126,7 @@ class TestIndexVariable(VariableSubclassobjects):
     cls = staticmethod(IndexVariable)
 
     def test_init(self):
-        with raises_regex(ValueError, "must be 1-dimensional"):
+        with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             IndexVariable((), 0)
 
     def test_to_index(self):
@@ -2144,7 +2146,7 @@ class TestIndexVariable(VariableSubclassobjects):
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
         assert float == x.values.dtype
-        with raises_regex(TypeError, "cannot be modified"):
+        with pytest.raises(TypeError, match=r"cannot be modified"):
             x[:] = 0
 
     def test_name(self):
@@ -2171,7 +2173,7 @@ class TestIndexVariable(VariableSubclassobjects):
         level_1 = IndexVariable("x", midx.get_level_values("level_1"))
         assert_identical(x.get_level_variable("level_1"), level_1)
 
-        with raises_regex(ValueError, "has no MultiIndex"):
+        with pytest.raises(ValueError, match=r"has no MultiIndex"):
             IndexVariable("y", [10.0]).get_level_variable("level")
 
     def test_concat_periods(self):
@@ -2354,7 +2356,7 @@ class TestAsCompatibleData:
         assert_identical(expect, full_like(orig, True, dtype=bool))
 
         # raise error on non-scalar fill_value
-        with raises_regex(ValueError, "must be scalar"):
+        with pytest.raises(ValueError, match=r"must be scalar"):
             full_like(orig, [1.0, 2.0])
 
         with pytest.raises(ValueError, match="'dtype' cannot be dict-like"):
@@ -2459,7 +2461,7 @@ class TestBackendIndexing:
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # could not doubly wrapping
-        with raises_regex(TypeError, "NumpyIndexingAdapter only wraps "):
+        with pytest.raises(TypeError, match=r"NumpyIndexingAdapter only wraps "):
             v = Variable(
                 dims=("x", "y"), data=NumpyIndexingAdapter(NumpyIndexingAdapter(self.d))
             )

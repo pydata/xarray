@@ -34,7 +34,6 @@ from . import (
     has_dask,
     has_scipy,
     raise_if_dask_computes,
-    raises_regex,
     requires_cftime,
     requires_dask,
 )
@@ -72,7 +71,7 @@ class TestOps:
         actual = first(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             first(self.x, 3)
 
     def test_last(self):
@@ -93,7 +92,7 @@ class TestOps:
         actual = last(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             last(self.x, 3)
 
     def test_count(self):

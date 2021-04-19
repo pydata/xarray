@@ -16,7 +16,7 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import raises_regex, requires_cftime, requires_cftime_1_1_0
+from . import requires_cftime, requires_cftime_1_1_0
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
@@ -340,7 +340,7 @@ def test_get_loc(date_type, index):
     result = index.get_loc("0001-02-01")
     assert result == slice(1, 2)
 
-    with raises_regex(KeyError, "1234"):
+    with pytest.raises(KeyError, match=r"1234"):
         index.get_loc("1234")
 
 

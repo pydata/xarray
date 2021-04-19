@@ -3,7 +3,7 @@ import pytest
 
 import xarray as xr
 from xarray import DataArray
-from xarray.tests import assert_allclose, assert_equal, raises_regex
+from xarray.tests import assert_allclose, assert_equal
 
 from . import raise_if_dask_computes, requires_cftime, requires_dask
 
@@ -15,7 +15,7 @@ def test_weighted_non_DataArray_weights(as_dataset):
     if as_dataset:
         data = data.to_dataset(name="data")
 
-    with raises_regex(ValueError, "`weights` must be a DataArray"):
+    with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
         data.weighted([1, 2])
 
 

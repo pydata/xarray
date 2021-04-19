@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_allclose, assert_equal, assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical
 
 
 @pytest.fixture
@@ -479,34 +479,38 @@ def test_groupby_drops_nans():
 
 def test_groupby_grouping_errors():
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array):
     grouped = array.groupby("y")
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean()
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     grouped = array.groupby("y", squeeze=False)

@@ -4,7 +4,7 @@ import pytest
 
 import xarray as xr
 
-from . import assert_identical, raises_regex
+from . import assert_identical
 
 
 @xr.register_dataset_accessor("example_accessor")
@@ -84,5 +84,5 @@ class TestAccessor:
             def __init__(self, xarray_obj):
                 raise AttributeError("broken")
 
-        with raises_regex(RuntimeError, "error initializing"):
+        with pytest.raises(RuntimeError, match=r"error initializing"):
             xr.Dataset().stupid_accessor

@@ -8,8 +8,6 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 
-from . import raises_regex
-
 
 class TestFormatting:
     def test_get_indexer_at_least_n_items(self):
@@ -50,7 +48,7 @@ class TestFormatting:
             expected = array.flat[:n]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_n_items(self):
@@ -60,7 +58,7 @@ class TestFormatting:
             expected = array.flat[-n:]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
