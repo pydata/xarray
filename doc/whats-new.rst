@@ -22,7 +22,8 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- apply ``combine_attrs`` recursively (:pull:`4902`).
+- apply ``combine_attrs`` on data variables and coordinate variables when concatenating 
+  and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
