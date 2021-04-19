@@ -144,7 +144,6 @@ class TestVariable(DaskTestCase):
             with raises_regex(TypeError, "stored in a dask array"):
                 v[:1] = 0
 
-
     def test_squeeze(self):
         u = self.eager_var
         v = self.lazy_var
