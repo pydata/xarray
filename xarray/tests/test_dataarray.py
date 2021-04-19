@@ -7330,7 +7330,7 @@ def test_deepcopy_obj_array():
 
 def test_clip(da):
     with raise_if_dask_computes():
-    	result = da.clip(min=0.5)
+        result = da.clip(min=0.5)
     assert result.min(...) >= 0.5
 
     result = da.clip(max=0.5)
