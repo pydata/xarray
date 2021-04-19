@@ -35,7 +35,7 @@ def move_exp_nanmean(array, *, axis, alpha):
 
 def move_exp_nansum(array, *, axis, alpha):
     if is_duck_dask_array(array):
-        raise TypeError("rolling_exp is not currently support for dask-like arrays")
+        raise TypeError("rolling_exp is not currently supported for dask-like arrays")
     import numbagg
 
     if LooseVersion(numbagg.__version__) < LooseVersion("0.2.0"):
