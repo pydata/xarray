@@ -136,18 +136,6 @@ flaky = pytest.mark.flaky
 network = pytest.mark.network
 
 
-@contextmanager
-def raises_regex(error, pattern):
-    __tracebackhide__ = True
-    with pytest.raises(error) as excinfo:
-        yield
-    message = str(excinfo.value)
-    if not re.search(pattern, message):
-        raise AssertionError(
-            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
-        )
-
-
 class UnexpectedDataAccess(Exception):
     pass
 
