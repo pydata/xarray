@@ -6611,7 +6611,7 @@ def test_rolling_properties(da):
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
-@pytest.mark.parametrize("backend", ['numpy'], indirect=True)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
@@ -7222,7 +7222,7 @@ class TestIrisConversion:
 @pytest.mark.parametrize(
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
-@pytest.mark.parametrize("backend", ['numpy'], indirect=True)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp(da, dim, window_type, window):
     da = da.isel(a=0)
     da = da.where(da > 0.2)
@@ -7242,7 +7242,7 @@ def test_rolling_exp(da, dim, window_type, window):
 
 
 @requires_numbagg
-@pytest.mark.parametrize("backend", ['numpy'], indirect=True)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp_keep_attrs(da):
     attrs = {"attrs": "da"}
     da.attrs = attrs
