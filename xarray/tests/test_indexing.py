@@ -1,5 +1,4 @@
 import itertools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -8,13 +7,7 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 
-from . import (
-    IndexerMaker,
-    ReturnItem,
-    assert_array_equal,
-    assert_identical,
-    raises_regex,
-)
+from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -738,18 +731,6 @@ def test_create_mask_dask():
 
     with pytest.raises(ValueError):
         indexing.create_mask(indexer, (5, 2), da.empty((5,), chunks=(1,)))
-
-
-def test_dask_item_assignment():
-    dask = pytest.importorskip("dask")
-    arr = DataArray([1, 2, 3, 4]).chunk(1)
-    expected = DataArray([99, 2, 3, 4]).chunk(1)
-    if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
-        arr[0] = 99
-        assert_identical(arr, expected)
-    else:
-        with raises_regex(TypeError, "does not support item assignment"):
-            arr[0] = 99
 
 
 def test_create_mask_error():
