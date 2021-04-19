@@ -515,14 +515,14 @@ class _LocIndexer:
             )
 
         # loop over dataset variables
-        for var, da in self.dataset.items():
+        for name, var in self.dataset.items():
             val = value
-            if type(value) == xr.core.dataset.Dataset:
-                val = value[var]
+            if isinstance(value, Dataset):
+                val = value[name]
             # only set value if all dimensions are present
-            if all([k in da.dims for k in key.keys()]):
-                pos_indexers, _ = remap_label_indexers(da, key)
-                da[pos_indexers] = val
+            if all([k in var.dims for k in key.keys()]):
+                pos_indexers, _ = remap_label_indexers(var, key)
+                var[pos_indexers] = val
 
 
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
@@ -1456,13 +1456,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         if utils.is_dict_like(key):
             # loop over dataset variables
-            for var, da in self.items():
+            for name, var in self.items():
                 val = value
-                if type(value) == xr.core.dataset.Dataset:
-                    val = value[var]
+                if isinstance(value, Dataset):
+                    val = value[name]
                 # only set value if all dimensions are present
-                if all([k in da.dims for k in key.keys()]):
-                    da[key] = val
+                if all([k in var.dims for k in key.keys()]):
+                    var[key] = val
         else:
             self.update({key: value})
 
