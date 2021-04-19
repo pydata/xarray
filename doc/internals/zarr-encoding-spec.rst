@@ -1,3 +1,4 @@
+.. currentmodule:: xarray
 
 .. _zarr_encoding:
 

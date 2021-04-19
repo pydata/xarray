@@ -31,7 +31,7 @@ dependencies:
   - sphinx-book-theme >= 0.0.38
   - sphinx-copybutton
   - sphinx-panels
-  - sphinx>=3.3
+  - sphinx<4
   - zarr>=2.4
   - pip:
       - sphinxext-rediraffe

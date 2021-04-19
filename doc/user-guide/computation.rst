@@ -451,7 +451,7 @@ Fitting arbitrary functions
 ===========================
 
 Xarray objects also provide an interface for fitting more complex functions using
-:py:meth:`scipy.optimize.curve_fit`. :py:meth:`~xarray.DataArray.curvefit` accepts
+:py:func:`scipy.optimize.curve_fit`. :py:meth:`~xarray.DataArray.curvefit` accepts
 user-defined functions and can fit along multiple coordinates.
 
 For example, we can fit a relationship between two ``DataArray`` objects, maintaining
