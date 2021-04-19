@@ -174,26 +174,26 @@ def test_interpolate_pd_compat_polynomial():
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
-    with raises_regex(ValueError, "Index 'x' must be monotonically increasing"):
+    with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
         expected.interpolate_na(dim="x", method="index")
 
 
 def test_interpolate_no_dim_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(NotImplementedError, "dim is a required argument"):
+    with pytest.raises(NotImplementedError, match=r"dim is a required argument"):
         da.interpolate_na(method="linear")
 
 
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(ValueError, "not a valid"):
+    with pytest.raises(ValueError, match=r"not a valid"):
         da.interpolate_na(dim="x", method="foo")
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
-    with raises_regex(ValueError, "Index 'x' has duplicate values"):
+    with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
         da.interpolate_na(dim="x", method="foo")
 
 
@@ -202,7 +202,7 @@ def test_interpolate_multiindex_raises():
     data[1, 1] = np.nan
     da = xr.DataArray(data, coords=[("x", ["a", "b"]), ("y", [0, 1, 2])])
     das = da.stack(z=("x", "y"))
-    with raises_regex(TypeError, "Index 'z' must be castable to float64"):
+    with pytest.raises(TypeError, match=r"Index 'z' must be castable to float64"):
         das.interpolate_na(dim="z")
 
 
@@ -215,7 +215,7 @@ def test_interpolate_2d_coord_raises():
     data = np.random.randn(2, 3)
     data[1, 1] = np.nan
     da = xr.DataArray(data, dims=("a", "b"), coords=coords)
-    with raises_regex(ValueError, "interpolation must be 1D"):
+    with pytest.raises(ValueError, match=r"interpolation must be 1D"):
         da.interpolate_na(dim="a", use_coordinate="x")
 
 
@@ -366,7 +366,7 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
     # this checks for ValueError in dask.array.apply_gufunc
-    with raises_regex(ValueError, "consists of multiple chunks"):
+    with pytest.raises(ValueError, match=r"consists of multiple chunks"):
         da.interpolate_na("time")
 
 
@@ -575,17 +575,17 @@ def test_interpolate_na_max_gap_errors(da_time):
     ):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(ValueError, "max_gap must be a scalar."):
+    with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Expected value of type str"):
+    with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(TypeError, "Expected integer or floating point"):
+    with pytest.raises(TypeError, match=r"Expected integer or floating point"):
         da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
 
-    with raises_regex(ValueError, "Could not convert 'huh' to timedelta64"):
+    with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
 
 
