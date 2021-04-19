@@ -380,7 +380,17 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def clip(self, min=None, max=None, *, keep_attrs=None):
+    def clip(self, min=None, max=None, *, keep_attrs: bool = None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
         from .computation import apply_ufunc
 
         if keep_attrs is None:

@@ -6914,7 +6914,7 @@ def test_rolling_keep_attrs_deprecated():
     data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da,)
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
 
     # deprecated option
     with pytest.warns(
