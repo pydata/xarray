@@ -8,7 +8,13 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 
-from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
+from . import (
+    IndexerMaker,
+    ReturnItem,
+    assert_array_equal,
+    assert_identical,
+    raises_regex,
+)
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -740,7 +746,7 @@ def test_dask_item_assignment():
     expected = DataArray([99, 2, 3, 4]).chunk(1)
     if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
         arr[0] = 99
-        assert (arr == expected).all()
+        assert_identical(arr, expected)
     else:
         with raises_regex(TypeError, "does not support item assignment"):
             arr[0] = 99
