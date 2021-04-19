@@ -111,38 +111,39 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[0], v[0])
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
-        if LooseVersion(dask.__version__)>=LooseVersion('2021.04.0+17'):
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([99,2,3,4]))
+        if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([99, 2, 3, 4]))
             arr[0] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([99,99,99,4]))
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([99, 99, 99, 4]))
             arr[2::-1] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([99,99,3,99]))
-            arr[[0,-1,1]] = 99
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([99, 99, 3, 99]))
+            arr[[0, -1, 1]] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([99,99,99,4]))
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([99, 99, 99, 4]))
             arr[np.arange(3)] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([1,99,99,99]))
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([1, 99, 99, 99]))
             arr[[False, True, True, True]] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([1,99,99,99]))
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([1, 99, 99, 99]))
             arr[np.arange(4) > 0] = 99
             assert_identical(arr, expected)
-            arr = Variable(("x"), da.array([1,2,3,4]))
-            expected = Variable(("x"), da.array([99,99,99,99]))
+            arr = Variable(("x"), da.array([1, 2, 3, 4]))
+            expected = Variable(("x"), da.array([99, 99, 99, 99]))
             arr[arr > 0] = 99
             assert_identical(arr, expected)
         else:
             with raises_regex(TypeError, "stored in a dask array"):
                 v[:1] = 0
+
 
     def test_squeeze(self):
         u = self.eager_var
