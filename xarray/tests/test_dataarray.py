@@ -7340,7 +7340,8 @@ def test_clip(da):
     assert result.min(...) >= 0.25
     assert result.max(...) <= 0.75
 
-    result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    with raise_if_dask_computes():
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
     assert result.dims == da.dims
     assert_array_equal(
         result.data,
@@ -7348,6 +7349,8 @@ def test_clip(da):
     )
 
     with_nans = da.isel(time=[0, 1]).reindex_like(da)
+    with raise_if_dask_computes():
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
     result = da.clip(with_nans)
     # The values should be the same where there were NaNs.
     assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
