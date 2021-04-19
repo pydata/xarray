@@ -1,6 +1,5 @@
 import importlib
 import platform
-import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
