@@ -514,15 +514,40 @@ class _LocIndexer:
                 "can only set locations defined by dictionaries from Dataset.loc"
             )
 
-        # loop over dataset variables
+        # check for consistency first
+        if isinstance(value, Dataset):
+            missing_vars = [
+                str(name) for name in value.data_vars if name not in self.dataset
+            ]
+            if len(missing_vars) > 0:
+                raise KeyError(
+                    "Variables {} in new values not available in dataset!".format(
+                        ",".join(missing_vars)
+                    )
+                )
+
         for name, var in self.dataset.items():
-            val = value
+            missing_keys = [k for k in key.keys() if k not in var.dims]
+            if len(missing_keys) > 0:
+                raise KeyError(
+                    "Variable {} does not contain dimensions {}!".format(
+                        name, ",".join(missing_keys)
+                    )
+                )
+            test_var = var.copy()
+            pos_indexers, _ = remap_label_indexers(var, key)
             if isinstance(value, Dataset):
-                val = value[name]
-            # only set value if all dimensions are present
-            if all([k in var.dims for k in key.keys()]):
-                pos_indexers, _ = remap_label_indexers(var, key)
-                var[pos_indexers] = val
+                test_var[pos_indexers] = value[name]
+            else:
+                test_var[pos_indexers] = value
+
+        # loop over dataset variables and set new values
+        for name, var in self.dataset.items():
+            pos_indexers, _ = remap_label_indexers(var, key)
+            if isinstance(value, Dataset):
+                var[pos_indexers] = value[name]
+            else:
+                var[pos_indexers] = value
 
 
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
@@ -1455,14 +1480,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable.
         """
         if utils.is_dict_like(key):
-            # loop over dataset variables
+            # check for consistency first
+            if isinstance(value, Dataset):
+                missing_vars = [
+                    str(name) for name in value.data_vars if name not in self.data_vars
+                ]
+                if len(missing_vars) > 0:
+                    raise KeyError(
+                        "Variables {} in new values not available in dataset!".format(
+                            ",".join(missing_vars)
+                        )
+                    )
             for name, var in self.items():
-                val = value
+                missing_keys = [k for k in key.keys() if k not in var.dims]
+                if len(missing_keys) > 0:
+                    raise KeyError(
+                        "Variable {} does not contain dimensions {}!".format(
+                            name, ",".join(missing_keys)
+                        )
+                    )
+                test_var = var.copy()
                 if isinstance(value, Dataset):
-                    val = value[name]
-                # only set value if all dimensions are present
-                if all([k in var.dims for k in key.keys()]):
-                    var[key] = val
+                    test_var[key] = value[name]
+                else:
+                    test_var[key] = value
+
+            # loop over dataset variables and set new values
+            for name, var in self.items():
+                if isinstance(value, Dataset):
+                    var[key] = value[name]
+                else:
+                    var[key] = value
         else:
             self.update({key: value})
 

@@ -3381,28 +3381,36 @@ class TestDataset:
         assert_equal(data1["A"], 3 * data2["A"])
 
         # test assignment with positional and label-based indexing
+        data3 = data1[["var1", "var2"]]
+        data4 = data3.copy()
         err_msg = "can only set locations defined by dictionaries from Dataset.loc"
         with raises_regex(TypeError, err_msg):
             data1.loc["a"] = 0
-        data3 = data1.copy()
-        data3[{"dim2": 0}] = 0.0
-        data3[{"dim2": 1}] = data1[{"dim2": 2}]
-        data3.loc[{"dim2": 1.5}] = 1.0
-        data3.loc[{"dim2": 2.0}] = data1.loc[{"dim2": 2.5}]
-        for v, dat1 in data1.items():
-            dat3 = data3[v]
-            if "dim2" in dat1.dims:
-                assert_array_equal(dat3[{"dim2": 0}], 0.0)
-                assert_array_equal(dat3[{"dim2": 1}], dat1[{"dim2": 2}])
-                assert_array_equal(dat3.loc[{"dim2": 1.5}], 1.0)
-                assert_array_equal(dat3.loc[{"dim2": 2.0}], dat1.loc[{"dim2": 2.5}])
-                unchanged = [1.0, 2.5, 3.0, 3.5, 4.0]
-                assert_identical(
-                    dat3.loc[{"dim2": unchanged}], dat1.loc[{"dim2": unchanged}]
-                )
-            else:
-                # these variables should be unchanged
-                assert_identical(dat3, dat1)
+        err_msg = "Variable var3 does not contain dimensions dim2!"
+        with raises_regex(KeyError, err_msg):
+            data1[{"dim2": 0}] = 0.0
+        with raises_regex(KeyError, err_msg):
+            data1.loc[{"dim2": 0}] = 0.0
+        err_msg = "Variables var3,A,B,scalar in new values not available in dataset!"
+        with raises_regex(KeyError, err_msg):
+            data4[{"dim2": 1}] = data1[{"dim2": 2}]
+        with raises_regex(KeyError, err_msg):
+            data4.loc[{"dim2": 1}] = data1[{"dim2": 2}]
+
+        data4[{"dim2": 0}] = 0.0
+        data4[{"dim2": 1}] = data3[{"dim2": 2}]
+        data4.loc[{"dim2": 1.5}] = 1.0
+        data4.loc[{"dim2": 2.0}] = data3.loc[{"dim2": 2.5}]
+        for v, dat3 in data3.items():
+            dat4 = data4[v]
+            assert_array_equal(dat4[{"dim2": 0}], 0.0)
+            assert_array_equal(dat4[{"dim2": 1}], dat3[{"dim2": 2}])
+            assert_array_equal(dat4.loc[{"dim2": 1.5}], 1.0)
+            assert_array_equal(dat4.loc[{"dim2": 2.0}], dat3.loc[{"dim2": 2.5}])
+            unchanged = [1.0, 2.5, 3.0, 3.5, 4.0]
+            assert_identical(
+                dat4.loc[{"dim2": unchanged}], dat3.loc[{"dim2": unchanged}]
+            )
 
     def test_setitem_pandas(self):
 
