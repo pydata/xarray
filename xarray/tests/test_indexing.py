@@ -1,4 +1,5 @@
 import itertools
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -736,7 +737,7 @@ def test_create_mask_dask():
 def test_dask_item_assignment():
     dask = pytest.importorskip("dask")
     arr = DataArray([1, 2, 3, 4]).chunk(1)
-    expected = xr.DataArray([99, 2, 3, 4]).chunk(1)
+    expected = DataArray([99, 2, 3, 4]).chunk(1)
     if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
         arr[0] = 99
         assert (arr == expected).all()
