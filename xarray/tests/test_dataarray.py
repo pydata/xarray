@@ -6914,12 +6914,7 @@ def test_rolling_keep_attrs_deprecated():
     data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
-    da = DataArray(
-        data,
-        dims=("coord"),
-        coords={"coord": coords},
-        attrs=attrs_da,
-    )
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da,)
 
     # deprecated option
     with pytest.warns(
@@ -7350,3 +7345,12 @@ def test_clip(da):
         result.data,
         np.clip(da.data, da.mean("x").data[:, :, np.newaxis], da.mean("a").data),
     )
+
+    with_nans = da.isel(time=[0, 1]).reindex_like(da)
+    result = da.clip(with_nans)
+    # The values should be the same where there were NaNs.
+    assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
+
+    # Unclear whether we want this work, OK to adjust the test when we have decided.
+    with pytest.raises(ValueError, match="arguments without labels along dimension"):
+        result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
