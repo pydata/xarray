@@ -742,7 +742,7 @@ def test_dask_item_assignment():
         arr[0] = 99
         assert (arr == expected).all()
     else:
-        with pytest.raise_regexp(TypeError, "does not support item assignment"):
+        with raises_regex(TypeError, "does not support item assignment"):
             arr[0] = 99
 
 
