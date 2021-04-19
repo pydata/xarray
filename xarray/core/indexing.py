@@ -1395,10 +1395,10 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 self.array[key.tuple] = value
         else:
             raise TypeError(
-                "this variable's data is stored in a dask array, "
+                "This variable's data is stored in a dask array, "
                 "and the installed dask version does not support item "
-                "assignment. To assign to this variable, you must "
-                "first load it into memory explicitly using the .load() "
+                "assignment. To assign to this variable, you must either upgrade dask or"
+                "first load the variable into memory explicitly using the .load() "
                 "method or accessing its .values attribute."
             )
 
