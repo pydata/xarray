@@ -48,6 +48,11 @@ _PAD_XR_NP_ARGS = [
 ]
 
 
+@pytest.fixture
+def var():
+    return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
+
+
 class VariableSubclassobjects:
     def test_properties(self):
         data = 0.5 * np.arange(10)
@@ -2510,3 +2515,27 @@ class TestBackendIndexing:
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
+
+
+def test_clip(var):
+    # Copied from test_dataarray (would there be a way to combine the tests?)
+    result = var.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = var.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = var.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    result = var.clip(min=var.mean("x"), max=var.mean("z"))
+    assert result.dims == var.dims
+    assert_array_equal(
+        result.data,
+        np.clip(
+            var.data,
+            var.mean("x").data[np.newaxis, :, :],
+            var.mean("z").data[:, :, np.newaxis],
+        ),
+    )

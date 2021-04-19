@@ -388,7 +388,9 @@ class DataWithCoords(AttrAccessMixin):
             # default.
             keep_attrs = _get_keep_attrs(default=True)
 
-        return apply_ufunc(np.clip, self, min, max, keep_attrs=keep_attrs)
+        return apply_ufunc(
+            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+        )
 
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""

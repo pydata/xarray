@@ -6434,28 +6434,43 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
+@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
+def backend(request):
+    return request.param
+
+
 @pytest.fixture(params=[1])
-def da(request):
+def da(request, backend):
     if request.param == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        values = np.random.random((3, 21, 4))
-        da = DataArray(values, dims=("a", "time", "x"))
-        da["time"] = times
-        return da
+        da = DataArray(
+            np.random.random((3, 21, 4)),
+            dims=("a", "time", "x"),
+            coords=dict(time=times),
+        )
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
     if request.param == "repeating_ints":
-        return DataArray(
+        da = DataArray(
             np.tile(np.arange(12), 5).reshape(5, 4, 3),
             coords={"x": list("abc"), "y": list("defg")},
             dims=list("zyx"),
         )
 
+    if backend == "dask":
+        return da.chunk()
+    elif backend == "numpy":
+        return da
+    else:
+        raise ValueError
+
 
 @pytest.fixture
 def da_dask(seed=123):
+    # TODO: if possible, use the `da` fixture parameterized with backends rather than
+    # this.
     pytest.importorskip("dask.array")
     rs = np.random.RandomState(seed)
     times = pd.date_range("2000-01-01", freq="1D", periods=21)
@@ -7328,3 +7343,7 @@ def test_clip(da):
 
     result = da.clip(min=da.mean("x"), max=da.mean("a"))
     assert result.dims == da.dims
+    assert_array_equal(
+        result.data,
+        np.clip(da.data, da.mean("x").data[:, :, np.newaxis], da.mean("a").data),
+    )
