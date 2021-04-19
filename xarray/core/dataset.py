@@ -1849,7 +1849,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         See Also
         --------
-        http://xarray.pydata.org/en/stable/io.html#zarr
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
         """
         from ..backends.api import to_zarr
 
