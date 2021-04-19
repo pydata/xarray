@@ -1392,6 +1392,9 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             elif isinstance(key, VectorizedIndexer):
                 self.array.vindex[key.tuple] = value
             elif isinstance(key, OuterIndexer):
+                num_non_slices = sum(
+                    0 if isinstance(k, slice) else 1 for k in key.tuple
+                )
                 num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in key.tuple)
                 if num_non_slices > 1:
                     raise NotImplementedError(
