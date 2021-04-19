@@ -2802,7 +2802,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
 
             # TOOD: this additional open is required since scipy seems to close the file
             # when it fails on the TypeError (though didn't when we used
-            # `raises_regex`?). ref https://github.com/pydata/xarray/pull/5191
+            # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
                 with pytest.raises(ValueError, match="cannot guess the engine"):
