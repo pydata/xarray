@@ -1392,6 +1392,12 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             elif isinstance(key, VectorizedIndexer):
                 self.array.vindex[key.tuple] = value
             elif isinstance(key, OuterIndexer):
+                num_non_slices = sum(0 if isinstance(k, slice) else 1 for k in key.tuple)
+                if num_non_slices > 1:
+                    raise NotImplementedError(
+                        "xarray can't set arrays with multiple "
+                        "array indices to dask yet."
+                    )
                 self.array[key.tuple] = value
         else:
             raise TypeError(
@@ -1401,6 +1407,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 "first load the variable into memory explicitly using the .load() "
                 "method or accessing its .values attribute."
             )
+
 
     def transpose(self, order):
         return self.array.transpose(order)
