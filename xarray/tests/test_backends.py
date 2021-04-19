@@ -2795,11 +2795,12 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         assert_identical(expected, actual)
 
                 f.seek(0)
-                with pytest.raises(TypeError, match=r"not a valid NetCDF 3"):
+                # Seems to fail with pytest.raises
+                with raises_regex(TypeError, "not a valid NetCDF 3"):
                     open_dataset(f, engine="scipy")
 
                 f.seek(8)
-                with pytest.raises(ValueError, match=r"cannot guess the engine"):
+                with raises_regex(ValueError, "cannot guess the engine"):
                     open_dataset(f)
 
 
