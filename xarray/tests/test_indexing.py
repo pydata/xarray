@@ -733,6 +733,18 @@ def test_create_mask_dask():
         indexing.create_mask(indexer, (5, 2), da.empty((5,), chunks=(1,)))
 
 
+def test_dask_item_assignment():
+    dask = pytest.importorskip("dask")
+    arr = DataArray([1, 2, 3, 4]).chunk(1)
+    expected = xr.DataArray([99, 2, 3, 4]).chunk(1)
+    if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
+        arr[0] = 99
+        assert (arr == expected).all()
+    else:
+        with pytest.raise_regexp(TypeError, "does not support item assignment"):
+            arr[0] = 99
+
+
 def test_create_mask_error():
     with raises_regex(TypeError, "unexpected key type"):
         indexing.create_mask((1, 2), (3, 4))

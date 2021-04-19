@@ -1385,14 +1385,14 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                     value = value[(slice(None),) * axis + (subkey,)]
                 return value
 
-    def __setitem__(self, key, newvalue):
+    def __setitem__(self, key, value):
         if LooseVersion(dask_version) >= LooseVersion("2021.04.0+17"):
             if isinstance(key, BasicIndexer):
-                self.array[key.tuple] = newvalue
+                self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):
-                self.array.vindex[key.tuple] = newvalue
+                self.array.vindex[key.tuple] = value
             elif isinstance(key, OuterIndexer):
-                self.array[key.tuple] = newvalue
+                self.array[key.tuple] = value
         else:
             raise TypeError(
                 "this variable's data is stored in a dask array, "
