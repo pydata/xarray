@@ -8,6 +8,7 @@ Or use the methods on a DataArray or Dataset:
 """
 import functools
 
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
@@ -653,12 +654,13 @@ def _plot2d(plotfunc):
 
         if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
             # Check we have new enough version of matplotlib
-            from distutils.version import LooseVersion
 
             import matplotlib as mpl
 
             if LooseVersion(mpl.__version__) < "3.2.0":
                 raise ValueError("surface plot requires at least matplotlib-3.2.0")
+
+            del mpl
 
             if ax is None:
                 # Need to create a "3d" Axes instance for surface plots

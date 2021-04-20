@@ -2,7 +2,6 @@ import contextlib
 import inspect
 from copy import copy
 from datetime import datetime
-from distutils.version import LooseVersion
 from typing import Any, Dict
 
 import numpy as np
@@ -30,6 +29,8 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
+    requires_matplotlib_3_2_0,
+    requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -1811,10 +1812,7 @@ except ImportError:
     pass
 else:
 
-    @pytest.mark.skipif(
-        LooseVersion(mpl2.__version__) < "3.2.0",
-        reason="surface plot requires newer matplotlib",
-    )
+    @requires_matplotlib_3_2_0
     class TestSurface(Common2dMixin, PlotTestCase):
 
         plotfunc = staticmethod(xplt.surface)
@@ -1835,30 +1833,30 @@ else:
 
         def test_xyincrease_false_changes_axes(self):
             # Does not make sense for surface plots
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_xyincrease_true_changes_axes(self):
             # Does not make sense for surface plots
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_can_pass_in_axis(self):
             self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
 
         def test_default_cmap(self):
             # Does not make sense for surface plots with default arguments
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_diverging_color_limits(self):
             # Does not make sense for surface plots with default arguments
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_colorbar_kwargs(self):
             # Does not make sense for surface plots with default arguments
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_cmap_and_color_both(self):
             # Does not make sense for surface plots with default arguments
-            pass
+            pytest.skip("does not make sense for surface plots")
 
         def test_seaborn_palette_as_cmap(self):
             # seaborn does not work with mpl_toolkits.mplot3d
@@ -1887,31 +1885,19 @@ else:
                 assert "y" == ax.get_ylabel()
                 assert "x" == ax.get_xlabel()
 
-        @pytest.mark.skipif(
-            LooseVersion(mpl.__version__) < "3.3.0",
-            reason="this feature of surface plot requires newer matplotlib",
-        )
+        @requires_matplotlib_3_3_0
         def test_viridis_cmap(self):
             return super().test_viridis_cmap()
 
-        @pytest.mark.skipif(
-            LooseVersion(mpl.__version__) < "3.3.0",
-            reason="this feature of surface plot requires newer matplotlib",
-        )
+        @requires_matplotlib_3_3_0
         def test_can_change_default_cmap(self):
             return super().test_can_change_default_cmap()
 
-        @pytest.mark.skipif(
-            LooseVersion(mpl.__version__) < "3.3.0",
-            reason="this feature of surface plot requires newer matplotlib",
-        )
+        @requires_matplotlib_3_3_0
         def test_colorbar_default_label(self):
             return super().test_colorbar_default_label()
 
-        @pytest.mark.skipif(
-            LooseVersion(mpl.__version__) < "3.3.0",
-            reason="this feature of surface plot requires newer matplotlib",
-        )
+        @requires_matplotlib_3_3_0
         def test_facetgrid_map_only_appends_mappables(self):
             return super().test_facetgrid_map_only_appends_mappables()
 
