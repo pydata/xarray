@@ -369,6 +369,34 @@ class TestPlot(PlotTestCase):
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
 
+    def test2d_1d_2d_coordinates_pcolormesh(self):
+        # Test with equal coordinates to catch bug from #5097
+        sz = 10
+        y2d, x2d = np.meshgrid(np.arange(sz), np.arange(sz))
+        a = DataArray(
+            easy_array((sz, sz)),
+            dims=["x", "y"],
+            coords={"x2d": (["x", "y"], x2d), "y2d": (["x", "y"], y2d)},
+        )
+
+        for x, y in [
+            ("x", "y"),
+            ("y", "x"),
+            ("x2d", "y"),
+            ("y", "x2d"),
+            ("x", "y2d"),
+            ("y2d", "x"),
+            ("x2d", "y2d"),
+            ("y2d", "x2d"),
+        ]:
+            p = a.plot.pcolormesh(x=x, y=y)
+            v = p.get_paths()[0].vertices
+
+            # Check all vertices are different, except last vertex which should be the
+            # same as the first
+            _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
+            assert np.all(unique_counts == 1)
+
     def test_contourf_cmap_set(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
 
