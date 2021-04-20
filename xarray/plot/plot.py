@@ -37,7 +37,7 @@ from .utils import (
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_meta_data(darray, x, z, hue, hue_style, size):
+def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
     def _determine_array(darray, name, array_style):
         """Find and determine what type of array it is."""
         array = darray[name]
@@ -708,7 +708,7 @@ def scatter(
         subplot_kws.update(projection="3d")
     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-    _data = _infer_meta_data(darray, x, z, hue, hue_style, _sizes)
+    _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, _sizes)
 
     add_guide = kwargs.pop("add_guide", None)
     if add_legend is not None:
