@@ -35,7 +35,6 @@ from . import (
     has_dask,
     has_scipy,
     raise_if_dask_computes,
-    raises_regex,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
