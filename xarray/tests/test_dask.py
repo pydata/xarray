@@ -140,7 +140,7 @@ class TestVariable(DaskTestCase):
             arr[arr > 0] = 99  # Indexing by one broadcastable Array of booleans
             assert_identical(arr, expected)
         else:
-            with raises_regex(TypeError, match=r"stored in a dask array"):
+            with pytest.raises(TypeError, match=r"stored in a dask array"):
                 v[:1] = 0
 
     def test_squeeze(self):
