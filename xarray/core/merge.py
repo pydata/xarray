@@ -223,6 +223,10 @@ def merge_collected(
                                 % (name, variable.attrs, other_variable.attrs)
                             )
                 merged_vars[name] = variable
+                merged_vars[name].attrs = merge_attrs(
+                    [var.attrs for var, _ in indexed_elements],
+                    combine_attrs=combine_attrs,
+                )
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
