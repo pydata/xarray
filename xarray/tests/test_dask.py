@@ -114,34 +114,34 @@ class TestVariable(DaskTestCase):
         if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 2, 3, 4]))
-            arr[0] = 99
+            arr[0] = 99 # Indexing by integers
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 99, 99, 4]))
-            arr[2::-1] = 99
+            arr[2::-1] = 99 # Indexing by slices
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 99, 3, 99]))
-            arr[[0, -1, 1]] = 99
+            arr[[0, -1, 1]] = 99 # Indexing by a list of integers
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 99, 99, 4]))
-            arr[np.arange(3)] = 99
+            arr[np.arange(3)] = 99 # Indexing by a 1-d numpy array of integers
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([1, 99, 99, 99]))
-            arr[[False, True, True, True]] = 99
+            arr[[False, True, True, True]] = 99 # Indexing by a list of booleans
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([1, 99, 99, 99]))
-            arr[np.arange(4) > 0] = 99
+            arr[np.arange(4) > 0] = 99 # Indexing by a 1-d numpy array of booleans
             assert_identical(arr, expected)
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 99, 99, 99]))
-            arr[arr > 0] = 99
+            arr[arr > 0] = 99 # Indexing by one broadcastable Array of booleans
             assert_identical(arr, expected)
         else:
-            with raises_regex(TypeError, "stored in a dask array"):
+            with raises_regex(TypeError, match=r"stored in a dask array"):
                 v[:1] = 0
 
     def test_squeeze(self):
