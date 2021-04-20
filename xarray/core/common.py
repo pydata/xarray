@@ -23,7 +23,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -121,7 +120,7 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray:
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -202,7 +201,7 @@ class AttrAccessMixin:
 
     __slots__ = ()
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls, **kwargs):
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
         raise error in the core xarray module and a FutureWarning in third-party
         extensions.
@@ -218,6 +217,7 @@ class AttrAccessMixin:
                 FutureWarning,
                 stacklevel=2,
             )
+        super().__init_subclass__(**kwargs)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
@@ -338,14 +338,12 @@ def get_squeeze_dims(
     return dim
 
 
-class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
+class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     _close: Optional[Callable[[], None]]
 
     __slots__ = ("_close",)
-
-    _rolling_exp_cls = RollingExp
 
     def squeeze(
         self,
@@ -490,9 +488,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        args
+        *args
             positional arguments passed into ``attrs.update``.
-        kwargs
+        **kwargs
             keyword arguments passed into ``attrs.update``.
 
         Returns
@@ -527,9 +525,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Alternatively a ``(callable, data_keyword)`` tuple where
             ``data_keyword`` is a string indicating the keyword of
             ``callable`` that expects the xarray object.
-        args
+        *args
             positional arguments passed into ``func``.
-        kwargs
+        **kwargs
             a dictionary of keyword arguments passed into ``func``.
 
         Returns
@@ -908,7 +906,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return self._rolling_exp_cls(self, window, window_type)
+        return RollingExp(self, window, window_type)
 
     def coarsen(
         self,

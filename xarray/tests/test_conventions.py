@@ -18,13 +18,7 @@ from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 
-from . import (
-    assert_array_equal,
-    raises_regex,
-    requires_cftime,
-    requires_dask,
-    requires_netCDF4,
-)
+from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
 from .test_backends import CFEncodedBase
 
 
@@ -145,7 +139,7 @@ class TestEncodeCFVariable:
         assert enc["a"].attrs["coordinates"] == "y"
         assert enc["b"].attrs["coordinates"] == "z"
         orig["a"].attrs["coordinates"] = "foo"
-        with raises_regex(ValueError, "'coordinates' found in both attrs"):
+        with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
     @requires_dask
@@ -236,7 +230,7 @@ class TestDecodeCF:
     @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
     def test_invalid_time_units_raises_eagerly(self):
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
-        with raises_regex(ValueError, "unable to decode time"):
+        with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
 
     @requires_cftime

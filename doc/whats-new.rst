@@ -37,7 +37,7 @@ New Features
 - Many of the arguments for the :py:attr:`DataArray.str` methods now support
   providing an array-like input. In this case, the array provided to the
   arguments is broadcast against the original array and applied elementwise.
-- :py:attr:`DataArray.str` now supports `+`, `*`, and `%` operators. These
+- :py:attr:`DataArray.str` now supports ``+``, ``*``, and ``%`` operators. These
   behave the same as they do for :py:class:`str`, except that they follow
   array broadcasting rules.
 - A large number of new :py:attr:`DataArray.str` methods were implemented,
@@ -64,6 +64,11 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add typing information to unary and binary arithmetic operators operating on
+  :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
+  :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
+  :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
+  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
 - Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
@@ -89,6 +94,11 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Decode values as signed if attribute `_Unsigned = "false"` (:issue:`4954`)
   By `Tobias Kölling <https://github.com/d70-t>`_.
+- Ensure standard calendar dates encoded with a calendar attribute with some or
+  all uppercase letters can be decoded or encoded to or from
+  ``np.datetime64[ns]`` dates with or without ``cftime`` installed
+  (:issue:`5093`, :pull:`5180`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -105,6 +115,10 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Enable displaying mypy error codes and ignore only specific error codes using
   ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Replace most uses of ``raises_regex`` with the more standard
+  ``pytest.raises(Exception, match="foo")``;
+  (:pull:`5188`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 .. _whats-new.0.17.0:
@@ -202,10 +216,10 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
-  ``reduce`` method, enabling coarsening operations with custom reduction
-  functions (:issue:`3741`, :pull:`4939`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
+- :py:class:`~core.rolling.DataArrayCoarsen` and :py:class:`~core.rolling.DatasetCoarsen`
+  now implement a ``reduce`` method, enabling coarsening operations with custom
+  reduction functions (:issue:`3741`, :pull:`4939`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Most rolling operations use significantly less memory. (:issue:`4325`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel`
@@ -224,9 +238,8 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Use specific type checks in
-  :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
-  access to ``values`` attribute (:issue:`2097`)
+- Use specific type checks in ``xarray.core.variable.as_compatible_data`` instead of
+  blanket access to ``values`` attribute (:issue:`2097`)
   By `Yunus Sevinchan <https://github.com/blsqr>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger
   computations anymore if :py:meth:`Dataset.weighted` or
