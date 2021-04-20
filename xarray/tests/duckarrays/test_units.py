@@ -12,7 +12,7 @@ pint = pytest.importorskip("pint")
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
-pytestmark = [pytest.mark.filterwarnings("error")]
+pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
 
 
 all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
