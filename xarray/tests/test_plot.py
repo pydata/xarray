@@ -29,7 +29,6 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib_3_2_0,
     requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
@@ -1812,7 +1811,6 @@ except ImportError:
     pass
 else:
 
-    @requires_matplotlib_3_2_0
     class TestSurface(Common2dMixin, PlotTestCase):
 
         plotfunc = staticmethod(xplt.surface)

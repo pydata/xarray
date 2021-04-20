@@ -60,9 +60,6 @@ def LooseVersion(vstring):
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
-has_matplotlib_3_2_0, requires_matplotlib_3_2_0 = _importorskip(
-    "matplotlib", minversion="3.2.0"
-)
 has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
     "matplotlib", minversion="3.3.0"
 )

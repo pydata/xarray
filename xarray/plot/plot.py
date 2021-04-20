@@ -7,7 +7,6 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -653,16 +652,13 @@ def _plot2d(plotfunc):
             subplot_kws = dict()
 
         if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
-            # Check we have new enough version of matplotlib
-
-            import matplotlib as mpl
-
-            if LooseVersion(mpl.__version__) < "3.2.0":
-                raise ValueError("surface plot requires at least matplotlib-3.2.0")
-
-            del mpl
-
             if ax is None:
+                # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+                # Remove when minimum requirement of matplotlib is 3.2:
+                from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
+
+                del Axes3D
+
                 # Need to create a "3d" Axes instance for surface plots
                 subplot_kws["projection"] = "3d"
 
