@@ -651,7 +651,7 @@ def _plot2d(plotfunc):
         if subplot_kws is None:
             subplot_kws = dict()
 
-        if "surface" == plotfunc.__name__ and not kwargs.get("_is_facetgrid", False):
+        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
             # Check we have new enough version of matplotlib
             from distutils.version import LooseVersion
 
@@ -659,8 +659,6 @@ def _plot2d(plotfunc):
 
             if LooseVersion(mpl.__version__) < "3.2.0":
                 raise ValueError("surface plot requires at least matplotlib-3.2.0")
-            del LooseVersion
-            del mpl
 
             if ax is None:
                 # Need to create a "3d" Axes instance for surface plots
@@ -683,7 +681,7 @@ def _plot2d(plotfunc):
         plt = import_matplotlib_pyplot()
 
         if (
-            "surface" == plotfunc.__name__
+            plotfunc.__name__ == "surface"
             and not kwargs.get("_is_facetgrid", False)
             and ax is not None
         ):
