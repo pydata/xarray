@@ -37,7 +37,7 @@ New Features
 - Many of the arguments for the :py:attr:`DataArray.str` methods now support
   providing an array-like input. In this case, the array provided to the
   arguments is broadcast against the original array and applied elementwise.
-- :py:attr:`DataArray.str` now supports `+`, `*`, and `%` operators. These
+- :py:attr:`DataArray.str` now supports ``+``, ``*``, and ``%`` operators. These
   behave the same as they do for :py:class:`str`, except that they follow
   array broadcasting rules.
 - A large number of new :py:attr:`DataArray.str` methods were implemented,
@@ -87,6 +87,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
+  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
 - Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Added support for `numpy.bool_` attributes in roundtrips using `h5netcdf` engine with `invalid_netcdf=True` [which casts `bool`s to `numpy.bool_`] (:issue:`4981`, :pull:`4986`).
   By `Victor Negîrneac <https://github.com/caenrigen>`_.
@@ -115,6 +117,10 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Enable displaying mypy error codes and ignore only specific error codes using
   ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Replace most uses of ``raises_regex`` with the more standard
+  ``pytest.raises(Exception, match="foo")``;
+  (:pull:`5188`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 .. _whats-new.0.17.0:
@@ -212,10 +218,10 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow installing from git archives (:pull:`4897`).
   By `Justus Magin <https://github.com/keewis>`_.
-- :py:class:`DataArrayCoarsen` and :py:class:`DatasetCoarsen` now implement a
-  ``reduce`` method, enabling coarsening operations with custom reduction
-  functions (:issue:`3741`, :pull:`4939`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
+- :py:class:`~core.rolling.DataArrayCoarsen` and :py:class:`~core.rolling.DatasetCoarsen`
+  now implement a ``reduce`` method, enabling coarsening operations with custom
+  reduction functions (:issue:`3741`, :pull:`4939`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Most rolling operations use significantly less memory. (:issue:`4325`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add :py:meth:`Dataset.drop_isel` and :py:meth:`DataArray.drop_isel`
@@ -234,11 +240,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
-  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
-- Use specific type checks in
-  :py:func:`~xarray.core.variable.as_compatible_data` instead of blanket
-  access to ``values`` attribute (:issue:`2097`)
+
+- Use specific type checks in ``xarray.core.variable.as_compatible_data`` instead of
+  blanket access to ``values`` attribute (:issue:`2097`)
   By `Yunus Sevinchan <https://github.com/blsqr>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger
   computations anymore if :py:meth:`Dataset.weighted` or
