@@ -787,6 +787,26 @@ where ``u`` and ``v`` denote the x and y direction components of the arrow vecto
 
 ``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
 
+Streamplot
+~~~~~~~~~~
+
+Visualizing vector fields is also supported with streamline plots:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_simple_streamplot.png
+    ds.isel(w=1, z=1).plot.streamplot(x="x", y="y", u="A", v="B")
+
+
+where ``u`` and ``v`` denote the x and y direction components of the vectors tangent to the streamlines. Again, faceting is also possible:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_streamplot.png
+    ds.plot.streamplot(x="x", y="y", u="A", v="B", col="w", row="z")
+
 .. _plot-maps:
 
 Maps
