@@ -116,7 +116,7 @@ class TestMergeFunction:
         data1 = xr.Dataset(attrs=var1_attrs)
         data2 = xr.Dataset(attrs=var2_attrs)
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match="combine_attrs"):
                 actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
@@ -174,7 +174,7 @@ class TestMergeFunction:
         )
 
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match="combine_attrs"):
                 actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
