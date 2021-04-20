@@ -737,6 +737,7 @@ def test_create_mask_error():
     with raises_regex(TypeError, "unexpected key type"):
         indexing.create_mask((1, 2), (3, 4))
 
+
 @pytest.mark.parametrize(
     "indices, expected",
     [

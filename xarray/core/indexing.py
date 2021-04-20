@@ -1410,7 +1410,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 "method or accessing its .values attribute."
             )
 
-
     def transpose(self, order):
         return self.array.transpose(order)
 
