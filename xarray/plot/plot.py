@@ -7,8 +7,8 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-
 from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 

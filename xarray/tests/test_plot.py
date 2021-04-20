@@ -1807,7 +1807,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
 # matplotlib>=3.2.0.
 # Note, importing as mpl2 to avoid redefining mpl, which is a flake8 error.
 try:
-    import matplotlib as mpl2
+    import matplotlib as mpl2  # noqa: F401
 except ImportError:
     pass
 else:
