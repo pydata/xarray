@@ -1849,7 +1849,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         See Also
         --------
-        http://xarray.pydata.org/en/stable/io.html#zarr
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
         """
         from ..backends.api import to_zarr
 
@@ -5513,9 +5514,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         -------
         difference : same type as caller
             The n-th order finite difference of this object.
-        .. note::
-            `n` matches numpy's behavior and is different from pandas' first
-            argument named `periods`.
+
+        Notes
+        -----
+        `n` matches numpy's behavior and is different from pandas' first argument named
+        `periods`.
 
         Examples
         --------
@@ -7137,7 +7140,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        coords : DataArray, str or sequence of DataArray, str
+        coords : hashable, DataArray, or sequence of hashable or DataArray
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
             functions, supply `coords` as a sequence in the same order as arguments in
@@ -7148,27 +7151,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : str or sequence of str
+        reduce_dims : hashable or sequence of hashable
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        p0 : dictionary, optional
+        p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dictionary, optional
+        bounds : dict-like, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : seq, optional
+        param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        kwargs : dictionary
+        **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns

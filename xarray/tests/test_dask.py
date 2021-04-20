@@ -24,7 +24,6 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raise_if_dask_computes,
-    raises_regex,
     requires_pint_0_15,
     requires_scipy_or_netCDF4,
 )
@@ -39,7 +38,7 @@ ON_WINDOWS = sys.platform == "win32"
 
 def test_raise_if_dask_computes():
     data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
-    with raises_regex(RuntimeError, "Too many computes"):
+    with pytest.raises(RuntimeError, match=r"Too many computes"):
         with raise_if_dask_computes():
             data.compute()
 
@@ -224,9 +223,9 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
-        with raises_regex(NotImplementedError, "only works along an axis"):
+        with pytest.raises(NotImplementedError, match=r"only works along an axis"):
             v.median()
-        with raises_regex(NotImplementedError, "only works along an axis"):
+        with pytest.raises(NotImplementedError, match=r"only works along an axis"):
             v.median(v.dims)
         with raise_if_dask_computes():
             v.reduce(duck_array_ops.mean)
@@ -536,7 +535,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         for coords in [u.coords, v.coords]:
             coords["ab"] = ("x", ["a", "a", "b", "b"])
-        with raises_regex(NotImplementedError, "dask"):
+        with pytest.raises(NotImplementedError, match=r"dask"):
             v.groupby("ab").first()
         expected = u.groupby("ab").first()
         with raise_if_dask_computes():
@@ -881,7 +880,7 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected, actual.compute())
 
-        with raises_regex(ValueError, "does not match the set of dimensions"):
+        with pytest.raises(ValueError, match=r"does not match the set of dimensions"):
             ds.to_dask_dataframe(dim_order=["x"])
 
 
@@ -1068,7 +1067,7 @@ def test_unify_chunks(map_ds):
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
-    with raises_regex(ValueError, "inconsistent chunks"):
+    with pytest.raises(ValueError, match=r"inconsistent chunks"):
         ds_copy.chunks
 
     expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
@@ -1100,34 +1099,34 @@ def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
-    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
+    with pytest.raises(ValueError, match=r"Received dimension 'x' of length 1"):
         xr.map_blocks(bad_func, map_da).compute()
 
     def returns_numpy(darray):
         return (darray * darray.x + 5 * darray.y).values
 
-    with raises_regex(TypeError, "Function must return an xarray DataArray"):
+    with pytest.raises(TypeError, match=r"Function must return an xarray DataArray"):
         xr.map_blocks(returns_numpy, map_da)
 
-    with raises_regex(TypeError, "args must be"):
+    with pytest.raises(TypeError, match=r"args must be"):
         xr.map_blocks(operator.add, map_da, args=10)
 
-    with raises_regex(TypeError, "kwargs must be"):
+    with pytest.raises(TypeError, match=r"kwargs must be"):
         xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
 
     def really_bad_func(darray):
         raise ValueError("couldn't do anything.")
 
-    with raises_regex(Exception, "Cannot infer"):
+    with pytest.raises(Exception, match=r"Cannot infer"):
         xr.map_blocks(really_bad_func, map_da)
 
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
-    with raises_regex(ValueError, "inconsistent chunks"):
+    with pytest.raises(ValueError, match=r"inconsistent chunks"):
         xr.map_blocks(bad_func, ds_copy)
 
-    with raises_regex(TypeError, "Cannot pass dask collections"):
+    with pytest.raises(TypeError, match=r"Cannot pass dask collections"):
         xr.map_blocks(bad_func, map_da, kwargs=dict(a=map_da.chunk()))
 
 
@@ -1182,10 +1181,10 @@ def test_map_blocks_dask_args():
         mapped = xr.map_blocks(operator.add, da1, args=[da2])
     xr.testing.assert_equal(da1 + da2, mapped)
 
-    with raises_regex(ValueError, "Chunk sizes along dimension 'x'"):
+    with pytest.raises(ValueError, match=r"Chunk sizes along dimension 'x'"):
         xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
 
-    with raises_regex(ValueError, "indexes along dimension 'x' are not equal"):
+    with pytest.raises(ValueError, match=r"indexes along dimension 'x' are not equal"):
         xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
 
     # reduction
@@ -1326,21 +1325,21 @@ def test_map_blocks_template_convert_object():
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_errors_bad_template(obj):
-    with raises_regex(ValueError, "unexpected coordinate variables"):
+    with pytest.raises(ValueError, match=r"unexpected coordinate variables"):
         xr.map_blocks(lambda x: x.assign_coords(a=10), obj, template=obj).compute()
-    with raises_regex(ValueError, "does not contain coordinate variables"):
+    with pytest.raises(ValueError, match=r"does not contain coordinate variables"):
         xr.map_blocks(lambda x: x.drop_vars("cxy"), obj, template=obj).compute()
-    with raises_regex(ValueError, "Dimensions {'x'} missing"):
+    with pytest.raises(ValueError, match=r"Dimensions {'x'} missing"):
         xr.map_blocks(lambda x: x.isel(x=1), obj, template=obj).compute()
-    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
+    with pytest.raises(ValueError, match=r"Received dimension 'x' of length 1"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
-    with raises_regex(TypeError, "must be a DataArray"):
+    with pytest.raises(TypeError, match=r"must be a DataArray"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=(obj,)).compute()
-    with raises_regex(ValueError, "map_blocks requires that one block"):
+    with pytest.raises(ValueError, match=r"map_blocks requires that one block"):
         xr.map_blocks(
             lambda x: x.isel(x=[1]).assign_coords(x=10), obj, template=obj.isel(x=[1])
         ).compute()
-    with raises_regex(ValueError, "Expected index 'x' to be"):
+    with pytest.raises(ValueError, match=r"Expected index 'x' to be"):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
@@ -1349,7 +1348,7 @@ def test_map_blocks_errors_bad_template(obj):
 
 
 def test_map_blocks_errors_bad_template_2(map_ds):
-    with raises_regex(ValueError, "unexpected data variables {'xyz'}"):
+    with pytest.raises(ValueError, match=r"unexpected data variables {'xyz'}"):
         xr.map_blocks(lambda x: x.assign(xyz=1), map_ds, template=map_ds).compute()
 
 
