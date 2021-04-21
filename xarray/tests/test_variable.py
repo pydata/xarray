@@ -33,7 +33,6 @@ from . import (
     assert_equal,
     assert_identical,
     raise_if_dask_computes,
-    raises_regex,
     requires_dask,
     requires_sparse,
     source_ndarray,
@@ -1349,9 +1348,9 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(x=0), v[:, 0])
         assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
         assert_identical(v.isel(time=[]), v[[]])
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0)

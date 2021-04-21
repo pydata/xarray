@@ -12,7 +12,6 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
-    raises_regex,
     requires_dask,
 )
 from .test_dataset import create_test_data
@@ -143,7 +142,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with raises_regex(merge.MergeError, "conflicting values"):
+            with pytest.raises(merge.MergeError, match="conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -154,7 +153,7 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with raises_regex(merge.MergeError, "conflicting values"):
+        with pytest.raises(merge.MergeError, match="conflicting values"):
             # previously dim="y", and raised error which makes no sense.
             # "foo" has dimension "y" so minimal should concatenate it?
             concat([ds1, ds2], "new_dim", data_vars="minimal")

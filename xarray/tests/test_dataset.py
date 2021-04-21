@@ -40,7 +40,6 @@ from . import (
     assert_identical,
     has_cftime,
     has_dask,
-    raises_regex,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
@@ -1023,9 +1022,9 @@ class TestDataset:
 
         with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of "
             r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
         ):
@@ -1417,9 +1416,9 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"Vectorized selection is "):
             mds.sel(one=["a", "b"])
 
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along MultiIndex variable: x",
         ):
             mds.sel(
                 x=xr.DataArray(
