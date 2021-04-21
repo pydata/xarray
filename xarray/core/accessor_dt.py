@@ -4,6 +4,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
+from ..coding.cftimeindex import CFTimeIndex
 from .common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
@@ -450,6 +451,14 @@ class DatetimeAccessor(Properties):
     is_leap_year = Properties._tslib_field_accessor(
         "is_leap_year", "Boolean indicator if the date belongs to a leap year.", bool
     )
+
+    @property
+    def calendar(self):
+        index = self._obj.variable._data.array
+        if isinstance(index, CFTimeIndex):
+            return index.calendar
+        # else : pd.datetimeIndex
+        return "standard"
 
 
 class TimedeltaAccessor(Properties):

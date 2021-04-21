@@ -47,6 +47,7 @@ from functools import partial
 from typing import ClassVar, Optional
 
 import numpy as np
+import pandas as pd
 
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
@@ -1016,3 +1017,99 @@ def cftime_range(
         dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)
+
+
+def date_range(
+    start=None,
+    end=None,
+    periods=None,
+    freq="D",
+    tz=None,
+    normalize=False,
+    name=None,
+    closed=None,
+    calendar="standard",
+    use_cftime=None,
+):
+    """Return a fixed frequency datetime index.
+
+    The type (CFTimeIndex or pd.DatetimeIndex) of the returned index depends
+    on the requested calendar and on `use_cftime`.
+
+    Parameters
+    ----------
+    start : str or datetime-like, optional
+        Left bound for generating dates.
+    end : str or datetime-like, optional
+        Right bound for generating dates.
+    periods : int, optional
+        Number of periods to generate.
+    freq : str or None, default: "D"
+        Frequency strings can have multiples, e.g. "5H".
+    tz : str or tzinfo, optional
+        Time zone name for returning localized DatetimeIndex, for example
+        'Asia/Hong_Kong'. By default, the resulting DatetimeIndex is
+        timezone-naive. Only valid with pandas DatetimeIndex.
+    normalize : bool, default: False
+        Normalize start/end dates to midnight before generating date range.
+    name : str, default: None
+        Name of the resulting index
+    closed : {"left", "right"} or None, default: None
+        Make the interval closed with respect to the given frequency to the
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
+    use_cftime : boolean, optional
+        If True, always return a CFTimeIndex.
+        If False, return a pd.DatetimeIndex if possible or raise a ValueError.
+        If None (default), return a pd.DatetimeIndex if possible, otherwise return a CFTimeIndex.
+        Defaults to False if `tz` is not None.
+
+    Returns
+    -------
+    CFTimeIndex or pd.DatetimeIndex
+
+    See also
+    --------
+    pandas.date_range
+    cftime_range
+    """
+    if tz is not None:
+        use_cftime = False
+
+    if (
+        calendar in ["standard", "proleptic_gregorian", "gregorian"]
+        and use_cftime is not True
+    ):
+        try:
+            return pd.date_range(
+                start=start,
+                end=end,
+                periods=periods,
+                freq=freq,
+                tz=tz,
+                normalize=normalize,
+                name=name,
+                close=closed,
+            )
+        except pd.errors.OutOfBoundsDatetime as err:
+            if use_cftime is False:
+                raise ValueError(
+                    "Date range is invalid for pandas DatetimeIndex, try using `use_cftime=True`."
+                ) from err
+    elif use_cftime is False:
+        raise ValueError(
+            f"Invalid calendar {calendar} for pandas DatetimeIndex, try using `use_cftime=True`."
+        )
+
+    return cftime_range(
+        start=start,
+        end=end,
+        periods=periods,
+        freq=freq,
+        tz=tz,
+        normalize=normalize,
+        name=name,
+        close=closed,
+        calendar=calendar,
+    )
