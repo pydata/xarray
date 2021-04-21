@@ -291,7 +291,6 @@ def inplace_to_noninplace_op(f):
 
 # _typed_ops.py uses the following wrapped functions as a kind of unary operator
 argsort = _method_wrapper("argsort")
-clip = _method_wrapper("clip")
 conj = _method_wrapper("conj")
 conjugate = _method_wrapper("conjugate")
 round_ = _func_slash_method_wrapper(duck_array_ops.around, name="round")

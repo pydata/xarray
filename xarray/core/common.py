@@ -378,6 +378,28 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
+    def clip(self, min=None, max=None, *, keep_attrs: bool = None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            # When this was a unary func, the default was True, so retaining the
+            # default.
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return apply_ufunc(
+            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+        )
+
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
         if key not in self.dims:
