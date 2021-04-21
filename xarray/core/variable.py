@@ -1669,6 +1669,21 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
+    def clip(self, min=None, max=None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max, dask="allowed")
+
     def reduce(
         self,
         func,

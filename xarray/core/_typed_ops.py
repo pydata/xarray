@@ -144,9 +144,6 @@ class DatasetOpsMixin:
     def argsort(self, *args, **kwargs):
         return self._unary_op(ops.argsort, *args, **kwargs)
 
-    def clip(self, *args, **kwargs):
-        return self._unary_op(ops.clip, *args, **kwargs)
-
     def conj(self, *args, **kwargs):
         return self._unary_op(ops.conj, *args, **kwargs)
 
@@ -195,7 +192,6 @@ class DatasetOpsMixin:
     __invert__.__doc__ = operator.invert.__doc__
     round.__doc__ = ops.round_.__doc__
     argsort.__doc__ = ops.argsort.__doc__
-    clip.__doc__ = ops.clip.__doc__
     conj.__doc__ = ops.conj.__doc__
     conjugate.__doc__ = ops.conjugate.__doc__
 
@@ -338,9 +334,6 @@ class DataArrayOpsMixin:
     def argsort(self, *args, **kwargs):
         return self._unary_op(ops.argsort, *args, **kwargs)
 
-    def clip(self, *args, **kwargs):
-        return self._unary_op(ops.clip, *args, **kwargs)
-
     def conj(self, *args, **kwargs):
         return self._unary_op(ops.conj, *args, **kwargs)
 
@@ -389,7 +382,6 @@ class DataArrayOpsMixin:
     __invert__.__doc__ = operator.invert.__doc__
     round.__doc__ = ops.round_.__doc__
     argsort.__doc__ = ops.argsort.__doc__
-    clip.__doc__ = ops.clip.__doc__
     conj.__doc__ = ops.conj.__doc__
     conjugate.__doc__ = ops.conjugate.__doc__
 
@@ -532,9 +524,6 @@ class VariableOpsMixin:
     def argsort(self, *args, **kwargs):
         return self._unary_op(ops.argsort, *args, **kwargs)
 
-    def clip(self, *args, **kwargs):
-        return self._unary_op(ops.clip, *args, **kwargs)
-
     def conj(self, *args, **kwargs):
         return self._unary_op(ops.conj, *args, **kwargs)
 
@@ -583,7 +572,6 @@ class VariableOpsMixin:
     __invert__.__doc__ = operator.invert.__doc__
     round.__doc__ = ops.round_.__doc__
     argsort.__doc__ = ops.argsort.__doc__
-    clip.__doc__ = ops.clip.__doc__
     conj.__doc__ = ops.conj.__doc__
     conjugate.__doc__ = ops.conjugate.__doc__
 
