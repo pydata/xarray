@@ -11,9 +11,10 @@ import numpy as np
 import pandas as pd
 
 try:
-    from dask import __version__ as dask_version
+    import dask
+    DASK_VERSION = LooseVersion(dask.__version__)
 except ModuleNotFoundError:
-    pass
+    DASK_VERSION = None
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
