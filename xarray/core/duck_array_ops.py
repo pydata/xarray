@@ -642,7 +642,7 @@ def push(array, n, axis):
     if is_duck_dask_array(array):
         if len(array.chunks[axis]) > 1 and n is not None and n < array.shape[axis]:
             raise NotImplementedError(
-                "Cannot fill along a chunked axis when limit is not None."
+                "Can only fill along a chunked axis when `limit` is None or at least axis length."
                 "Either rechunk to a single chunk along this axis or call .compute() or .load() first."
             )
         if all(c == 1 for c in array.chunks[axis]):
