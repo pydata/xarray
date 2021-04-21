@@ -18,7 +18,6 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     raise_if_dask_computes,
-    raises_regex,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
@@ -573,8 +572,8 @@ def da_time():
 
 
 def test_interpolate_na_max_gap_errors(da_time):
-    with raises_regex(
-        NotImplementedError, "max_gap not implemented for unlabeled coordinates"
+    with pytest.raises(
+        NotImplementedError, match=r"max_gap not implemented for unlabeled coordinates"
     ):
         da_time.interpolate_na("t", max_gap=1)
 

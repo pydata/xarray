@@ -35,7 +35,6 @@ from xarray.tests import (
     assert_identical,
     has_dask,
     raise_if_dask_computes,
-    raises_regex,
     requires_bottleneck,
     requires_dask,
     requires_iris,
@@ -798,9 +797,9 @@ class TestDataArray:
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
         assert_identical(self.dv[:3], self.dv.isel(x=slice(3)))
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0)
@@ -2331,7 +2330,7 @@ class TestDataArray:
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
-        with raises_regex((KeyError, ValueError), "not .* in axis"):
+        with pytest.raises((KeyError, ValueError), match=r"not .* in axis"):
             actual = arr.drop_sel(y=[0, 1, 3])
 
         actual = arr.drop_sel(y=[0, 1, 3], errors="ignore")
@@ -3792,8 +3791,9 @@ class TestDataArray:
             "data": array.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
-        with raises_regex(
-            ValueError, "cannot convert dict when coords are missing the key 'dims'"
+        with pytest.raises(
+            ValueError,
+            match=r"cannot convert dict when coords are missing the key 'dims'",
         ):
             DataArray.from_dict(d)
 

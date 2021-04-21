@@ -117,9 +117,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Enable displaying mypy error codes and ignore only specific error codes using
   ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Replace most uses of ``raises_regex`` with the more standard
+- Replace uses of ``raises_regex`` with the more standard
   ``pytest.raises(Exception, match="foo")``;
-  (:pull:`5188`).
+  (:pull:`5188`), (:pull:`5191`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
