@@ -17,6 +17,9 @@ def create(op):
     return utils.numpy_array.map(convert)
 
 
+@pytest.mark.apply_marks(
+    {"test_reduce": pytest.mark.skip(reason="sparse times out on the first call")}
+)
 class TestVariableReduceMethods(base.VariableReduceTests):
     @staticmethod
     def create(op):
