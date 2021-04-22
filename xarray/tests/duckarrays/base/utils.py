@@ -1,17 +1,6 @@
 import warnings
 from contextlib import contextmanager
 
-import hypothesis.extra.numpy as npst
-import hypothesis.strategies as st
-
-shapes = npst.array_shapes()
-dtypes = (
-    npst.integer_dtypes()
-    | npst.unsigned_integer_dtypes()
-    | npst.floating_dtypes()
-    | npst.complex_number_dtypes()
-)
-
 
 @contextmanager
 def suppress_warning(category, message=""):
@@ -21,19 +10,8 @@ def suppress_warning(category, message=""):
         yield
 
 
-numpy_array = npst.arrays(dtype=dtypes, shape=shapes)
-
-
 def create_dimension_names(ndim):
     return [f"dim_{n}" for n in range(ndim)]
-
-
-def valid_axis(ndim):
-    return st.none() | st.integers(-ndim, ndim - 1)
-
-
-def valid_axes(ndim):
-    return valid_axis(ndim) | npst.valid_tuple_axes(ndim)
 
 
 def valid_dims_from_axes(dims, axes):

@@ -6,7 +6,7 @@ from hypothesis import note
 from .. import assert_identical
 from ..test_units import assert_units_equal
 from . import base
-from .base import utils
+from .base import strategies, utils
 
 pint = pytest.importorskip("pint")
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
@@ -34,13 +34,13 @@ all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
 class TestVariableReduceMethods(base.VariableReduceTests):
     @st.composite
     @staticmethod
-    def create(draw, op):
+    def create(draw, op, shape):
         if op in ("cumprod",):
             units = st.just("dimensionless")
         else:
             units = all_units
 
-        return Quantity(draw(utils.numpy_array), draw(units))
+        return Quantity(draw(strategies.numpy_array(shape)), draw(units))
 
     def check_reduce(self, obj, op, *args, **kwargs):
         if (
