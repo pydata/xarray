@@ -79,8 +79,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 - Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is
-  2d (:issue:`5097`, :pull:`5099`).
-  By `John Omotani <https://github.com/johnomotani>`_
+  2d (:issue:`5097`, :pull:`5099`). By `John Omotani <https://github.com/johnomotani>`_.
 - Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Added support for `numpy.bool_` attributes in roundtrips using `h5netcdf` engine with `invalid_netcdf=True` [which casts `bool`s to `numpy.bool_`] (:issue:`4981`, :pull:`4986`).
   By `Victor Negîrneac <https://github.com/caenrigen>`_.
