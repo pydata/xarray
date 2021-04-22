@@ -373,6 +373,16 @@ def test_cftime_datetime_mean_dask_error():
         da.mean()
 
 
+def test_mean_dtype():
+    ds = Dataset()
+    ds["pos"] = [1, 2, 3]
+    ds["data"] = ("pos", "time"), [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+    ds["var"] = "pos", [2, 3, 4]
+    ds2 = ds.mean(dim="time")
+    assert all(ds2["var"] == ds["var"])
+    assert ds2["var"].dtype == ds["var"].dtype
+
+
 @pytest.mark.parametrize("dim_num", [1, 2])
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize("dask", [False, True])

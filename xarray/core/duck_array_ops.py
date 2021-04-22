@@ -537,6 +537,11 @@ def mean(array, axis=None, skipna=None, **kwargs):
     dtypes"""
     from .common import _contains_cftime_datetimes
 
+    # The mean over an empty axis shouldn't change the data
+    # See https://github.com/pydata/xarray/issues/4885
+    if axis == tuple():
+        return array
+
     array = asarray(array)
     if array.dtype.kind in "Mm":
         offset = _datetime_nanmin(array)

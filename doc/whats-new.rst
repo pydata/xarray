@@ -85,6 +85,10 @@ Breaking changes
   as positional, all others need to be passed are keyword arguments. This is part of the
   refactor to support external backends (:issue:`4309`, :pull:`4989`).
   By `Alessandro Amici <https://github.com/alexamici>`_.
+- :py:func:`mean` does not change the data if axis is None. This
+  ensures that Datasets where some variables do not have the averaged
+  dimensions are not accidentially changed (:issue:`4885`).
+  By `David Schwörer <https://github.com/dschwoerer>`_
 
 Deprecations
 ~~~~~~~~~~~~
