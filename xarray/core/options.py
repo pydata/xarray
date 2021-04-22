@@ -86,7 +86,7 @@ def _get_boolean_with_default(option, default):
         return global_choice
     else:
         raise ValueError(
-            f"The global option f{option} must be one of True, False or 'default'."
+            f"The global option {option} must be one of True, False or 'default'."
         )
 
 
