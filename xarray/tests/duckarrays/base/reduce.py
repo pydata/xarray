@@ -43,7 +43,7 @@ class VariableReduceTests:
         ),
     )
     @given(st.data())
-    def test_variable_reduce(self, method, data):
+    def test_reduce(self, method, data):
         raw = data.draw(self.create(method))
         dims = create_dimension_names(raw.ndim)
         var = xr.Variable(dims, raw)
