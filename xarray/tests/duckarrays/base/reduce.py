@@ -3,8 +3,6 @@ import numpy as np
 import pytest
 from hypothesis import given, note
 
-import xarray as xr
-
 from ... import assert_identical
 from . import strategies
 from .utils import valid_dims_from_axes
@@ -88,11 +86,9 @@ class DataArrayReduceTests:
     )
     @given(st.data())
     def test_reduce(self, method, data):
-        raw = data.draw(self.create(method))
-        dims = strategies.create_dimension_names(raw.ndim)
-        arr = xr.DataArray(dims=dims, data=raw)
+        arr = data.draw(strategies.data_array(lambda shape: self.create(method, shape)))
 
-        reduce_axes = data.draw(strategies.valid_axis(raw.ndim))
-        reduce_dims = valid_dims_from_axes(dims, reduce_axes)
+        reduce_axes = data.draw(strategies.valid_axis(arr.ndim))
+        reduce_dims = valid_dims_from_axes(arr.dims, reduce_axes)
 
         self.check_reduce(arr, method, dim=reduce_dims)

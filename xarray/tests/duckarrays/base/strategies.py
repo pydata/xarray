@@ -41,6 +41,22 @@ def variable(draw, create_data, dims=None, shape=None, sizes=None):
     return xr.Variable(dims, draw(data))
 
 
+@st.composite
+def data_array(draw, create_data):
+    name = draw(st.none() | st.text(min_size=1))
+
+    shape = draw(shapes())
+
+    dims = create_dimension_names(len(shape))
+    data = draw(create_data(shape))
+
+    return xr.DataArray(
+        data=data,
+        name=name,
+        dims=dims,
+    )
+
+
 def valid_axis(ndim):
     return st.none() | st.integers(-ndim, ndim - 1)
 
