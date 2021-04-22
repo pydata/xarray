@@ -25,6 +25,9 @@ all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
             "[std]": pytest.mark.skip(
                 reason="bottleneck's implementation of std is incorrect for float32"
             ),
+            "[var]": pytest.mark.skip(
+                reason="bottleneck's implementation of var is incorrect for float32"
+            ),
         }
     }
 )
