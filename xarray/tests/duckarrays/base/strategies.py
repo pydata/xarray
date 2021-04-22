@@ -57,6 +57,35 @@ def data_array(draw, create_data):
     )
 
 
+def dimension_sizes(sizes):
+    sizes_ = list(sizes.items())
+    return st.lists(
+        elements=st.sampled_from(sizes_), min_size=1, max_size=len(sizes_)
+    ).map(dict)
+
+
+@st.composite
+def dataset(draw, create_data):
+    names = st.text(min_size=1)
+    sizes = draw(
+        st.dictionaries(
+            keys=names,
+            values=st.integers(min_value=2, max_value=20),
+            min_size=1,
+            max_size=5,
+        )
+    )
+
+    data_vars = st.dictionaries(
+        keys=names,
+        values=variable(create_data, sizes=dimension_sizes(sizes)),
+        min_size=1,
+        max_size=20,
+    )
+
+    return xr.Dataset(data_vars=draw(data_vars))
+
+
 def valid_axis(ndim):
     return st.none() | st.integers(-ndim, ndim - 1)
 
