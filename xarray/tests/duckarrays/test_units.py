@@ -18,6 +18,16 @@ pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
 all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
 
 
+@pytest.mark.apply_marks(
+    {
+        "test_reduce": {
+            "[prod]": pytest.mark.skip(reason="inconsistent implementation in pint"),
+            "[std]": pytest.mark.skip(
+                reason="bottleneck's implementation of std is incorrect for float32"
+            ),
+        }
+    }
+)
 class TestVariableReduceMethods(base.VariableReduceTests):
     @st.composite
     @staticmethod
