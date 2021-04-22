@@ -1,5 +1,6 @@
-from .reduce import VariableReduceTests
+from .reduce import DataArrayReduceTests, VariableReduceTests
 
 __all__ = [
     "VariableReduceTests",
+    "DataArrayReduceTests",
 ]
