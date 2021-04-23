@@ -55,7 +55,7 @@ def as_dense(obj):
         }
     }
 )
-class TestVariableReduceMethods(base.VariableReduceTests):
+class TestSparseVariableReduceMethods(base.VariableReduceTests):
     @staticmethod
     def create(op, shape):
         return create(op, shape)
@@ -78,7 +78,7 @@ class TestVariableReduceMethods(base.VariableReduceTests):
         }
     }
 )
-class TestDataArrayReduceMethods(base.DataArrayReduceTests):
+class TestSparseDataArrayReduceMethods(base.DataArrayReduceTests):
     @staticmethod
     def create(op, shape):
         return create(op, shape)
@@ -101,7 +101,7 @@ class TestDataArrayReduceMethods(base.DataArrayReduceTests):
         }
     }
 )
-class TestDatasetReduceMethods(base.DatasetReduceTests):
+class TestSparseDatasetReduceMethods(base.DatasetReduceTests):
     @staticmethod
     def create(op, shape):
         return create(op, shape)

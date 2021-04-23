@@ -45,7 +45,7 @@ def apply_func(op, var, *args, **kwargs):
         }
     }
 )
-class TestVariableReduceMethods(base.VariableReduceTests):
+class TestPintVariableReduceMethods(base.VariableReduceTests):
     @st.composite
     @staticmethod
     def create(draw, op, shape):
@@ -91,7 +91,7 @@ class TestVariableReduceMethods(base.VariableReduceTests):
         }
     }
 )
-class TestDataArrayReduceMethods(base.DataArrayReduceTests):
+class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
     @st.composite
     @staticmethod
     def create(draw, op, shape):
@@ -137,7 +137,7 @@ class TestDataArrayReduceMethods(base.DataArrayReduceTests):
         }
     }
 )
-class TestDatasetReduceMethods(base.DatasetReduceTests):
+class TestPintDatasetReduceMethods(base.DatasetReduceTests):
     @st.composite
     @staticmethod
     def create(draw, op, shape):
