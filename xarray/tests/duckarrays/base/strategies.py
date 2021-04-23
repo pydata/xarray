@@ -77,22 +77,20 @@ def dataset(
     max_vars=10,
 ):
     names = st.text(min_size=1)
-    sizes = draw(
-        st.dictionaries(
-            keys=names,
-            values=st.integers(min_value=min_size, max_value=max_size),
-            min_size=min_dims,
-            max_size=max_dims,
-        )
+    sizes = st.dictionaries(
+        keys=names,
+        values=st.integers(min_value=min_size, max_value=max_size),
+        min_size=min_dims,
+        max_size=max_dims,
     )
 
-    variable_names = names.filter(lambda n: n not in sizes)
-
-    data_vars = st.dictionaries(
-        keys=variable_names,
-        values=variable(create_data, sizes=dimension_sizes(sizes)),
-        min_size=min_vars,
-        max_size=max_vars,
+    data_vars = sizes.flatmap(
+        lambda s: st.dictionaries(
+            keys=names.filter(lambda n: n not in s),
+            values=variable(create_data, sizes=dimension_sizes(s)),
+            min_size=min_vars,
+            max_size=max_vars,
+        )
     )
 
     return xr.Dataset(data_vars=draw(data_vars))
