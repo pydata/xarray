@@ -27,14 +27,12 @@ def create_dimension_names(ndim):
 
 
 @st.composite
-def variable(draw, create_data, dims=None, shape=None, sizes=None):
+def variable(draw, create_data, *, sizes=None):
     if sizes is not None:
         dims, shape = zip(*draw(sizes).items())
     else:
-        if shape is None:
-            shape = draw(shapes())
-        if dims is None:
-            dims = create_dimension_names(len(shape))
+        dims = draw(st.lists(st.text(min_size=1), max_size=4))
+        shape = draw(shapes(len(dims)))
 
     data = create_data(shape)
 
@@ -45,9 +43,9 @@ def variable(draw, create_data, dims=None, shape=None, sizes=None):
 def data_array(draw, create_data):
     name = draw(st.none() | st.text(min_size=1))
 
-    shape = draw(shapes())
+    dims = draw(st.lists(elements=st.text(min_size=1), max_size=4))
+    shape = draw(shapes(len(dims)))
 
-    dims = create_dimension_names(len(shape))
     data = draw(create_data(shape))
 
     return xr.DataArray(
