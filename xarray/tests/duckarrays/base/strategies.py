@@ -29,7 +29,7 @@ def create_dimension_names(ndim):
 @st.composite
 def variable(draw, create_data, dims=None, shape=None, sizes=None):
     if sizes is not None:
-        dims, sizes = zip(*draw(sizes).items())
+        dims, shape = zip(*draw(sizes).items())
     else:
         if shape is None:
             shape = draw(shapes())
