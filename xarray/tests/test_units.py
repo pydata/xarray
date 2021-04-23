@@ -183,11 +183,17 @@ def attach_units(obj, units):
         # try the array name, "data" and None, then fall back to dimensionless
         units = units.copy()
         THIS_ARRAY = xr.core.dataarray._THIS_ARRAY
+        unset = object()
         if obj.name in units:
             name = obj.name
         elif None in units:
             name = None
-        units[THIS_ARRAY] = units.pop(name)
+        else:
+            name = unset
+
+        if name is not unset:
+            units[THIS_ARRAY] = units.pop(name)
+
         ds = obj._to_temp_dataset()
         attached = attach_units(ds, units)
         new_obj = obj._from_temp_dataset(attached, name=obj.name)
