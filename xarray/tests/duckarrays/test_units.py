@@ -18,6 +18,23 @@ pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
 all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
 
 
+def apply_func(op, var, *args, **kwargs):
+    dim = kwargs.pop("dim", None)
+    if dim in var.dims:
+        axis = utils.valid_axes_from_dims(var.dims, dim)
+    else:
+        axis = None
+    kwargs["axis"] = axis
+
+    arr = var.data
+    func_name = f"nan{op}" if arr.dtype.kind in "fc" else op
+    func = getattr(np, func_name, getattr(np, op))
+    with utils.suppress_warning(RuntimeWarning):
+        result = func(arr, *args, **kwargs)
+
+    return getattr(result, "units", None)
+
+
 @pytest.mark.apply_marks(
     {
         "test_reduce": {
@@ -42,6 +59,13 @@ class TestVariableReduceMethods(base.VariableReduceTests):
 
         return Quantity(draw(strategies.numpy_array(shape)), draw(units))
 
+    def compute_expected(self, obj, op, *args, **kwargs):
+        without_units = strip_units(obj)
+        expected = getattr(without_units, op)(*args, **kwargs)
+
+        units = apply_func(op, obj, *args, **kwargs)
+        return attach_units(expected, {None: units})
+
     def check_reduce(self, obj, op, *args, **kwargs):
         if (
             op in ("cumprod",)
@@ -55,20 +79,7 @@ class TestVariableReduceMethods(base.VariableReduceTests):
 
             note(f"actual:\n{actual}")
 
-            without_units = obj.copy(data=obj.data.magnitude)
-            expected = getattr(without_units, op)(*args, **kwargs)
-
-            func_name = f"nan{op}" if obj.dtype.kind in "fc" else op
-            func = getattr(np, func_name, getattr(np, op))
-            func_kwargs = kwargs.copy()
-            dim = func_kwargs.pop("dim", None)
-            axis = utils.valid_axes_from_dims(obj.dims, dim)
-            func_kwargs["axis"] = axis
-            with utils.suppress_warning(RuntimeWarning):
-                result = func(obj.data, *args, **func_kwargs)
-            units = getattr(result, "units", None)
-            if units is not None:
-                expected = expected.copy(data=Quantity(expected.data, units))
+            expected = self.compute_expected(obj, op, *args, **kwargs)
 
             note(f"expected:\n{expected}")
 
@@ -97,6 +108,13 @@ class TestDataArrayReduceMethods(base.DataArrayReduceTests):
 
         return Quantity(draw(strategies.numpy_array(shape)), draw(units))
 
+    def compute_expected(self, obj, op, *args, **kwargs):
+        without_units = strip_units(obj)
+        expected = getattr(without_units, op)(*args, **kwargs)
+        units = apply_func(op, obj.variable, *args, **kwargs)
+
+        return attach_units(expected, {obj.name: units})
+
     def check_reduce(self, obj, op, *args, **kwargs):
         if (
             op in ("cumprod",)
@@ -110,20 +128,7 @@ class TestDataArrayReduceMethods(base.DataArrayReduceTests):
 
             note(f"actual:\n{actual}")
 
-            without_units = obj.copy(data=obj.data.magnitude)
-            expected = getattr(without_units, op)(*args, **kwargs)
-
-            func_name = f"nan{op}" if obj.dtype.kind in "fc" else op
-            func = getattr(np, func_name, getattr(np, op))
-            func_kwargs = kwargs.copy()
-            dim = func_kwargs.pop("dim", None)
-            axis = utils.valid_axes_from_dims(obj.dims, dim)
-            func_kwargs["axis"] = axis
-            with utils.suppress_warning(RuntimeWarning):
-                result = func(obj.data, *args, **func_kwargs)
-            units = getattr(result, "units", None)
-            if units is not None:
-                expected = expected.copy(data=Quantity(expected.data, units))
+            expected = self.compute_expected(obj, op, *args, **kwargs)
 
             note(f"expected:\n{expected}")
 
@@ -150,22 +155,6 @@ class TestDatasetReduceMethods(base.DatasetReduceTests):
         return Quantity(draw(strategies.numpy_array(shape)), draw(units))
 
     def compute_expected(self, obj, op, *args, **kwargs):
-        def apply_func(op, var, *args, **kwargs):
-            dim = kwargs.pop("dim", None)
-            if dim in var.dims:
-                axis = utils.valid_axes_from_dims(var.dims, dim)
-            else:
-                axis = None
-            kwargs["axis"] = axis
-
-            arr = var.data
-            func_name = f"nan{op}" if arr.dtype.kind in "fc" else op
-            func = getattr(np, func_name, getattr(np, op))
-            with utils.suppress_warning(RuntimeWarning):
-                result = func(arr, *args, **kwargs)
-
-            return getattr(result, "units", None)
-
         without_units = strip_units(obj)
         result_without_units = getattr(without_units, op)(*args, **kwargs)
         units = {
