@@ -70,9 +70,9 @@ def dataset(draw, create_data):
     sizes = draw(
         st.dictionaries(
             keys=names,
-            values=st.integers(min_value=2, max_value=20),
+            values=st.integers(min_value=2, max_value=10),
             min_size=1,
-            max_size=5,
+            max_size=4,
         )
     )
 
@@ -80,7 +80,7 @@ def dataset(draw, create_data):
         keys=names,
         values=variable(create_data, sizes=dimension_sizes(sizes)),
         min_size=1,
-        max_size=20,
+        max_size=10,
     )
 
     return xr.Dataset(data_vars=draw(data_vars))
