@@ -310,12 +310,20 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
+def _create_nan_agg_method(
+    name, dask_module=dask_array, coerce_strings=False, invariant_0d=False
+):
     from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
+
+        # The data is invariant in the case of 0d data, so do not
+        # change the data (and dtype)
+        # See https://github.com/pydata/xarray/issues/4885
+        if invariant_0d and axis == ():
+            return values
 
         values = asarray(values)
 
@@ -354,28 +362,30 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
 # See ops.inject_reduce_methods
 argmax = _create_nan_agg_method("argmax", coerce_strings=True)
 argmin = _create_nan_agg_method("argmin", coerce_strings=True)
-max = _create_nan_agg_method("max", coerce_strings=True)
-min = _create_nan_agg_method("min", coerce_strings=True)
-sum = _create_nan_agg_method("sum")
+max = _create_nan_agg_method("max", coerce_strings=True, invariant_0d=True)
+min = _create_nan_agg_method("min", coerce_strings=True, invariant_0d=True)
+sum = _create_nan_agg_method("sum", invariant_0d=True)
 sum.numeric_only = True
 sum.available_min_count = True
 std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
 var.numeric_only = True
-median = _create_nan_agg_method("median", dask_module=dask_array_compat)
+median = _create_nan_agg_method(
+    "median", dask_module=dask_array_compat, invariant_0d=True
+)
 median.numeric_only = True
-prod = _create_nan_agg_method("prod")
+prod = _create_nan_agg_method("prod", invariant_0d=True)
 prod.numeric_only = True
 prod.available_min_count = True
-cumprod_1d = _create_nan_agg_method("cumprod")
+cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
-cumsum_1d = _create_nan_agg_method("cumsum")
+cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 unravel_index = _dask_or_eager_func("unravel_index")
 
 
-_mean = _create_nan_agg_method("mean")
+_mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
@@ -536,11 +546,6 @@ def mean(array, axis=None, skipna=None, **kwargs):
     """inhouse mean that can handle np.datetime64 or cftime.datetime
     dtypes"""
     from .common import _contains_cftime_datetimes
-
-    # The mean over an empty axis shouldn't change the data
-    # See https://github.com/pydata/xarray/issues/4885
-    if axis == tuple():
-        return array
 
     array = asarray(array)
     if array.dtype.kind in "Mm":
