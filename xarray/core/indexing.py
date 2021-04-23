@@ -12,6 +12,7 @@ import pandas as pd
 
 try:
     import dask
+
     DASK_VERSION = LooseVersion(dask.__version__)
 except ModuleNotFoundError:
     DASK_VERSION = None
