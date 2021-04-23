@@ -1,5 +1,7 @@
 import pytest
 
+pytest.importorskip("hypothesis")
+
 from .. import assert_allclose
 from . import base
 from .base import utils

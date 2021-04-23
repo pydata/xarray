@@ -1,6 +1,9 @@
+import pytest
+
+pytest.importorskip("hypothesis")
+
 import hypothesis.strategies as st
 import numpy as np
-import pytest
 from hypothesis import note
 
 from .. import assert_identical
