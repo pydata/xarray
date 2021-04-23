@@ -18,6 +18,9 @@ def valid_dims_from_axes(dims, axes):
     if axes is None:
         return None
 
+    if axes == 0 and len(dims) == 0:
+        return None
+
     if isinstance(axes, int):
         return dims[axes]
 

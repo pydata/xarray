@@ -4,8 +4,8 @@ import hypothesis.strategies as st
 import xarray as xr
 
 
-def shapes(ndim=None):
-    return npst.array_shapes()
+def shapes(ndim):
+    return npst.array_shapes(min_dims=ndim, max_dims=ndim)
 
 
 dtypes = (
@@ -18,7 +18,7 @@ dtypes = (
 
 def numpy_array(shape=None):
     if shape is None:
-        shape = npst.array_shapes()
+        shape = shapes()
     return npst.arrays(dtype=dtypes, shape=shape)
 
 
@@ -31,19 +31,19 @@ def variable(draw, create_data, *, sizes=None):
     if sizes is not None:
         dims, shape = zip(*draw(sizes).items())
     else:
-        dims = draw(st.lists(st.text(min_size=1), max_size=4))
-        shape = draw(shapes(len(dims)))
+        dims = draw(st.lists(st.text(min_size=1), max_size=4, unique=True).map(tuple))
+        ndim = len(dims)
+        shape = draw(shapes(ndim))
 
-    data = create_data(shape)
-
-    return xr.Variable(dims, draw(data))
+    data = draw(create_data(shape))
+    return xr.Variable(dims, data)
 
 
 @st.composite
 def data_array(draw, create_data):
     name = draw(st.none() | st.text(min_size=1))
 
-    dims = draw(st.lists(elements=st.text(min_size=1), max_size=4))
+    dims = draw(st.lists(elements=st.text(min_size=1), max_size=4, unique=True))
     shape = draw(shapes(len(dims)))
 
     data = draw(create_data(shape))
@@ -70,9 +70,9 @@ def dataset(
     min_dims=1,
     max_dims=4,
     min_size=2,
-    max_size=10,
+    max_size=5,
     min_vars=1,
-    max_vars=10,
+    max_vars=5,
 ):
     names = st.text(min_size=1)
     sizes = st.dictionaries(
@@ -95,6 +95,8 @@ def dataset(
 
 
 def valid_axis(ndim):
+    if ndim == 0:
+        return st.none() | st.just(0)
     return st.none() | st.integers(-ndim, ndim - 1)
 
 
