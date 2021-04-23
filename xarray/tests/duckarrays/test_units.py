@@ -39,12 +39,6 @@ def apply_func(op, var, *args, **kwargs):
     {
         "test_reduce": {
             "[prod]": pytest.mark.skip(reason="inconsistent implementation in pint"),
-            "[std]": pytest.mark.skip(
-                reason="bottleneck's implementation of std is incorrect for float32"
-            ),
-            "[var]": pytest.mark.skip(
-                reason="bottleneck's implementation of var is incorrect for float32"
-            ),
         }
     }
 )
@@ -91,9 +85,6 @@ class TestVariableReduceMethods(base.VariableReduceTests):
     {
         "test_reduce": {
             "[prod]": pytest.mark.skip(reason="inconsistent implementation in pint"),
-            "[std]": pytest.mark.skip(
-                reason="bottleneck's implementation of std is incorrect for float32"
-            ),
         }
     }
 )
