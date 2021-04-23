@@ -6,7 +6,7 @@ import hypothesis.strategies as st
 import numpy as np
 from hypothesis import note
 
-from .. import assert_identical
+from .. import assert_allclose
 from ..test_units import assert_units_equal, attach_units, strip_units
 from . import base
 from .base import strategies, utils
@@ -81,7 +81,7 @@ class TestPintVariableReduceMethods(base.VariableReduceTests):
             note(f"expected:\n{expected}")
 
             assert_units_equal(actual, expected)
-            assert_identical(actual, expected)
+            assert_allclose(actual, expected)
 
 
 @pytest.mark.apply_marks(
@@ -127,7 +127,7 @@ class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
             note(f"expected:\n{expected}")
 
             assert_units_equal(actual, expected)
-            assert_identical(actual, expected)
+            assert_allclose(actual, expected)
 
 
 @pytest.mark.apply_marks(
@@ -176,4 +176,4 @@ class TestPintDatasetReduceMethods(base.DatasetReduceTests):
             note(f"expected:\n{expected}")
 
             assert_units_equal(actual, expected)
-            assert_identical(actual, expected)
+            assert_allclose(actual, expected)
