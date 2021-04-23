@@ -65,22 +65,34 @@ def dimension_sizes(sizes):
 
 
 @st.composite
-def dataset(draw, create_data):
+def dataset(
+    draw,
+    create_data,
+    *,
+    min_dims=1,
+    max_dims=4,
+    min_size=2,
+    max_size=10,
+    min_vars=1,
+    max_vars=10,
+):
     names = st.text(min_size=1)
     sizes = draw(
         st.dictionaries(
             keys=names,
-            values=st.integers(min_value=2, max_value=10),
-            min_size=1,
-            max_size=4,
+            values=st.integers(min_value=min_size, max_value=max_size),
+            min_size=min_dims,
+            max_size=max_dims,
         )
     )
 
+    variable_names = names.filter(lambda n: n not in sizes)
+
     data_vars = st.dictionaries(
-        keys=names,
+        keys=variable_names,
         values=variable(create_data, sizes=dimension_sizes(sizes)),
-        min_size=1,
-        max_size=10,
+        min_size=min_vars,
+        max_size=max_vars,
     )
 
     return xr.Dataset(data_vars=draw(data_vars))
