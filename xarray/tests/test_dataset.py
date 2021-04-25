@@ -3495,6 +3495,25 @@ class TestDataset:
 
         assert np.issubdtype(ds.x.dtype, dtype)
 
+    def test_setitem_using_list(self):
+
+        # assign a list of variables
+        var1 = Variable(["dim1"], np.random.randn(8))
+        var2 = Variable(["dim1"], np.random.randn(8))
+        data1 = create_test_data()
+        data1[["A", "B"]] = [var1, var2]
+        data2 = data1.copy()
+        data2[["A", "B"]] = [var1, var2]
+        assert_identical(data1, data2)
+        # assign a list of dataset arrays
+        dv = 2 * data2[["A", "B"]]
+        data1[["C", "D"]] = [d.variable for d in dv.data_vars.values()]
+        data2[["C", "D"]] = dv
+        assert_identical(data1, data2)
+
+        with pytest.raises(ValueError, match=r"must have the same length"):
+            data1[["A", "B"]] = [var1]
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
