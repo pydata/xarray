@@ -64,11 +64,15 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Switch the tutorial functions to use `pooch <https://github.com/fatiando/pooch>`_
+  (which is now a optional dependency) and add :py:func:`tutorial.open_rasterio` as a
+  way to open example rasterio files (:issue:`3986`, :pull:`4102`, :pull:`5074`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Add typing information to unary and binary arithmetic operators operating on
   :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
   :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
   :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
-  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Enable passing arrays with a subset of dimensions to
