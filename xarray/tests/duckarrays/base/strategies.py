@@ -20,10 +20,6 @@ def numpy_array(shape):
     return npst.arrays(dtype=dtypes, shape=shape)
 
 
-def create_dimension_names(ndim):
-    return [f"dim_{n}" for n in range(ndim)]
-
-
 @st.composite
 def variable(draw, create_data, *, sizes=None):
     if sizes is not None:
