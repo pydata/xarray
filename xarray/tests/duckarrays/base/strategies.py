@@ -16,9 +16,7 @@ dtypes = (
 )
 
 
-def numpy_array(shape=None):
-    if shape is None:
-        shape = shapes()
+def numpy_array(shape):
     return npst.arrays(dtype=dtypes, shape=shape)
 
 
