@@ -3,11 +3,6 @@ import hypothesis.strategies as st
 
 import xarray as xr
 
-
-def shapes(ndim):
-    return npst.array_shapes(min_dims=ndim, max_dims=ndim)
-
-
 dtypes = (
     npst.integer_dtypes()
     | npst.unsigned_integer_dtypes()
@@ -20,40 +15,56 @@ def numpy_array(shape):
     return npst.arrays(dtype=dtypes, shape=shape)
 
 
+def dimension_sizes(min_dims, max_dims, min_size, max_size):
+    sizes = st.lists(
+        elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
+        min_size=min_dims,
+        max_size=max_dims,
+        unique_by=lambda x: x[0],
+    )
+    return sizes
+
+
 @st.composite
-def variable(draw, create_data, *, sizes=None):
-    if sizes is not None:
-        dims, shape = zip(*draw(sizes).items())
+def variable(
+    draw, create_data, *, sizes=None, min_size=1, max_size=5, min_dims=0, max_dims=5
+):
+    if sizes is None:
+        sizes = dimension_sizes(
+            min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
+        )
+
+    drawn_sizes = draw(sizes)
+    if not drawn_sizes:
+        dims = ()
+        shape = ()
     else:
-        dims = draw(st.lists(st.text(min_size=1), max_size=4, unique=True).map(tuple))
-        ndim = len(dims)
-        shape = draw(shapes(ndim))
+        dims, shape = zip(*drawn_sizes)
+    data = create_data(shape)
 
-    data = draw(create_data(shape))
-    return xr.Variable(dims, data)
+    return xr.Variable(dims, draw(data))
 
 
 @st.composite
-def data_array(draw, create_data):
+def data_array(draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_size=5):
     name = draw(st.none() | st.text(min_size=1))
 
-    dims = draw(st.lists(elements=st.text(min_size=1), max_size=4, unique=True))
-    shape = draw(shapes(len(dims)))
+    sizes = st.lists(
+        elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
+        min_size=min_dims,
+        max_size=max_dims,
+        unique_by=lambda x: x[0],
+    )
+    drawn_sizes = draw(sizes)
+    dims, shape = zip(*drawn_sizes)
 
-    data = draw(create_data(shape))
+    data = create_data(shape)
 
     return xr.DataArray(
         data=data,
         name=name,
         dims=dims,
     )
-
-
-def dimension_sizes(sizes):
-    sizes_ = list(sizes.items())
-    return st.lists(
-        elements=st.sampled_from(sizes_), min_size=1, max_size=len(sizes_)
-    ).map(dict)
 
 
 @st.composite
@@ -69,17 +80,14 @@ def dataset(
     max_vars=5,
 ):
     names = st.text(min_size=1)
-    sizes = st.dictionaries(
-        keys=names,
-        values=st.integers(min_value=min_size, max_value=max_size),
-        min_size=min_dims,
-        max_size=max_dims,
+    sizes = dimension_sizes(
+        min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
     )
 
     data_vars = sizes.flatmap(
         lambda s: st.dictionaries(
             keys=names.filter(lambda n: n not in s),
-            values=variable(create_data, sizes=dimension_sizes(s)),
+            values=variable(create_data, sizes=s),
             min_size=min_vars,
             max_size=max_vars,
         )
