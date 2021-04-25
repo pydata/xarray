@@ -1475,14 +1475,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
-    def __setitem__(self, key: Hashable, value) -> None:
-        """Add an array to this dataset.
+    def __setitem__(self, key, value) -> None:
+        """Add a (list of) array to this dataset.
 
-        If value is a `DataArray`, call its `select_vars()` method, rename it
+        If value is a (list of) `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
-        If value is an `Variable` object (or tuple of form
+        If value is a (list of) `Variable` object (or tuple of form
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
@@ -1491,7 +1491,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 "cannot yet use a dictionary as a key to set Dataset values"
             )
 
-        self.update({key: value})
+        if isinstance(key, list):
+            if len(key) != len(value):
+                raise ValueError("keys and value must have the same length.")
+            if isinstance(value, Dataset):
+                self.update(dict(zip(key, value.data_vars.values())))
+            else:
+                self.update(dict(zip(key, value)))
+        else:
+            self.update({key: value})
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
