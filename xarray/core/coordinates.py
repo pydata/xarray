@@ -50,7 +50,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
     @property
     def indexes(self) -> Indexes:
-        return self._data.indexes  # type: ignore
+        return self._data.indexes  # type: ignore[attr-defined]
 
     @property
     def variables(self):
@@ -105,9 +105,11 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)  # type: ignore
+            return self._data.get_index(dim)  # type: ignore[attr-defined]
         else:
-            indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
+            indexes = [
+                self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
+            ]
 
             # compute the sizes of the repeat and tile for the cartesian product
             # (taken from pandas.core.reshape.util)
@@ -159,13 +161,14 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         )
         self._update_coords(coords, indexes)
 
-    def _merge_raw(self, other):
+    def _merge_raw(self, other, reflexive):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
             indexes = dict(self.indexes)
         else:
-            variables, indexes = merge_coordinates_without_align([self, other])
+            coord_list = [self, other] if not reflexive else [other, self]
+            variables, indexes = merge_coordinates_without_align(coord_list)
         return variables, indexes
 
     @contextmanager

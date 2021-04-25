@@ -8,6 +8,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
@@ -74,7 +75,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
         attrs = {k: getattr(var, k) for k in var.ncattrs()}
         return Variable(var.dimensions, data, attrs)
 
@@ -131,6 +132,8 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         lock=None,
         **format_kwargs,
     ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )

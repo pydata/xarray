@@ -15,6 +15,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
+    _normalize_path,
 )
 from .store import StoreBackendEntrypoint
 
@@ -336,7 +337,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._write_region = write_region
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
         attributes = dict(attributes)
         encoding = {
@@ -701,6 +702,8 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
     ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
             group=group,

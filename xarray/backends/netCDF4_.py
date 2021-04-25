@@ -16,6 +16,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
     robust_getitem,
 )
@@ -388,7 +389,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
@@ -513,11 +514,11 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
-        if isinstance(store_spec, str) and is_remote_uri(store_spec):
+    def guess_can_open(self, filename_or_obj):
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
         try:
-            _, ext = os.path.splitext(store_spec)
+            _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
             return False
         return ext in {".nc", ".nc4", ".cdf"}
@@ -542,6 +543,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         autoclose=False,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
             filename_or_obj,
             mode=mode,

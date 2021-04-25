@@ -27,7 +27,7 @@ try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None  # type: ignore
+    dask_array = None
 
 
 def _dask_or_eager_func(
@@ -337,12 +337,20 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
+def _create_nan_agg_method(
+    name, dask_module=dask_array, coerce_strings=False, invariant_0d=False
+):
     from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
+
+        # The data is invariant in the case of 0d data, so do not
+        # change the data (and dtype)
+        # See https://github.com/pydata/xarray/issues/4885
+        if invariant_0d and axis == ():
+            return values
 
         values = asarray(values)
 
@@ -381,28 +389,30 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
 # See ops.inject_reduce_methods
 argmax = _create_nan_agg_method("argmax", coerce_strings=True)
 argmin = _create_nan_agg_method("argmin", coerce_strings=True)
-max = _create_nan_agg_method("max", coerce_strings=True)
-min = _create_nan_agg_method("min", coerce_strings=True)
-sum = _create_nan_agg_method("sum")
+max = _create_nan_agg_method("max", coerce_strings=True, invariant_0d=True)
+min = _create_nan_agg_method("min", coerce_strings=True, invariant_0d=True)
+sum = _create_nan_agg_method("sum", invariant_0d=True)
 sum.numeric_only = True
 sum.available_min_count = True
 std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
 var.numeric_only = True
-median = _create_nan_agg_method("median", dask_module=dask_array_compat)
+median = _create_nan_agg_method(
+    "median", dask_module=dask_array_compat, invariant_0d=True
+)
 median.numeric_only = True
-prod = _create_nan_agg_method("prod")
+prod = _create_nan_agg_method("prod", invariant_0d=True)
 prod.numeric_only = True
 prod.available_min_count = True
-cumprod_1d = _create_nan_agg_method("cumprod")
+cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
-cumsum_1d = _create_nan_agg_method("cumsum")
+cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 unravel_index = _dask_or_eager_func("unravel_index")
 
 
-_mean = _create_nan_agg_method("mean")
+_mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
@@ -591,7 +601,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True  # type: ignore
+mean.numeric_only = True  # type: ignore[attr-defined]
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
@@ -641,15 +651,15 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, axis, window, center, fill_value):
+def sliding_window_view(array, window_shape, axis):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
-    else:  # np.ndarray
-        return nputils.rolling_window(array, axis, window, center, fill_value)
+        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+    else:
+        return npcompat.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):

@@ -24,14 +24,13 @@ from xarray.core.duck_array_ops import (
     np_timedelta64_to_float,
     pd_timedelta_to_float,
     py_timedelta_to_float,
-    rolling_window,
     same_dtype,
     stack,
     timedelta_to_numeric,
     where,
 )
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal
+from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from . import (
     arm_xfail,
@@ -39,7 +38,6 @@ from . import (
     has_dask,
     has_scipy,
     raise_if_dask_computes,
-    raises_regex,
     requires_cftime,
     requires_dask,
 )
@@ -77,7 +75,7 @@ class TestOps:
         actual = first(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             first(self.x, 3)
 
     def test_last(self):
@@ -98,7 +96,7 @@ class TestOps:
         actual = last(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             last(self.x, 3)
 
     def test_count(self):
@@ -487,6 +485,17 @@ def test_cftime_datetime_mean_dask_error():
         da.mean()
 
 
+def test_empty_axis_dtype():
+    ds = Dataset()
+    ds["pos"] = [1, 2, 3]
+    ds["data"] = ("pos", "time"), [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+    ds["var"] = "pos", [2, 3, 4]
+    assert_identical(ds.mean(dim="time")["var"], ds["var"])
+    assert_identical(ds.max(dim="time")["var"], ds["var"])
+    assert_identical(ds.min(dim="time")["var"], ds["var"])
+    assert_identical(ds.sum(dim="time")["var"], ds["var"])
+
+
 @pytest.mark.parametrize("dim_num", [1, 2])
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize("dask", [False, True])
@@ -641,32 +650,6 @@ def test_isnull_with_dask():
     da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
     assert isinstance(da.isnull().data, dask_array_type)
     assert_equal(da.isnull().load(), da.load().isnull())
-
-
-@pytest.mark.skipif(not has_dask, reason="This is for dask.")
-@pytest.mark.parametrize("axis", [0, -1])
-@pytest.mark.parametrize("window", [3, 8, 11])
-@pytest.mark.parametrize("center", [True, False])
-def test_dask_rolling(axis, window, center):
-    import dask.array as da
-
-    x = np.array(np.random.randn(100, 40), dtype=float)
-    dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
-
-    expected = rolling_window(
-        x, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    actual = rolling_window(
-        dx, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    assert isinstance(actual, da.Array)
-    assert_array_equal(actual, expected)
-    assert actual.shape == expected.shape
-
-    # we need to take care of window size if chunk size is small
-    # window/2 should be smaller than the smallest chunk size.
-    with pytest.raises(ValueError):
-        rolling_window(dx, axis=axis, window=100, center=center, fill_value=np.nan)
 
 
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")

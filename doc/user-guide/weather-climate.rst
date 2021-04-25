@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _weather-climate:
 
 Weather and climate data
@@ -8,7 +10,7 @@ Weather and climate data
 
     import xarray as xr
 
-``xarray`` can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`related-projects`).
+``xarray`` can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
 
 .. _Climate and Forecast (CF) conventions: http://cfconventions.org
 

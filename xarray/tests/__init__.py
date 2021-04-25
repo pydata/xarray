@@ -1,6 +1,5 @@
 import importlib
 import platform
-import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
@@ -83,6 +82,7 @@ has_sparse, requires_sparse = _importorskip("sparse")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 # Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
 has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
+has_numexpr, requires_numexpr = _importorskip("numexpr")
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -133,18 +133,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-@contextmanager
-def raises_regex(error, pattern):
-    __tracebackhide__ = True
-    with pytest.raises(error) as excinfo:
-        yield
-    message = str(excinfo.value)
-    if not re.search(pattern, message):
-        raise AssertionError(
-            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
-        )
 
 
 class UnexpectedDataAccess(Exception):

@@ -1,5 +1,4 @@
 import copy
-import functools
 import itertools
 import numbers
 import warnings
@@ -24,7 +23,9 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from .arithmetic import VariableArithmetic
+from .common import AbstractArray
 from .indexing import (
     BasicIndexer,
     OuterIndexer,
@@ -32,7 +33,6 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import IS_NEP18_ACTIVE
 from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
@@ -41,6 +41,7 @@ from .pycompat import (
     is_duck_dask_array,
 )
 from .utils import (
+    NdimSizeLenMixin,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -61,7 +62,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     + cupy_array_type
 )
 # https://github.com/python/mypy/issues/224
-BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
+BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 VariableType = TypeVar("VariableType", bound="Variable")
 """Type annotation to be used when methods of Variable return self or a copy of self.
@@ -179,7 +180,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -242,16 +243,7 @@ def as_compatible_data(data, fastpath=False):
 
     if not isinstance(data, np.ndarray):
         if hasattr(data, "__array_function__"):
-            if IS_NEP18_ACTIVE:
-                return data
-            else:
-                raise TypeError(
-                    "Got an NumPy-like array type providing the "
-                    "__array_function__ protocol but NEP18 is not enabled. "
-                    "Check that numpy >= v1.16 and that the environment "
-                    'variable "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION" is set to '
-                    '"1"'
-                )
+            return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
@@ -293,9 +285,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(
-    common.AbstractArray, arithmetic.SupportsArithmetic, utils.NdimSizeLenMixin
-):
+class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -531,22 +521,15 @@ class Variable(
 
     def __dask_postcompute__(self):
         array_func, array_args = self._data.__dask_postcompute__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
     def __dask_postpersist__(self):
         array_func, array_args = self._data.__dask_postpersist__()
-        return (
-            self._dask_finalize,
-            (array_func, array_args, self._dims, self._attrs, self._encoding),
-        )
+        return self._dask_finalize, (array_func,) + array_args
 
-    @staticmethod
-    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
-        data = array_func(results, *array_args)
-        return Variable(dims, data, attrs=attrs, encoding=encoding)
+    def _dask_finalize(self, results, array_func, *args, **kwargs):
+        data = array_func(results, *args, **kwargs)
+        return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
     def values(self):
@@ -815,7 +798,7 @@ class Variable(
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
         """Used by IndexVariable to return IndexVariable objects when possible."""
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(dims=dims, data=data)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
         """Index this Variable with -1 remapped to fill_value."""
@@ -994,8 +977,12 @@ class Variable(
         return self._replace(data=data)
 
     def _replace(
-        self, dims=_default, data=_default, attrs=_default, encoding=_default
-    ) -> "Variable":
+        self: VariableType,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+        encoding=_default,
+    ) -> VariableType:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -1016,7 +1003,7 @@ class Variable(
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     @property
     def chunks(self):
@@ -1098,7 +1085,7 @@ class Variable(
 
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
@@ -1222,7 +1209,7 @@ class Variable(
             # TODO: remove this once dask.array automatically aligns chunks
             data = data.rechunk(self.data.chunks)
 
-        return type(self)(self.dims, data, self._attrs, fastpath=True)
+        return self._replace(data=data)
 
     def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """
@@ -1334,7 +1321,7 @@ class Variable(
 
         # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]  # type: ignore
+            stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
 
         # change integer values to a tuple of two of those values and change pad_width to index
         for k, v in pad_width.items():
@@ -1351,7 +1338,7 @@ class Variable(
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
+            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
 
         array = duck_array_ops.pad(
             self.data.astype(dtype, copy=False),
@@ -1381,7 +1368,7 @@ class Variable(
             # TODO: remove this once dask.array automatically aligns chunks
             data = data.rechunk(self.data.chunks)
 
-        return type(self)(self.dims, data, self._attrs, fastpath=True)
+        return self._replace(data=data)
 
     def roll(self, shifts=None, **shifts_kwargs):
         """
@@ -1443,7 +1430,7 @@ class Variable(
             return self.copy(deep=False)
 
         data = as_indexable(self._data).transpose(axes)
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(dims=dims, data=data)
 
     @property
     def T(self) -> "Variable":
@@ -1681,6 +1668,21 @@ class Variable(
 
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
+
+    def clip(self, min=None, max=None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
         self,
@@ -2040,7 +2042,7 @@ class Variable(
             For nd-rolling, should be list of integers.
         window_dim : str
             New name of the window dimension.
-            For nd-rolling, should be list of integers.
+            For nd-rolling, should be list of strings.
         center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
@@ -2083,26 +2085,56 @@ class Variable(
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            array = self.astype(dtype, copy=False).data
+            var = self.astype(dtype, copy=False)
         else:
             dtype = self.dtype
-            array = self.data
+            var = self
 
-        if isinstance(dim, list):
-            assert len(dim) == len(window)
-            assert len(dim) == len(window_dim)
-            assert len(dim) == len(center)
-        else:
+        if utils.is_scalar(dim):
+            for name, arg in zip(
+                ["window", "window_dim", "center"], [window, window_dim, center]
+            ):
+                if not utils.is_scalar(arg):
+                    raise ValueError(
+                        f"Expected {name}={arg!r} to be a scalar like 'dim'."
+                    )
             dim = [dim]
-            window = [window]
-            window_dim = [window_dim]
-            center = [center]
+
+        # dim is now a list
+        nroll = len(dim)
+        if utils.is_scalar(window):
+            window = [window] * nroll
+        if utils.is_scalar(window_dim):
+            window_dim = [window_dim] * nroll
+        if utils.is_scalar(center):
+            center = [center] * nroll
+        if (
+            len(dim) != len(window)
+            or len(dim) != len(window_dim)
+            or len(dim) != len(center)
+        ):
+            raise ValueError(
+                "'dim', 'window', 'window_dim', and 'center' must be the same length. "
+                f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
+                f" and center={center!r}."
+            )
+
+        pads = {}
+        for d, win, cent in zip(dim, window, center):
+            if cent:
+                start = win // 2  # 10 -> 5,  9 -> 4
+                end = win - 1 - start
+                pads[d] = (start, end)
+            else:
+                pads[d] = (win - 1, 0)
+
+        padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
         new_dims = self.dims + tuple(window_dim)
         return Variable(
             new_dims,
-            duck_array_ops.rolling_window(
-                array, axis=axis, window=window, center=center, fill_value=fill_value
+            duck_array_ops.sliding_window_view(
+                padded.data, window_shape=window, axis=axis
             ),
         )
 
@@ -2268,64 +2300,50 @@ class Variable(
 
     @property
     def real(self):
-        return type(self)(self.dims, self.data.real, self._attrs)
+        return self._replace(data=self.data.real)
 
     @property
     def imag(self):
-        return type(self)(self.dims, self.data.imag, self._attrs)
+        return self._replace(data=self.data.imag)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 
-    @staticmethod
-    def _unary_op(f):
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            with np.errstate(all="ignore"):
-                result = self.__array_wrap__(f(self.data, *args, **kwargs))
-                if keep_attrs:
-                    result.attrs = self.attrs
-                return result
-
-        return func
-
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, (xr.DataArray, xr.Dataset)):
-                return NotImplemented
-            self_data, other_data, dims = _broadcast_compat_data(self, other)
-            keep_attrs = _get_keep_attrs(default=False)
-            attrs = self._attrs if keep_attrs else None
-            with np.errstate(all="ignore"):
-                new_data = (
-                    f(self_data, other_data)
-                    if not reflexive
-                    else f(other_data, self_data)
-                )
-            result = Variable(dims, new_data, attrs=attrs)
+    def _unary_op(self, f, *args, **kwargs):
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        with np.errstate(all="ignore"):
+            result = self.__array_wrap__(f(self.data, *args, **kwargs))
+            if keep_attrs:
+                result.attrs = self.attrs
             return result
 
-        return func
-
-    @staticmethod
-    def _inplace_binary_op(f):
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, xr.Dataset):
-                raise TypeError("cannot add a Dataset to a Variable in-place")
+    def _binary_op(self, other, f, reflexive=False):
+        if isinstance(other, (xr.DataArray, xr.Dataset)):
+            return NotImplemented
+        if reflexive and issubclass(type(self), type(other)):
+            other_data, self_data, dims = _broadcast_compat_data(other, self)
+        else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-            if dims != self.dims:
-                raise ValueError("dimensions cannot change for in-place operations")
-            with np.errstate(all="ignore"):
-                self.values = f(self_data, other_data)
-            return self
+        keep_attrs = _get_keep_attrs(default=False)
+        attrs = self._attrs if keep_attrs else None
+        with np.errstate(all="ignore"):
+            new_data = (
+                f(self_data, other_data) if not reflexive else f(other_data, self_data)
+            )
+        result = Variable(dims, new_data, attrs=attrs)
+        return result
 
-        return func
+    def _inplace_binary_op(self, other, f):
+        if isinstance(other, xr.Dataset):
+            raise TypeError("cannot add a Dataset to a Variable in-place")
+        self_data, other_data, dims = _broadcast_compat_data(self, other)
+        if dims != self.dims:
+            raise ValueError("dimensions cannot change for in-place operations")
+        with np.errstate(all="ignore"):
+            self.values = f(self_data, other_data)
+        return self
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
         """A (private) method to convert datetime array to numeric dtype
@@ -2497,9 +2515,6 @@ class Variable(
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
 
-ops.inject_all_ops_and_reduce_methods(Variable)
-
-
 class IndexVariable(Variable):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
@@ -2533,14 +2548,14 @@ class IndexVariable(Variable):
         return self
 
     # https://github.com/python/mypy/issues/1465
-    @Variable.data.setter  # type: ignore
+    @Variable.data.setter  # type: ignore[attr-defined]
     def data(self, data):
         raise ValueError(
             f"Cannot assign to the .data attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    @Variable.values.setter  # type: ignore
+    @Variable.values.setter  # type: ignore[attr-defined]
     def values(self, values):
         raise ValueError(
             f"Cannot assign to the .values attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
@@ -2564,7 +2579,7 @@ class IndexVariable(Variable):
             # returns Variable rather than IndexVariable if multi-dimensional
             return Variable(dims, data, self._attrs, self._encoding)
         else:
-            return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+            return self._replace(dims=dims, data=data)
 
     def __setitem__(self, key, value):
         raise TypeError("%s values cannot be modified" % type(self).__name__)
@@ -2645,7 +2660,7 @@ class IndexVariable(Variable):
                         data.shape, self.shape
                     )
                 )
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
 
     def equals(self, other, equiv=None, check_dtype=False):
         # if equiv is specified, super up
@@ -2749,7 +2764,7 @@ def _broadcast_compat_variables(*variables):
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_variables(), some variables may have
-    dimensions of size 1 instead of the the size of the broadcast dimension.
+    dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)

@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - uses: xarray-contrib/ci-trigger@v1
+      - uses: xarray-contrib/ci-trigger@v1.1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
@@ -42,26 +42,16 @@ jobs:
             "py37-min-all-deps",
             "py37-min-nep18",
             "py38-all-but-dask",
-            "py38-backend-api-v2",
             "py38-flaky",
           ]
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-backend-api-v2" ]] ;
-          then
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-            echo "XARRAY_BACKEND_API=v2" >> $GITHUB_ENV
-
-          elif [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
@@ -126,10 +116,6 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
@@ -167,10 +153,6 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
@@ -199,7 +181,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Run mypy
         run: |
-          python -m mypy xarray
+          python -m mypy .
 
   min-version-policy:
     name: Minimum Version Policy
@@ -211,10 +193,6 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.

@@ -22,10 +22,12 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
+  - numexpr
   - numpy
   - pandas
   - pint
-  - pip=20.2
+  - pip
+  - pooch
   - pre-commit
   - pseudonetcdf
   - pydap
