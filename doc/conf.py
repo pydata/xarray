@@ -125,6 +125,7 @@ napoleon_type_aliases = {
     "callable": ":py:func:`callable`",
     "dict_like": ":term:`dict-like <mapping>`",
     "dict-like": ":term:`dict-like <mapping>`",
+    "path-like": ":term:`path-like <path-like object>`",
     "mapping": ":term:`mapping`",
     "file-like": ":term:`file-like <file-like object>`",
     # special terms
