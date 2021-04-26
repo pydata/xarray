@@ -90,7 +90,7 @@ def dataset(
 
     data_vars = sizes.flatmap(
         lambda s: st.dictionaries(
-            keys=names.filter(lambda n: n not in s),
+            keys=names.filter(lambda n: n not in dict(s)),
             values=variable(create_data, sizes=s),
             min_size=min_vars,
             max_size=max_vars,
