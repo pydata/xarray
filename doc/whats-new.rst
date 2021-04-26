@@ -23,6 +23,9 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add ``safe_chunks`` option to :py:meth:`Dataset.to_zarr` which allows overriding
+  checks made to ensure Dask and Zarr chunk compatibility (:issue:`5056`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
   of datasets and data arrays by evaluating query expressions against the values of the
   data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
