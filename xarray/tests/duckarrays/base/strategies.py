@@ -27,7 +27,7 @@ def dimension_sizes(min_dims, max_dims, min_size, max_size):
 
 @st.composite
 def variable(
-    draw, create_data, *, sizes=None, min_size=1, max_size=5, min_dims=0, max_dims=5
+    draw, create_data, *, sizes=None, min_size=1, max_size=5, min_dims=1, max_dims=4
 ):
     if sizes is None:
         sizes = draw(
