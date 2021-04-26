@@ -1872,10 +1872,9 @@ class ZarrBase(CFEncodedBase):
                 pass
 
         # unless...
-        with pytest.warns(UserWarning):
-            with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
-                # don't actually check equality because the data could be corrupted
-                pass
+        with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
 
         badenc.var1.encoding["chunks"] = (2,)
         with raises_regex(NotImplementedError, "Specified Zarr chunk encoding"):
@@ -1911,12 +1910,9 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
         # override option
-        with pytest.warns(UserWarning):
-            with self.roundtrip(
-                ds_chunk4, save_kwargs={"safe_chunks": False}
-            ) as actual:
-                # don't actually check equality because the data could be corrupted
-                pass
+        with self.roundtrip(ds_chunk4, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
