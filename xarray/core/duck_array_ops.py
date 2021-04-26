@@ -641,3 +641,12 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
     else:
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+
+
+def push(array, n, axis):
+    from bottleneck import push
+
+    if is_duck_dask_array(array):
+        return dask_array_ops.push(array, n, axis)
+    else:
+        return push(array, n, axis)
