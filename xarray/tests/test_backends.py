@@ -1871,14 +1871,21 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(badenc) as actual:
                 pass
 
+        # unless...
+        with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
+
         badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(ValueError, match=r"Specified Zarr chunk encoding"):
+        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
             with self.roundtrip(badenc) as actual:
                 pass
 
         badenc = badenc.chunk({"x": (3, 3, 6)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(ValueError, match=r"incompatible with this encoding"):
+        with pytest.raises(
+            NotImplementedError, match=r"incompatible with this encoding"
+        ):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -1901,9 +1908,13 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
+        # override option
+        with self.roundtrip(ds_chunk4, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
