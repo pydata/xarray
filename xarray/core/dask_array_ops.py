@@ -51,3 +51,24 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         # See issue dask/dask#6516
         coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
     return coeffs, residuals
+
+
+def push(array, n, axis):
+    """
+    Dask-aware bottleneck.push
+    """
+    from bottleneck import push
+
+    if len(array.chunks[axis]) > 1 and n is not None and n < array.shape[axis]:
+        raise NotImplementedError(
+            "Cannot fill along a chunked axis when limit is not None."
+            "Either rechunk to a single chunk along this axis or call .compute() or .load() first."
+        )
+    if all(c == 1 for c in array.chunks[axis]):
+        array = array.rechunk({axis: 2})
+    pushed = array.map_blocks(push, axis=axis, n=n)
+    if len(array.chunks[axis]) > 1:
+        pushed = pushed.map_overlap(
+            push, axis=axis, n=n, depth={axis: (1, 0)}, boundary="none"
+        )
+    return pushed

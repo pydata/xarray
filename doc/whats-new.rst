@@ -100,6 +100,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
+  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is
   2d (:issue:`5097`, :pull:`5099`). By `John Omotani <https://github.com/johnomotani>`_.
 - Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
