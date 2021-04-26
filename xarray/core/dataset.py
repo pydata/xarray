@@ -5242,6 +5242,58 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             obj._set_numpy_data_from_dataframe(idx, arrays, dims)
         return obj
 
+    @classmethod
+    def from_dask_dataframe(cls, dataframe):
+        """Convert a dask.dataframe.DataFrame into an xarray.Dataset
+
+        This method will produce a Dataset from a dask DataFrame.
+        Dimensions are loaded into memory but the data itself remains
+        a dask array.
+
+        Parameters
+        ----------
+        dataframe : dask.dataframe.DataFrame
+            Dask DataFrame from which to copy data and index.
+
+        Returns
+        -------
+        Dataset
+            The converted Dataset
+
+        See also
+        --------
+        xarray.DataArray.from_dask_series
+        xarray.Dataset.from_dataframe
+        xarray.DataArray.from_series
+        """
+        import dask.dataframe as dd
+
+        if not dataframe.columns.is_unique:
+            raise ValueError("cannot convert DataFrame with non-unique columns")
+        if not isinstance(dataframe, dd.DataFrame):
+            raise ValueError("cannot convert non-dask dataframe objects")
+
+        # TODO: stop computing once dask.dataframe.Index objects are supported
+        idx = dataframe.index.compute()
+
+        # Cast to a NumPy array first, in case the Series is a pandas Extension
+        # array (which doesn't have a valid NumPy dtype)
+        # TODO: allow users to control how this casting happens, e.g., by
+        # forwarding arguments to pandas.Series.to_numpy?
+        arrays = [(k, v.to_dask_array(lengths=True)) for k, v in dataframe.items()]
+
+        obj = cls()
+
+        # dask.dataframe does not support MultiIndex objects so no need to special-case here
+        index_name = idx.name if idx.name is not None else "index"
+        dims = (index_name,)
+        obj[index_name] = (dims, idx)
+
+        for name, values in arrays:
+            obj[name] = (dims, values)
+
+        return obj
+
     def to_dask_dataframe(self, dim_order=None, set_index=False):
         """
         Convert this dataset into a dask.dataframe.DataFrame.

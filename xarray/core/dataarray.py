@@ -2863,6 +2863,36 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result.name = series.name
         return result
 
+    @classmethod
+    def from_dask_series(cls, series) -> "DataArray":
+        """Convert a dask.dataframe.Series into an xarray.DataArray.
+
+        This method will produce a DataArray from a dask Series.
+        Dimensions are loaded into memory but the data itself remains
+        a dask array.
+
+        Parameters
+        ----------
+        series : dask.dataframe.Series
+            dask Series from which to copy data and index.
+
+        Returns
+        -------
+        DataArray
+            The converted DataArray
+
+        See also
+        --------
+        xarray.Dataset.from_dask_dataframe
+        xarray.DataArray.from_series
+        """
+        temp_name = "__temporary_name"
+        df = series.to_frame(name=temp_name)
+        ds = Dataset.from_dask_dataframe(df)
+        result = ds[temp_name]
+        result.name = series.name
+        return result
+
     def to_cdms2(self) -> "cdms2_Variable":
         """Convert this array into a cdms2.Variable"""
         from ..convert import to_cdms2
