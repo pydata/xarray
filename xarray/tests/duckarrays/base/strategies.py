@@ -30,16 +30,20 @@ def variable(
     draw, create_data, *, sizes=None, min_size=1, max_size=5, min_dims=0, max_dims=5
 ):
     if sizes is None:
-        sizes = dimension_sizes(
-            min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
+        sizes = draw(
+            dimension_sizes(
+                min_size=min_size,
+                max_size=max_size,
+                min_dims=min_dims,
+                max_dims=max_dims,
+            )
         )
 
-    drawn_sizes = draw(sizes)
-    if not drawn_sizes:
+    if not sizes:
         dims = ()
         shape = ()
     else:
-        dims, shape = zip(*drawn_sizes)
+        dims, shape = zip(*sizes)
     data = create_data(shape)
 
     return xr.Variable(dims, draw(data))
