@@ -3501,8 +3501,9 @@ class TestDataset:
         var1 = Variable(["dim1"], np.random.randn(8))
         var2 = Variable(["dim1"], np.random.randn(8))
         data1 = create_test_data()
-        data1[["A", "B"]] = [var1, var2]
         data2 = data1.copy()
+        data1["A"] = var1
+        data1["B"] = var2
         data2[["A", "B"]] = [var1, var2]
         assert_identical(data1, data2)
         # assign a list of dataset arrays
@@ -3511,7 +3512,7 @@ class TestDataset:
         data2[["C", "D"]] = dv
         assert_identical(data1, data2)
 
-        with pytest.raises(ValueError, match=r"must have the same length"):
+        with pytest.raises(ValueError, match=r"Different lengths"):
             data1[["A", "B"]] = [var1]
 
     def test_assign(self):

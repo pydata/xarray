@@ -1503,9 +1503,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if isinstance(key, list):
             if len(key) != len(value):
-                raise ValueError(f"Different lengths of variables to be set "
-                                 f"({len(key)}) and data used as input for "
-                                 f"setting ({len(value)})")
+                raise ValueError(
+                    f"Different lengths of variables to be set "
+                    f"({len(key)}) and data used as input for "
+                    f"setting ({len(value)})"
+                )
             if isinstance(value, Dataset):
                 self.update(dict(zip(key, value.data_vars.values())))
             else:
