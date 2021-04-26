@@ -62,7 +62,7 @@ def data_array(draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_siz
     drawn_sizes = draw(sizes)
     dims, shape = zip(*drawn_sizes)
 
-    data = create_data(shape)
+    data = draw(create_data(shape))
 
     return xr.DataArray(
         data=data,
