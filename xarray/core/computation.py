@@ -43,7 +43,7 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
-    """ Return either first object of type 'kind' or raise if not found. """
+    """Return either first object of type 'kind' or raise if not found."""
     for arg in args:
         if isinstance(arg, kind):
             return arg
