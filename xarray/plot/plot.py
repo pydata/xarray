@@ -657,6 +657,7 @@ def _plot2d(plotfunc):
                 # Remove when minimum requirement of matplotlib is 3.2:
                 from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
 
+                # delete so it does not end up in locals()
                 del Axes3D
 
                 # Need to create a "3d" Axes instance for surface plots
