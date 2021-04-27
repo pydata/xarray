@@ -212,7 +212,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 
 def _finalize_store(write, store):
-    """ Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
 

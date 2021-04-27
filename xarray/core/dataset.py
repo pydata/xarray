@@ -543,7 +543,7 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
         return Frozen({k: all_variables[k] for k in self})
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._dataset._ipython_key_completions_()
