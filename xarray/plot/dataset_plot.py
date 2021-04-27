@@ -519,7 +519,7 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
 
 @_dsplot
 def quiver(ds, x, y, ax, u, v, **kwargs):
-    """ Quiver plot with Dataset variables."""
+    """Quiver plot with Dataset variables."""
     import matplotlib as mpl
 
     if x is None or y is None or u is None or v is None:
@@ -548,7 +548,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
 @_dsplot
 def streamplot(ds, x, y, ax, u, v, **kwargs):
-    """ Quiver plot with Dataset variables."""
+    """Quiver plot with Dataset variables."""
     import matplotlib as mpl
 
     if x is None or y is None or u is None or v is None:

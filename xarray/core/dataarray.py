@@ -496,7 +496,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]

@@ -778,7 +778,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_ondisk_after_print(self):
-        """ Make sure print does not load file into memory """
+        """Make sure print does not load file into memory"""
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             repr(on_disk)

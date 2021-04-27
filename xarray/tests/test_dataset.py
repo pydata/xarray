@@ -1191,7 +1191,7 @@ class TestDataset:
         assert_array_equal(actual["var3"], expected_var3)
 
     def test_isel_dataarray(self):
-        """ Test for indexing by DataArray """
+        """Test for indexing by DataArray"""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(

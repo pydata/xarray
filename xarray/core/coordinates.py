@@ -296,7 +296,7 @@ class DatasetCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._data._ipython_key_completions_()
@@ -366,7 +366,7 @@ class DataArrayCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
 
