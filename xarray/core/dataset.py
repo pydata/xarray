@@ -2063,12 +2063,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 else:
                     yield k, v
             elif isinstance(v, int):
-                yield k, Variable((), v)
+                yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
                 if v.ndim == 0:
-                    yield k, Variable((), v)
+                    yield k, Variable((), v, attrs=self.coords[k].attrs)
                 elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v)
+                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
                 else:
                     raise AssertionError()  # Already tested by _validate_indexers
             else:
