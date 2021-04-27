@@ -176,7 +176,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
 
         >>> from affine import Affine
         >>> da = xr.open_rasterio(
-        ...     "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif"
+        ...     "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif"
         ... )
         >>> da
         <xarray.DataArray (band: 3, y: 718, x: 791)>

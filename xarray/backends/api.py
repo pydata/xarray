@@ -28,7 +28,7 @@ from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .common import AbstractDataStore, ArrayWriter
+from .common import AbstractDataStore, ArrayWriter, _normalize_path
 from .locks import _get_scheduler
 
 if TYPE_CHECKING:
@@ -107,16 +107,6 @@ def _get_default_engine(path: str, allow_remote: bool = False):
     else:
         engine = _get_default_engine_netcdf()
     return engine
-
-
-def _normalize_path(path):
-    if isinstance(path, Path):
-        path = str(path)
-
-    if isinstance(path, str) and not is_remote_uri(path):
-        path = os.path.abspath(os.path.expanduser(path))
-
-    return path
 
 
 def _validate_dataset_names(dataset):
@@ -222,7 +212,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 
 def _finalize_store(write, store):
-    """ Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
 
@@ -375,10 +365,11 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr"} or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        "netcdf4".
+        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
+        can also be used.
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
@@ -1374,6 +1365,7 @@ def to_zarr(
     consolidated: bool = False,
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
+    safe_chunks: bool = True,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1428,6 +1420,7 @@ def to_zarr(
             consolidated=consolidated,
             region=region,
             encoding=encoding,
+            # do we need to pass safe_chunks through here?
         )
 
     zstore = backends.ZarrStore.open_group(
@@ -1439,6 +1432,7 @@ def to_zarr(
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
+        safe_chunks=safe_chunks,
     )
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims

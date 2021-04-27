@@ -694,10 +694,6 @@ def hashable(v: Any) -> bool:
     return True
 
 
-def not_implemented(*args, **kwargs):
-    return NotImplemented
-
-
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
     for use in to_dict

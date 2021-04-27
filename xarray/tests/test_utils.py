@@ -9,7 +9,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.utils import either_dict_or_kwargs
 
-from . import assert_array_equal, raises_regex, requires_cftime, requires_dask
+from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -153,9 +153,9 @@ class TestDictionaries:
 
     def test_compat_dict_union(self):
         assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "unsafe to merge dictionaries without "
+            match=r"unsafe to merge dictionaries without "
             "overriding values; conflicting key",
         ):
             utils.compat_dict_union(self.x, self.z)
