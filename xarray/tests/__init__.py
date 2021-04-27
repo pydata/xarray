@@ -1,6 +1,5 @@
 import importlib
 import platform
-import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
@@ -137,18 +136,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-@contextmanager
-def raises_regex(error, pattern):
-    __tracebackhide__ = True
-    with pytest.raises(error) as excinfo:
-        yield
-    message = str(excinfo.value)
-    if not re.search(pattern, message):
-        raise AssertionError(
-            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
-        )
 
 
 class UnexpectedDataAccess(Exception):

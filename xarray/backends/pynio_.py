@@ -8,6 +8,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
@@ -117,6 +118,7 @@ class PynioBackendEntrypoint(BackendEntrypoint):
             lock=lock,
         )
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
             ds = store_entrypoint.open_dataset(

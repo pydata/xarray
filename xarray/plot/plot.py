@@ -447,7 +447,7 @@ class _PlotMethods:
 
     # we can't use functools.wraps here since that also modifies the name / qualname
     __doc__ = __call__.__doc__ = plot.__doc__
-    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
     __call__.__annotations__ = plot.__annotations__
 
     @functools.wraps(hist)

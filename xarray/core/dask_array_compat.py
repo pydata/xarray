@@ -105,9 +105,9 @@ else:
 
         Parameters
         ----------
-        size: int
+        size : int
             The maximum size of any chunk.
-        chunks: tuple
+        chunks : tuple
             Chunks along one axis, e.g. ``(3, 3, 2)``
 
         Examples
@@ -158,7 +158,7 @@ else:
 
     def sliding_window_view(x, window_shape, axis=None):
         from dask.array.overlap import map_overlap
-        from numpy.core.numeric import normalize_axis_tuple  # type: ignore
+        from numpy.core.numeric import normalize_axis_tuple
 
         from .npcompat import sliding_window_view as _np_sliding_window_view
 
