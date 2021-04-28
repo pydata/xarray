@@ -113,9 +113,6 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is
-  2d (:issue:`5079`, :pull:`5099`).
-  By `John Omotani <https://github.com/johnomotani>`_
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
   (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is

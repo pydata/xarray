@@ -633,9 +633,11 @@ def _plot2d(plotfunc):
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
-            add_colorbar = plotfunc.__name__ != "contour" and not (
+            add_colorbar = True
+            if plotfunc.__name__ == "contour" or (
                 plotfunc.__name__ == "surface" and cmap is None
-            )
+            ):
+                add_colorbar  = False
         imshow_rgb = plotfunc.__name__ == "imshow" and darray.ndim == (
             3 + (row is not None) + (col is not None)
         )
@@ -653,7 +655,7 @@ def _plot2d(plotfunc):
 
         if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
             if ax is None:
-                # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+                # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
                 # Remove when minimum requirement of matplotlib is 3.2:
                 from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
 

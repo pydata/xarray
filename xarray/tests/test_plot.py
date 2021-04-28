@@ -135,7 +135,6 @@ class PlotTestCase:
         plt.close("all")
 
     def pass_in_axis(self, plotmethod, subplot_kw=None):
-        subplot_kw = {} if subplot_kw is None else subplot_kw
         fig, axes = plt.subplots(ncols=2, subplot_kw=subplot_kw)
         plotmethod(ax=axes[0])
         assert axes[0].has_data()
