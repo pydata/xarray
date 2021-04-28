@@ -2,6 +2,9 @@ import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 
 import xarray as xr
+from xarray.core.utils import is_dict_like
+
+from . import utils
 
 dtypes = (
     npst.integer_dtypes()
@@ -108,3 +111,25 @@ def valid_axis(ndim):
 
 def valid_axes(ndim):
     return valid_axis(ndim) | npst.valid_tuple_axes(ndim)
+
+
+def valid_dim(dims):
+    if not isinstance(dims, list):
+        dims = [dims]
+
+    ndim = len(dims)
+    axis = valid_axis(ndim)
+    return axis.map(lambda axes: utils.valid_dims_from_axes(dims, axes))
+
+
+def valid_dims(dims):
+    if is_dict_like(dims):
+        dims = list(dims.keys())
+    elif isinstance(dims, tuple):
+        dims = list(dims)
+    elif not isinstance(dims, list):
+        dims = [dims]
+
+    ndim = len(dims)
+    axes = valid_axes(ndim)
+    return axes.map(lambda axes: utils.valid_dims_from_axes(dims, axes))

@@ -5,7 +5,6 @@ from hypothesis import given, note
 
 from ... import assert_identical
 from . import strategies
-from .utils import valid_dims_from_axes
 
 
 class VariableReduceTests:
@@ -45,8 +44,7 @@ class VariableReduceTests:
     def test_reduce(self, method, data):
         var = data.draw(strategies.variable(lambda shape: self.create(method, shape)))
 
-        reduce_axes = data.draw(strategies.valid_axis(var.ndim))
-        reduce_dims = valid_dims_from_axes(var.dims, reduce_axes)
+        reduce_dims = data.draw(strategies.valid_dims(var.dims))
 
         self.check_reduce(var, method, dim=reduce_dims)
 
@@ -88,8 +86,7 @@ class DataArrayReduceTests:
     def test_reduce(self, method, data):
         arr = data.draw(strategies.data_array(lambda shape: self.create(method, shape)))
 
-        reduce_axes = data.draw(strategies.valid_axis(arr.ndim))
-        reduce_dims = valid_dims_from_axes(arr.dims, reduce_axes)
+        reduce_dims = data.draw(strategies.valid_dims(arr.dims))
 
         self.check_reduce(arr, method, dim=reduce_dims)
 
@@ -133,8 +130,6 @@ class DatasetReduceTests:
             strategies.dataset(lambda shape: self.create(method, shape), max_size=5)
         )
 
-        reduce_dims = data.draw(st.sampled_from(list(ds.dims)))
-        # reduce_axes = data.draw(strategies.valid_axis(len(ds.dims)))
-        # reduce_dims = valid_dims_from_axes(ds.dims, reduce_axes)
+        reduce_dims = data.draw(strategies.valid_dims(ds.dims))
 
         self.check_reduce(ds, method, dim=reduce_dims)
