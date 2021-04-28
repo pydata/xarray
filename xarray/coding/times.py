@@ -72,6 +72,28 @@ def _is_standard_calendar(calendar):
     return calendar.lower() in _STANDARD_CALENDARS
 
 
+def _is_numpy_datetime(times):
+    return times.dtype.char in ("M", "m")
+
+
+def _is_numpy_compatible_time_range(times):
+    if _is_numpy_datetime(times):
+        return True
+    # Cftime object
+    tmin = times.min()
+    tmax = times.max()
+    if hasattr(tmin, "item"):  # it is an array, the the element.
+        tmin = tmin.item()
+        tmax = tmax.item()
+    try:
+        pd.Timestamp(*tmin.timetuple()[:2], 1)
+        pd.Timestamp(*tmax.timetuple()[:2], 1)
+    except pd.errors.OutOfBoundsDatetime:
+        return False
+    else:
+        return True
+
+
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith("s"):
@@ -374,7 +396,7 @@ def infer_timedelta_units(deltas):
     return units
 
 
-def cftime_to_nptime(times):
+def cftime_to_nptime(times, raise_on_invalid=True):
     """Given an array of cftime.datetime objects, return an array of
     numpy.datetime64 objects of the same size"""
     times = np.asarray(times)
@@ -389,11 +411,42 @@ def cftime_to_nptime(times):
                 t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
             )
         except ValueError as e:
-            raise ValueError(
-                "Cannot convert date {} to a date in the "
-                "standard calendar.  Reason: {}.".format(t, e)
-            )
+            if raise_on_invalid:
+                raise ValueError(
+                    "Cannot convert date {} to a date in the "
+                    "standard calendar.  Reason: {}.".format(t, e)
+                )
+            else:
+                dt = "NaT"
         new[i] = np.datetime64(dt)
+    return new
+
+
+def convert_cftimes(times, date_type, missing=None):
+    """Given an array of datetimes, return the same dates in another cftime date type.
+
+    Useful to convert between calendars from numpy to cftime or between cftime calendars.
+    If missing is given, invalid dates are replaced by it, otherwise an error is raised.
+    """
+    new = np.empty(times.shape, dtype="O")
+    if _is_numpy_datetime(times):
+        # Convert datetime64 objects to Timestamps
+        times = pd.DatetimeIndex(times)
+    for i, t in enumerate(times):
+        try:
+            dt = date_type(
+                t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
+            )
+        except ValueError as e:
+            if missing is None:
+                raise ValueError(
+                    "Cannot convert date {} to a date in the "
+                    "standard calendar.  Reason: {}.".format(t, e)
+                )
+            else:
+                dt = missing
+
+        new[i] = dt
     return new
 
 

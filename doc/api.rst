@@ -512,6 +512,7 @@ Datetimelike properties
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
@@ -835,6 +836,8 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
+   date_range
+   date_range_like
 
 Faceting
 --------

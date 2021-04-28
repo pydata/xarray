@@ -458,7 +458,7 @@ class DatetimeAccessor(Properties):
         if isinstance(index, CFTimeIndex):
             return index.calendar
         # else : pd.datetimeIndex
-        return "standard"
+        return "proleptic_gregorian"
 
 
 class TimedeltaAccessor(Properties):

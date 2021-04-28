@@ -22,10 +22,13 @@ from xarray.coding.cftime_offsets import (
     YearEnd,
     _days_in_month,
     cftime_range,
+    date_range,
+    date_range_like,
     get_date_type,
     to_cftime_datetime,
     to_offset,
 )
+from xarray.coding.frequencies import infer_freq
 
 cftime = pytest.importorskip("cftime")
 
@@ -1228,3 +1231,68 @@ def test_cftime_range_standard_calendar_refers_to_gregorian():
 
     (result,) = cftime_range("2000", periods=1)
     assert isinstance(result, DatetimeGregorian)
+
+
+@pytest.mark.parametrize(
+    "start,calendar,use_cftime,expcf",
+    [
+        ("1990-01-01", "standard", None, False),
+        ("1990-01-01", "proleptic_gregorian", True, True),
+        ("1990-01-01", "noleap", None, True),
+        ("1990-01-01", "gregorian", False, False),
+        ("1400-01-01", "standard", None, True),
+        ("3400-01-01", "standard", None, True),
+    ],
+)
+def test_date_range(start, calendar, use_cftime, expcf):
+    dr = date_range(
+        start, periods=14, freq="D", calendar=calendar, use_cftime=use_cftime
+    )
+
+    if expcf:
+        assert isinstance(dr, CFTimeIndex)
+    else:
+        assert isinstance(dr, pd.DatetimeIndex)
+
+
+def test_date_range_errors():
+    with pytest.raises(ValueError, match="Date range is invalid"):
+        date_range(
+            "1400-01-01", periods=1, freq="D", calendar="standard", use_cftime=False
+        )
+
+    with pytest.raises(ValueError, match="Date range is invalid"):
+        date_range(
+            "2480-01-01",
+            periods=1,
+            freq="D",
+            calendar="proleptic_gregorian",
+            use_cftime=False,
+        )
+
+    with pytest.raises(ValueError, match="Invalid calendar "):
+        date_range(
+            "1900-01-01", periods=1, freq="D", calendar="noleap", use_cftime=False
+        )
+
+
+@pytest.mark.parametrize(
+    "args,cal_src,cal_tgt,use_cftime,exp0",
+    [
+        (("2020-02-01", None, 12, "4M"), "standard", "noleap", None, "2020-02-28"),
+        (("2020-02-01", None, 12, "M"), "noleap", "gregorian", None, "2020-02-29"),
+        (("2020-02-28", None, 12, "3H"), "all_leap", "gregorian", False, "2020-02-28"),
+        (("2020-03-30", None, 12, "M"), "360_day", "gregorian", False, "2020-03-31"),
+        (("2020-03-31", None, 12, "M"), "gregorian", "360_day", None, "2020-03-30"),
+    ],
+)
+def test_date_range_like(args, cal_src, cal_tgt, use_cftime, exp0):
+    start, end, periods, freq = args
+    source = date_range(start, end, periods, freq, calendar=cal_src)
+
+    out = date_range_like(source, cal_tgt, use_cftime=use_cftime)
+
+    assert len(out) == periods
+    assert infer_freq(out) == freq
+
+    assert out[0].isoformat().startswith(exp0)

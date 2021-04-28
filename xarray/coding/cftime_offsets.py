@@ -41,7 +41,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from functools import partial
 from typing import ClassVar, Optional
@@ -51,16 +51,19 @@ import pandas as pd
 
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from .times import format_cftime_datetime
+from .times import _is_standard_calendar, format_cftime_datetime
 
 
-def get_date_type(calendar):
+def get_date_type(calendar, use_cftime=True):
     """Return the cftime date type for a given calendar name."""
     try:
         import cftime
     except ImportError:
         raise ImportError("cftime is required for dates with non-standard calendars")
     else:
+        if _is_standard_calendar(calendar) and not use_cftime:
+            return pd.Timestamp
+
         calendars = {
             "noleap": cftime.DatetimeNoLeap,
             "360_day": cftime.Datetime360Day,
@@ -709,6 +712,8 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
+    elif isinstance(date_str_or_date, (datetime, pd.Timestamp)):
+        return cftime.DatetimeProlepticGregorian(*date_str_or_date.timetuple())
     else:
         raise TypeError(
             "date_str_or_date must be a string or a "
@@ -1074,13 +1079,12 @@ def date_range(
     pandas.date_range
     cftime_range
     """
+    from .times import _is_standard_calendar
+
     if tz is not None:
         use_cftime = False
 
-    if (
-        calendar in ["standard", "proleptic_gregorian", "gregorian"]
-        and use_cftime is not True
-    ):
+    if _is_standard_calendar(calendar) and use_cftime is not True:
         try:
             return pd.date_range(
                 start=start,
@@ -1090,7 +1094,7 @@ def date_range(
                 tz=tz,
                 normalize=normalize,
                 name=name,
-                close=closed,
+                closed=closed,
             )
         except pd.errors.OutOfBoundsDatetime as err:
             if use_cftime is False:
@@ -1107,9 +1111,133 @@ def date_range(
         end=end,
         periods=periods,
         freq=freq,
-        tz=tz,
         normalize=normalize,
         name=name,
-        close=closed,
+        closed=closed,
+        calendar=calendar,
+    )
+
+
+def date_range_like(source, calendar, use_cftime=None):
+    """Generate a datetime array with the same frequency, start and end as another one, but in a different calendar.
+
+    Parameters
+    ----------
+    source : DataArray or CFTimeIndex or pd.DatetimeIndex
+      1D datetime array
+    calendar : str
+      New calendar name.
+    use_cftime : bool, optional
+      If True, the output uses cftime objects. If None (default), numpy objects are used if possible.
+      If False, numpy objects are used or an error is raised.
+
+    Returns
+    -------
+    DataArray
+      1D datetime coordinate with the same start, end and frequency as the source, but in the new calendar.
+        The start date is assumed to exist in the target calendar.
+        If the end date doesn't exist, the code tries 1 and 2 calendar days before.
+        Exception when the source is in 360_day and the end of the range is the 30th of a 31-days month,
+        then the 31st is appended to the range.
+    """
+    from .frequencies import infer_freq
+    from .times import (
+        _is_numpy_compatible_time_range,
+        _is_numpy_datetime,
+        _is_standard_calendar,
+    )
+
+    freq = infer_freq(source)
+    if freq is None:
+        raise ValueError(
+            "`date_range_like` was unable to generate a range as the source frequency was not inferrable."
+        )
+
+    # Arguments Checks for target
+    if use_cftime is not True:
+        if _is_standard_calendar(calendar):
+            if _is_numpy_compatible_time_range(source):
+                # Conversion is possible with pandas, force False if it was None
+                use_cftime = False
+            elif use_cftime is False:
+                raise ValueError(
+                    "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
+                )
+            # else : Default to cftime
+        elif use_cftime is False:
+            # target calendar is ctime-only.
+            raise ValueError(
+                f"Calendar '{calendar}' is only valid with cftime. Try using `use_cftime=True`."
+            )
+        else:
+            use_cftime = True
+
+    src_start = source.values.min()
+    src_end = source.values.max()
+    if _is_numpy_datetime(source):
+        src_cal = "default"
+        # We want to use datetime fields (datetime64 object don't have them)
+        src_start = pd.Timestamp(src_start)
+        src_end = pd.Timestamp(src_end)
+    else:
+        if isinstance(source, CFTimeIndex):
+            src_cal = source.calendar
+        else:  # DataArray
+            src_cal = source.dt.calendar
+
+    tgt_cal = calendar if use_cftime else "default"
+    if src_cal == tgt_cal:
+        return source
+
+    date_type = get_date_type(calendar, use_cftime)
+
+    def _convert_or_go_back(date):
+        try:
+            return date_type(
+                date.year,
+                date.month,
+                date.day,
+                date.hour,
+                date.minute,
+                date.second,
+                date.microsecond,
+            )
+        except ValueError:
+            # Day is invalid, happens at the end of months, try again the day before
+            try:
+                return date_type(
+                    date.year,
+                    date.month,
+                    date.day - 1,
+                    date.hour,
+                    date.minute,
+                    date.second,
+                    date.microsecond,
+                )
+            except ValueError:
+                # Still invalid, happens for 360_day to non-leap february. Try again 2 days befordate.
+                return date_type(
+                    date.year,
+                    date.month,
+                    date.day - 2,
+                    date.hour,
+                    date.minute,
+                    date.second,
+                    date.microsecond,
+                )
+
+    start = _convert_or_go_back(src_start)
+    end = _convert_or_go_back(src_end)
+
+    # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
+    if src_end.day == src_end.daysinmonth and isinstance(
+        to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
+    ):
+        end = end.replace(day=end.daysinmonth)
+
+    return date_range(
+        start=start.isoformat(),
+        end=end.isoformat(),
+        freq=freq,
         calendar=calendar,
     )

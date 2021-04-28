@@ -115,6 +115,10 @@ class TestDatetimeAccessor:
         actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
 
+    def test_calendar(self):
+        cal = self.data.time.dt.calendar
+        assert cal == "proleptic_gregorian"
+
     def test_strftime(self):
         assert (
             "2000-01-01 01:00:00" == self.data.time.dt.strftime("%Y-%m-%d %H:%M:%S")[1]
@@ -423,6 +427,12 @@ def test_field_access(data, field):
     )
 
     assert_equal(result, expected)
+
+
+@requires_cftime
+def test_calendar_cftime(data):
+    expected = data.time.values[0].calendar
+    assert data.time.dt.calendar == expected
 
 
 @requires_cftime
