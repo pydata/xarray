@@ -3012,15 +3012,12 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     @pytest.mark.parametrize("join", ["outer", "inner", "left", "right"])
-    def test_open_mfdataset_does_same_as_concat(self, combine, opt, join):
+    def test_open_mfdataset_does_same_as_concat(self, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            if combine == "by_coords":
-                files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine=combine, concat_dim="t", join=join
+                files, data_vars=opt, combine="nested", concat_dim="t", join=join
             ) as ds:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
@@ -3066,14 +3063,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 with pytest.raises(xr.MergeError):
                     xr.open_mfdataset(
                         files,
-                        combine="by_coords",
+                        combine="nested",
                         concat_dim="t",
                         combine_attrs=combine_attrs,
                     )
             else:
                 with xr.open_mfdataset(
                     files,
-                    combine="by_coords",
+                    combine="nested",
                     concat_dim="t",
                     combine_attrs=combine_attrs,
                 ) as ds:
@@ -3091,7 +3088,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self):
@@ -3106,18 +3103,15 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds["v1"].test_dataarray_attr == 0
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
-    def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
+    def test_open_mfdataset_exact_join_raises_error(self, opt):
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
-            if combine == "by_coords":
-                files.reverse()
             with pytest.raises(ValueError, match=r"indexes along dimension"):
                 open_mfdataset(
-                    files, data_vars=opt, combine=combine, concat_dim="t", join="exact"
+                    files, data_vars=opt, combine="nested", concat_dim="t", join="exact"
                 )
 
     def test_common_coord_when_datavars_all(self):
