@@ -885,12 +885,16 @@ def open_mfdataset(
         # encoding the originally-supplied structure as "ids".
         # The "ids" are not used at all if combine='by_coords`.
         combined_ids_paths = _infer_concat_order_from_positions(paths)
-        ids, paths = (list(combined_ids_paths.keys()),
-                      list(combined_ids_paths.values()))
+        ids, paths = (
+            list(combined_ids_paths.keys()),
+            list(combined_ids_paths.values()),
+        )
 
     elif combine == "by_coords" and concat_dim is not None:
-        raise ValueError("`concat_dim` can only be used with combine='nested',"
-                         " not with combine='by_coords'")
+        raise ValueError(
+            "`concat_dim` can only be used with combine='nested',"
+            " not with combine='by_coords'"
+        )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
