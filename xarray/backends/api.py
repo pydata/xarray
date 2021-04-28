@@ -212,7 +212,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 
 def _finalize_store(write, store):
-    """ Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
 
@@ -1365,6 +1365,7 @@ def to_zarr(
     consolidated: bool = False,
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
+    safe_chunks: bool = True,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1419,6 +1420,7 @@ def to_zarr(
             consolidated=consolidated,
             region=region,
             encoding=encoding,
+            # do we need to pass safe_chunks through here?
         )
 
     zstore = backends.ZarrStore.open_group(
@@ -1430,6 +1432,7 @@ def to_zarr(
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
+        safe_chunks=safe_chunks,
     )
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims

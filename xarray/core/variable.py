@@ -660,7 +660,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return dims, BasicIndexer(key), None
 
     def _validate_indexers(self, key):
-        """ Make sanity checks """
+        """Make sanity checks"""
         for dim, k in zip(self.dims, key):
             if isinstance(k, BASIC_INDEXING_TYPES):
                 pass
@@ -715,7 +715,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return dims, OuterIndexer(tuple(new_key)), None
 
     def _nonzero(self):
-        """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
+        """Equivalent numpy's nonzero but returns a tuple of Varibles."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
@@ -1668,6 +1668,21 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
+
+    def clip(self, min=None, max=None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
         self,

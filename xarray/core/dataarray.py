@@ -496,7 +496,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -2515,7 +2515,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2539,7 +2540,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -4418,7 +4420,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Parameters
         ----------
-        coords : DataArray, str or sequence of DataArray, str
+        coords : hashable, DataArray, or sequence of DataArray or hashable
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
             functions, supply `coords` as a sequence in the same order as arguments in
@@ -4429,27 +4431,27 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : str or sequence of str
+        reduce_dims : hashable or sequence of hashable
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        p0 : dictionary, optional
+        p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dictionary, optional
+        bounds : dict-like, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : seq, optional
+        param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        kwargs : dictionary
+        **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
