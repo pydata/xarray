@@ -5,6 +5,9 @@ from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 
+cftime = pytest.importorskip("cftime")
+
+
 # Maximum day of year in each calendar.
 max_doy = {
     "default": 366,
