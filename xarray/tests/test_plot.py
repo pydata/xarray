@@ -2,7 +2,7 @@ import contextlib
 import inspect
 from copy import copy
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -1110,7 +1110,7 @@ class Common2dMixin:
     """
 
     # Needs to be overridden in TestSurface for facet grid plots
-    subplot_kws: Dict[Any, Any] = {}
+    subplot_kws: Union[Dict[Any, Any], None] = None
 
     @pytest.fixture(autouse=True)
     def setUp(self):
