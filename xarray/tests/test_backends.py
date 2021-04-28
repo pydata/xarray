@@ -3401,6 +3401,16 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
+    def test_open_mfdataset_raise_on_bad_combine_args(self):
+        # Regression test for unhelpful error shown in #5230
+        original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with pytest.raises(ValueError, match="`concat_dim` can only"):
+                    open_mfdataset([tmp1, tmp2], concat_dim="x")
+
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self):
         original = Dataset(
