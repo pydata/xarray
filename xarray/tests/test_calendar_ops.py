@@ -5,6 +5,8 @@ from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
 
+from . import requires_cftime_1_1_0
+
 cftime = pytest.importorskip("cftime")
 
 
@@ -91,6 +93,7 @@ def test_convert_calendar_360_days(source, target, freq, align_on):
         assert conv.size == 359 if freq == "D" else 359 * 4
 
 
+@requires_cftime_1_1_0
 @pytest.mark.parametrize(
     "source,target,freq",
     [
