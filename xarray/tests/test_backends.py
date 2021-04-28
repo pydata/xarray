@@ -3012,12 +3012,17 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     @pytest.mark.parametrize("join", ["outer", "inner", "left", "right"])
-    def test_open_mfdataset_does_same_as_concat(self, opt, join):
+    def test_open_mfdataset_does_same_as_concat(self, combine, concat_dim, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            if combine == "by_coords":
+                files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine="nested", concat_dim="t", join=join
+                files, data_vars=opt, combine=combine, concat_dim=concat_dim, join=join
             ) as ds:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
@@ -3106,12 +3111,19 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
             with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds["v1"].test_dataarray_attr == 0
 
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
-    def test_open_mfdataset_exact_join_raises_error(self, opt):
+    def test_open_mfdataset_exact_join_raises_error(self, combine, concat_dim, opt):
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
             with pytest.raises(ValueError, match=r"indexes along dimension"):
                 open_mfdataset(
-                    files, data_vars=opt, combine="nested", concat_dim="t", join="exact"
+                    files,
+                    data_vars=opt,
+                    combine=combine,
+                    concat_dim=concat_dim,
+                    join="exact",
                 )
 
     def test_common_coord_when_datavars_all(self):

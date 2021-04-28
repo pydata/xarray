@@ -631,8 +631,7 @@ def combine_by_coords(
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
     join : {"outer", "inner", "left", "right", "exact"}, optional
-        String indicating how to combine differing indexes
-        (excluding concat_dim) in objects
+        String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes
