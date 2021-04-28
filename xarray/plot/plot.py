@@ -637,7 +637,7 @@ def _plot2d(plotfunc):
             if plotfunc.__name__ == "contour" or (
                 plotfunc.__name__ == "surface" and cmap is None
             ):
-                add_colorbar  = False
+                add_colorbar = False
         imshow_rgb = plotfunc.__name__ == "imshow" and darray.ndim == (
             3 + (row is not None) + (col is not None)
         )
