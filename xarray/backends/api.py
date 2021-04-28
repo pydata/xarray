@@ -738,7 +738,7 @@ def open_mfdataset(
         see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
-        if ``combine='by_coords'``, and if any of the dimensions along which you want to
+        if ``combine='nested'``, and if any of the dimensions along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you want to
         stack a collection of 2D arrays along a third dimension. Set
         ``concat_dim=[..., None, ...]`` explicitly to disable concatenation along a
@@ -885,6 +885,10 @@ def open_mfdataset(
             concat_dim = [concat_dim]
     combined_ids_paths = _infer_concat_order_from_positions(paths)
     ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
+
+    if combine == "by_coords" and concat_dim is not None:
+        raise ValueError("Passing a value for `concat_dim` can only be used "
+                         "with combine='nested', not combine='by_coords'")
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
