@@ -820,7 +820,7 @@ class TestCombineAuto:
         )
 
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match="combine_attrs"):
                 combine_by_coords([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = combine_by_coords([data1, data2], combine_attrs=combine_attrs)
@@ -884,7 +884,7 @@ class TestCombineAuto:
         )
 
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match="combine_attrs"):
                 combine_by_coords([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = combine_by_coords([data1, data2], combine_attrs=combine_attrs)
