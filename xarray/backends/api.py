@@ -307,7 +307,7 @@ def _dataset_from_backend_dataset(
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
         raise ValueError(
-            "chunks must be an int, dict, 'auto', or None. " f"Instead found {chunks}."
+            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
