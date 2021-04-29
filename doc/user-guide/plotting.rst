@@ -417,7 +417,7 @@ produce plots with nonuniform coordinates.
 
 There are several other options for plotting 2D data.
 
-Contour plot using `DataArray.plot.contour()`
+Contour plot using :py:meth:`DataArray.plot.contour()`
 
 .. ipython:: python
     :okwarning:
@@ -425,7 +425,7 @@ Contour plot using `DataArray.plot.contour()`
     @savefig plotting_contour.png width=4in
     air2d.plot.contour()
 
-Filled contour plot using `DataArray.plot.contourf()`
+Filled contour plot using :py:meth:`DataArray.plot.contourf()`
 
 .. ipython:: python
     :okwarning:
@@ -433,12 +433,12 @@ Filled contour plot using `DataArray.plot.contourf()`
     @savefig plotting_contourf.png width=4in
     air2d.plot.contourf()
 
-Surface plot using `DataArray.plot.surface()`
+Surface plot using :py:meth:`DataArray.plot.surface()`
 
 .. ipython:: python
     :okwarning:
 
-    @savefig plotting_contourf.png width=4in
+    @savefig plotting_surface.png width=4in
     air2d.plot.surface()
 
 ====================
