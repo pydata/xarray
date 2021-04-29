@@ -592,6 +592,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return f"{type(self).__name__}(array={self.array!r}, key={self.key!r})"
 
 
+# keep an alias to the old name for external backends pydata/xarray#5111
+LazilyOuterIndexedArray = LazilyIndexedArray
+
+
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make vectorized indexing lazy."""
 
@@ -1099,7 +1103,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(indexer, shape):
-    """ Return an identical vindex but slices are replaced by arrays """
+    """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
     if len(slices) == 0:
         return indexer

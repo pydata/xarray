@@ -12,7 +12,6 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
-    raises_regex,
     requires_dask,
 )
 from .test_dataset import create_test_data
@@ -41,9 +40,11 @@ def test_concat_compat():
 
     for var in ["has_x", "no_x_y"]:
         assert "y" not in result[var].dims and "y" not in result[var].coords
-    with raises_regex(ValueError, "coordinates in some datasets but not others"):
+    with pytest.raises(
+        ValueError, match=r"coordinates in some datasets but not others"
+    ):
         concat([ds1, ds2], dim="q")
-    with raises_regex(ValueError, "'q' is not present in all datasets"):
+    with pytest.raises(ValueError, match=r"'q' is not present in all datasets"):
         concat([ds2, ds1], dim="q")
 
 
@@ -141,7 +142,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with raises_regex(merge.MergeError, "conflicting values"):
+            with pytest.raises(merge.MergeError, match="conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -152,7 +153,7 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with raises_regex(merge.MergeError, "conflicting values"):
+        with pytest.raises(merge.MergeError, match="conflicting values"):
             # previously dim="y", and raised error which makes no sense.
             # "foo" has dimension "y" so minimal should concatenate it?
             concat([ds1, ds2], "new_dim", data_vars="minimal")
@@ -185,36 +186,40 @@ class TestConcatDataset:
         data = create_test_data()
         split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
 
-        with raises_regex(ValueError, "must supply at least one"):
+        with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with raises_regex(ValueError, "Cannot specify both .*='different'"):
+        with pytest.raises(ValueError, match=r"Cannot specify both .*='different'"):
             concat(
                 [data, data], dim="concat_dim", data_vars="different", compat="override"
             )
 
-        with raises_regex(ValueError, "must supply at least one"):
+        with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with raises_regex(ValueError, "are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
-        with raises_regex(ValueError, "global attributes not"):
+        with pytest.raises(ValueError, match=r"global attributes not"):
             data0, data1 = deepcopy(split_data)
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
-        with raises_regex(ValueError, "compat.* invalid"):
+        with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
 
-        with raises_regex(ValueError, "unexpected value for"):
+        with pytest.raises(ValueError, match=r"unexpected value for"):
             concat([data, data], "new_dim", coords="foobar")
 
-        with raises_regex(ValueError, "coordinate in some datasets but not others"):
+        with pytest.raises(
+            ValueError, match=r"coordinate in some datasets but not others"
+        ):
             concat([Dataset({"x": 0}), Dataset({"x": [1]})], dim="z")
 
-        with raises_regex(ValueError, "coordinate in some datasets but not others"):
+        with pytest.raises(
+            ValueError, match=r"coordinate in some datasets but not others"
+        ):
             concat([Dataset({"x": 0}), Dataset({}, {"x": 1})], dim="z")
 
     def test_concat_join_kwarg(self):
@@ -242,7 +247,7 @@ class TestConcatDataset:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with raises_regex(ValueError, "indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
@@ -528,10 +533,10 @@ class TestConcatDataArray:
         expected = foo[:2].rename({"x": "concat_dim"})
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, "not identical"):
+        with pytest.raises(ValueError, match=r"not identical"):
             concat([foo, bar], dim="w", compat="identical")
 
-        with raises_regex(ValueError, "not a valid argument"):
+        with pytest.raises(ValueError, match=r"not a valid argument"):
             concat([foo, bar], dim="w", data_vars="minimal")
 
     def test_concat_encoding(self):
@@ -609,7 +614,7 @@ class TestConcatDataArray:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with raises_regex(ValueError, "indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
@@ -629,9 +634,9 @@ class TestConcatDataArray:
             [0, 0], coords=[("x", [0, 1])], attrs={"b": 42}
         )
 
-        with raises_regex(ValueError, "combine_attrs='identical'"):
+        with pytest.raises(ValueError, match=r"combine_attrs='identical'"):
             actual = concat([da1, da2], dim="x", combine_attrs="identical")
-        with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+        with pytest.raises(ValueError, match=r"combine_attrs='no_conflicts'"):
             da3 = da2.copy(deep=True)
             da3.attrs["b"] = 44
             actual = concat([da1, da3], dim="x", combine_attrs="no_conflicts")
@@ -684,14 +689,14 @@ def test_concat_merge_single_non_dim_coord():
         actual = concat([da1, da2], "x", coords=coords)
         assert_identical(actual, expected)
 
-    with raises_regex(ValueError, "'y' is not present in all datasets."):
+    with pytest.raises(ValueError, match=r"'y' is not present in all datasets."):
         concat([da1, da2], dim="x", coords="all")
 
     da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
     da2 = DataArray([4, 5, 6], dims="x", coords={"x": [4, 5, 6]})
     da3 = DataArray([7, 8, 9], dims="x", coords={"x": [7, 8, 9], "y": 1})
     for coords in ["different", "all"]:
-        with raises_regex(ValueError, "'y' not present in all datasets"):
+        with pytest.raises(ValueError, match=r"'y' not present in all datasets"):
             concat([da1, da2, da3], dim="x")
 
 

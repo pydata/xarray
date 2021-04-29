@@ -22,13 +22,13 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from . import has_dask, raises_regex, requires_dask
+from . import has_dask, requires_dask
 
 dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
-    """ A version of this function which accepts numpy arrays """
+    """A version of this function which accepts numpy arrays"""
     from xarray.testing import assert_identical as assert_identical_
 
     if hasattr(a, "identical"):
@@ -568,9 +568,9 @@ def test_dataset_join():
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
     # by default, cannot have different labels
-    with raises_regex(ValueError, "indexes .* are not equal"):
+    with pytest.raises(ValueError, match=r"indexes .* are not equal"):
         apply_ufunc(operator.add, ds0, ds1)
-    with raises_regex(TypeError, "must supply"):
+    with pytest.raises(TypeError, match=r"must supply"):
         apply_ufunc(operator.add, ds0, ds1, dataset_join="outer")
 
     def add(a, b, join, dataset_join):
@@ -590,7 +590,7 @@ def test_dataset_join():
     actual = add(ds0, ds1, "outer", "outer")
     assert_identical(actual, expected)
 
-    with raises_regex(ValueError, "data variable names"):
+    with pytest.raises(ValueError, match=r"data variable names"):
         apply_ufunc(operator.add, ds0, xr.Dataset({"b": 1}))
 
     ds2 = xr.Dataset({"b": ("x", [99, 3]), "x": [1, 2]})
@@ -708,11 +708,11 @@ def test_apply_dask_parallelized_errors():
     data_array = xr.DataArray(array, dims=("x", "y"))
 
     # from apply_array_ufunc
-    with raises_regex(ValueError, "at least one input is an xarray object"):
+    with pytest.raises(ValueError, match=r"at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
     # formerly from _apply_blockwise, now from apply_variable_ufunc
-    with raises_regex(ValueError, "consists of multiple chunks"):
+    with pytest.raises(ValueError, match=r"consists of multiple chunks"):
         apply_ufunc(
             identity,
             data_array,
@@ -1160,7 +1160,9 @@ def test_vectorize_dask_new_output_dims():
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
-    with raises_regex(ValueError, "dimension 'z1' in 'output_sizes' must correspond"):
+    with pytest.raises(
+        ValueError, match=r"dimension 'z1' in 'output_sizes' must correspond"
+    ):
         apply_ufunc(
             func,
             data_array.chunk({"x": 1}),
@@ -1171,8 +1173,8 @@ def test_vectorize_dask_new_output_dims():
             dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
-    with raises_regex(
-        ValueError, "dimension 'z' in 'output_core_dims' needs corresponding"
+    with pytest.raises(
+        ValueError, match=r"dimension 'z' in 'output_core_dims' needs corresponding"
     ):
         apply_ufunc(
             func,
@@ -1193,10 +1195,10 @@ def test_output_wrong_number():
     def tuple3x(x):
         return (x, x, x)
 
-    with raises_regex(ValueError, "number of outputs"):
+    with pytest.raises(ValueError, match=r"number of outputs"):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
-    with raises_regex(ValueError, "number of outputs"):
+    with pytest.raises(ValueError, match=r"number of outputs"):
         apply_ufunc(tuple3x, variable, output_core_dims=[(), ()])
 
 
@@ -1209,13 +1211,13 @@ def test_output_wrong_dims():
     def remove_dim(x):
         return x[..., 0]
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(add_dim, variable, output_core_dims=[("y", "z")])
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(add_dim, variable)
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(remove_dim, variable)
 
 
@@ -1231,11 +1233,11 @@ def test_output_wrong_dim_size():
     def apply_truncate_broadcast_invalid(obj):
         return apply_ufunc(truncate, obj)
 
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(variable)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(data_array)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(dataset)
 
     def apply_truncate_x_x_invalid(obj):
@@ -1243,11 +1245,11 @@ def test_output_wrong_dim_size():
             truncate, obj, input_core_dims=[["x"]], output_core_dims=[["x"]]
         )
 
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(variable)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(data_array)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(dataset)
 
     def apply_truncate_x_z(obj):
@@ -1442,7 +1444,7 @@ def test_dot_align_coords(use_dask):
     xr.testing.assert_allclose(expected, actual)
 
     with xr.set_options(arithmetic_join="exact"):
-        with raises_regex(ValueError, "indexes along dimension"):
+        with pytest.raises(ValueError, match=r"indexes along dimension"):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all

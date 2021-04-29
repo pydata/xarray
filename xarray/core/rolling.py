@@ -5,8 +5,8 @@ from typing import Any, Callable, Dict
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
+from .arithmetic import CoarsenArithmetic
 from .dask_array_ops import dask_rolling_wrapper
-from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
 
@@ -111,7 +111,9 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name: str, fillna, rolling_agg_func: Callable = None) -> Callable:  # type: ignore
+    def _reduce_method(  # type: ignore[misc]
+        name: str, fillna, rolling_agg_func: Callable = None
+    ) -> Callable:
         """Constructs reduction methods built on a numpy reduction function (e.g. sum),
         a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
         if rolling_agg_func:
@@ -757,7 +759,7 @@ class DatasetRolling(Rolling):
         )
 
 
-class Coarsen:
+class Coarsen(CoarsenArithmetic):
     """A object that implements the coarsen.
 
     See Also
@@ -974,7 +976,3 @@ class DatasetCoarsen(Coarsen):
         """
         wrapped_func = self._reduce_method(func)
         return wrapped_func(self, **kwargs)
-
-
-inject_reduce_methods(DataArrayCoarsen)
-inject_reduce_methods(DatasetCoarsen)

@@ -381,7 +381,9 @@ def map_blocks(
         # template xarray object has been provided with proper sizes and chunk shapes
         indexes = dict(template.indexes)
         if isinstance(template, DataArray):
-            output_chunks = dict(zip(template.dims, template.chunks))  # type: ignore
+            output_chunks = dict(
+                zip(template.dims, template.chunks)  # type: ignore[arg-type]
+            )
         else:
             output_chunks = dict(template.chunks)
 
@@ -499,8 +501,8 @@ def map_blocks(
         expected["shapes"] = {
             k: output_chunks[k][v] for k, v in chunk_index.items() if k in output_chunks
         }
-        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore
-        expected["coords"] = set(template.coords.keys())  # type: ignore
+        expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
+        expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
         # TODO: benbovy - flexible indexes: clean this up
         # for now assumes pandas index (thus can be indexed) but it won't be the case for
         # all indexes
@@ -579,5 +581,5 @@ def map_blocks(
     if result_is_array:
         da = dataset_to_dataarray(result)
         da.name = template_name
-        return da  # type: ignore
-    return result  # type: ignore
+        return da  # type: ignore[return-value]
+    return result  # type: ignore[return-value]

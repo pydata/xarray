@@ -239,7 +239,7 @@ to access any variable in a dataset, datasets have four key properties:
   used in ``data_vars`` (e.g., arrays of numbers, datetime objects or strings)
 - ``attrs``: :py:class:`dict` to hold arbitrary metadata
 
-The distinction between whether a variables falls in data or coordinates
+The distinction between whether a variable falls in data or coordinates
 (borrowed from `CF conventions`_) is mostly semantic, and you can probably get
 away with ignoring it if you like: dictionary like access on a dataset will
 supply variables found in either category. However, xarray does make use of the

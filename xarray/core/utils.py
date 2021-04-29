@@ -503,7 +503,7 @@ class SortedKeysDict(MutableMapping[K, V]):
 
     def __iter__(self) -> Iterator[K]:
         # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore
+        return iter(sorted(self.mapping))  # type: ignore[type-var]
 
     def __len__(self) -> int:
         return len(self.mapping)
@@ -692,10 +692,6 @@ def hashable(v: Any) -> bool:
     except TypeError:
         return False
     return True
-
-
-def not_implemented(*args, **kwargs):
-    return NotImplemented
 
 
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:

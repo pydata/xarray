@@ -1,4 +1,5 @@
 from datetime import datetime
+from distutils.version import LooseVersion
 from itertools import product
 
 import numpy as np
@@ -15,7 +16,7 @@ from xarray.core.combine import (
     _new_tile_id,
 )
 
-from . import assert_equal, assert_identical, raises_regex, requires_cftime
+from . import assert_equal, assert_identical, requires_cftime
 from .test_dataset import create_test_data
 
 
@@ -161,15 +162,15 @@ class TestTileIDsFromCoords:
     def test_no_dimension_coords(self):
         ds0 = Dataset({"foo": ("x", [0, 1])})
         ds1 = Dataset({"foo": ("x", [2, 3])})
-        with raises_regex(ValueError, "Could not find any dimension"):
+        with pytest.raises(ValueError, match=r"Could not find any dimension"):
             _infer_concat_order_from_coords([ds1, ds0])
 
     def test_coord_not_monotonic(self):
         ds0 = Dataset({"x": [0, 1]})
         ds1 = Dataset({"x": [3, 2]})
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "Coordinate variable x is neither monotonically increasing nor",
+            match=r"Coordinate variable x is neither monotonically increasing nor",
         ):
             _infer_concat_order_from_coords([ds1, ds0])
 
@@ -319,13 +320,17 @@ class TestCheckShapeTileIDs:
     def test_check_depths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
-        with raises_regex(ValueError, "sub-lists do not have consistent depths"):
+        with pytest.raises(
+            ValueError, match=r"sub-lists do not have consistent depths"
+        ):
             _check_shape_tile_ids(combined_tile_ids)
 
     def test_check_lengths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0, 0): ds, (0, 1): ds, (0, 2): ds, (1, 0): ds, (1, 1): ds}
-        with raises_regex(ValueError, "sub-lists do not have consistent lengths"):
+        with pytest.raises(
+            ValueError, match=r"sub-lists do not have consistent lengths"
+        ):
             _check_shape_tile_ids(combined_tile_ids)
 
 
@@ -379,7 +384,7 @@ class TestNestedCombine:
 
     def test_combine_nested_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with raises_regex(ValueError, "indexes along dimension"):
+        with pytest.raises(ValueError, match=r"indexes along dimension"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     def test_empty_input(self):
@@ -528,7 +533,7 @@ class TestNestedCombine:
         datasets[1][1].attrs = {"a": 1, "e": 5}
         datasets[1][2].attrs = {"a": 1, "f": 6}
 
-        with raises_regex(ValueError, "combine_attrs='identical'"):
+        with pytest.raises(ValueError, match=r"combine_attrs='identical'"):
             result = combine_nested(
                 datasets, concat_dim=["dim1", "dim2"], combine_attrs="identical"
             )
@@ -556,15 +561,19 @@ class TestNestedCombine:
         ds = create_test_data
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
-        with raises_regex(ValueError, "sub-lists do not have consistent lengths"):
+        with pytest.raises(
+            ValueError, match=r"sub-lists do not have consistent lengths"
+        ):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
-        with raises_regex(ValueError, "sub-lists do not have consistent depths"):
+        with pytest.raises(
+            ValueError, match=r"sub-lists do not have consistent depths"
+        ):
             combine_nested(datasets, concat_dim=["dim1", "dim2"])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
-        with raises_regex(ValueError, "concat_dims has length"):
+        with pytest.raises(ValueError, match=r"concat_dims has length"):
             combine_nested(datasets, concat_dim=["dim1"])
 
     def test_merge_one_dim_concat_another(self):
@@ -657,11 +666,13 @@ class TestCombineAuto:
         assert_equal(actual, expected)
 
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
-        with raises_regex(ValueError, "Could not find any dimension coordinates"):
+        with pytest.raises(
+            ValueError, match=r"Could not find any dimension coordinates"
+        ):
             combine_by_coords(objs)
 
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [0]})]
-        with raises_regex(ValueError, "Every dimension needs a coordinate"):
+        with pytest.raises(ValueError, match=r"Every dimension needs a coordinate"):
             combine_by_coords(objs)
 
         def test_empty_input(self):
@@ -683,7 +694,7 @@ class TestCombineAuto:
 
     def test_combine_coords_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with raises_regex(ValueError, "indexes along dimension"):
+        with pytest.raises(ValueError, match=r"indexes along dimension"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     @pytest.mark.parametrize(
@@ -709,7 +720,7 @@ class TestCombineAuto:
 
         if combine_attrs == "no_conflicts":
             objs[1].attrs["a"] = 2
-            with raises_regex(ValueError, "combine_attrs='no_conflicts'"):
+            with pytest.raises(ValueError, match=r"combine_attrs='no_conflicts'"):
                 actual = combine_nested(
                     objs, concat_dim="x", join="outer", combine_attrs=combine_attrs
                 )
@@ -727,7 +738,7 @@ class TestCombineAuto:
 
         objs[1].attrs["b"] = 2
 
-        with raises_regex(ValueError, "combine_attrs='identical'"):
+        with pytest.raises(ValueError, match=r"combine_attrs='identical'"):
             actual = combine_nested(
                 objs, concat_dim="x", join="outer", combine_attrs="identical"
             )
@@ -808,8 +819,9 @@ class TestCombineAuto:
     def test_check_for_impossible_ordering(self):
         ds0 = Dataset({"x": [0, 1, 5]})
         ds1 = Dataset({"x": [2, 3]})
-        with raises_regex(
-            ValueError, "does not have monotonic global indexes along dimension x"
+        with pytest.raises(
+            ValueError,
+            match=r"does not have monotonic global indexes along dimension x",
         ):
             combine_by_coords([ds1, ds0])
 
@@ -865,5 +877,22 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    with raises_regex(TypeError, r"cannot compare .* \(different calendars\)"):
+    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
+        error_msg = "Cannot combine along dimension 'time' with mixed types."
+    else:
+        error_msg = r"cannot compare .* \(different calendars\)"
+
+    with pytest.raises(TypeError, match=error_msg):
+        combine_by_coords([da_1, da_2])
+
+
+def test_combine_by_coords_raises_for_differing_types():
+
+    # str and byte cannot be compared
+    da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
+    da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()
+
+    with pytest.raises(
+        TypeError, match=r"Cannot combine along dimension 'time' with mixed types."
+    ):
         combine_by_coords([da_1, da_2])

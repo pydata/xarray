@@ -179,6 +179,7 @@ Computation
    Dataset.integrate
    Dataset.map_blocks
    Dataset.polyfit
+   Dataset.curvefit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -375,7 +376,7 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.map_blocks
-
+   DataArray.curvefit
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -421,14 +422,14 @@ String manipulation
 
 .. autosummary::
    :toctree: generated/
+   :template: autosummary/accessor.rst
+
+   DataArray.str
+
+.. autosummary::
+   :toctree: generated/
    :template: autosummary/accessor_method.rst
 
-   DataArray.str._apply
-   DataArray.str._padder
-   DataArray.str._partitioner
-   DataArray.str._re_compile
-   DataArray.str._splitter
-   DataArray.str._stringify
    DataArray.str.capitalize
    DataArray.str.casefold
    DataArray.str.cat
@@ -860,6 +861,7 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
+   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -895,6 +897,9 @@ Advanced API
    as_variable
    register_dataset_accessor
    register_dataarray_accessor
+   Dataset.set_close
+   backends.BackendArray
+   backends.BackendEntrypoint
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
