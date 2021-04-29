@@ -173,7 +173,7 @@ def char_to_bytes(arr):
 
     if len(arr.chunks[-1]) > 1:
         raise ValueError(
-            "cannot stacked dask character array with "
+            "cannot stack dask character array with "
             "multiple chunks in the last dimension: {}".format(arr)
         )
 

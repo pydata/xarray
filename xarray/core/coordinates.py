@@ -382,10 +382,8 @@ def assert_coordinate_consistent(
         # make sure there are no conflict in dimension coordinates
         if k in coords and k in obj.coords and not coords[k].equals(obj[k].variable):
             raise IndexError(
-                "dimension coordinate {!r} conflicts between "
-                "indexed and indexing objects:\n{}\nvs.\n{}".format(
-                    k, obj[k], coords[k]
-                )
+                f"dimension coordinate {k!r} conflicts between "
+                f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
             )
 
 

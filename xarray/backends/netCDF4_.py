@@ -279,7 +279,8 @@ def _extract_nc4_variable_encoding(
 
 
 def _is_list_of_strings(value):
-    return np.asarray(value).dtype.kind in ["U", "S"] and np.asarray(value).size > 1
+    arr = np.asarray(value)
+    return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
 
 class NetCDF4DataStore(WritableCFDataStore):

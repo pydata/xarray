@@ -73,7 +73,7 @@ def sort_backends(backend_entrypoints):
     ordered_backends_entrypoints = {
         be_name: backend_entrypoints.pop(be_name)
         for be_name in STANDARD_BACKENDS_ORDER
-        if backend_entrypoints.get(be_name, None) is not None
+        if be_name in backend_entrypoints
     }
 
     ordered_backends_entrypoints.update(

@@ -280,10 +280,10 @@ def either_dict_or_kwargs(
         return cast(Mapping[Hashable, T], kw_kwargs)
 
     if not is_dict_like(pos_kwargs):
-        raise ValueError("the first argument to .%s must be a dictionary" % func_name)
+        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
     if kw_kwargs:
         raise ValueError(
-            "cannot specify both keyword and positional " "arguments to .%s" % func_name
+            f"cannot specify both keyword and positional arguments to .{func_name}"
         )
     return pos_kwargs
 

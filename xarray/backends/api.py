@@ -305,10 +305,10 @@ def _dataset_from_backend_dataset(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if not isinstance(chunks, (int, dict)) and chunks is not None and chunks != "auto":
+    if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
         raise ValueError(
             "chunks must be an int, dict, 'auto', or None. "
-            "Instead found %s. " % chunks
+            f"Instead found {chunks}." 
         )
 
     _protect_dataset_variables_inplace(backend_ds, cache)

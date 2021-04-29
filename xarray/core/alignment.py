@@ -339,8 +339,8 @@ def align(
     for dim, sizes in unlabeled_dim_sizes.items():
         if dim not in all_indexes and len(sizes) > 1:
             raise ValueError(
-                "arguments without labels along dimension %r cannot be "
-                "aligned because they have different dimension sizes: %r" % (dim, sizes)
+                f"arguments without labels along dimension {dim!r} cannot be "
+                f"aligned because they have different dimension sizes: {sizes!r}"
             )
 
     result = []
