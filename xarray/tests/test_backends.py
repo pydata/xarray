@@ -3117,6 +3117,8 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     def test_open_mfdataset_exact_join_raises_error(self, combine, concat_dim, opt):
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
+            if combine == "by_coords":
+                files.reverse()
             with pytest.raises(ValueError, match=r"indexes along dimension"):
                 open_mfdataset(
                     files,
