@@ -187,7 +187,7 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
 
-    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -440,11 +440,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # TODO: make this function dask-compatible?
     # Set offset to minimum if not given
     if offset is None:
-        if array.dtype.kind in "Mm":
-            offset = _datetime_nanmin(array)
-        else:
-            offset = min(array)
-
+        offset = _datetime_nanmin(array) if array.dtype.kind in "Mm" else min(array)
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
     # One option is to enforce 1970-01-01 as the universal offset.

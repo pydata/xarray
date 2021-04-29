@@ -73,8 +73,7 @@ def moveaxis(a, source, destination):
     for dest, src in sorted(zip(destination, source)):
         order.insert(dest, src)
 
-    result = transpose(order)
-    return result
+    return transpose(order)
 
 
 # Type annotations stubs

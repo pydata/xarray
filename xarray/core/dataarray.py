@@ -537,8 +537,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
-        return dataset
+        return Dataset._construct_direct(variables, coord_names, indexes=indexes)
 
     def to_dataset(
         self,
@@ -667,9 +666,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def _item_key_to_dict(self, key: Any) -> Mapping[Hashable, Any]:
         if utils.is_dict_like(key):
             return key
-        else:
-            key = indexing.expanded_indexer(key, self.ndim)
-            return dict(zip(self.dims, key))
+        key = indexing.expanded_indexer(key, self.ndim)
+        return dict(zip(self.dims, key))
 
     @property
     def _level_coords(self) -> Dict[Hashable, Hashable]:
@@ -807,13 +805,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
             return self._replace(coords=dataset._variables)
-        else:
-            if self.name is None:
-                raise ValueError(
-                    "cannot reset_coords with drop=False on an unnamed DataArrray"
-                )
-            dataset[self.name] = self.variable
-            return dataset
+        if self.name is None:
+            raise ValueError(
+                "cannot reset_coords with drop=False on an unnamed DataArrray"
+            )
+        dataset[self.name] = self.variable
+        return dataset
 
     def __dask_tokenize__(self):
         from dask.base import normalize_token

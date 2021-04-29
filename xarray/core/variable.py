@@ -241,21 +241,14 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray):
-        if hasattr(data, "__array_function__"):
-            return data
+    if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+        return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
 
-    if isinstance(data, np.ndarray):
-        if data.dtype.kind == "O":
-            data = _possibly_convert_objects(data)
-        elif data.dtype.kind == "M":
-            data = _possibly_convert_objects(data)
-        elif data.dtype.kind == "m":
-            data = _possibly_convert_objects(data)
-
+    if isinstance(data, np.ndarray) and data.dtype.kind in ["O", "M", "m"]:
+        data = _possibly_convert_objects(data)
     return _maybe_wrap_data(data)
 
 
@@ -273,10 +266,7 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    if isinstance(data, cupy_array_type):
-        data = data.get()
-    else:
-        data = np.asarray(data)
+    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -662,9 +652,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _validate_indexers(self, key):
         """Make sanity checks"""
         for dim, k in zip(self.dims, key):
-            if isinstance(k, BASIC_INDEXING_TYPES):
-                pass
-            else:
+            if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
                     k = np.asarray(k)
                     if k.ndim > 1:

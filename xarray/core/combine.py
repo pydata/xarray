@@ -11,8 +11,7 @@ from .merge import merge
 
 
 def _infer_concat_order_from_positions(datasets):
-    combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
-    return combined_ids
+    return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
 def _infer_tile_ids_from_nested_list(entry, current_pos):
@@ -140,7 +139,7 @@ def _check_dimension_depth_tile_ids(combined_tile_ids):
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
     if not nesting_depths:
         nesting_depths = [0]
-    if not set(nesting_depths) == {nesting_depths[0]}:
+    if set(nesting_depths) != {nesting_depths[0]}:
         raise ValueError(
             "The supplied objects do not form a hypercube because"
             " sub-lists do not have consistent depths"

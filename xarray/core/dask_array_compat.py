@@ -81,7 +81,7 @@ else:
 
         a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
 
-        result = da.map_blocks(
+        return da.map_blocks(
             np.nanmedian,
             a,
             axis=axis,
@@ -91,8 +91,6 @@ else:
             if keepdims
             else None,
         )
-
-        return result
 
 
 if LooseVersion(dask_version) > LooseVersion("2.30.0"):

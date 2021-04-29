@@ -254,7 +254,7 @@ def is_full_slice(value: Any) -> bool:
 
 
 def is_list_like(value: Any) -> bool:
-    return isinstance(value, list) or isinstance(value, tuple)
+    return isinstance(value, (list, tuple))
 
 
 def is_duck_array(value: Any) -> bool:
@@ -274,21 +274,18 @@ def either_dict_or_kwargs(
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
-    if pos_kwargs is not None:
-        if not is_dict_like(pos_kwargs):
-            raise ValueError(
-                "the first argument to .%s must be a dictionary" % func_name
-            )
-        if kw_kwargs:
-            raise ValueError(
-                "cannot specify both keyword and positional "
-                "arguments to .%s" % func_name
-            )
-        return pos_kwargs
-    else:
+    if pos_kwargs is None:
         # Need an explicit cast to appease mypy due to invariance; see
         # https://github.com/python/mypy/issues/6228
         return cast(Mapping[Hashable, T], kw_kwargs)
+
+    if not is_dict_like(pos_kwargs):
+        raise ValueError("the first argument to .%s must be a dictionary" % func_name)
+    if kw_kwargs:
+        raise ValueError(
+            "cannot specify both keyword and positional " "arguments to .%s" % func_name
+        )
+    return pos_kwargs
 
 
 def is_scalar(value: Any, include_0d: bool = True) -> bool:
@@ -358,10 +355,7 @@ def dict_equiv(
     for k in first:
         if k not in second or not compat(first[k], second[k]):
             return False
-    for k in second:
-        if k not in first:
-            return False
-    return True
+    return all(k in first for k in second)
 
 
 def compat_dict_intersection(
@@ -863,7 +857,7 @@ def drop_missing_dims(
     """
 
     if missing_dims == "raise":
-        supplied_dims_set = set(val for val in supplied_dims if val is not ...)
+        supplied_dims_set = {val for val in supplied_dims if val is not ...}
         invalid = supplied_dims_set - set(dims)
         if invalid:
             raise ValueError(

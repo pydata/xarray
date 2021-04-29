@@ -129,13 +129,13 @@ def unique_variable(
             if equals is not True:
                 break
 
-        if equals is None:
-            # now compare values with minimum number of computes
-            out = out.compute()
-            for var in variables[1:]:
-                equals = getattr(out, compat)(var)
-                if not equals:
-                    break
+    if equals is None:
+        # now compare values with minimum number of computes
+        out = out.compute()
+        for var in variables[1:]:
+            equals = getattr(out, compat)(var)
+            if not equals:
+                break
 
     if not equals:
         raise MergeError(
@@ -633,11 +633,7 @@ def merge_core(
         )
 
     attrs = merge_attrs(
-        [
-            var.attrs
-            for var in coerced
-            if isinstance(var, Dataset) or isinstance(var, DataArray)
-        ],
+        [var.attrs for var in coerced if isinstance(var, (Dataset, DataArray))],
         combine_attrs,
     )
 
@@ -882,8 +878,7 @@ def merge(
         combine_attrs=combine_attrs,
         fill_value=fill_value,
     )
-    merged = Dataset._construct_direct(**merge_result._asdict())
-    return merged
+    return Dataset._construct_direct(**merge_result._asdict())
 
 
 def dataset_merge_method(
