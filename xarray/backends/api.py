@@ -478,7 +478,7 @@ def open_dataset(
     # TODO remove after v0.19
     if kwargs.pop("lock", None):
         warnings.warn(
-            "The kwarg 'lock' has been deprecated, and is now"
+            "The kwarg 'lock' has been deprecated, and is now "
             "ignored. In the future passing lock will "
             "raise an error.",
             DeprecationWarning,
