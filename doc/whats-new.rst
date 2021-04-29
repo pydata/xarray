@@ -25,7 +25,6 @@ New Features
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
-
 - Add ``safe_chunks`` option to :py:meth:`Dataset.to_zarr` which allows overriding
   checks made to ensure Dask and Zarr chunk compatibility (:issue:`5056`).
   By `Ryan Abernathey <https://github.com/rabernat>`_
@@ -112,6 +111,9 @@ Breaking changes
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
   Further, coarsen now keeps attributes per default (:pull:`5227`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- switch the default of :py:func`merge`'s ``combine_attrs`` parameter to ``"override"``
+  (:pull:`4902`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Deprecations
 ~~~~~~~~~~~~
