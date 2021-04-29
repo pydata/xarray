@@ -8,6 +8,8 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 
+from . import requires_netCDF4
+
 
 class TestFormatting:
     def test_get_indexer_at_least_n_items(self):
@@ -470,6 +472,25 @@ def test_large_array_repr_length():
 
     result = repr(da).splitlines()
     assert len(result) < 50
+
+
+@requires_netCDF4
+def test_repr_file_collapsed(tmp_path):
+    arr = xr.DataArray(np.random.randn(100), dims="test")
+    arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
+
+    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
+        display_expand_data=False
+    ):
+        actual = formatting.array_repr(arr)
+        expected = dedent(
+            """\
+        <xarray.DataArray (test: 100)>
+        ...
+        Dimensions without coordinates: test"""
+        )
+
+        assert actual == expected
 
 
 @pytest.mark.parametrize(

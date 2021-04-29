@@ -510,7 +510,7 @@ def array_repr(arr):
     if _get_boolean_with_default("display_expand_data", default=True):
         data_repr = short_data_repr(arr)
     else:
-        data_repr = inline_variable_array_repr(arr, OPTIONS["display_width"])
+        data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
     summary = [
         "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
