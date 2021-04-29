@@ -412,6 +412,36 @@ produce plots with nonuniform coordinates.
     b.plot()
 
 ====================
+ Other types of plot
+====================
+
+There are several other options for plotting 2D data.
+
+Contour plot using `DataArray.plot.contour()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_contour.png width=4in
+    air2d.plot.contour()
+
+Filled contour plot using `DataArray.plot.contourf()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_contourf.png width=4in
+    air2d.plot.contourf()
+
+Surface plot using `DataArray.plot.surface()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_contourf.png width=4in
+    air2d.plot.surface()
+
+====================
  Calling Matplotlib
 ====================
 
