@@ -208,7 +208,7 @@ class ScipyDataStore(WritableCFDataStore):
             and variable.encoding != {"_FillValue": None}
         ):
             raise ValueError(
-                f"unexpected encoding for scipy backend: {list(variable.encoding)}" 
+                f"unexpected encoding for scipy backend: {list(variable.encoding)}"
             )
 
         data = variable.data
