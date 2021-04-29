@@ -108,6 +108,11 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- The `lock` keyword argument to :py:func:`open_dataset` and :py:func:`open_dataarray` has now
+  been deprecated, and will give a warning if passed. From the next version it will
+  raise an error. This is part of the refactor to support external backends (:issue:`5073`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
