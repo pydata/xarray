@@ -81,20 +81,20 @@ def _get_date_field(values, name, dtype):
     else:
         access_method = _access_through_cftimeindex
 
-    if not is_duck_dask_array(values):
+    if is_duck_dask_array(values):
+        from dask.array import map_blocks
+
+        new_axis = chunks = None
+        # isocalendar adds adds an axis
+        if name == "isocalendar":
+            chunks = (3,) + values.chunksize
+            new_axis = 0
+
+        return map_blocks(
+            access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
+        )
+    else:
         return access_method(values, name)
-
-    from dask.array import map_blocks
-
-    new_axis = chunks = None
-    # isocalendar adds adds an axis
-    if name == "isocalendar":
-        chunks = (3,) + values.chunksize
-        new_axis = 0
-
-    return map_blocks(
-        access_method, values, name, dtype=dtype, new_axis=new_axis, chunks=chunks
-    )
 
 
 def _round_through_series_or_index(values, name, freq):
@@ -134,15 +134,15 @@ def _round_field(values, name, freq):
         Array-like of datetime fields accessed for each element in values
 
     """
-    if not is_duck_dask_array(values):
+    if is_duck_dask_array(values):
+        from dask.array import map_blocks
+
+        dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
+        return map_blocks(
+            _round_through_series_or_index, values, name, freq=freq, dtype=dtype
+        )
+    else:
         return _round_through_series_or_index(values, name, freq)
-
-    from dask.array import map_blocks
-
-    dtype = np.datetime64 if is_np_datetime_like(values.dtype) else np.dtype("O")
-    return map_blocks(
-        _round_through_series_or_index, values, name, freq=freq, dtype=dtype
-    )
 
 
 def _strftime_through_cftimeindex(values, date_format):
@@ -171,12 +171,12 @@ def _strftime(values, date_format):
         access_method = _strftime_through_series
     else:
         access_method = _strftime_through_cftimeindex
-    if not is_duck_dask_array(values):
+    if is_duck_dask_array(values):
+        from dask.array import map_blocks
+
+        return map_blocks(access_method, values, date_format)
+    else:
         return access_method(values, date_format)
-
-    from dask.array import map_blocks
-
-    return map_blocks(access_method, values, date_format)
 
 
 class Properties:
@@ -345,9 +345,9 @@ class DatetimeAccessor(Properties):
 
         obj_type = type(self._obj)
         data_vars = {}
-        for name, value in zip(values, ["year", "week", "weekday"]):
+        for i, name in enumerate(["year", "week", "weekday"]):
             data_vars[name] = obj_type(
-                values, name=name, coords=self._obj.coords, dims=self._obj.dims
+                values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
             )
 
         return Dataset(data_vars)
@@ -386,11 +386,13 @@ class DatetimeAccessor(Properties):
         )
 
         if LooseVersion(pd.__version__) < "1.1.0":
-            return Properties._tslib_field_accessor(
+            weekofyear = Properties._tslib_field_accessor(
                 "weekofyear", "The week ordinal of the year", np.int64
             ).fget(self)
         else:
-            return self.isocalendar().week
+            weekofyear = self.isocalendar().week
+
+        return weekofyear
 
     week = weekofyear
     dayofweek = Properties._tslib_field_accessor(
