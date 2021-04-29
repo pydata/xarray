@@ -439,7 +439,8 @@ Surface plot using :py:meth:`DataArray.plot.surface()`
     :okwarning:
 
     @savefig plotting_surface.png width=4in
-    air2d.plot.surface()
+    # transpose just to make the example look a bit nicer
+    air2d.T.plot.surface()
 
 ====================
  Calling Matplotlib
