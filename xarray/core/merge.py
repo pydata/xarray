@@ -659,7 +659,7 @@ def merge(
     compat: str = "no_conflicts",
     join: str = "outer",
     fill_value: object = dtypes.NA,
-    combine_attrs: str = "drop",
+    combine_attrs: str = "override",
 ) -> "Dataset":
     """Merge any number of xarray objects into a single Dataset as variables.
 
@@ -698,7 +698,7 @@ def merge(
         variable names to fill values. Use a data array's name to
         refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "drop"
+                     "override"}, default: "override"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
