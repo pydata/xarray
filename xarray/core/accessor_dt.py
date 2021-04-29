@@ -344,12 +344,12 @@ class DatetimeAccessor(Properties):
         values = _get_date_field(self._obj.data, "isocalendar", np.int64)
 
         obj_type = type(self._obj)
-        data_vars = {
-            name: obj_type(
-                values[i], name=name, coords=self._obj.coords, dims=self._obj.dims
+        data_vars = {}
+        for name, value in zip(values, ["year", "week", "weekday"]):
+            data_vars[name] = obj_type(
+                values, name=name, coords=self._obj.coords, dims=self._obj.dims
             )
-            for i, name in enumerate(["year", "week", "weekday"])
-        }
+
         return Dataset(data_vars)
 
     year = Properties._tslib_field_accessor(

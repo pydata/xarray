@@ -159,7 +159,10 @@ def _netcdf4_create_group(dataset, name):
 
 
 def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
-    if group not in {None, "", "/"}:
+    if group in {None, "", "/"}:
+        # use the root group
+        return ds
+    else:
         # make sure it's a string
         if not isinstance(group, str):
             raise ValueError("group must be a string or None")
@@ -174,9 +177,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                 else:
                     # wrap error to provide slightly more helpful message
                     raise OSError(f"group not found: {key}", e)
-
-    # use the root group
-    return ds
+        return ds
 
 
 def _ensure_fill_value_valid(data, attributes):
