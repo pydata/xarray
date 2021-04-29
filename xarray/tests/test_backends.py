@@ -50,7 +50,6 @@ from . import (
     has_netCDF4,
     has_scipy,
     network,
-    raises_regex,
     requires_cfgrib,
     requires_cftime,
     requires_dask,
@@ -779,7 +778,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_ondisk_after_print(self):
-        """ Make sure print does not load file into memory """
+        """Make sure print does not load file into memory"""
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             repr(on_disk)
@@ -1170,8 +1169,8 @@ class CFEncodedBase(DatasetIOBase):
             self.save(data, tmp_file, mode="w")
             data["var9"] = data["var2"] * 3
             data = data.isel(dim1=slice(2, 6))  # modify one dimension
-            with raises_regex(
-                ValueError, "Unable to update size for existing dimension"
+            with pytest.raises(
+                ValueError, match=r"Unable to update size for existing dimension"
             ):
                 self.save(data, tmp_file, mode="a")
 
@@ -1872,14 +1871,21 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(badenc) as actual:
                 pass
 
+        # unless...
+        with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
+
         badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(ValueError, match=r"Specified Zarr chunk encoding"):
+        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
             with self.roundtrip(badenc) as actual:
                 pass
 
         badenc = badenc.chunk({"x": (3, 3, 6)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(ValueError, match=r"incompatible with this encoding"):
+        with pytest.raises(
+            NotImplementedError, match=r"incompatible with this encoding"
+        ):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -1902,9 +1908,13 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
+        # override option
+        with self.roundtrip(ds_chunk4, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
@@ -2216,8 +2226,8 @@ class ZarrBase(CFEncodedBase):
                 data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "cannot set region unless mode='a' or mode=None"
+            with pytest.raises(
+                ValueError, match=r"cannot set region unless mode='a' or mode=None"
             ):
                 data.to_zarr(store, region={"x": slice(None)}, mode="w")
 
@@ -2234,15 +2244,16 @@ class ZarrBase(CFEncodedBase):
                 data2.to_zarr(store, region={"x": slice(None, None, 2)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "all keys in ``region`` are not in Dataset dimensions"
+            with pytest.raises(
+                ValueError,
+                match=r"all keys in ``region`` are not in Dataset dimensions",
             ):
                 data.to_zarr(store, region={"y": slice(None)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(
+            with pytest.raises(
                 ValueError,
-                "all variables in the dataset to write must have at least one dimension in common",
+                match=r"all variables in the dataset to write must have at least one dimension in common",
             ):
                 data2.assign(v=2).to_zarr(store, region={"x": slice(2)})
 
@@ -2253,8 +2264,9 @@ class ZarrBase(CFEncodedBase):
                 data.to_zarr(store, region={"x": slice(None)}, append_dim="x")
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "variable 'u' already exists with different dimension sizes"
+            with pytest.raises(
+                ValueError,
+                match=r"variable 'u' already exists with different dimension sizes",
             ):
                 data2.to_zarr(store, region={"x": slice(3)})
 
@@ -2651,8 +2663,8 @@ class TestH5NetCDFData(NetCDF4Base):
 
         # Incompatible encodings cause a crash
         with create_tmp_file() as tmp_file:
-            with raises_regex(
-                ValueError, "'zlib' and 'compression' encodings mismatch"
+            with pytest.raises(
+                ValueError, match=r"'zlib' and 'compression' encodings mismatch"
             ):
                 data.to_netcdf(
                     tmp_file,
@@ -2661,8 +2673,9 @@ class TestH5NetCDFData(NetCDF4Base):
                 )
 
         with create_tmp_file() as tmp_file:
-            with raises_regex(
-                ValueError, "'complevel' and 'compression_opts' encodings mismatch"
+            with pytest.raises(
+                ValueError,
+                match=r"'complevel' and 'compression_opts' encodings mismatch",
             ):
                 data.to_netcdf(
                     tmp_file,
@@ -2795,12 +2808,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         assert_identical(expected, actual)
 
                 f.seek(0)
-                # Seems to fail with pytest.raises
-                with raises_regex(TypeError, "not a valid NetCDF 3"):
+                with pytest.raises(TypeError, match="not a valid NetCDF 3"):
                     open_dataset(f, engine="scipy")
 
+            # TOOD: this additional open is required since scipy seems to close the file
+            # when it fails on the TypeError (though didn't when we used
+            # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
+            with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with raises_regex(ValueError, "cannot guess the engine"):
+                with pytest.raises(ValueError, match="cannot guess the engine"):
                     open_dataset(f)
 
 

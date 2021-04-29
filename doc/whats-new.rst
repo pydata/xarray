@@ -25,6 +25,10 @@ New Features
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
+
+- Add ``safe_chunks`` option to :py:meth:`Dataset.to_zarr` which allows overriding
+  checks made to ensure Dask and Zarr chunk compatibility (:issue:`5056`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
   of datasets and data arrays by evaluating query expressions against the values of the
   data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
@@ -66,16 +70,31 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Switch the tutorial functions to use `pooch <https://github.com/fatiando/pooch>`_
+  (which is now a optional dependency) and add :py:func:`tutorial.open_rasterio` as a
+  way to open example rasterio files (:issue:`3986`, :pull:`4102`, :pull:`5074`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Add typing information to unary and binary arithmetic operators operating on
   :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
   :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
   :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
-  By `Richard Kleijn <https://github.com/rhkleijn>`_ .
+  By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Enable passing arrays with a subset of dimensions to
+  :py:meth:`DataArray.clip` & :py:meth:`Dataset.clip`; these methods now use
+  :py:func:`xarray.apply_ufunc`; (:pull:`5184`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
 - Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Add options to control expand/collapse of sections in display of Dataset and
+  DataArray. The function :py:func:`set_options` now takes keyword aguments
+  ``display_expand_attrs``, ``display_expand_coords``, ``display_expand_data``,
+  ``display_expand_data_vars``, all of which can be one of ``True`` to always
+  expand, ``False`` to always collapse, or ``default`` to expand unless over a
+  pre-defined limit (:pull:`5126`).
+  By `Tom White <https://github.com/tomwhite>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -83,12 +102,26 @@ Breaking changes
   as positional, all others need to be passed are keyword arguments. This is part of the
   refactor to support external backends (:issue:`4309`, :pull:`4989`).
   By `Alessandro Amici <https://github.com/alexamici>`_.
+- Functions that are identities for 0d data return the unchanged data
+  if axis is empty. This ensures that Datasets where some variables do
+  not have the averaged dimensions are not accidentially changed
+  (:issue:`4885`, :pull:`5207`).  By `David Schwörer
+  <https://github.com/dschwoerer>`_
+- :py:attr:`DataArray.coarsen` and :py:attr:`Dataset.coarsen` no longer support passing ``keep_attrs``
+  via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
+  ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
+  Further, coarsen now keeps attributes per default (:pull:`5227`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
+  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is
+  2d (:issue:`5097`, :pull:`5099`). By `John Omotani <https://github.com/johnomotani>`_.
 - Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Added support for `numpy.bool_` attributes in roundtrips using `h5netcdf` engine with `invalid_netcdf=True` [which casts `bool`s to `numpy.bool_`] (:issue:`4981`, :pull:`4986`).
   By `Victor Negîrneac <https://github.com/caenrigen>`_.
@@ -96,6 +129,8 @@ Bug fixes
   By `Justus Magin <https://github.com/keewis>`_.
 - Decode values as signed if attribute `_Unsigned = "false"` (:issue:`4954`)
   By `Tobias Kölling <https://github.com/d70-t>`_.
+- Keep coords attributes when interpolating when the indexer is not a Variable. (:issue:`4239`, :issue:`4839` :pull:`5031`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Ensure standard calendar dates encoded with a calendar attribute with some or
   all uppercase letters can be decoded or encoded to or from
   ``np.datetime64[ns]`` dates with or without ``cftime`` installed
@@ -117,9 +152,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Enable displaying mypy error codes and ignore only specific error codes using
   ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
-- Replace most uses of ``raises_regex`` with the more standard
+- Replace uses of ``raises_regex`` with the more standard
   ``pytest.raises(Exception, match="foo")``;
-  (:pull:`5188`).
+  (:pull:`5188`), (:pull:`5191`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 

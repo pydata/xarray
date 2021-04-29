@@ -40,7 +40,6 @@ from . import (
     assert_identical,
     has_cftime,
     has_dask,
-    raises_regex,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
@@ -1025,9 +1024,9 @@ class TestDataset:
 
         with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of "
             r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
         ):
@@ -1194,7 +1193,7 @@ class TestDataset:
         assert_array_equal(actual["var3"], expected_var3)
 
     def test_isel_dataarray(self):
-        """ Test for indexing by DataArray """
+        """Test for indexing by DataArray"""
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(
@@ -1419,9 +1418,9 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"Vectorized selection is "):
             mds.sel(one=["a", "b"])
 
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along MultiIndex variable: x",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -6077,16 +6076,16 @@ def test_dir_unicode(data_set):
 def ds(request):
     if request.param == 1:
         return Dataset(
-            {
-                "z1": (["y", "x"], np.random.randn(2, 8)),
-                "z2": (["time", "y"], np.random.randn(10, 2)),
-            },
-            {
-                "x": ("x", np.linspace(0, 1.0, 8)),
-                "time": ("time", np.linspace(0, 1.0, 10)),
-                "c": ("y", ["a", "b"]),
-                "y": range(2),
-            },
+            dict(
+                z1=(["y", "x"], np.random.randn(2, 8)),
+                z2=(["time", "y"], np.random.randn(10, 2)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 8)),
+                time=("time", np.linspace(0, 1.0, 10)),
+                c=("y", ["a", "b"]),
+                y=range(2),
+            ),
         )
 
     if request.param == 2:
@@ -6160,36 +6159,118 @@ def test_coarsen_coords_cftime():
     np.testing.assert_array_equal(actual.time, expected_times)
 
 
-def test_coarsen_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
+)
+def test_coarsen_keep_attrs(funcname, argument):
+    global_attrs = {"units": "test", "long_name": "testing"}
+    da_attrs = {"da_attr": "test"}
+    attrs_coords = {"attrs_coords": "test"}
+    da_not_coarsend_attrs = {"da_not_coarsend_attr": "test"}
 
-    var1 = np.linspace(10, 15, 100)
-    var2 = np.linspace(5, 10, 100)
+    data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"var1": ("coord", var1), "var2": ("coord", var2)},
-        coords={"coord": coords},
-        attrs=_attrs,
+        data_vars={
+            "da": ("coord", data, da_attrs),
+            "da_not_coarsend": ("no_coord", data, da_not_coarsend_attrs),
+        },
+        coords={"coord": ("coord", coords, attrs_coords)},
+        attrs=global_attrs,
     )
 
-    ds2 = ds.copy(deep=True)
+    # attrs are now kept per default
+    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == global_attrs
+    assert result.da.attrs == da_attrs
+    assert result.da_not_coarsend.attrs == da_not_coarsend_attrs
+    assert result.coord.attrs == attrs_coords
+    assert result.da.name == "da"
+    assert result.da_not_coarsend.name == "da_not_coarsend"
 
-    # Test dropped attrs
-    dat = ds.coarsen(coord=5).mean()
-    assert dat.attrs == {}
+    # discard attrs
+    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_coarsend.attrs == {}
+    assert result.coord.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_coarsend.name == "da_not_coarsend"
 
-    # Test kept attrs using dataset keyword
-    dat = ds.coarsen(coord=5, keep_attrs=True).mean()
-    assert dat.attrs == _attrs
+    # test discard attrs using global option
+    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
 
-    # Test kept attrs using global option
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_coarsend.attrs == {}
+    assert result.coord.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_coarsend.name == "da_not_coarsend"
+
+    # keyword takes precedence over global option
+    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+
+    assert result.attrs == global_attrs
+    assert result.da.attrs == da_attrs
+    assert result.da_not_coarsend.attrs == da_not_coarsend_attrs
+    assert result.coord.attrs == attrs_coords
+    assert result.da.name == "da"
+    assert result.da_not_coarsend.name == "da_not_coarsend"
+
+    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
     with set_options(keep_attrs=True):
-        dat = ds.coarsen(coord=5).mean()
-    assert dat.attrs == _attrs
+        result = func(*argument, keep_attrs=False)
 
-    # Test kept attrs in original object
-    xr.testing.assert_identical(ds, ds2)
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+    assert result.da_not_coarsend.attrs == {}
+    assert result.coord.attrs == {}
+    assert result.da.name == "da"
+    assert result.da_not_coarsend.name == "da_not_coarsend"
+
+
+def test_coarsen_keep_attrs_deprecated():
+    global_attrs = {"units": "test", "long_name": "testing"}
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    ds = Dataset(
+        data_vars={"da": ("coord", data)},
+        coords={"coord": coords},
+        attrs=global_attrs,
+    )
+    ds.da.attrs = attrs_da
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = ds.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = ds.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
+
+    assert result.attrs == {}
+    assert result.da.attrs == {}
 
 
 @pytest.mark.slow
@@ -6853,3 +6934,18 @@ def test_deepcopy_obj_array():
     x0 = Dataset(dict(foo=DataArray(np.array([object()]))))
     x1 = deepcopy(x0)
     assert x0["foo"].values[0] is not x1["foo"].values[0]
+
+
+def test_clip(ds):
+    result = ds.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = ds.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = ds.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
+    assert result.dims == ds.dims
