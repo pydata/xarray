@@ -107,9 +107,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             (dim,) = ordered_dims
             return self._data.get_index(dim)  # type: ignore[attr-defined]
         else:
-            return self._extracted_from_to_index_17(ordered_dims)
+            return self._compute_multi_index(ordered_dims)
 
-    def _extracted_from_to_index_17(self, ordered_dims):
+    def _compute_multi_index(self, ordered_dims):
         indexes = [
             self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
         ]
