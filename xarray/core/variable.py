@@ -27,13 +27,7 @@ from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
 from .indexes import PandasIndexAdapter
-from .indexing import (
-    BasicIndexer,
-    OuterIndexer,
-    PandasIndexAdapter,
-    VectorizedIndexer,
-    as_indexable,
-)
+from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
