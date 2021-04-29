@@ -128,7 +128,7 @@ class ScipyDataStore(WritableCFDataStore):
         elif format == "NETCDF3_CLASSIC":
             version = 1
         else:
-            raise ValueError("invalid format for scipy.io.netcdf backend: %r" % format)
+            raise ValueError(f"invalid format for scipy.io.netcdf backend: {format!r}")
 
         if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
@@ -181,7 +181,7 @@ class ScipyDataStore(WritableCFDataStore):
     def set_dimension(self, name, length, is_unlimited=False):
         if name in self.ds.dimensions:
             raise ValueError(
-                "%s does not support modifying dimensions" % type(self).__name__
+                f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, dim_length)

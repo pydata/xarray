@@ -146,7 +146,7 @@ def _get_time_bins(index, freq, closed, label, base):
     if not isinstance(index, CFTimeIndex):
         raise TypeError(
             "index must be a CFTimeIndex, but got "
-            "an instance of %r" % type(index).__name__
+            f"an instance of {type(index).__name__!r}"
         )
     if len(index) == 0:
         datetime_bins = labels = CFTimeIndex(data=[], name=index.name)

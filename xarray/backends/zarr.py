@@ -204,8 +204,8 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
         dimensions = zarr_obj.attrs[dimension_key]
     except KeyError:
         raise KeyError(
-            "Zarr object is missing the attribute `%s`, which is "
-            "required for xarray to determine variable dimensions." % (dimension_key)
+            f"Zarr object is missing the attribute `{dimension_key}`, which is "
+            "required for xarray to determine variable dimensions."
         )
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
     return dimensions, attributes
@@ -235,7 +235,7 @@ def extract_zarr_variable_encoding(
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for zarr backend:  %r" % invalid
+                f"unexpected encoding parameters for zarr backend:  {invalid!r}"
             )
     else:
         for k in list(encoding):
@@ -388,16 +388,16 @@ class ZarrStore(AbstractWritableDataStore):
                 for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
                         raise ValueError(
-                            "found conflicting lengths for dimension %s "
-                            "(%d != %d)" % (d, s, dimensions[d])
+                            f"found conflicting lengths for dimension {d} "
+                            f"({s} != {dimensions[d]})"
                         )
                     dimensions[d] = s
 
             except KeyError:
                 raise KeyError(
-                    "Zarr object is missing the attribute `%s`, "
+                    f"Zarr object is missing the attribute `{DIMENSION_KEY}`, "
                     "which is required for xarray to determine "
-                    "variable dimensions." % (DIMENSION_KEY)
+                    "variable dimensions."
                 )
         return dimensions
 

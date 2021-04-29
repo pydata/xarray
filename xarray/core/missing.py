@@ -93,7 +93,7 @@ class NumpyInterpolator(BaseInterpolator):
             self._left = fill_value
             self._right = fill_value
         else:
-            raise ValueError("%s is not a valid fill_value" % fill_value)
+            raise ValueError(f"{fill_value} is not a valid fill_value")
 
     def __call__(self, x):
         return self.f(

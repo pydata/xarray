@@ -319,7 +319,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     if len(set(not_none)) < len(not_none):
         raise ValueError(
             "Dimension names must be None or unique strings, but imshow was "
-            "passed x=%r, y=%r, and rgb=%r." % (x, y, rgb)
+            f"passed x={x!r}, y={y!r}, and rgb={rgb!r}."
         )
     for label in not_none:
         if label not in darray.dims:
@@ -341,8 +341,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         rgb = could_be_color[0]
     if rgb is not None and darray[rgb].size not in (3, 4):
         raise ValueError(
-            "Cannot interpret dim %r of size %s as RGB or RGBA."
-            % (rgb, darray[rgb].size)
+            f"Cannot interpret dim {rgb!r} of size {darray[rgb].size} as RGB or RGBA."
         )
 
     # If rgb dimension is still unknown, there must be two or three dimensions
@@ -352,9 +351,9 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         rgb = could_be_color[-1]
         warnings.warn(
             "Several dimensions of this array could be colors.  Xarray "
-            "will use the last possible dimension (%r) to match "
+            f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
-            "and/or rgb dimensions to override this guess." % rgb
+            "and/or rgb dimensions to override this guess."
         )
     assert rgb is not None
 
@@ -661,15 +660,15 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
         vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
         if vmax < vmin:
             raise ValueError(
-                "vmin=%r is less than the default vmax (%r) - you must supply "
-                "a vmax > vmin in this case." % (vmin, vmax)
+                f"vmin={vmin!r} is less than the default vmax ({vmax!r}) - you must supply "
+                "a vmax > vmin in this case."
             )
     elif vmin is None:
         vmin = 0
         if vmin > vmax:
             raise ValueError(
-                "vmax=%r is less than the default vmin (0) - you must supply "
-                "a vmin < vmax in this case." % vmax
+                f"vmax={vmax!r} is less than the default vmin (0) - you must supply "
+                "a vmin < vmax in this case."
             )
     # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
     # to avoid precision loss, integer over/underflow, etc with extreme inputs.

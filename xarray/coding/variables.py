@@ -294,7 +294,7 @@ class UnsignedIntegerCoder(VariableCoder):
         #      integer data should be treated as unsigned"
         if encoding.get("_Unsigned", "false") == "true":
             pop_to(encoding, attrs, "_Unsigned")
-            signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+            signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
             if "_FillValue" in attrs:
                 new_fill = signed_dtype.type(attrs["_FillValue"])
                 attrs["_FillValue"] = new_fill
@@ -310,7 +310,7 @@ class UnsignedIntegerCoder(VariableCoder):
 
             if data.dtype.kind == "i":
                 if unsigned == "true":
-                    unsigned_dtype = np.dtype("u%s" % data.dtype.itemsize)
+                    unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=unsigned_dtype)
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
                     if "_FillValue" in attrs:
@@ -318,7 +318,7 @@ class UnsignedIntegerCoder(VariableCoder):
                         attrs["_FillValue"] = new_fill
             elif data.dtype.kind == "u":
                 if unsigned == "false":
-                    signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+                    signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=signed_dtype)
                     data = lazy_elemwise_func(data, transform, signed_dtype)
                     if "_FillValue" in attrs:
@@ -326,8 +326,8 @@ class UnsignedIntegerCoder(VariableCoder):
                         attrs["_FillValue"] = new_fill
             else:
                 warnings.warn(
-                    "variable %r has _Unsigned attribute but is not "
-                    "of integer type. Ignoring attribute." % name,
+                    f"variable {name!r} has _Unsigned attribute but is not "
+                    "of integer type. Ignoring attribute.",
                     SerializationWarning,
                     stacklevel=3,
                 )

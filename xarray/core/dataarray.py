@@ -98,16 +98,16 @@ def _infer_coords_and_dims(
         and len(coords) != len(shape)
     ):
         raise ValueError(
-            "coords is not dict-like, but it has %s items, "
-            "which does not match the %s dimensions of the "
-            "data" % (len(coords), len(shape))
+            f"coords is not dict-like, but it has {len(coords)} items, "
+            f"which does not match the {len(shape)} dimensions of the "
+            "data"
         )
 
     if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
-        dims = ["dim_%s" % n for n in range(len(shape))]
+        dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
@@ -125,12 +125,12 @@ def _infer_coords_and_dims(
     elif len(dims) != len(shape):
         raise ValueError(
             "different number of dimensions on data "
-            "and dims: %s vs %s" % (len(shape), len(dims))
+            f"and dims: {len(shape)} vs {len(dims)}"
         )
     else:
         for d in dims:
             if not isinstance(d, str):
-                raise TypeError("dimension %s is not a string" % d)
+                raise TypeError(f"dimension {d} is not a string")
 
     new_coords: Dict[Any, Variable] = {}
 
@@ -147,24 +147,24 @@ def _infer_coords_and_dims(
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError(
-                "coordinate %s has dimensions %s, but these "
+                f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                "dimensions %s" % (k, v.dims, dims)
+                f"dimensions {dims}"
             )
 
         for d, s in zip(v.dims, v.shape):
             if s != sizes[d]:
                 raise ValueError(
-                    "conflicting sizes for dimension %r: "
-                    "length %s on the data but length %s on "
-                    "coordinate %r" % (d, sizes[d], s, k)
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
                 )
 
         if k in sizes and v.shape != (sizes[k],):
             raise ValueError(
-                "coordinate %r is a DataArray dimension, but "
-                "it has shape %r rather than expected shape %r "
-                "matching the dimension size" % (k, v.shape, (sizes[k],))
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
             )
 
     assert_unique_multiindex_level_names(new_coords)
@@ -1988,7 +1988,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             coord = self._coords[dim]
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
-                raise ValueError("coordinate %r has no MultiIndex" % dim)
+                raise ValueError(f"coordinate {dim!r} has no MultiIndex")
             replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
@@ -2632,8 +2632,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             constructor = constructors[self.ndim]
         except KeyError:
             raise ValueError(
-                "cannot convert arrays with %s dimensions into "
-                "pandas objects" % self.ndim
+                f"cannot convert arrays with {self.ndim} dimensions into "
+                "pandas objects"
             )
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)

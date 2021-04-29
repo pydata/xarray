@@ -111,7 +111,7 @@ class CharacterArrayCoder(VariableCoder):
             if "char_dim_name" in encoding.keys():
                 char_dim_name = encoding.pop("char_dim_name")
             else:
-                char_dim_name = "string%s" % data.shape[-1]
+                char_dim_name = f"string{data.shape[-1]}"
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 

@@ -122,8 +122,8 @@ def _encode_nc4_variable(var):
 def _check_encoding_dtype_is_vlen_string(dtype):
     if dtype is not str:
         raise AssertionError(  # pragma: no cover
-            "unexpected dtype encoding %r. This shouldn't happen: please "
-            "file a bug report at github.com/pydata/xarray" % dtype
+            f"unexpected dtype encoding {dtype!r}. This shouldn't happen: please "
+            "file a bug report at github.com/pydata/xarray"
         )
 
 
@@ -173,7 +173,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise OSError("group not found: %s" % key, e)
+                    raise OSError(f"group not found: {key}", e)
 
     # use the root group
     return ds
@@ -267,8 +267,8 @@ def _extract_nc4_variable_encoding(
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for %r backend: %r. Valid "
-                "encodings are: %r" % (backend, invalid, valid_encodings)
+                f"unexpected encoding parameters for {backend!r} backend: {invalid!r}. Valid "
+                f"encodings are: {valid_encodings!r}"
             )
     else:
         for k in list(encoding):
@@ -462,9 +462,9 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "netCDF4 does not yet support setting a fill value for "
                 "variable-length strings "
                 "(https://github.com/Unidata/netcdf4-python/issues/730). "
-                "Either remove '_FillValue' from encoding on variable %r "
+                f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type." % name
+                "NC_CHAR type."
             )
 
         encoding = _extract_nc4_variable_encoding(

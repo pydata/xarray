@@ -218,7 +218,7 @@ def update_safety_check(
         if k in first_dict and not compat(v, first_dict[k]):
             raise ValueError(
                 "unsafe to merge dictionaries without "
-                "overriding values; conflicting key %r" % k
+                f"overriding values; conflicting key {k!r}"
             )
 
 
@@ -724,7 +724,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
     def _raise_if_hidden(self, key: K) -> None:
         if key in self._hidden_keys:
-            raise KeyError("Key `%r` is hidden." % key)
+            raise KeyError(f"Key `{key!r}` is hidden.")
 
     # The next five methods are requirements of the ABC.
     def __setitem__(self, key: K, value: V) -> None:

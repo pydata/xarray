@@ -73,7 +73,7 @@ def check_result_variables(
 
 def dataset_to_dataarray(obj: Dataset) -> DataArray:
     if not isinstance(obj, Dataset):
-        raise TypeError("Expected Dataset, got %s" % type(obj))
+        raise TypeError(f"Expected Dataset, got {type(obj)}")
 
     if len(obj.data_vars) > 1:
         raise TypeError(

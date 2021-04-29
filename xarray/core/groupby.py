@@ -29,8 +29,8 @@ def check_reduce_dims(reduce_dims, dimensions):
             reduce_dims = [reduce_dims]
         if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
-                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
-                % (reduce_dims, dimensions)
+                f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
+                f"to reduce over all dimensions or one or more of {dimensions!r}."
             )
 
 
@@ -105,7 +105,7 @@ def _consolidate_slices(slices):
     last_slice = slice(None)
     for slice_ in slices:
         if not isinstance(slice_, slice):
-            raise ValueError("list element is not a slice: %r" % slice_)
+            raise ValueError(f"list element is not a slice: {slice_!r}")
         if (
             result
             and last_slice.stop == slice_.start
@@ -378,7 +378,7 @@ class GroupBy:
         if len(group_indices) == 0:
             if bins is not None:
                 raise ValueError(
-                    "None of the data falls within bins with edges %r" % bins
+                    f"None of the data falls within bins with edges {bins!r}"
                 )
             else:
                 raise ValueError(
@@ -491,8 +491,8 @@ class GroupBy:
                 if self._group.name not in other.dims:
                     raise ValueError(
                         "incompatible dimensions for a grouped "
-                        "binary operation: the group variable %r "
-                        "is not a dimension on the other argument" % self._group.name
+                        f"binary operation: the group variable {self._group.name!r} "
+                        "is not a dimension on the other argument"
                     )
                 if dummy is None:
                     dummy = _dummy_copy(other)
