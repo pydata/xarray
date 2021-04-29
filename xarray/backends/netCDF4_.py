@@ -129,18 +129,16 @@ def _check_encoding_dtype_is_vlen_string(dtype):
 
 def _get_datatype(var, nc_format="NETCDF4", raise_on_invalid_encoding=False):
     if nc_format == "NETCDF4":
-        datatype = _nc4_dtype(var)
-    else:
-        if "dtype" in var.encoding:
-            encoded_dtype = var.encoding["dtype"]
-            _check_encoding_dtype_is_vlen_string(encoded_dtype)
-            if raise_on_invalid_encoding:
-                raise ValueError(
-                    "encoding dtype=str for vlen strings is only supported "
-                    "with format='NETCDF4'."
-                )
-        datatype = var.dtype
-    return datatype
+        return _nc4_dtype(var)
+    if "dtype" in var.encoding:
+        encoded_dtype = var.encoding["dtype"]
+        _check_encoding_dtype_is_vlen_string(encoded_dtype)
+        if raise_on_invalid_encoding:
+            raise ValueError(
+                "encoding dtype=str for vlen strings is only supported "
+                "with format='NETCDF4'."
+            )
+    return var.dtype
 
 
 def _nc4_dtype(var):
@@ -161,10 +159,7 @@ def _netcdf4_create_group(dataset, name):
 
 
 def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
-    if group in {None, "", "/"}:
-        # use the root group
-        return ds
-    else:
+    if group not in {None, "", "/"}:
         # make sure it's a string
         if not isinstance(group, str):
             raise ValueError("group must be a string or None")
@@ -179,7 +174,9 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                 else:
                     # wrap error to provide slightly more helpful message
                     raise OSError("group not found: %s" % key, e)
-        return ds
+
+    # use the root group
+    return ds
 
 
 def _ensure_fill_value_valid(data, attributes):
@@ -203,7 +200,7 @@ def _force_native_endianness(var):
         # if endian exists, remove it from the encoding.
         var.encoding.pop("endian", None)
     # check to see if encoding has a value for endian its 'native'
-    if not var.encoding.get("endian", "native") == "native":
+    if var.encoding.get("endian", "native") != "native":
         raise NotImplementedError(
             "Attempt to write non-native endian type, "
             "this is not supported by the netCDF4 "
@@ -282,10 +279,7 @@ def _extract_nc4_variable_encoding(
 
 
 def _is_list_of_strings(value):
-    if np.asarray(value).dtype.kind in ["U", "S"] and np.asarray(value).size > 1:
-        return True
-    else:
-        return False
+    return np.asarray(value).dtype.kind in ["U", "S"] and np.asarray(value).size > 1
 
 
 class NetCDF4DataStore(WritableCFDataStore):
@@ -313,7 +307,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
-                if not type(manager) is netCDF4.Dataset:
+                if type(manager) is not netCDF4.Dataset:
                     raise ValueError(
                         "must supply a root netCDF4.Dataset if the group "
                         "argument is provided"
@@ -359,10 +353,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         if lock is None:
             if mode == "r":
-                if is_remote_uri(filename):
-                    lock = NETCDFC_LOCK
-                else:
-                    lock = NETCDF4_PYTHON_LOCK
+                lock = NETCDFC_LOCK if is_remote_uri(filename) else NETCDF4_PYTHON_LOCK
             else:
                 if format is None or format.startswith("NETCDF4"):
                     base_lock = NETCDF4_PYTHON_LOCK
@@ -417,25 +408,22 @@ class NetCDF4DataStore(WritableCFDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        dsvars = FrozenDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
-        return dsvars
 
     def get_attrs(self):
-        attrs = FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
-        return attrs
+        return FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
 
     def get_dimensions(self):
-        dims = FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
-        return dims
+        return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v.isunlimited()
+        return {
+            "unlimited_dims": {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()
+            }
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         dim_length = length if not is_unlimited else None

@@ -70,10 +70,12 @@ def set_missing_parameters(backend_entrypoints):
 
 
 def sort_backends(backend_entrypoints):
-    ordered_backends_entrypoints = {}
-    for be_name in STANDARD_BACKENDS_ORDER:
-        if backend_entrypoints.get(be_name, None) is not None:
-            ordered_backends_entrypoints[be_name] = backend_entrypoints.pop(be_name)
+    ordered_backends_entrypoints = {
+        be_name: backend_entrypoints.pop(be_name)
+        for be_name in STANDARD_BACKENDS_ORDER
+        if backend_entrypoints.get(be_name, None) is not None
+    }
+
     ordered_backends_entrypoints.update(
         {name: backend_entrypoints[name] for name in sorted(backend_entrypoints)}
     )
@@ -87,10 +89,7 @@ def build_engines(pkg_entrypoints):
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
-    engines = {}
-    for name, backend in backend_entrypoints.items():
-        engines[name] = backend()
-    return engines
+    return {name: backend() for name, backend in backend_entrypoints.items()}
 
 
 @functools.lru_cache(maxsize=1)

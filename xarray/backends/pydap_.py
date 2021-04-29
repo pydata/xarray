@@ -45,7 +45,7 @@ class PydapArrayWrapper(BackendArray):
         result = robust_getitem(array, key, catch=ValueError)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and len(axis) > 0:
+        if result.ndim + len(axis) != array.ndim and axis:
             result = np.squeeze(result, axis)
 
         return result
@@ -130,7 +130,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            ds = store_entrypoint.open_dataset(
+            return store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,
@@ -140,7 +140,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
-            return ds
 
 
 if has_pydap:

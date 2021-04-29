@@ -174,11 +174,9 @@ class ScipyDataStore(WritableCFDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if name in self.ds.dimensions:
@@ -204,12 +202,14 @@ class ScipyDataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
-        if check_encoding and variable.encoding:
-            if variable.encoding != {"_FillValue": None}:
-                raise ValueError(
-                    "unexpected encoding for scipy backend: %r"
-                    % list(variable.encoding)
-                )
+        if (
+            check_encoding
+            and variable.encoding
+            and variable.encoding != {"_FillValue": None}
+        ):
+            raise ValueError(
+                "unexpected encoding for scipy backend: %r" % list(variable.encoding)
+            )
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we

@@ -379,8 +379,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_attrs(self):
-        attributes = dict(self.ds.attrs.asdict())
-        return attributes
+        return dict(self.ds.attrs.asdict())
 
     def get_dimensions(self):
         dimensions = {}
@@ -458,7 +457,7 @@ class ZarrStore(AbstractWritableDataStore):
             variables_without_encoding, attributes
         )
 
-        if len(existing_variables) > 0:
+        if existing_variables:
             # there are variables to append
             # their encoding must be the same as in the store
             ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
@@ -684,7 +683,7 @@ def open_zarr(
         "storage_options": storage_options,
     }
 
-    ds = open_dataset(
+    return open_dataset(
         filename_or_obj=store,
         group=group,
         decode_cf=decode_cf,
@@ -699,8 +698,6 @@ def open_zarr(
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
     )
-
-    return ds
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):

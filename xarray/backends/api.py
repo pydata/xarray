@@ -101,12 +101,11 @@ def _get_default_engine_netcdf():
 
 def _get_default_engine(path: str, allow_remote: bool = False):
     if allow_remote and is_remote_uri(path):
-        engine = _get_default_engine_remote_uri()
+        return _get_default_engine_remote_uri()
     elif path.endswith(".gz"):
-        engine = _get_default_engine_gz()
+        return _get_default_engine_gz()
     else:
-        engine = _get_default_engine_netcdf()
-    return engine
+        return _get_default_engine_netcdf()
 
 
 def _validate_dataset_names(dataset):
@@ -294,8 +293,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
         )
-    ds = backend_ds._replace(variables)
-    return ds
+    return backend_ds._replace(variables)
 
 
 def _dataset_from_backend_dataset(
@@ -307,12 +305,11 @@ def _dataset_from_backend_dataset(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        if chunks != "auto":
-            raise ValueError(
-                "chunks must be an int, dict, 'auto', or None. "
-                "Instead found %s. " % chunks
-            )
+    if not isinstance(chunks, (int, dict)) and chunks is not None and chunks != "auto":
+        raise ValueError(
+            "chunks must be an int, dict, 'auto', or None. "
+            "Instead found %s. " % chunks
+        )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -330,9 +327,8 @@ def _dataset_from_backend_dataset(
     ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+    if "source" not in ds.encoding and isinstance(filename_or_obj, str):
+        ds.encoding["source"] = filename_or_obj
 
     return ds
 
@@ -503,7 +499,7 @@ def open_dataset(
         **decoders,
         **kwargs,
     )
-    ds = _dataset_from_backend_dataset(
+    return _dataset_from_backend_dataset(
         backend_ds,
         filename_or_obj,
         engine,
@@ -514,8 +510,6 @@ def open_dataset(
         **decoders,
         **kwargs,
     )
-
-    return ds
 
 
 def open_dataarray(
