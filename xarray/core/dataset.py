@@ -1266,8 +1266,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         level_coords: Dict[str, Hashable] = {}
         for name, index_adapter in self.indexes.items():
             index = index_adapter
-            if isinstance(index, pd.MultiIndex):
-                level_names = index.names
+            # TODO: benbovy - flexible indexes: update when MultIndex has its own xarray class.
+            if isinstance(index.array, pd.MultiIndex):
+                level_names = index.array.names
                 (dim,) = self.variables[name].dims
                 level_coords.update({lname: dim for lname in level_names})
         return level_coords
@@ -1278,7 +1279,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """
         variables: Dict[Hashable, Variable] = {}
         coord_names = set()
-        indexes: Dict[Hashable, pd.Index] = {}
+        indexes: Dict[Hashable, IndexAdapter] = {}
 
         for name in names:
             try:
@@ -1291,7 +1292,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 if ref_name in self._coord_names or ref_name in self.dims:
                     coord_names.add(var_name)
                 if (var_name,) == var.dims:
-                    indexes[var_name] = var.to_index()
+                    indexes[var_name] = var._to_index_adpater()
 
         needed_dims: Set[Hashable] = set()
         for v in variables.values():
@@ -1966,7 +1967,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 v = np.asarray(v)
 
                 if v.dtype.kind in "US":
-                    index = self.indexes[k]
+                    # TODO: benbovy - flexible indexes
+                    # update when CFTimeIndex has its own xarray index class
+                    index = self.indexes[k].array
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
                     elif isinstance(index, xr.CFTimeIndex):
@@ -2115,7 +2118,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     continue
                 if indexes and var_name in indexes:
                     if var_value.ndim == 1:
-                        indexes[var_name] = PandasIndexAdapter(var_value.data)
+                        indexes[var_name] = var_value._to_index_adpater()
                     else:
                         del indexes[var_name]
             variables[var_name] = var_value
@@ -2916,7 +2919,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         for k, v in indexers.items():
             assert isinstance(v, Variable)
             if v.dims == (k,):
-                indexes[k] = v.to_index()
+                indexes[k] = v._to_index_adpater()
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(coords)
@@ -3517,7 +3520,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         indexes = dict(self.indexes)
         for dim, order in dim_order.items():
             coord = self._variables[dim]
-            index = self.indexes[dim]
+            # TODO: benbovy - flexible indexes: update when MultiIndex
+            # has its own class inherited from xarray.Index
+            index = self.indexes[dim].array
             if not isinstance(index, pd.MultiIndex):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
@@ -3702,7 +3707,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         # coerce the levels of the MultiIndex to have the same type as the
         # input dimensions. This code is messy, so it might be better to just
         # input a dummy value for the singleton dimension.
-        idx = data_array.indexes[new_dim]
+        # TODO: benbovy - flexible indexes: update when MultIndex has its own
+        # class inheriting from xarray.Index
+        idx = data_array.indexes[new_dim].array
         levels = [idx.levels[0]] + [
             level.astype(self[level.name].dtype) for level in idx.levels[1:]
         ]
@@ -5529,7 +5536,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         indexes = dict(self.indexes)
         if dim in indexes:
-            indexes[dim] = indexes[dim][kwargs_new[dim]]
+            # TODO: benbovy - flexible indexes: check slicing of xarray indexes?
+            # or only allow this for pandas indexes?
+            index = indexes[dim].array
+            indexes[dim] = PandasIndexAdapter(index[kwargs_new[dim]])
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)
 

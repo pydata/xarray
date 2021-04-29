@@ -484,7 +484,9 @@ class DataArray(AbstractArray, DataWithCoords):
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
+            pd_idx = idx.array
+            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -2181,7 +2183,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.to_stacked_array
         """
 
-        idx = self.indexes[dim]
+        # TODO: benbovy - flexible indexes: update when MultIndex has its own
+        # class inheriting from xarray.Index
+        idx = self.indexes[dim].array
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 

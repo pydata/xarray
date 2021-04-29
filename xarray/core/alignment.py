@@ -17,12 +17,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.core.indexes import PandasIndexAdapter
-
 from . import dtypes
-from .indexes import IndexAdapter
+from .indexes import IndexAdapter, PandasIndexAdapter
 from .indexing import get_indexer_nd
-from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str
+from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
@@ -304,7 +302,11 @@ def align(
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
-            index = PandasIndexAdapter(indexes[dim])
+            # TODO: benbovy - flexible indexes. maybe move this logic in util func
+            if isinstance(indexes[dim], IndexAdapter):
+                index = indexes[dim]
+            else:
+                index = PandasIndexAdapter(safe_cast_to_index(indexes[dim]))
             if (
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes

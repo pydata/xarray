@@ -119,15 +119,17 @@ class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
 
     def union(self, other):
         if isinstance(other, pd.Index):
-            return self.array.union(other)
+            new_idx = self.array.union(other)
         else:
-            return self.array.union(other.array)
+            new_idx = self.array.union(other.array)
+        return type(self)(new_idx)
 
     def intersection(self, other):
         if isinstance(other, pd.Index):
-            return self.array.intersection(other)
+            new_idx = self.array.intersection(other)
         else:
-            return self.array.intersection(other.array)
+            new_idx = self.array.intersection(other.array)
+        return type(self)(new_idx)
 
     def __getitem__(
         self, indexer
@@ -305,13 +307,17 @@ def isel_variable_and_index(
     return new_variable, new_index
 
 
-def roll_index(index: pd.Index, count: int, axis: int = 0) -> pd.Index:
+def roll_index(
+    index: PandasIndexAdapter, count: int, axis: int = 0
+) -> PandasIndexAdapter:
     """Roll an pandas.Index."""
-    count %= index.shape[0]
+    pd_index = index.array
+    count %= pd_index.shape[0]
     if count != 0:
-        return index[-count:].append(index[:-count])
+        new_idx = pd_index[-count:].append(pd_index[:-count])
     else:
-        return index[:]
+        new_idx = pd_index[:]
+    return PandasIndexAdapter(new_idx)
 
 
 def propagate_indexes(

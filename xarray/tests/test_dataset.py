@@ -1391,13 +1391,13 @@ class TestDataset:
         )
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="x"))
-        actual_sel = mds.sel(x=DataArray(mds.indexes["x"][:3], dims="x"))
+        actual_sel = mds.sel(x=DataArray(midx[:3], dims="x"))
         assert actual_isel["x"].dims == ("x",)
         assert actual_sel["x"].dims == ("x",)
         assert_identical(actual_isel, actual_sel)
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="z"))
-        actual_sel = mds.sel(x=Variable("z", mds.indexes["x"][:3]))
+        actual_sel = mds.sel(x=Variable("z", midx[:3]))
         assert actual_isel["x"].dims == ("z",)
         assert actual_sel["x"].dims == ("z",)
         assert_identical(actual_isel, actual_sel)
@@ -1407,7 +1407,7 @@ class TestDataset:
             x=xr.DataArray(np.arange(3), dims="z", coords={"z": [0, 1, 2]})
         )
         actual_sel = mds.sel(
-            x=xr.DataArray(mds.indexes["x"][:3], dims="z", coords={"z": [0, 1, 2]})
+            x=xr.DataArray(midx[:3], dims="z", coords={"z": [0, 1, 2]})
         )
         assert actual_isel["x"].dims == ("z",)
         assert actual_sel["x"].dims == ("z",)
@@ -2688,20 +2688,22 @@ class TestDataset:
 
         renamed = orig.rename(time="time_new")
         assert "time_new" in renamed.indexes
-        assert isinstance(renamed.indexes["time_new"], CFTimeIndex)
-        assert renamed.indexes["time_new"].name == "time_new"
+        # TODO: benbovy - flexible indexes: update when CFTimeIndex
+        # inherits from xarray.Index
+        assert isinstance(renamed.indexes["time_new"].array, CFTimeIndex)
+        assert renamed.indexes["time_new"].array.name == "time_new"
 
         # check original has not changed
         assert "time" in orig.indexes
-        assert isinstance(orig.indexes["time"], CFTimeIndex)
-        assert orig.indexes["time"].name == "time"
+        assert isinstance(orig.indexes["time"].array, CFTimeIndex)
+        assert orig.indexes["time"].array.name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+        assert isinstance(renamed.indexes["time"].array, CFTimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+        assert isinstance(renamed.indexes["time"].array, CFTimeIndex)
 
     def test_rename_does_not_change_DatetimeIndex_type(self):
         # make sure DatetimeIndex is conderved on rename
@@ -2711,20 +2713,22 @@ class TestDataset:
 
         renamed = orig.rename(time="time_new")
         assert "time_new" in renamed.indexes
-        assert isinstance(renamed.indexes["time_new"], DatetimeIndex)
-        assert renamed.indexes["time_new"].name == "time_new"
+        # TODO: benbovy - flexible indexes: update when DatetimeIndex
+        # inherits from xarray.Index?
+        assert isinstance(renamed.indexes["time_new"].array, DatetimeIndex)
+        assert renamed.indexes["time_new"].array.name == "time_new"
 
         # check original has not changed
         assert "time" in orig.indexes
-        assert isinstance(orig.indexes["time"], DatetimeIndex)
-        assert orig.indexes["time"].name == "time"
+        assert isinstance(orig.indexes["time"].array, DatetimeIndex)
+        assert orig.indexes["time"].array.name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+        assert isinstance(renamed.indexes["time"].array, DatetimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+        assert isinstance(renamed.indexes["time"].array, DatetimeIndex)
 
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
@@ -2733,7 +2737,9 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
+        pd.testing.assert_index_equal(
+            actual.indexes["y"].array, expected.indexes["y"].array
+        )
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2764,7 +2770,9 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
+        pd.testing.assert_index_equal(
+            actual.indexes["y"].array, expected.indexes["y"].array
+        )
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -3141,7 +3149,9 @@ class TestDataset:
         D = xr.Dataset({"a": a, "b": b})
         sample_dims = ["x"]
         y = D.to_stacked_array("features", sample_dims)
-        assert y.indexes["features"].levels[1].dtype == D.y.dtype
+        # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
+        # inherited from xarray.Index
+        assert y.indexes["features"].array.levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self):
