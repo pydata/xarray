@@ -370,8 +370,7 @@ def infer_timedelta_units(deltas):
     """
     deltas = to_timedelta_unboxed(np.asarray(deltas).ravel())
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
-    units = _infer_time_units_from_diff(unique_timedeltas)
-    return units
+    return _infer_time_units_from_diff(unique_timedeltas)
 
 
 def cftime_to_nptime(times):

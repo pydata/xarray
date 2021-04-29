@@ -91,12 +91,12 @@ def lazy_elemwise_func(array, func, dtype):
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if is_duck_dask_array(array):
-        import dask.array as da
-
-        return da.map_blocks(func, array, dtype=dtype)
-    else:
+    if not is_duck_dask_array(array):
         return _ElementwiseFunctionArray(array, func, dtype)
+
+    import dask.array as da
+
+    return da.map_blocks(func, array, dtype=dtype)
 
 
 def unpack_for_encoding(var):
@@ -255,10 +255,10 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in encoding or "add_offset" in encoding:
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             data = data.astype(dtype=dtype, copy=True)
-            if "add_offset" in encoding:
-                data -= pop_to(encoding, attrs, "add_offset", name=name)
-            if "scale_factor" in encoding:
-                data /= pop_to(encoding, attrs, "scale_factor", name=name)
+        if "add_offset" in encoding:
+            data -= pop_to(encoding, attrs, "add_offset", name=name)
+        if "scale_factor" in encoding:
+            data /= pop_to(encoding, attrs, "scale_factor", name=name)
 
         return Variable(dims, data, attrs, encoding)
 

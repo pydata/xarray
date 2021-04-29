@@ -130,18 +130,18 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if is_duck_dask_array(arr):
-        import dask.array as da
-
-        return da.map_blocks(
-            _numpy_bytes_to_char,
-            arr,
-            dtype="S1",
-            chunks=arr.chunks + ((arr.dtype.itemsize,)),
-            new_axis=[arr.ndim],
-        )
-    else:
+    if not is_duck_dask_array(arr):
         return _numpy_bytes_to_char(arr)
+
+    import dask.array as da
+
+    return da.map_blocks(
+        _numpy_bytes_to_char,
+        arr,
+        dtype="S1",
+        chunks=arr.chunks + ((arr.dtype.itemsize,)),
+        new_axis=[arr.ndim],
+    )
 
 
 def _numpy_bytes_to_char(arr):
@@ -166,25 +166,25 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.string_)
 
-    if is_duck_dask_array(arr):
-        import dask.array as da
-
-        if len(arr.chunks[-1]) > 1:
-            raise ValueError(
-                "cannot stacked dask character array with "
-                "multiple chunks in the last dimension: {}".format(arr)
-            )
-
-        dtype = np.dtype("S" + str(arr.shape[-1]))
-        return da.map_blocks(
-            _numpy_char_to_bytes,
-            arr,
-            dtype=dtype,
-            chunks=arr.chunks[:-1],
-            drop_axis=[arr.ndim - 1],
-        )
-    else:
+    if not is_duck_dask_array(arr):
         return StackedBytesArray(arr)
+
+    import dask.array as da
+
+    if len(arr.chunks[-1]) > 1:
+        raise ValueError(
+            "cannot stacked dask character array with "
+            "multiple chunks in the last dimension: {}".format(arr)
+        )
+
+    dtype = np.dtype("S" + str(arr.shape[-1]))
+    return da.map_blocks(
+        _numpy_char_to_bytes,
+        arr,
+        dtype=dtype,
+        chunks=arr.chunks[:-1],
+        drop_axis=[arr.ndim - 1],
+    )
 
 
 def _numpy_char_to_bytes(arr):

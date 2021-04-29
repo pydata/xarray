@@ -187,7 +187,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(self.month_deltas) > 1:
             return None
 
-        if not self.month_deltas[0] % 3 == 0:
+        if self.month_deltas[0] % 3 != 0:
             return None
 
         return {"cs": "QS", "ce": "Q"}.get(month_anchor_check(self.index))
@@ -232,12 +232,12 @@ def _is_multiple(us, mult: int):
 
 def _maybe_add_count(base: str, count: float):
     """If count is greater than 1, add it to the base offset string"""
-    if count != 1:
-        assert count == int(count)
-        count = int(count)
-        return f"{count}{base}"
-    else:
+    if count == 1:
         return base
+
+    assert count == int(count)
+    count = int(count)
+    return f"{count}{base}"
 
 
 def month_anchor_check(dates):
@@ -259,8 +259,7 @@ def month_anchor_check(dates):
 
         if calendar_end:
             cal = date.day == date.daysinmonth
-            if calendar_end:
-                calendar_end &= cal
+            calendar_end &= cal
         elif not calendar_start:
             break
 
