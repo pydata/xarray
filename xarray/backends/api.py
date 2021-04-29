@@ -1,4 +1,5 @@
 import os
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -444,7 +445,7 @@ def open_dataset(
 
         - 'group': path to the netCDF4 group in the given file to open given as
           a str,supported by "netcdf4", "h5netcdf", "zarr".
-        - 'lock': resource lock to use when reading data from disk. Only
+        - 'lock': (Deprecated) resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
@@ -472,6 +473,15 @@ def open_dataset(
         raise TypeError(
             "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
             "all other options must be passed as keyword arguments"
+        )
+
+    # TODO remove after v0.19
+    if kwargs.pop("lock", None):
+        warnings.warn(
+            "The kwarg 'lock' has been deprecated, and is now"
+            "ignored. In future (from v0.19) passing lock will "
+            "raise an error.",
+            DeprecationWarning,
         )
 
     if cache is None:
@@ -628,7 +638,7 @@ def open_dataarray(
 
         - 'group': path to the netCDF4 group in the given file to open given as
           a str,supported by "netcdf4", "h5netcdf", "zarr".
-        - 'lock': resource lock to use when reading data from disk. Only
+        - 'lock': (Deprecated) resource lock to use when reading data from disk. Only
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
@@ -653,6 +663,15 @@ def open_dataarray(
         raise TypeError(
             "open_dataarray() takes only 1 positional argument starting from version 0.18.0, "
             "all other options must be passed as keyword arguments"
+        )
+
+    # TODO remove after v0.19
+    if kwargs.pop("lock", None):
+        warnings.warn(
+            "The kwarg 'lock' has been deprecated, and is now"
+            "ignored. In future (from v0.19) passing lock will "
+            "raise an error.",
+            DeprecationWarning,
         )
 
     dataset = open_dataset(
