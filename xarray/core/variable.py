@@ -2140,16 +2140,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         Apply reduction function.
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
-        if not windows:
-            return self.copy()
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         if keep_attrs:
             _attrs = self.attrs
         else:
             _attrs = None
+
+        if not windows:
+            return self._replace(attrs=_attrs)
 
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
