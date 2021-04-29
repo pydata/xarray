@@ -445,11 +445,6 @@ def open_dataset(
 
         - 'group': path to the netCDF4 group in the given file to open given as
           a str,supported by "netcdf4", "h5netcdf", "zarr".
-        - 'lock': (Deprecated) resource lock to use when reading data from disk. Only
-          relevant when using dask or another form of parallelism. By default,
-          appropriate locks are chosen to safely read and write files with the
-          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -638,11 +633,6 @@ def open_dataarray(
 
         - 'group': path to the netCDF4 group in the given file to open given as
           a str,supported by "netcdf4", "h5netcdf", "zarr".
-        - 'lock': (Deprecated) resource lock to use when reading data from disk. Only
-          relevant when using dask or another form of parallelism. By default,
-          appropriate locks are chosen to safely read and write files with the
-          currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
