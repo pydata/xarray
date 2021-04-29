@@ -564,7 +564,9 @@ def reindex_variables(
                 "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
-        target = new_indexes[dim] = PandasIndexAdapter(np.asarray(indexers[dim]))
+        target = new_indexes[dim] = PandasIndexAdapter(
+            safe_cast_to_index(indexers[dim])
+        )
 
         if dim in indexes:
             # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
