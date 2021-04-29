@@ -115,6 +115,17 @@ def test_repr_of_dataarray(dataarray):
         formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2
     )
 
+    with xr.set_options(display_expand_data=False):
+        formatted = fh.array_repr(dataarray)
+        assert "dim_0" in formatted
+        # has an expanded data section
+        assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
+        # coords and attrs don't have an items so they'll be be disabled and collapsed
+        assert (
+            formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
+            == 2
+        )
+
 
 def test_summary_of_multiindex_coord(multiindex):
     idx = multiindex.x.variable.to_index_variable()
@@ -137,6 +148,20 @@ def test_repr_of_dataset(dataset):
     )
     assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        formatted = fh.dataset_repr(dataset)
+        # coords, attrs, and data_vars are collapsed
+        assert (
+            formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
+            == 0
+        )
+        assert "&lt;U4" in formatted or "&gt;U4" in formatted
+        assert "&lt;IA&gt;" in formatted
 
 
 def test_repr_text_fallback(dataset):

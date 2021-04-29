@@ -1,6 +1,5 @@
 import copy
 import datetime
-import functools
 import inspect
 import sys
 import warnings
@@ -53,11 +52,8 @@ from . import (
     weighted,
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
-from .common import (
-    DataWithCoords,
-    ImplementsDatasetReduce,
-    _contains_datetime_like_objects,
-)
+from .arithmetic import DatasetArithmetic
+from .common import DataWithCoords, _contains_datetime_like_objects
 from .coordinates import (
     DatasetCoordinates,
     assert_coordinate_consistent,
@@ -547,7 +543,7 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
         return Frozen({k: all_variables[k] for k in self})
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._dataset._ipython_key_completions_()
@@ -567,7 +563,7 @@ class _LocIndexer:
         return self.dataset.sel(key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
+class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file,
@@ -1780,12 +1776,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         consolidated: bool = False,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
+        safe_chunks: bool = True,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
-        .. note:: Experimental
-                  The Zarr backend is new and experimental. Please report any
-                  unexpected behavior via github issues.
+        Zarr chunks are determined in the following way:
+
+        - From the ``chunks`` attribute in each variable's ``encoding``
+        - If the variable is a Dask array, from the dask chunks
+        - If neither Dask chunks nor encoding chunks are present, chunks will
+          be determined automatically by Zarr
+        - If both Dask chunks and encoding chunks are present, encoding chunks
+          will be used, provided that there is a many-to-one relationship between
+          encoding chunks and dask chunks (i.e. Dask chunks are bigger than and
+          evenly divide encoding chunks); otherwise raise a ``ValueError``.
+          This restriction ensures that no synchronization / locks are required
+          when writing. To disable this restriction, use ``safe_chunks=False``.
 
         Parameters
         ----------
@@ -1837,6 +1843,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+        safe_chunks : bool, optional
+            If True, only allow writes to when there is a many-to-one relationship
+            between Zarr chunks (specified in encoding) and Dask chunks.
+            Set False to override this restriction; however, data may become corrupted
+            if Zarr arrays are written in parallel. This option may be useful in combination
+            with ``compute=False`` to initialize a Zarr from an existing
+            Dataset with aribtrary chunk structure.
 
         References
         ----------
@@ -1850,6 +1863,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             If a DataArray is a dask array, it is written with those chunks.
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
+
+        See Also
+        --------
+        :ref:`io.zarr`
+            The I/O user guide, with more details and examples.
         """
         from ..backends.api import to_zarr
 
@@ -1868,6 +1886,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             consolidated=consolidated,
             append_dim=append_dim,
             region=region,
+            safe_chunks=safe_chunks,
         )
 
     def __repr__(self) -> str:
@@ -2044,12 +2063,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 else:
                     yield k, v
             elif isinstance(v, int):
-                yield k, Variable((), v)
+                yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
                 if v.ndim == 0:
-                    yield k, Variable((), v)
+                    yield k, Variable((), v, attrs=self.coords[k].attrs)
                 elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v)
+                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
                 else:
                     raise AssertionError()  # Already tested by _validate_indexers
             else:
@@ -4653,7 +4672,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -4678,7 +4698,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -5395,70 +5416,55 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return obj
 
-    @staticmethod
-    def _unary_op(f):
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            variables = {}
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            for k, v in self._variables.items():
-                if k in self._coord_names:
-                    variables[k] = v
-                else:
-                    variables[k] = f(v, *args, **kwargs)
-                    if keep_attrs:
-                        variables[k].attrs = v._attrs
-            attrs = self._attrs if keep_attrs else None
-            return self._replace_with_new_dims(variables, attrs=attrs)
+    def _unary_op(self, f, *args, **kwargs):
+        variables = {}
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        for k, v in self._variables.items():
+            if k in self._coord_names:
+                variables[k] = v
+            else:
+                variables[k] = f(v, *args, **kwargs)
+                if keep_attrs:
+                    variables[k].attrs = v._attrs
+        attrs = self._attrs if keep_attrs else None
+        return self._replace_with_new_dims(variables, attrs=attrs)
 
-        return func
+    def _binary_op(self, other, f, reflexive=False, join=None):
+        from .dataarray import DataArray
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, join=None):
-        @functools.wraps(f)
-        def func(self, other):
-            from .dataarray import DataArray
+        if isinstance(other, groupby.GroupBy):
+            return NotImplemented
+        align_type = OPTIONS["arithmetic_join"] if join is None else join
+        if isinstance(other, (DataArray, Dataset)):
+            self, other = align(self, other, join=align_type, copy=False)
+        g = f if not reflexive else lambda x, y: f(y, x)
+        ds = self._calculate_binary_op(g, other, join=align_type)
+        return ds
 
-            if isinstance(other, groupby.GroupBy):
-                return NotImplemented
-            align_type = OPTIONS["arithmetic_join"] if join is None else join
-            if isinstance(other, (DataArray, Dataset)):
-                self, other = align(self, other, join=align_type, copy=False)
-            g = f if not reflexive else lambda x, y: f(y, x)
-            ds = self._calculate_binary_op(g, other, join=align_type)
-            return ds
+    def _inplace_binary_op(self, other, f):
+        from .dataarray import DataArray
 
-        return func
-
-    @staticmethod
-    def _inplace_binary_op(f):
-        @functools.wraps(f)
-        def func(self, other):
-            from .dataarray import DataArray
-
-            if isinstance(other, groupby.GroupBy):
-                raise TypeError(
-                    "in-place operations between a Dataset and "
-                    "a grouped object are not permitted"
-                )
-            # we don't actually modify arrays in-place with in-place Dataset
-            # arithmetic -- this lets us automatically align things
-            if isinstance(other, (DataArray, Dataset)):
-                other = other.reindex_like(self, copy=False)
-            g = ops.inplace_to_noninplace_op(f)
-            ds = self._calculate_binary_op(g, other, inplace=True)
-            self._replace_with_new_dims(
-                ds._variables,
-                ds._coord_names,
-                attrs=ds._attrs,
-                indexes=ds._indexes,
-                inplace=True,
+        if isinstance(other, groupby.GroupBy):
+            raise TypeError(
+                "in-place operations between a Dataset and "
+                "a grouped object are not permitted"
             )
-            return self
-
-        return func
+        # we don't actually modify arrays in-place with in-place Dataset
+        # arithmetic -- this lets us automatically align things
+        if isinstance(other, (DataArray, Dataset)):
+            other = other.reindex_like(self, copy=False)
+        g = ops.inplace_to_noninplace_op(f)
+        ds = self._calculate_binary_op(g, other, inplace=True)
+        self._replace_with_new_dims(
+            ds._variables,
+            ds._coord_names,
+            attrs=ds._attrs,
+            indexes=ds._indexes,
+            inplace=True,
+        )
+        return self
 
     def _calculate_binary_op(self, f, other, join="inner", inplace=False):
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
@@ -5528,9 +5534,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         -------
         difference : same type as caller
             The n-th order finite difference of this object.
-        .. note::
-            `n` matches numpy's behavior and is different from pandas' first
-            argument named `periods`.
+
+        Notes
+        -----
+        `n` matches numpy's behavior and is different from pandas' first argument named
+        `periods`.
 
         Examples
         --------
@@ -7152,7 +7160,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         Parameters
         ----------
-        coords : DataArray, str or sequence of DataArray, str
+        coords : hashable, DataArray, or sequence of hashable or DataArray
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
             functions, supply `coords` as a sequence in the same order as arguments in
@@ -7163,27 +7171,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : str or sequence of str
+        reduce_dims : hashable or sequence of hashable
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        p0 : dictionary, optional
+        p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dictionary, optional
+        bounds : dict-like, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : seq, optional
+        param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        kwargs : dictionary
+        **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns
@@ -7308,6 +7316,3 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         result.attrs = self.attrs.copy()
 
         return result
-
-
-ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)

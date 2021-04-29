@@ -11,37 +11,36 @@ import pathlib
 import numpy as np
 
 from .backends.api import open_dataset as _open_dataset
-from .backends.rasterio_ import open_rasterio
+from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
-
-
-def _open_rasterio(path, engine=None, **kwargs):
-    data = open_rasterio(path, **kwargs)
-    name = data.name if data.name is not None else "data"
-    return data.to_dataset(name=name)
-
 
 _default_cache_dir_name = "xarray_tutorial_data"
 base_url = "https://github.com/pydata/xarray-data"
 version = "master"
 
 
-external_urls = {
-    "RGB.byte": (
-        "rasterio",
-        "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif",
-    ),
-}
-overrides = {
-    "rasterio": _open_rasterio,
+def _construct_cache_dir(path):
+    import pooch
+
+    if isinstance(path, pathlib.Path):
+        path = os.fspath(path)
+    elif path is None:
+        path = pooch.os_cache(_default_cache_dir_name)
+
+    return path
+
+
+external_urls = {}  # type: dict
+external_rasterio_urls = {
+    "RGB.byte": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
+    "shade": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/shade.tif",
 }
 
 
 # idea borrowed from Seaborn
 def open_dataset(
     name,
-    engine=None,
     cache=True,
     cache_dir=None,
     **kws,
@@ -51,30 +50,26 @@ def open_dataset(
 
     If a local copy is found then always use that to avoid network traffic.
 
+    Available datasets:
+
+    * ``"air_temperature"``: NCEP reanalysis subset
+    * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
+    * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
+    * ``"tiny"``: small synthetic dataset with a 1D data variable
+    * ``"era5-2mt-2019-03-uk.grib"``: ERA5 temperature data over the UK
+    * ``"eraint_uvz"``: data from ERA-Interim reanalysis, monthly averages of upper level data
+
     Parameters
     ----------
     name : str
         Name of the file containing the dataset.
         e.g. 'air_temperature'
-    engine : str, optional
-        The engine to use.
     cache_dir : path-like, optional
         The directory in which to search for and write cached data.
     cache : bool, optional
         If True, then cache data locally for use on subsequent calls
     **kws : dict, optional
         Passed to xarray.open_dataset
-
-    Notes
-    -----
-    Available datasets:
-
-    * ``"air_temperature"``
-    * ``"rasm"``
-    * ``"ROMS_example"``
-    * ``"tiny"``
-    * ``"era5-2mt-2019-03-uk.grib"``
-    * ``"RGB.byte"``: example rasterio file from https://github.com/mapbox/rasterio
 
     See Also
     --------
@@ -85,15 +80,12 @@ def open_dataset(
     except ImportError:
         raise ImportError("using the tutorial data requires pooch")
 
-    if isinstance(cache_dir, pathlib.Path):
-        cache_dir = os.fspath(cache_dir)
-    elif cache_dir is None:
-        cache_dir = pooch.os_cache(_default_cache_dir_name)
+    logger = pooch.get_logger()
+    logger.setLevel("WARNING")
 
+    cache_dir = _construct_cache_dir(cache_dir)
     if name in external_urls:
-        engine_, url = external_urls[name]
-        if engine is None:
-            engine = engine_
+        url = external_urls[name]
     else:
         # process the name
         default_extension = ".nc"
@@ -103,15 +95,76 @@ def open_dataset(
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
-    _open = overrides.get(engine, _open_dataset)
     # retrieve the file
     filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    ds = _open(filepath, engine=engine, **kws)
+    ds = _open_dataset(filepath, **kws)
     if not cache:
         ds = ds.load()
         pathlib.Path(filepath).unlink()
 
     return ds
+
+
+def open_rasterio(
+    name,
+    engine=None,
+    cache=True,
+    cache_dir=None,
+    **kws,
+):
+    """
+    Open a rasterio dataset from the online repository (requires internet).
+
+    If a local copy is found then always use that to avoid network traffic.
+
+    Available datasets:
+
+    * ``"RGB.byte"``: TIFF file derived from USGS Landsat 7 ETM imagery.
+    * ``"shade"``: TIFF file derived from from USGS SRTM 90 data
+
+    ``RGB.byte`` and ``shade`` are downloaded from the ``rasterio`` repository [1]_.
+
+    Parameters
+    ----------
+    name : str
+        Name of the file containing the dataset.
+        e.g. 'RGB.byte'
+    cache_dir : path-like, optional
+        The directory in which to search for and write cached data.
+    cache : bool, optional
+        If True, then cache data locally for use on subsequent calls
+    **kws : dict, optional
+        Passed to xarray.open_rasterio
+
+    See Also
+    --------
+    xarray.open_rasterio
+
+    References
+    ----------
+    .. [1] https://github.com/mapbox/rasterio
+    """
+    try:
+        import pooch
+    except ImportError:
+        raise ImportError("using the tutorial data requires pooch")
+
+    logger = pooch.get_logger()
+    logger.setLevel("WARNING")
+
+    cache_dir = _construct_cache_dir(cache_dir)
+    url = external_rasterio_urls.get(name)
+    if url is None:
+        raise ValueError(f"unknown rasterio dataset: {name}")
+
+    # retrieve the file
+    filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
+    arr = _open_rasterio(filepath, **kws)
+    if not cache:
+        arr = arr.load()
+        pathlib.Path(filepath).unlink()
+
+    return arr
 
 
 def load_dataset(*args, **kwargs):

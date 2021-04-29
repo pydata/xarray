@@ -1,3 +1,5 @@
+.. currentmodule:: xarray
+
 .. _weather-climate:
 
 Weather and climate data
