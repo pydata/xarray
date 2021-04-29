@@ -44,14 +44,13 @@ def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
     if extend_min and extend_max:
-        extend = "both"
+        return "both"
     elif extend_min:
-        extend = "min"
+        return "min"
     elif extend_max:
-        extend = "max"
+        return "max"
     else:
-        extend = "neither"
-    return extend
+        return "neither"
 
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
