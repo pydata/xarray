@@ -1346,7 +1346,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if ref_name in self._coord_names or ref_name in self.dims:
                     coord_names.add(var_name)
                 if (var_name,) == var.dims:
-                    indexes[var_name] = var._to_index_adpater()
+                    indexes[var_name] = var._to_xindex()
 
         needed_dims: Set[Hashable] = set()
         for v in variables.values():
@@ -2202,7 +2202,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     continue
                 if indexes and var_name in indexes:
                     if var_value.ndim == 1:
-                        indexes[var_name] = var_value._to_index_adpater()
+                        indexes[var_name] = var_value._to_xindex()
                     else:
                         del indexes[var_name]
             variables[var_name] = var_value
@@ -3003,7 +3003,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         for k, v in indexers.items():
             assert isinstance(v, Variable)
             if v.dims == (k,):
-                indexes[k] = v._to_index_adpater()
+                indexes[k] = v._to_xindex()
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(coords)

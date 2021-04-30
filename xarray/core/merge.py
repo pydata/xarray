@@ -279,7 +279,7 @@ def collect_variables_and_indexes(
             variable = as_variable(variable, name=name)
             if variable.dims == (name,):
                 variable = variable.to_index_variable()
-                index = variable._to_index_adpater()
+                index = variable._to_xindex()
             else:
                 index = None
             append(name, variable, index)
@@ -475,7 +475,7 @@ def _extract_indexes_from_coords(coords):
     for name, variable in coords.items():
         variable = as_variable(variable, name=name)
         if variable.dims == (name,):
-            yield name, variable._to_index_adpater()
+            yield name, variable._to_xindex()
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):

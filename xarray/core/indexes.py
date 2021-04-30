@@ -271,7 +271,7 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return {key: coords[key]._to_index_adpater() for key in dims if key in coords}
+    return {key: coords[key]._to_xindex() for key in dims if key in coords}
 
 
 def isel_variable_and_index(
