@@ -92,6 +92,13 @@ New Features
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
+  `combine='by_coords'` is specified, which should never have been possible (as
+  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
+  Also removes unneeded internal reordering of datasets in
+  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
+  Fixes (:issue:`5230`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
