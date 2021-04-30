@@ -15,7 +15,7 @@ try:
 
     DASK_VERSION = LooseVersion(dask.__version__)
 except ModuleNotFoundError:
-    DASK_VERSION = LooseVersion('0')
+    DASK_VERSION = LooseVersion("0")
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
