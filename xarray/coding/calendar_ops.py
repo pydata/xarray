@@ -2,10 +2,10 @@ from datetime import timedelta
 
 import numpy as np
 
+from ..core.common import is_np_datetime_like
 from .cftime_offsets import date_range_like, get_date_type
 from .times import (
     _is_numpy_compatible_time_range,
-    _is_numpy_datetime,
     _is_standard_calendar,
     cftime_to_nptime,
     convert_cftimes,
@@ -132,7 +132,7 @@ def convert_calendar(
     # Get source
     source = time.dt.calendar
 
-    src_cal = "default" if _is_numpy_datetime(time) else source
+    src_cal = "default" if is_np_datetime_like(time.dtype) else source
     tgt_cal = target if use_cftime else "default"
     if src_cal == tgt_cal:
         return ds
@@ -230,7 +230,7 @@ def _datetime_to_decimal_year(times, calendar=None):
 
     calendar = calendar or times.dt.calendar
 
-    if _is_numpy_datetime(times):
+    if is_np_datetime_like(times.dtype):
         times = times.copy(
             data=convert_cftimes(times.values, get_date_type("standard"))
         )

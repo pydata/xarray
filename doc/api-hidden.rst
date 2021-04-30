@@ -287,6 +287,7 @@
    core.accessor_dt.DatetimeAccessor.floor
    core.accessor_dt.DatetimeAccessor.round
    core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.calendar
    core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek

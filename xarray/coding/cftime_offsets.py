@@ -49,9 +49,14 @@ from typing import ClassVar, Optional
 import numpy as np
 import pandas as pd
 
+from ..core.common import is_np_datetime_like
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from .times import _is_standard_calendar, format_cftime_datetime
+from .times import (
+    _is_numpy_compatible_time_range,
+    _is_standard_calendar,
+    format_cftime_datetime,
+)
 
 
 def get_date_type(calendar, use_cftime=True):
@@ -1135,17 +1140,12 @@ def date_range_like(source, calendar, use_cftime=None):
     -------
     DataArray
       1D datetime coordinate with the same start, end and frequency as the source, but in the new calendar.
-        The start date is assumed to exist in the target calendar.
-        If the end date doesn't exist, the code tries 1 and 2 calendar days before.
-        Exception when the source is in 360_day and the end of the range is the 30th of a 31-days month,
-        then the 31st is appended to the range.
+      The start date is assumed to exist in the target calendar.
+      If the end date doesn't exist, the code tries 1 and 2 calendar days before.
+      Exception when the source is daily or coarser, then if the end of the input range is on
+      the last day of the month, the output range will also end on the last day of the month in the new calendar.
     """
     from .frequencies import infer_freq
-    from .times import (
-        _is_numpy_compatible_time_range,
-        _is_numpy_datetime,
-        _is_standard_calendar,
-    )
 
     freq = infer_freq(source)
     if freq is None:
@@ -1174,7 +1174,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     src_start = source.values.min()
     src_end = source.values.max()
-    if _is_numpy_datetime(source):
+    if is_np_datetime_like(source.dtype):
         src_cal = "default"
         # We want to use datetime fields (datetime64 object don't have them)
         src_start = pd.Timestamp(src_start)

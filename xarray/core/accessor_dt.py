@@ -454,6 +454,10 @@ class DatetimeAccessor(Properties):
 
     @property
     def calendar(self):
+        """The name of the calendar of the dates.
+
+        Only relevant for arrays of cftime objects, returns "proleptic_gregorian" for arrays of numpy objects.
+        """
         index = self._obj.variable._data.array
         if isinstance(index, CFTimeIndex):
             return index.calendar

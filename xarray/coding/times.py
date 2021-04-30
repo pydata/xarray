@@ -9,7 +9,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from ..core import indexing
-from ..core.common import contains_cftime_datetimes
+from ..core.common import contains_cftime_datetimes, is_np_datetime_like
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.variable import Variable
 from .variables import (
@@ -72,12 +72,8 @@ def _is_standard_calendar(calendar):
     return calendar.lower() in _STANDARD_CALENDARS
 
 
-def _is_numpy_datetime(times):
-    return times.dtype.kind in ("M", "m")
-
-
 def _is_numpy_compatible_time_range(times):
-    if _is_numpy_datetime(times):
+    if is_np_datetime_like(times.dtype):
         return True
     # Cftime object
     tmin = times.min()
@@ -429,7 +425,7 @@ def convert_cftimes(times, date_type, missing=None):
     If missing is given, invalid dates are replaced by it, otherwise an error is raised.
     """
     new = np.empty(times.shape, dtype="O")
-    if _is_numpy_datetime(times):
+    if is_np_datetime_like(times.dtype):
         # Convert datetime64 objects to Timestamps
         times = pd.DatetimeIndex(times)
     for i, t in enumerate(times):
