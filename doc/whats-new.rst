@@ -94,6 +94,13 @@ New Features
   By `Tom White <https://github.com/tomwhite>`_.
 - Significant speedups in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`.
   (:issue:`4739`, :pull:`4740`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
+  `combine='by_coords'` is specified, which should never have been possible (as
+  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
+  Also removes unneeded internal reordering of datasets in
+  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
+  Fixes (:issue:`5230`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
