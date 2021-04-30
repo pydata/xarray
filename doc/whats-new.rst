@@ -92,6 +92,8 @@ New Features
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Significant speedups in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`.
+  (:issue:`4739`, :pull:`4740`). By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
