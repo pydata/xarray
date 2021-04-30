@@ -1215,7 +1215,7 @@ def date_range_like(source, calendar, use_cftime=None):
                     date.microsecond,
                 )
             except ValueError:
-                # Still invalid, happens for 360_day to non-leap february. Try again 2 days befordate.
+                # Still invalid, happens for 360_day to non-leap february. Try again 2 days before date.
                 return date_type(
                     date.year,
                     date.month,

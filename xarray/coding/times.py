@@ -73,7 +73,7 @@ def _is_standard_calendar(calendar):
 
 
 def _is_numpy_datetime(times):
-    return times.dtype.char in ("M", "m")
+    return times.dtype.kind in ("M", "m")
 
 
 def _is_numpy_compatible_time_range(times):

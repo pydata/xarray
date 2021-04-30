@@ -26,7 +26,7 @@ max_doy = {
 
 
 @pytest.mark.parametrize(
-    "source,target,use_cftime,freq",
+    "source, target, use_cftime, freq",
     [
         ("standard", "noleap", None, "D"),
         ("noleap", "proleptic_gregorian", True, "D"),
