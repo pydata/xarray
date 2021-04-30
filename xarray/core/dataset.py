@@ -1476,7 +1476,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             return self._copy_listed(np.asarray(key))
 
     @overload
-    def __setitem__(self, key: Iterable[Hashable], value) -> None:
+    def __setitem__(self, key: List[Hashable], value) -> None:
         ...
 
     @overload
