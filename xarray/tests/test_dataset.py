@@ -3515,6 +3515,12 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"Different lengths"):
             actual[["A", "B"]] = [var1]
 
+        with pytest.raises(ValueError, match=r"Empty list of variables"):
+            actual[[]] = [var1]
+
+        with pytest.raises(ValueError, match=r"assign single DataArray"):
+            actual[["A", "B"]] = xr.DataArray([1, 2])
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)

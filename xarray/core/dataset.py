@@ -1502,16 +1502,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             )
 
         if isinstance(key, list):
-            if len(key) != len(value):
-                raise ValueError(
-                    f"Different lengths of variables to be set "
-                    f"({len(key)}) and data used as input for "
-                    f"setting ({len(value)})"
-                )
-            if isinstance(value, Dataset):
-                self.update(dict(zip(key, value.data_vars.values())))
+            if len(key) == 0:
+                raise ValueError("Empty list of variables to be set")
+            if len(key) == 1:
+                self.update({key[0]: value})
             else:
-                self.update(dict(zip(key, value)))
+                if len(key) != len(value):
+                    raise ValueError(
+                        f"Different lengths of variables to be set "
+                        f"({len(key)}) and data used as input for "
+                        f"setting ({len(value)})"
+                    )
+                if isinstance(value, Dataset):
+                    self.update(dict(zip(key, value.data_vars.values())))
+                elif isinstance(value, xr.DataArray):
+                    raise ValueError("Cannot assign single DataArray to multiple keys")
+                else:
+                    self.update(dict(zip(key, value)))
+
         else:
             self.update({key: value})
 
