@@ -780,14 +780,18 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing"""
-        if self._indexes is None:
-            self._indexes = default_indexes(self._coords, self.dims)
-        return Indexes({k: idx.array for k, idx in self._indexes.items()})
+        """Mapping of xarray Index or pandas.Index objects used for label based indexing."""
+        xr_or_pd_indexes = {}
+        for k, idx in self.xindexes.items():
+            try:
+                xr_or_pd_indexes[k] = idx.to_pandas_index()
+            except TypeError:
+                xr_or_pd_indexes[k] = idx
+        return Indexes(xr_or_pd_indexes)
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray.Index objects used for label based indexing"""
+        """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
@@ -1005,8 +1009,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
+            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
+            # xarray Index needs a copy method.
             indexes = {
-                k: PandasIndexAdapter(v.array.copy(deep=deep))
+                k: PandasIndexAdapter(v.to_pandas_index().copy(deep=deep))
                 for k, v in self._indexes.items()
             }
         return self._replace(variable, coords, indexes=indexes)
@@ -2189,7 +2195,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         # TODO: benbovy - flexible indexes: update when MultIndex has its own
         # class inheriting from xarray.Index
-        idx = self.xindexes[dim].array
+        idx = self.xindexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 

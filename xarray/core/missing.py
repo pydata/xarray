@@ -321,7 +321,9 @@ def interp_na(
         # has its own class inheriting from xarray.Index
         if (
             dim in self.xindexes
-            and isinstance(self.xindexes[dim].array, (pd.DatetimeIndex, CFTimeIndex))
+            and isinstance(
+                self.xindexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+            )
             and use_coordinate
         ):
             # Convert to float

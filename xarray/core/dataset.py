@@ -1180,7 +1180,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # switch from dimension to level names, if necessary
         dim_names: Dict[Hashable, str] = {}
         for dim, idx in indexes.items():
-            pd_idx = idx.array
+            pd_idx = idx.to_pandas_index()
             if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = pd_idx.name
         if dim_names:
@@ -1318,11 +1318,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coordinate name.
         """
         level_coords: Dict[str, Hashable] = {}
-        for name, index_adapter in self.xindexes.items():
-            index = index_adapter
+        for name, index in self.xindexes.items():
             # TODO: benbovy - flexible indexes: update when MultIndex has its own xarray class.
-            if isinstance(index.array, pd.MultiIndex):
-                level_names = index.array.names
+            pd_index = index.to_pandas_index()
+            if isinstance(pd_index, pd.MultiIndex):
+                level_names = pd_index.names
                 (dim,) = self.variables[name].dims
                 level_coords.update({lname: dim for lname in level_names})
         return level_coords
@@ -1579,14 +1579,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing"""
-        if self._indexes is None:
-            self._indexes = default_indexes(self._variables, self._dims)
-        return Indexes({k: idx.array for k, idx in self._indexes.items()})
+        """Mapping of xarray Index or pandas.Index objects used for label based indexing."""
+        xr_or_pd_indexes = {}
+        for k, idx in self.xindexes.items():
+            try:
+                xr_or_pd_indexes[k] = idx.to_pandas_index()
+            except TypeError:
+                xr_or_pd_indexes[k] = idx
+        return Indexes(xr_or_pd_indexes)
 
     @property
     def xindexes(self) -> Indexes:
-        """Mapping of xarray.Index objects used for label based indexing"""
+        """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._variables, self._dims)
         return Indexes(self._indexes)
@@ -2053,7 +2057,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if v.dtype.kind in "US":
                     # TODO: benbovy - flexible indexes
                     # update when CFTimeIndex has its own xarray index class
-                    index = self.xindexes[k].array
+                    index = self.xindexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
                     elif isinstance(index, xr.CFTimeIndex):
@@ -3100,7 +3104,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             return None
         indexes = {}
         for k, v in self.xindexes.items():
-            index = v.array
+            # TODO: benbovy - flexible indexes: make it compatible with any xarray Index
+            index = v.to_pandas_index()
             new_name = name_dict.get(k, k)
             if new_name not in dims_set:
                 continue
@@ -3606,7 +3611,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             coord = self._variables[dim]
             # TODO: benbovy - flexible indexes: update when MultiIndex
             # has its own class inherited from xarray.Index
-            index = self.xindexes[dim].array
+            index = self.xindexes[dim].to_pandas_index()
             if not isinstance(index, pd.MultiIndex):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
@@ -3793,7 +3798,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # input a dummy value for the singleton dimension.
         # TODO: benbovy - flexible indexes: update when MultIndex has its own
         # class inheriting from xarray.Index
-        idx = data_array.xindexes[new_dim].array
+        idx = data_array.xindexes[new_dim].to_pandas_index()
         levels = [idx.levels[0]] + [
             level.astype(self[level.name].dtype) for level in idx.levels[1:]
         ]
@@ -5611,7 +5616,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if dim in indexes:
             # TODO: benbovy - flexible indexes: check slicing of xarray indexes?
             # or only allow this for pandas indexes?
-            index = indexes[dim].array
+            index = indexes[dim].to_pandas_index()
             indexes[dim] = PandasIndexAdapter(index[kwargs_new[dim]])
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)

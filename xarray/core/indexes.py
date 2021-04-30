@@ -36,16 +36,21 @@ class Index:
         else:
             self.coord_names = tuple([coord_names])
 
-        # TODO (benbovy - flexible indexes): remove
-        # temporarly avoid mypy errors: the `array` attribute is used in many places
-        # to access the underlying pandas.Index objects from xarray_obj.indexes
-        self.array = pd.Index([])
-
     @classmethod
     def from_variables(
         cls, variables: Dict[Hashable, "Variable"], **kwargs
     ):  # pragma: no cover
         raise NotImplementedError()
+
+    def to_pandas_index(self) -> pd.Index:
+        """Cast this xarray index to a pandas.Index object or raise a TypeError
+        if this is not supported.
+
+        This method is used by all xarray operations that expect/require a
+        pandas.Index object.
+
+        """
+        raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
 
     def equals(self, other):  # pragma: no cover
         raise NotImplementedError()
@@ -92,6 +97,9 @@ class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
 
         varname, var = list(variables.items())[0]
         return cls(var.data, dtype=var.dtype, coord_name=varname)
+
+    def to_pandas_index(self) -> pd.Index:
+        return self.array
 
     @property
     def dtype(self) -> np.dtype:
@@ -303,7 +311,8 @@ def isel_variable_and_index(
     indexer = indexers[dim]
     if isinstance(indexer, Variable):
         indexer = indexer.data
-    new_index = PandasIndexAdapter(index.array[indexer])
+    pd_index = index.to_pandas_index()
+    new_index = PandasIndexAdapter(pd_index[indexer])
     return new_variable, new_index
 
 
@@ -311,7 +320,7 @@ def roll_index(
     index: PandasIndexAdapter, count: int, axis: int = 0
 ) -> PandasIndexAdapter:
     """Roll an pandas.Index."""
-    pd_index = index.array
+    pd_index = index.to_pandas_index()
     count %= pd_index.shape[0]
     if count != 0:
         new_idx = pd_index[-count:].append(pd_index[:-count])

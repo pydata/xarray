@@ -570,7 +570,7 @@ def reindex_variables(
 
         if dim in indexes:
             # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
-            index = indexes[dim].array
+            index = indexes[dim].to_pandas_index()
 
             if not index.is_unique:
                 raise ValueError(

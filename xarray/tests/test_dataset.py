@@ -2698,20 +2698,20 @@ class TestDataset:
         assert "time_new" in renamed.xindexes
         # TODO: benbovy - flexible indexes: update when CFTimeIndex
         # inherits from xarray.Index
-        assert isinstance(renamed.xindexes["time_new"].array, CFTimeIndex)
-        assert renamed.xindexes["time_new"].array.name == "time_new"
+        assert isinstance(renamed.xindexes["time_new"].to_pandas_index(), CFTimeIndex)
+        assert renamed.xindexes["time_new"].to_pandas_index().name == "time_new"
 
         # check original has not changed
         assert "time" in orig.xindexes
-        assert isinstance(orig.xindexes["time"].array, CFTimeIndex)
-        assert orig.xindexes["time"].array.name == "time"
+        assert isinstance(orig.xindexes["time"].to_pandas_index(), CFTimeIndex)
+        assert orig.xindexes["time"].to_pandas_index().name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.xindexes["time"].array, CFTimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), CFTimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.xindexes["time"].array, CFTimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), CFTimeIndex)
 
     def test_rename_does_not_change_DatetimeIndex_type(self):
         # make sure DatetimeIndex is conderved on rename
@@ -2723,20 +2723,20 @@ class TestDataset:
         assert "time_new" in renamed.xindexes
         # TODO: benbovy - flexible indexes: update when DatetimeIndex
         # inherits from xarray.Index?
-        assert isinstance(renamed.xindexes["time_new"].array, DatetimeIndex)
-        assert renamed.xindexes["time_new"].array.name == "time_new"
+        assert isinstance(renamed.xindexes["time_new"].to_pandas_index(), DatetimeIndex)
+        assert renamed.xindexes["time_new"].to_pandas_index().name == "time_new"
 
         # check original has not changed
         assert "time" in orig.xindexes
-        assert isinstance(orig.xindexes["time"].array, DatetimeIndex)
-        assert orig.xindexes["time"].array.name == "time"
+        assert isinstance(orig.xindexes["time"].to_pandas_index(), DatetimeIndex)
+        assert orig.xindexes["time"].to_pandas_index().name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.xindexes["time"].array, DatetimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), DatetimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.xindexes["time"].array, DatetimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), DatetimeIndex)
 
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
@@ -2746,7 +2746,8 @@ class TestDataset:
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
         pd.testing.assert_index_equal(
-            actual.xindexes["y"].array, expected.xindexes["y"].array
+            actual.xindexes["y"].to_pandas_index(),
+            expected.xindexes["y"].to_pandas_index(),
         )
 
         roundtripped = actual.swap_dims({"y": "x"})
@@ -2779,7 +2780,8 @@ class TestDataset:
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
         pd.testing.assert_index_equal(
-            actual.xindexes["y"].array, expected.xindexes["y"].array
+            actual.xindexes["y"].to_pandas_index(),
+            expected.xindexes["y"].to_pandas_index(),
         )
 
     def test_expand_dims_error(self):
@@ -3159,7 +3161,7 @@ class TestDataset:
         y = D.to_stacked_array("features", sample_dims)
         # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
         # inherited from xarray.Index
-        assert y.xindexes["features"].array.levels[1].dtype == D.y.dtype
+        assert y.xindexes["features"].to_pandas_index().levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self):

@@ -508,7 +508,7 @@ def map_blocks(
         # all indexes
         expected_indexes = {}
         for dim in indexes:
-            idx = indexes[dim].array[
+            idx = indexes[dim].to_pandas_index()[
                 _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
             ]
             expected_indexes[dim] = PandasIndexAdapter(idx)

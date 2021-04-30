@@ -406,7 +406,7 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.xindexes[key].array
+            return self.xindexes[key].to_pandas_index()
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
@@ -1161,7 +1161,7 @@ class DataWithCoords(AttrAccessMixin):
             )
 
             # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
-            if isinstance(self.xindexes[dim_name].array, CFTimeIndex):
+            if isinstance(self.xindexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)
