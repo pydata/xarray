@@ -8,7 +8,7 @@ import numpy as np
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import IndexAdapter, default_indexes
+from xarray.core.indexes import Index, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -253,7 +253,7 @@ def assert_chunks_equal(a, b):
 
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     assert isinstance(indexes, dict), indexes
-    assert all(isinstance(v, IndexAdapter) for v in indexes.values()), {
+    assert all(isinstance(v, Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
     }
 

@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, indexing
-from .indexes import IndexAdapter, Indexes
+from .indexes import Index, Indexes
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
@@ -271,7 +271,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, IndexAdapter]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -334,7 +334,7 @@ class DataArrayCoordinates(Coordinates):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, IndexAdapter]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 

@@ -553,7 +553,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def _to_index_adpater(self):
         # temporary function used internally as a replacement of to_index()
-        # returns an IndexAdpater instance instead of a pd.Index instance
+        # returns an xarray Index instance instead of a pd.Index instance
         return PandasIndexAdapter(self.to_index())
 
     def to_index(self):

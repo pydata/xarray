@@ -52,7 +52,7 @@ from .coordinates import (
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import (
-    IndexAdapter,
+    Index,
     Indexes,
     PandasIndexAdapter,
     default_indexes,
@@ -351,7 +351,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, IndexAdapter]]
+    _indexes: Optional[Dict[Hashable, Index]]
     _name: Optional[Hashable]
     _variable: Variable
 

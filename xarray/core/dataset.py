@@ -61,7 +61,7 @@ from .coordinates import (
 )
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
-    IndexAdapter,
+    Index,
     Indexes,
     PandasIndexAdapter,
     default_indexes,
@@ -694,7 +694,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     _dims: Dict[Hashable, int]
     _encoding: Optional[Dict[Hashable, Any]]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, IndexAdapter]]
+    _indexes: Optional[Dict[Hashable, Index]]
     _variables: Dict[Hashable, Variable]
 
     __slots__ = (
@@ -1089,7 +1089,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Any, IndexAdapter], None, Default] = _default,
+        indexes: Union[Dict[Any, Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1138,7 +1138,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Hashable, IndexAdapter], None, Default] = _default,
+        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Replace variables with recalculated dimensions."""
@@ -1166,7 +1166,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables, coord_names, dims, attrs, indexes=None, inplace=inplace
         )
 
-    def _overwrite_indexes(self, indexes: Mapping[Any, IndexAdapter]) -> "Dataset":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Index]) -> "Dataset":
         if not indexes:
             return self
 
@@ -1333,7 +1333,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         variables: Dict[Hashable, Variable] = {}
         coord_names = set()
-        indexes: Dict[Hashable, IndexAdapter] = {}
+        indexes: Dict[Hashable, Index] = {}
 
         for name in names:
             try:
@@ -2230,7 +2230,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         indexers_list = list(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, IndexAdapter] = {}
+        indexes: Dict[Hashable, Index] = {}
 
         for name, var in self.variables.items():
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
@@ -3326,7 +3326,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
         variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, IndexAdapter] = {}
+        indexes: Dict[Hashable, Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:

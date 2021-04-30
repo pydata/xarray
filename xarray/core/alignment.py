@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes
-from .indexes import IndexAdapter, PandasIndexAdapter
+from .indexes import Index, PandasIndexAdapter
 from .indexing import get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
 from .variable import IndexVariable, Variable
@@ -303,7 +303,7 @@ def align(
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
             # TODO: benbovy - flexible indexes. maybe move this logic in util func
-            if isinstance(indexes[dim], IndexAdapter):
+            if isinstance(indexes[dim], Index):
                 index = indexes[dim]
             else:
                 index = PandasIndexAdapter(safe_cast_to_index(indexes[dim]))
@@ -492,14 +492,14 @@ def reindex_like_indexers(
 def reindex_variables(
     variables: Mapping[Any, Variable],
     sizes: Mapping[Any, int],
-    indexes: Mapping[Any, IndexAdapter],
+    indexes: Mapping[Any, Index],
     indexers: Mapping,
     method: Optional[str] = None,
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
     sparse: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, IndexAdapter]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 

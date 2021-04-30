@@ -28,7 +28,7 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
-from xarray.core.indexes import IndexAdapter
+from xarray.core.indexes import Index
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import is_scalar
 
@@ -584,7 +584,7 @@ class TestDataset:
         assert set(ds.xindexes) == {"dim2", "dim3", "time"}
         assert len(ds.xindexes) == 3
         assert "dim2" in repr(ds.xindexes)
-        assert all([isinstance(idx, IndexAdapter) for idx in ds.xindexes.values()])
+        assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
 
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3

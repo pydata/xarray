@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .variable import Variable
 
 
-class IndexAdapter:
+class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
     __slots__ = "coord_names"
@@ -57,7 +57,7 @@ class IndexAdapter:
         raise NotImplementedError()
 
 
-class PandasIndexAdapter(IndexAdapter, ExplicitlyIndexedNDArrayMixin):
+class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
@@ -256,7 +256,7 @@ class Indexes(collections.abc.Mapping):
 
 def default_indexes(
     coords: Mapping[Any, "Variable"], dims: Iterable
-) -> Dict[Hashable, IndexAdapter]:
+) -> Dict[Hashable, Index]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -277,9 +277,9 @@ def default_indexes(
 def isel_variable_and_index(
     name: Hashable,
     variable: "Variable",
-    index: IndexAdapter,
+    index: Index,
     indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
-) -> Tuple["Variable", Optional[IndexAdapter]]:
+) -> Tuple["Variable", Optional[Index]]:
     """Index a Variable and pandas.Index together."""
     from .variable import Variable
 
@@ -321,8 +321,8 @@ def roll_index(
 
 
 def propagate_indexes(
-    indexes: Optional[Dict[Hashable, IndexAdapter]], exclude: Optional[Any] = None
-) -> Optional[Dict[Hashable, IndexAdapter]]:
+    indexes: Optional[Dict[Hashable, Index]], exclude: Optional[Any] = None
+) -> Optional[Dict[Hashable, Index]]:
     """Creates new indexes dict from existing dict optionally excluding some dimensions."""
     if exclude is None:
         exclude = ()

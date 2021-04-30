@@ -77,7 +77,7 @@ def _infer_concat_order_from_coords(datasets):
                 )
 
             # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
-            # get pd.Index objects from IndexAdapter objects
+            # get pd.Index objects from Index objects
             indexes = [index.array for index in indexes]
 
             # If dimension coordinate values are same on every dataset then

@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import IndexAdapter, PandasIndexAdapter
+from .indexes import Index, PandasIndexAdapter
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
@@ -158,14 +158,14 @@ def _assert_compat_valid(compat):
         )
 
 
-MergeElement = Tuple[Variable, Optional[IndexAdapter]]
+MergeElement = Tuple[Variable, Optional[Index]]
 
 
 def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
     prioritized: Mapping[Hashable, MergeElement] = None,
     compat: str = "minimal",
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, IndexAdapter]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
     Parameters
@@ -187,7 +187,7 @@ def merge_collected(
     _assert_compat_valid(compat)
 
     merged_vars: Dict[Hashable, Variable] = {}
-    merged_indexes: Dict[Hashable, IndexAdapter] = {}
+    merged_indexes: Dict[Hashable, Index] = {}
 
     for name, elements_list in grouped.items():
         if name in prioritized:
@@ -252,7 +252,7 @@ def collect_variables_and_indexes(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    grouped: Dict[Hashable, List[Tuple[Variable, Optional[IndexAdapter]]]] = {}
+    grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = {}
 
     def append(name, variable, index):
         values = grouped.setdefault(name, [])
@@ -291,7 +291,7 @@ def collect_from_coordinates(
     list_of_coords: "List[Coordinates]",
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
-    grouped: Dict[Hashable, List[Tuple[Variable, Optional[IndexAdapter]]]] = {}
+    grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = {}
 
     for coords in list_of_coords:
         variables = coords.variables
@@ -306,7 +306,7 @@ def merge_coordinates_without_align(
     objects: "List[Coordinates]",
     prioritized: Mapping[Hashable, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, IndexAdapter]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
     This function is used for merging coordinate from pre-existing xarray
@@ -439,9 +439,9 @@ def merge_coords(
     compat: str = "minimal",
     join: str = "outer",
     priority_arg: Optional[int] = None,
-    indexes: Optional[Mapping[Hashable, IndexAdapter]] = None,
+    indexes: Optional[Mapping[Hashable, Index]] = None,
     fill_value: object = dtypes.NA,
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, IndexAdapter]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge coordinate variables.
 
     See merge_core below for argument descriptions. This works similarly to
@@ -560,7 +560,7 @@ def merge_core(
     combine_attrs: Optional[str] = "override",
     priority_arg: Optional[int] = None,
     explicit_coords: Optional[Sequence] = None,
-    indexes: Optional[Mapping[Hashable, IndexAdapter]] = None,
+    indexes: Optional[Mapping[Hashable, Index]] = None,
     fill_value: object = dtypes.NA,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.

@@ -1160,7 +1160,7 @@ class DataWithCoords(AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an IndexAdpater subclass
+            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
             if isinstance(self.xindexes[dim_name].array, CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
