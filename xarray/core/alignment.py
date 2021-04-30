@@ -64,7 +64,7 @@ def _override_indexes(objects, all_indexes, exclude):
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
         new_indexes = {}
-        for dim in obj.indexes:
+        for dim in obj.xindexes:
             if dim not in exclude:
                 new_indexes[dim] = all_indexes[dim][0]
         objects[idx + 1] = obj._overwrite_indexes(new_indexes)
@@ -285,7 +285,7 @@ def align(
             if dim not in exclude:
                 all_coords[dim].append(obj.coords[dim])
                 try:
-                    index = obj.indexes[dim]
+                    index = obj.xindexes[dim]
                 except KeyError:
                     unlabeled_dim_sizes[dim].add(obj.sizes[dim])
                 else:
@@ -474,7 +474,7 @@ def reindex_like_indexers(
     ValueError
         If any dimensions without labels have different sizes.
     """
-    indexers = {k: v for k, v in other.indexes.items() if k in target.dims}
+    indexers = {k: v for k, v in other.xindexes.items() if k in target.dims}
 
     for dim in other.dims:
         if dim not in indexers and dim in target.dims:

@@ -53,6 +53,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         return self._data.indexes  # type: ignore[attr-defined]
 
     @property
+    def xindexes(self) -> Indexes:
+        return self._data.xindexes  # type: ignore[attr-defined]
+
+    @property
     def variables(self):
         raise NotImplementedError()
 
@@ -157,7 +161,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
         coords, indexes = merge_coords(
-            [self.variables, other_vars], priority_arg=1, indexes=self.indexes
+            [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
         self._update_coords(coords, indexes)
 
@@ -165,7 +169,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
-            indexes = dict(self.indexes)
+            indexes = dict(self.xindexes)
         else:
             coord_list = [self, other] if not reflexive else [other, self]
             variables, indexes = merge_coordinates_without_align(coord_list)
@@ -180,7 +184,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             # don't include indexes in prioritized, because we didn't align
             # first and we want indexes to be checked
             prioritized = {
-                k: (v, None) for k, v in self.variables.items() if k not in self.indexes
+                k: (v, None)
+                for k, v in self.variables.items()
+                if k not in self.xindexes
             }
             variables, indexes = merge_coordinates_without_align(
                 [self, other], prioritized
@@ -285,7 +291,7 @@ class DatasetCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
@@ -343,7 +349,7 @@ class DataArrayCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 

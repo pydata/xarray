@@ -783,6 +783,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Mapping of pandas.Index objects used for label based indexing"""
         if self._indexes is None:
             self._indexes = default_indexes(self._coords, self.dims)
+        return Indexes({k: idx.array for k, idx in self._indexes.items()})
+
+    @property
+    def xindexes(self) -> Indexes:
+        """Mapping of xarray.Index objects used for label based indexing"""
+        if self._indexes is None:
+            self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
 
     @property
@@ -2182,7 +2189,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         # TODO: benbovy - flexible indexes: update when MultIndex has its own
         # class inheriting from xarray.Index
-        idx = self.indexes[dim].array
+        idx = self.xindexes[dim].array
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 

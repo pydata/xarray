@@ -257,7 +257,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     dim_indexers = get_dim_indexers(data_obj, indexers)
     for dim, label in dim_indexers.items():
         try:
-            index = data_obj.indexes[dim].array
+            index = data_obj.xindexes[dim].array
         except KeyError:
             # no index for this dimension: reuse the provided labels
             if method is not None or tolerance is not None:

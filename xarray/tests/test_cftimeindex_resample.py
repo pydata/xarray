@@ -100,7 +100,7 @@ def test_resample(freqs, closed, label, base):
             .mean()
         )
         # TODO (benbovy - flexible indexes): update when CFTimeIndex is a IndexAdpater subclass
-        da_cftime["time"] = da_cftime.indexes["time"].array.to_datetimeindex()
+        da_cftime["time"] = da_cftime.xindexes["time"].array.to_datetimeindex()
         xr.testing.assert_identical(da_cftime, da_datetime)
 
 
@@ -147,5 +147,5 @@ def test_calendars(calendar):
         .mean()
     )
     # TODO (benbovy - flexible indexes): update when CFTimeIndex is a IndexAdpater subclass
-    da_cftime["time"] = da_cftime.indexes["time"].array.to_datetimeindex()
+    da_cftime["time"] = da_cftime.xindexes["time"].array.to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)

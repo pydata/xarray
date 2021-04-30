@@ -696,7 +696,7 @@ def test_concat_cftimeindex(date_type):
     )
     da = xr.concat([da1, da2], dim="time")
 
-    assert isinstance(da.indexes["time"].array, CFTimeIndex)
+    assert isinstance(da.xindexes["time"].array, CFTimeIndex)
 
 
 @requires_cftime

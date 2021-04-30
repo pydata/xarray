@@ -264,13 +264,13 @@ def collect_variables_and_indexes(
 
     for mapping in list_of_mappings:
         if isinstance(mapping, Dataset):
-            append_all(mapping.variables, mapping.indexes)
+            append_all(mapping.variables, mapping.xindexes)
             continue
 
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
                 coords = variable._coords.copy()  # use private API for speed
-                indexes = dict(variable.indexes)
+                indexes = dict(variable.xindexes)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 indexes.pop(name, None)
@@ -295,7 +295,7 @@ def collect_from_coordinates(
 
     for coords in list_of_coords:
         variables = coords.variables
-        indexes = coords.indexes
+        indexes = coords.xindexes
         for name, variable in variables.items():
             value = grouped.setdefault(name, [])
             value.append((variable, indexes.get(name)))
@@ -961,7 +961,7 @@ def dataset_update_method(
     # use ds.coords and not ds.indexes, else str coords are cast to object
     # TODO: benbovy - flexible indexes: fix this (it only works with pandas indexes)
     indexes = {
-        key: PandasIndexAdapter(dataset.coords[key]) for key in dataset.indexes.keys()
+        key: PandasIndexAdapter(dataset.coords[key]) for key in dataset.xindexes.keys()
     }
     return merge_core(
         [dataset, other],
