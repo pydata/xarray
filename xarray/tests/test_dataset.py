@@ -6844,6 +6844,7 @@ def test_integrate(dask):
         da.integrate(dim="x")
 
 
+@requires_scipy
 @pytest.mark.parametrize("dask", [True, False])
 def test_cumulative_integrate(dask):
     rs = np.random.RandomState(43)
