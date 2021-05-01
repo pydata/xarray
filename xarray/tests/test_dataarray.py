@@ -7317,26 +7317,26 @@ def test_drop_duplicate_coords(keep):
     da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
 
     if keep == "first":
-        data = [1, 2, 4]
-        init = [0, 0, 1]
-        tau = [1, 2, 1]
-        valid = [8, 6, 7]
+        data = [[1, 2], [4, np.nan]]
+        init = [0, 1]
+        tau = [1, 2]
+        valid = [[8.0, 6.0], [7.0, np.nan]]
     elif keep == "last":
-        data = [1, 3, 6]
-        init = [0, 0, 1]
-        tau = [1, 3, 3]
-        valid = [8, 6, 7]
+        data = [[1, 3], [np.nan, 6]]
+        init = [0, 1]
+        tau = [1, 3]
+        valid = [[8.0, 6.0], [np.nan, 7]]
     else:
-        data = [1]
+        data = [[1]]
         init = [0]
         tau = [1]
-        valid = [8]
+        valid = [[8]]
 
     result = da.drop_duplicate_coords("valid", keep=keep)
     expected = xr.DataArray(
         data,
-        dims="valid",
-        coords={"init": ("valid", init), "tau": ("valid", tau), "valid": valid},
+        dims=["init", "tau"],
+        coords={"init": init, "tau": tau, "valid": (("init", "tau"), valid)},
     )
     assert_equal(expected, result)
 
@@ -7350,29 +7350,9 @@ def test_drop_duplicate_coords_duplicate_dims(keep):
     )
     da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
 
-    if keep == "first":
-        data = [1, 2, 4]
-        init = [0, 0, 0]
-        tau = [1, 2, 1]
-        valid = [8, 6, 7]
-    elif keep == "last":
-        data = [1, 3, 6]
-        init = [0, 0, 0]
-        tau = [1, 3, 3]
-        valid = [8, 6, 7]
-    else:
-        data = [1]
-        init = [0]
-        tau = [1]
-        valid = [8]
+    with pytest.raises(ValueError):
+        da.drop_duplicate_coords("valid", keep=keep)
 
-    result = da.drop_duplicate_coords("valid", keep=keep)
-    expected = xr.DataArray(
-        data,
-        dims="valid",
-        coords={"init": ("valid", init), "tau": ("valid", tau), "valid": valid},
-    )
-    assert_equal(expected, result)
 
 @pytest.mark.parametrize("keep", ["first", "last", False])
 def test_drop_duplicate_coords_missing(keep):

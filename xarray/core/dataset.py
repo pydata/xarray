@@ -7110,6 +7110,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 )
             elif coord not in new.dims:
                 dims = new[coord].dims
+                for dim in dims:
+                    if any(new.get_index(dim).duplicated()):
+                        raise ValueError(
+                            f"Cannot have duplicate dimension values in "
+                            f"'{dim}' when dropping duplicate coordinate "
+                            f"values for '{coord}' due to ambiguity "
+                            f"in unstack."
+                        )
 
                 # stack the coord's dimensions
                 tmp_dim = "__tmp_dim__"
@@ -7122,29 +7130,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 # can actually find duplicates
                 new[tmp_dim] = new[coord].values.ravel()
 
-                base_coord = coord
-
                 # replace coord with tmp_dim for use with get_index()
                 # as to not repeat the same call in the dimension clause
                 coord = tmp_dim
+
+                unstack_tmp_dim = True
             else:
-                base_coord = None
+                unstack_tmp_dim = False
 
             index = new.get_index(coord).duplicated(keep=keep)
             new = new.isel({coord: ~index})
 
-            if base_coord is not None:
-                # remove tmp_dim
-                new = new.swap_dims({tmp_dim: base_coord}).drop(tmp_dim)
+            if unstack_tmp_dim:
+                # return everything to normal
+                new[coord] = stacked_coord_indices.isel({coord: ~index})
+                new = new.unstack(coord)
 
-                # get associated coordinates with the stacked dim
-                tmp_index = stacked_coord_indices.isel({coord: ~index}).indexes[tmp_dim]
-
-                # unpack the coordinates and add back to dataset
-                keys = tmp_index.names
-                values = list(zip(*tmp_index.values))
-                for key, value in dict(zip(keys, values)).items():
-                    new.coords[key] = base_coord, list(value)
         return new
 
     def curvefit(
