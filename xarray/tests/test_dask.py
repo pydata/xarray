@@ -111,6 +111,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
         if LooseVersion(dask.__version__) >= LooseVersion("2021.04.0+17"):
+            # TODO: use @pytest.mark.parametrize to parametrize this
             arr = Variable(("x"), da.array([1, 2, 3, 4]))
             expected = Variable(("x"), da.array([99, 2, 3, 4]))
             arr[0] = 99  # Indexing by integers

@@ -74,6 +74,9 @@ New Features
 - Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
 - Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Implement ``__setitem__`` for :py:class:`core.indexing.DaskIndexingAdapter` if
+  dask version supports item assignment. (:issue:`5171`, :pull:`5174`)
+  By `Tammas Loughran <https://github.com/tammasloughran>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
