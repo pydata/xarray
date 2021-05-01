@@ -143,7 +143,7 @@ def test_ensure_warnings_not_elevated(func):
 
     # define a custom Variable class that raises a warning in assert_*
     class WarningVariable(xr.Variable):
-        @property  # type: ignore[misc]
+        @property  # type: ignore
         def dims(self):
             warnings.warn("warning in test")
             return super().dims

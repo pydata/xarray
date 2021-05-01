@@ -158,7 +158,7 @@ else:
 
     def sliding_window_view(x, window_shape, axis=None):
         from dask.array.overlap import map_overlap
-        from numpy.core.numeric import normalize_axis_tuple
+        from numpy.core.numeric import normalize_axis_tuple  # type: ignore
 
         from .npcompat import sliding_window_view as _np_sliding_window_view
 

@@ -1,7 +1,6 @@
 import copy
 import datetime
 import functools
-import inspect
 import sys
 import warnings
 from collections import defaultdict
@@ -455,63 +454,6 @@ def as_dataset(obj: Any) -> "Dataset":
     if not isinstance(obj, Dataset):
         obj = Dataset(obj)
     return obj
-
-
-def _get_func_args(func, param_names):
-    """Use `inspect.signature` to try accessing `func` args. Otherwise, ensure
-    they are provided by user.
-    """
-    try:
-        func_args = inspect.signature(func).parameters
-    except ValueError:
-        func_args = {}
-        if not param_names:
-            raise ValueError(
-                "Unable to inspect `func` signature, and `param_names` was not provided."
-            )
-    if param_names:
-        params = param_names
-    else:
-        params = list(func_args)[1:]
-        if any(
-            [(p.kind in [p.VAR_POSITIONAL, p.VAR_KEYWORD]) for p in func_args.values()]
-        ):
-            raise ValueError(
-                "`param_names` must be provided because `func` takes variable length arguments."
-            )
-    return params, func_args
-
-
-def _initialize_curvefit_params(params, p0, bounds, func_args):
-    """Set initial guess and bounds for curvefit.
-    Priority: 1) passed args 2) func signature 3) scipy defaults
-    """
-
-    def _initialize_feasible(lb, ub):
-        # Mimics functionality of scipy.optimize.minpack._initialize_feasible
-        lb_finite = np.isfinite(lb)
-        ub_finite = np.isfinite(ub)
-        p0 = np.nansum(
-            [
-                0.5 * (lb + ub) * int(lb_finite & ub_finite),
-                (lb + 1) * int(lb_finite & ~ub_finite),
-                (ub - 1) * int(~lb_finite & ub_finite),
-            ]
-        )
-        return p0
-
-    param_defaults = {p: 1 for p in params}
-    bounds_defaults = {p: (-np.inf, np.inf) for p in params}
-    for p in params:
-        if p in func_args and func_args[p].default is not func_args[p].empty:
-            param_defaults[p] = func_args[p].default
-        if p in bounds:
-            bounds_defaults[p] = tuple(bounds[p])
-            if param_defaults[p] < bounds[p][0] or param_defaults[p] > bounds[p][1]:
-                param_defaults[p] = _initialize_feasible(bounds[p][0], bounds[p][1])
-        if p in p0:
-            param_defaults[p] = p0[p]
-    return param_defaults, bounds_defaults
 
 
 class DataVariables(Mapping[Hashable, "DataArray"]):
@@ -1454,11 +1396,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     # FIXME https://github.com/python/mypy/issues/7328
     @overload
-    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore[misc]
+    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore[misc]
+    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore
         ...
 
     @overload
@@ -1508,7 +1450,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore[assignment]
+    __hash__ = None  # type: ignore
 
     def _all_compat(self, other: "Dataset", compat_str: str) -> bool:
         """Helper function for equals and identical"""
@@ -4408,7 +4350,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
+                count += np.asarray(array.count(dims))  # type: ignore
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
@@ -4789,7 +4731,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
                         # the former is often more efficient
-                        reduce_dims = None  # type: ignore[assignment]
+                        reduce_dims = None  # type: ignore
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_dims,
@@ -6469,9 +6411,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         lhs = np.vander(x, order)
 
         if rcond is None:
-            rcond = (
-                x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore[attr-defined]
-            )
+            rcond = x.shape[0] * np.core.finfo(x.dtype).eps  # type: ignore
 
         # Weights:
         if w is not None:
@@ -6747,7 +6687,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 variables[name] = var.pad(
                     pad_width=var_pad_width,
                     mode=coord_pad_mode,
-                    **coord_pad_options,  # type: ignore[arg-type]
+                    **coord_pad_options,  # type: ignore
                 )
 
         return self._replace_vars_and_dims(variables)

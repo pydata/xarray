@@ -60,7 +60,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     + cupy_array_type
 )
 # https://github.com/python/mypy/issues/224
-BASIC_INDEXING_TYPES = integer_types + (slice,)
+BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
 VariableType = TypeVar("VariableType", bound="Variable")
 """Type annotation to be used when methods of Variable return self or a copy of self.
@@ -999,7 +999,7 @@ class Variable(
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore[assignment]
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):
@@ -1317,7 +1317,7 @@ class Variable(
 
         # workaround for bug in Dask's default value of stat_length https://github.com/dask/dask/issues/5303
         if stat_length is None and mode in ["maximum", "mean", "median", "minimum"]:
-            stat_length = [(n, n) for n in self.data.shape]  # type: ignore[assignment]
+            stat_length = [(n, n) for n in self.data.shape]  # type: ignore
 
         # change integer values to a tuple of two of those values and change pad_width to index
         for k, v in pad_width.items():
@@ -1334,7 +1334,7 @@ class Variable(
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
+            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore
 
         array = duck_array_ops.pad(
             self.data.astype(dtype, copy=False),
@@ -2541,14 +2541,14 @@ class IndexVariable(Variable):
         return self
 
     # https://github.com/python/mypy/issues/1465
-    @Variable.data.setter  # type: ignore[attr-defined]
+    @Variable.data.setter  # type: ignore
     def data(self, data):
         raise ValueError(
             f"Cannot assign to the .data attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    @Variable.values.setter  # type: ignore[attr-defined]
+    @Variable.values.setter  # type: ignore
     def values(self, values):
         raise ValueError(
             f"Cannot assign to the .values attribute of dimension coordinate a.k.a IndexVariable {self.name!r}. "

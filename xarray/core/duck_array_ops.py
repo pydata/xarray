@@ -27,7 +27,7 @@ try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None
+    dask_array = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -564,7 +564,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True  # type: ignore[attr-defined]
+mean.numeric_only = True  # type: ignore
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

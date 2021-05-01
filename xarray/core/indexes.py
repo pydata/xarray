@@ -140,6 +140,6 @@ def propagate_indexes(
     if indexes is not None:
         new_indexes = {k: v for k, v in indexes.items() if k not in exclude}
     else:
-        new_indexes = None  # type: ignore[assignment]
+        new_indexes = None  # type: ignore
 
     return new_indexes

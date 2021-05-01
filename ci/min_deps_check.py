@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 from typing import Dict, Iterator, Optional, Tuple
 
-import conda.api  # type: ignore[import]
+import conda.api
 import yaml
 from dateutil.relativedelta import relativedelta
 
@@ -76,9 +76,9 @@ def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
             raise ValueError("non-numerical version: " + row)
 
         if len(version_tup) == 2:
-            yield (pkg, *version_tup, None)  # type: ignore[misc]
+            yield (pkg, *version_tup, None)  # type: ignore
         elif len(version_tup) == 3:
-            yield (pkg, *version_tup)  # type: ignore[misc]
+            yield (pkg, *version_tup)  # type: ignore
         else:
             raise ValueError("expected major.minor or major.minor.patch: " + row)
 
