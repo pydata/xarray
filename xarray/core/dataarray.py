@@ -4503,8 +4503,20 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         -------
         DataArray
         """
-        ds = self._to_temp_dataset().drop_duplicates(dims=dims, keep=keep)
-        return self._from_temp_dataset(ds)
+        if dims is None:
+            dims = list(self.dims)
+        elif isinstance(dims, str) or not isinstance(dims, Iterable):
+            dims = [dims]
+        else:
+            dims = list(dims)
+
+        indexes = {}
+        for dim in dims:
+            if dim not in self.dims:
+                raise ValueError(f"'{dim}' not found in dimensions")
+            indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
+
+        return self.isel(indexes)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
