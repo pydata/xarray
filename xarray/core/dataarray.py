@@ -3538,12 +3538,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if a datetime coordinate is used.
-        cumulative : bool, default False
-            If set to True, return the cumulative integral along the given coordinate
-            instead of the definite integral over the coordinate. Note that unlike
-            :py:meth:scipy.integrate.cumulative_trapezoidal or :py:meth:numpy.cumsum the
-            cumulative integral always begins with zero, so that the length of the
-            dimension is unchanged, rather than reduced by one.
 
         Returns
         -------
@@ -3650,7 +3644,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                [0.15, 0.25, 0.35],
                [4.65, 5.75, 6.85],
                [5.4 , 6.6 , 7.8 ]])
-        Dimensions without coordinates: x, y
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
