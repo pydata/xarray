@@ -6036,8 +6036,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         self,
         coord: Union[Hashable, Sequence[Hashable]],
         datetime_unit: str = None,
-        *,
-        cumulative: bool = False,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -6052,12 +6050,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
             Specify the unit if datetime coordinate is used.
-        cumulative : bool, default False
-            If set to True, return the cumulative integral along the given coordinate
-            instead of the definite integral over the coordinate. Note that unlike
-            :py:meth:scipy.integrate.cumulative_trapezoidal or :py:meth:numpy.cumsum the
-            cumulative integral always begins with zero, so that the length of the
-            dimension is unchanged, rather than reduced by one.
 
         Returns
         -------
@@ -6100,9 +6092,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             coord = (coord,)
         result = self
         for c in coord:
-            result = result._integrate_one(
-                c, datetime_unit=datetime_unit, cumulative=cumulative
-            )
+            result = result._integrate_one(c, datetime_unit=datetime_unit)
         return result
 
     def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
@@ -6157,6 +6147,81 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
+
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
+    ) -> "Dataset":
+        """Integrate along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral of each variable is always 0, in
+            order to keep the length of the dimension unchanged between input and
+            output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : Dataset
+
+        See also
+        --------
+        DataArray.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
+        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) int64 5 5 6 6
+            b        (x) int64 1 2 1 0
+        >>> ds.cumulative_integrate("x")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 5.0 10.5 16.5
+            b        (x) float64 0.0 1.5 3.0 3.5
+        >>> ds.cumulative_integrate("y")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 30.0 8.0 20.0
+            b        (x) float64 0.0 9.0 3.0 4.0
+        """
+        if not isinstance(coord, (list, tuple)):
+            coord = (coord,)
+        result = self
+        for c in coord:
+            result = result._integrate_one(
+                c, datetime_unit=datetime_unit, cumulative=True
+            )
+        return result
 
     @property
     def real(self):

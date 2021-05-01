@@ -3534,7 +3534,6 @@ class DataArray(AbstractArray, DataWithCoords):
         coord: Union[Hashable, Sequence[Hashable]] = None,
         datetime_unit: str = None,
         *,
-        cumulative: bool = False,
         dim: Union[Hashable, Sequence[Hashable]] = None,
     ) -> "DataArray":
         """Integrate along the given coordinate using the trapezoidal rule.
@@ -3606,9 +3605,67 @@ class DataArray(AbstractArray, DataWithCoords):
             )
             warnings.warn(msg, FutureWarning, stacklevel=2)
 
-        ds = self._to_temp_dataset().integrate(
-            coord, datetime_unit, cumulative=cumulative
-        )
+        ds = self._to_temp_dataset().integrate(coord, datetime_unit)
+        return self._from_temp_dataset(ds)
+
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]] = None,
+        datetime_unit: str = None,
+    ) -> "DataArray":
+        """Integrate cumulatively along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral is always 0, in order to keep the
+            length of the dimension unchanged between input and output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : DataArray
+
+        See also
+        --------
+        Dataset.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.cumulative_integrate("x")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[0.  , 0.  , 0.  ],
+               [0.15, 0.25, 0.35],
+               [4.65, 5.75, 6.85],
+               [5.4 , 6.6 , 7.8 ]])
+        Dimensions without coordinates: x, y
+        """
+        ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
     def unify_chunks(self) -> "DataArray":

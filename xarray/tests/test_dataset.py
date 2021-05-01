@@ -6758,7 +6758,7 @@ def test_integrate(dask):
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_integrate_cumulative(dask):
+def test_cumulative_integrate(dask):
     rs = np.random.RandomState(43)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -6778,7 +6778,7 @@ def test_integrate_cumulative(dask):
     ds = xr.Dataset({"var": da})
 
     # along x
-    actual = da.integrate("x", cumulative=True)
+    actual = da.cumulative_integrate("x")
 
     # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
     # still provided for backward compatibility
@@ -6791,36 +6791,33 @@ def test_integrate_cumulative(dask):
     )
     assert_allclose(expected_x, actual.compute())
     assert_equal(
-        ds["var"].integrate("x", cumulative=True),
-        ds.integrate("x", cumulative=True)["var"],
+        ds["var"].cumulative_integrate("x"),
+        ds.cumulative_integrate("x")["var"],
     )
 
     # make sure result is also a dask array (if the source is dask array)
     assert isinstance(actual.data, type(da.data))
 
     # along y
-    actual = da.integrate("y", cumulative=True)
+    actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
         cumtrapz(da, da["y"], axis=1, initial=0.0),
         dims=["x", "y"],
         coords=da.coords,
     )
     assert_allclose(expected_y, actual.compute())
-    assert_equal(actual, ds.integrate("y", cumulative=True)["var"])
+    assert_equal(actual, ds.cumulative_integrate("y")["var"])
     assert_equal(
-        ds["var"].integrate("y", cumulative=True),
-        ds.integrate("y", cumulative=True)["var"],
+        ds["var"].cumulative_integrate("y"),
+        ds.cumulative_integrate("y")["var"],
     )
 
     # along x and y
-    actual = da.integrate(("y", "x"), cumulative=True)
+    actual = da.cumulative_integrate(("y", "x"))
     assert actual.ndim == 2
 
     with pytest.raises(ValueError):
-        da.integrate("x2d", cumulative=True)
-
-    with pytest.warns(FutureWarning):
-        da.integrate(dim="x", cumulative=True)
+        da.cumulative_integrate("x2d")
 
 
 @pytest.mark.parametrize("dask", [True, False])
