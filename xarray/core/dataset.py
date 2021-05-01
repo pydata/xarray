@@ -7382,5 +7382,4 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         return result
 
-
 ops.inject_all_ops_and_reduce_methods(Dataset, array_only=False)
