@@ -99,6 +99,9 @@ New Features
   :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
   Fixes (:issue:`5230`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Implement ``__setitem__`` for :py:class:`core.indexing.DaskIndexingAdapter` if
+  dask version supports item assignment. (:issue:`5171`, :pull:`5174`)
+  By `Tammas Loughran <https://github.com/tammasloughran>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
