@@ -6903,33 +6903,33 @@ def test_drop_duplicate_coords_dims(keep):
 @pytest.mark.parametrize("keep", ["first", "last", False])
 def test_drop_duplicate_coords(keep):
     ds = xr.DataArray(
-        [[1, 2, 3], [4, 5, 6]],
+        [["a", "b", "c"], ["d", "e", "f"]],
         coords={"init": [0, 1], "tau": [1, 2, 3]},
         dims=["init", "tau"],
     ).to_dataset(name="test")
     ds.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
 
     if keep == "first":
-        data = [[1, 2], [4, np.nan]]
+        data = [["a", "b"], ["d", np.nan]]
         init = [0, 1]
         tau = [1, 2]
-        valid = [[8.0, 6.0], [7.0, np.nan]]
+        valid = [8.0, 7.0, 6.0, np.nan]
     elif keep == "last":
-        data = [[1, 3], [np.nan, 6]]
+        data = [["a", "c"], [np.nan, "f"]]
         init = [0, 1]
         tau = [1, 3]
-        valid = [[8.0, 6.0], [np.nan, 7]]
+        valid = [8.0, 6.0, np.nan, 7]
     else:
-        data = [[1]]
+        data = [["a"]]
         init = [0]
         tau = [1]
-        valid = [[8]]
+        valid = [8]
 
     result = ds.drop_duplicate_coords("valid", keep=keep)
     expected = xr.DataArray(
         data,
         dims=["init", "tau"],
-        coords={"init": init, "tau": tau, "valid": (("init", "tau"), valid)},
+        coords={"init": init, "tau": tau, "valid": valid},
         name="test",
     ).to_dataset()
     assert_equal(expected, result)
