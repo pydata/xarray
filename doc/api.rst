@@ -103,7 +103,6 @@ Dataset contents
    Dataset.expand_dims
    Dataset.drop_vars
    Dataset.drop_dims
-   Dataset.drop_duplicates
    Dataset.set_coords
    Dataset.reset_coords
 
