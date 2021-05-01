@@ -7418,7 +7418,7 @@ def test_clip(da):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 
-pytest.mark.parametrize("keep", ["first", "last", False])
+@pytest.mark.parametrize("keep", ["first", "last", False])
 def test_drop_duplicates(keep):
     ds = xr.DataArray(
         [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
