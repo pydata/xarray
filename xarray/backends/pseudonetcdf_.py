@@ -8,6 +8,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
@@ -131,6 +132,8 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         lock=None,
         **format_kwargs,
     ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = PseudoNetCDFDataStore.open(
             filename_or_obj, lock=lock, mode=mode, **format_kwargs
         )

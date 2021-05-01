@@ -27,6 +27,7 @@ from .core.variable import Variable as _Variable
 
 _xarray_types = (_Variable, _DataArray, _Dataset, _GroupBy)
 _dispatch_order = (_np.ndarray, _dask_array_type) + _xarray_types
+_UNDEFINED = object()
 
 
 def _dispatch_priority(obj):
@@ -53,24 +54,27 @@ class _UFuncDispatcher:
             )
 
         new_args = args
-        f = _dask_or_eager_func(self._name, array_args=slice(len(args)))
+        res = _UNDEFINED
         if len(args) > 2 or len(args) == 0:
             raise TypeError(
                 "cannot handle {} arguments for {!r}".format(len(args), self._name)
             )
         elif len(args) == 1:
             if isinstance(args[0], _xarray_types):
-                f = args[0]._unary_op(self)
+                res = args[0]._unary_op(self)
         else:  # len(args) = 2
             p1, p2 = map(_dispatch_priority, args)
             if p1 >= p2:
                 if isinstance(args[0], _xarray_types):
-                    f = args[0]._binary_op(self)
+                    res = args[0]._binary_op(args[1], self)
             else:
                 if isinstance(args[1], _xarray_types):
-                    f = args[1]._binary_op(self, reflexive=True)
+                    res = args[1]._binary_op(args[0], self, reflexive=True)
                     new_args = tuple(reversed(args))
-        res = f(*new_args, **kwargs)
+
+        if res is _UNDEFINED:
+            f = _dask_or_eager_func(self._name, array_args=slice(len(args)))
+            res = f(*new_args, **kwargs)
         if res is NotImplemented:
             raise TypeError(
                 "%r not implemented for types (%r, %r)"

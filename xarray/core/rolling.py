@@ -5,8 +5,8 @@ from typing import Any, Callable, Dict
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
+from .arithmetic import CoarsenArithmetic
 from .dask_array_ops import dask_rolling_wrapper
-from .ops import inject_reduce_methods
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
 
@@ -759,7 +759,7 @@ class DatasetRolling(Rolling):
         )
 
 
-class Coarsen:
+class Coarsen(CoarsenArithmetic):
     """A object that implements the coarsen.
 
     See Also
@@ -805,6 +805,16 @@ class Coarsen:
         self.windows = windows
         self.side = side
         self.boundary = boundary
+
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``coarsen`` is deprecated and will raise an"
+                " error in xarray 0.19. Please pass ``keep_attrs`` directly to the"
+                " applied function, i.e. use ``ds.coarsen(...).mean(keep_attrs=False)``"
+                " instead of ``ds.coarsen(..., keep_attrs=False).mean()``"
+                " Note that keep_attrs is now True per default.",
+                FutureWarning,
+            )
         self.keep_attrs = keep_attrs
 
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
@@ -818,6 +828,19 @@ class Coarsen:
             if c not in coord_func:
                 coord_func[c] = duck_array_ops.mean
         self.coord_func = coord_func
+
+    def _get_keep_attrs(self, keep_attrs):
+
+        if keep_attrs is None:
+            # TODO: uncomment the next line and remove the others after the deprecation
+            # keep_attrs = _get_keep_attrs(default=True)
+
+            if self.keep_attrs is None:
+                keep_attrs = _get_keep_attrs(default=True)
+            else:
+                keep_attrs = self.keep_attrs
+
+        return keep_attrs
 
     def __repr__(self):
         """provide a nice str repr of our coarsen object"""
@@ -849,11 +872,13 @@ class DataArrayCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, **kwargs):
+        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
             from .dataarray import DataArray
 
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side, self.keep_attrs, **kwargs
+                self.windows, func, self.boundary, self.side, keep_attrs, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -866,16 +891,18 @@ class DataArrayCoarsen(Coarsen):
                             self.coord_func[c],
                             self.boundary,
                             self.side,
-                            self.keep_attrs,
+                            keep_attrs,
                             **kwargs,
                         )
                     else:
                         coords[c] = v
-            return DataArray(reduced, dims=self.obj.dims, coords=coords)
+            return DataArray(
+                reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
+            )
 
         return wrapped_func
 
-    def reduce(self, func: Callable, **kwargs):
+    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -886,6 +913,10 @@ class DataArrayCoarsen(Coarsen):
             to return the result of collapsing an np.ndarray over the coarsening
             dimensions.  It must be possible to provide the `axis` argument
             with a tuple of integers.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -905,7 +936,7 @@ class DataArrayCoarsen(Coarsen):
         Dimensions without coordinates: a, b
         """
         wrapped_func = self._reduce_method(func)
-        return wrapped_func(self, **kwargs)
+        return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetCoarsen(Coarsen):
@@ -925,10 +956,12 @@ class DatasetCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, **kwargs):
+        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
             from .dataset import Dataset
 
-            if self.keep_attrs:
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
+            if keep_attrs:
                 attrs = self.obj.attrs
             else:
                 attrs = {}
@@ -936,26 +969,32 @@ class DatasetCoarsen(Coarsen):
             reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
-                    self.windows, func, self.boundary, self.side, **kwargs
+                    self.windows,
+                    func,
+                    self.boundary,
+                    self.side,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
                 )
 
             coords = {}
             for c, v in self.obj.coords.items():
-                if any(d in self.windows for d in v.dims):
-                    coords[c] = v.variable.coarsen(
-                        self.windows,
-                        self.coord_func[c],
-                        self.boundary,
-                        self.side,
-                        **kwargs,
-                    )
-                else:
-                    coords[c] = v.variable
+                # variable.coarsen returns variables not containing the window dims
+                # unchanged (maybe removes attrs)
+                coords[c] = v.variable.coarsen(
+                    self.windows,
+                    self.coord_func[c],
+                    self.boundary,
+                    self.side,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+
             return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
 
-    def reduce(self, func: Callable, **kwargs):
+    def reduce(self, func: Callable, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -966,6 +1005,10 @@ class DatasetCoarsen(Coarsen):
             to return the result of collapsing an np.ndarray over the coarsening
             dimensions.  It must be possible to provide the `axis` argument with
             a tuple of integers.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
         **kwargs : dict
             Additional keyword arguments passed on to `func`.
 
@@ -975,8 +1018,4 @@ class DatasetCoarsen(Coarsen):
             Arrays with summarized data.
         """
         wrapped_func = self._reduce_method(func)
-        return wrapped_func(self, **kwargs)
-
-
-inject_reduce_methods(DataArrayCoarsen)
-inject_reduce_methods(DatasetCoarsen)
+        return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)

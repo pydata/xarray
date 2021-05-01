@@ -6,7 +6,6 @@ from xarray.core import dtypes, merge
 from xarray.core.merge import MergeError
 from xarray.testing import assert_equal, assert_identical
 
-from . import raises_regex
 from .test_dataset import create_test_data
 
 
@@ -47,7 +46,7 @@ class TestMergeFunction:
 
     def test_merge_dataarray_unnamed(self):
         data = xr.DataArray([1, 2], dims="x")
-        with raises_regex(ValueError, "without providing an explicit name"):
+        with pytest.raises(ValueError, match=r"without providing an explicit name"):
             xr.merge([data])
 
     def test_merge_arrays_attrs_default(self):
@@ -115,7 +114,7 @@ class TestMergeFunction:
         data.var1.attrs = var1_attrs
         data.var2.attrs = var2_attrs
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match=r"combine_attrs"):
                 actual = xr.merge([data.var1, data.var2], combine_attrs=combine_attrs)
         else:
             actual = xr.merge([data.var1, data.var2], combine_attrs=combine_attrs)
@@ -175,7 +174,7 @@ class TestMergeFunction:
         data2.dim1.attrs = attrs2
 
         if expect_exception:
-            with raises_regex(MergeError, "combine_attrs"):
+            with pytest.raises(MergeError, match=r"combine_attrs"):
                 actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
         else:
             actual = xr.merge([data1, data2], combine_attrs=combine_attrs)
@@ -219,16 +218,16 @@ class TestMergeFunction:
     def test_merge_alignment_error(self):
         ds = xr.Dataset(coords={"x": [1, 2]})
         other = xr.Dataset(coords={"x": [2, 3]})
-        with raises_regex(ValueError, "indexes .* not equal"):
+        with pytest.raises(ValueError, match=r"indexes .* not equal"):
             xr.merge([ds, other], join="exact")
 
     def test_merge_wrong_input_error(self):
-        with raises_regex(TypeError, "objects must be an iterable"):
+        with pytest.raises(TypeError, match=r"objects must be an iterable"):
             xr.merge([1])
         ds = xr.Dataset(coords={"x": [1, 2]})
-        with raises_regex(TypeError, "objects must be an iterable"):
+        with pytest.raises(TypeError, match=r"objects must be an iterable"):
             xr.merge({"a": ds})
-        with raises_regex(TypeError, "objects must be an iterable"):
+        with pytest.raises(TypeError, match=r"objects must be an iterable"):
             xr.merge([ds, 1])
 
     def test_merge_no_conflicts_single_var(self):
@@ -307,9 +306,9 @@ class TestMergeMethod:
 
         with pytest.raises(ValueError):
             ds1.merge(ds2.rename({"var3": "var1"}))
-        with raises_regex(ValueError, "should be coordinates or not"):
+        with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.reset_coords().merge(data)
-        with raises_regex(ValueError, "should be coordinates or not"):
+        with pytest.raises(ValueError, match=r"should be coordinates or not"):
             data.merge(data.reset_coords())
 
     def test_merge_broadcast_equals(self):
@@ -339,14 +338,14 @@ class TestMergeMethod:
 
         ds2 = xr.Dataset({"x": [0, 0]})
         for compat in ["equals", "identical"]:
-            with raises_regex(ValueError, "should be coordinates or not"):
+            with pytest.raises(ValueError, match=r"should be coordinates or not"):
                 ds1.merge(ds2, compat=compat)
 
         ds2 = xr.Dataset({"x": ((), 0, {"foo": "bar"})})
         with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat="identical")
 
-        with raises_regex(ValueError, "compat=.* invalid"):
+        with pytest.raises(ValueError, match=r"compat=.* invalid"):
             ds1.merge(ds2, compat="foobar")
 
         assert ds1.identical(ds1.merge(ds2, compat="override"))

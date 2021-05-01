@@ -1,5 +1,4 @@
 import copy
-import functools
 import itertools
 import numbers
 import warnings
@@ -24,7 +23,9 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from .arithmetic import VariableArithmetic
+from .common import AbstractArray
 from .indexing import (
     BasicIndexer,
     OuterIndexer,
@@ -40,6 +41,7 @@ from .pycompat import (
     is_duck_dask_array,
 )
 from .utils import (
+    NdimSizeLenMixin,
     OrderedSet,
     _default,
     decode_numpy_dict_values,
@@ -283,9 +285,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(
-    common.AbstractArray, arithmetic.SupportsArithmetic, utils.NdimSizeLenMixin
-):
+class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -660,7 +660,7 @@ class Variable(
         return dims, BasicIndexer(key), None
 
     def _validate_indexers(self, key):
-        """ Make sanity checks """
+        """Make sanity checks"""
         for dim, k in zip(self.dims, key):
             if isinstance(k, BASIC_INDEXING_TYPES):
                 pass
@@ -715,7 +715,7 @@ class Variable(
         return dims, OuterIndexer(tuple(new_key)), None
 
     def _nonzero(self):
-        """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
+        """Equivalent numpy's nonzero but returns a tuple of Varibles."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
@@ -798,7 +798,7 @@ class Variable(
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
         """Used by IndexVariable to return IndexVariable objects when possible."""
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(dims=dims, data=data)
 
     def _getitem_with_mask(self, key, fill_value=dtypes.NA):
         """Index this Variable with -1 remapped to fill_value."""
@@ -977,8 +977,12 @@ class Variable(
         return self._replace(data=data)
 
     def _replace(
-        self, dims=_default, data=_default, attrs=_default, encoding=_default
-    ) -> "Variable":
+        self: VariableType,
+        dims=_default,
+        data=_default,
+        attrs=_default,
+        encoding=_default,
+    ) -> VariableType:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -1081,7 +1085,7 @@ class Variable(
 
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
@@ -1205,7 +1209,7 @@ class Variable(
             # TODO: remove this once dask.array automatically aligns chunks
             data = data.rechunk(self.data.chunks)
 
-        return type(self)(self.dims, data, self._attrs, fastpath=True)
+        return self._replace(data=data)
 
     def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """
@@ -1364,7 +1368,7 @@ class Variable(
             # TODO: remove this once dask.array automatically aligns chunks
             data = data.rechunk(self.data.chunks)
 
-        return type(self)(self.dims, data, self._attrs, fastpath=True)
+        return self._replace(data=data)
 
     def roll(self, shifts=None, **shifts_kwargs):
         """
@@ -1426,7 +1430,7 @@ class Variable(
             return self.copy(deep=False)
 
         data = as_indexable(self._data).transpose(axes)
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(dims=dims, data=data)
 
     @property
     def T(self) -> "Variable":
@@ -1664,6 +1668,21 @@ class Variable(
 
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
+
+    def clip(self, min=None, max=None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
         self,
@@ -2121,16 +2140,17 @@ class Variable(
         Apply reduction function.
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
-        if not windows:
-            return self.copy()
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         if keep_attrs:
             _attrs = self.attrs
         else:
             _attrs = None
+
+        if not windows:
+            return self._replace(attrs=_attrs)
 
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
@@ -2276,64 +2296,50 @@ class Variable(
 
     @property
     def real(self):
-        return type(self)(self.dims, self.data.real, self._attrs)
+        return self._replace(data=self.data.real)
 
     @property
     def imag(self):
-        return type(self)(self.dims, self.data.imag, self._attrs)
+        return self._replace(data=self.data.imag)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 
-    @staticmethod
-    def _unary_op(f):
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            with np.errstate(all="ignore"):
-                result = self.__array_wrap__(f(self.data, *args, **kwargs))
-                if keep_attrs:
-                    result.attrs = self.attrs
-                return result
-
-        return func
-
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, (xr.DataArray, xr.Dataset)):
-                return NotImplemented
-            self_data, other_data, dims = _broadcast_compat_data(self, other)
-            keep_attrs = _get_keep_attrs(default=False)
-            attrs = self._attrs if keep_attrs else None
-            with np.errstate(all="ignore"):
-                new_data = (
-                    f(self_data, other_data)
-                    if not reflexive
-                    else f(other_data, self_data)
-                )
-            result = Variable(dims, new_data, attrs=attrs)
+    def _unary_op(self, f, *args, **kwargs):
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        with np.errstate(all="ignore"):
+            result = self.__array_wrap__(f(self.data, *args, **kwargs))
+            if keep_attrs:
+                result.attrs = self.attrs
             return result
 
-        return func
-
-    @staticmethod
-    def _inplace_binary_op(f):
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, xr.Dataset):
-                raise TypeError("cannot add a Dataset to a Variable in-place")
+    def _binary_op(self, other, f, reflexive=False):
+        if isinstance(other, (xr.DataArray, xr.Dataset)):
+            return NotImplemented
+        if reflexive and issubclass(type(self), type(other)):
+            other_data, self_data, dims = _broadcast_compat_data(other, self)
+        else:
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-            if dims != self.dims:
-                raise ValueError("dimensions cannot change for in-place operations")
-            with np.errstate(all="ignore"):
-                self.values = f(self_data, other_data)
-            return self
+        keep_attrs = _get_keep_attrs(default=False)
+        attrs = self._attrs if keep_attrs else None
+        with np.errstate(all="ignore"):
+            new_data = (
+                f(self_data, other_data) if not reflexive else f(other_data, self_data)
+            )
+        result = Variable(dims, new_data, attrs=attrs)
+        return result
 
-        return func
+    def _inplace_binary_op(self, other, f):
+        if isinstance(other, xr.Dataset):
+            raise TypeError("cannot add a Dataset to a Variable in-place")
+        self_data, other_data, dims = _broadcast_compat_data(self, other)
+        if dims != self.dims:
+            raise ValueError("dimensions cannot change for in-place operations")
+        with np.errstate(all="ignore"):
+            self.values = f(self_data, other_data)
+        return self
 
     def _to_numeric(self, offset=None, datetime_unit=None, dtype=float):
         """A (private) method to convert datetime array to numeric dtype
@@ -2505,9 +2511,6 @@ class Variable(
         return self._unravel_argminmax("argmax", dim, axis, keep_attrs, skipna)
 
 
-ops.inject_all_ops_and_reduce_methods(Variable)
-
-
 class IndexVariable(Variable):
     """Wrapper for accommodating a pandas.Index in an xarray.Variable.
 
@@ -2572,7 +2575,7 @@ class IndexVariable(Variable):
             # returns Variable rather than IndexVariable if multi-dimensional
             return Variable(dims, data, self._attrs, self._encoding)
         else:
-            return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+            return self._replace(dims=dims, data=data)
 
     def __setitem__(self, key, value):
         raise TypeError("%s values cannot be modified" % type(self).__name__)
@@ -2653,7 +2656,7 @@ class IndexVariable(Variable):
                         data.shape, self.shape
                     )
                 )
-        return type(self)(self.dims, data, self._attrs, self._encoding, fastpath=True)
+        return self._replace(data=data)
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
@@ -2751,7 +2754,7 @@ def _broadcast_compat_variables(*variables):
     """Create broadcast compatible variables, with the same dimensions.
 
     Unlike the result of broadcast_variables(), some variables may have
-    dimensions of size 1 instead of the the size of the broadcast dimension.
+    dimensions of size 1 instead of the size of the broadcast dimension.
     """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
