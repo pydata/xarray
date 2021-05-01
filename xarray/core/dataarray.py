@@ -4483,10 +4483,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def drop_duplicates(
         self,
         dims: Union[Hashable, Iterable[Hashable]] = None,
-        keep: Union[
-            str,
-            bool,
-        ] = "first",
+        keep: Union[str, bool] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
         Parameters
