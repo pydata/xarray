@@ -23,6 +23,10 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add 'cumulative' option to :py:meth:`Dataset.integrate` and
+  :py:meth:`DataArray.integrate` so that result is a cumulative integral, like
+  :py:meth:`scipy.integrate.cumulative_trapezoidal` (:pull:`5153`).
+  By `John Omotani <https://github.com/johnomotani>`_.
 - Add ``safe_chunks`` option to :py:meth:`Dataset.to_zarr` which allows overriding
   checks made to ensure Dask and Zarr chunk compatibility (:issue:`5056`).
   By `Ryan Abernathey <https://github.com/rabernat>`_
