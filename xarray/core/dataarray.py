@@ -4496,6 +4496,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             - ``"first"`` : Drop duplicates except for the first occurrence.
             - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.
+
         Returns
         -------
         DataArray
