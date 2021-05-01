@@ -543,7 +543,7 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
         return Frozen({k: all_variables[k] for k in self})
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._dataset._ipython_key_completions_()
@@ -1776,12 +1776,22 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         consolidated: bool = False,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
+        safe_chunks: bool = True,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
-        .. note:: Experimental
-                  The Zarr backend is new and experimental. Please report any
-                  unexpected behavior via github issues.
+        Zarr chunks are determined in the following way:
+
+        - From the ``chunks`` attribute in each variable's ``encoding``
+        - If the variable is a Dask array, from the dask chunks
+        - If neither Dask chunks nor encoding chunks are present, chunks will
+          be determined automatically by Zarr
+        - If both Dask chunks and encoding chunks are present, encoding chunks
+          will be used, provided that there is a many-to-one relationship between
+          encoding chunks and dask chunks (i.e. Dask chunks are bigger than and
+          evenly divide encoding chunks); otherwise raise a ``ValueError``.
+          This restriction ensures that no synchronization / locks are required
+          when writing. To disable this restriction, use ``safe_chunks=False``.
 
         Parameters
         ----------
@@ -1833,6 +1843,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+        safe_chunks : bool, optional
+            If True, only allow writes to when there is a many-to-one relationship
+            between Zarr chunks (specified in encoding) and Dask chunks.
+            Set False to override this restriction; however, data may become corrupted
+            if Zarr arrays are written in parallel. This option may be useful in combination
+            with ``compute=False`` to initialize a Zarr from an existing
+            Dataset with aribtrary chunk structure.
 
         References
         ----------
@@ -1869,6 +1886,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             consolidated=consolidated,
             append_dim=append_dim,
             region=region,
+            safe_chunks=safe_chunks,
         )
 
     def __repr__(self) -> str:
@@ -2045,12 +2063,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 else:
                     yield k, v
             elif isinstance(v, int):
-                yield k, Variable((), v)
+                yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
                 if v.ndim == 0:
-                    yield k, Variable((), v)
+                    yield k, Variable((), v, attrs=self.coords[k].attrs)
                 elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v)
+                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
                 else:
                     raise AssertionError()  # Already tested by _validate_indexers
             else:
@@ -4654,7 +4672,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -4679,7 +4698,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------

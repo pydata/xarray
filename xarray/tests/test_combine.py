@@ -16,7 +16,7 @@ from xarray.core.combine import (
     _new_tile_id,
 )
 
-from . import assert_equal, assert_identical, raises_regex, requires_cftime
+from . import assert_equal, assert_identical, requires_cftime
 from .test_dataset import create_test_data
 
 
@@ -168,9 +168,9 @@ class TestTileIDsFromCoords:
     def test_coord_not_monotonic(self):
         ds0 = Dataset({"x": [0, 1]})
         ds1 = Dataset({"x": [3, 2]})
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "Coordinate variable x is neither monotonically increasing nor",
+            match=r"Coordinate variable x is neither monotonically increasing nor",
         ):
             _infer_concat_order_from_coords([ds1, ds0])
 
@@ -819,8 +819,9 @@ class TestCombineAuto:
     def test_check_for_impossible_ordering(self):
         ds0 = Dataset({"x": [0, 1, 5]})
         ds1 = Dataset({"x": [2, 3]})
-        with raises_regex(
-            ValueError, "does not have monotonic global indexes along dimension x"
+        with pytest.raises(
+            ValueError,
+            match=r"does not have monotonic global indexes along dimension x",
         ):
             combine_by_coords([ds1, ds0])
 
@@ -881,7 +882,7 @@ def test_combine_by_coords_raises_for_differing_calendars():
     else:
         error_msg = r"cannot compare .* \(different calendars\)"
 
-    with raises_regex(TypeError, error_msg):
+    with pytest.raises(TypeError, match=error_msg):
         combine_by_coords([da_1, da_2])
 
 
@@ -891,7 +892,7 @@ def test_combine_by_coords_raises_for_differing_types():
     da_1 = DataArray([0], dims=["time"], coords=[["a"]], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[[b"b"]], name="a").to_dataset()
 
-    with raises_regex(
-        TypeError, "Cannot combine along dimension 'time' with mixed types."
+    with pytest.raises(
+        TypeError, match=r"Cannot combine along dimension 'time' with mixed types."
     ):
         combine_by_coords([da_1, da_2])

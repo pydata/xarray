@@ -496,7 +496,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -2515,7 +2515,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2539,7 +2540,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------

@@ -22,13 +22,13 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from . import has_dask, raises_regex, requires_dask
+from . import has_dask, requires_dask
 
 dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
-    """ A version of this function which accepts numpy arrays """
+    """A version of this function which accepts numpy arrays"""
     from xarray.testing import assert_identical as assert_identical_
 
     if hasattr(a, "identical"):
@@ -1173,8 +1173,8 @@ def test_vectorize_dask_new_output_dims():
             dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
-    with raises_regex(
-        ValueError, "dimension 'z' in 'output_core_dims' needs corresponding"
+    with pytest.raises(
+        ValueError, match=r"dimension 'z' in 'output_core_dims' needs corresponding"
     ):
         apply_ufunc(
             func,

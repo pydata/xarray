@@ -11,7 +11,7 @@ import pandas as pd
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
-from .duck_array_ops import datetime_to_numeric, timedelta_to_numeric
+from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import OrderedSet, is_scalar
@@ -390,12 +390,10 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
 
 def _bfill(arr, n=None, axis=-1):
     """inverse of ffill"""
-    import bottleneck as bn
-
     arr = np.flip(arr, axis=axis)
 
     # fill
-    arr = bn.push(arr, axis=axis, n=n)
+    arr = push(arr, axis=axis, n=n)
 
     # reverse back to original
     return np.flip(arr, axis=axis)
@@ -403,17 +401,15 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
-    import bottleneck as bn
-
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
     return apply_ufunc(
-        bn.push,
+        push,
         arr,
-        dask="parallelized",
+        dask="allowed",
         keep_attrs=True,
         output_dtypes=[arr.dtype],
         kwargs=dict(n=_limit, axis=axis),
@@ -430,7 +426,7 @@ def bfill(arr, dim=None, limit=None):
     return apply_ufunc(
         _bfill,
         arr,
-        dask="parallelized",
+        dask="allowed",
         keep_attrs=True,
         output_dtypes=[arr.dtype],
         kwargs=dict(n=_limit, axis=axis),

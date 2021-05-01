@@ -378,6 +378,28 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
+    def clip(self, min=None, max=None, *, keep_attrs: bool = None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            # When this was a unary func, the default was True, so retaining the
+            # default.
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return apply_ufunc(
+            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+        )
+
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
         if key not in self.dims:
@@ -932,10 +954,6 @@ class DataWithCoords(AttrAccessMixin):
         coord_func : str or mapping of hashable to str, default: "mean"
             function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -979,8 +997,6 @@ class DataWithCoords(AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(

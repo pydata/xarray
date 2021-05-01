@@ -391,6 +391,17 @@ class TestFormatting:
 
         assert actual == expected
 
+        with xr.set_options(display_expand_data=False):
+            actual = formatting.array_repr(ds[(1, 2)])
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)>
+            0
+            Dimensions without coordinates: test"""
+            )
+
+            assert actual == expected
+
 
 def test_inline_variable_array_repr_custom_repr():
     class CustomArray:
@@ -492,3 +503,19 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         len_summary = len(summary)
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        actual = formatting.dataset_repr(ds)
+        expected = dedent(
+            f"""\
+            <xarray.Dataset>
+            Dimensions:      (time: 2)
+            Coordinates: (1)
+            Data variables: ({n_vars})
+            Attributes: ({n_attr})"""
+        )
+        assert actual == expected
