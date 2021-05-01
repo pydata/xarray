@@ -7262,9 +7262,9 @@ def test_deepcopy_obj_array():
 
 
 @pytest.mark.parametrize("keep", ["first", "last", False])
-def drop_duplicate_coords_dim(keep):
-    da = xr.DataArray(
-        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}
+def test_drop_duplicates(keep):
+    ds = xr.DataArray(
+        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
     )
 
     if keep == "first":
@@ -7277,20 +7277,19 @@ def drop_duplicate_coords_dim(keep):
         data = [6, 7]
         time = [1, 2]
 
-    expected = xr.DataArray(
-        data, dims="time", coords={"time": time}
-    )
-    result = da.drop_duplicate_coords("time", keep=keep)
+    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+    result = ds.drop_duplicates("time", keep=keep)
     assert_equal(expected, result)
 
 
 @pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicate_coords_dims(keep):
+def test_drop_duplicates_multi_dim(keep):
     base_data = np.stack([np.arange(0, 5) * i for i in np.arange(0, 5)])
-    da = xr.DataArray(
+    ds = xr.DataArray(
         base_data,
         coords={"lat": [0, 1, 2, 2, 3], "lon": [0, 1, 3, 3, 4]},
         dims=["lat", "lon"],
+        name="test",
     )
 
     if keep == "first":
@@ -7307,67 +7306,7 @@ def test_drop_duplicate_coords_dims(keep):
         lon = [0, 1, 4]
 
     expected = xr.DataArray(
-        data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon}
+        data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon}, name="test"
     )
-    result = da.drop_duplicate_coords(["lat", "lon"], keep=keep)
+    result = ds.drop_duplicates(["lat", "lon"], keep=keep)
     assert_equal(expected, result)
-
-
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicate_coords(keep):
-    da = xr.DataArray(
-        [["a", "b", "c"], ["d", "e", "f"]],
-        coords={"init": [0, 1], "tau": [1, 2, 3]},
-        dims=["init", "tau"],
-    )
-    da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
-
-    if keep == "first":
-        data = [["a", "b"], ["d", np.nan]]
-        init = [0, 1]
-        tau = [1, 2]
-        valid = [8.0, 7.0, 6.0, np.nan]
-    elif keep == "last":
-        data = [["a", "c"], [np.nan, "f"]]
-        init = [0, 1]
-        tau = [1, 3]
-        valid = [8.0, 6.0, np.nan, 7]
-    else:
-        data = [["a"]]
-        init = [0]
-        tau = [1]
-        valid = [8]
-
-    result = da.drop_duplicate_coords("valid", keep=keep)
-    expected = xr.DataArray(
-        data,
-        dims=["init", "tau"],
-        coords={"init": init, "tau": tau, "valid": valid},
-    )
-    assert_equal(expected, result)
-
-
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicate_coords_duplicate_dims(keep):
-    da = xr.DataArray(
-        [["a", "b", "c"], ["d", "e", "f"]],
-        coords={"init": [0, 0], "tau": [1, 2, 3]},  # duplicate inits
-        dims=["init", "tau"],
-    )
-    da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
-
-    with pytest.raises(ValueError):
-        da.drop_duplicate_coords("valid", keep=keep)
-
-
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicate_coords_missing(keep):
-    da = xr.DataArray(
-        [["a", "b", "c"], ["d", "e", "f"]],
-        coords={"init": [0, 0], "tau": [1, 2, 3]},  # duplicate inits
-        dims=["init", "tau"],
-    )
-    da.coords["valid"] = (("init", "tau"), np.array([[8, 6, 6], [7, 7, 7]]))
-
-    with pytest.raises(ValueError):
-        da.drop_duplicate_coords("doesnt exist", keep=keep)
