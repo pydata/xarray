@@ -6844,6 +6844,70 @@ def test_integrate(dask):
         da.integrate(dim="x")
 
 
+@requires_scipy
+@pytest.mark.parametrize("dask", [True, False])
+def test_cumulative_integrate(dask):
+    rs = np.random.RandomState(43)
+    coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        dims=["x", "y"],
+        coords={
+            "x": coord,
+            "x2": (("x",), rs.randn(8)),
+            "z": 3,
+            "x2d": (("x", "y"), rs.randn(8, 6)),
+        },
+    )
+    if dask and has_dask:
+        da = da.chunk({"x": 4})
+
+    ds = xr.Dataset({"var": da})
+
+    # along x
+    actual = da.cumulative_integrate("x")
+
+    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
+    # still provided for backward compatibility
+    from scipy.integrate import cumtrapz
+
+    expected_x = xr.DataArray(
+        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_x, actual.compute())
+    assert_equal(
+        ds["var"].cumulative_integrate("x"),
+        ds.cumulative_integrate("x")["var"],
+    )
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
+
+    # along y
+    actual = da.cumulative_integrate("y")
+    expected_y = xr.DataArray(
+        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_y, actual.compute())
+    assert_equal(actual, ds.cumulative_integrate("y")["var"])
+    assert_equal(
+        ds["var"].cumulative_integrate("y"),
+        ds.cumulative_integrate("y")["var"],
+    )
+
+    # along x and y
+    actual = da.cumulative_integrate(("y", "x"))
+    assert actual.ndim == 2
+
+    with pytest.raises(ValueError):
+        da.cumulative_integrate("x2d")
+
+
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize("which_datetime", ["np", "cftime"])
 def test_trapz_datetime(dask, which_datetime):
