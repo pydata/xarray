@@ -1486,7 +1486,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def __setitem__(self, key, value) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
-        the following operations is applied to the relevant type.
+        the following operations is applied to the respective value.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this

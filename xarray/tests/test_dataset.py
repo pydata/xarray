@@ -3507,19 +3507,27 @@ class TestDataset:
         actual[["A", "B"]] = [var1, var2]
         assert_identical(actual, expected)
         # assign a list of dataset arrays
-        dv = 2 * data2[["A", "B"]]
-        data1[["C", "D"]] = [d.variable for d in dv.data_vars.values()]
-        data2[["C", "D"]] = dv
-        assert_identical(data1, data2)
+        dv = 2 * expected[["A", "B"]]
+        actual[["C", "D"]] = [d.variable for d in dv.data_vars.values()]
+        expected[["C", "D"]] = dv
+        assert_identical(actual, expected)
 
-        with pytest.raises(ValueError, match=r"Different lengths"):
-            actual[["A", "B"]] = [var1]
-
-        with pytest.raises(ValueError, match=r"Empty list of variables"):
-            actual[[]] = [var1]
-
-        with pytest.raises(ValueError, match=r"assign single DataArray"):
-            actual[["A", "B"]] = xr.DataArray([1, 2])
+    @pytest.mark.parametrize(
+        "var_list, data, error_regex",
+        [
+            (
+                ["A", "B"],
+                [Variable(["dim1"], np.random.randn(8))],
+                r"Different lengths",
+            ),
+            ([], [Variable(["dim1"], np.random.randn(8))], r"Empty list of variables"),
+            (["A", "B"], xr.DataArray([1, 2]), r"assign single DataArray"),
+        ],
+    )
+    def test_setitem_using_list_errors(self, var_list, data, error_regex):
+        actual = create_test_data()
+        with pytest.raises(ValueError, match=error_regex):
+            actual[var_list] = data
 
     def test_assign(self):
         ds = Dataset()
