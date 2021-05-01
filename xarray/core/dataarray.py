@@ -4488,7 +4488,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Returns a new DataArray with duplicate dimension values removed.
         Parameters
         ----------
-        dims : dimension label or sequence of labels, optional
+        dims : hashable or sequence of hashable, optional
             Only consider certain dimensions for identifying duplicates, by
             default use all dimensions.
         keep : {"first", "last", False}, default: "first"
