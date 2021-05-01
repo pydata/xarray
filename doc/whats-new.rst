@@ -99,6 +99,9 @@ New Features
   :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
   Fixes (:issue:`5230`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Implement :py:meth:`Dataset.drop_duplicates` and :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5231`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -7316,3 +7316,40 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         result.attrs = self.attrs.copy()
 
         return result
+
+    def drop_duplicates(
+        self,
+        dims: Union[Hashable, Iterable[Hashable]] = None,
+        keep: Union[str, bool] = "first",
+    ):
+        """Returns a new dataset with duplicate dimension values removed.
+
+        Parameters
+        ----------
+        dims : dimension label or sequence of labels, optional
+            Only consider certain dimensions for identifying duplicates, by
+            default use all dimensions.
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        Dataset
+        """
+        if dims is None:
+            dims = list(self.dims)
+        elif isinstance(dims, str) or not isinstance(dims, Iterable):
+            dims = [dims]
+        else:
+            dims = list(dims)
+
+        indexes = {}
+        for dim in dims:
+            if dim not in self.dims:
+                raise ValueError(f"'{dim}' not found in dimensions")
+            indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
+
+        return self.isel(indexes)
