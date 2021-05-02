@@ -543,7 +543,7 @@ class DataVariables(Mapping[Hashable, "DataArray"]):
         return Frozen({k: all_variables[k] for k in self})
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._dataset._ipython_key_completions_()
@@ -1806,12 +1806,22 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         consolidated: bool = False,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
+        safe_chunks: bool = True,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
-        .. note:: Experimental
-                  The Zarr backend is new and experimental. Please report any
-                  unexpected behavior via github issues.
+        Zarr chunks are determined in the following way:
+
+        - From the ``chunks`` attribute in each variable's ``encoding``
+        - If the variable is a Dask array, from the dask chunks
+        - If neither Dask chunks nor encoding chunks are present, chunks will
+          be determined automatically by Zarr
+        - If both Dask chunks and encoding chunks are present, encoding chunks
+          will be used, provided that there is a many-to-one relationship between
+          encoding chunks and dask chunks (i.e. Dask chunks are bigger than and
+          evenly divide encoding chunks); otherwise raise a ``ValueError``.
+          This restriction ensures that no synchronization / locks are required
+          when writing. To disable this restriction, use ``safe_chunks=False``.
 
         Parameters
         ----------
@@ -1863,6 +1873,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
               in with ``region``, use a separate call to ``to_zarr()`` with
               ``compute=False``. See "Appending to existing Zarr stores" in
               the reference documentation for full details.
+        safe_chunks : bool, optional
+            If True, only allow writes to when there is a many-to-one relationship
+            between Zarr chunks (specified in encoding) and Dask chunks.
+            Set False to override this restriction; however, data may become corrupted
+            if Zarr arrays are written in parallel. This option may be useful in combination
+            with ``compute=False`` to initialize a Zarr from an existing
+            Dataset with aribtrary chunk structure.
 
         References
         ----------
@@ -1899,6 +1916,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             consolidated=consolidated,
             append_dim=append_dim,
             region=region,
+            safe_chunks=safe_chunks,
         )
 
     def __repr__(self) -> str:
@@ -2075,12 +2093,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 else:
                     yield k, v
             elif isinstance(v, int):
-                yield k, Variable((), v)
+                yield k, Variable((), v, attrs=self.coords[k].attrs)
             elif isinstance(v, np.ndarray):
                 if v.ndim == 0:
-                    yield k, Variable((), v)
+                    yield k, Variable((), v, attrs=self.coords[k].attrs)
                 elif v.ndim == 1:
-                    yield k, IndexVariable((k,), v)
+                    yield k, IndexVariable((k,), v, attrs=self.coords[k].attrs)
                 else:
                     raise AssertionError()  # Already tested by _validate_indexers
             else:
@@ -4684,7 +4702,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -4709,7 +4728,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -6051,7 +6071,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def integrate(
-        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -6111,7 +6133,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             result = result._integrate_one(c, datetime_unit=datetime_unit)
         return result
 
-    def _integrate_one(self, coord, datetime_unit=None):
+    def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
@@ -6138,18 +6160,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set()
         for k, v in self.variables.items():
             if k in self.coords:
-                if dim not in v.dims:
+                if dim not in v.dims or cumulative:
                     variables[k] = v
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
-                    integ = duck_array_ops.trapz(
-                        v.data, coord_var.data, axis=v.get_axis_num(dim)
-                    )
-                    v_dims = list(v.dims)
-                    v_dims.remove(dim)
+                    if cumulative:
+                        integ = duck_array_ops.cumulative_trapezoid(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = v.dims
+                    else:
+                        integ = duck_array_ops.trapz(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = list(v.dims)
+                        v_dims.remove(dim)
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
@@ -6157,6 +6185,81 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
+
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
+    ) -> "Dataset":
+        """Integrate along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral of each variable is always 0, in
+            order to keep the length of the dimension unchanged between input and
+            output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : Dataset
+
+        See also
+        --------
+        DataArray.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
+        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) int64 5 5 6 6
+            b        (x) int64 1 2 1 0
+        >>> ds.cumulative_integrate("x")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 5.0 10.5 16.5
+            b        (x) float64 0.0 1.5 3.0 3.5
+        >>> ds.cumulative_integrate("y")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 30.0 8.0 20.0
+            b        (x) float64 0.0 9.0 3.0 4.0
+        """
+        if not isinstance(coord, (list, tuple)):
+            coord = (coord,)
+        result = self
+        for c in coord:
+            result = result._integrate_one(
+                c, datetime_unit=datetime_unit, cumulative=True
+            )
+        return result
 
     @property
     def real(self):
