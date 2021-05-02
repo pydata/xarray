@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -32,7 +34,6 @@ jobs:
       - name: Test the artifacts
         run: |
           python -m twine check dist/*
-          git describe
           pwd
           if [ -f dist/xarray-999.tar.gz ]; then
             echo "❌ INVALID VERSION NUMBER"
