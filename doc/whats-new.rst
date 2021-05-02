@@ -23,6 +23,8 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
 - Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
