@@ -1,0 +1,52 @@
+name: Build and Upload xarray to PyPI
+on:
+  release:
+    types:
+      - published
+  push:
+  pull_request:
+
+
+jobs:
+  build-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install setuptools setuptools-scm wheel twine check-manifest
+
+      - name: Build tarball and wheels
+        run: |
+          python setup.py sdist bdist_wheel
+          python -m pip wheel . -w dist --no-deps
+
+      - name: Test the artifacts
+        run: |
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: releases
+          path: dist
+
+  test-built-dist:
+    needs: build-artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: releases
+          path: dist
+      - name: List contents of built dist
+        run: |
+          ls -ltrh
+          ls -ltrh dist
