@@ -116,29 +116,27 @@ class TestVariable(DaskTestCase):
         reason="Requires dask v2021.04.1 or later",
     )
     @pytest.mark.parametrize(
-        "input_data, expected_data, index, index_data",
+        "expected_data, index, index_data",
         [
-            (da.array([1, 2, 3, 4]), da.array([99, 2, 3, 4]), 0, 99),
-            (da.array([1, 2, 3, 4]), da.array([99, 99, 99, 4]), slice(2, None, -1), 99),
-            (da.array([1, 2, 3, 4]), da.array([99, 99, 3, 99]), [0, -1, 1], 99),
-            (da.array([1, 2, 3, 4]), da.array([99, 99, 99, 4]), np.arange(3), 99),
+            (da.array([99, 2, 3, 4]), 0, 99),
+            (da.array([99, 99, 99, 4]), slice(2, None, -1), 99),
+            (da.array([99, 99, 3, 99]), [0, -1, 1], 99),
+            (da.array([99, 99, 99, 4]), np.arange(3), 99),
             (
-                da.array([1, 2, 3, 4]),
                 da.array([1, 99, 99, 99]),
                 [False, True, True, True],
                 99,
             ),
             (da.array([1, 2, 3, 4]), da.array([1, 99, 99, 99]), np.arange(4) > 0, 99),
             (
-                da.array([1, 2, 3, 4]),
                 da.array([99, 99, 99, 99]),
                 Variable(("x"), da.array([1, 2, 3, 4])) > 0,
                 99,
             ),
         ],
     )
-    def test_setitem_dask_array(self, input_data, expected_data, index, index_data):
-        arr = Variable(("x"), input_data)
+    def test_setitem_dask_array(self, expected_data, index, index_data):
+        arr = Variable(("x"), da.array([1, 2, 3, 4]))
         expected = Variable(("x"), expected_data)
         arr[index] = index_data
         assert_identical(arr, expected)
