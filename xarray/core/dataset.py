@@ -1475,14 +1475,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
+    @overload
+    def __setitem__(self, key: List[Hashable], value) -> None:
+        ...
+
+    @overload
     def __setitem__(self, key: Hashable, value) -> None:
+        ...
+
+    def __setitem__(self, key, value) -> None:
         """Add an array to this dataset.
+        Multiple arrays can be added at the same time, in which case each of
+        the following operations is applied to the respective value.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
-        If value is an `Variable` object (or tuple of form
+        If value is a `Variable` object (or tuple of form
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
@@ -1491,7 +1501,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 "cannot yet use a dictionary as a key to set Dataset values"
             )
 
-        self.update({key: value})
+        if isinstance(key, list):
+            if len(key) == 0:
+                raise ValueError("Empty list of variables to be set")
+            if len(key) == 1:
+                self.update({key[0]: value})
+            else:
+                if len(key) != len(value):
+                    raise ValueError(
+                        f"Different lengths of variables to be set "
+                        f"({len(key)}) and data used as input for "
+                        f"setting ({len(value)})"
+                    )
+                if isinstance(value, Dataset):
+                    self.update(dict(zip(key, value.data_vars.values())))
+                elif isinstance(value, xr.DataArray):
+                    raise ValueError("Cannot assign single DataArray to multiple keys")
+                else:
+                    self.update(dict(zip(key, value)))
+
+        else:
+            self.update({key: value})
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
