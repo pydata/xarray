@@ -23,6 +23,8 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).
+  By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
   :py:meth:`DataArray.integrate` so that result is a cumulative integral, like
   :py:meth:`scipy.integrate.cumulative_trapezoidal` (:pull:`5153`).
