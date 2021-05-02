@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v2
         name: Install Python
         with:
@@ -35,7 +33,7 @@ jobs:
         run: |
           python -m twine check dist/*
           pwd
-          if [ -f dist/xarray-999.tar.gz ]; then
+          if [ -f dist/xarray-0.0.0.tar.gz ]; then
             echo "❌ INVALID VERSION NUMBER"
             exit 1
           else
