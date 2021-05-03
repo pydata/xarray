@@ -1643,7 +1643,8 @@ class TestDataArray:
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.xindexes[dim_name], actual.xindexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # as kwargs
@@ -1653,7 +1654,8 @@ class TestDataArray:
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.xindexes[dim_name], actual.xindexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # multiindex case
@@ -1664,7 +1666,8 @@ class TestDataArray:
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
     def test_expand_dims_error(self):
