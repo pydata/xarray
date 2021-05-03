@@ -514,40 +514,9 @@ class _LocIndexer:
                 "can only set locations defined by dictionaries from Dataset.loc"
             )
 
-        # check for consistency first
-        if isinstance(value, Dataset):
-            missing_vars = [
-                str(name) for name in value.data_vars if name not in self.dataset
-            ]
-            if len(missing_vars) > 0:
-                raise KeyError(
-                    "Variables {} in new values not available in dataset!".format(
-                        ",".join(missing_vars)
-                    )
-                )
-
-        for name, var in self.dataset.items():
-            missing_keys = [k for k in key.keys() if k not in var.dims]
-            if len(missing_keys) > 0:
-                raise KeyError(
-                    "Variable {} does not contain dimensions {}!".format(
-                        name, ",".join(missing_keys)
-                    )
-                )
-            test_var = var.copy()
-            pos_indexers, _ = remap_label_indexers(var, key)
-            if isinstance(value, Dataset):
-                test_var[pos_indexers] = value[name]
-            else:
-                test_var[pos_indexers] = value
-
-        # loop over dataset variables and set new values
-        for name, var in self.dataset.items():
-            pos_indexers, _ = remap_label_indexers(var, key)
-            if isinstance(value, Dataset):
-                var[pos_indexers] = value[name]
-            else:
-                var[pos_indexers] = value
+        # set new values
+        pos_indexers, _ = remap_label_indexers(self.dataset, key)
+        self.dataset[pos_indexers] = value
 
 
 class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
