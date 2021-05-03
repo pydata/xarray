@@ -6510,33 +6510,89 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
-def test_coarsen_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
+)
+def test_coarsen_keep_attrs(funcname, argument):
+    attrs_da = {"da_attr": "test"}
+    attrs_coords = {"attrs_coords": "test"}
 
-    da = xr.DataArray(
-        np.linspace(0, 364, num=364),
-        dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
-        attrs=_attrs,
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(
+        data,
+        dims=("coord"),
+        coords={"coord": ("coord", coords, attrs_coords)},
+        attrs=attrs_da,
+        name="name",
     )
 
-    da2 = da.copy(deep=True)
+    # attrs are now kept per default
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == attrs_da
+    da.coord.attrs == attrs_coords
+    assert result.name == "name"
 
-    # Test dropped attrs
-    dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == {}
+    # discard attrs
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using dataset keyword
-    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
-    assert dat.attrs == _attrs
+    # test discard attrs using global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using global option
-    with xr.set_options(keep_attrs=True):
-        dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == _attrs
+    # keyword takes precedence over global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+    assert result.attrs == attrs_da
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs in original object
-    xr.testing.assert_identical(da, da2)
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
+
+
+def test_coarsen_keep_attrs_deprecated():
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
+
+    assert result.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
+
+    assert result.attrs == {}
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
