@@ -4454,7 +4454,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Examples
         --------
-        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")   
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
         >>> da
         <xarray.DataArray 'a' (x: 5)>
         array([0, 1, 2, 3, 4])
