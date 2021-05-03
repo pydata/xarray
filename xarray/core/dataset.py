@@ -1830,13 +1830,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in file system only for Zarr array chunks.
             Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", None}, optional
+        mode : {"w", "w-", "a", "r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist).
-            If ``append_dim`` is set, ``mode`` can be omitted as it is
-            internally set to ``"a"``. Otherwise, ``mode`` will default to
-            `w-` if not set.
+            "a" means override existing variables (create if does not exist);
+            "r+" means modify existing array *values* only (raise an error if
+            any metadata or shapes would change).
+            The default mode is "a" if ``append_dim`` is set. Otherwise, it is
+            "r+" if ``region`` is set and ``w-`` otherwise.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional

@@ -66,7 +66,7 @@ class ZarrArrayWrapper(BackendArray):
         self.dtype = dtype
 
     def get_array(self):
-        return self.datastore.ds[self.variable_name]
+        return self.datastore.zarr_group[self.variable_name]
 
     def __getitem__(self, key):
         array = self.get_array()
@@ -284,11 +284,39 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
+def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+    if new_var.dims != existing_var.dims:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension names {existing_var.dims} != "
+            f"{new_var.dims}, but changing variable "
+            f"dimensions is not supported by to_zarr()."
+        )
+
+    existing_sizes = {}
+    for dim, size in existing_var.sizes.items():
+        if region is not None and dim in region:
+            start, stop, stride = region[dim].indices(size)
+            assert stride == 1  # region was already validated
+            size = stop - start
+        if dim != append_dim:
+            existing_sizes[dim] = size
+
+    new_sizes = {dim: size for dim, size in new_var.sizes.items() if dim != append_dim}
+    if existing_sizes != new_sizes:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension sizes: {existing_sizes} != {new_sizes}. "
+            f"to_zarr() only supports changing dimension sizes when "
+            f"explicitly appending, but append_dim={append_dim!r}."
+        )
+
+
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "ds",
+        "zarr_group",
         "_append_dim",
         "_consolidate_on_close",
         "_group",
@@ -347,14 +375,19 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
         safe_chunks=True,
     ):
-        self.ds = zarr_group
-        self._read_only = self.ds.read_only
-        self._synchronizer = self.ds.synchronizer
-        self._group = self.ds.path
+        self.zarr_group = zarr_group
+        self._read_only = self.zarr_group.read_only
+        self._synchronizer = self.zarr_group.synchronizer
+        self._group = self.zarr_group.path
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
         self._safe_chunks = safe_chunks
+
+    @property
+    def ds(self):
+        # TODO: consider deprecating this in favor of zarr_group
+        return self.zarr_group
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
@@ -375,16 +408,16 @@ class ZarrStore(AbstractWritableDataStore):
 
     def get_variables(self):
         return FrozenDict(
-            (k, self.open_store_variable(k, v)) for k, v in self.ds.arrays()
+            (k, self.open_store_variable(k, v)) for k, v in self.zarr_group.arrays()
         )
 
     def get_attrs(self):
-        attributes = dict(self.ds.attrs.asdict())
+        attributes = dict(self.zarr_group.attrs.asdict())
         return attributes
 
     def get_dimensions(self):
         dimensions = {}
-        for k, v in self.ds.arrays():
+        for k, v in self.zarr_group.arrays():
             try:
                 for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
@@ -409,7 +442,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
 
     def set_attributes(self, attributes):
-        self.ds.attrs.put(attributes)
+        self.zarr_group.attrs.put(attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
@@ -448,35 +481,47 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-
-        existing_variables = {
-            vn for vn in variables if _encode_variable_name(vn) in self.ds
+        existing_variable_names = {
+            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
         }
-        new_variables = set(variables) - existing_variables
+        new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
         variables_encoded, attributes = self.encode(
             variables_without_encoding, attributes
         )
 
-        if len(existing_variables) > 0:
+        if existing_variable_names:
+            existing_ds = StoreBackendEntrypoint().open_dataset(self)
+
             # there are variables to append
             # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
-            variables_with_encoding = {}
-            for vn in existing_variables:
-                variables_with_encoding[vn] = variables[vn].copy(deep=False)
-                variables_with_encoding[vn].encoding = ds[vn].encoding
-            variables_with_encoding, _ = self.encode(variables_with_encoding, {})
-            variables_encoded.update(variables_with_encoding)
+            vars_with_encoding = {}
+            for vn in existing_variable_names:
+                vars_with_encoding[vn] = variables[vn].copy(deep=False)
+                vars_with_encoding[vn].encoding = existing_ds[vn].encoding
+            vars_with_encoding, _ = self.encode(vars_with_encoding, {})
+            variables_encoded.update(vars_with_encoding)
+
+            for var_name in existing_variable_names:
+                new_var = variables_encoded[var_name]
+                existing_var = existing_ds.variables[var_name]
+                _validate_existing_dims(
+                    var_name,
+                    new_var,
+                    existing_var,
+                    self._write_region,
+                    self._append_dim,
+                )
 
         if self._write_region is None:
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.ds.store)
+            zarr.consolidate_metadata(self.zarr_group.store)
 
     def sync(self):
         pass
@@ -511,9 +556,9 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.ds:
+            if name in self.zarr_group:
                 # existing variable
-                zarr_array = self.ds[name]
+                zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -527,7 +572,7 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
-                zarr_array = self.ds.create(
+                zarr_array = self.zarr_group.create(
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)

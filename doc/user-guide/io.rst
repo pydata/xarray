@@ -1074,9 +1074,13 @@ data should be written (in index space, not coordinate space), e.g.,
     # For convenience, we'll slice a single dataset, but in the real use-case
     # we would create them separately, possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)}, consolidated=True)
+    ds.isel(x=slice(10, 20)).to_zarr(
+        path, region={"x": slice(10, 20)}, consolidated=True
+    )
+    ds.isel(x=slice(20, 30)).to_zarr(
+        path, region={"x": slice(20, 30)}, consolidated=True
+    )
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).

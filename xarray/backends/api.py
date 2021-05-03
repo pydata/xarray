@@ -1247,6 +1247,42 @@ def save_mfdataset(
         )
 
 
+def _validate_region(ds, region):
+    if not isinstance(region, dict):
+        raise TypeError(f"``region`` must be a dict, got {type(region)}")
+
+    for k, v in region.items():
+        if k not in ds.dims:
+            raise ValueError(
+                f"all keys in ``region`` are not in Dataset dimensions, got "
+                f"{list(region)} and {list(ds.dims)}"
+            )
+        if not isinstance(v, slice):
+            raise TypeError(
+                "all values in ``region`` must be slice objects, got "
+                f"region={region}"
+            )
+        if v.step not in {1, None}:
+            raise ValueError(
+                "step on all slices in ``region`` must be 1 or None, got "
+                f"region={region}"
+            )
+
+    non_matching_vars = [
+        k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
+    ]
+    if non_matching_vars:
+        raise ValueError(
+            f"when setting `region` explicitly in to_zarr(), all "
+            f"variables in the dataset to write must have at least "
+            f"one dimension in common with the region's dimensions "
+            f"{list(region.keys())}, but that is not "
+            f"the case for some variables here. To drop these variables "
+            f"from this dataset before exporting to zarr, write: "
+            f".drop({non_matching_vars!r})"
+        )
+
+
 def _validate_datatypes_for_zarr_append(dataset):
     """DataArray.name and Dataset keys must be a string or None"""
 
@@ -1269,98 +1305,6 @@ def _validate_datatypes_for_zarr_append(dataset):
 
     for k in dataset.data_vars.values():
         check_dtype(k)
-
-
-def _validate_append_dim_and_encoding(
-    ds_to_append, store, append_dim, region, encoding, **open_kwargs
-):
-    try:
-        ds = backends.zarr.open_zarr(store, **open_kwargs)
-    except ValueError:  # store empty
-        return
-
-    if append_dim:
-        if append_dim not in ds.dims:
-            raise ValueError(
-                f"append_dim={append_dim!r} does not match any existing "
-                f"dataset dimensions {ds.dims}"
-            )
-        if region is not None and append_dim in region:
-            raise ValueError(
-                f"cannot list the same dimension in both ``append_dim`` and "
-                f"``region`` with to_zarr(), got {append_dim} in both"
-            )
-
-    if region is not None:
-        if not isinstance(region, dict):
-            raise TypeError(f"``region`` must be a dict, got {type(region)}")
-        for k, v in region.items():
-            if k not in ds_to_append.dims:
-                raise ValueError(
-                    f"all keys in ``region`` are not in Dataset dimensions, got "
-                    f"{list(region)} and {list(ds_to_append.dims)}"
-                )
-            if not isinstance(v, slice):
-                raise TypeError(
-                    "all values in ``region`` must be slice objects, got "
-                    f"region={region}"
-                )
-            if v.step not in {1, None}:
-                raise ValueError(
-                    "step on all slices in ``region`` must be 1 or None, got "
-                    f"region={region}"
-                )
-
-        non_matching_vars = [
-            k
-            for k, v in ds_to_append.variables.items()
-            if not set(region).intersection(v.dims)
-        ]
-        if non_matching_vars:
-            raise ValueError(
-                f"when setting `region` explicitly in to_zarr(), all "
-                f"variables in the dataset to write must have at least "
-                f"one dimension in common with the region's dimensions "
-                f"{list(region.keys())}, but that is not "
-                f"the case for some variables here. To drop these variables "
-                f"from this dataset before exporting to zarr, write: "
-                f".drop({non_matching_vars!r})"
-            )
-
-    for var_name, new_var in ds_to_append.variables.items():
-        if var_name in ds.variables:
-            existing_var = ds.variables[var_name]
-            if new_var.dims != existing_var.dims:
-                raise ValueError(
-                    f"variable {var_name!r} already exists with different "
-                    f"dimension names {existing_var.dims} != "
-                    f"{new_var.dims}, but changing variable "
-                    f"dimensions is not supported by to_zarr()."
-                )
-
-            existing_sizes = {}
-            for dim, size in existing_var.sizes.items():
-                if region is not None and dim in region:
-                    start, stop, stride = region[dim].indices(size)
-                    assert stride == 1  # region was already validated above
-                    size = stop - start
-                if dim != append_dim:
-                    existing_sizes[dim] = size
-
-            new_sizes = {
-                dim: size for dim, size in new_var.sizes.items() if dim != append_dim
-            }
-            if existing_sizes != new_sizes:
-                raise ValueError(
-                    f"variable {var_name!r} already exists with different "
-                    f"dimension sizes: {existing_sizes} != {new_sizes}. "
-                    f"to_zarr() only supports changing dimension sizes when "
-                    f"explicitly appending, but append_dim={append_dim!r}."
-                )
-            if var_name in encoding.keys():
-                raise ValueError(
-                    f"variable {var_name!r} already exists, but encoding was provided"
-                )
 
 
 def to_zarr(
@@ -1391,59 +1335,74 @@ def to_zarr(
         encoding = {}
 
     if mode is None:
-        if append_dim is not None or region is not None:
+        if append_dim is not None:
             mode = "a"
+        elif region is not None:
+            mode = "r+"
         else:
             mode = "w-"
 
     if mode != "a" and append_dim is not None:
         raise ValueError("cannot set append_dim unless mode='a' or mode=None")
 
-    if mode != "a" and region is not None:
-        raise ValueError("cannot set region unless mode='a' or mode=None")
+    if mode not in ["a", "r+"] and region is not None:
+        raise ValueError("cannot set region unless mode='a', mode='r+' or mode=None")
 
-    if mode not in ["w", "w-", "a"]:
-        # TODO: figure out how to handle 'r+'
+    if mode not in ["w", "w-", "a", "r+"]:
         raise ValueError(
             "The only supported options for mode are 'w', "
-            f"'w-' and 'a', but mode={mode!r}"
-        )
-
-    if consolidated and region is not None:
-        raise ValueError(
-            "cannot use consolidated=True when the region argument is set. "
-            "Instead, set consolidated=True when writing to zarr with "
-            "compute=False before writing data."
+            f"'w-', 'a' and 'r+', but mode={mode!r}"
         )
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    if mode == "a":
-        _validate_datatypes_for_zarr_append(dataset)
-        _validate_append_dim_and_encoding(
-            dataset,
-            store,
-            append_dim,
-            group=group,
-            consolidated=consolidated,
-            region=region,
-            encoding=encoding,
-            # do we need to pass safe_chunks through here?
-        )
+    if region is not None:
+        _validate_region(dataset, region)
+        if append_dim is not None and append_dim in region:
+            raise ValueError(
+                f"cannot list the same dimension in both ``append_dim`` and "
+                f"``region`` with to_zarr(), got {append_dim} in both"
+            )
 
     zstore = backends.ZarrStore.open_group(
         store=store,
         mode=mode,
         synchronizer=synchronizer,
         group=group,
-        consolidate_on_close=consolidated,
+        consolidated=consolidated and mode == "r+",
+        consolidate_on_close=consolidated and mode != "r+",
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
     )
+
+    if mode in ["a", "r+"]:
+        _validate_datatypes_for_zarr_append(dataset)
+        if append_dim is not None:
+            existing_dims = zstore.get_dimensions()
+            if append_dim not in existing_dims:
+                raise ValueError(
+                    f"append_dim={append_dim!r} does not match any existing "
+                    f"dataset dimensions {existing_dims}"
+                )
+        existing_var_names = set(zstore.zarr_group.array_keys())
+        for var_name in existing_var_names:
+            if var_name in encoding.keys():
+                raise ValueError(
+                    f"variable {var_name!r} already exists, but encoding was provided"
+                )
+        if mode == "r+":
+            new_names = [k for k in dataset.variables if k not in existing_var_names]
+            if new_names:
+                raise ValueError(
+                    f"dataset contains non-pre-existing variables {new_names}, "
+                    "which is not allowed in ``xarray.Dataset.to_zarr()`` with "
+                    "mode='r+'. To allow writing new variables, set mode='a'."
+                )
+
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
     dump_to_store(dataset, zstore, writer, encoding=encoding)

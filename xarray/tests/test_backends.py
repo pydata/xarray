@@ -3,6 +3,7 @@ import itertools
 import math
 import os.path
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -2022,6 +2023,25 @@ class ZarrBase(CFEncodedBase):
     def test_append_write(self):
         super().test_append_write()
 
+    def test_append_with_mode_rplus_success(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"foo": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            modified.to_zarr(store, mode="r+")
+            with self.open(store) as actual:
+                assert_identical(actual, modified)
+
+    def test_append_with_mode_rplus_fails(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"bar": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            with pytest.raises(
+                ValueError, match="dataset contains non-pre-existing variables"
+            ):
+                modified.to_zarr(store, mode="r+")
+
     def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
@@ -2178,8 +2198,21 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
                 region = {"x": slice(i, i + 2)}
-                nonzeros.isel(region).to_zarr(store, region=region)
+                nonzeros.isel(region).to_zarr(
+                    store, region=region, consolidated=consolidated
+                )
             with xr.open_zarr(store, consolidated=consolidated) as actual:
+                assert_identical(actual, nonzeros)
+
+    @pytest.mark.parametrize("mode", [None, "r+", "a"])
+    def test_write_region_mode(self, mode):
+        zeros = Dataset({"u": (("x",), np.zeros(10))})
+        nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
+        with self.create_zarr_target() as store:
+            zeros.to_zarr(store)
+            for region in [{"x": slice(5)}, {"x": slice(5, 10)}]:
+                nonzeros.isel(region).to_zarr(store, region=region, mode=mode)
+            with xr.open_zarr(store) as actual:
                 assert_identical(actual, nonzeros)
 
     @requires_dask
@@ -2200,7 +2233,7 @@ class ZarrBase(CFEncodedBase):
 
         with self.create_zarr_target() as store:
             template.to_zarr(store, compute=False)
-            data.to_zarr(store, region={"x": slice(None)})
+            data.to_zarr(store, region={"x": slice(None)}, mode="a")
             with self.open(store) as actual:
                 assert_identical(actual, expected)
 
@@ -2222,12 +2255,11 @@ class ZarrBase(CFEncodedBase):
             data2.to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with pytest.raises(ValueError, match=r"cannot use consolidated=True"):
-                data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
-
-        with setup_and_verify_store() as store:
             with pytest.raises(
-                ValueError, match=r"cannot set region unless mode='a' or mode=None"
+                ValueError,
+                match=re.escape(
+                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                ),
             ):
                 data.to_zarr(store, region={"x": slice(None)}, mode="w")
 
