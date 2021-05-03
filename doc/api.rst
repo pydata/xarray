@@ -588,6 +588,7 @@ Plotting
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.surface
 
 .. _api.ufuncs:
 

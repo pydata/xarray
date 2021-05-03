@@ -59,6 +59,9 @@ def LooseVersion(vstring):
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
+has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
+    "matplotlib", minversion="3.3.0"
+)
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")

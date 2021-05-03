@@ -263,7 +263,9 @@ class FacetGrid:
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
-        func_kwargs.update({"add_colorbar": False, "add_labels": False})
+        func_kwargs["add_colorbar"] = False
+        if func.__name__ != "surface":
+            func_kwargs["add_labels"] = False
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(
