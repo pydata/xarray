@@ -7235,6 +7235,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.isel
         pandas.eval
 
+        Examples
+        --------
+        >>> a = np.arange(0, 5, 1)
+        >>> b = np.linspace(0, 1, 5)
+        >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+        >>> ds.query(x="a > 2")
+        <xarray.Dataset>
+        Dimensions:  (x: 2)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 3 4
+            b        (x) float64 0.75 1.0
         """
 
         # allow queries to be given either as a dict or as kwargs
