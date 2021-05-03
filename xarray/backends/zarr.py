@@ -491,20 +491,23 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
         if existing_variable_names:
-            existing_ds = StoreBackendEntrypoint().open_dataset(self)
-
-            # there are variables to append
-            # their encoding must be the same as in the store
+            # Decode variables directly, without going via xarray.Dataset to
+            # avoid needing to load index variables into memory.
+            # TODO: consider making loading indexes lazy again?
+            existing_vars, _, _ = conventions.decode_cf_variables(
+                self.get_variables(), self.get_attrs()
+            )
+            # Modified variables must use the same encoding as the store.
             vars_with_encoding = {}
             for vn in existing_variable_names:
                 vars_with_encoding[vn] = variables[vn].copy(deep=False)
-                vars_with_encoding[vn].encoding = existing_ds[vn].encoding
+                vars_with_encoding[vn].encoding = existing_vars[vn].encoding
             vars_with_encoding, _ = self.encode(vars_with_encoding, {})
             variables_encoded.update(vars_with_encoding)
 
             for var_name in existing_variable_names:
                 new_var = variables_encoded[var_name]
-                existing_var = existing_ds.variables[var_name]
+                existing_var = existing_vars[var_name]
                 _validate_existing_dims(
                     var_name,
                     new_var,
