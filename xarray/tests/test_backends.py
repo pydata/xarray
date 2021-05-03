@@ -735,7 +735,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexes.PandasIndexAdapter)
+                        assert isinstance(obj, indexes.PandasIndex)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))

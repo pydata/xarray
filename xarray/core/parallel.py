@@ -27,7 +27,7 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.indexes import PandasIndexAdapter
+from xarray.core.indexes import PandasIndex
 
 from .alignment import align
 from .dataarray import DataArray
@@ -511,7 +511,7 @@ def map_blocks(
             idx = indexes[dim].to_pandas_index()[
                 _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
             ]
-            expected_indexes[dim] = PandasIndexAdapter(idx)
+            expected_indexes[dim] = PandasIndex(idx)
         expected["indexes"] = expected_indexes
 
         from_wrapper = (gname,) + chunk_tuple

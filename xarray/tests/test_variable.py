@@ -11,7 +11,7 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
-from xarray.core.indexes import PandasIndexAdapter
+from xarray.core.indexes import PandasIndex
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -535,7 +535,7 @@ class VariableSubclassobjects:
         v = self.cls("x", midx)
         for deep in [True, False]:
             w = v.copy(deep=deep)
-            assert isinstance(w._data, PandasIndexAdapter)
+            assert isinstance(w._data, PandasIndex)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
@@ -2145,7 +2145,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_data(self):
         x = IndexVariable("x", np.arange(3.0))
-        assert isinstance(x._data, PandasIndexAdapter)
+        assert isinstance(x._data, PandasIndex)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
@@ -2287,7 +2287,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, LazilyIndexedArray)
+        types = (np.asarray, PandasIndex, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),

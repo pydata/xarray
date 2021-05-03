@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, PandasIndexAdapter
+from .indexes import Index, PandasIndex
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
@@ -960,9 +960,7 @@ def dataset_update_method(
 
     # use ds.coords and not ds.indexes, else str coords are cast to object
     # TODO: benbovy - flexible indexes: fix this (it only works with pandas indexes)
-    indexes = {
-        key: PandasIndexAdapter(dataset.coords[key]) for key in dataset.xindexes.keys()
-    }
+    indexes = {key: PandasIndex(dataset.coords[key]) for key in dataset.xindexes.keys()}
     return merge_core(
         [dataset, other],
         priority_arg=1,

@@ -51,13 +51,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import (
-    Index,
-    Indexes,
-    PandasIndexAdapter,
-    default_indexes,
-    propagate_indexes,
-)
+from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -1012,7 +1006,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
             # xarray Index needs a copy method.
             indexes = {
-                k: PandasIndexAdapter(v.to_pandas_index().copy(deep=deep))
+                k: PandasIndex(v.to_pandas_index().copy(deep=deep))
                 for k, v in self._indexes.items()
             }
         return self._replace(variable, coords, indexes=indexes)

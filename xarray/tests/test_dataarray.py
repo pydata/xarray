@@ -24,7 +24,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.indexes import Index, PandasIndexAdapter, propagate_indexes
+from xarray.core.indexes import Index, PandasIndex, propagate_indexes
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
@@ -148,9 +148,7 @@ class TestDataArray:
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
         expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        expected_xindexes = {
-            k: PandasIndexAdapter(idx) for k, idx in expected_indexes.items()
-        }
+        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
         assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])

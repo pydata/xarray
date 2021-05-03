@@ -108,7 +108,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     dimension. If `index` is a pandas.MultiIndex and depending on `label`,
     return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
-    from .indexes import PandasIndexAdapter
+    from .indexes import PandasIndex
 
     new_index = None
 
@@ -201,7 +201,7 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
                 raise KeyError(f"not all values found in index {index_name!r}")
 
     if new_index is not None:
-        new_index = PandasIndexAdapter(new_index)
+        new_index = PandasIndex(new_index)
 
     return indexer, new_index
 
@@ -721,9 +721,9 @@ def as_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
-        from .indexes import PandasIndexAdapter
+        from .indexes import PandasIndex
 
-        return PandasIndexAdapter(array)
+        return PandasIndex(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):

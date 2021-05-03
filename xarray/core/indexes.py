@@ -62,7 +62,7 @@ class Index:
         raise NotImplementedError()
 
 
-class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
+class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
     __slots__ = ("array", "_dtype")
@@ -142,7 +142,7 @@ class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
     def __getitem__(
         self, indexer
     ) -> Union[
-        "PandasIndexAdapter",
+        "PandasIndex",
         NumpyIndexingAdapter,
         np.ndarray,
         np.datetime64,
@@ -160,7 +160,7 @@ class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
         result = self.array[key]
 
         if isinstance(result, pd.Index):
-            result = PandasIndexAdapter(result, dtype=self.dtype)
+            result = PandasIndex(result, dtype=self.dtype)
         else:
             # result is a scalar
             if result is pd.NaT:
@@ -192,7 +192,7 @@ class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
             type(self).__name__, self.array, self.dtype
         )
 
-    def copy(self, deep: bool = True) -> "PandasIndexAdapter":
+    def copy(self, deep: bool = True) -> "PandasIndex":
         # Not the same as just writing `self.array.copy(deep=deep)`, as
         # shallow copies of the underlying numpy.ndarrays become deep ones
         # upon pickling
@@ -201,7 +201,7 @@ class PandasIndexAdapter(Index, ExplicitlyIndexedNDArrayMixin):
         # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
         # 8000341
         array = self.array.copy(deep=True) if deep else self.array
-        return PandasIndexAdapter(array, self._dtype)
+        return PandasIndex(array, self._dtype)
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
@@ -312,13 +312,11 @@ def isel_variable_and_index(
     if isinstance(indexer, Variable):
         indexer = indexer.data
     pd_index = index.to_pandas_index()
-    new_index = PandasIndexAdapter(pd_index[indexer])
+    new_index = PandasIndex(pd_index[indexer])
     return new_variable, new_index
 
 
-def roll_index(
-    index: PandasIndexAdapter, count: int, axis: int = 0
-) -> PandasIndexAdapter:
+def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:
     """Roll an pandas.Index."""
     pd_index = index.to_pandas_index()
     count %= pd_index.shape[0]
@@ -326,7 +324,7 @@ def roll_index(
         new_idx = pd_index[-count:].append(pd_index[:-count])
     else:
         new_idx = pd_index[:]
-    return PandasIndexAdapter(new_idx)
+    return PandasIndex(new_idx)
 
 
 def propagate_indexes(
