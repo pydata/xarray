@@ -127,12 +127,12 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
     def union(self, other):
         if isinstance(other, pd.Index):
             other = PandasIndex(other)
-        return isinstance(other, PandasIndex) and self.array.union(other.array)
+        return PandasIndex(self.array.union(other.array))
 
     def intersection(self, other):
         if isinstance(other, pd.Index):
             other = PandasIndex(other)
-        return isinstance(other, PandasIndex) and self.array.intersection(other.array)
+        return PandasIndex(self.array.intersection(other.array))
 
     def __getitem__(
         self, indexer
