@@ -1579,14 +1579,17 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of xarray Index or pandas.Index objects used for label based indexing."""
-        xr_or_pd_indexes = {}
-        for k, idx in self.xindexes.items():
-            try:
-                xr_or_pd_indexes[k] = idx.to_pandas_index()
-            except TypeError:
-                xr_or_pd_indexes[k] = idx
-        return Indexes(xr_or_pd_indexes)
+        """Mapping of pandas.Index objects used for label based indexing.
+
+        Raises an error in case where this Dataset has indexes that cannot be coerced
+        to pandas.Index objects.
+
+        See Also
+        --------
+        Dataset.xindexes
+
+        """
+        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
 
     @property
     def xindexes(self) -> Indexes:
