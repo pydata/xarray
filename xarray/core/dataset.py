@@ -1449,6 +1449,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable.
         """
         if utils.is_dict_like(key):
+            from .dataarray import DataArray
+
             # check for consistency first
             if isinstance(value, Dataset):
                 missing_vars = [
@@ -1468,12 +1470,39 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             name, ",".join(missing_keys)
                         )
                     )
-                test_var = var.copy()
-                if isinstance(value, Dataset):
-                    test_var[key] = value[name]
-                else:
-                    test_var[key] = value
 
+                # test indexing
+                try:
+                    var_k = var[key]
+                except IndexError:
+                    raise IndexError(
+                        "Indexer {} not available in variable '{}'".format(key, name)
+                    )
+
+                if isinstance(value, Dataset):
+                    val = value[name]
+                else:
+                    val = value
+                if isinstance(val, DataArray):
+                    for dim in val.dims:
+                        coord1 = var_k[dim]
+                        coord2 = val[dim]
+                        if (len(coord1) != len(coord2)) or any(
+                            coord1.values != coord2.values
+                        ):
+                            raise IndexError(
+                                "Variable '{}': dimension coordinate '{}' conflicts"
+                                " between indexed and indexing objects: "
+                                " {}\n vs.\n {}".format(name, dim, coord2, coord1)
+                            )
+                elif isinstance(val, np.ndarray):
+                    try:
+                        np.broadcast_to(val, var_k.shape)
+                    except ValueError:
+                        raise ValueError(
+                            "Variable '{}': input array of shape {} cannot be broadcast"
+                            " to shape {}".format(name, val.shape, var_k.shape)
+                        )
             # loop over dataset variables and set new values
             for name, var in self.items():
                 if isinstance(value, Dataset):

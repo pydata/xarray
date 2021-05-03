@@ -3396,6 +3396,17 @@ class TestDataset:
             data4[{"dim2": 1}] = data1[{"dim2": 2}]
         with raises_regex(KeyError, err_msg):
             data4.loc[{"dim2": 1}] = data1[{"dim2": 2}]
+        err_msg = "not available in variable"
+        with raises_regex(IndexError, err_msg):
+            data4[{"dim2": 10}] = data3[{"dim2": 2}]
+        err_msg = "Variable 'var1': dimension coordinate 'dim2' conflicts"
+        with raises_regex(IndexError, err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4, 5]}]
+        with raises_regex(IndexError, err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4]}]
+        err_msg = "Variable 'var1': input array of shape"
+        with raises_regex(ValueError, err_msg):
+            data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4, 5]}].values
 
         data4[{"dim2": 0}] = 0.0
         data4[{"dim2": 1}] = data3[{"dim2": 2}]
