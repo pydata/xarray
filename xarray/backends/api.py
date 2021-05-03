@@ -655,14 +655,14 @@ def open_dataarray(
             "all other options must be passed as keyword arguments"
         )
 
-    # TODO remove after v0.19
-    if kwargs.pop("lock", None):
-        warnings.warn(
-            "The kwarg 'lock' has been deprecated, and is now"
-            "ignored. In future (from v0.19) passing lock will "
-            "raise an error.",
-            DeprecationWarning,
-        )
+        # TODO remove after v0.19
+        if kwargs.pop("lock", None):
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated, and is now "
+                "ignored. In the future passing lock will "
+                "raise an error.",
+                DeprecationWarning,
+            )
 
     dataset = open_dataset(
         filename_or_obj,
