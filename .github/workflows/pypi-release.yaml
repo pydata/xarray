@@ -3,8 +3,7 @@ on:
   release:
     types:
       - published
-
-
+  push:
 
 jobs:
   build-artifacts:
@@ -25,8 +24,7 @@ jobs:
         run: |
           git clean -xdf
           git restore -SW .
-          python setup.py sdist bdist_wheel
-          python -m pip wheel . -w dist --no-deps
+          python -m build --sdist --wheel .
 
       - name: Test the artifacts
         run: |
