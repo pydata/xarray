@@ -5097,6 +5097,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return ordered_dims
 
+    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+        """Convert this dataset into a pandas object without changing the number of dimensions.
+
+        The type of the returned object depends on the number of Dataset
+        dimensions:
+
+        * 0D -> `pandas.Series`
+        * 1D -> `pandas.DataFrame`
+
+        Only works for Datasets with 1 or fewer dimensions.
+        """
+        if len(self.dims) == 0:
+            return pd.Series({k: v.item() for k, v in self.items()})
+        if len(self.dims) == 1:
+            return self.to_dataframe()
+        raise ValueError(
+            "cannot convert Datasets with %s dimensions into "
+            "pandas objects without changing the number of dimensions. "
+            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+        )
+
     def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
@@ -6746,36 +6767,26 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
-            'constant' (default)
-                Pads with a constant value.
-            'edge'
-                Pads with the edge values of array.
-            'linear_ramp'
-                Pads with the linear ramp between end_value and the
-                array edge value.
-            'maximum'
-                Pads with the maximum value of all or part of the
-                vector along each axis.
-            'mean'
-                Pads with the mean value of all or part of the
-                vector along each axis.
-            'median'
-                Pads with the median value of all or part of the
-                vector along each axis.
-            'minimum'
-                Pads with the minimum value of all or part of the
-                vector along each axis.
-            'reflect'
-                Pads with the reflection of the vector mirrored on
-                the first and last values of the vector along each
-                axis.
-            'symmetric'
-                Pads with the reflection of the vector mirrored
-                along the edge of the array.
-            'wrap'
-                Pads with the wrap of the vector along the axis.
-                The first values are used to pad the end and the
-                end values are used to pad the beginning.
+            - constant: Pads with a constant value.
+            - edge: Pads with the edge values of array.
+            - linear_ramp: Pads with the linear ramp between end_value and the
+              array edge value.
+            - maximum: Pads with the maximum value of all or part of the
+              vector along each axis.
+            - mean: Pads with the mean value of all or part of the
+              vector along each axis.
+            - median: Pads with the median value of all or part of the
+              vector along each axis.
+            - minimum: Pads with the minimum value of all or part of the
+              vector along each axis.
+            - reflect: Pads with the reflection of the vector mirrored on
+              the first and last values of the vector along each axis.
+            - symmetric: Pads with the reflection of the vector mirrored
+              along the edge of the array.
+            - wrap: Pads with the wrap of the vector along the axis.
+              The first values are used to pad the end and the
+              end values are used to pad the beginning.
+
         stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -7214,15 +7225,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             parser to retain strict Python semantics.
         engine : {"python", "numexpr", None}, default: None
             The engine used to evaluate the expression. Supported engines are:
+
             - None: tries to use numexpr, falls back to python
             - "numexpr": evaluates expressions using numexpr
             - "python": performs operations as if you had eval’d in top level python
+
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
+
             - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
+
         **queries_kwargs : {dim: query, ...}, optional
             The keyword arguments form of ``queries``.
             One of queries or queries_kwargs must be provided.

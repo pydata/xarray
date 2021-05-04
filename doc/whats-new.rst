@@ -23,6 +23,10 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
+- Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
+  surface plots (:issue:`#2235` :issue:`#5084` :pull:`5101`).
 - Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
@@ -98,13 +102,6 @@ New Features
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
-- Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
-  `combine='by_coords'` is specified, which should never have been possible (as
-  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
-  Also removes unneeded internal reordering of datasets in
-  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
-  Fixes (:issue:`5230`).
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Implement ``__setitem__`` for :py:class:`core.indexing.DaskIndexingAdapter` if
   dask version supports item assignment. (:issue:`5171`, :pull:`5174`)
   By `Tammas Loughran <https://github.com/tammasloughran>`_.
@@ -136,6 +133,20 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+
+- Warn when passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
+  `combine='by_coords'` is specified, which should never have been possible (as
+  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
+  Also removes unneeded internal reordering of datasets in
+  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
+  Fixes (:issue:`5230`), via (:pull:`5231`, :pull:`5255`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- The `lock` keyword argument to :py:func:`open_dataset` and :py:func:`open_dataarray` is now
+  a backend specific option. It will give a warning if passed to a backend that doesn't support it
+  instead of being silently ignored. From the next version it will raise an error.
+  This is part of the refactor to support external backends (:issue:`5073`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
+
 
 Bug fixes
 ~~~~~~~~~

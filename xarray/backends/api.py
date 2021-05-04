@@ -1,4 +1,5 @@
 import os
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -449,7 +450,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -633,7 +634,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -891,10 +892,14 @@ def open_mfdataset(
             list(combined_ids_paths.values()),
         )
 
+    # TODO raise an error instead of a warning after v0.19
     elif combine == "by_coords" and concat_dim is not None:
-        raise ValueError(
-            "`concat_dim` can only be used with combine='nested',"
-            " not with combine='by_coords'"
+        warnings.warn(
+            "When combine='by_coords', passing a value for `concat_dim` has no "
+            "effect. This combination will raise an error in future. To manually "
+            "combine along a specific dimension you should instead specify "
+            "combine='nested' along with a value for `concat_dim`.",
+            DeprecationWarning,
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
