@@ -509,7 +509,7 @@ def array_repr(arr):
         name_str = ""
 
     if _get_boolean_with_default("display_expand_data", default=True) or isinstance(
-        arr.data, MemoryCachedArray
+        arr.variable._data, MemoryCachedArray
     ):
         data_repr = short_data_repr(arr)
     else:
