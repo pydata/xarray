@@ -3401,10 +3401,10 @@ class TestDataset:
         err_msg = "Indexer {'dim2': 10} not available in variable 'var1'"
         with raises_regex(IndexError, err_msg):
             data4[{"dim2": 10}] = data3[{"dim2": 2}]
-        err_msg = "Variable 'var1': dimension coordinate 'dim2' conflicts"
-        with raises_regex(IndexError, err_msg):
+        err_msg = "indexes along dimension 'dim2' are not equal"
+        with raises_regex(ValueError, err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4, 5]}]
-        with raises_regex(IndexError, err_msg):
+        with raises_regex(ValueError, err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4]}]
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
         with raises_regex(TypeError, err_msg):

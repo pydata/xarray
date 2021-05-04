@@ -1489,17 +1489,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 else:
                     val = value
                 if isinstance(val, DataArray):
-                    for dim in val.dims:
-                        coord1 = var_k[dim]
-                        coord2 = val[dim]
-                        if (len(coord1) != len(coord2)) or any(
-                            coord1.values != coord2.values
-                        ):
-                            raise IndexError(
-                                f"Variable '{name}': dimension coordinate '{dim}' conflicts"
-                                f" between indexed and indexing objects: "
-                                f" {coord2}\n vs.\n {coord1}"
-                            )
+                    xr.align(val, var_k, join="exact", copy=False)
 
             # loop over dataset variables and set new values
             for name, var in self.items():
