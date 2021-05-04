@@ -5093,6 +5093,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return ordered_dims
 
+    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+        """Convert this dataset into a pandas object without changing the number of dimensions.
+
+        The type of the returned object depends on the number of Dataset
+        dimensions:
+
+        * 0D -> `pandas.Series`
+        * 1D -> `pandas.DataFrame`
+
+        Only works for Datasets with 1 or fewer dimensions.
+        """
+        if len(self.dims) == 0:
+            return pd.Series({k: v.item() for k, v in self.items()})
+        if len(self.dims) == 1:
+            return self.to_dataframe()
+        raise ValueError(
+            "cannot convert Datasets with %s dimensions into "
+            "pandas objects without changing the number of dimensions. "
+            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+        )
+
     def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
