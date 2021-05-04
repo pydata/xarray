@@ -133,7 +133,7 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - The `lock` keyword argument to :py:func:`open_dataset` and :py:func:`open_dataarray` is now
   a backend specific option. It will give a warning if passed to a backend that doesn't support it
-  instead of being siletly ignored. From the next version it will raise an error.
+  instead of being silently ignored. From the next version it will raise an error.
   This is part of the refactor to support external backends (:issue:`5073`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
 
