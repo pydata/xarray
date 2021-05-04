@@ -246,7 +246,7 @@ See its docstring for more details.
     across the datasets (ignoring floating point differences). The following command
     with suitable modifications (such as ``parallel=True``) works well with such datasets::
 
-         xr.open_mfdataset('my/files/*.nc', concat_dim="time",
+         xr.open_mfdataset('my/files/*.nc', concat_dim="time", combine="nested",
      	              	   data_vars='minimal', coords='minimal', compat='override')
 
     This command concatenates variables along the ``"time"`` dimension, but only those that

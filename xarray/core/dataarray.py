@@ -4452,6 +4452,17 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset.query
         pandas.eval
 
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
+        >>> da
+        <xarray.DataArray 'a' (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        >>> da.query(x="a > 2")
+        <xarray.DataArray 'a' (x: 2)>
+        array([3, 4])
+        Dimensions without coordinates: x
         """
 
         ds = self._to_dataset_whole(shallow_copy=True)
