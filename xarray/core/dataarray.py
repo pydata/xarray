@@ -776,7 +776,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing.
 
-        Raises an error in case where this Dataset has indexes that cannot be coerced
+        Raises an error if this Dataset has indexes that cannot be coerced
         to pandas.Index objects.
 
         See Also

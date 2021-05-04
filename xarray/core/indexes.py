@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
-    __slots__ = "coord_names"
+    __slots__ = ("coord_names",)
 
     def __init__(self, coord_names: Union[Hashable, Iterable[Hashable]]):
         if isinstance(coord_names, Iterable) and not isinstance(coord_names, str):
@@ -183,9 +183,7 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
         return self.array  # self.array should be always one-dimensional
 
     def __repr__(self) -> str:
-        return "{}(array={!r}, dtype={!r})".format(
-            type(self).__name__, self.array, self.dtype
-        )
+        return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
     def copy(self, deep: bool = True) -> "PandasIndex":
         # Not the same as just writing `self.array.copy(deep=deep)`, as
