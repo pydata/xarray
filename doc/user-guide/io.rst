@@ -961,23 +961,21 @@ Xarray needs to read all of the zarr metadata when it opens a dataset.
 In some storage mediums, such as with cloud object storage (e.g. amazon S3),
 this can introduce significant overhead, because two separate HTTP calls to the
 object store must be made for each variable in the dataset.
-With version 2.3, zarr will support a feature called *consolidated metadata*,
-which allows all metadata for the entire dataset to be stored with a single
-key (by default called ``.zmetadata``). This can drastically speed up
-opening the store. (For more information on this feature, consult the
+As of Xarray version 0.18, Xarray by default uses a feature called
+*consolidated metadata*, stores all metadata for the entire dataset with a
+single key (by default called ``.zmetadata``). This typically drastically speeds
+up opening the store. (For more information on this feature, consult the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
-If you have zarr version 2.3 or greater, xarray can write and read stores
-with consolidated metadata. To write consolidated metadata, pass the
-``consolidated=True`` option to the
-:py:attr:`Dataset.to_zarr` method::
-
-    ds.to_zarr('foo.zarr', consolidated=True)
-
-To read a consolidated store, pass the ``consolidated=True`` option to
+By default, Xarray writes consolidated metadata and attempts to reads stores
+with consolidated metadata, falling back to use non-consolidate metadata for
+reads. To skip this fallback, set ``consolidated=True`` in
 :py:func:`open_zarr`::
 
     ds = xr.open_zarr('foo.zarr', consolidated=True)
+
+or to skip writing/reading consolidate metadata altogether, set
+``conslidated=False``.
 
 Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
@@ -1062,7 +1060,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds = xr.Dataset({"foo": ("x", dummies)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False, consolidated=True)
+    ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
@@ -1072,15 +1070,11 @@ data should be written (in index space, not coordinate space), e.g.,
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
-    # we would create them separately, possibly even from separate processes.
+    # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)}, consolidated=True)
-    ds.isel(x=slice(10, 20)).to_zarr(
-        path, region={"x": slice(10, 20)}, consolidated=True
-    )
-    ds.isel(x=slice(20, 30)).to_zarr(
-        path, region={"x": slice(20, 30)}, consolidated=True
-    )
+    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
 
 Concurrent writes with ``region`` are safe as long as they modify distinct
 chunks in the underlying Zarr arrays (or use an appropriate ``lock``).

@@ -1,5 +1,6 @@
 import os
 import pathlib
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -320,6 +321,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_append_dim",
         "_consolidate_on_close",
         "_group",
+        "_mode",
         "_read_only",
         "_synchronizer",
         "_write_region",
@@ -340,6 +342,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        stacklevel=2,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
@@ -355,21 +358,44 @@ class ZarrStore(AbstractWritableDataStore):
             open_kwargs["storage_options"] = storage_options
         elif storage_options:
             raise ValueError("Storage options only compatible with zarr>=2.5.0")
+
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
+            if consolidated is None:
+                consolidated = False
 
-        if consolidated:
+        if consolidated is None:
+            try:
+                zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            except KeyError:
+                warnings.warn(
+                    "failed to open Zarr store with consolidated metadata, "
+                    "falling back to try reading non-consolidated metadata. In "
+                    "the future, this will be an error instead. To skip "
+                    "this fallback, set consolidated=True; to skip attempting "
+                    "to read consolidated metadata, consolidated=False.",
+                    FutureWarning,
+                    stacklevel=stacklevel,
+                )
+                zarr_group = zarr.open_group(store, **open_kwargs)
+        elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
         return cls(
-            zarr_group, consolidate_on_close, append_dim, write_region, safe_chunks
+            zarr_group,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
         )
 
     def __init__(
         self,
         zarr_group,
+        mode=None,
         consolidate_on_close=False,
         append_dim=None,
         write_region=None,
@@ -379,6 +405,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._read_only = self.zarr_group.read_only
         self._synchronizer = self.zarr_group.synchronizer
         self._group = self.zarr_group.path
+        self._mode = mode
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
@@ -516,7 +543,7 @@ class ZarrStore(AbstractWritableDataStore):
                     self._append_dim,
                 )
 
-        if self._write_region is None:
+        if self._mode not in ["r", "r+"]:
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
 
@@ -561,6 +588,9 @@ class ZarrStore(AbstractWritableDataStore):
 
             if name in self.zarr_group:
                 # existing variable
+                # TODO: if mode="a", consider overriding the existing variable
+                # metadata. This would need some case work properly with region
+                # and append_dim.
                 zarr_array = self.zarr_group[name]
             else:
                 # new variable
@@ -613,7 +643,7 @@ def open_zarr(
     concat_characters=True,
     decode_coords=True,
     drop_variables=None,
-    consolidated=False,
+    consolidated=None,
     overwrite_encoded_chunks=False,
     chunk_store=None,
     storage_options=None,
@@ -622,10 +652,6 @@ def open_zarr(
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
-
-    .. note:: Experimental
-              The Zarr backend is new and experimental. Please report any
-              unexpected behavior via github issues.
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
@@ -678,6 +704,8 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+        By default (`consolidate=None`), attempts to read consolidated metadata,
+        falling back to read non-consolidated metadata if that fails.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
     decode_timedelta : bool, optional
@@ -730,6 +758,7 @@ def open_zarr(
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
         "storage_options": storage_options,
+        "stacklevel": 4,
     }
 
     ds = open_dataset(
@@ -765,10 +794,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         group=None,
         mode="r",
         synchronizer=None,
-        consolidated=False,
-        consolidate_on_close=False,
+        consolidated=None,
         chunk_store=None,
         storage_options=None,
+        stacklevel=3,
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -778,9 +807,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
-            consolidate_on_close=consolidate_on_close,
+            consolidate_on_close=False,
             chunk_store=chunk_store,
             storage_options=storage_options,
+            stacklevel=stacklevel + 1,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

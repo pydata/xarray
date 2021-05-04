@@ -1803,7 +1803,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         group: str = None,
         encoding: Mapping = None,
         compute: bool = True,
-        consolidated: bool = False,
+        consolidated: Optional[bool] = None,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
         safe_chunks: bool = True,
@@ -1852,7 +1852,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             array data later. Metadata is always updated eagerly.
         consolidated : bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing metadata.
+            after writing metadata and read existing stores with consolidated
+            metadata; if False, do not. The default (`consolidated=None`) means
+            write consolidated metadata and attempt to read consolidated
+            metadata for existing stores (falling back to non-consolidated).
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.

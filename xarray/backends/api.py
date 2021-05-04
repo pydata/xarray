@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     Mapping,
     MutableMapping,
+    Optional,
     Tuple,
     Union,
 )
@@ -1316,7 +1317,7 @@ def to_zarr(
     group: str = None,
     encoding: Mapping = None,
     compute: bool = True,
-    consolidated: bool = False,
+    consolidated: Optional[bool] = None,
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
@@ -1366,17 +1367,24 @@ def to_zarr(
                 f"``region`` with to_zarr(), got {append_dim} in both"
             )
 
+    if mode == "r+":
+        already_consolidated = consolidated
+        consolidate_on_close = False
+    else:
+        already_consolidated = False
+        consolidate_on_close = consolidated or consolidated is None
     zstore = backends.ZarrStore.open_group(
         store=store,
         mode=mode,
         synchronizer=synchronizer,
         group=group,
-        consolidated=consolidated and mode == "r+",
-        consolidate_on_close=consolidated and mode != "r+",
+        consolidated=already_consolidated,
+        consolidate_on_close=consolidate_on_close,
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
+        stacklevel=4,  # for Dataset.to_zarr()
     )
 
     if mode in ["a", "r+"]:
