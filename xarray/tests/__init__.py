@@ -1,6 +1,5 @@
 import importlib
 import platform
-import re
 import warnings
 from contextlib import contextmanager
 from distutils import version
@@ -60,6 +59,9 @@ def LooseVersion(vstring):
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
+has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
+    "matplotlib", minversion="3.3.0"
+)
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -134,18 +136,6 @@ def raise_if_dask_computes(max_computes=0):
 
 flaky = pytest.mark.flaky
 network = pytest.mark.network
-
-
-@contextmanager
-def raises_regex(error, pattern):
-    __tracebackhide__ = True
-    with pytest.raises(error) as excinfo:
-        yield
-    message = str(excinfo.value)
-    if not re.search(pattern, message):
-        raise AssertionError(
-            f"exception {excinfo.value!r} did not match pattern {pattern!r}"
-        )
 
 
 class UnexpectedDataAccess(Exception):

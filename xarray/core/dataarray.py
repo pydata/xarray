@@ -496,7 +496,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -2515,7 +2515,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2539,7 +2540,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -3587,6 +3589,68 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]] = None,
+        datetime_unit: str = None,
+    ) -> "DataArray":
+        """Integrate cumulatively along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral is always 0, in order to keep the
+            length of the dimension unchanged between input and output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : DataArray
+
+        See also
+        --------
+        Dataset.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.cumulative_integrate("x")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[0.  , 0.  , 0.  ],
+               [0.15, 0.25, 0.35],
+               [4.65, 5.75, 6.85],
+               [5.4 , 6.6 , 7.8 ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
+        return self._from_temp_dataset(ds)
+
     def unify_chunks(self) -> "DataArray":
         """Unify chunk size along all chunked dimensions of this DataArray.
 
@@ -4388,6 +4452,17 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset.query
         pandas.eval
 
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
+        >>> da
+        <xarray.DataArray 'a' (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        >>> da.query(x="a > 2")
+        <xarray.DataArray 'a' (x: 2)>
+        array([3, 4])
+        Dimensions without coordinates: x
         """
 
         ds = self._to_dataset_whole(shallow_copy=True)
@@ -4418,7 +4493,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Parameters
         ----------
-        coords : DataArray, str or sequence of DataArray, str
+        coords : hashable, DataArray, or sequence of DataArray or hashable
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
             functions, supply `coords` as a sequence in the same order as arguments in
@@ -4429,27 +4504,27 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : str or sequence of str
+        reduce_dims : hashable or sequence of hashable
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
         skipna : bool, optional
             Whether to skip missing values when fitting. Default is True.
-        p0 : dictionary, optional
+        p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dictionary, optional
+        bounds : dict-like, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : seq, optional
+        param_names : sequence of hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
-        kwargs : dictionary
+        **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
         Returns

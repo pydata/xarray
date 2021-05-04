@@ -4,10 +4,18 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
+from distutils.version import LooseVersion
 from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+
+try:
+    import dask
+
+    DASK_VERSION = LooseVersion(dask.__version__)
+except ModuleNotFoundError:
+    DASK_VERSION = LooseVersion("0")
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
@@ -1098,7 +1106,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(indexer, shape):
-    """ Return an identical vindex but slices are replaced by arrays """
+    """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
     if len(slices) == 0:
         return indexer
@@ -1380,13 +1388,29 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        raise TypeError(
-            "this variable's data is stored in a dask array, "
-            "which does not support item assignment. To "
-            "assign to this variable, you must first load it "
-            "into memory explicitly using the .load() "
-            "method or accessing its .values attribute."
-        )
+        if DASK_VERSION >= "2021.04.0+17":
+            if isinstance(key, BasicIndexer):
+                self.array[key.tuple] = value
+            elif isinstance(key, VectorizedIndexer):
+                self.array.vindex[key.tuple] = value
+            elif isinstance(key, OuterIndexer):
+                num_non_slices = sum(
+                    0 if isinstance(k, slice) else 1 for k in key.tuple
+                )
+                if num_non_slices > 1:
+                    raise NotImplementedError(
+                        "xarray can't set arrays with multiple "
+                        "array indices to dask yet."
+                    )
+                self.array[key.tuple] = value
+        else:
+            raise TypeError(
+                "This variable's data is stored in a dask array, "
+                "and the installed dask version does not support item "
+                "assignment. To assign to this variable, you must either upgrade dask or"
+                "first load the variable into memory explicitly using the .load() "
+                "method or accessing its .values attribute."
+            )
 
     def transpose(self, order):
         return self.array.transpose(order)
