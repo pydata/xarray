@@ -3383,20 +3383,22 @@ class TestDataset:
         # test assignment with positional and label-based indexing
         data3 = data1[["var1", "var2"]]
         data4 = data3.copy()
-        err_msg = "can only set locations defined by dictionaries from Dataset.loc"
+        err_msg = (
+            "can only set locations defined by dictionaries from Dataset.loc. Got: a"
+        )
         with raises_regex(TypeError, err_msg):
             data1.loc["a"] = 0
-        err_msg = "Variable var3 does not contain dimensions dim2!"
-        with raises_regex(KeyError, err_msg):
+        err_msg = r"Variable 'var3' does not contain dimensions \['dim2'\]:"
+        with raises_regex(ValueError, err_msg):
             data1[{"dim2": 0}] = 0.0
-        with raises_regex(KeyError, err_msg):
+        with raises_regex(ValueError, err_msg):
             data1.loc[{"dim2": 0}] = 0.0
-        err_msg = "Variables var3,A,B,scalar in new values not available in dataset!"
-        with raises_regex(KeyError, err_msg):
+        err_msg = r"Variables \['var3', 'A', 'B', 'scalar'\] in new values not available in dataset:"
+        with raises_regex(ValueError, err_msg):
             data4[{"dim2": 1}] = data1[{"dim2": 2}]
-        with raises_regex(KeyError, err_msg):
+        with raises_regex(ValueError, err_msg):
             data4.loc[{"dim2": 1}] = data1[{"dim2": 2}]
-        err_msg = "not available in variable"
+        err_msg = "Indexer {'dim2': 10} not available in variable 'var1'"
         with raises_regex(IndexError, err_msg):
             data4[{"dim2": 10}] = data3[{"dim2": 2}]
         err_msg = "Variable 'var1': dimension coordinate 'dim2' conflicts"

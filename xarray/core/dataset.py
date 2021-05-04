@@ -511,7 +511,8 @@ class _LocIndexer:
     def __setitem__(self, key, value) -> None:
         if not utils.is_dict_like(key):
             raise TypeError(
-                "can only set locations defined by dictionaries from Dataset.loc"
+                "can only set locations defined by dictionaries from Dataset.loc."
+                f" Got: {key}"
             )
 
         # set new values
@@ -1454,30 +1455,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             # check for consistency first
             if isinstance(value, Dataset):
                 missing_vars = [
-                    str(name) for name in value.data_vars if name not in self.data_vars
+                    name for name in value.data_vars if name not in self.data_vars
                 ]
-                if len(missing_vars) > 0:
-                    raise KeyError(
-                        "Variables {} in new values not available in dataset!".format(
-                            ",".join(missing_vars)
-                        )
+                if missing_vars:
+                    raise ValueError(
+                        f"Variables {missing_vars} in new values"
+                        f" not available in dataset:\n{self}"
                     )
+
             for name, var in self.items():
                 missing_keys = [k for k in key.keys() if k not in var.dims]
-                if len(missing_keys) > 0:
-                    raise KeyError(
-                        "Variable {} does not contain dimensions {}!".format(
-                            name, ",".join(missing_keys)
-                        )
+                if missing_keys:
+                    raise ValueError(
+                        f"Variable '{name}' does not contain "
+                        f"dimensions {missing_keys}:\n{var}"
                     )
 
                 # test indexing
                 try:
                     var_k = var[key]
-                except IndexError:
+                except IndexError as e:
                     raise IndexError(
-                        "Indexer {} not available in variable '{}'".format(key, name)
-                    )
+                        f"Indexer {key} not available in variable '{name}'"
+                    ) from e
 
                 if isinstance(value, Dataset):
                     val = value[name]
@@ -1491,9 +1491,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             coord1.values != coord2.values
                         ):
                             raise IndexError(
-                                "Variable '{}': dimension coordinate '{}' conflicts"
-                                " between indexed and indexing objects: "
-                                " {}\n vs.\n {}".format(name, dim, coord2, coord1)
+                                f"Variable '{name}': dimension coordinate '{dim}' conflicts"
+                                f" between indexed and indexing objects: "
+                                f" {coord2}\n vs.\n {coord1}"
                             )
                 elif isinstance(val, np.ndarray):
                     try:
@@ -1503,6 +1503,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                             "Variable '{}': input array of shape {} cannot be broadcast"
                             " to shape {}".format(name, val.shape, var_k.shape)
                         )
+
             # loop over dataset variables and set new values
             for name, var in self.items():
                 if isinstance(value, Dataset):
