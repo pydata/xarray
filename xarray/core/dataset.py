@@ -1462,6 +1462,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         f"Variables {missing_vars} in new values"
                         f" not available in dataset:\n{self}"
                     )
+            elif not isinstance(value, DataArray) and isinstance(value, Iterable):
+                raise TypeError(
+                    "Dataset assignment only accepts DataArrays, "
+                    "Datasets, and scalars."
+                )
 
             for name, var in self.items():
                 missing_keys = [k for k in key.keys() if k not in var.dims]
@@ -1495,14 +1500,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                                 f" between indexed and indexing objects: "
                                 f" {coord2}\n vs.\n {coord1}"
                             )
-                elif isinstance(val, np.ndarray):
-                    try:
-                        np.broadcast_to(val, var_k.shape)
-                    except ValueError:
-                        raise ValueError(
-                            "Variable '{}': input array of shape {} cannot be broadcast"
-                            " to shape {}".format(name, val.shape, var_k.shape)
-                        )
 
             # loop over dataset variables and set new values
             for name, var in self.items():
