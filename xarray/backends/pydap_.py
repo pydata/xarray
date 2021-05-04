@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from ..core import indexing
@@ -125,7 +127,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
         # TODO remove after v0.19
-        if kwargs.pop("lock", None):
+        if lock is None:
             warnings.warn(
                 "The kwarg 'lock' has been deprecated for this backend, and is now "
                 "ignored. In the future passing lock will raise an error.",
