@@ -507,7 +507,7 @@ def array_repr(arr):
     else:
         name_str = ""
 
-    if _get_boolean_with_default("display_expand_data", default=True):
+    if _get_boolean_with_default("display_expand_data", default=True) or isinstance(arr.data, MemoryCachedArray):
         data_repr = short_data_repr(arr)
     else:
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
