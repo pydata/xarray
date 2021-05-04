@@ -127,7 +127,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
         # TODO remove after v0.19
-        if lock is None:
+        if lock is not None:
             warnings.warn(
                 "The kwarg 'lock' has been deprecated for this backend, and is now "
                 "ignored. In the future passing lock will raise an error.",
