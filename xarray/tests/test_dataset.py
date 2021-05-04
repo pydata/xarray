@@ -3495,6 +3495,40 @@ class TestDataset:
 
         assert np.issubdtype(ds.x.dtype, dtype)
 
+    def test_setitem_using_list(self):
+
+        # assign a list of variables
+        var1 = Variable(["dim1"], np.random.randn(8))
+        var2 = Variable(["dim1"], np.random.randn(8))
+        actual = create_test_data()
+        expected = actual.copy()
+        expected["A"] = var1
+        expected["B"] = var2
+        actual[["A", "B"]] = [var1, var2]
+        assert_identical(actual, expected)
+        # assign a list of dataset arrays
+        dv = 2 * expected[["A", "B"]]
+        actual[["C", "D"]] = [d.variable for d in dv.data_vars.values()]
+        expected[["C", "D"]] = dv
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "var_list, data, error_regex",
+        [
+            (
+                ["A", "B"],
+                [Variable(["dim1"], np.random.randn(8))],
+                r"Different lengths",
+            ),
+            ([], [Variable(["dim1"], np.random.randn(8))], r"Empty list of variables"),
+            (["A", "B"], xr.DataArray([1, 2]), r"assign single DataArray"),
+        ],
+    )
+    def test_setitem_using_list_errors(self, var_list, data, error_regex):
+        actual = create_test_data()
+        with pytest.raises(ValueError, match=error_regex):
+            actual[var_list] = data
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
@@ -6842,6 +6876,70 @@ def test_integrate(dask):
 
     with pytest.warns(FutureWarning):
         da.integrate(dim="x")
+
+
+@requires_scipy
+@pytest.mark.parametrize("dask", [True, False])
+def test_cumulative_integrate(dask):
+    rs = np.random.RandomState(43)
+    coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        dims=["x", "y"],
+        coords={
+            "x": coord,
+            "x2": (("x",), rs.randn(8)),
+            "z": 3,
+            "x2d": (("x", "y"), rs.randn(8, 6)),
+        },
+    )
+    if dask and has_dask:
+        da = da.chunk({"x": 4})
+
+    ds = xr.Dataset({"var": da})
+
+    # along x
+    actual = da.cumulative_integrate("x")
+
+    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
+    # still provided for backward compatibility
+    from scipy.integrate import cumtrapz
+
+    expected_x = xr.DataArray(
+        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_x, actual.compute())
+    assert_equal(
+        ds["var"].cumulative_integrate("x"),
+        ds.cumulative_integrate("x")["var"],
+    )
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
+
+    # along y
+    actual = da.cumulative_integrate("y")
+    expected_y = xr.DataArray(
+        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_y, actual.compute())
+    assert_equal(actual, ds.cumulative_integrate("y")["var"])
+    assert_equal(
+        ds["var"].cumulative_integrate("y"),
+        ds.cumulative_integrate("y")["var"],
+    )
+
+    # along x and y
+    actual = da.cumulative_integrate(("y", "x"))
+    assert actual.ndim == 2
+
+    with pytest.raises(ValueError):
+        da.cumulative_integrate("x2d")
 
 
 @pytest.mark.parametrize("dask", [True, False])
