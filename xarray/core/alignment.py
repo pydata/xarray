@@ -332,6 +332,9 @@ def align(
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
+            # TODO: benbovy - flexible indexes: expose a size property for xarray.Index?
+            # Some indexes may not have a defined size (e.g., built from multiple coords of
+            # different sizes)
             labeled_size = index.size
             if len(unlabeled_sizes | {labeled_size}) > 1:
                 raise ValueError(
