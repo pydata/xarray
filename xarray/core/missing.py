@@ -740,7 +740,8 @@ def interp_func(var, x, new_x, method, kwargs):
             concatenate=True,
             dtype=dtype,
             new_axes=new_axes,
-            # meta=var._meta,  # TODO: uncomment when dask is bumped
+            # TODO: uncomment when min dask version is > 2.15:
+            # meta=var._meta,  
             align_arrays=False,
         )
 
