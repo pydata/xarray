@@ -181,3 +181,29 @@ def test_variable_repr_html():
     # Just test that something reasonable was produced.
     assert html.startswith("<div") and html.endswith("</div>")
     assert "xarray.Variable" in html
+
+
+def test_repr_of_nonstr_dataset(dataset):
+    ds = dataset.copy()
+    ds.attrs[1] = "Test value"
+    ds[2] = ds["tmin"]
+    formatted = fh.dataset_repr(ds)
+    assert "<dt><span>1 :</span></dt><dd>Test value</dd>" in formatted
+    assert "<div class='xr-var-name'><span>2</span>" in formatted
+
+
+def test_repr_of_nonstr_dataarray(dataarray):
+    da = dataarray.rename(dim_0=15)
+    da.attrs[1] = "value"
+    formatted = fh.array_repr(da)
+    assert "<dt><span>1 :</span></dt><dd>value</dd>" in formatted
+    assert "<li><span>15</span>: 4</li>" in formatted
+
+
+def test_nonstr_variable_repr_html():
+    v = xr.Variable(["time", 10], [[1, 2, 3], [4, 5, 6]], {22: "bar"})
+    assert hasattr(v, "_repr_html_")
+    with xr.set_options(display_style="html"):
+        html = v._repr_html_().strip()
+    assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
+    assert "<li><span>10</span>: 3</li></ul>" in html
