@@ -1436,8 +1436,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         """Add an array to this dataset.
 
         If key is a dictionary, update all variables in the dataset
-        one by one with the given value at the given location. Skip variables
-        that do not possess all of the dimensions given in the location key.
+        one by one with the given value at the given location.
         If the given value is also a dataset, select corresponding variables
         in the given value and in the dataset to be changed.
 
