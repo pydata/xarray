@@ -683,6 +683,7 @@ Dataset methods
    open_rasterio
    open_zarr
    Dataset.to_netcdf
+   Dataset.to_pandas
    Dataset.to_zarr
    save_mfdataset
    Dataset.to_array

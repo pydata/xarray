@@ -23,6 +23,8 @@ v0.17.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
   surface plots (:issue:`#2235` :issue:`#5084` :pull:`5101`).
 - Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).

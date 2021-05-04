@@ -1768,6 +1768,27 @@ class TestDataset:
 
         assert_identical(original2.broadcast_like(original1), expected2)
 
+    def test_to_pandas(self):
+        # 0D -> series
+        actual = Dataset({"a": 1, "b": 2}).to_pandas()
+        expected = pd.Series([1, 2], ["a", "b"])
+        assert_array_equal(actual, expected)
+
+        # 1D -> dataframe
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list("abcdefghij")
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        actual = ds.to_pandas()
+        expected = ds.to_dataframe()
+        assert expected.equals(actual), (expected, actual)
+
+        # 2D -> error
+        x2d = np.random.randn(10, 10)
+        y2d = np.random.randn(10, 10)
+        with pytest.raises(ValueError, match=r"cannot convert Datasets"):
+            Dataset({"a": (["t", "r"], x2d), "b": (["t", "r"], y2d)}).to_pandas()
+
     def test_reindex_like(self):
         data = create_test_data()
         data["letters"] = ("dim3", 10 * ["a"])
