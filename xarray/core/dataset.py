@@ -1449,47 +1449,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable.
         """
         if utils.is_dict_like(key):
-            from .dataarray import DataArray
-
             # check for consistency first
-            if isinstance(value, Dataset):
-                missing_vars = [
-                    name for name in value.data_vars if name not in self.data_vars
-                ]
-                if missing_vars:
-                    raise ValueError(
-                        f"Variables {missing_vars} in new values"
-                        f" not available in dataset:\n{self}"
-                    )
-            elif not isinstance(value, DataArray) and isinstance(value, Iterable):
-                raise TypeError(
-                    "Dataset assignment only accepts DataArrays, "
-                    "Datasets, and scalars."
-                )
-
-            for name, var in self.items():
-                missing_keys = [k for k in key.keys() if k not in var.dims]
-                if missing_keys:
-                    raise ValueError(
-                        f"Variable '{name}' does not contain "
-                        f"dimensions {missing_keys}:\n{var}"
-                    )
-
-                # test indexing
-                try:
-                    var_k = var[key]
-                except IndexError as e:
-                    raise IndexError(
-                        f"Indexer {key} not available in variable '{name}'"
-                    ) from e
-
-                if isinstance(value, Dataset):
-                    val = value[name]
-                else:
-                    val = value
-                if isinstance(val, DataArray):
-                    xr.align(val, var_k, join="exact", copy=False)
-
+            self._setitem_check(key, value)
             # loop over dataset variables and set new values
             for name, var in self.items():
                 if isinstance(value, Dataset):
@@ -1498,6 +1459,51 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                     var[key] = value
         else:
             self.update({key: value})
+
+    def _setitem_check(self, key, value):
+        """Consistency check for __setitem__
+
+        When assigning values to a subset of a Dataset, do consistency check beforehand
+        to avoid leaving the dataset in a partially updated state when an error occurs.
+        """
+        from .dataarray import DataArray
+
+        if isinstance(value, Dataset):
+            missing_vars = [
+                name for name in value.data_vars if name not in self.data_vars
+            ]
+            if missing_vars:
+                raise ValueError(
+                    f"Variables {missing_vars} in new values"
+                    f" not available in dataset:\n{self}"
+                )
+        elif not isinstance(value, DataArray) and isinstance(value, Iterable):
+            raise TypeError(
+                "Dataset assignment only accepts DataArrays, Datasets, and scalars."
+            )
+
+        for name, var in self.items():
+            missing_keys = [k for k in key.keys() if k not in var.dims]
+            if missing_keys:
+                raise ValueError(
+                    f"Variable '{name}' does not contain "
+                    f"dimensions {missing_keys}:\n{var}"
+                )
+
+            # test indexing
+            try:
+                var_k = var[key]
+            except IndexError as e:
+                raise IndexError(
+                    f"Indexer {key} not available in variable '{name}'"
+                ) from e
+
+            if isinstance(value, Dataset):
+                val = value[name]
+            else:
+                val = value
+            if isinstance(val, DataArray):
+                xr.align(val, var_k, join="exact", copy=False)
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
