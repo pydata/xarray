@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from ..core import indexing
@@ -122,7 +124,16 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         use_cftime=None,
         decode_timedelta=None,
         session=None,
+        lock=None,
     ):
+        # TODO remove after v0.19
+        if lock is not None:
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated for this backend, and is now "
+                "ignored. In the future passing lock will raise an error.",
+                DeprecationWarning,
+            )
+
         store = PydapDataStore.open(
             filename_or_obj,
             session=session,
