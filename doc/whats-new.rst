@@ -95,6 +95,19 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed:
+
+  ============ ====== ====
+  Package      Old    New
+  ============ ====== ====
+  boto3        1.12   1.13
+  cftime       1.0    1.1
+  dask         2.11   2.15
+  distributed  2.11   2.15
+  matplotlib   3.1    3.2
+  numba        0.48   0.49
+  ============ ====== ====
+
 - :py:func:`open_dataset` and :py:func:`open_dataarray` now accept only the first argument
   as positional, all others need to be passed are keyword arguments. This is part of the
   refactor to support external backends (:issue:`4309`, :pull:`4989`).
