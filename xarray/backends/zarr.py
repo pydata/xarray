@@ -1,5 +1,6 @@
 import os
 import pathlib
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -721,7 +722,15 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidate_on_close=False,
         chunk_store=None,
         storage_options=None,
+        lock=None,
     ):
+        # TODO remove after v0.19
+        if kwargs.pop("lock", None):
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated for this backend, and is now "
+                "ignored. In the future passing lock will raise an error.",
+                DeprecationWarning,
+            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
