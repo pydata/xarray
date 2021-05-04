@@ -476,7 +476,7 @@ def test_large_array_repr_length():
 
 @requires_netCDF4
 def test_repr_file_collapsed(tmp_path):
-    arr = xr.DataArray(np.random.randn(100), dims="test")
+    arr = xr.DataArray(np.arange(100), dims="test")
     arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
     with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
