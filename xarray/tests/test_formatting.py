@@ -476,7 +476,7 @@ def test_large_array_repr_length():
 
 @requires_netCDF4
 def test_repr_file_collapsed(tmp_path):
-    arr = xr.DataArray(np.arange(100), dims="test")
+    arr = xr.DataArray(np.arange(100000), dims="test")
     arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
     with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
@@ -485,8 +485,8 @@ def test_repr_file_collapsed(tmp_path):
         actual = formatting.array_repr(arr)
         expected = dedent(
             """\
-        <xarray.DataArray (test: 100)>
-        0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 ... 86 87 88 89 90 91 92 93 94 95 96 97 98 99
+        <xarray.DataArray (test: 100000)>
+        [100000 values with dtype=int64]
         Dimensions without coordinates: test"""
         )
 
