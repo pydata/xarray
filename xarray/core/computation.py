@@ -207,7 +207,10 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
+    combine_attrs: str = "override",
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -235,7 +238,7 @@ def build_output_coords(
     else:
         # TODO: save these merged indexes, instead of re-computing them later
         merged_vars, unused_indexes = merge_coordinates_without_align(
-            coords_list, exclude_dims=exclude_dims
+            coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
         )
 
     output_coords = []
@@ -253,7 +256,12 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False
+    func,
+    *args,
+    signature,
+    join="inner",
+    exclude_dims=frozenset(),
+    keep_attrs="override",
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -273,7 +281,9 @@ def apply_dataarray_vfunc(
     else:
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
-    result_coords = build_output_coords(args, signature, exclude_dims)
+    result_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
 
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
@@ -428,7 +438,9 @@ def apply_dataset_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    list_of_coords = build_output_coords(args, signature, exclude_dims)
+    list_of_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
