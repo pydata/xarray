@@ -22,7 +22,9 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- apply ``combine_attrs`` on data variables and coordinate variables when concatenating
+  and merging datasets and dataarrays (:pull:`4902`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
@@ -144,6 +146,10 @@ Breaking changes
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
   Further, coarsen now keeps attributes per default (:pull:`5227`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- switch the default of the :py:func:`merge` ``combine_attrs`` parameter to
+  ``"override"``. This will keep the current behavior for merging the ``attrs`` of
+  variables but stop dropping the ``attrs`` of the main objects (:pull:`4902`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Deprecations
 ~~~~~~~~~~~~
