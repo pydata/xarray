@@ -13,7 +13,7 @@ repos:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 21.4b2
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.0
+    rev: 3.9.1
     hooks:
       - id: flake8
   # - repo: https://github.com/Carreau/velin
@@ -34,6 +34,7 @@ repos:
     rev: v0.812
     hooks:
       - id: mypy
+        # Copied from setup.cfg
         exclude: "properties|asv_bench"
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade

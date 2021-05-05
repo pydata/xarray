@@ -43,7 +43,7 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
-    """ Return either first object of type 'kind' or raise if not found. """
+    """Return either first object of type 'kind' or raise if not found."""
     for arg in args:
         if isinstance(arg, kind):
             return arg
@@ -1370,7 +1370,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays : DataArray or Variable
+    *arrays : DataArray or Variable
         Arrays to compute.
     dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.

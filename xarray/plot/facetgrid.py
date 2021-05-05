@@ -238,7 +238,7 @@ class FacetGrid:
             plotting method such as `xarray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        kwargs
+        **kwargs
             additional keyword arguments to func
 
         Returns
@@ -263,7 +263,9 @@ class FacetGrid:
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
-        func_kwargs.update({"add_colorbar": False, "add_labels": False})
+        func_kwargs["add_colorbar"] = False
+        if func.__name__ != "surface":
+            func_kwargs["add_labels"] = False
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(
@@ -507,7 +509,7 @@ class FacetGrid:
             Template for plot titles containing {coord} and {value}
         maxchar : int
             Truncate titles at maxchar
-        kwargs : keyword args
+        **kwargs : keyword args
             additional arguments to matplotlib.text
 
         Returns
@@ -603,11 +605,11 @@ class FacetGrid:
             must plot to the currently active matplotlib Axes and take a
             `color` keyword argument. If faceting on the `hue` dimension,
             it must also take a `label` keyword argument.
-        args : strings
+        *args : strings
             Column names in self.data that identify variables with data to
             plot. The data for each variable is passed to `func` in the
             order the variables are specified in the call.
-        kwargs : keyword arguments
+        **kwargs : keyword arguments
             All keyword arguments are passed to the plotting function.
 
         Returns
