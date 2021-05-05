@@ -149,7 +149,7 @@ Breaking changes
 - Xarray now uses consolidated metadata by default when writing and reading Zarr
   stores (:issue:`5251`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-  - The default ``mode`` for :py:method:`Dataset.to_zarr` when ``region`` is set
+  - The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
   has changed to the new ``mode="r+"``, which only allows for overriding
   pre-existing array values. This is a safer default than the prior ``mode="a"``,
   and allows for higher performance writes (:pull:`5252`).
