@@ -61,7 +61,7 @@ pytestmark = [
 ]
 
 
-def create_test_data(seed=None):
+def create_test_data(seed=None, add_attrs=True):
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
@@ -76,7 +76,9 @@ def create_test_data(seed=None):
     obj["dim3"] = ("dim3", list("abcdefghij"))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
-        obj[v] = (dims, data, {"foo": "variable"})
+        obj[v] = (dims, data)
+        if add_attrs:
+            obj[v].attrs = {"foo": "variable"}
     obj.coords["numbers"] = (
         "dim3",
         np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),

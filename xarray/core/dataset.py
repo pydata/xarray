@@ -2996,17 +2996,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
             return x, new_x
 
+        validated_indexers = {
+            k: _validate_interp_indexer(maybe_variable(obj, k), v)
+            for k, v in indexers.items()
+        }
+
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
+        # optimization: create dask coordinate arrays once per Dataset
+        # rather than once per Variable when dask.array.unify_chunks is called later
+        # GH4739
+        if obj.__dask_graph__():
+            dask_indexers = {
+                k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
+                for k, (index, dest) in validated_indexers.items()
+            }
+
         variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
+            if is_duck_dask_array(var.data):
+                use_indexers = dask_indexers
+            else:
+                use_indexers = validated_indexers
+
             if var.dtype.kind in "uifc":
-                var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
-                }
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif all(d not in indexers for d in var.dims):
                 # keep unrelated object array
