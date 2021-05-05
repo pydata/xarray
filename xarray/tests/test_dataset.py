@@ -3408,11 +3408,9 @@ class TestDataset:
         with raises_regex(ValueError, err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
         data3["var2"] = data3["var2"].T
-        err_msg = "dimension coordinate 'dim2' conflicts between"
-        with raises_regex(IndexError, err_msg):
-            data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4, 5]}]
-        with raises_regex(IndexError, err_msg):
-            data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4]}]
+        err_msg = "indexes along dimension 'dim2' are not equal"
+        with raises_regex(ValueError, err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3, 4]}]
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
         with raises_regex(TypeError, err_msg):
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values

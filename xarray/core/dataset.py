@@ -1525,15 +1525,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
-            for dim in value.dims:
-                coord1 = self[key][dim]
-                coord2 = value[dim]
-                if (len(coord1) != len(coord2)) or any(coord1.values != coord2.values):
-                    raise IndexError(
-                        f"dimension coordinate '{dim}' conflicts "
-                        f"between indexed original data and new data: "
-                        f" {coord1}\n vs.\n {coord2}"
-                    )
+            xr.align(self[key], value, join="exact")
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
