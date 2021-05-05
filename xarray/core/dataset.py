@@ -1452,11 +1452,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             # check for consistency first
             self._setitem_check(key, value)
             # loop over dataset variables and set new values
+            processed = []
             for name, var in self.items():
-                if isinstance(value, Dataset):
-                    var[key] = value[name]
-                else:
-                    var[key] = value
+                try:
+                    if isinstance(value, Dataset):
+                        var[key] = value[name]
+                    else:
+                        var[key] = value
+                    processed.append(name)
+                except Exception as e:
+                    if processed:
+                        raise RuntimeError(
+                            "An error occured while setting values of the"
+                            f" variable '{name}'. The following variables have"
+                            f" been successfully updated:\n{processed}"
+                        ) from e
+                    else:
+                        raise e
         else:
             self.update({key: value})
 

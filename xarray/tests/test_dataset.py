@@ -3409,6 +3409,15 @@ class TestDataset:
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
         with raises_regex(TypeError, err_msg):
             data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
+        data5 = data4.astype(str)
+        data5["var4"] = data4["var1"]
+        err_msg = (
+            "An error occured while setting values of the variable 'var4'. "
+            "The following variables have been successfully updated:\n"
+            r"\['var1', 'var2', 'var3'\]"
+        )
+        with raises_regex(RuntimeError, err_msg):
+            data5[{"dim2": 1}] = "a"
 
         data4[{"dim2": 0}] = 0.0
         data4[{"dim2": 1}] = data3[{"dim2": 2}]
