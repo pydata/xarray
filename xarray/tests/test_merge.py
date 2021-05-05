@@ -202,6 +202,14 @@ class TestMergeFunction:
         expected = xr.Dataset(attrs={"a": 0, "d": 0, "e": 0})
         assert_identical(actual, expected)
 
+    def test_merge_attrs_no_conflicts_compat_minimal(self):
+        """make sure compat="minimal" does not silence errors"""
+        ds1 = xr.Dataset({"a": ("x", [], {"a": 0})})
+        ds2 = xr.Dataset({"a": ("x", [], {"a": 1})})
+
+        with pytest.raises(xr.MergeError, match="combine_attrs"):
+            xr.merge([ds1, ds2], combine_attrs="no_conflicts", compat="minimal")
+
     def test_merge_dicts_simple(self):
         actual = xr.merge([{"foo": 0}, {"bar": "one"}, {"baz": 3.5}])
         expected = xr.Dataset({"foo": 0, "bar": "one", "baz": 3.5})

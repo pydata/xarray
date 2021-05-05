@@ -232,14 +232,16 @@ def merge_collected(
                 variables = [variable for variable, _ in elements_list]
                 try:
                     merged_vars[name] = unique_variable(name, variables, compat)
-                    merged_vars[name].attrs = merge_attrs(
-                        [var.attrs for var in variables], combine_attrs=combine_attrs
-                    )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
+
+                if name in merged_vars:
+                    merged_vars[name].attrs = merge_attrs(
+                        [var.attrs for var in variables], combine_attrs=combine_attrs
+                    )
 
     return merged_vars, merged_indexes
 
@@ -515,11 +517,11 @@ def merge_attrs(variable_attrs, combine_attrs):
         for attrs in variable_attrs[1:]:
             try:
                 result = compat_dict_union(result, attrs)
-            except ValueError:
+            except ValueError as e:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "
                     "the same. Merging %s with %s" % (str(result), str(attrs))
-                )
+                ) from e
         return result
     elif combine_attrs == "drop_conflicts":
         result = {}
