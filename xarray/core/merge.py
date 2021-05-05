@@ -237,9 +237,11 @@ def merge_collected(
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
-                merged_vars[name].attrs = merge_attrs(
-                    [var.attrs for var in variables], combine_attrs=combine_attrs
-                )
+
+                if name in merged_vars:
+                    merged_vars[name].attrs = merge_attrs(
+                        [var.attrs for var in variables], combine_attrs=combine_attrs
+                    )
 
     return merged_vars, merged_indexes
 
