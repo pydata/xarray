@@ -1508,8 +1508,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 val = value
 
-            # check consistency of dimensions
             if isinstance(val, DataArray):
+                # check consistency of dimensions
                 for dim in val.dims:
                     if dim not in var_k.dims:
                         raise KeyError(
@@ -1522,6 +1522,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                         f"Variable '{name}': dimension order differs between"
                         f" original and new data:\n{dims}\nvs.\n{val.dims}"
                     )
+            else:
+                val = np.array(val)
+
+            # check type consistency
+            val.astype(var_k.dtype)
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
