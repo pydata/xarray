@@ -155,9 +155,7 @@ def nanmedian(a, axis=None, out=None):
     # possibly blow memory
     if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
         axis = None
-    return _dask_or_eager_func(
-        "nanmedian", dask_module=dask_array_compat, eager_module=nputils
-    )(a, axis=axis)
+    return _dask_or_eager_func("nanmedian", eager_module=nputils)(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
