@@ -508,7 +508,7 @@ def _dataset_concat(
                 vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
                 raise ValueError("%r is not present in all datasets." % k)
-            combined = concat_vars(vars, dim, positions)
+            combined = concat_vars(vars, dim, positions, combine_attrs=combine_attrs)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
         elif k in result_vars:
@@ -572,7 +572,7 @@ def _dataarray_concat(
         positions,
         fill_value=fill_value,
         join=join,
-        combine_attrs="drop",
+        combine_attrs=combine_attrs,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)
