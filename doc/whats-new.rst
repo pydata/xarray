@@ -102,6 +102,15 @@ New Features
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Significant speedups in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`.
+  (:issue:`4739`, :pull:`4740`). By `Deepak Cherian <https://github.com/dcherian>`_.
+- Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
+  `combine='by_coords'` is specified, which should never have been possible (as
+  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
+  Also removes unneeded internal reordering of datasets in
+  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
+  Fixes (:issue:`5230`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Implement ``__setitem__`` for :py:class:`core.indexing.DaskIndexingAdapter` if
   dask version supports item assignment. (:issue:`5171`, :pull:`5174`)
   By `Tammas Loughran <https://github.com/tammasloughran>`_.
