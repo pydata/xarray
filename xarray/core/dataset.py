@@ -1487,35 +1487,53 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             if missing_vars:
                 raise ValueError(
                     f"Variables {missing_vars} in new values"
-                    f" not available in dataset:\n{self}"
+                    f" not available in original dataset:\n{self}"
                 )
-        elif not isinstance(value, DataArray) and isinstance(value, Iterable):
+        elif not any([isinstance(value, t) for t in [DataArray, Number, str]]):
             raise TypeError(
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
 
         for name, var in self.items():
-            missing_keys = [k for k in key.keys() if k not in var.dims]
-            if missing_keys:
-                raise ValueError(
-                    f"Variable '{name}' does not contain "
-                    f"dimensions {missing_keys}:\n{var}"
-                )
-
             # test indexing
             try:
                 var_k = var[key]
-            except IndexError as e:
-                raise IndexError(
-                    f"Indexer {key} not available in variable '{name}'"
+            except Exception as e:
+                raise ValueError(
+                    f"Variable '{name}': indexer {key} not available"
                 ) from e
 
             if isinstance(value, Dataset):
                 val = value[name]
             else:
                 val = value
+
+            # check consistency of dimensions
             if isinstance(val, DataArray):
-                xr.align(val, var_k, join="exact", copy=False)
+                for dim in val.dims:
+                    if dim not in var_k.dims:
+                        raise KeyError(
+                            f"Variable '{name}': dimension '{dim}' appears in new values "
+                            f"but not in the indexed original data"
+                        )
+                dims = tuple([dim for dim in var_k.dims if dim in val.dims])
+                if dims != val.dims:
+                    raise ValueError(
+                        f"Variable '{name}': dimension order differs between"
+                        f" original and new data:\n{dims}\nvs.\n{val.dims}"
+                    )
+
+        # check consistency of dimension sizes and dimension coordinates
+        if isinstance(value, DataArray) or isinstance(value, Dataset):
+            for dim in value.dims:
+                coord1 = self[key][dim]
+                coord2 = value[dim]
+                if (len(coord1) != len(coord2)) or any(coord1.values != coord2.values):
+                    raise IndexError(
+                        f"dimension coordinate '{dim}' conflicts "
+                        f"between indexed original data and new data: "
+                        f" {coord1}\n vs.\n {coord2}"
+                    )
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""

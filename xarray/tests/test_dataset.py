@@ -3382,29 +3382,36 @@ class TestDataset:
 
         # test assignment with positional and label-based indexing
         data3 = data1[["var1", "var2"]]
+        data3["var3"] = data3.var1.isel(dim1=0)
         data4 = data3.copy()
         err_msg = (
             "can only set locations defined by dictionaries from Dataset.loc. Got: a"
         )
         with raises_regex(TypeError, err_msg):
             data1.loc["a"] = 0
-        err_msg = r"Variable 'var3' does not contain dimensions \['dim2'\]:"
-        with raises_regex(ValueError, err_msg):
-            data1[{"dim2": 0}] = 0.0
-        with raises_regex(ValueError, err_msg):
-            data1.loc[{"dim2": 0}] = 0.0
-        err_msg = r"Variables \['var3', 'A', 'B', 'scalar'\] in new values not available in dataset:"
+        err_msg = r"Variables \['A', 'B', 'scalar'\] in new values not available in original dataset:"
         with raises_regex(ValueError, err_msg):
             data4[{"dim2": 1}] = data1[{"dim2": 2}]
+        err_msg = "Variable 'var3': indexer {'dim2': 0} not available"
         with raises_regex(ValueError, err_msg):
-            data4.loc[{"dim2": 1}] = data1[{"dim2": 2}]
-        err_msg = "Indexer {'dim2': 10} not available in variable 'var1'"
-        with raises_regex(IndexError, err_msg):
+            data1[{"dim2": 0}] = 0.0
+        err_msg = "Variable 'var1': indexer {'dim2': 10} not available"
+        with raises_regex(ValueError, err_msg):
             data4[{"dim2": 10}] = data3[{"dim2": 2}]
-        err_msg = "indexes along dimension 'dim2' are not equal"
+        err_msg = "Variable 'var1': dimension 'dim2' appears in new values"
+        with raises_regex(KeyError, err_msg):
+            data4[{"dim2": 2}] = data3[{"dim2": [2]}]
+        err_msg = (
+            "Variable 'var2': dimension order differs between original and new data"
+        )
+        data3["var2"] = data3["var2"].T
         with raises_regex(ValueError, err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
+        data3["var2"] = data3["var2"].T
+        err_msg = "dimension coordinate 'dim2' conflicts between"
+        with raises_regex(IndexError, err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4, 5]}]
-        with raises_regex(ValueError, err_msg):
+        with raises_regex(IndexError, err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [3, 4]}]
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
         with raises_regex(TypeError, err_msg):
