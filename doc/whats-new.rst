@@ -146,8 +146,9 @@ Breaking changes
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
   Further, coarsen now keeps attributes per default (:pull:`5227`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- switch the default of the :py:func`merge` ``combine_attrs`` parameter to ``"override"``
-  (:pull:`4902`)
+- switch the default of the :py:func:`merge` ``combine_attrs`` parameter to
+  ``"override"``. This will keep the current behavior for merging the ``attrs`` of
+  variables but stop dropping the ``attrs`` of the main objects (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
 
 Deprecations
