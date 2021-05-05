@@ -1449,16 +1449,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
         variable.
         """
         if utils.is_dict_like(key):
-            # check for consistency first
-            self._setitem_check(key, value)
+            # check for consistency and convert value to dataset
+            value = self._setitem_check(key, value)
             # loop over dataset variables and set new values
             processed = []
             for name, var in self.items():
                 try:
-                    if isinstance(value, Dataset):
-                        var[key] = value[name]
-                    else:
-                        var[key] = value
+                    var[key] = value[name]
                     processed.append(name)
                 except Exception as e:
                     if processed:
@@ -1494,6 +1491,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
 
+        new_value = xr.Dataset()
         for name, var in self.items():
             # test indexing
             try:
@@ -1525,12 +1523,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
             else:
                 val = np.array(val)
 
-            # check type consistency
-            val.astype(var_k.dtype)
+            # type conversion
+            new_value[name] = val.astype(var_k.dtype, copy=False)
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
-            xr.align(self[key], value, join="exact")
+            xr.align(self[key], value, join="exact", copy=False)
+
+        return new_value
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
