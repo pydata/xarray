@@ -20,6 +20,7 @@ dependencies:
   - numba
   - numpy>=1.17
   - pandas>=1.0
+  - pooch
   - pip
   - pydata-sphinx-theme>=0.4.3
   - rasterio>=1.1
@@ -30,7 +31,7 @@ dependencies:
   - sphinx-book-theme >= 0.0.38
   - sphinx-copybutton
   - sphinx-panels
-  - sphinx>=3.3
+  - sphinx<4
   - zarr>=2.4
   - pip:
       - sphinxext-rediraffe

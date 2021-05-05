@@ -44,6 +44,18 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
+def _ensure_same_types(series, dim):
+
+    if series.dtype == object:
+        types = set(series.map(type))
+        if len(types) > 1:
+            types = ", ".join(t.__name__ for t in types)
+            raise TypeError(
+                f"Cannot combine along dimension '{dim}' with mixed types."
+                f" Found: {types}."
+            )
+
+
 def _infer_concat_order_from_coords(datasets):
 
     concat_dims = []
@@ -88,11 +100,15 @@ def _infer_concat_order_from_coords(datasets):
                     raise ValueError("Cannot handle size zero dimensions")
                 first_items = pd.Index([index[0] for index in indexes])
 
+                series = first_items.to_series()
+
+                # ensure series does not contain mixed types, e.g. cftime calendars
+                _ensure_same_types(series, dim)
+
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
-                series = first_items.to_series()
                 rank = series.rank(
                     method="dense", ascending=ascending, numeric_only=False
                 )
@@ -356,7 +372,7 @@ def combine_nested(
 
     To concatenate along multiple dimensions the datasets must be passed as a
     nested list-of-lists, with a depth equal to the length of ``concat_dims``.
-    ``manual_combine`` will concatenate along the top-level list first.
+    ``combine_nested`` will concatenate along the top-level list first.
 
     Useful for combining datasets from a set of nested directories, or for
     collecting the output of a simulation parallelized along multiple
@@ -480,7 +496,7 @@ def combine_nested(
         temperature    (x, y) float64 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
         precipitation  (x, y) float64 1.868 -0.9773 0.761 ... -0.7422 0.1549 0.3782
 
-    ``manual_combine`` can also be used to explicitly merge datasets with
+    ``combine_nested`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
     along two times, and contain two different variables, we can pass ``None``
     to ``concat_dim`` to specify the dimension of the nested list over which
@@ -524,7 +540,7 @@ def combine_nested(
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
-    # The IDs argument tells _manual_combine that datasets aren't yet sorted
+    # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
         concat_dims=concat_dim,
@@ -567,7 +583,7 @@ def combine_by_coords(
 
     Aligns coordinates, but different variables on datasets can cause it
     to fail under some scenarios. In complex cases, you may need to clean up
-    your data and use concat/merge explicitly (also see `manual_combine`).
+    your data and use concat/merge explicitly (also see `combine_nested`).
 
     Works well if, for example, you have N years of data and M data variables,
     and each combination of a distinct time period and set of data variables is
@@ -615,8 +631,7 @@ def combine_by_coords(
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
     join : {"outer", "inner", "left", "right", "exact"}, optional
-        String indicating how to combine differing indexes
-        (excluding concat_dim) in objects
+        String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes

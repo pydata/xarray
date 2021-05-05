@@ -412,6 +412,37 @@ produce plots with nonuniform coordinates.
     b.plot()
 
 ====================
+ Other types of plot
+====================
+
+There are several other options for plotting 2D data.
+
+Contour plot using :py:meth:`DataArray.plot.contour()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_contour.png width=4in
+    air2d.plot.contour()
+
+Filled contour plot using :py:meth:`DataArray.plot.contourf()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_contourf.png width=4in
+    air2d.plot.contourf()
+
+Surface plot using :py:meth:`DataArray.plot.surface()`
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig plotting_surface.png width=4in
+    # transpose just to make the example look a bit nicer
+    air2d.T.plot.surface()
+
+====================
  Calling Matplotlib
 ====================
 
@@ -786,6 +817,26 @@ where ``u`` and ``v`` denote the x and y direction components of the arrow vecto
     ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
 
 ``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
+
+Streamplot
+~~~~~~~~~~
+
+Visualizing vector fields is also supported with streamline plots:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_simple_streamplot.png
+    ds.isel(w=1, z=1).plot.streamplot(x="x", y="y", u="A", v="B")
+
+
+where ``u`` and ``v`` denote the x and y direction components of the vectors tangent to the streamlines. Again, faceting is also possible:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_streamplot.png
+    ds.plot.streamplot(x="x", y="y", u="A", v="B", col="w", row="z")
 
 .. _plot-maps:
 

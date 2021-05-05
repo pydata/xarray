@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import numpy as np
 
@@ -10,6 +11,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
@@ -20,7 +22,13 @@ try:
     has_cfgrib = True
 except ModuleNotFoundError:
     has_cfgrib = False
-
+# cfgrib throws a RuntimeError if eccodes is not installed
+except (ImportError, RuntimeError):
+    warnings.warn(
+        "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
+        "Try `import cfgrib` to get the full error message"
+    )
+    has_cfgrib = False
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
 #   in most circumstances. See:
@@ -114,6 +122,7 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         time_dims=("time", "step"),
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,
             indexpath=indexpath,

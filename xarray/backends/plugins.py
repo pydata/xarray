@@ -1,12 +1,11 @@
 import functools
 import inspect
 import itertools
-import logging
 import warnings
 
 import pkg_resources
 
-from .common import BACKEND_ENTRYPOINTS
+from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -55,8 +54,11 @@ def backends_dict_from_pkg(pkg_entrypoints):
     backend_entrypoints = {}
     for pkg_ep in pkg_entrypoints:
         name = pkg_ep.name
-        backend = pkg_ep.load()
-        backend_entrypoints[name] = backend
+        try:
+            backend = pkg_ep.load()
+            backend_entrypoints[name] = backend
+        except Exception as ex:
+            warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
     return backend_entrypoints
 
 
@@ -105,16 +107,28 @@ def guess_engine(store_spec):
             if backend.guess_can_open and backend.guess_can_open(store_spec):
                 return engine
         except Exception:
-            logging.exception(f"{engine!r} fails while guessing")
+            warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     raise ValueError("cannot guess the engine, try passing one explicitly")
 
 
 def get_backend(engine):
-    """Select open_dataset method based on current engine"""
-    engines = list_engines()
-    if engine not in engines:
-        raise ValueError(
-            f"unrecognized engine {engine} must be one of: {list(engines)}"
+    """Select open_dataset method based on current engine."""
+    if isinstance(engine, str):
+        engines = list_engines()
+        if engine not in engines:
+            raise ValueError(
+                f"unrecognized engine {engine} must be one of: {list(engines)}"
+            )
+        backend = engines[engine]
+    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
+        backend = engine
+    else:
+        raise TypeError(
+            (
+                "engine must be a string or a subclass of "
+                f"xarray.backends.BackendEntrypoint: {engine}"
+            )
         )
-    return engines[engine]
+
+    return backend

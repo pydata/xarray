@@ -7,9 +7,6 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.npcompat import IS_NEP18_ACTIVE
-
-from . import raises_regex
 
 
 class TestFormatting:
@@ -51,7 +48,7 @@ class TestFormatting:
             expected = array.flat[:n]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_n_items(self):
@@ -61,7 +58,7 @@ class TestFormatting:
             expected = array.flat[-n:]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
@@ -394,8 +391,18 @@ class TestFormatting:
 
         assert actual == expected
 
+        with xr.set_options(display_expand_data=False):
+            actual = formatting.array_repr(ds[(1, 2)])
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)>
+            0
+            Dimensions without coordinates: test"""
+            )
 
-@pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
+            assert actual == expected
+
+
 def test_inline_variable_array_repr_custom_repr():
     class CustomArray:
         def __init__(self, value, attr):
@@ -496,3 +503,19 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         len_summary = len(summary)
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        actual = formatting.dataset_repr(ds)
+        expected = dedent(
+            f"""\
+            <xarray.Dataset>
+            Dimensions:      (time: 2)
+            Coordinates: (1)
+            Data variables: ({n_vars})
+            Attributes: ({n_attr})"""
+        )
+        assert actual == expected
