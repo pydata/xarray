@@ -22,7 +22,13 @@ v0.17.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- apply ``combine_attrs`` on data variables and coordinate variables when concatenating
+  and merging datasets and dataarrays (:pull:`4902`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
+- Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
+  surface plots (:issue:`#2235` :issue:`#5084` :pull:`5101`).
 - Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
@@ -98,6 +104,8 @@ New Features
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
+- Significant speedups in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`.
+  (:issue:`4739`, :pull:`4740`). By `Deepak Cherian <https://github.com/dcherian>`_.
 - Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
   `combine='by_coords'` is specified, which should never have been possible (as
   :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
@@ -111,6 +119,19 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed:
+
+  ============ ====== ====
+  Package      Old    New
+  ============ ====== ====
+  boto3        1.12   1.13
+  cftime       1.0    1.1
+  dask         2.11   2.15
+  distributed  2.11   2.15
+  matplotlib   3.1    3.2
+  numba        0.48   0.49
+  ============ ====== ====
+
 - :py:func:`open_dataset` and :py:func:`open_dataarray` now accept only the first argument
   as positional, all others need to be passed are keyword arguments. This is part of the
   refactor to support external backends (:issue:`4309`, :pull:`4989`).
@@ -125,9 +146,27 @@ Breaking changes
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
   Further, coarsen now keeps attributes per default (:pull:`5227`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+- switch the default of the :py:func:`merge` ``combine_attrs`` parameter to
+  ``"override"``. This will keep the current behavior for merging the ``attrs`` of
+  variables but stop dropping the ``attrs`` of the main objects (:pull:`4902`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Deprecations
 ~~~~~~~~~~~~
+
+- Warn when passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
+  `combine='by_coords'` is specified, which should never have been possible (as
+  :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
+  Also removes unneeded internal reordering of datasets in
+  :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
+  Fixes (:issue:`5230`), via (:pull:`5231`, :pull:`5255`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- The `lock` keyword argument to :py:func:`open_dataset` and :py:func:`open_dataarray` is now
+  a backend specific option. It will give a warning if passed to a backend that doesn't support it
+  instead of being silently ignored. From the next version it will raise an error.
+  This is part of the refactor to support external backends (:issue:`5073`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_ and `Alessandro Amici <https://github.com/alexamici>`_.
+
 
 Bug fixes
 ~~~~~~~~~

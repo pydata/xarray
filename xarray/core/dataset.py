@@ -2992,17 +2992,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
             return x, new_x
 
+        validated_indexers = {
+            k: _validate_interp_indexer(maybe_variable(obj, k), v)
+            for k, v in indexers.items()
+        }
+
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
+        # optimization: create dask coordinate arrays once per Dataset
+        # rather than once per Variable when dask.array.unify_chunks is called later
+        # GH4739
+        if obj.__dask_graph__():
+            dask_indexers = {
+                k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
+                for k, (index, dest) in validated_indexers.items()
+            }
+
         variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
+            if is_duck_dask_array(var.data):
+                use_indexers = dask_indexers
+            else:
+                use_indexers = validated_indexers
+
             if var.dtype.kind in "uifc":
-                var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
-                }
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif all(d not in indexers for d in var.dims):
                 # keep unrelated object array
@@ -5093,6 +5114,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return ordered_dims
 
+    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+        """Convert this dataset into a pandas object without changing the number of dimensions.
+
+        The type of the returned object depends on the number of Dataset
+        dimensions:
+
+        * 0D -> `pandas.Series`
+        * 1D -> `pandas.DataFrame`
+
+        Only works for Datasets with 1 or fewer dimensions.
+        """
+        if len(self.dims) == 0:
+            return pd.Series({k: v.item() for k, v in self.items()})
+        if len(self.dims) == 1:
+            return self.to_dataframe()
+        raise ValueError(
+            "cannot convert Datasets with %s dimensions into "
+            "pandas objects without changing the number of dimensions. "
+            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+        )
+
     def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
@@ -6742,36 +6784,26 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
-            'constant' (default)
-                Pads with a constant value.
-            'edge'
-                Pads with the edge values of array.
-            'linear_ramp'
-                Pads with the linear ramp between end_value and the
-                array edge value.
-            'maximum'
-                Pads with the maximum value of all or part of the
-                vector along each axis.
-            'mean'
-                Pads with the mean value of all or part of the
-                vector along each axis.
-            'median'
-                Pads with the median value of all or part of the
-                vector along each axis.
-            'minimum'
-                Pads with the minimum value of all or part of the
-                vector along each axis.
-            'reflect'
-                Pads with the reflection of the vector mirrored on
-                the first and last values of the vector along each
-                axis.
-            'symmetric'
-                Pads with the reflection of the vector mirrored
-                along the edge of the array.
-            'wrap'
-                Pads with the wrap of the vector along the axis.
-                The first values are used to pad the end and the
-                end values are used to pad the beginning.
+            - constant: Pads with a constant value.
+            - edge: Pads with the edge values of array.
+            - linear_ramp: Pads with the linear ramp between end_value and the
+              array edge value.
+            - maximum: Pads with the maximum value of all or part of the
+              vector along each axis.
+            - mean: Pads with the mean value of all or part of the
+              vector along each axis.
+            - median: Pads with the median value of all or part of the
+              vector along each axis.
+            - minimum: Pads with the minimum value of all or part of the
+              vector along each axis.
+            - reflect: Pads with the reflection of the vector mirrored on
+              the first and last values of the vector along each axis.
+            - symmetric: Pads with the reflection of the vector mirrored
+              along the edge of the array.
+            - wrap: Pads with the wrap of the vector along the axis.
+              The first values are used to pad the end and the
+              end values are used to pad the beginning.
+
         stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -7210,15 +7242,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             parser to retain strict Python semantics.
         engine : {"python", "numexpr", None}, default: None
             The engine used to evaluate the expression. Supported engines are:
+
             - None: tries to use numexpr, falls back to python
             - "numexpr": evaluates expressions using numexpr
             - "python": performs operations as if you had eval’d in top level python
+
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
+
             - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
+
         **queries_kwargs : {dim: query, ...}, optional
             The keyword arguments form of ``queries``.
             One of queries or queries_kwargs must be provided.
@@ -7235,6 +7271,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.isel
         pandas.eval
 
+        Examples
+        --------
+        >>> a = np.arange(0, 5, 1)
+        >>> b = np.linspace(0, 1, 5)
+        >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+        >>> ds.query(x="a > 2")
+        <xarray.Dataset>
+        Dimensions:  (x: 2)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 3 4
+            b        (x) float64 0.75 1.0
         """
 
         # allow queries to be given either as a dict or as kwargs
