@@ -952,10 +952,6 @@ class DataWithCoords(AttrAccessMixin):
         coord_func : str or mapping of hashable to str, default: "mean"
             function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -999,8 +995,6 @@ class DataWithCoords(AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(

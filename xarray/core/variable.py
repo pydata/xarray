@@ -1757,7 +1757,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return Variable(dims, data, attrs=attrs)
 
     @classmethod
-    def concat(cls, variables, dim="concat_dim", positions=None, shortcut=False):
+    def concat(
+        cls,
+        variables,
+        dim="concat_dim",
+        positions=None,
+        shortcut=False,
+        combine_attrs="override",
+    ):
         """Concatenate variables along a new or existing dimension.
 
         Parameters
@@ -1780,6 +1787,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             This option is used internally to speed-up groupby operations.
             If `shortcut` is True, some checks of internal consistency between
             arrays to concatenate are skipped.
+        combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                         "override"}, default: "override"
+            String indicating how to combine attrs of the objects being merged:
+
+            - "drop": empty attrs on returned Dataset.
+            - "identical": all attrs must be the same on every object.
+            - "no_conflicts": attrs from all objects are combined, any that have
+              the same name must also have the same value.
+            - "drop_conflicts": attrs from all objects are combined, any that have
+              the same name but different values are dropped.
+            - "override": skip comparing and copy attrs from the first dataset to
+              the result.
 
         Returns
         -------
@@ -1787,6 +1806,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
+        from .merge import merge_attrs
+
         if not isinstance(dim, str):
             (dim,) = dim.dims
 
@@ -1811,7 +1832,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dims = (dim,) + first_var.dims
             data = duck_array_ops.stack(arrays, axis=axis)
 
-        attrs = dict(first_var.attrs)
+        attrs = merge_attrs(
+            [var.attrs for var in variables], combine_attrs=combine_attrs
+        )
         encoding = dict(first_var.encoding)
         if not shortcut:
             for var in variables:
@@ -2126,16 +2149,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         Apply reduction function.
         """
         windows = {k: v for k, v in windows.items() if k in self.dims}
-        if not windows:
-            return self.copy()
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         if keep_attrs:
             _attrs = self.attrs
         else:
             _attrs = None
+
+        if not windows:
+            return self._replace(attrs=_attrs)
 
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
@@ -2566,12 +2590,21 @@ class IndexVariable(Variable):
         raise TypeError(f"{type(self).__name__} values cannot be modified")
 
     @classmethod
-    def concat(cls, variables, dim="concat_dim", positions=None, shortcut=False):
+    def concat(
+        cls,
+        variables,
+        dim="concat_dim",
+        positions=None,
+        shortcut=False,
+        combine_attrs="override",
+    ):
         """Specialized version of Variable.concat for IndexVariable objects.
 
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
+        from .merge import merge_attrs
+
         if not isinstance(dim, str):
             (dim,) = dim.dims
 
@@ -2598,12 +2631,13 @@ class IndexVariable(Variable):
         # keep as str if possible as pandas.Index uses object (converts to numpy array)
         data = maybe_coerce_to_str(data, variables)
 
-        attrs = dict(first_var.attrs)
+        attrs = merge_attrs(
+            [var.attrs for var in variables], combine_attrs=combine_attrs
+        )
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
                     raise ValueError("inconsistent dimensions")
-                utils.remove_incompatible_items(attrs, var.attrs)
 
         return cls(first_var.dims, data, attrs)
 
@@ -2776,7 +2810,13 @@ def _broadcast_compat_data(self, other):
     return self_data, other_data, dims
 
 
-def concat(variables, dim="concat_dim", positions=None, shortcut=False):
+def concat(
+    variables,
+    dim="concat_dim",
+    positions=None,
+    shortcut=False,
+    combine_attrs="override",
+):
     """Concatenate variables along a new or existing dimension.
 
     Parameters
@@ -2799,6 +2839,18 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
         This option is used internally to speed-up groupby operations.
         If `shortcut` is True, some checks of internal consistency between
         arrays to concatenate are skipped.
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "override"
+        String indicating how to combine attrs of the objects being merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
 
     Returns
     -------
@@ -2808,9 +2860,9 @@ def concat(variables, dim="concat_dim", positions=None, shortcut=False):
     """
     variables = list(variables)
     if all(isinstance(v, IndexVariable) for v in variables):
-        return IndexVariable.concat(variables, dim, positions, shortcut)
+        return IndexVariable.concat(variables, dim, positions, shortcut, combine_attrs)
     else:
-        return Variable.concat(variables, dim, positions, shortcut)
+        return Variable.concat(variables, dim, positions, shortcut, combine_attrs)
 
 
 def assert_unique_multiindex_level_names(variables):

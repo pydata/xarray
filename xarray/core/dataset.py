@@ -1472,14 +1472,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
+    @overload
+    def __setitem__(self, key: List[Hashable], value) -> None:
+        ...
+
+    @overload
     def __setitem__(self, key: Hashable, value) -> None:
+        ...
+
+    def __setitem__(self, key, value) -> None:
         """Add an array to this dataset.
+        Multiple arrays can be added at the same time, in which case each of
+        the following operations is applied to the respective value.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
-        If value is an `Variable` object (or tuple of form
+        If value is a `Variable` object (or tuple of form
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
@@ -1488,7 +1498,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 "cannot yet use a dictionary as a key to set Dataset values"
             )
 
-        self.update({key: value})
+        if isinstance(key, list):
+            if len(key) == 0:
+                raise ValueError("Empty list of variables to be set")
+            if len(key) == 1:
+                self.update({key[0]: value})
+            else:
+                if len(key) != len(value):
+                    raise ValueError(
+                        f"Different lengths of variables to be set "
+                        f"({len(key)}) and data used as input for "
+                        f"setting ({len(value)})"
+                    )
+                if isinstance(value, Dataset):
+                    self.update(dict(zip(key, value.data_vars.values())))
+                elif isinstance(value, xr.DataArray):
+                    raise ValueError("Cannot assign single DataArray to multiple keys")
+                else:
+                    self.update(dict(zip(key, value)))
+
+        else:
+            self.update({key: value})
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
@@ -2959,17 +2989,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
             return x, new_x
 
+        validated_indexers = {
+            k: _validate_interp_indexer(maybe_variable(obj, k), v)
+            for k, v in indexers.items()
+        }
+
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
+        # optimization: create dask coordinate arrays once per Dataset
+        # rather than once per Variable when dask.array.unify_chunks is called later
+        # GH4739
+        if obj.__dask_graph__():
+            dask_indexers = {
+                k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
+                for k, (index, dest) in validated_indexers.items()
+            }
+
         variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
+            if is_duck_dask_array(var.data):
+                use_indexers = dask_indexers
+            else:
+                use_indexers = validated_indexers
+
             if var.dtype.kind in "uifc":
-                var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
-                }
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif all(d not in indexers for d in var.dims):
                 # keep unrelated object array
@@ -5060,6 +5111,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return ordered_dims
 
+    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+        """Convert this dataset into a pandas object without changing the number of dimensions.
+
+        The type of the returned object depends on the number of Dataset
+        dimensions:
+
+        * 0D -> `pandas.Series`
+        * 1D -> `pandas.DataFrame`
+
+        Only works for Datasets with 1 or fewer dimensions.
+        """
+        if len(self.dims) == 0:
+            return pd.Series({k: v.item() for k, v in self.items()})
+        if len(self.dims) == 1:
+            return self.to_dataframe()
+        raise ValueError(
+            "cannot convert Datasets with %s dimensions into "
+            "pandas objects without changing the number of dimensions. "
+            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+        )
+
     def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
         data = [
@@ -6037,7 +6109,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def integrate(
-        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -6097,7 +6171,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             result = result._integrate_one(c, datetime_unit=datetime_unit)
         return result
 
-    def _integrate_one(self, coord, datetime_unit=None):
+    def _integrate_one(self, coord, datetime_unit=None, cumulative=False):
         from .variable import Variable
 
         if coord not in self.variables and coord not in self.dims:
@@ -6124,18 +6198,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set()
         for k, v in self.variables.items():
             if k in self.coords:
-                if dim not in v.dims:
+                if dim not in v.dims or cumulative:
                     variables[k] = v
                     coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
-                    integ = duck_array_ops.trapz(
-                        v.data, coord_var.data, axis=v.get_axis_num(dim)
-                    )
-                    v_dims = list(v.dims)
-                    v_dims.remove(dim)
+                    if cumulative:
+                        integ = duck_array_ops.cumulative_trapezoid(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = v.dims
+                    else:
+                        integ = duck_array_ops.trapz(
+                            v.data, coord_var.data, axis=v.get_axis_num(dim)
+                        )
+                        v_dims = list(v.dims)
+                        v_dims.remove(dim)
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
@@ -6143,6 +6223,81 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
+
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]],
+        datetime_unit: str = None,
+    ) -> "Dataset":
+        """Integrate along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral of each variable is always 0, in
+            order to keep the length of the dimension unchanged between input and
+            output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : Dataset
+
+        See also
+        --------
+        DataArray.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     data_vars={"a": ("x", [5, 5, 6, 6]), "b": ("x", [1, 2, 1, 0])},
+        ...     coords={"x": [0, 1, 2, 3], "y": ("x", [1, 7, 3, 5])},
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) int64 5 5 6 6
+            b        (x) int64 1 2 1 0
+        >>> ds.cumulative_integrate("x")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 5.0 10.5 16.5
+            b        (x) float64 0.0 1.5 3.0 3.5
+        >>> ds.cumulative_integrate("y")
+        <xarray.Dataset>
+        Dimensions:  (x: 4)
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+            y        (x) int64 1 7 3 5
+        Data variables:
+            a        (x) float64 0.0 30.0 8.0 20.0
+            b        (x) float64 0.0 9.0 3.0 4.0
+        """
+        if not isinstance(coord, (list, tuple)):
+            coord = (coord,)
+        result = self
+        for c in coord:
+            result = result._integrate_one(
+                c, datetime_unit=datetime_unit, cumulative=True
+            )
+        return result
 
     @property
     def real(self):
@@ -6625,36 +6780,26 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         mode : str, default: "constant"
             One of the following string values (taken from numpy docs).
 
-            'constant' (default)
-                Pads with a constant value.
-            'edge'
-                Pads with the edge values of array.
-            'linear_ramp'
-                Pads with the linear ramp between end_value and the
-                array edge value.
-            'maximum'
-                Pads with the maximum value of all or part of the
-                vector along each axis.
-            'mean'
-                Pads with the mean value of all or part of the
-                vector along each axis.
-            'median'
-                Pads with the median value of all or part of the
-                vector along each axis.
-            'minimum'
-                Pads with the minimum value of all or part of the
-                vector along each axis.
-            'reflect'
-                Pads with the reflection of the vector mirrored on
-                the first and last values of the vector along each
-                axis.
-            'symmetric'
-                Pads with the reflection of the vector mirrored
-                along the edge of the array.
-            'wrap'
-                Pads with the wrap of the vector along the axis.
-                The first values are used to pad the end and the
-                end values are used to pad the beginning.
+            - constant: Pads with a constant value.
+            - edge: Pads with the edge values of array.
+            - linear_ramp: Pads with the linear ramp between end_value and the
+              array edge value.
+            - maximum: Pads with the maximum value of all or part of the
+              vector along each axis.
+            - mean: Pads with the mean value of all or part of the
+              vector along each axis.
+            - median: Pads with the median value of all or part of the
+              vector along each axis.
+            - minimum: Pads with the minimum value of all or part of the
+              vector along each axis.
+            - reflect: Pads with the reflection of the vector mirrored on
+              the first and last values of the vector along each axis.
+            - symmetric: Pads with the reflection of the vector mirrored
+              along the edge of the array.
+            - wrap: Pads with the wrap of the vector along the axis.
+              The first values are used to pad the end and the
+              end values are used to pad the beginning.
+
         stat_length : int, tuple or mapping of hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -7093,15 +7238,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             parser to retain strict Python semantics.
         engine : {"python", "numexpr", None}, default: None
             The engine used to evaluate the expression. Supported engines are:
+
             - None: tries to use numexpr, falls back to python
             - "numexpr": evaluates expressions using numexpr
             - "python": performs operations as if you had eval’d in top level python
+
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
+
             - "raise": raise an exception
             - "warning": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
+
         **queries_kwargs : {dim: query, ...}, optional
             The keyword arguments form of ``queries``.
             One of queries or queries_kwargs must be provided.
@@ -7118,6 +7267,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.isel
         pandas.eval
 
+        Examples
+        --------
+        >>> a = np.arange(0, 5, 1)
+        >>> b = np.linspace(0, 1, 5)
+        >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+        >>> ds.query(x="a > 2")
+        <xarray.Dataset>
+        Dimensions:  (x: 2)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 3 4
+            b        (x) float64 0.75 1.0
         """
 
         # allow queries to be given either as a dict or as kwargs
