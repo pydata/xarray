@@ -188,6 +188,9 @@ Bug fixes
   ``np.datetime64[ns]`` dates with or without ``cftime`` installed
   (:issue:`5093`, :pull:`5180`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
+  to the applied function instead (:pull:`5265`).  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
