@@ -3,14 +3,11 @@ on:
   release:
     types:
       - published
-  push:
-    branches:
-      - master
 
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
-    if: github.repository == 'pydata/xarray'
+    if: github.repository == 'pydata/xarray' &&  startsWith(github.event.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v2
         with:
@@ -63,16 +60,13 @@ jobs:
           ls -ltrh
           ls -ltrh dist
       - name: Publish package to TestPyPI
-        if: github.event_name == 'push' || startsWith(github.event.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.TESTPYPI_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           verbose: true
-
       - name: Check uploaded package
-        if: github.event_name == 'push' || startsWith(github.event.ref, 'refs/tags/v')
         run: |
           sleep 3
           python -m pip install --upgrade pip
@@ -81,7 +75,6 @@ jobs:
 
   upload-to-pypi:
     needs: test-built-dist
-    if: github.event_name == 'release' && startsWith(github.event.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
