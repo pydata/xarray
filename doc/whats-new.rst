@@ -28,7 +28,8 @@ New Features
 - Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add :py:meth:`DataArray.plot.surface` which wraps matplotlib's `plot_surface` to make
-  surface plots (:issue:`#2235` :issue:`#5084` :pull:`5101`).
+  surface plots (:issue:`2235` :issue:`5084` :pull:`5101`).
+  By `John Omotani <https://github.com/johnomotani>`_.
 - Allow passing multiple arrays to :py:meth:`Dataset.__setitem__` (:pull:`5216`).
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
@@ -40,7 +41,8 @@ New Features
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - Add :py:meth:`Dataset.query` and :py:meth:`DataArray.query` which enable indexing
   of datasets and data arrays by evaluating query expressions against the values of the
-  data variables (:pull:`4984`). By `Alistair Miles <https://github.com/alimanfoo>`_.
+  data variables (:pull:`4984`).
+  By `Alistair Miles <https://github.com/alimanfoo>`_.
 - Allow passing ``combine_attrs`` to :py:meth:`Dataset.merge` (:pull:`4895`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Support for `dask.graph_manipulation
@@ -65,6 +67,7 @@ New Features
   :py:meth:`DataArray.str.rsplit`, and  :py:meth:`DataArray.str.split`.
   A number of these methods allow for splitting or joining the strings in an
   array. (:issue:`4622`)
+  By `Todd Jennings <https://github.com/toddrjen>`_
 - Thanks to the new pluggable backend infrastructure external packages may now
   use the ``xarray.backends`` entry point to register additional engines to be used in
   :py:func:`open_dataset`, see the documentation in :ref:`add_a_backend`
@@ -94,7 +97,8 @@ New Features
   :py:meth:`DataArray.clip` & :py:meth:`Dataset.clip`; these methods now use
   :py:func:`xarray.apply_ufunc`; (:pull:`5184`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-- Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`). By `Baudouin Raoult <https://github.com/b8raoult>`_.
+- Disable the `cfgrib` backend if the `eccodes` library is not installed (:pull:`5083`).
+  By `Baudouin Raoult <https://github.com/b8raoult>`_.
 - Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
   By `Sam Levang <https://github.com/slevang>`_.
 - Add options to control expand/collapse of sections in display of Dataset and
@@ -105,7 +109,8 @@ New Features
   pre-defined limit (:pull:`5126`).
   By `Tom White <https://github.com/tomwhite>`_.
 - Significant speedups in :py:meth:`Dataset.interp` and :py:meth:`DataArray.interp`.
-  (:issue:`4739`, :pull:`4740`). By `Deepak Cherian <https://github.com/dcherian>`_.
+  (:issue:`4739`, :pull:`4740`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Prevent passing `concat_dim` to :py:func:`xarray.open_mfdataset` when
   `combine='by_coords'` is specified, which should never have been possible (as
   :py:func:`xarray.combine_by_coords` has no `concat_dim` argument to pass to).
@@ -139,8 +144,8 @@ Breaking changes
 - Functions that are identities for 0d data return the unchanged data
   if axis is empty. This ensures that Datasets where some variables do
   not have the averaged dimensions are not accidentially changed
-  (:issue:`4885`, :pull:`5207`).  By `David Schwörer
-  <https://github.com/dschwoerer>`_
+  (:issue:`4885`, :pull:`5207`).
+  By `David Schwörer <https://github.com/dschwoerer>`_.
 - :py:attr:`DataArray.coarsen` and :py:attr:`Dataset.coarsen` no longer support passing ``keep_attrs``
   via its constructor. Pass ``keep_attrs`` via the applied function, i.e. use
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
@@ -171,10 +176,15 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill`, :py:meth:`Dataset.bfill` along chunked dimensions.
-  (:issue:`2699`).By `Deepak Cherian <https://github.com/dcherian>`_.
+  (:issue:`2699`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix 2d plot failure for certain combinations of dimensions when `x` is 1d and `y` is
-  2d (:issue:`5097`, :pull:`5099`). By `John Omotani <https://github.com/johnomotani>`_.
-- Ensure standard calendar times encoded with large values (i.e. greater than approximately 292 years), can be decoded correctly without silently overflowing (:pull:`5050`).  This was a regression in xarray 0.17.0.  By `Zeb Nicholls <https://github.com/znicholls>`_.
+  2d (:issue:`5097`, :pull:`5099`).
+  By `John Omotani <https://github.com/johnomotani>`_.
+- Ensure standard calendar times encoded with large values (i.e. greater than
+  approximately 292 years), can be decoded correctly without silently overflowing
+  (:pull:`5050`).  This was a regression in xarray 0.17.0.
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Added support for `numpy.bool_` attributes in roundtrips using `h5netcdf` engine with `invalid_netcdf=True` [which casts `bool`s to `numpy.bool_`] (:issue:`4981`, :pull:`4986`).
   By `Victor Negîrneac <https://github.com/caenrigen>`_.
 - Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
@@ -191,11 +201,14 @@ Bug fixes
 - Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
   to the applied function instead (:pull:`5265`).  By `Mathias Hauser <https://github.com/mathause>`_.
 
+  (:issue:`5093`, :pull:`5180`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 - New section on :ref:`add_a_backend` in the "Internals" chapter aimed to backend developers
-  (:issue:`4803`, :pull:`4810`). By `Aureliana Barghini <https://github.com/aurghs>`_.
+  (:issue:`4803`, :pull:`4810`).
+  By `Aureliana Barghini <https://github.com/aurghs>`_.
 - Add :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit` under "See also" in
   the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
   (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
@@ -206,7 +219,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Enable displaying mypy error codes and ignore only specific error codes using
-  ``# type: ignore[error-code]`` (:pull:`5096`). By `Mathias Hauser <https://github.com/mathause>`_.
+  ``# type: ignore[error-code]`` (:pull:`5096`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Replace uses of ``raises_regex`` with the more standard
   ``pytest.raises(Exception, match="foo")``;
   (:pull:`5188`), (:pull:`5191`).
@@ -368,7 +382,8 @@ Bug fixes
 - Resolve intervals before appending other metadata to labels when plotting (:issue:`4322`, :pull:`4794`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Fix regression when decoding a variable with a ``scale_factor`` and ``add_offset`` given
-  as a list of length one (:issue:`4631`) by `Mathias Hauser <https://github.com/mathause>`_.
+  as a list of length one (:issue:`4631`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Expand user directory paths (e.g. ``~/``) in :py:func:`open_mfdataset` and
   :py:meth:`Dataset.to_zarr` (:issue:`4783`, :pull:`4795`).
   By `Julien Seguinot <https://github.com/juseg>`_.
@@ -380,13 +395,15 @@ Bug fixes
   :pull:`4855`).
   By `Leif Denby <https://github.com/leifdenby>`_.
 - Fix time encoding bug associated with using cftime versions greater than
-  1.4.0 with xarray (:issue:`4870`, :pull:`4871`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+  1.4.0 with xarray (:issue:`4870`, :pull:`4871`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Stop :py:meth:`DataArray.sum` and :py:meth:`DataArray.prod` computing lazy
   arrays when called with a ``min_count`` parameter (:issue:`4898`, :pull:`4911`).
   By `Blair Bonnett <https://github.com/bcbnz>`_.
 - Fix bug preventing the ``min_count`` parameter to :py:meth:`DataArray.sum` and
   :py:meth:`DataArray.prod` working correctly when calculating over all axes of
-  a float64 array (:issue:`4898`, :pull:`4911`). By `Blair Bonnett <https://github.com/bcbnz>`_.
+  a float64 array (:issue:`4898`, :pull:`4911`).
+  By `Blair Bonnett <https://github.com/bcbnz>`_.
 - Fix decoding of vlen strings using h5py versions greater than 3.0.0 with h5netcdf backend (:issue:`4570`, :pull:`4893`).
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Allow converting :py:class:`Dataset` or :py:class:`DataArray` objects with a ``MultiIndex``
