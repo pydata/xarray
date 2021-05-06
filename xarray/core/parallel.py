@@ -540,10 +540,14 @@ def map_blocks(
         dependencies=[arg for arg in npargs if dask.is_dask_collection(arg)],
     )
 
-    for gname_l, layer in new_layers.items():
-        # This adds in the getitems for each variable in the dataset.
-        hlg.dependencies[gname_l] = {gname}
-        hlg.layers[gname_l] = layer
+    # This adds in the getitems for each variable in the dataset.
+    hlg = HighLevelGraph(
+        {**hlg.layers, **new_layers},
+        dependencies={
+            **hlg.dependencies,
+            **{name: {gname} for name in new_layers.keys()},
+        },
+    )
 
     result = Dataset(coords=indexes, attrs=template.attrs)
     for index in result.indexes:
