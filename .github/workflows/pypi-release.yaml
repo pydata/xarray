@@ -76,7 +76,7 @@ jobs:
         run: |
           sleep 3
           python -m pip install --upgrade pip
-          python -m pip install --index-url https://test.pypi.org/simple --upgrade xarray
+          python -m pip install --extra-index-url https://test.pypi.org/simple --upgrade xarray
           python -m xarray.util.print_versions
 
   upload-to-pypi:
