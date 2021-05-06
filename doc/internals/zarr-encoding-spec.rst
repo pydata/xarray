@@ -44,8 +44,8 @@ non-standard Zarr extension, albeit one implemented upstream in Zarr-Python.
 You do not need to write consolidated metadata to make Zarr stores readable in
 Xarray, but because Xarray can open these stores much faster, users will see a
 warning about poor performance when reading non-consolidated stores unless they
-explicitly set ``consolidated=False``. See io.zarr.consolidated_metadata_ for
-more details.
+explicitly set ``consolidated=False``. See :ref:`io.zarr.consolidated_metadata`
+for more details.
 
 As a concrete example, here we write a tutorial dataset to Zarr and then
 re-open it directly with Zarr:
