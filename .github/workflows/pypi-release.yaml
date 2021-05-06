@@ -81,7 +81,7 @@ jobs:
 
   upload-to-pypi:
     needs: test-built-dist
-    if: github.event_name == 'release' && startsWith(github.event.ref, 'refs/tags/v')
+    if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
