@@ -34,7 +34,7 @@ New Features
   By `Giacomo Caria <https://github.com/gcaria>`_.
 - Add 'cumulative' option to :py:meth:`Dataset.integrate` and
   :py:meth:`DataArray.integrate` so that result is a cumulative integral, like
-  :py:meth:`scipy.integrate.cumulative_trapezoidal` (:pull:`5153`).
+  :py:func:`scipy.integrate.cumulative_trapezoidal` (:pull:`5153`).
   By `John Omotani <https://github.com/johnomotani>`_.
 - Add ``safe_chunks`` option to :py:meth:`Dataset.to_zarr` which allows overriding
   checks made to ensure Dask and Zarr chunk compatibility (:issue:`5056`).
@@ -87,8 +87,8 @@ New Features
   way to open example rasterio files (:issue:`3986`, :pull:`4102`, :pull:`5074`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Add typing information to unary and binary arithmetic operators operating on
-  :py:class:`~core.dataset.Dataset`, :py:class:`~core.dataarray.DataArray`,
-  :py:class:`~core.variable.Variable`, :py:class:`~core.groupby.DatasetGroupBy` or
+  :py:class:`Dataset`, :py:class:`DataArray`, :py:class:`Variable`,
+  :py:class:`~core.groupby.DatasetGroupBy` or
   :py:class:`~core.groupby.DataArrayGroupBy` (:pull:`4904`).
   By `Richard Kleijn <https://github.com/rhkleijn>`_.
 - Add a ``combine_attrs`` parameter to :py:func:`open_mfdataset` (:pull:`4971`).
@@ -118,7 +118,7 @@ New Features
   :py:func:`xarray.open_mfdataset` when `combine='by_coords'` is specified.
   Fixes (:issue:`5230`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Implement ``__setitem__`` for :py:class:`core.indexing.DaskIndexingAdapter` if
+- Implement ``__setitem__`` for ``xarray.core.indexing.DaskIndexingAdapter`` if
   dask version supports item assignment. (:issue:`5171`, :pull:`5174`)
   By `Tammas Loughran <https://github.com/tammasloughran>`_.
 
