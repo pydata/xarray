@@ -14,10 +14,10 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.{0.18.1}:
+.. _whats-new.0.18.1:
 
-v{0.18.1} (unreleased)
----------------------
+v0.18.1 (unreleased)
+--------------------
 
 New Features
 ~~~~~~~~~~~~
