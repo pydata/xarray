@@ -29,6 +29,15 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
+@pytest.mark.parametrize("numpy_str_type", (np.str, np.str_))
+def test_numpy_str_handling(numpy_str_type) -> None:
+    dtype = strings.create_vlen_dtype(numpy_str_type)
+    assert dtype.metadata["element_type"] == str
+    assert strings.is_unicode_dtype(dtype)
+    assert not strings.is_bytes_dtype(dtype)
+    assert strings.check_vlen_dtype(dtype) is str
+
+
 def test_EncodedStringCoder_decode() -> None:
     coder = strings.EncodedStringCoder()
 
