@@ -499,7 +499,7 @@ def open_dataset(
         **decoders,
         **kwargs,
     )
-    return _dataset_from_backend_dataset(
+    ds = _dataset_from_backend_dataset(
         backend_ds,
         filename_or_obj,
         engine,
@@ -510,6 +510,7 @@ def open_dataset(
         **decoders,
         **kwargs,
     )
+    return ds
 
 
 def open_dataarray(
