@@ -72,12 +72,17 @@ jobs:
     needs: test-built-dist
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: 3.8
       - uses: actions/download-artifact@v2
         with:
           name: releases
           path: dist
 
       - name: Publish package to TestPyPI
+        if: github.event_name == 'push' || startsWith(github.event.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
@@ -85,11 +90,17 @@ jobs:
           repository_url: https://test.pypi.org/legacy/
           verbose: true
 
+      - name: Check uploaded package
+        if: github.event_name == 'push' || startsWith(github.event.ref, 'refs/tags/v')
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://test.pypi.org/simple --upgrade xarray
+          python -m xarray.util.print_versions
+
       - name: Publish package to PyPI
         if: github.event_name == 'release' && startsWith(github.event.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: true
           verbose: true
