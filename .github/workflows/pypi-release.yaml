@@ -4,8 +4,6 @@ on:
     types:
       - published
   push:
-    branches:
-      - master
     tags:
       - 'v*'
 
