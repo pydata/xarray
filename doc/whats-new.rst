@@ -21,8 +21,8 @@ v0.18.0 (6 May 2021)
 
 This release brings a few important performance improvements, a wide range of
 usability upgrades, lots of bug fixes, and some new features. These include
-a new plugin API to add new engines, a new theme for the documentation, and several
-new plot functions.
+a plugin API to add backend engines, a new theme for the documentation,
+curve fitting methods, and several new plotting functions.
 
 Many thanks to the 38 contributors to this release: Aaron Spring, Alessandro Amici,
 Alex Marandon, Alistair Miles, Ana Paula Krelling, Anderson Banihirwe, Aureliana Barghini,
