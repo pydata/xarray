@@ -369,12 +369,18 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_group = zarr.open_consolidated(store, **open_kwargs)
             except KeyError:
                 warnings.warn(
-                    "failed to open Zarr store with consolidated metadata, "
-                    "falling back to try reading non-consolidated metadata. In "
-                    "the future, this will be an error instead. To skip "
-                    "this fallback, set consolidated=True; to skip attempting "
-                    "to read consolidated metadata, consolidated=False.",
-                    FutureWarning,
+                    "Failed to open Zarr store with consolidated metadata, "
+                    "falling back to try reading non-consolidated metadata. "
+                    "This is typically much slower for opening a dataset. "
+                    "To silence this warning, consider:\n"
+                    "1. Consolidating metadata in this existing store with "
+                    "zarr.consolidate_metadata().\n"
+                    "2. Explicitly setting consolidated=False, to avoid trying "
+                    "to read consolidate metadata, or\n"
+                    "3. Explicitly setting consolidated=True, to raise an "
+                    "error in this case instead of falling back to try "
+                    "reading non-consolidated metadata."
+                    RuntimeWarning,
                     stacklevel=stacklevel,
                 )
                 zarr_group = zarr.open_group(store, **open_kwargs)

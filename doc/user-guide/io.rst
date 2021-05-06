@@ -954,6 +954,8 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+.. _io.zarr.consolidated_metadata:
+
 Consolidated Metadata
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -969,17 +971,19 @@ up opening the store. (For more information on this feature, consult the
 
 By default, Xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
-reads. To skip this fallback, set ``consolidated=True`` in
-:py:func:`open_zarr`::
+reads. Because this fall-back option is so much slower, Xarray issues a
+``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
 
-    ds = xr.open_zarr('foo.zarr', consolidated=True)
+    Failed to open Zarr store with consolidated metadata, falling back to try
+    reading non-consolidated metadata. This is typically much slower for
+    opening a dataset. To silence this warning, consider:
 
-or to skip writing/reading consolidated metadata altogether, set
-``conslidated=False``.
-
-Xarray can't perform consolidation on pre-existing zarr datasets. This should
-be done directly from zarr, as described in the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
+    1. Consolidating metadata in this existing store with
+       :py:func:`zarr.consolidate_metadata`.
+    2. Explicitly setting ``consolidated=False``, to avoid trying to read
+       consolidate metadata.
+    3. Explicitly setting ``consolidated=True``, to raise an error in this case
+       instead of falling back to try reading non-consolidated metadata.
 
 .. _io.zarr.appending:
 
