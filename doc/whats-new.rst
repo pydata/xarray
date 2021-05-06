@@ -14,10 +14,23 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.17.1:
+.. _whats-new.0.18.0:
 
-v0.17.1 (unreleased)
----------------------
+v0.18.0 (6 May 2021)
+--------------------
+
+This release brings a few important performance improvements, a wide range of
+usability upgrades, lots of bug fixes, and some new features. These include
+a plugin API to add backend engines, a new theme for the documentation,
+curve fitting methods, and several new plotting functions.
+
+Many thanks to the 38 contributors to this release: Aaron Spring, Alessandro Amici,
+Alex Marandon, Alistair Miles, Ana Paula Krelling, Anderson Banihirwe, Aureliana Barghini,
+Baudouin Raoult, Benoit Bovy, Blair Bonnett, David Trémouilles, Deepak Cherian,
+Gabriel Medeiros Abrahão, Giacomo Caria, Hauke Schulz, Illviljan, Mathias Hauser, Matthias Bussonnier,
+Mattia Almansi, Maximilian Roos, Ray Bell, Richard Kleijn, Ryan Abernathey, Sam Levang, Spencer Clark,
+Spencer Jones, Tammas Loughran, Tobias Kölling, Todd, Tom Nicholas, Tom White, Victor Negîrneac,
+Xianxiang Li, Zeb Nicholls, crusaderky, dschwoerer, johnomotani, keewis
 
 
 New Features
@@ -198,8 +211,8 @@ Documentation
   (:issue:`4803`, :pull:`4810`). By `Aureliana Barghini <https://github.com/aurghs>`_.
 - Add :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit` under "See also" in
   the docstrings of :py:meth:`Dataset.polyfit` and :py:meth:`DataArray.polyfit`
-  (:issue:`5016`, :pull:`5020`). By `Aaron Spring <https://github.com/aaronspring>`_.
-
+  (:issue:`5016`, :pull:`5020`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 - New sphinx theme & rearrangement of the docs (:pull:`4835`).
   By `Anderson Banihirwe <https://github.com/andersy005>`_.
 
@@ -236,7 +249,6 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - xarray no longer supports python 3.6
 
-  The minimum versions of some other dependencies were changed:
   The minimum version policy was changed to also apply to projects with irregular
   releases. As a result, the minimum versions of some dependencies have changed:
 
