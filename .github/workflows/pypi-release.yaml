@@ -81,6 +81,7 @@ jobs:
 
   upload-to-pypi:
     needs: test-built-dist
+    if: github.event_name == 'release' && startsWith(github.event.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v2
@@ -88,7 +89,6 @@ jobs:
           name: releases
           path: dist
       - name: Publish package to PyPI
-        if: github.event_name == 'release' && startsWith(github.event.ref, 'refs/tags/v')
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
