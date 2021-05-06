@@ -379,7 +379,7 @@ class ZarrStore(AbstractWritableDataStore):
                     "to read consolidate metadata, or\n"
                     "3. Explicitly setting consolidated=True, to raise an "
                     "error in this case instead of falling back to try "
-                    "reading non-consolidated metadata."
+                    "reading non-consolidated metadata.",
                     RuntimeWarning,
                     stacklevel=stacklevel,
                 )

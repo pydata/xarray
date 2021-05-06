@@ -1717,8 +1717,8 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as store:
             expected.to_zarr(store, consolidated=False)
             with pytest.warns(
-                FutureWarning,
-                match="failed to open Zarr store with consolidated",
+                RuntimeWarning,
+                match="Failed to open Zarr store with consolidated",
             ):
                 with xr.open_zarr(store) as ds:
                     assert_identical(ds, expected)
