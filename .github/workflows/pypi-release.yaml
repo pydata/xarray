@@ -10,7 +10,7 @@ on:
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
-    if: github.repository == 'pydata/xarray'
+    # if: github.repository == 'pydata/xarray'
     steps:
       - uses: actions/checkout@v2
         with:
