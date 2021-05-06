@@ -4,13 +4,13 @@ on:
     types:
       - published
   push:
-    # branches:
-    #   - master
+    branches:
+      - master
 
 jobs:
   build-artifacts:
     runs-on: ubuntu-latest
-    # if: github.repository == 'pydata/xarray'
+    if: github.repository == 'pydata/xarray'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -31,7 +31,7 @@ jobs:
           git restore -SW .
           python -m build --sdist --wheel .
 
-      - name: Test the artifacts
+      - name: Check built artifacts
         run: |
           python -m twine check dist/*
           pwd
