@@ -962,19 +962,19 @@ In some storage mediums, such as with cloud object storage (e.g. amazon S3),
 this can introduce significant overhead, because two separate HTTP calls to the
 object store must be made for each variable in the dataset.
 As of Xarray version 0.18, Xarray by default uses a feature called
-*consolidated metadata*, stores all metadata for the entire dataset with a
+*consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
-By default, Xarray writes consolidated metadata and attempts to reads stores
-with consolidated metadata, falling back to use non-consolidate metadata for
+By default, Xarray writes consolidated metadata and attempts to read stores
+with consolidated metadata, falling back to use non-consolidated metadata for
 reads. To skip this fallback, set ``consolidated=True`` in
 :py:func:`open_zarr`::
 
     ds = xr.open_zarr('foo.zarr', consolidated=True)
 
-or to skip writing/reading consolidate metadata altogether, set
+or to skip writing/reading consolidated metadata altogether, set
 ``conslidated=False``.
 
 Xarray can't perform consolidation on pre-existing zarr datasets. This should
