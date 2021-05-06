@@ -2992,17 +2992,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
             return x, new_x
 
+        validated_indexers = {
+            k: _validate_interp_indexer(maybe_variable(obj, k), v)
+            for k, v in indexers.items()
+        }
+
+        # optimization: subset to coordinate range of the target index
+        if method in ["linear", "nearest"]:
+            for k, v in validated_indexers.items():
+                obj, newidx = missing._localize(obj, {k: v})
+                validated_indexers[k] = newidx[k]
+
+        # optimization: create dask coordinate arrays once per Dataset
+        # rather than once per Variable when dask.array.unify_chunks is called later
+        # GH4739
+        if obj.__dask_graph__():
+            dask_indexers = {
+                k: (index.to_base_variable().chunk(), dest.to_base_variable().chunk())
+                for k, (index, dest) in validated_indexers.items()
+            }
+
         variables: Dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
 
+            if is_duck_dask_array(var.data):
+                use_indexers = dask_indexers
+            else:
+                use_indexers = validated_indexers
+
             if var.dtype.kind in "uifc":
-                var_indexers = {
-                    k: _validate_interp_indexer(maybe_variable(obj, k), v)
-                    for k, v in indexers.items()
-                    if k in var.dims
-                }
+                var_indexers = {k: v for k, v in use_indexers.items() if k in var.dims}
                 variables[name] = missing.interp(var, var_indexers, method, **kwargs)
             elif all(d not in indexers for d in var.dims):
                 # keep unrelated object array
@@ -5092,6 +5113,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ordered_dims = {k: self.dims[k] for k in dim_order}
 
         return ordered_dims
+
+    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+        """Convert this dataset into a pandas object without changing the number of dimensions.
+
+        The type of the returned object depends on the number of Dataset
+        dimensions:
+
+        * 0D -> `pandas.Series`
+        * 1D -> `pandas.DataFrame`
+
+        Only works for Datasets with 1 or fewer dimensions.
+        """
+        if len(self.dims) == 0:
+            return pd.Series({k: v.item() for k, v in self.items()})
+        if len(self.dims) == 1:
+            return self.to_dataframe()
+        raise ValueError(
+            "cannot convert Datasets with %s dimensions into "
+            "pandas objects without changing the number of dimensions. "
+            "Please use Dataset.to_dataframe() instead." % len(self.dims)
+        )
 
     def _to_dataframe(self, ordered_dims: Mapping[Hashable, int]):
         columns = [k for k in self.variables if k not in self.dims]
