@@ -12,7 +12,9 @@ jobs:
   detect-ci-trigger:
     name: detect ci trigger
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
@@ -111,6 +113,7 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
+    if: github.repository == 'pydata/xarray'
     defaults:
       run:
         shell: bash -l {0}
