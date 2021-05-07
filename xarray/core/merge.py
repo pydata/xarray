@@ -129,13 +129,13 @@ def unique_variable(
             if equals is not True:
                 break
 
-    if equals is None:
-        # now compare values with minimum number of computes
-        out = out.compute()
-        for var in variables[1:]:
-            equals = getattr(out, compat)(var)
-            if not equals:
-                break
+        if equals is None:
+            # now compare values with minimum number of computes
+            out = out.compute()
+            for var in variables[1:]:
+                equals = getattr(out, compat)(var)
+                if not equals:
+                    break
 
     if not equals:
         raise MergeError(

@@ -232,12 +232,12 @@ def _is_multiple(us, mult: int):
 
 def _maybe_add_count(base: str, count: float):
     """If count is greater than 1, add it to the base offset string"""
-    if count == 1:
+    if count != 1:
+        assert count == int(count)
+        count = int(count)
+        return f"{count}{base}"
+    else:
         return base
-
-    assert count == int(count)
-    count = int(count)
-    return f"{count}{base}"
 
 
 def month_anchor_check(dates):

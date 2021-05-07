@@ -684,7 +684,7 @@ def open_zarr(
         "storage_options": storage_options,
     }
 
-    return open_dataset(
+    ds = open_dataset(
         filename_or_obj=store,
         group=group,
         decode_cf=decode_cf,
@@ -699,6 +699,7 @@ def open_zarr(
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
     )
+    return ds
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):

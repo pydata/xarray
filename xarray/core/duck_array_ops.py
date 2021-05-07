@@ -427,9 +427,7 @@ def _datetime_nanmin(array):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
-
     Convert the datetime array to a timedelta relative to an offset.
-
     Parameters
     ----------
     array : array-like
@@ -442,12 +440,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
-
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
-
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even
@@ -457,7 +453,11 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # TODO: make this function dask-compatible?
     # Set offset to minimum if not given
     if offset is None:
-        offset = _datetime_nanmin(array) if array.dtype.kind in "Mm" else min(array)
+        if array.dtype.kind in "Mm":
+            offset = _datetime_nanmin(array)
+        else:
+            offset = min(array)
+
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
     # One option is to enforce 1970-01-01 as the universal offset.

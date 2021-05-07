@@ -433,7 +433,10 @@ class DataArrayRolling(Rolling):
 
         # save memory with reductions GH4325
         fillna = kwargs.pop("fillna", dtypes.NA)
-        obj = self.obj.fillna(fillna) if fillna is not dtypes.NA else self.obj
+        if fillna is not dtypes.NA:
+            obj = self.obj.fillna(fillna)
+        else:
+            obj = self.obj
         windows = self._construct(
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )

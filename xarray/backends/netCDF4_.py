@@ -355,7 +355,10 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         if lock is None:
             if mode == "r":
-                lock = NETCDFC_LOCK if is_remote_uri(filename) else NETCDF4_PYTHON_LOCK
+                if is_remote_uri(filename):
+                    lock = NETCDFC_LOCK
+                else:
+                    lock = NETCDF4_PYTHON_LOCK
             else:
                 if format is None or format.startswith("NETCDF4"):
                     base_lock = NETCDF4_PYTHON_LOCK

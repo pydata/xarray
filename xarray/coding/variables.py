@@ -77,7 +77,6 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 def lazy_elemwise_func(array, func, dtype):
     """Lazily apply an element-wise function to an array.
-
     Parameters
     ----------
     array : any valid value of Variable._data
@@ -86,17 +85,16 @@ def lazy_elemwise_func(array, func, dtype):
         this should be a pickle-able object.
     dtype : coercible to np.dtype
         Dtype for the result of this function.
-
     Returns
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
     """
-    if not is_duck_dask_array(array):
+    if is_duck_dask_array(array):
+        import dask.array as da
+
+        return da.map_blocks(func, array, dtype=dtype)
+    else:
         return _ElementwiseFunctionArray(array, func, dtype)
-
-    import dask.array as da
-
-    return da.map_blocks(func, array, dtype=dtype)
 
 
 def unpack_for_encoding(var):

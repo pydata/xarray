@@ -642,7 +642,7 @@ class GroupBy:
         if dim is None:
             dim = self._group_dim
 
-        return self.map(
+        out = self.map(
             self._obj.__class__.quantile,
             shortcut=False,
             q=q,
@@ -651,6 +651,7 @@ class GroupBy:
             keep_attrs=keep_attrs,
             skipna=skipna,
         )
+        return out
 
     def where(self, cond, other=dtypes.NA):
         """Return elements from `self` or `other` depending on `cond`.

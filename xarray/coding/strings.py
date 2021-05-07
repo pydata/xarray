@@ -171,7 +171,7 @@ def char_to_bytes(arr):
         if len(arr.chunks[-1]) > 1:
             raise ValueError(
                 "cannot stacked dask character array with "
-                f"multiple chunks in the last dimension: {arr}"
+                "multiple chunks in the last dimension: {}".format(arr)
             )
 
         dtype = np.dtype("S" + str(arr.shape[-1]))
@@ -182,7 +182,8 @@ def char_to_bytes(arr):
             chunks=arr.chunks[:-1],
             drop_axis=[arr.ndim - 1],
         )
-    return StackedBytesArray(arr)
+    else:
+        return StackedBytesArray(arr)
 
 
 def _numpy_char_to_bytes(arr):
