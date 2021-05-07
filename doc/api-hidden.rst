@@ -598,6 +598,7 @@
    plot.imshow
    plot.pcolormesh
    plot.scatter
+   plot.surface
 
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles

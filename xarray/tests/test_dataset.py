@@ -61,7 +61,7 @@ pytestmark = [
 ]
 
 
-def create_test_data(seed=None):
+def create_test_data(seed=None, add_attrs=True):
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
@@ -76,7 +76,9 @@ def create_test_data(seed=None):
     obj["dim3"] = ("dim3", list("abcdefghij"))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
-        obj[v] = (dims, data, {"foo": "variable"})
+        obj[v] = (dims, data)
+        if add_attrs:
+            obj[v].attrs = {"foo": "variable"}
     obj.coords["numbers"] = (
         "dim3",
         np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
@@ -1767,6 +1769,27 @@ class TestDataset:
         )
 
         assert_identical(original2.broadcast_like(original1), expected2)
+
+    def test_to_pandas(self):
+        # 0D -> series
+        actual = Dataset({"a": 1, "b": 2}).to_pandas()
+        expected = pd.Series([1, 2], ["a", "b"])
+        assert_array_equal(actual, expected)
+
+        # 1D -> dataframe
+        x = np.random.randn(10)
+        y = np.random.randn(10)
+        t = list("abcdefghij")
+        ds = Dataset({"a": ("t", x), "b": ("t", y), "t": ("t", t)})
+        actual = ds.to_pandas()
+        expected = ds.to_dataframe()
+        assert expected.equals(actual), (expected, actual)
+
+        # 2D -> error
+        x2d = np.random.randn(10, 10)
+        y2d = np.random.randn(10, 10)
+        with pytest.raises(ValueError, match=r"cannot convert Datasets"):
+            Dataset({"a": (["t", "r"], x2d), "b": (["t", "r"], y2d)}).to_pandas()
 
     def test_reindex_like(self):
         data = create_test_data()
@@ -3495,6 +3518,40 @@ class TestDataset:
 
         assert np.issubdtype(ds.x.dtype, dtype)
 
+    def test_setitem_using_list(self):
+
+        # assign a list of variables
+        var1 = Variable(["dim1"], np.random.randn(8))
+        var2 = Variable(["dim1"], np.random.randn(8))
+        actual = create_test_data()
+        expected = actual.copy()
+        expected["A"] = var1
+        expected["B"] = var2
+        actual[["A", "B"]] = [var1, var2]
+        assert_identical(actual, expected)
+        # assign a list of dataset arrays
+        dv = 2 * expected[["A", "B"]]
+        actual[["C", "D"]] = [d.variable for d in dv.data_vars.values()]
+        expected[["C", "D"]] = dv
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "var_list, data, error_regex",
+        [
+            (
+                ["A", "B"],
+                [Variable(["dim1"], np.random.randn(8))],
+                r"Different lengths",
+            ),
+            ([], [Variable(["dim1"], np.random.randn(8))], r"Empty list of variables"),
+            (["A", "B"], xr.DataArray([1, 2]), r"assign single DataArray"),
+        ],
+    )
+    def test_setitem_using_list_errors(self, var_list, data, error_regex):
+        actual = create_test_data()
+        with pytest.raises(ValueError, match=error_regex):
+            actual[var_list] = data
+
     def test_assign(self):
         ds = Dataset()
         actual = ds.assign(x=[0, 1, 2], y=2)
@@ -3889,6 +3946,11 @@ class TestDataset:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
+
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -6484,6 +6546,11 @@ def test_rolling_exp_keep_attrs(ds):
     assert result.attrs == {}
     assert result.z1.attrs == {}
 
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        ds.rolling_exp(time=10, keep_attrs=True)
+
 
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
@@ -6842,6 +6909,70 @@ def test_integrate(dask):
 
     with pytest.warns(FutureWarning):
         da.integrate(dim="x")
+
+
+@requires_scipy
+@pytest.mark.parametrize("dask", [True, False])
+def test_cumulative_integrate(dask):
+    rs = np.random.RandomState(43)
+    coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        dims=["x", "y"],
+        coords={
+            "x": coord,
+            "x2": (("x",), rs.randn(8)),
+            "z": 3,
+            "x2d": (("x", "y"), rs.randn(8, 6)),
+        },
+    )
+    if dask and has_dask:
+        da = da.chunk({"x": 4})
+
+    ds = xr.Dataset({"var": da})
+
+    # along x
+    actual = da.cumulative_integrate("x")
+
+    # From scipy-1.6.0 cumtrapz is renamed to cumulative_trapezoid, but cumtrapz is
+    # still provided for backward compatibility
+    from scipy.integrate import cumtrapz
+
+    expected_x = xr.DataArray(
+        cumtrapz(da.compute(), da["x"], axis=0, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_x, actual.compute())
+    assert_equal(
+        ds["var"].cumulative_integrate("x"),
+        ds.cumulative_integrate("x")["var"],
+    )
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
+
+    # along y
+    actual = da.cumulative_integrate("y")
+    expected_y = xr.DataArray(
+        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
+    )
+    assert_allclose(expected_y, actual.compute())
+    assert_equal(actual, ds.cumulative_integrate("y")["var"])
+    assert_equal(
+        ds["var"].cumulative_integrate("y"),
+        ds.cumulative_integrate("y")["var"],
+    )
+
+    # along x and y
+    actual = da.cumulative_integrate(("y", "x"))
+    assert actual.ndim == 2
+
+    with pytest.raises(ValueError):
+        da.cumulative_integrate("x2d")
 
 
 @pytest.mark.parametrize("dask", [True, False])

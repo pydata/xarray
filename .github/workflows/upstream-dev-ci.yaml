@@ -14,7 +14,9 @@ jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
@@ -31,12 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-      always()
-      && github.repository == 'pydata/xarray'
-      && (
         (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         || needs.detect-ci-trigger.outputs.triggered == 'true'
-      )
     defaults:
       run:
         shell: bash -l {0}
@@ -97,9 +95,7 @@ jobs:
     name: report
     needs: upstream-dev
     if: |
-      always()
-      && github.event_name == 'schedule'
-      && github.repository == 'pydata/xarray'
+      github.event_name == 'schedule'
       && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
     defaults:
