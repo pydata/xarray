@@ -59,6 +59,9 @@ re-open it directly with Zarr:
     ds.to_zarr("rasm.zarr", mode="w")
 
     zgroup = zarr.open("rasm.zarr")
+
     ! ls -a rasm.zarr
+
     print(zgroup.tree())
+
     dict(zgroup["Tair"].attrs)
