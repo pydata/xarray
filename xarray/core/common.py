@@ -924,6 +924,14 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
+
+        if "keep_attrs" in window_kwargs:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
+                " ``keep_attrs`` directly to the applied function, e.g."
+                " ``rolling_exp(...).mean(keep_attrs=False)``."
+            )
+
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
         return RollingExp(self, window, window_type)
@@ -1043,10 +1051,6 @@ class DataWithCoords(AttrAccessMixin):
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -1121,8 +1125,12 @@ class DataWithCoords(AttrAccessMixin):
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
+                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
+                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
+            )
 
         # note: the second argument (now 'skipna') use to be 'dim'
         if (
