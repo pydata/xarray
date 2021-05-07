@@ -141,7 +141,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
-            return store_entrypoint.open_dataset(
+            ds = store_entrypoint.open_dataset(
                 store,
                 mask_and_scale=mask_and_scale,
                 decode_times=decode_times,
@@ -151,6 +151,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 use_cftime=use_cftime,
                 decode_timedelta=decode_timedelta,
             )
+            return ds
 
 
 if has_pydap:
