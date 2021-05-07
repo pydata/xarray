@@ -22,10 +22,18 @@ v0.18.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Xarray now uses consolidated metadata by default when writing and reading Zarr
+  stores (:issue:`5251`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
+  has changed to the new ``mode="r+"``, which only allows for overriding
+  pre-existing array values. This is a safer default than the prior ``mode="a"``,
+  and allows for higher performance writes (:pull:`5252`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -193,14 +201,6 @@ Breaking changes
   ``ds.coarsen(...).mean(keep_attrs=False)`` instead of ``ds.coarsen(..., keep_attrs=False).mean()``.
   Further, coarsen now keeps attributes per default (:pull:`5227`).
   By `Mathias Hauser <https://github.com/mathause>`_.
-- Xarray now uses consolidated metadata by default when writing and reading Zarr
-  stores (:issue:`5251`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-  - The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
-  has changed to the new ``mode="r+"``, which only allows for overriding
-  pre-existing array values. This is a safer default than the prior ``mode="a"``,
-  and allows for higher performance writes (:pull:`5252`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - switch the default of the :py:func:`merge` ``combine_attrs`` parameter to
   ``"override"``. This will keep the current behavior for merging the ``attrs`` of
   variables but stop dropping the ``attrs`` of the main objects (:pull:`4902`).
