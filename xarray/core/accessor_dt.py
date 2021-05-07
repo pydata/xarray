@@ -4,7 +4,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
-from ..coding.cftimeindex import CFTimeIndex
+from ..coding.times import infer_calendar_name
 from .common import (
     _contains_datetime_like_objects,
     is_np_datetime_like,
@@ -458,11 +458,7 @@ class DatetimeAccessor(Properties):
 
         Only relevant for arrays of cftime objects, returns "proleptic_gregorian" for arrays of numpy objects.
         """
-        index = self._obj.variable._data.array
-        if isinstance(index, CFTimeIndex):
-            return index.calendar
-        # else : pd.datetimeIndex
-        return "proleptic_gregorian"
+        return infer_calendar_name(self._obj.data)
 
 
 class TimedeltaAccessor(Properties):

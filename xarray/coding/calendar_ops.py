@@ -4,12 +4,7 @@ import numpy as np
 
 from ..core.common import is_np_datetime_like
 from .cftime_offsets import date_range_like, get_date_type
-from .times import (
-    _is_numpy_compatible_time_range,
-    _is_standard_calendar,
-    cftime_to_nptime,
-    convert_cftimes,
-)
+from .times import _is_numpy_compatible_time_range, _is_standard_calendar, convert_times
 
 try:
     import cftime
@@ -31,7 +26,7 @@ def _days_in_year(year, calendar, use_cftime=True):
 
 def convert_calendar(
     ds,
-    target,
+    calendar,
     dim="time",
     align_on=None,
     missing=None,
@@ -112,7 +107,7 @@ def convert_calendar(
     # Arguments Checks for target
     if use_cftime is not True:
         # Then we check is pandas is possible.
-        if _is_standard_calendar(target):
+        if _is_standard_calendar(calendar):
             if _is_numpy_compatible_time_range(time):
                 # Conversion is possible with pandas, force False if it was None.
                 use_cftime = False
@@ -124,7 +119,7 @@ def convert_calendar(
         elif use_cftime is False:
             # target calendar is ctime-only.
             raise ValueError(
-                f"Calendar '{target}'' is only valid with cftime. Try using `use_cftime=True`."
+                f"Calendar '{calendar}' is only valid with cftime. Try using `use_cftime=True`."
             )
         else:
             use_cftime = True
@@ -133,17 +128,17 @@ def convert_calendar(
     source = time.dt.calendar
 
     src_cal = "default" if is_np_datetime_like(time.dtype) else source
-    tgt_cal = target if use_cftime else "default"
+    tgt_cal = calendar if use_cftime else "default"
     if src_cal == tgt_cal:
         return ds
 
-    if (source == "360_day" or target == "360_day") and align_on is None:
+    if (source == "360_day" or calendar == "360_day") and align_on is None:
         raise ValueError(
             "Argument `align_on` must be specified with either 'date' or "
             "'year' when converting to or from a '360_day' calendar."
         )
 
-    if source != "360_day" and target != "360_day":
+    if source != "360_day" and calendar != "360_day":
         align_on = "date"
 
     out = ds.copy()
@@ -155,7 +150,7 @@ def convert_calendar(
             # Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar
             yr = int(time.dt.year[0])
             return np.round(
-                _days_in_year(yr, target, use_cftime)
+                _days_in_year(yr, calendar, use_cftime)
                 * time.dt.dayofyear
                 / _days_in_year(yr, source, use_cftime)
             ).astype(int)
@@ -189,7 +184,7 @@ def convert_calendar(
         # Convert the source datetimes, but override the doy with our new doys
         out[dim] = DataArray(
             [
-                _convert_datetime(date, newdoy, target)
+                _convert_datetime(date, newdoy, calendar)
                 for date, newdoy in zip(time.variable._data.array, new_doy)
             ],
             dims=(dim,),
@@ -198,20 +193,18 @@ def convert_calendar(
         # Remove duplicate timestamps, happens when reducing the number of days
         out = out.isel({dim: np.unique(out[dim], return_index=True)[1]})
     elif align_on == "date":
-        if use_cftime:
-            # Use the Index version of the 1D array
-            new_times = convert_cftimes(
-                time.variable._data.array, get_date_type(target), missing=np.NaN
-            )
-        else:
-            new_times = cftime_to_nptime(time.values, raise_on_invalid=False)
+        new_times = convert_times(
+            time.variable._data.array,
+            get_date_type(calendar, use_cftime=use_cftime),
+            raise_on_invalid=False,
+        )
         out[dim] = new_times
 
         # Remove NaN that where put on invalid dates in target calendar
         out = out.where(out[dim].notnull(), drop=True)
 
     if missing is not None:
-        time_target = date_range_like(time, calendar=target, use_cftime=use_cftime)
+        time_target = date_range_like(time, calendar=calendar, use_cftime=use_cftime)
         out = out.reindex({dim: time_target}, fill_value=missing)
 
     # Copy attrs but remove `calendar` if still present.
@@ -231,9 +224,7 @@ def _datetime_to_decimal_year(times, calendar=None):
     calendar = calendar or times.dt.calendar
 
     if is_np_datetime_like(times.dtype):
-        times = times.copy(
-            data=convert_cftimes(times.values, get_date_type("standard"))
-        )
+        times = times.copy(data=convert_times(times.values, get_date_type("standard")))
 
     def _make_index(time):
         year = int(time.dt.year[0])

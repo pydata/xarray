@@ -30,7 +30,7 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.frequencies import infer_freq
 
-from . import requires_cftime_1_1_0
+from . import requires_cftime
 
 cftime = pytest.importorskip("cftime")
 
@@ -1278,7 +1278,7 @@ def test_date_range_errors():
         )
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize(
     "args,cal_src,cal_tgt,use_cftime,exp0",
     [

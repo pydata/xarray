@@ -55,6 +55,7 @@ from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import (
     _is_numpy_compatible_time_range,
     _is_standard_calendar,
+    convert_time_or_go_back,
     format_cftime_datetime,
 )
 
@@ -1190,44 +1191,8 @@ def date_range_like(source, calendar, use_cftime=None):
         return source
 
     date_type = get_date_type(calendar, use_cftime)
-
-    def _convert_or_go_back(date):
-        try:
-            return date_type(
-                date.year,
-                date.month,
-                date.day,
-                date.hour,
-                date.minute,
-                date.second,
-                date.microsecond,
-            )
-        except ValueError:
-            # Day is invalid, happens at the end of months, try again the day before
-            try:
-                return date_type(
-                    date.year,
-                    date.month,
-                    date.day - 1,
-                    date.hour,
-                    date.minute,
-                    date.second,
-                    date.microsecond,
-                )
-            except ValueError:
-                # Still invalid, happens for 360_day to non-leap february. Try again 2 days before date.
-                return date_type(
-                    date.year,
-                    date.month,
-                    date.day - 2,
-                    date.hour,
-                    date.minute,
-                    date.second,
-                    date.microsecond,
-                )
-
-    start = _convert_or_go_back(src_start)
-    end = _convert_or_go_back(src_end)
+    start = convert_time_or_go_back(src_start, date_type)
+    end = convert_time_or_go_back(src_end, date_type)
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
     if src_end.day == src_end.daysinmonth and isinstance(
