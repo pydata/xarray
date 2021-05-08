@@ -702,6 +702,7 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
         assert_identical(actual, expected)
 
 
+@pytest.mark.parametrize("variant", ("dim", "coord"))
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
@@ -756,17 +757,41 @@ def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
         ),
     ),
 )
-def test_keep_attrs_strategies_dataarray_variables(strategy, attrs, expected, error):
-    a = xr.DataArray(dims="x", data=[0, 1], coords={"u": ("x", [0, 1], attrs[0])})
-    b = xr.DataArray(dims="x", data=[0, 1], coords={"u": ("x", [0, 1], attrs[1])})
-    c = xr.DataArray(dims="x", data=[0, 1], coords={"u": ("x", [0, 1], attrs[2])})
+def test_keep_attrs_strategies_dataarray_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "dim": lambda attrs, default: (attrs, default),
+        "coord": lambda attrs, default: (default, attrs),
+    }.get(variant)
+
+    dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
+    a = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[0]), "u": ("x", [0, 1], coord_attrs[0])},
+    )
+    b = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[1]), "u": ("x", [0, 1], coord_attrs[1])},
+    )
+    c = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[2]), "u": ("x", [0, 1], coord_attrs[2])},
+    )
 
     if error:
         with pytest.raises(xr.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
+        dim_attrs, coord_attrs = compute_attrs(expected, {})
         expected = xr.DataArray(
-            dims="x", data=[0, 3], coords={"u": ("x", [0, 1], expected)}
+            dims="x",
+            data=[0, 3],
+            coords={"x": ("x", [0, 1], dim_attrs), "u": ("x", [0, 1], coord_attrs)},
         )
         actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
 
@@ -842,6 +867,7 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
         assert_identical(actual, expected)
 
 
+@pytest.mark.parametrize("variant", ("data", "dim", "coord"))
 @pytest.mark.parametrize(
     ["strategy", "attrs", "expected", "error"],
     (
@@ -896,23 +922,37 @@ def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
         ),
     ),
 )
-def test_keep_attrs_strategies_dataset_variables(strategy, attrs, expected, error):
+def test_keep_attrs_strategies_dataset_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "data": lambda attrs, default: (attrs, default, default),
+        "dim": lambda attrs, default: (default, attrs, default),
+        "coord": lambda attrs, default: (default, default, attrs),
+    }.get(variant)
+    data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
     a = xr.Dataset(
-        {"a": ("x", [0, 1], attrs[0])}, coords={"u": ("x", [0, 1], attrs[0])}
+        {"a": ("x", [], data_attrs[0])},
+        coords={"x": ("x", [], dim_attrs[0]), "u": ("x", [], coord_attrs[0])},
     )
     b = xr.Dataset(
-        {"a": ("x", [0, 1], attrs[1])}, coords={"u": ("x", [0, 1], attrs[1])}
+        {"a": ("x", [], data_attrs[1])},
+        coords={"x": ("x", [], dim_attrs[1]), "u": ("x", [], coord_attrs[1])},
     )
     c = xr.Dataset(
-        {"a": ("x", [0, 1], attrs[2])}, coords={"u": ("x", [0, 1], attrs[2])}
+        {"a": ("x", [], data_attrs[2])},
+        coords={"x": ("x", [], dim_attrs[2]), "u": ("x", [], coord_attrs[2])},
     )
 
     if error:
         with pytest.raises(xr.MergeError):
             apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
     else:
+        data_attrs, dim_attrs, coord_attrs = compute_attrs(expected, {})
         expected = xr.Dataset(
-            {"a": ("x", [0, 3], expected)}, coords={"u": ("x", [0, 1], expected)}
+            {"a": ("x", [], data_attrs)},
+            coords={"x": ("x", [], dim_attrs), "u": ("x", [], coord_attrs)},
         )
         actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
 
