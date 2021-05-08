@@ -822,7 +822,7 @@ def apply_ufunc(
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: Union[bool, str, None] = False,
+    keep_attrs: Union[bool, str] = None,
     kwargs: Mapping = None,
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
