@@ -981,7 +981,6 @@ def apply_ufunc(
     ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
     ...     return result[..., 0, 0]
     ...
-
     >>> def inner_product(a, b, dim):
     ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
@@ -1010,7 +1009,6 @@ def apply_ufunc(
     function that needs to be applied to vectors:
 
     >>> import scipy.stats
-
     >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
     ...     return apply_ufunc(
     ...         scipy.stats.wasserstein_distance,
