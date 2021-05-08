@@ -21,7 +21,9 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+  :py:func:`apply_ufunc` (:pull:`5041`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -66,9 +68,6 @@ New Features
 ~~~~~~~~~~~~
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
-  By `Justus Magin <https://github.com/keewis>`_.
-- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
-  :py:func:`apply_ufunc` (:pull:`5041`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Add :py:meth:`Dataset.to_pandas` (:pull:`5247`)
   By `Giacomo Caria <https://github.com/gcaria>`_.
