@@ -275,8 +275,7 @@ def apply_dataarray_vfunc(
 
     objs = _all_of_type(args, DataArray)
 
-    # TODO: fix the default value, now that keep_attrs always is a str
-    if keep_attrs in (False, "drop"):
+    if keep_attrs == "drop":
         name = result_name(args)
     else:
         first_obj = _first_of_type(args, DataArray)
@@ -417,7 +416,7 @@ def apply_dataset_vfunc(
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
-    keep_attrs=False,
+    keep_attrs="override",
 ):
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -627,7 +626,7 @@ def apply_variable_ufunc(
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
-    keep_attrs=False,
+    keep_attrs="override",
     dask_gufunc_kwargs=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects."""
