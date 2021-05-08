@@ -966,7 +966,7 @@ def apply_ufunc(
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
 
-    Compute the mean (``.mean``) over one dimension::
+    Compute the mean (``.mean``) over one dimension:
 
     >>> def mean(obj, dim):
     ...     # note: apply always moves core dimensions to the end
@@ -975,7 +975,7 @@ def apply_ufunc(
     ...     )
     ...
 
-    Inner product over a specific dimension (like ``xr.dot``)::
+    Inner product over a specific dimension (like ``xr.dot``):
 
     >>> def _inner(x, y):
     ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
@@ -986,7 +986,7 @@ def apply_ufunc(
     ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
 
-    Stack objects along a new dimension (like ``xr.concat``)::
+    Stack objects along a new dimension (like ``xr.concat``):
 
     >>> def stack(objects, dim, new_coord):
     ...     # note: this version does not stack coordinates
@@ -1007,7 +1007,7 @@ def apply_ufunc(
     function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
     terribly fast. Here we'll use it to calculate the distance between
     empirical samples from two probability distributions, using a scipy
-    function that needs to be applied to vectors::
+    function that needs to be applied to vectors:
 
     >>> import scipy.stats
 
