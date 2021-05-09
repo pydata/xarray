@@ -124,14 +124,14 @@ def plot(
     **kwargs,
 ):
     """
-    Default plot of DataArray using matplotlib.pyplot.
+    Default plot of DataArray using :mod:`matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
-    darray.squeeze()
+    the :meth:`squeezed DataArray <DataArray.squeeze>`.
 
     =============== ===========================
     Dimensions      Plotting function
-    --------------- ---------------------------
+    =============== ===========================
     1               :py:func:`xarray.plot.line`
     2               :py:func:`xarray.plot.pcolormesh`
     Anything else   :py:func:`xarray.plot.hist`
@@ -141,22 +141,23 @@ def plot(
     ----------
     darray : DataArray
     row : str, optional
-        If passed, make row faceted plots on this dimension name
+        If passed, make row faceted plots on this dimension name.
     col : str, optional
-        If passed, make column faceted plots on this dimension name
+        If passed, make column faceted plots on this dimension name.
     hue : str, optional
-        If passed, make faceted line plots with hue on this dimension name
+        If passed, make faceted line plots with hue on this dimension name.
     col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
+        Use together with ``col`` to wrap faceted plots.
     ax : matplotlib.axes.Axes, optional
-        If None, uses the current axis. Not applicable when using facets.
+        If ``None``, use the current axes. Not applicable when using facets.
     rtol : float, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots.
+        Dictionary of keyword arguments for Matplotlib subplots
+        (see :meth:`matplotlib.figure.Figure.add_subplot`).
     **kwargs : optional
-        Additional keyword arguments to matplotlib
+        Additional keyword arguments for Matplotlib.
 
     """
     darray = darray.squeeze().compute()
@@ -226,14 +227,14 @@ def line(
     **kwargs,
 ):
     """
-    Line plot of DataArray index against values
+    Line plot of DataArray values.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`.
 
     Parameters
     ----------
     darray : DataArray
-        Must be 1 dimensional
+        Must be one-dimensional (1D).
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -241,33 +242,35 @@ def line(
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
+        If provided, create a new figure for the plot with the given size:
+        height (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib axes object, optional
-        Axis on which to plot this figure. By default, use the current axis.
+        Axes on which to plot. By default, the current is used.
         Mutually exclusive with ``size`` and ``figsize``.
-    hue : string, optional
+    hue : str, optional
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
-    x, y : string, optional
-        Dimension, coordinate or MultiIndex level for x, y axis.
+    x, y : str, optional
+        Dimension, coordinate or multi-index level for x, y axis.
         Only one of these may be specified.
-        The other coordinate plots values from the DataArray on which this
+        The other will be used for values from the DataArray on which this
         plot method is called.
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the x- and y-axis respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for x- and y-axis.
+    xlim, ylim : array-like, optional
+        Specify x- and y-axis limits.
     xincrease : None, True, or False, optional
-        Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function.
+        Should the values on the x axis be increasing from left to right?
+        if ``None``, use the default for the Matplotlib function.
     yincrease : None, True, or False, optional
-        Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function.
+        Should the values on the y axis be increasing from top to bottom?
+        if ``None``, use the default for the Matplotlib function.
     add_legend : bool, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
-        Additional arguments to matplotlib.pyplot.plot
+        Additional arguments to :func:`matplotlib.pyplot.plot`.
     """
     # Handle facetgrids first
     if row or col:
