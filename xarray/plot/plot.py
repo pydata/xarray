@@ -893,26 +893,28 @@ def _plot2d(plotfunc):
 @_plot2d
 def imshow(x, y, z, ax, **kwargs):
     """
-    Image plot of 2d DataArray using matplotlib.pyplot
+    Image plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
+    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`.
 
     While other plot methods require the DataArray to be strictly
     two-dimensional, ``imshow`` also accepts a 3D array where some
     dimension can be interpreted as RGB or RGBA color channels and
     allows this dimension to be specified via the kwarg ``rgb=``.
 
-    Unlike matplotlib, Xarray can apply ``vmin`` and ``vmax`` to RGB or RGBA
-    data, by applying a single scaling factor and offset to all bands.
+    Unlike :func:`matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
+    for RGB(A) data,
+    xarray *will* use ``vmin`` and ``vmax`` for RGB(A) data
+    by applying a single scaling factor and offset to all bands.
     Passing  ``robust=True`` infers ``vmin`` and ``vmax``
     :ref:`in the usual way <robust-plotting>`.
 
     .. note::
         This function needs uniformly spaced coordinates to
-        properly label the axes. Call DataArray.plot() to check.
+        properly label the axes. Call :meth:`DataArray.plot` to check.
 
-    The pixels are centered on the coordinates values. Ie, if the coordinate
-    value is 3.2 then the pixels for those coordinates will be centered on 3.2.
+    The pixels are centered on the coordinates values. For example, if the coordinate
+    value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
 
     if x.ndim != 1 or y.ndim != 1:
@@ -968,9 +970,9 @@ def imshow(x, y, z, ax, **kwargs):
 @_plot2d
 def contour(x, y, z, ax, **kwargs):
     """
-    Contour plot of 2d DataArray
+    Contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contour`
+    Wraps :func:`matplotlib:matplotlib.pyplot.contour`.
     """
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
@@ -979,9 +981,9 @@ def contour(x, y, z, ax, **kwargs):
 @_plot2d
 def contourf(x, y, z, ax, **kwargs):
     """
-    Filled contour plot of 2d DataArray
+    Filled contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
+    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`.
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
@@ -990,9 +992,9 @@ def contourf(x, y, z, ax, **kwargs):
 @_plot2d
 def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
-    Pseudocolor plot of 2d DataArray
+    Pseudocolor plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`
+    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
 
     # decide on a default for infer_intervals (GH781)
@@ -1040,9 +1042,9 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 @_plot2d
 def surface(x, y, z, ax, **kwargs):
     """
-    Surface plot of 2d DataArray
+    Surface plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`
+    Wraps :func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`.
     """
     primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive
