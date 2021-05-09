@@ -239,11 +239,11 @@ def line(
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
         If provided, create a new figure for the plot with the given size:
-        height (in inches) of each plot. See also: ``aspect``.
+        *height* (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, the current is used.
         Mutually exclusive with ``size`` and ``figsize``.
@@ -391,30 +391,30 @@ def hist(
     **kwargs,
 ):
     """
-    Histogram of DataArray
+    Histogram of DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
+    Wraps :func:`matplotlib:matplotlib.pyplot.hist`.
 
-    Plots N dimensional arrays by first flattening the array.
+    Plots *N*-dimensional arrays by first flattening the array.
 
     Parameters
     ----------
     darray : DataArray
-        Can be any dimension
+        Can have any number of dimensions.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib.axes.Axes, optional
-        Axis on which to plot this figure. By default, use the current axis.
+        Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
-        Additional keyword arguments to matplotlib.pyplot.hist
+        Additional keyword arguments to :func:`matplotlib.pyplot.hist`.
 
     """
     ax = get_axis(figsize, size, aspect, ax)
