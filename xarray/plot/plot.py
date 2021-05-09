@@ -1070,28 +1070,21 @@ def _plot2d(plotfunc):
             darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb
         )
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = darray[xlab].values
-        yval = darray[ylab].values
+        xval = darray[xlab]
+        yval = darray[ylab]
 
-        # check if we need to broadcast one dimension
-        if xval.ndim < yval.ndim:
-            dims = darray[ylab].dims
-            if xval.shape[0] == yval.shape[0]:
-                xval = np.broadcast_to(xval[:, np.newaxis], yval.shape)
-            else:
-                xval = np.broadcast_to(xval[np.newaxis, :], yval.shape)
-
-        elif yval.ndim < xval.ndim:
-            dims = darray[xlab].dims
-            if yval.shape[0] == xval.shape[0]:
-                yval = np.broadcast_to(yval[:, np.newaxis], xval.shape)
-            else:
-                yval = np.broadcast_to(yval[np.newaxis, :], xval.shape)
-        elif xval.ndim == 2:
-            dims = darray[xlab].dims
+        if xval.ndim > 1 or yval.ndim > 1:
+            # Passing 2d coordinate values, need to ensure they are transposed the same
+            # way as darray
+            xval = xval.broadcast_like(darray)
+            yval = yval.broadcast_like(darray)
+            dims = darray.dims
         else:
-            dims = (darray[ylab].dims[0], darray[xlab].dims[0])
+            dims = (yval.dims[0], xval.dims[0])
+
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.values
+        yval = yval.values
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names

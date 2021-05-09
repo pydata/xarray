@@ -826,10 +826,9 @@
    backends.DummyFileManager.acquire_context
    backends.DummyFileManager.close
 
-   backends.common.BackendArray
-   backends.common.BackendEntrypoint
-   backends.common.BackendEntrypoint.guess_can_open
-   backends.common.BackendEntrypoint.open_dataset
+   backends.BackendArray
+   backends.BackendEntrypoint.guess_can_open
+   backends.BackendEntrypoint.open_dataset
 
    core.indexing.IndexingSupport
    core.indexing.explicit_indexing_adapter
