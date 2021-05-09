@@ -164,6 +164,7 @@ def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
     prioritized: Mapping[Hashable, MergeElement] = None,
     compat: str = "minimal",
+    combine_attrs="override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -222,6 +223,10 @@ def merge_collected(
                                 % (name, variable.attrs, other_variable.attrs)
                             )
                 merged_vars[name] = variable
+                merged_vars[name].attrs = merge_attrs(
+                    [var.attrs for var, _ in indexed_elements],
+                    combine_attrs=combine_attrs,
+                )
                 merged_indexes[name] = index
             else:
                 variables = [variable for variable, _ in elements_list]
@@ -232,6 +237,11 @@ def merge_collected(
                         # we need more than "minimal" compatibility (for which
                         # we drop conflicting coordinates)
                         raise
+
+                if name in merged_vars:
+                    merged_vars[name].attrs = merge_attrs(
+                        [var.attrs for var in variables], combine_attrs=combine_attrs
+                    )
 
     return merged_vars, merged_indexes
 
@@ -507,11 +517,11 @@ def merge_attrs(variable_attrs, combine_attrs):
         for attrs in variable_attrs[1:]:
             try:
                 result = compat_dict_union(result, attrs)
-            except ValueError:
+            except ValueError as e:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "
                     "the same. Merging %s with %s" % (str(result), str(attrs))
-                )
+                ) from e
         return result
     elif combine_attrs == "drop_conflicts":
         result = {}
@@ -613,7 +623,9 @@ def merge_core(
     collected = collect_variables_and_indexes(aligned)
 
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
-    variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
+    variables, out_indexes = merge_collected(
+        collected, prioritized, compat=compat, combine_attrs=combine_attrs
+    )
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
@@ -649,7 +661,7 @@ def merge(
     compat: str = "no_conflicts",
     join: str = "outer",
     fill_value: object = dtypes.NA,
-    combine_attrs: str = "drop",
+    combine_attrs: str = "override",
 ) -> "Dataset":
     """Merge any number of xarray objects into a single Dataset as variables.
 
@@ -688,7 +700,7 @@ def merge(
         variable names to fill values. Use a data array's name to
         refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "drop"
+                     "override"}, default: "override"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.

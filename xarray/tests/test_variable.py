@@ -1182,7 +1182,7 @@ class TestVariable(VariableSubclassobjects):
         assert isinstance(v._data, LazilyIndexedArray)
 
     def test_detect_indexer_type(self):
-        """ Tests indexer type was correctly detected. """
+        """Tests indexer type was correctly detected."""
         data = np.random.random((10, 11))
         v = Variable(["x", "y"], data)
 
@@ -2446,7 +2446,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 
 class TestBackendIndexing:
-    """    Make sure all the array wrappers can be indexed. """
+    """Make sure all the array wrappers can be indexed."""
 
     @pytest.fixture(autouse=True)
     def setUp(self):
