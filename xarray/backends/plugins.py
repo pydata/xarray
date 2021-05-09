@@ -5,7 +5,7 @@ import warnings
 
 import pkg_resources
 
-from .common import BACKEND_ENTRYPOINTS
+from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -113,10 +113,22 @@ def guess_engine(store_spec):
 
 
 def get_backend(engine):
-    """Select open_dataset method based on current engine"""
-    engines = list_engines()
-    if engine not in engines:
-        raise ValueError(
-            f"unrecognized engine {engine} must be one of: {list(engines)}"
+    """Select open_dataset method based on current engine."""
+    if isinstance(engine, str):
+        engines = list_engines()
+        if engine not in engines:
+            raise ValueError(
+                f"unrecognized engine {engine} must be one of: {list(engines)}"
+            )
+        backend = engines[engine]
+    elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
+        backend = engine
+    else:
+        raise TypeError(
+            (
+                "engine must be a string or a subclass of "
+                f"xarray.backends.BackendEntrypoint: {engine}"
+            )
         )
-    return engines[engine]
+
+    return backend

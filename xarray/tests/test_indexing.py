@@ -7,7 +7,7 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 
-from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
+from . import IndexerMaker, ReturnItem, assert_array_equal
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -37,7 +37,7 @@ class TestIndexers:
             j = indexing.expanded_indexer(i, x.ndim)
             assert_array_equal(x[i], x[j])
             assert_array_equal(self.set_to_zero(x, i), self.set_to_zero(x, j))
-        with raises_regex(IndexError, "too many indices"):
+        with pytest.raises(IndexError, match=r"too many indices"):
             indexing.expanded_indexer(arr[1, 2, 3], 2)
 
     def test_asarray_tuplesafe(self):
@@ -69,15 +69,15 @@ class TestIndexers:
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
         index = pd.Index([1, 2, 3])
-        with raises_regex(KeyError, "not all values found"):
+        with pytest.raises(KeyError, match=r"not all values found"):
             indexing.convert_label_indexer(index, [0])
         with pytest.raises(KeyError):
             indexing.convert_label_indexer(index, 0)
-        with raises_regex(ValueError, "does not have a MultiIndex"):
+        with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
             indexing.convert_label_indexer(index, {"one": 0})
 
         mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        with raises_regex(KeyError, "not all values found"):
+        with pytest.raises(KeyError, match=r"not all values found"):
             indexing.convert_label_indexer(mindex, [0])
         with pytest.raises(KeyError):
             indexing.convert_label_indexer(mindex, 0)
@@ -110,13 +110,13 @@ class TestIndexers:
         dim_indexers = indexing.get_dim_indexers(mdata, {"one": "a", "two": 1})
         assert dim_indexers == {"x": {"one": "a", "two": 1}}
 
-        with raises_regex(ValueError, "cannot combine"):
+        with pytest.raises(ValueError, match=r"cannot combine"):
             indexing.get_dim_indexers(mdata, {"x": "a", "two": 1})
 
-        with raises_regex(ValueError, "do not exist"):
+        with pytest.raises(ValueError, match=r"do not exist"):
             indexing.get_dim_indexers(mdata, {"y": "a"})
 
-        with raises_regex(ValueError, "do not exist"):
+        with pytest.raises(ValueError, match=r"do not exist"):
             indexing.get_dim_indexers(mdata, {"four": 1})
 
     def test_remap_label_indexers(self):
@@ -469,7 +469,7 @@ def test_vectorized_indexer():
     check_slice(indexing.VectorizedIndexer)
     check_array1d(indexing.VectorizedIndexer)
     check_array2d(indexing.VectorizedIndexer)
-    with raises_regex(ValueError, "numbers of dimensions"):
+    with pytest.raises(ValueError, match=r"numbers of dimensions"):
         indexing.VectorizedIndexer(
             (np.array(1, dtype=np.int64), np.arange(5, dtype=np.int64))
         )
@@ -734,7 +734,7 @@ def test_create_mask_dask():
 
 
 def test_create_mask_error():
-    with raises_regex(TypeError, "unexpected key type"):
+    with pytest.raises(TypeError, match=r"unexpected key type"):
         indexing.create_mask((1, 2), (3, 4))
 
 

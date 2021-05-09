@@ -6,7 +6,7 @@ How to add a new backend
 Adding a new backend for read support to Xarray does not require
 to integrate any code in Xarray; all you need to do is:
 
-- Create a class that inherits from Xarray :py:class:`~xarray.backends.common.BackendEntrypoint`
+- Create a class that inherits from Xarray :py:class:`~xarray.backends.BackendEntrypoint`
   and implements the method ``open_dataset`` see :ref:`RST backend_entrypoint`
 
 - Declare this class as an external plugin in your ``setup.py``, see :ref:`RST backend_registration`
@@ -161,8 +161,8 @@ guess_can_open
 ``guess_can_open`` is used to identify the proper engine to open your data
 file automatically in case the engine is not specified explicitly. If you are
 not interested in supporting this feature, you can skip this step since
-:py:class:`~xarray.backends.common.BackendEntrypoint` already provides a
-default :py:meth:`~xarray.backend.common.BackendEntrypoint.guess_can_open`
+:py:class:`~xarray.backends.BackendEntrypoint` already provides a
+default :py:meth:`~xarray.backends.BackendEntrypoint.guess_can_open`
 that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
@@ -299,7 +299,7 @@ Where:
 - :py:class:`~xarray.core.indexing.LazilyIndexedArray` is a class
   provided by Xarray that manages the lazy loading.
 - ``MyBackendArray`` shall be implemented by the backend and shall inherit
-  from :py:class:`~xarray.backends.common.BackendArray`.
+  from :py:class:`~xarray.backends.BackendArray`.
 
 BackendArray subclassing
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -455,5 +455,5 @@ In the first case Xarray uses the chunks size specified in
 ``preferred_chunks``.
 In the second case Xarray accommodates ideal chunk sizes, preserving if
 possible the "preferred_chunks". The ideal chunk size is computed using
-:py:func:`dask.core.normalize_chunks`, setting
+:py:func:`dask.array.core.normalize_chunks`, setting
 ``previous_chunks = preferred_chunks``.
