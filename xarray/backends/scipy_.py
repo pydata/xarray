@@ -11,6 +11,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
@@ -262,6 +263,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )

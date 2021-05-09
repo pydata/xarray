@@ -24,7 +24,6 @@ from . import (
     assert_array_equal,
     assert_equal,
     has_nc_time_axis,
-    raises_regex,
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
@@ -185,10 +184,10 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, "x must be one of None, 'dim_0'"):
+        with pytest.raises(ValueError, match=r"x must be one of None, 'dim_0'"):
             self.darray[:, 0, 0].plot(x="dim_1")
 
-        with raises_regex(TypeError, "complex128"):
+        with pytest.raises(TypeError, match=r"complex128"):
             (self.darray[:, 0, 0] + 1j).plot()
 
     def test_1d_bool(self):
@@ -204,14 +203,14 @@ class TestPlot(PlotTestCase):
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
 
-        with raises_regex(ValueError, "Cannot specify both"):
+        with pytest.raises(ValueError, match=r"Cannot specify both"):
             da.plot(x="z", y="z")
 
         error_msg = "must be one of None, 'z'"
-        with raises_regex(ValueError, f"x {error_msg}"):
+        with pytest.raises(ValueError, match=rf"x {error_msg}"):
             da.plot(x="f")
 
-        with raises_regex(ValueError, f"y {error_msg}"):
+        with pytest.raises(ValueError, match=rf"y {error_msg}"):
             da.plot(y="f")
 
     def test_multiindex_level_as_coord(self):
@@ -277,7 +276,7 @@ class TestPlot(PlotTestCase):
             da.plot(x="t", hue="wrong_coord")
 
     def test_2d_line(self):
-        with raises_regex(ValueError, "hue"):
+        with pytest.raises(ValueError, match=r"hue"):
             self.darray[:, :, 0].plot.line()
 
         self.darray[:, :, 0].plot.line(hue="dim_1")
@@ -286,7 +285,7 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x="dim_0", hue="dim_1")
         self.darray[:, :, 0].plot.line(y="dim_0", hue="dim_1")
 
-        with raises_regex(ValueError, "Cannot"):
+        with pytest.raises(ValueError, match=r"Cannot"):
             self.darray[:, :, 0].plot.line(x="dim_1", y="dim_0", hue="dim_1")
 
     def test_2d_line_accepts_legend_kw(self):
@@ -368,6 +367,34 @@ class TestPlot(PlotTestCase):
 
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
+
+    def test2d_1d_2d_coordinates_pcolormesh(self):
+        # Test with equal coordinates to catch bug from #5097
+        sz = 10
+        y2d, x2d = np.meshgrid(np.arange(sz), np.arange(sz))
+        a = DataArray(
+            easy_array((sz, sz)),
+            dims=["x", "y"],
+            coords={"x2d": (["x", "y"], x2d), "y2d": (["x", "y"], y2d)},
+        )
+
+        for x, y in [
+            ("x", "y"),
+            ("y", "x"),
+            ("x2d", "y"),
+            ("y", "x2d"),
+            ("x", "y2d"),
+            ("y2d", "x"),
+            ("x2d", "y2d"),
+            ("y2d", "x2d"),
+        ]:
+            p = a.plot.pcolormesh(x=x, y=y)
+            v = p.get_paths()[0].vertices
+
+            # Check all vertices are different, except last vertex which should be the
+            # same as the first
+            _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
+            assert np.all(unique_counts == 1)
 
     def test_contourf_cmap_set(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
@@ -518,10 +545,10 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             assert ax.has_data()
 
-        with raises_regex(ValueError, "[Ff]acet"):
+        with pytest.raises(ValueError, match=r"[Ff]acet"):
             d.plot(x="x", y="y", col="z", ax=plt.gca())
 
-        with raises_regex(ValueError, "[Ff]acet"):
+        with pytest.raises(ValueError, match=r"[Ff]acet"):
             d[0].plot(x="x", y="y", col="z", ax=plt.gca())
 
     @pytest.mark.slow
@@ -555,16 +582,16 @@ class TestPlot(PlotTestCase):
         self.darray.plot(size=5, aspect=2)
         assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
-        with raises_regex(ValueError, "cannot provide both"):
+        with pytest.raises(ValueError, match=r"cannot provide both"):
             self.darray.plot(ax=plt.gca(), figsize=(3, 4))
 
-        with raises_regex(ValueError, "cannot provide both"):
+        with pytest.raises(ValueError, match=r"cannot provide both"):
             self.darray.plot(size=5, figsize=(3, 4))
 
-        with raises_regex(ValueError, "cannot provide both"):
+        with pytest.raises(ValueError, match=r"cannot provide both"):
             self.darray.plot(size=5, ax=plt.gca())
 
-        with raises_regex(ValueError, "cannot provide `aspect`"):
+        with pytest.raises(ValueError, match=r"cannot provide `aspect`"):
             self.darray.plot(aspect=1)
 
     @pytest.mark.slow
@@ -578,7 +605,7 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             assert ax.has_data()
 
-        with raises_regex(ValueError, "[Ff]acet"):
+        with pytest.raises(ValueError, match=r"[Ff]acet"):
             d.plot(x="x", y="y", col="columns", ax=plt.gca())
 
     def test_coord_with_interval(self):
@@ -655,7 +682,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray([1, 2, 3], {"letter": ["a", "b", "c"]}, dims="letter")
-        with raises_regex(TypeError, r"[Pp]lot"):
+        with pytest.raises(TypeError, match=r"[Pp]lot"):
             a.plot.line()
 
     def test_primitive_returned(self):
@@ -1111,26 +1138,26 @@ class Common2dMixin:
         assert "y_long_name [y_units]" == plt.gca().get_ylabel()
 
     def test_1d_raises_valueerror(self):
-        with raises_regex(ValueError, r"DataArray must be 2d"):
+        with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(self.darray[0, :])
 
     def test_bool(self):
         xr.ones_like(self.darray, dtype=bool).plot()
 
     def test_complex_raises_typeerror(self):
-        with raises_regex(TypeError, "complex128"):
+        with pytest.raises(TypeError, match=r"complex128"):
             (self.darray + 1j).plot()
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
         if self.plotfunc.__name__ == "imshow":
             pytest.skip()
-        with raises_regex(ValueError, r"DataArray must be 2d"):
+        with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
-        with raises_regex(TypeError, r"[Pp]lot"):
+        with pytest.raises(TypeError, match=r"[Pp]lot"):
             self.plotfunc(a)
 
     def test_multiindex_raises_typeerror(self):
@@ -1140,7 +1167,7 @@ class Common2dMixin:
             coords=dict(x=("x", [0, 1, 2]), a=("y", [0, 1]), b=("y", [2, 3])),
         )
         a = a.set_index(y=("a", "b"))
-        with raises_regex(TypeError, r"[Pp]lot"):
+        with pytest.raises(TypeError, match=r"[Pp]lot"):
             self.plotfunc(a)
 
     def test_can_pass_in_axis(self):
@@ -1252,15 +1279,15 @@ class Common2dMixin:
 
     def test_bad_x_string_exception(self):
 
-        with raises_regex(ValueError, "x and y cannot be equal."):
+        with pytest.raises(ValueError, match=r"x and y cannot be equal."):
             self.plotmethod(x="y", y="y")
 
         error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
-        with raises_regex(ValueError, f"x {error_msg}"):
+        with pytest.raises(ValueError, match=rf"x {error_msg}"):
             self.plotmethod("not_a_real_dim", "y")
-        with raises_regex(ValueError, f"x {error_msg}"):
+        with pytest.raises(ValueError, match=rf"x {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
-        with raises_regex(ValueError, f"y {error_msg}"):
+        with pytest.raises(ValueError, match=rf"y {error_msg}"):
             self.plotmethod(y="not_a_real_dim")
         self.darray.coords["z"] = 100
 
@@ -1310,10 +1337,10 @@ class Common2dMixin:
             assert x == ax.get_xlabel()
             assert y == ax.get_ylabel()
 
-        with raises_regex(ValueError, "levels of the same MultiIndex"):
+        with pytest.raises(ValueError, match=r"levels of the same MultiIndex"):
             self.plotfunc(da, x="a", y="b")
 
-        with raises_regex(ValueError, "y must be one of None, 'a', 'b', 'x'"):
+        with pytest.raises(ValueError, match=r"y must be one of None, 'a', 'b', 'x'"):
             self.plotfunc(da, x="a", y="y")
 
     def test_default_title(self):
@@ -1608,7 +1635,7 @@ class TestContour(Common2dMixin, PlotTestCase):
             self.plotmethod(colors="k", cmap="RdBu")
 
     def list_of_colors_in_cmap_raises_error(self):
-        with raises_regex(ValueError, "list of colors"):
+        with pytest.raises(ValueError, match=r"list of colors"):
             self.plotmethod(cmap=["k", "b"])
 
     @pytest.mark.slow
@@ -1680,7 +1707,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
     @pytest.mark.slow
     def test_cannot_change_mpl_aspect(self):
 
-        with raises_regex(ValueError, "not available in xarray"):
+        with pytest.raises(ValueError, match=r"not available in xarray"):
             self.darray.plot.imshow(aspect="equal")
 
         # with numbers we fall back to fig control
@@ -1700,7 +1727,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
             self.plotmethod(cmap="husl")
 
     def test_2d_coord_names(self):
-        with raises_regex(ValueError, "requires 1D coordinates"):
+        with pytest.raises(ValueError, match=r"requires 1D coordinates"):
             self.plotmethod(x="x2d", y="y2d")
 
     def test_plot_rgb_image(self):
@@ -1861,7 +1888,7 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_norow_nocol_error(self):
-        with raises_regex(ValueError, r"[Rr]ow"):
+        with pytest.raises(ValueError, match=r"[Rr]ow"):
             xplt.FacetGrid(self.darray)
 
     @pytest.mark.slow
@@ -1882,7 +1909,7 @@ class TestFacetGrid(PlotTestCase):
     @pytest.mark.slow
     def test_nonunique_index_error(self):
         self.darray.coords["z"] = [0.1, 0.2, 0.2]
-        with raises_regex(ValueError, r"[Uu]nique"):
+        with pytest.raises(ValueError, match=r"[Uu]nique"):
             xplt.FacetGrid(self.darray, col="z")
 
     @pytest.mark.slow
@@ -1949,10 +1976,10 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col="z", figsize=(9, 4))
         assert_array_equal(g.fig.get_size_inches(), (9, 4))
 
-        with raises_regex(ValueError, "cannot provide both"):
+        with pytest.raises(ValueError, match=r"cannot provide both"):
             g = xplt.plot(self.darray, row=2, col="z", figsize=(6, 4), size=6)
 
-        with raises_regex(ValueError, "Can't use"):
+        with pytest.raises(ValueError, match=r"Can't use"):
             g = xplt.plot(self.darray, row=2, col="z", ax=plt.gca(), size=6)
 
     @pytest.mark.slow
@@ -2187,10 +2214,10 @@ class TestDatasetQuiverPlots(PlotTestCase):
         with figure_context():
             hdl = self.ds.isel(row=0, col=0).plot.quiver(x="x", y="y", u="u", v="v")
             assert isinstance(hdl, mpl.quiver.Quiver)
-        with raises_regex(ValueError, "specify x, y, u, v"):
+        with pytest.raises(ValueError, match=r"specify x, y, u, v"):
             self.ds.isel(row=0, col=0).plot.quiver(x="x", y="y", u="u")
 
-        with raises_regex(ValueError, "hue_style"):
+        with pytest.raises(ValueError, match=r"hue_style"):
             self.ds.isel(row=0, col=0).plot.quiver(
                 x="x", y="y", u="u", v="v", hue="mag", hue_style="discrete"
             )
@@ -2217,7 +2244,7 @@ class TestDatasetQuiverPlots(PlotTestCase):
                 add_guide=False,
             )
             assert fg.quiverkey is None
-        with raises_regex(ValueError, "Please provide scale"):
+        with pytest.raises(ValueError, match=r"Please provide scale"):
             self.ds.plot.quiver(x="x", y="y", u="u", v="v", row="row", col="col")
 
 
@@ -2247,10 +2274,10 @@ class TestDatasetStreamplotPlots(PlotTestCase):
         with figure_context():
             hdl = self.ds.isel(row=0, col=0).plot.streamplot(x="x", y="y", u="u", v="v")
             assert isinstance(hdl, mpl.collections.LineCollection)
-        with raises_regex(ValueError, "specify x, y, u, v"):
+        with pytest.raises(ValueError, match=r"specify x, y, u, v"):
             self.ds.isel(row=0, col=0).plot.streamplot(x="x", y="y", u="u")
 
-        with raises_regex(ValueError, "hue_style"):
+        with pytest.raises(ValueError, match=r"hue_style"):
             self.ds.isel(row=0, col=0).plot.streamplot(
                 x="x", y="y", u="u", v="v", hue="mag", hue_style="discrete"
             )
@@ -2403,7 +2430,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_scatter(self, x, y, hue, markersize):
         self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
 
-        with raises_regex(ValueError, "u, v"):
+        with pytest.raises(ValueError, match=r"u, v"):
             self.ds.plot.scatter(x, y, u="col", v="row")
 
     def test_non_numeric_legend(self):
@@ -2505,7 +2532,7 @@ class TestNcAxisNotInstalled(PlotTestCase):
         self.darray = darray
 
     def test_ncaxis_notinstalled_line_plot(self):
-        with raises_regex(ImportError, "optional `nc-time-axis`"):
+        with pytest.raises(ImportError, match=r"optional `nc-time-axis`"):
             self.darray.plot.line()
 
 
