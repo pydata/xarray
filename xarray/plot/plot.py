@@ -256,7 +256,7 @@ def line(
         The other will be used for values from the DataArray on which this
         plot method is called.
     xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
-        Specifies scaling for the *x*- and *y*-axis respectively.
+        Specifies scaling for the *x*- and *y*-axis, respectively.
     xticks, yticks : array-like, optional
         Specify tick locations for *x*- and *y*-axis.
     xlim, ylim : array-like, optional
@@ -341,16 +341,16 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
 
     Parameters
     ----------
-    where : {"pre", "post", "mid"}, default: "pre"
+    where : {'pre', 'post', 'mid'}, default: 'pre'
         Define where the steps should be placed:
 
-        - ``"pre"``: The y value is continued constantly to the left from
+        - ``'pre'``: The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - ``"post"``: The y value is continued constantly to the right from
+        - ``'post'``: The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - ``"mid"``: Steps occur half-way between the *x* positions.
+        - ``'mid'``: Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
         :py:class:`pandas.Interval` values, e.g. as a result of
@@ -485,100 +485,108 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional, unless creating faceted plots
-    x : string, optional
-        Coordinate for x axis. If None use darray.dims[1]
-    y : string, optional
-        Coordinate for y axis. If None use darray.dims[0]
+        Must be two-dimensional, unless creating faceted plots.
+    x : str, optional
+        Coordinate for *x* axis. If ``None``, use ``darray.dims[1]``.
+    y : str, optional
+        Coordinate for *y* axis. If ``None``, use ``darray.dims[0]``.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib axes object, optional
-        Axis on which to plot this figure. By default, use the current axis.
+        Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     row : string, optional
-        If passed, make row faceted plots on this dimension name
+        If passed, make row faceted plots on this dimension name.
     col : string, optional
-        If passed, make column faceted plots on this dimension name
+        If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
+        Use together with ``col`` to wrap faceted plots.
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the *x*- and *y*-axis, respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for *x*- and *y*-axis.
+    xlim, ylim : array-like, optional
+        Specify *x*- and *y*-axis limits.
     xincrease : None, True, or False, optional
-        Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function.
+        Should the values on the *x* axis be increasing from left to right?
+        If ``None``, use the default for the Matplotlib function.
     yincrease : None, True, or False, optional
-        Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function.
+        Should the values on the *y* axis be increasing from top to bottom?
+        If ``None``, use the default for the Matplotlib function.
     add_colorbar : bool, optional
-        Adds colorbar to axis
+        Add colorbar to axes.
     add_labels : bool, optional
-        Use xarray metadata to label axes
-    norm : ``matplotlib.colors.Normalize`` instance, optional
-        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
-        must be None.
-    vmin, vmax : floats, optional
+        Use xarray metadata to label axes.
+    norm : matplotlib.colors.Normalize, optional
+        If the ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
+    vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
         setting one of these values will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : matplotlib colormap name or object, optional
+    cmap : str or colormap, optional
         The mapping from data values to color space. If not provided, this
-        will be either be ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
-        color palette. If ``cmap`` is seaborn color palette and the plot type
-        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
-    colors : discrete colors to plot, optional
-        A single color or a list of colors. If the plot type is not ``contour``
-        or ``contourf``, the ``levels`` argument is required.
+        will be either be ``'viridis'`` (if the function infers a sequential
+        dataset) or ``'RdBu_r'`` (if the function infers a diverging dataset).
+        See the :doc:`colormap reference <matplotlib:tutorials/colors/colormaps>`
+        for options.
+
+        If *seaborn* is installed, ``cmap`` may also be a
+        `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
+        Note: if ``cmap`` is a seaborn color palette and the plot type
+        is not ``'contour'`` or ``'contourf'``, ``levels`` must also be specified.
+    colors : str or array-like, optional
+        A single color or a list of colors. If the plot type is not ``'contour'``
+        or ``'contourf'``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
         diverging colormap.
     robust : bool, optional
-        If True and ``vmin`` or ``vmax`` are absent, the colormap range is
+        If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {"neither", "both", "min", "max"}, optional
+    extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
-        provided, extend is inferred from vmin, vmax and the data limits.
-    levels : int or list-like object, optional
-        Split the colormap (cmap) into discrete color intervals. If an integer
+        provided, extend is inferred from ``vmin``, ``vmax`` and the data limits.
+    levels : int or array-like, optional
+        Split the colormap (``cmap``) into discrete color intervals. If an integer
         is provided, "nice" levels are chosen based on the data range: this can
         imply that the final number of levels is not exactly the expected one.
         Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
         setting ``levels=np.linspace(vmin, vmax, N)``.
     infer_intervals : bool, optional
-        Only applies to pcolormesh. If True, the coordinate intervals are
-        passed to pcolormesh. If False, the original coordinates are used
+        Only applies to pcolormesh. If ``True``, the coordinate intervals are
+        passed to pcolormesh. If ``False``, the original coordinates are used
         (this can be useful for certain map projections). The default is to
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only used
-        for 2D and FacetGrid plots.
-    cbar_ax : matplotlib Axes, optional
+        Dictionary of keyword arguments for Matplotlib subplots. Only used
+        for 2D and faceted plots.
+        (see :meth:`matplotlib.figure.Figure.add_subplot`).
+    cbar_ax : matplotlib axes object, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
-        Dictionary of keyword arguments to pass to the colorbar.
+        Dictionary of keyword arguments to pass to the colorbar
+        (see :meth:`matplotlib.figure.Figure.colorbar`).
     **kwargs : optional
-        Additional arguments to wrapped matplotlib function
+        Additional arguments to wrapped Matplotlib function.
 
     Returns
     -------
     artist :
-        The same type of primitive artist that the wrapped matplotlib
-        function returns
+        The same type of primitive artist that the wrapped Matplotlib
+        function returns.
     """
 
     # Build on the original docstring
