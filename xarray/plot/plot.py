@@ -251,24 +251,24 @@ def line(
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : str, optional
-        Dimension, coordinate or multi-index level for x, y axis.
+        Dimension, coordinate or multi-index level for *x*, *y* axis.
         Only one of these may be specified.
         The other will be used for values from the DataArray on which this
         plot method is called.
     xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
-        Specifies scaling for the x- and y-axis respectively.
+        Specifies scaling for the *x*- and *y*-axis respectively.
     xticks, yticks : array-like, optional
-        Specify tick locations for x- and y-axis.
+        Specify tick locations for *x*- and *y*-axis.
     xlim, ylim : array-like, optional
-        Specify x- and y-axis limits.
+        Specify *x*- and *y*-axis limits.
     xincrease : None, True, or False, optional
-        Should the values on the x axis be increasing from left to right?
+        Should the values on the *x* axis be increasing from left to right?
         if ``None``, use the default for the Matplotlib function.
     yincrease : None, True, or False, optional
-        Should the values on the y axis be increasing from top to bottom?
+        Should the values on the *y* axis be increasing from top to bottom?
         if ``None``, use the default for the Matplotlib function.
     add_legend : bool, optional
-        Add legend with y axis coordinates (2D inputs only).
+        Add legend with *y* axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to :func:`matplotlib.pyplot.plot`.
     """
@@ -335,29 +335,29 @@ def line(
 
 def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
-    Step plot of DataArray index against values
+    Step plot of DataArray values.
 
-    Similar to :func:`matplotlib:matplotlib.pyplot.step`
+    Similar to :func:`matplotlib:matplotlib.pyplot.step`.
 
     Parameters
     ----------
     where : {"pre", "post", "mid"}, default: "pre"
         Define where the steps should be placed:
 
-        - "pre": The y value is continued constantly to the left from
+        - ``"pre"``: The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - "post": The y value is continued constantly to the right from
+        - ``"post"``: The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - "mid": Steps occur half-way between the *x* positions.
+        - ``"mid"``: Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
-        :py:func:`pandas.Interval` values, e.g. as a result of
+        :py:class:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
     *args, **kwargs : optional
-        Additional arguments following :py:func:`xarray.plot.line`
+        Additional arguments for :py:func:`xarray.plot.line`.
     """
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
