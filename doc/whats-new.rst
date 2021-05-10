@@ -21,6 +21,9 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:func:`call_on_dataset` as a way to apply functions expecting
+  :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes
@@ -124,9 +127,6 @@ New Features
   :py:class:`~core.groupby.DataArrayGroupBy`, inspired by pandas'
   :py:meth:`~pandas.core.groupby.GroupBy.get_group`.
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- Add :py:func:`call_on_dataset` as a way to apply functions expecting
-  :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
-  By `Justus Magin <https://github.com/keewis>`_.
 - Switch the tutorial functions to use `pooch <https://github.com/fatiando/pooch>`_
   (which is now a optional dependency) and add :py:func:`tutorial.open_rasterio` as a
   way to open example rasterio files (:issue:`3986`, :pull:`4102`, :pull:`5074`).
