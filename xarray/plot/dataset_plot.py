@@ -217,7 +217,7 @@ def _dsplot(plotfunc):
         smaller arrows
     add_guide: bool, optional
         Add a guide that depends on ``hue_style``:
-        
+
         - for ``'discrete'``, build a legend.
           This is the default for non-numeric ``hue`` variables.
         - for ``'continuous'``, build a colorbar
@@ -532,7 +532,7 @@ def scatter(ds, x, y, u, v, **kwargs):
 @_dsplot
 def quiver(ds, x, y, u, v, **kwargs):
     """Quiver plot of Dataset variables.
-    
+
     Wraps :func:`matplotlib.pyplot.quiver`.
     """
     import matplotlib as mpl
@@ -565,7 +565,7 @@ def quiver(ds, x, y, u, v, **kwargs):
 @_dsplot
 def streamplot(ds, x, y, u, v, **kwargs):
     """Plot streamlines of Dataset variables.
-    
+
     Wraps :func:`matplotlib.pyplot.streamplot`.
     """
     import matplotlib as mpl
