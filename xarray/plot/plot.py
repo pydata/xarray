@@ -545,8 +545,8 @@ def _plot2d(plotfunc):
         `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
         Note: if ``cmap`` is a seaborn color palette and the plot type
         is not ``'contour'`` or ``'contourf'``, ``levels`` must also be specified.
-    colors : str or array-like, optional
-        A single color or a list of colors. If the plot type is not ``'contour'``
+    colors : str or array-like of color-like, optional
+        A single color or a sequence of colors. If the plot type is not ``'contour'``
         or ``'contourf'``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
@@ -557,7 +557,7 @@ def _plot2d(plotfunc):
         computed with 2nd and 98th percentiles instead of the extreme values.
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
-        provided, extend is inferred from ``vmin``, ``vmax`` and the data limits.
+        provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
     levels : int or array-like, optional
         Split the colormap (``cmap``) into discrete color intervals. If an integer
         is provided, "nice" levels are chosen based on the data range: this can
@@ -580,7 +580,7 @@ def _plot2d(plotfunc):
         Dictionary of keyword arguments to pass to the colorbar
         (see :meth:`matplotlib.figure.Figure.colorbar`).
     **kwargs : optional
-        Additional arguments to wrapped Matplotlib function.
+        Additional keyword arguments to wrapped Matplotlib function.
 
     Returns
     -------
