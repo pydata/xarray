@@ -1151,7 +1151,7 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def call_on_dataset(func, obj, *args, **kwargs):
+def call_on_dataset(func, obj, name, *args, **kwargs):
     """apply a function expecting a Dataset to a xarray object
 
     Parameters
@@ -1161,6 +1161,9 @@ def call_on_dataset(func, obj, *args, **kwargs):
     obj : DataArray or Dataset
         The dataset to apply ``func`` to. If a ``DataArray``, convert it to a single
         variable ``Dataset`` first.
+    name : hashable
+        A intermediate name to use as the name of the data variable. If the DataArray
+        already had a name, it will be restored after converting back.
     *args, **kwargs
         Additional arguments to ``func``
 
@@ -1168,12 +1171,6 @@ def call_on_dataset(func, obj, *args, **kwargs):
     -------
     DataArray or Dataset
         The result of ``func(obj, *args, **kwargs)`` with the same type as ``obj``.
-
-    Notes
-    -----
-    DataArray objects without a name (or named ``None``) will be renamed to
-    ``"<this-array>"`` before being passed to ``func``. The empty name will be restored
-    for the result of the call.
 
     See Also
     --------
@@ -1218,28 +1215,24 @@ def call_on_dataset(func, obj, *args, **kwargs):
         b        (x) float64 -1.5 1.5
     Attributes:
         attr:     value
-    >>> xr.call_on_dataset(f, ds.a)
+    >>> xr.call_on_dataset(f, ds.a, name="<this-array>")
     <xarray.DataArray 'a' (x: 2)>
     array([1.5, 2. ])
     Coordinates:
       * x        (x) int64 0 1
     """
-    from .dataarray import _THIS_ARRAY, DataArray
+    from .dataarray import DataArray
     from .parallel import dataarray_to_dataset, dataset_to_dataarray
 
     if isinstance(obj, DataArray):
-        ds = dataarray_to_dataset(obj)
-        if obj.name is None:
-            ds = ds.rename({_THIS_ARRAY: "<this-array>"})
+        ds = dataarray_to_dataset(obj.rename(name))
     else:
         ds = obj
 
     result = func(ds, *args, **kwargs)
 
     if isinstance(obj, DataArray):
-        if obj.name is None:
-            result = result.rename({"<this-array>": None})
-        result = dataset_to_dataarray(result)
+        result = dataset_to_dataarray(result).rename({name: obj.name})
 
     return result
 
