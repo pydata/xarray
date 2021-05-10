@@ -31,10 +31,9 @@ class Index:
     __slots__ = ("coord_names",)
 
     def __init__(self, coord_names: Union[Hashable, Iterable[Hashable]]):
-        if isinstance(coord_names, Iterable) and not isinstance(coord_names, str):
-            self.coord_names = tuple(coord_names)
-        else:
-            self.coord_names = tuple([coord_names])
+        if isinstance(coord_names, Hashable):
+            coord_names = (coord_names,)
+        self.coord_names = tuple(coord_names)
 
     @classmethod
     def from_variables(
