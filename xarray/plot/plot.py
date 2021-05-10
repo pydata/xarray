@@ -148,7 +148,7 @@ def plot(
         If passed, make faceted line plots with hue on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
-    ax : matplotlib.axes.Axes, optional
+    ax : matplotlib axes object, optional
         If ``None``, use the current axes. Not applicable when using facets.
     rtol : float, optional
         Relative tolerance used to determine if the indexes
@@ -410,7 +410,7 @@ def hist(
     size : scalar, optional
         If provided, create a new figure for the plot with the given size:
         *height* (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib.axes.Axes, optional
+    ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
