@@ -1393,7 +1393,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if DASK_VERSION >= "2021.04.0+17":
+        if DASK_VERSION >= "2021.04.1":
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):

@@ -3101,6 +3101,11 @@ class TestDataArray:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            array.resample(time="1D", keep_attrs=True)
+
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -7329,6 +7334,11 @@ def test_rolling_exp_keep_attrs(da):
     with set_options(keep_attrs=True):
         result = da.rolling_exp(time=10).mean(keep_attrs=False)
     assert result.attrs == {}
+
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        da.rolling_exp(time=10, keep_attrs=True)
 
 
 def test_no_dict():
