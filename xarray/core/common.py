@@ -23,7 +23,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .arithmetic import SupportsArithmetic
 from .npcompat import DTypeLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -121,7 +120,7 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray(ImplementsArrayReduce):
+class AbstractArray:
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
@@ -202,7 +201,7 @@ class AttrAccessMixin:
 
     __slots__ = ()
 
-    def __init_subclass__(cls):
+    def __init_subclass__(cls, **kwargs):
         """Verify that all subclasses explicitly define ``__slots__``. If they don't,
         raise error in the core xarray module and a FutureWarning in third-party
         extensions.
@@ -218,6 +217,7 @@ class AttrAccessMixin:
                 FutureWarning,
                 stacklevel=2,
             )
+        super().__init_subclass__(**kwargs)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
@@ -338,14 +338,12 @@ def get_squeeze_dims(
     return dim
 
 
-class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
+class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     _close: Optional[Callable[[], None]]
 
     __slots__ = ("_close",)
-
-    _rolling_exp_cls = RollingExp
 
     def squeeze(
         self,
@@ -379,6 +377,28 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
+
+    def clip(self, min=None, max=None, *, keep_attrs: bool = None):
+        """
+        Return an array whose values are limited to ``[min, max]``.
+        At least one of max or min must be given.
+
+        Refer to `numpy.clip` for full documentation.
+
+        See Also
+        --------
+        numpy.clip : equivalent function
+        """
+        from .computation import apply_ufunc
+
+        if keep_attrs is None:
+            # When this was a unary func, the default was True, so retaining the
+            # default.
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return apply_ufunc(
+            np.clip, self, min, max, keep_attrs=keep_attrs, dask="allowed"
+        )
 
     def get_index(self, key: Hashable) -> pd.Index:
         """Get an index for a dimension, with fall-back to a default RangeIndex"""
@@ -490,9 +510,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        args
+        *args
             positional arguments passed into ``attrs.update``.
-        kwargs
+        **kwargs
             keyword arguments passed into ``attrs.update``.
 
         Returns
@@ -527,9 +547,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Alternatively a ``(callable, data_keyword)`` tuple where
             ``data_keyword`` is a string indicating the keyword of
             ``callable`` that expects the xarray object.
-        args
+        *args
             positional arguments passed into ``func``.
-        kwargs
+        **kwargs
             a dictionary of keyword arguments passed into ``func``.
 
         Returns
@@ -906,9 +926,17 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
+
+        if "keep_attrs" in window_kwargs:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
+                " ``keep_attrs`` directly to the applied function, e.g."
+                " ``rolling_exp(...).mean(keep_attrs=False)``."
+            )
+
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return self._rolling_exp_cls(self, window, window_type)
+        return RollingExp(self, window, window_type)
 
     def coarsen(
         self,
@@ -934,10 +962,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         coord_func : str or mapping of hashable to str, default: "mean"
             function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -981,8 +1005,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
@@ -1031,10 +1053,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -1109,8 +1127,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
+                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
+                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
+            )
 
         # note: the second argument (now 'skipna') use to be 'dim'
         if (

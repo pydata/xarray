@@ -161,13 +161,14 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         )
         self._update_coords(coords, indexes)
 
-    def _merge_raw(self, other):
+    def _merge_raw(self, other, reflexive):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
             indexes = dict(self.indexes)
         else:
-            variables, indexes = merge_coordinates_without_align([self, other])
+            coord_list = [self, other] if not reflexive else [other, self]
+            variables, indexes = merge_coordinates_without_align(coord_list)
         return variables, indexes
 
     @contextmanager
@@ -295,7 +296,7 @@ class DatasetCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._data._ipython_key_completions_()
@@ -365,7 +366,7 @@ class DataArrayCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
 

@@ -45,6 +45,17 @@ def test_remove_duplicates(dummy_duplicated_entrypoints):
     assert len(entrypoints) == 2
 
 
+def test_broken_plugin():
+    broken_backend = pkg_resources.EntryPoint.parse(
+        "broken_backend = xarray.tests.test_plugins:backend_1"
+    )
+    with pytest.warns(RuntimeWarning) as record:
+        _ = plugins.build_engines([broken_backend])
+    assert len(record) == 1
+    message = str(record[0].message)
+    assert "Engine 'broken_backend'" in message
+
+
 def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
 
     with pytest.warns(RuntimeWarning) as record:

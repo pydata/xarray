@@ -11,6 +11,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .locks import SerializableLock, ensure_lock
 from .store import StoreBackendEntrypoint
@@ -22,9 +23,10 @@ try:
 except ModuleNotFoundError:
     has_cfgrib = False
 # cfgrib throws a RuntimeError if eccodes is not installed
-except RuntimeError:
+except (ImportError, RuntimeError):
     warnings.warn(
-        "Failed to load cfgrib - most likely eccodes is missing. Try `import cfgrib` to get the error message"
+        "Failed to load cfgrib - most likely there is a problem accessing the ecCodes library. "
+        "Try `import cfgrib` to get the full error message"
     )
     has_cfgrib = False
 
@@ -120,6 +122,7 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         time_dims=("time", "step"),
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = CfGribDataStore(
             filename_or_obj,
             indexpath=indexpath,

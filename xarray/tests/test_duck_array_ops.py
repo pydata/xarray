@@ -20,13 +20,14 @@ from xarray.core.duck_array_ops import (
     mean,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
+    push,
     py_timedelta_to_float,
     stack,
     timedelta_to_numeric,
     where,
 )
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal
+from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from . import (
     arm_xfail,
@@ -34,7 +35,7 @@ from . import (
     has_dask,
     has_scipy,
     raise_if_dask_computes,
-    raises_regex,
+    requires_bottleneck,
     requires_cftime,
     requires_dask,
 )
@@ -72,7 +73,7 @@ class TestOps:
         actual = first(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             first(self.x, 3)
 
     def test_last(self):
@@ -93,7 +94,7 @@ class TestOps:
         actual = last(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             last(self.x, 3)
 
     def test_count(self):
@@ -372,6 +373,17 @@ def test_cftime_datetime_mean_dask_error():
     da = DataArray(times, dims=["time"]).chunk()
     with pytest.raises(NotImplementedError):
         da.mean()
+
+
+def test_empty_axis_dtype():
+    ds = Dataset()
+    ds["pos"] = [1, 2, 3]
+    ds["data"] = ("pos", "time"), [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+    ds["var"] = "pos", [2, 3, 4]
+    assert_identical(ds.mean(dim="time")["var"], ds["var"])
+    assert_identical(ds.max(dim="time")["var"], ds["var"])
+    assert_identical(ds.min(dim="time")["var"], ds["var"])
+    assert_identical(ds.sum(dim="time")["var"], ds["var"])
 
 
 @pytest.mark.parametrize("dim_num", [1, 2])
@@ -859,3 +871,26 @@ def test_least_squares(use_dask, skipna):
 
     np.testing.assert_allclose(coeffs, [1.5, 1.25])
     np.testing.assert_allclose(residuals, [2.0])
+
+
+@requires_dask
+@requires_bottleneck
+def test_push_dask():
+    import bottleneck
+    import dask.array
+
+    array = np.array([np.nan, np.nan, np.nan, 1, 2, 3, np.nan, np.nan, 4, 5, np.nan, 6])
+    expected = bottleneck.push(array, axis=0)
+    for c in range(1, 11):
+        with raise_if_dask_computes():
+            actual = push(dask.array.from_array(array, chunks=c), axis=0, n=None)
+        np.testing.assert_equal(actual, expected)
+
+    # some chunks of size-1 with NaN
+    with raise_if_dask_computes():
+        actual = push(
+            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+            axis=0,
+            n=None,
+        )
+    np.testing.assert_equal(actual, expected)

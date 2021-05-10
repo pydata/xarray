@@ -1,4 +1,5 @@
 import os
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -28,7 +29,7 @@ from ..core.dataarray import DataArray
 from ..core.dataset import Dataset, _get_chunk, _maybe_chunk
 from ..core.utils import is_remote_uri
 from . import plugins
-from .common import AbstractDataStore, ArrayWriter
+from .common import AbstractDataStore, ArrayWriter, _normalize_path
 from .locks import _get_scheduler
 
 if TYPE_CHECKING:
@@ -107,16 +108,6 @@ def _get_default_engine(path: str, allow_remote: bool = False):
     else:
         engine = _get_default_engine_netcdf()
     return engine
-
-
-def _normalize_path(path):
-    if isinstance(path, Path):
-        path = str(path)
-
-    if isinstance(path, str) and not is_remote_uri(path):
-        path = os.path.abspath(os.path.expanduser(path))
-
-    return path
 
 
 def _validate_dataset_names(dataset):
@@ -222,7 +213,7 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 
 def _finalize_store(write, store):
-    """ Finalize this store by explicitly syncing and closing"""
+    """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
 
@@ -375,10 +366,11 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr"} or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        "netcdf4".
+        "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
+        can also be used.
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
@@ -457,7 +449,7 @@ def open_dataset(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -641,7 +633,7 @@ def open_dataarray(
           relevant when using dask or another form of parallelism. By default,
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
-          "pynio", "pseudonetcdf", "cfgrib".
+          "scipy", "pynio", "pseudonetcdf", "cfgrib".
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -747,7 +739,7 @@ def open_mfdataset(
         see the full documentation for more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
-        if ``combine='by_coords'``, and if any of the dimensions along which you want to
+        if ``combine='nested'``, and if any of the dimensions along which you want to
         concatenate is not a dimension in the original datasets, e.g., if you want to
         stack a collection of 2D arrays along a third dimension. Set
         ``concat_dim=[..., None, ...]`` explicitly to disable concatenation along a
@@ -886,14 +878,28 @@ def open_mfdataset(
     if not paths:
         raise OSError("no files to open")
 
-    # If combine='by_coords' then this is unnecessary, but quick.
-    # If combine='nested' then this creates a flat list which is easier to
-    # iterate over, while saving the originally-supplied structure as "ids"
     if combine == "nested":
         if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
             concat_dim = [concat_dim]
-    combined_ids_paths = _infer_concat_order_from_positions(paths)
-    ids, paths = (list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
+
+        # This creates a flat list which is easier to iterate over, whilst
+        # encoding the originally-supplied structure as "ids".
+        # The "ids" are not used at all if combine='by_coords`.
+        combined_ids_paths = _infer_concat_order_from_positions(paths)
+        ids, paths = (
+            list(combined_ids_paths.keys()),
+            list(combined_ids_paths.values()),
+        )
+
+    # TODO raise an error instead of a warning after v0.19
+    elif combine == "by_coords" and concat_dim is not None:
+        warnings.warn(
+            "When combine='by_coords', passing a value for `concat_dim` has no "
+            "effect. This combination will raise an error in future. To manually "
+            "combine along a specific dimension you should instead specify "
+            "combine='nested' along with a value for `concat_dim`.",
+            DeprecationWarning,
+        )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
 
@@ -1374,6 +1380,7 @@ def to_zarr(
     consolidated: bool = False,
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
+    safe_chunks: bool = True,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1428,6 +1435,7 @@ def to_zarr(
             consolidated=consolidated,
             region=region,
             encoding=encoding,
+            # do we need to pass safe_chunks through here?
         )
 
     zstore = backends.ZarrStore.open_group(
@@ -1439,6 +1447,7 @@ def to_zarr(
         chunk_store=chunk_store,
         append_dim=append_dim,
         write_region=region,
+        safe_chunks=safe_chunks,
     )
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims

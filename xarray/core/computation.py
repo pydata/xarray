@@ -43,7 +43,7 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
-    """ Return either first object of type 'kind' or raise if not found. """
+    """Return either first object of type 'kind' or raise if not found."""
     for arg in args:
         if isinstance(arg, kind):
             return arg
@@ -966,51 +966,58 @@ def apply_ufunc(
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
 
-    Compute the mean (``.mean``) over one dimension::
+    Compute the mean (``.mean``) over one dimension:
 
-        def mean(obj, dim):
-            # note: apply always moves core dimensions to the end
-            return apply_ufunc(np.mean, obj,
-                               input_core_dims=[[dim]],
-                               kwargs={'axis': -1})
+    >>> def mean(obj, dim):
+    ...     # note: apply always moves core dimensions to the end
+    ...     return apply_ufunc(
+    ...         np.mean, obj, input_core_dims=[[dim]], kwargs={"axis": -1}
+    ...     )
+    ...
 
-    Inner product over a specific dimension (like ``xr.dot``)::
+    Inner product over a specific dimension (like ``xr.dot``):
 
-        def _inner(x, y):
-            result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
-            return result[..., 0, 0]
+    >>> def _inner(x, y):
+    ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
+    ...     return result[..., 0, 0]
+    ...
+    >>> def inner_product(a, b, dim):
+    ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    ...
 
-        def inner_product(a, b, dim):
-            return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    Stack objects along a new dimension (like ``xr.concat``):
 
-    Stack objects along a new dimension (like ``xr.concat``)::
-
-        def stack(objects, dim, new_coord):
-            # note: this version does not stack coordinates
-            func = lambda *x: np.stack(x, axis=-1)
-            result = apply_ufunc(func, *objects,
-                                 output_core_dims=[[dim]],
-                                 join='outer',
-                                 dataset_fill_value=np.nan)
-            result[dim] = new_coord
-            return result
+    >>> def stack(objects, dim, new_coord):
+    ...     # note: this version does not stack coordinates
+    ...     func = lambda *x: np.stack(x, axis=-1)
+    ...     result = apply_ufunc(
+    ...         func,
+    ...         *objects,
+    ...         output_core_dims=[[dim]],
+    ...         join="outer",
+    ...         dataset_fill_value=np.nan
+    ...     )
+    ...     result[dim] = new_coord
+    ...     return result
+    ...
 
     If your function is not vectorized but can be applied only to core
     dimensions, you can use ``vectorize=True`` to turn into a vectorized
     function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
     terribly fast. Here we'll use it to calculate the distance between
     empirical samples from two probability distributions, using a scipy
-    function that needs to be applied to vectors::
+    function that needs to be applied to vectors:
 
-        import scipy.stats
-
-        def earth_mover_distance(first_samples,
-                                 second_samples,
-                                 dim='ensemble'):
-            return apply_ufunc(scipy.stats.wasserstein_distance,
-                               first_samples, second_samples,
-                               input_core_dims=[[dim], [dim]],
-                               vectorize=True)
+    >>> import scipy.stats
+    >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
+    ...     return apply_ufunc(
+    ...         scipy.stats.wasserstein_distance,
+    ...         first_samples,
+    ...         second_samples,
+    ...         input_core_dims=[[dim], [dim]],
+    ...         vectorize=True,
+    ...     )
+    ...
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
@@ -1441,7 +1448,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays : DataArray or Variable
+    *arrays : DataArray or Variable
         Arrays to compute.
     dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.

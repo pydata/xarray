@@ -17,7 +17,7 @@ from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
-    raises_regex,
+    raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
@@ -174,26 +174,26 @@ def test_interpolate_pd_compat_polynomial():
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
-    with raises_regex(ValueError, "Index 'x' must be monotonically increasing"):
+    with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
         expected.interpolate_na(dim="x", method="index")
 
 
 def test_interpolate_no_dim_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(NotImplementedError, "dim is a required argument"):
+    with pytest.raises(NotImplementedError, match=r"dim is a required argument"):
         da.interpolate_na(method="linear")
 
 
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(ValueError, "not a valid"):
+    with pytest.raises(ValueError, match=r"not a valid"):
         da.interpolate_na(dim="x", method="foo")
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
-    with raises_regex(ValueError, "Index 'x' has duplicate values"):
+    with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
         da.interpolate_na(dim="x", method="foo")
 
 
@@ -202,7 +202,7 @@ def test_interpolate_multiindex_raises():
     data[1, 1] = np.nan
     da = xr.DataArray(data, coords=[("x", ["a", "b"]), ("y", [0, 1, 2])])
     das = da.stack(z=("x", "y"))
-    with raises_regex(TypeError, "Index 'z' must be castable to float64"):
+    with pytest.raises(TypeError, match=r"Index 'z' must be castable to float64"):
         das.interpolate_na(dim="z")
 
 
@@ -215,7 +215,7 @@ def test_interpolate_2d_coord_raises():
     data = np.random.randn(2, 3)
     data[1, 1] = np.nan
     da = xr.DataArray(data, dims=("a", "b"), coords=coords)
-    with raises_regex(ValueError, "interpolation must be 1D"):
+    with pytest.raises(ValueError, match=r"interpolation must be 1D"):
         da.interpolate_na(dim="a", use_coordinate="x")
 
 
@@ -366,7 +366,7 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
     # this checks for ValueError in dask.array.apply_gufunc
-    with raises_regex(ValueError, "consists of multiple chunks"):
+    with pytest.raises(ValueError, match=r"consists of multiple chunks"):
         da.interpolate_na("time")
 
 
@@ -394,37 +394,39 @@ def test_ffill():
 
 @requires_bottleneck
 @requires_dask
-def test_ffill_dask():
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_dask(method):
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"x": 5})
-    actual = da.ffill("time")
-    expected = da.load().ffill("time")
-    assert isinstance(actual.data, dask_array_type)
+
+    dask_method = getattr(da, method)
+    numpy_method = getattr(da.compute(), method)
+    # unchunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("time")
+    expected = numpy_method("time")
+    assert_equal(actual, expected)
+
+    # chunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("x")
+    expected = numpy_method("x")
     assert_equal(actual, expected)
 
     # with limit
-    da = da.chunk({"x": 5})
-    actual = da.ffill("time", limit=3)
-    expected = da.load().ffill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    with raise_if_dask_computes():
+        actual = dask_method("time", limit=3)
+    expected = numpy_method("time", limit=3)
     assert_equal(actual, expected)
 
+    # limit < axis size
+    with pytest.raises(NotImplementedError):
+        actual = dask_method("x", limit=2)
 
-@requires_bottleneck
-@requires_dask
-def test_bfill_dask():
-    da, _ = make_interpolate_example_data((40, 40), 0.5)
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time")
-    expected = da.load().bfill("time")
-    assert isinstance(actual.data, dask_array_type)
-    assert_equal(actual, expected)
-
-    # with limit
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time", limit=3)
-    expected = da.load().bfill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    # limit > axis size
+    with raise_if_dask_computes():
+        actual = dask_method("x", limit=41)
+    expected = numpy_method("x", limit=41)
     assert_equal(actual, expected)
 
 
@@ -570,22 +572,22 @@ def da_time():
 
 
 def test_interpolate_na_max_gap_errors(da_time):
-    with raises_regex(
-        NotImplementedError, "max_gap not implemented for unlabeled coordinates"
+    with pytest.raises(
+        NotImplementedError, match=r"max_gap not implemented for unlabeled coordinates"
     ):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(ValueError, "max_gap must be a scalar."):
+    with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Expected value of type str"):
+    with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(TypeError, "Expected integer or floating point"):
+    with pytest.raises(TypeError, match=r"Expected integer or floating point"):
         da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
 
-    with raises_regex(ValueError, "Could not convert 'huh' to timedelta64"):
+    with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
 
 

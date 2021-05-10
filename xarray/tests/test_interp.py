@@ -495,7 +495,7 @@ def test_dataset():
 
 @pytest.mark.parametrize("case", [0, 3])
 def test_interpolate_dimorder(case):
-    """ Make sure the resultant dimension order is consistent with .sel() """
+    """Make sure the resultant dimension order is consistent with .sel()"""
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -881,3 +881,23 @@ def test_interp1d_bounds_error():
 
     # default is to fill with nans, so this should pass
     da.interp(time=3.5)
+
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "x, expect_same_attrs",
+    [
+        (2.5, True),
+        (np.array([2.5, 5]), True),
+        (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
+    ],
+)
+def test_coord_attrs(x, expect_same_attrs):
+    base_attrs = dict(foo="bar")
+    ds = xr.Dataset(
+        data_vars=dict(a=2 * np.arange(5)),
+        coords={"x": ("x", np.arange(5), base_attrs)},
+    )
+
+    has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
+    assert expect_same_attrs == has_same_attrs

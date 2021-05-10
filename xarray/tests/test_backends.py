@@ -50,7 +50,6 @@ from . import (
     has_netCDF4,
     has_scipy,
     network,
-    raises_regex,
     requires_cfgrib,
     requires_cftime,
     requires_dask,
@@ -779,7 +778,7 @@ class DatasetIOBase:
             assert_identical(expected, actual)
 
     def test_ondisk_after_print(self):
-        """ Make sure print does not load file into memory """
+        """Make sure print does not load file into memory"""
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             repr(on_disk)
@@ -920,7 +919,7 @@ class CFEncodedBase(DatasetIOBase):
             with open_dataset(tmp_file, decode_coords=False) as ds:
                 assert ds.coords["latitude"].attrs["bounds"] == "latitude_bnds"
                 assert ds.coords["longitude"].attrs["bounds"] == "longitude_bnds"
-                assert "latlon" not in ds["variable"].attrs["coordinates"]
+                assert "coordinates" not in ds["variable"].attrs
                 assert "coordinates" not in ds.attrs
 
     def test_coordinate_variables_after_dataset_roundtrip(self):
@@ -1058,12 +1057,12 @@ class CFEncodedBase(DatasetIOBase):
         assert ds.x.encoding == {}
 
         kwargs = dict(encoding={"x": {"foo": "bar"}})
-        with raises_regex(ValueError, "unexpected encoding"):
+        with pytest.raises(ValueError, match=r"unexpected encoding"):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
         kwargs = dict(encoding={"x": "foo"})
-        with raises_regex(ValueError, "must be castable"):
+        with pytest.raises(ValueError, match=r"must be castable"):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
@@ -1170,8 +1169,8 @@ class CFEncodedBase(DatasetIOBase):
             self.save(data, tmp_file, mode="w")
             data["var9"] = data["var2"] * 3
             data = data.isel(dim1=slice(2, 6))  # modify one dimension
-            with raises_regex(
-                ValueError, "Unable to update size for existing dimension"
+            with pytest.raises(
+                ValueError, match=r"Unable to update size for existing dimension"
             ):
                 self.save(data, tmp_file, mode="a")
 
@@ -1179,7 +1178,7 @@ class CFEncodedBase(DatasetIOBase):
         ds = Dataset(coords={"y": ("x", [1, 2]), "z": ("x", ["a", "b"])}).set_index(
             x=["y", "z"]
         )
-        with raises_regex(NotImplementedError, "MultiIndex"):
+        with pytest.raises(NotImplementedError, match=r"MultiIndex"):
             with self.roundtrip(ds):
                 pass
 
@@ -1238,7 +1237,7 @@ class NetCDF4Base(CFEncodedBase):
             # check that missing group raises appropriate exception
             with pytest.raises(IOError):
                 open_dataset(tmp_file, group="bar")
-            with raises_regex(ValueError, "must be a string"):
+            with pytest.raises(ValueError, match=r"must be a string"):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
@@ -1861,25 +1860,32 @@ class ZarrBase(CFEncodedBase):
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({"x": (5, 4, 3)})
-        with raises_regex(ValueError, "uniform chunk sizes."):
+        with pytest.raises(ValueError, match=r"uniform chunk sizes."):
             with self.roundtrip(ds_chunk_irreg) as actual:
                 pass
 
         # should fail if encoding["chunks"] clashes with dask_chunks
         badenc = ds.chunk({"x": 4})
         badenc.var1.encoding["chunks"] = (6,)
-        with raises_regex(NotImplementedError, "named 'var1' would overlap"):
+        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
             with self.roundtrip(badenc) as actual:
                 pass
 
+        # unless...
+        with self.roundtrip(badenc, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
+
         badenc.var1.encoding["chunks"] = (2,)
-        with raises_regex(ValueError, "Specified Zarr chunk encoding"):
+        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
             with self.roundtrip(badenc) as actual:
                 pass
 
         badenc = badenc.chunk({"x": (3, 3, 6)})
         badenc.var1.encoding["chunks"] = (3,)
-        with raises_regex(ValueError, "incompatible with this encoding"):
+        with pytest.raises(
+            NotImplementedError, match=r"incompatible with this encoding"
+        ):
             with self.roundtrip(badenc) as actual:
                 pass
 
@@ -1902,9 +1908,13 @@ class ZarrBase(CFEncodedBase):
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
+        # override option
+        with self.roundtrip(ds_chunk4, save_kwargs={"safe_chunks": False}) as actual:
+            # don't actually check equality because the data could be corrupted
+            pass
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
@@ -2212,47 +2222,51 @@ class ZarrBase(CFEncodedBase):
             data2.to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(ValueError, "cannot use consolidated=True"):
+            with pytest.raises(ValueError, match=r"cannot use consolidated=True"):
                 data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "cannot set region unless mode='a' or mode=None"
+            with pytest.raises(
+                ValueError, match=r"cannot set region unless mode='a' or mode=None"
             ):
                 data.to_zarr(store, region={"x": slice(None)}, mode="w")
 
         with setup_and_verify_store() as store:
-            with raises_regex(TypeError, "must be a dict"):
+            with pytest.raises(TypeError, match=r"must be a dict"):
                 data.to_zarr(store, region=slice(None))
 
         with setup_and_verify_store() as store:
-            with raises_regex(TypeError, "must be slice objects"):
+            with pytest.raises(TypeError, match=r"must be slice objects"):
                 data2.to_zarr(store, region={"x": [0, 1]})
 
         with setup_and_verify_store() as store:
-            with raises_regex(ValueError, "step on all slices"):
+            with pytest.raises(ValueError, match=r"step on all slices"):
                 data2.to_zarr(store, region={"x": slice(None, None, 2)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "all keys in ``region`` are not in Dataset dimensions"
+            with pytest.raises(
+                ValueError,
+                match=r"all keys in ``region`` are not in Dataset dimensions",
             ):
                 data.to_zarr(store, region={"y": slice(None)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(
+            with pytest.raises(
                 ValueError,
-                "all variables in the dataset to write must have at least one dimension in common",
+                match=r"all variables in the dataset to write must have at least one dimension in common",
             ):
                 data2.assign(v=2).to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with raises_regex(ValueError, "cannot list the same dimension in both"):
+            with pytest.raises(
+                ValueError, match=r"cannot list the same dimension in both"
+            ):
                 data.to_zarr(store, region={"x": slice(None)}, append_dim="x")
 
         with setup_and_verify_store() as store:
-            with raises_regex(
-                ValueError, "variable 'u' already exists with different dimension sizes"
+            with pytest.raises(
+                ValueError,
+                match=r"variable 'u' already exists with different dimension sizes",
             ):
                 data2.to_zarr(store, region={"x": slice(3)})
 
@@ -2375,7 +2389,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 
     def test_array_attrs(self):
         ds = Dataset(attrs={"foo": [[1, 2], [3, 4]]})
-        with raises_regex(ValueError, "must be 1-dimensional"):
+        with pytest.raises(ValueError, match=r"must be 1-dimensional"):
             with self.roundtrip(ds):
                 pass
 
@@ -2396,7 +2410,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
             with nc4.Dataset(tmp_file, "w", format="NETCDF4") as rootgrp:
                 rootgrp.createGroup("foo")
 
-            with raises_regex(TypeError, "pip install netcdf4"):
+            with pytest.raises(TypeError, match=r"pip install netcdf4"):
                 open_dataset(tmp_file, engine="scipy")
 
 
@@ -2416,7 +2430,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     def test_encoding_kwarg_vlen_string(self):
         original = Dataset({"x": ["foo", "bar", "baz"]})
         kwargs = dict(encoding={"x": {"dtype": str}})
-        with raises_regex(ValueError, "encoding dtype=str for vlen"):
+        with pytest.raises(ValueError, match=r"encoding dtype=str for vlen"):
             with self.roundtrip(original, save_kwargs=kwargs):
                 pass
 
@@ -2448,18 +2462,18 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
     @requires_scipy
     def test_engine(self):
         data = create_test_data()
-        with raises_regex(ValueError, "unrecognized engine"):
+        with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")
-        with raises_regex(ValueError, "invalid engine"):
+        with pytest.raises(ValueError, match=r"invalid engine"):
             data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
-            with raises_regex(ValueError, "unrecognized engine"):
+            with pytest.raises(ValueError, match=r"unrecognized engine"):
                 open_dataset(tmp_file, engine="foobar")
 
         netcdf_bytes = data.to_netcdf()
-        with raises_regex(ValueError, "unrecognized engine"):
+        with pytest.raises(ValueError, match=r"unrecognized engine"):
             open_dataset(BytesIO(netcdf_bytes), engine="foobar")
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -2649,8 +2663,8 @@ class TestH5NetCDFData(NetCDF4Base):
 
         # Incompatible encodings cause a crash
         with create_tmp_file() as tmp_file:
-            with raises_regex(
-                ValueError, "'zlib' and 'compression' encodings mismatch"
+            with pytest.raises(
+                ValueError, match=r"'zlib' and 'compression' encodings mismatch"
             ):
                 data.to_netcdf(
                     tmp_file,
@@ -2659,8 +2673,9 @@ class TestH5NetCDFData(NetCDF4Base):
                 )
 
         with create_tmp_file() as tmp_file:
-            with raises_regex(
-                ValueError, "'complevel' and 'compression_opts' encodings mismatch"
+            with pytest.raises(
+                ValueError,
+                match=r"'complevel' and 'compression_opts' encodings mismatch",
             ):
                 data.to_netcdf(
                     tmp_file,
@@ -2746,23 +2761,25 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
     engine = "h5netcdf"
 
     def test_open_badbytes(self):
-        with raises_regex(ValueError, "HDF5 as bytes"):
+        with pytest.raises(ValueError, match=r"HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with raises_regex(ValueError, "cannot guess the engine"):
+        with pytest.raises(ValueError, match=r"cannot guess the engine"):
             with open_dataset(b"garbage"):
                 pass
-        with raises_regex(ValueError, "can only read bytes"):
+        with pytest.raises(ValueError, match=r"can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
-        with raises_regex(ValueError, "not the signature of a valid netCDF file"):
+        with pytest.raises(
+            ValueError, match=r"not the signature of a valid netCDF file"
+        ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
 
     def test_open_twice(self):
         expected = create_test_data()
         expected.attrs["foo"] = "bar"
-        with raises_regex(ValueError, "read/write pointer not at the start"):
+        with pytest.raises(ValueError, match=r"read/write pointer not at the start"):
             with create_tmp_file() as tmp_file:
                 expected.to_netcdf(tmp_file, engine="h5netcdf")
                 with open(tmp_file, "rb") as f:
@@ -2791,11 +2808,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         assert_identical(expected, actual)
 
                 f.seek(0)
-                with raises_regex(TypeError, "not a valid NetCDF 3"):
+                with pytest.raises(TypeError, match="not a valid NetCDF 3"):
                     open_dataset(f, engine="scipy")
 
+            # TOOD: this additional open is required since scipy seems to close the file
+            # when it fails on the TypeError (though didn't when we used
+            # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
+            with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with raises_regex(ValueError, "cannot guess the engine"):
+                with pytest.raises(ValueError, match="cannot guess the engine"):
                     open_dataset(f)
 
 
@@ -2991,15 +3012,17 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     @pytest.mark.parametrize("join", ["outer", "inner", "left", "right"])
-    def test_open_mfdataset_does_same_as_concat(self, combine, opt, join):
+    def test_open_mfdataset_does_same_as_concat(self, combine, concat_dim, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine=combine, concat_dim="t", join=join
+                files, data_vars=opt, combine=combine, concat_dim=concat_dim, join=join
             ) as ds:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
@@ -3045,14 +3068,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 with pytest.raises(xr.MergeError):
                     xr.open_mfdataset(
                         files,
-                        combine="by_coords",
+                        combine="nested",
                         concat_dim="t",
                         combine_attrs=combine_attrs,
                     )
             else:
                 with xr.open_mfdataset(
                     files,
-                    combine="by_coords",
+                    combine="nested",
                     concat_dim="t",
                     combine_attrs=combine_attrs,
                 ) as ds:
@@ -3070,7 +3093,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self):
@@ -3085,18 +3108,24 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds["v1"].test_dataarray_attr == 0
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
-    def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
+    def test_open_mfdataset_exact_join_raises_error(self, combine, concat_dim, opt):
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
-            with raises_regex(ValueError, "indexes along dimension"):
+            with pytest.raises(ValueError, match=r"indexes along dimension"):
                 open_mfdataset(
-                    files, data_vars=opt, combine=combine, concat_dim="t", join="exact"
+                    files,
+                    data_vars=opt,
+                    combine=combine,
+                    concat_dim=concat_dim,
+                    join="exact",
                 )
 
     def test_common_coord_when_datavars_all(self):
@@ -3226,9 +3255,9 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
-        with raises_regex(IOError, "no files to open"):
+        with pytest.raises(IOError, match=r"no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
-        with raises_regex(ValueError, "wild-card"):
+        with pytest.raises(ValueError, match=r"wild-card"):
             open_mfdataset("http://some/remote/uri")
 
     @requires_fsspec
@@ -3236,7 +3265,7 @@ class TestDask(DatasetIOBase):
         pytest.importorskip("aiobotocore")
 
         # glob is attempted as of #4823, but finds no files
-        with raises_regex(OSError, "no files"):
+        with pytest.raises(OSError, match=r"no files"):
             open_mfdataset("http://some/remote/uri", engine="zarr")
 
     def test_open_mfdataset_2d(self):
@@ -3331,7 +3360,7 @@ class TestDask(DatasetIOBase):
                     # first dataset loaded
                     assert actual.test1 == ds1.test1
                     # attributes from ds2 are not retained, e.g.,
-                    with raises_regex(AttributeError, "no attribute"):
+                    with pytest.raises(AttributeError, match=r"no attribute"):
                         actual.test2
 
     def test_open_mfdataset_attrs_file(self):
@@ -3379,6 +3408,19 @@ class TestDask(DatasetIOBase):
 
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
+
+    # TODO check for an error instead of a warning once deprecated
+    def test_open_mfdataset_raise_on_bad_combine_args(self):
+        # Regression test for unhelpful error shown in #5230
+        original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with pytest.warns(
+                    DeprecationWarning, match="`concat_dim` has no effect"
+                ):
+                    open_mfdataset([tmp1, tmp2], concat_dim="x")
 
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self):
@@ -3430,15 +3472,15 @@ class TestDask(DatasetIOBase):
 
     def test_save_mfdataset_invalid(self):
         ds = Dataset()
-        with raises_regex(ValueError, "cannot use mode"):
+        with pytest.raises(ValueError, match=r"cannot use mode"):
             save_mfdataset([ds, ds], ["same", "same"])
-        with raises_regex(ValueError, "same length"):
+        with pytest.raises(ValueError, match=r"same length"):
             save_mfdataset([ds, ds], ["only one path"])
 
     def test_save_mfdataset_invalid_dataarray(self):
         # regression test for GH1555
         da = DataArray([1, 2])
-        with raises_regex(TypeError, "supports writing Dataset"):
+        with pytest.raises(TypeError, match=r"supports writing Dataset"):
             save_mfdataset([da], ["dataarray"])
 
     def test_save_mfdataset_pathlib_roundtrip(self):
@@ -3570,6 +3612,7 @@ class TestDask(DatasetIOBase):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
+    @pytest.mark.xfail
     def test_save_mfdataset_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -4577,7 +4620,7 @@ class TestRasterio:
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
-        with raises_regex(ValueError, "unexpected encoding"):
+        with pytest.raises(ValueError, match=r"unexpected encoding"):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
         var = xr.Variable(("x",), [1, 2, 3], {}, {"chunking": (2, 1)})
@@ -4597,7 +4640,7 @@ class TestEncodingInvalid:
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
         var = xr.Variable(("x",), [1, 2, 3], {}, {"least_sigificant_digit": 2})
-        with raises_regex(ValueError, "unexpected encoding"):
+        with pytest.raises(ValueError, match=r"unexpected encoding"):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
 
@@ -4631,17 +4674,17 @@ class TestValidateAttrs:
             ds, attrs = new_dataset_and_attrs()
 
             attrs[123] = "test"
-            with raises_regex(TypeError, "Invalid name for attr: 123"):
+            with pytest.raises(TypeError, match=r"Invalid name for attr: 123"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[MiscObject()] = "test"
-            with raises_regex(TypeError, "Invalid name for attr: "):
+            with pytest.raises(TypeError, match=r"Invalid name for attr: "):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs[""] = "test"
-            with raises_regex(ValueError, "Invalid name for attr '':"):
+            with pytest.raises(ValueError, match=r"Invalid name for attr '':"):
                 ds.to_netcdf("test.nc")
 
             # This one should work
@@ -4652,12 +4695,12 @@ class TestValidateAttrs:
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = {"a": 5}
-            with raises_regex(TypeError, "Invalid value for attr 'test'"):
+            with pytest.raises(TypeError, match=r"Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
             attrs["test"] = MiscObject()
-            with raises_regex(TypeError, "Invalid value for attr 'test'"):
+            with pytest.raises(TypeError, match=r"Invalid value for attr 'test'"):
                 ds.to_netcdf("test.nc")
 
             ds, attrs = new_dataset_and_attrs()
@@ -4943,7 +4986,7 @@ def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
 @pytest.mark.parametrize("engine", ["netcdf4", "scipy"])
 def test_invalid_netcdf_raises(engine):
     data = create_test_data()
-    with raises_regex(ValueError, "unrecognized option 'invalid_netcdf'"):
+    with pytest.raises(ValueError, match=r"unrecognized option 'invalid_netcdf'"):
         data.to_netcdf("foo.nc", engine=engine, invalid_netcdf=True)
 
 
@@ -4988,7 +5031,7 @@ def test_extract_zarr_variable_encoding():
 
     # raises on invalid
     var = xr.Variable("x", [1, 2], encoding={"foo": (1,)})
-    with raises_regex(ValueError, "unexpected encoding parameters"):
+    with pytest.raises(ValueError, match=r"unexpected encoding parameters"):
         actual = backends.zarr.extract_zarr_variable_encoding(
             var, raise_on_invalid=True
         )
