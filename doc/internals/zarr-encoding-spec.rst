@@ -63,5 +63,4 @@ re-open it directly with Zarr:
     ! ls -a rasm.zarr
 
     print(zgroup.tree())
-
     dict(zgroup["Tair"].attrs)
