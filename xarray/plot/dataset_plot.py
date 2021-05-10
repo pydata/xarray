@@ -472,7 +472,7 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, u, v, **kwargs):
+def scatter(ds, x, y, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
 
@@ -486,6 +486,7 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
             "Use 'add_guide' instead."
         )
 
+    ax = kwargs.pop("ax")
     cmap_params = kwargs.pop("cmap_params")
     hue = kwargs.pop("hue")
     hue_style = kwargs.pop("hue_style")
@@ -529,7 +530,7 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
 
 
 @_dsplot
-def quiver(ds, x, y, ax, u, v, **kwargs):
+def quiver(ds, x, y, u, v, **kwargs):
     """Quiver plot of Dataset variables.
     
     Wraps :func:`matplotlib.pyplot.quiver`.
@@ -554,6 +555,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
+    ax = kwargs.pop("ax")
     kwargs.pop("hue_style")
     kwargs.setdefault("pivot", "middle")
     hdl = ax.quiver(*args, **kwargs, **cmap_params)
@@ -561,7 +563,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
 
 @_dsplot
-def streamplot(ds, x, y, ax, u, v, **kwargs):
+def streamplot(ds, x, y, u, v, **kwargs):
     """Plot streamlines of Dataset variables.
     
     Wraps :func:`matplotlib.pyplot.streamplot`.
@@ -607,6 +609,7 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
+    ax = kwargs.pop("ax")
     kwargs.pop("hue_style")
     hdl = ax.streamplot(*args, **kwargs, **cmap_params)
 
