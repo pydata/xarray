@@ -61,7 +61,7 @@ pytestmark = [
 ]
 
 
-def create_test_data(seed=None):
+def create_test_data(seed=None, add_attrs=True):
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
@@ -76,7 +76,9 @@ def create_test_data(seed=None):
     obj["dim3"] = ("dim3", list("abcdefghij"))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
-        obj[v] = (dims, data, {"foo": "variable"})
+        obj[v] = (dims, data)
+        if add_attrs:
+            obj[v].attrs = {"foo": "variable"}
     obj.coords["numbers"] = (
         "dim3",
         np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
@@ -3945,6 +3947,11 @@ class TestDataset:
         expected = ds.attrs
         assert expected == actual
 
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            ds.resample(time="1D", keep_attrs=True)
+
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         ds = Dataset(
@@ -6538,6 +6545,11 @@ def test_rolling_exp_keep_attrs(ds):
         result = ds.rolling_exp(time=10).mean(keep_attrs=False)
     assert result.attrs == {}
     assert result.z1.attrs == {}
+
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        ds.rolling_exp(time=10, keep_attrs=True)
 
 
 @pytest.mark.parametrize("center", (True, False))

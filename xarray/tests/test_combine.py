@@ -5,7 +5,14 @@ from itertools import product
 import numpy as np
 import pytest
 
-from xarray import DataArray, Dataset, combine_by_coords, combine_nested, concat
+from xarray import (
+    DataArray,
+    Dataset,
+    MergeError,
+    combine_by_coords,
+    combine_nested,
+    concat,
+)
 from xarray.core import dtypes
 from xarray.core.combine import (
     _check_shape_tile_ids,
@@ -476,7 +483,8 @@ class TestNestedCombine:
         assert_identical(x_first, y_first)
 
     def test_concat_one_dim_merge_another(self):
-        data = create_test_data()
+        data = create_test_data(add_attrs=False)
+
         data1 = data.copy(deep=True)
         data2 = data.copy(deep=True)
 
@@ -502,7 +510,7 @@ class TestNestedCombine:
         assert_equal(result, expected)
 
     def test_auto_combine_2d_combine_attrs_kwarg(self):
-        ds = create_test_data
+        ds = lambda x: create_test_data(x, add_attrs=False)
 
         partway1 = concat([ds(0), ds(3)], dim="dim1")
         partway2 = concat([ds(1), ds(4)], dim="dim1")
@@ -716,11 +724,6 @@ class TestCombineAuto:
         with pytest.raises(ValueError, match="without providing an explicit name"):
             combine_by_coords(objs)
 
-    def test_combine_coords_empty_list(self):
-        expected = Dataset()
-        actual = combine_by_coords([])
-        assert_identical(expected, actual)
-
     @pytest.mark.parametrize(
         "join, expected",
         [
@@ -796,6 +799,142 @@ class TestCombineAuto:
             objs, concat_dim="x", join="outer", combine_attrs="drop_conflicts"
         )
         assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_combine_nested_combine_attrs_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        data1 = Dataset(
+            {
+                "a": ("x", [1, 2], attrs1),
+                "b": ("x", [3, -1], attrs1),
+                "x": ("x", [0, 1], attrs1),
+            }
+        )
+        data2 = Dataset(
+            {
+                "a": ("x", [2, 3], attrs2),
+                "b": ("x", [-2, 1], attrs2),
+                "x": ("x", [2, 3], attrs2),
+            }
+        )
+
+        if expect_exception:
+            with pytest.raises(MergeError, match="combine_attrs"):
+                combine_by_coords([data1, data2], combine_attrs=combine_attrs)
+        else:
+            actual = combine_by_coords([data1, data2], combine_attrs=combine_attrs)
+            expected = Dataset(
+                {
+                    "a": ("x", [1, 2, 2, 3], expected_attrs),
+                    "b": ("x", [3, -1, -2, 1], expected_attrs),
+                },
+                {"x": ("x", [0, 1, 2, 3], expected_attrs)},
+            )
+
+            assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 1, "b": 2, "c": 3},
+                {"b": 1, "c": 3, "d": 4},
+                {"a": 1, "c": 3, "d": 4},
+                False,
+            ),
+        ],
+    )
+    def test_combine_by_coords_combine_attrs_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        data1 = Dataset(
+            {"x": ("a", [0], attrs1), "y": ("a", [0], attrs1), "a": ("a", [0], attrs1)}
+        )
+        data2 = Dataset(
+            {"x": ("a", [1], attrs2), "y": ("a", [1], attrs2), "a": ("a", [1], attrs2)}
+        )
+
+        if expect_exception:
+            with pytest.raises(MergeError, match="combine_attrs"):
+                combine_by_coords([data1, data2], combine_attrs=combine_attrs)
+        else:
+            actual = combine_by_coords([data1, data2], combine_attrs=combine_attrs)
+            expected = Dataset(
+                {
+                    "x": ("a", [0, 1], expected_attrs),
+                    "y": ("a", [0, 1], expected_attrs),
+                    "a": ("a", [0, 1], expected_attrs),
+                }
+            )
+
+            assert_identical(actual, expected)
 
     def test_infer_order_from_coords(self):
         data = create_test_data()
