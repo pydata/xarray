@@ -255,6 +255,8 @@ def _dsplot(plotfunc):
         be either ``'viridis'`` (if the function infers a sequential
         dataset) or ``'RdBu_r'`` (if the function infers a diverging
         dataset).
+        See the :doc:`colormap reference <matplotlib:tutorials/colors/colormaps>`
+        for options.
 
         If *seaborn* is installed, ``cmap`` may also be a
         `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
