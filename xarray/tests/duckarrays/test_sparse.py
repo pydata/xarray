@@ -10,7 +10,7 @@ from .base import strategies
 
 sparse = pytest.importorskip("sparse")
 
-pytestmarks = [
+pytestmark = [
     pytest.mark.skip(
         reason=(
             "timing issues due to the JIT compiler of numba"
