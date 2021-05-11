@@ -21,11 +21,15 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
+  of `datasets` so anyone calling this method using a named parameter will need to update
+  the name accordingly (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -403,8 +407,6 @@ Bug fixes
   <http://github.com/hmaarrfk>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
-- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
 - By default, when possible, xarray will now always use values of type ``int64`` when encoding
   and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
   precision and accuracy are maintained in the round-tripping process
