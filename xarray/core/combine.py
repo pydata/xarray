@@ -69,12 +69,16 @@ def _infer_concat_order_from_coords(datasets):
         if dim in ds0:
 
             # Need to read coordinate values to do ordering
-            indexes = [ds.indexes.get(dim) for ds in datasets]
+            indexes = [ds.xindexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
                 raise ValueError(
                     "Every dimension needs a coordinate for "
                     "inferring concatenation order"
                 )
+
+            # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
+            # get pd.Index objects from Index objects
+            indexes = [index.array for index in indexes]
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -849,25 +853,19 @@ def combine_by_coords(
         )
         return DataArray()._from_temp_dataset(combined_temp_dataset)
 
-    else:
-        # Group by data vars
-        sorted_datasets = sorted(data_objects, key=vars_as_keys)
-        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
-
-        # Perform the multidimensional combine on each group of data variables
-        # before merging back together
-        concatenated_grouped_by_data_vars = []
-        for vars, datasets_with_same_vars in grouped_by_vars:
-            concatenated = _combine_single_variable_hypercube(
-                list(datasets_with_same_vars),
-                fill_value=fill_value,
-                data_vars=data_vars,
-                coords=coords,
-                compat=compat,
-                join=join,
-                combine_attrs=combine_attrs,
-            )
-            concatenated_grouped_by_data_vars.append(concatenated)
+        # Check the overall coordinates are monotonically increasing
+        # TODO (benbovy - flexible indexes): only with pandas.Index?
+        for dim in concat_dims:
+            indexes = concatenated.xindexes.get(dim)
+            if not (
+                indexes.array.is_monotonic_increasing
+                or indexes.array.is_monotonic_decreasing
+            ):
+                raise ValueError(
+                    "Resulting object does not have monotonic"
+                    " global indexes along dimension {}".format(dim)
+                )
+        concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(
         concatenated_grouped_by_data_vars,
