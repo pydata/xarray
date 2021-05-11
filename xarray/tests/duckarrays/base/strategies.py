@@ -110,7 +110,7 @@ def valid_axis(ndim):
 
 
 def valid_axes(ndim):
-    return valid_axis(ndim) | npst.valid_tuple_axes(ndim)
+    return valid_axis(ndim) | npst.valid_tuple_axes(ndim, min_size=1)
 
 
 def valid_dim(dims):
