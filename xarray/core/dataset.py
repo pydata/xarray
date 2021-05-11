@@ -2344,7 +2344,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.isel
         DataArray.sel
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
+        func_args = set(locals().keys())
+        dims = set(self.dims)
+        indexers = either_dict_or_kwargs(
+            indexers, indexers_kwargs, "sel", func_args=func_args, dims=dims
+        )
         pos_indexers, new_indexes = remap_label_indexers(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
