@@ -379,7 +379,7 @@ with ``git commit --no-verify``.
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Please try to maintain backwards compatibility. *xarray* has growing number of users with
+Please try to maintain backwards compatibility. *xarray* has a growing number of users with
 lots of existing code, so don't break it if at all possible.  If you think breakage is
 required, clearly state why as part of the pull request.
 
