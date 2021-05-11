@@ -399,7 +399,7 @@ a user passes `old_arg`, we would instead catch it:
 
             # Still do what the user intended here
 
-This temporary check would then be removed in the subsequent version of xarray.
+This temporary check would then be removed in a subsequent version of xarray.
 This process of first warning users before actually breaking their code is known as a
 "deprecation cycle", and makes changes significantly easier to handle both for users
 of xarray, and for developers of other libraries that depend on xarray.
