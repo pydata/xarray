@@ -385,8 +385,8 @@ required, clearly state why as part of the pull request.
 
 Be especially careful when changing function and method signatures, because any change
 may require a deprecation warning. For example, if your pull request means that the
-argument `old_arg` to `func` is no longer valid, instead of simply raising an error if
-a user passes `old_arg`, we would instead catch it:
+argument ``old_arg`` to ``func`` is no longer valid, instead of simply raising an error if
+a user passes ``old_arg``, we would instead catch it:
 
     def func(new_arg, old_arg=None):
         if old_arg is not None:
