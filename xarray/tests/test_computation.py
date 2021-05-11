@@ -469,29 +469,36 @@ def test_apply_groupby_add():
 
 
 @pytest.mark.parametrize(
-    ["obj", "expected"],
+    ["obj", "attrs", "expected"],
     (
         pytest.param(
             xr.DataArray(
                 [0, 1],
-                coords={
-                    "x": ("x", [-1, 1], {"a": 1, "b": 2}),
-                    "u": ("x", [2, 3], {"c": 3}),
-                },
                 dims="x",
-                attrs={"d": 4, "e": 5},
             ),
-            xr.DataArray([0, 1], coords={"x": [-1, 1], "u": ("x", [2, 3])}, dims="x"),
-            id="DataArray",
+            {None: {"a": 1}},
+            xr.DataArray([0, 1], dims="x", attrs={"a": 1}),
+            id="unnamed DataArray",
+        ),
+        pytest.param(
+            xr.DataArray(
+                [0, 1],
+                dims="x",
+                name="b",
+            ),
+            {None: {"a": 1}},
+            xr.DataArray([0, 1], dims="x", attrs={"a": 1}),
+            id="named DataArray",
         ),
         pytest.param(
             xr.Dataset(
-                {"a": ("x", [1, 2], {"a": 1, "b": 2}), "b": ("x", [0, 1], {"c": 3})},
+                {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
                 coords={
                     "x": ("x", [-1, 1], {"d": 4, "e": 5}),
                     "u": ("x", [2, 3], {"f": 6}),
                 },
             ),
+            {"a": {"a": 1}},
             xr.Dataset(
                 {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
                 coords={"x": [-1, 1], "u": ("x", [2, 3])},
@@ -500,15 +507,25 @@ def test_apply_groupby_add():
         ),
     ),
 )
-def test_call_on_dataset(obj, expected):
-    def clear_all_attrs(ds):
+def test_call_on_dataset(obj, attrs, expected):
+    temporary_name = "<this-array>"
+
+    def attach_attrs(ds, attrs):
         new_ds = ds.copy()
-        for var in new_ds.variables.values():
-            var.attrs.clear()
-        new_ds.attrs.clear()
+        for n, v in new_ds.variables.items():
+            if n == temporary_name:
+                n = None
+
+            if n not in attrs:
+                continue
+
+            v.attrs.update(attrs[n])
+
         return new_ds
 
-    actual = xr.call_on_dataset(clear_all_attrs, obj)
+    actual = xr.call_on_dataset(
+        lambda ds: attach_attrs(ds, attrs), obj, name=temporary_name
+    )
     assert_identical(actual, expected)
 
 

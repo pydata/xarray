@@ -1239,7 +1239,7 @@ def call_on_dataset(func, obj, name, *args, **kwargs):
     result = func(ds, *args, **kwargs)
 
     if isinstance(obj, DataArray):
-        result = dataset_to_dataarray(result).rename({name: obj.name})
+        result = dataset_to_dataarray(result.rename({name: obj.name}))
 
     return result
 
