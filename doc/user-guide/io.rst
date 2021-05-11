@@ -246,7 +246,7 @@ See its docstring for more details.
     across the datasets (ignoring floating point differences). The following command
     with suitable modifications (such as ``parallel=True``) works well with such datasets::
 
-         xr.open_mfdataset('my/files/*.nc', concat_dim="time",
+         xr.open_mfdataset('my/files/*.nc', concat_dim="time", combine="nested",
      	              	   data_vars='minimal', coords='minimal', compat='override')
 
     This command concatenates variables along the ``"time"`` dimension, but only those that
@@ -836,11 +836,6 @@ in files, and in cloud-based object storage such as `Amazon S3`_ and
 Xarray's Zarr backend allows xarray to leverage these capabilities, including
 the ability to store and analyze datasets far too large fit onto disk
 (particularly :ref:`in combination with dask <dask>`).
-
-.. warning::
-
-    Zarr support is still an experimental feature. Please report any bugs or
-    unexepected behavior via github issues.
 
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.

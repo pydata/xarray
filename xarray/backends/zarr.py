@@ -1,5 +1,6 @@
 import os
 import pathlib
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -83,7 +84,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
     Given encoding chunks (possibly None) and variable chunks (possibly None)
     """
@@ -133,7 +134,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name)
+        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -164,24 +165,32 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
                 continue
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
-                    raise NotImplementedError(
+                    base_error = (
                         f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
                         f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
-                        "This is not implemented in xarray yet. "
-                        "Consider either rechunking using `chunk()` or instead deleting "
-                        "or modifying `encoding['chunks']`."
+                        f"Writing this array in parallel with dask could lead to corrupted data."
                     )
+                    if safe_chunks:
+                        raise NotImplementedError(
+                            base_error
+                            + " Consider either rechunking using `chunk()`, deleting "
+                            "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+                        )
             if dchunks[-1] > zchunk:
-                raise ValueError(
+                base_error = (
                     "Final chunk of Zarr array must be the same size or "
                     "smaller than the first. "
                     f"Specified Zarr chunk encoding['chunks']={enc_chunks_tuple}, "
                     f"for variable named {name!r} "
-                    f"but {dchunks} in the variable's Dask chunks {var_chunks} is "
+                    f"but {dchunks} in the variable's Dask chunks {var_chunks} are "
                     "incompatible with this encoding. "
-                    "Consider either rechunking using `chunk()` or instead deleting "
-                    "or modifying `encoding['chunks']`."
                 )
+                if safe_chunks:
+                    raise NotImplementedError(
+                        base_error
+                        + " Consider either rechunking using `chunk()`, deleting "
+                        "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+                    )
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
@@ -203,7 +212,9 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     return dimensions, attributes
 
 
-def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
+def extract_zarr_variable_encoding(
+    variable, raise_on_invalid=False, name=None, safe_chunks=True
+):
     """
     Extract zarr encoding dictionary from xarray Variable
 
@@ -233,7 +244,7 @@ def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"), variable.chunks, variable.ndim, name
+        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks
     )
     encoding["chunks"] = chunks
     return encoding
@@ -285,6 +296,7 @@ class ZarrStore(AbstractWritableDataStore):
         "_read_only",
         "_synchronizer",
         "_write_region",
+        "_safe_chunks",
     )
 
     @classmethod
@@ -300,6 +312,7 @@ class ZarrStore(AbstractWritableDataStore):
         storage_options=None,
         append_dim=None,
         write_region=None,
+        safe_chunks=True,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
@@ -323,10 +336,17 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close, append_dim, write_region)
+        return cls(
+            zarr_group, consolidate_on_close, append_dim, write_region, safe_chunks
+        )
 
     def __init__(
-        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
+        self,
+        zarr_group,
+        consolidate_on_close=False,
+        append_dim=None,
+        write_region=None,
+        safe_chunks=True,
     ):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
@@ -335,6 +355,7 @@ class ZarrStore(AbstractWritableDataStore):
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
+        self._safe_chunks = safe_chunks
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
@@ -497,7 +518,7 @@ class ZarrStore(AbstractWritableDataStore):
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn
+                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
                 )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
@@ -701,7 +722,15 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidate_on_close=False,
         chunk_store=None,
         storage_options=None,
+        lock=None,
     ):
+        # TODO remove after v0.19
+        if lock is not None:
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated for this backend, and is now "
+                "ignored. In the future passing lock will raise an error.",
+                DeprecationWarning,
+            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

@@ -24,7 +24,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.indexes import propagate_indexes
+from xarray.core.indexes import Index, PandasIndex, propagate_indexes
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
@@ -35,7 +35,6 @@ from xarray.tests import (
     assert_identical,
     has_dask,
     raise_if_dask_computes,
-    raises_regex,
     requires_bottleneck,
     requires_dask,
     requires_iris,
@@ -148,10 +147,15 @@ class TestDataArray:
 
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
-        expected = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        assert array.indexes.keys() == expected.keys()
-        for k in expected:
-            assert array.indexes[k].equals(expected[k])
+        expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
+        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        assert array.xindexes.keys() == expected_xindexes.keys()
+        assert array.indexes.keys() == expected_indexes.keys()
+        assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
+        assert all([isinstance(idx, Index) for idx in array.xindexes.values()])
+        for k in expected_indexes:
+            assert array.xindexes[k].equals(expected_xindexes[k])
+            assert array.indexes[k].equals(expected_indexes[k])
 
     def test_get_index(self):
         array = DataArray(np.zeros((2, 3)), coords={"x": ["a", "b"]}, dims=["x", "y"])
@@ -798,9 +802,9 @@ class TestDataArray:
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
         assert_identical(self.dv[:3], self.dv.isel(x=slice(3)))
         assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of \('x', 'y'\)",
         ):
             self.dv.isel(not_a_dim=0)
@@ -1460,7 +1464,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.indexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1480,7 +1484,7 @@ class TestDataArray:
         # regression test for GH3746
         arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
         del arr.coords["x"]
-        assert "x" not in arr.indexes
+        assert "x" not in arr.xindexes
 
     def test_broadcast_like(self):
         arr1 = DataArray(
@@ -1628,18 +1632,19 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
             )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # as kwargs
@@ -1647,9 +1652,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # multiindex case
@@ -1658,9 +1664,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": idx}, "y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
     def test_expand_dims_error(self):
@@ -2331,7 +2338,7 @@ class TestDataArray:
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
-        with raises_regex((KeyError, ValueError), "not .* in axis"):
+        with pytest.raises((KeyError, ValueError), match=r"not .* in axis"):
             actual = arr.drop_sel(y=[0, 1, 3])
 
         actual = arr.drop_sel(y=[0, 1, 3], errors="ignore")
@@ -3094,6 +3101,11 @@ class TestDataArray:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            array.resample(time="1D", keep_attrs=True)
+
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -3792,8 +3804,9 @@ class TestDataArray:
             "data": array.values,
             "coords": {"x": {"data": ["a", "b"]}},
         }
-        with raises_regex(
-            ValueError, "cannot convert dict when coords are missing the key 'dims'"
+        with pytest.raises(
+            ValueError,
+            match=r"cannot convert dict when coords are missing the key 'dims'",
         ):
             DataArray.from_dict(d)
 
@@ -4329,12 +4342,12 @@ class TestDataArray:
     def test_binary_op_propagate_indexes(self):
         # regression test for GH2227
         self.dv["x"] = np.arange(self.dv.sizes["x"])
-        expected = self.dv.indexes["x"]
+        expected = self.dv.xindexes["x"]
 
-        actual = (self.dv * 10).indexes["x"]
+        actual = (self.dv * 10).xindexes["x"]
         assert expected is actual
 
-        actual = (self.dv > 10).indexes["x"]
+        actual = (self.dv > 10).xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self):
@@ -6436,28 +6449,43 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
+@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
+def backend(request):
+    return request.param
+
+
 @pytest.fixture(params=[1])
-def da(request):
+def da(request, backend):
     if request.param == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        values = np.random.random((3, 21, 4))
-        da = DataArray(values, dims=("a", "time", "x"))
-        da["time"] = times
-        return da
+        da = DataArray(
+            np.random.random((3, 21, 4)),
+            dims=("a", "time", "x"),
+            coords=dict(time=times),
+        )
 
     if request.param == 2:
-        return DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
 
     if request.param == "repeating_ints":
-        return DataArray(
+        da = DataArray(
             np.tile(np.arange(12), 5).reshape(5, 4, 3),
             coords={"x": list("abc"), "y": list("defg")},
             dims=list("zyx"),
         )
 
+    if backend == "dask":
+        return da.chunk()
+    elif backend == "numpy":
+        return da
+    else:
+        raise ValueError
+
 
 @pytest.fixture
 def da_dask(seed=123):
+    # TODO: if possible, use the `da` fixture parameterized with backends rather than
+    # this.
     pytest.importorskip("dask.array")
     rs = np.random.RandomState(seed)
     times = pd.date_range("2000-01-01", freq="1D", periods=21)
@@ -6487,33 +6515,89 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
-def test_coarsen_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
+)
+def test_coarsen_keep_attrs(funcname, argument):
+    attrs_da = {"da_attr": "test"}
+    attrs_coords = {"attrs_coords": "test"}
 
-    da = xr.DataArray(
-        np.linspace(0, 364, num=364),
-        dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
-        attrs=_attrs,
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(
+        data,
+        dims=("coord"),
+        coords={"coord": ("coord", coords, attrs_coords)},
+        attrs=attrs_da,
+        name="name",
     )
 
-    da2 = da.copy(deep=True)
+    # attrs are now kept per default
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == attrs_da
+    da.coord.attrs == attrs_coords
+    assert result.name == "name"
 
-    # Test dropped attrs
-    dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == {}
+    # discard attrs
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using dataset keyword
-    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
-    assert dat.attrs == _attrs
+    # test discard attrs using global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using global option
-    with xr.set_options(keep_attrs=True):
-        dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == _attrs
+    # keyword takes precedence over global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+    assert result.attrs == attrs_da
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs in original object
-    xr.testing.assert_identical(da, da2)
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
+
+
+def test_coarsen_keep_attrs_deprecated():
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
+
+    assert result.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
+
+    assert result.attrs == {}
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
@@ -6598,6 +6682,7 @@ def test_rolling_properties(da):
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
@@ -6900,12 +6985,7 @@ def test_rolling_keep_attrs_deprecated():
     data = np.linspace(10, 15, 100)
     coords = np.linspace(1, 10, 100)
 
-    da = DataArray(
-        data,
-        dims=("coord"),
-        coords={"coord": coords},
-        attrs=attrs_da,
-    )
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
 
     # deprecated option
     with pytest.warns(
@@ -7208,6 +7288,7 @@ class TestIrisConversion:
 @pytest.mark.parametrize(
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp(da, dim, window_type, window):
     da = da.isel(a=0)
     da = da.where(da > 0.2)
@@ -7227,6 +7308,7 @@ def test_rolling_exp(da, dim, window_type, window):
 
 
 @requires_numbagg
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp_keep_attrs(da):
     attrs = {"attrs": "da"}
     da.attrs = attrs
@@ -7252,6 +7334,11 @@ def test_rolling_exp_keep_attrs(da):
     with set_options(keep_attrs=True):
         result = da.rolling_exp(time=10).mean(keep_attrs=False)
     assert result.attrs == {}
+
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        da.rolling_exp(time=10, keep_attrs=True)
 
 
 def test_no_dict():
@@ -7315,3 +7402,35 @@ def test_deepcopy_obj_array():
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
     assert x0.values[0] is not x1.values[0]
+
+
+def test_clip(da):
+    with raise_if_dask_computes():
+        result = da.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = da.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = da.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    with raise_if_dask_computes():
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    assert result.dims == da.dims
+    assert_array_equal(
+        result.data,
+        np.clip(da.data, da.mean("x").data[:, :, np.newaxis], da.mean("a").data),
+    )
+
+    with_nans = da.isel(time=[0, 1]).reindex_like(da)
+    with raise_if_dask_computes():
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    result = da.clip(with_nans)
+    # The values should be the same where there were NaNs.
+    assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
+
+    # Unclear whether we want this work, OK to adjust the test when we have decided.
+    with pytest.raises(ValueError, match="arguments without labels along dimension"):
+        result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))

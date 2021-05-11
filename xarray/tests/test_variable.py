@@ -11,6 +11,7 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.indexes import PandasIndex
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -19,7 +20,6 @@ from xarray.core.indexing import (
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
-    PandasIndexAdapter,
     VectorizedIndexer,
 )
 from xarray.core.pycompat import dask_array_type
@@ -33,7 +33,6 @@ from . import (
     assert_equal,
     assert_identical,
     raise_if_dask_computes,
-    raises_regex,
     requires_dask,
     requires_sparse,
     source_ndarray,
@@ -46,6 +45,11 @@ _PAD_XR_NP_ARGS = [
     [{"x": (3, 1), "z": (2, 0)}, ((3, 1), (0, 0), (2, 0))],
     [{"x": (3, 1), "z": 2}, ((3, 1), (0, 0), (2, 2))],
 ]
+
+
+@pytest.fixture
+def var():
+    return Variable(dims=list("xyz"), data=np.random.rand(3, 4, 5))
 
 
 class VariableSubclassobjects:
@@ -531,7 +535,7 @@ class VariableSubclassobjects:
         v = self.cls("x", midx)
         for deep in [True, False]:
             w = v.copy(deep=deep)
-            assert isinstance(w._data, PandasIndexAdapter)
+            assert isinstance(w._data, PandasIndex)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
@@ -1178,7 +1182,7 @@ class TestVariable(VariableSubclassobjects):
         assert isinstance(v._data, LazilyIndexedArray)
 
     def test_detect_indexer_type(self):
-        """ Tests indexer type was correctly detected. """
+        """Tests indexer type was correctly detected."""
         data = np.random.random((10, 11))
         v = Variable(["x", "y"], data)
 
@@ -1349,9 +1353,9 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(v.isel(x=0), v[:, 0])
         assert_identical(v.isel(x=[0, 2]), v[:, [0, 2]])
         assert_identical(v.isel(time=[]), v[[]])
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
+            match=r"Dimensions {'not_a_dim'} do not exist. Expected one or more of "
             r"\('time', 'x'\)",
         ):
             v.isel(not_a_dim=0)
@@ -2141,7 +2145,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_data(self):
         x = IndexVariable("x", np.arange(3.0))
-        assert isinstance(x._data, PandasIndexAdapter)
+        assert isinstance(x._data, PandasIndex)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
@@ -2283,7 +2287,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, LazilyIndexedArray)
+        types = (np.asarray, PandasIndex, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2442,7 +2446,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 
 class TestBackendIndexing:
-    """    Make sure all the array wrappers can be indexed. """
+    """Make sure all the array wrappers can be indexed."""
 
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -2512,3 +2516,27 @@ class TestBackendIndexing:
         v = Variable(dims=("x", "y"), data=CopyOnWriteArray(DaskIndexingAdapter(da)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
+
+
+def test_clip(var):
+    # Copied from test_dataarray (would there be a way to combine the tests?)
+    result = var.clip(min=0.5)
+    assert result.min(...) >= 0.5
+
+    result = var.clip(max=0.5)
+    assert result.max(...) <= 0.5
+
+    result = var.clip(min=0.25, max=0.75)
+    assert result.min(...) >= 0.25
+    assert result.max(...) <= 0.75
+
+    result = var.clip(min=var.mean("x"), max=var.mean("z"))
+    assert result.dims == var.dims
+    assert_array_equal(
+        result.data,
+        np.clip(
+            var.data,
+            var.mean("x").data[np.newaxis, :, :],
+            var.mean("z").data[:, :, np.newaxis],
+        ),
+    )

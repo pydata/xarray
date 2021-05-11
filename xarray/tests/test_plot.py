@@ -2,6 +2,7 @@ import contextlib
 import inspect
 from copy import copy
 from datetime import datetime
+from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
+    requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -35,6 +37,7 @@ from . import (
 try:
     import matplotlib as mpl
     import matplotlib.pyplot as plt
+    import mpl_toolkits  # type: ignore
 except ImportError:
     pass
 
@@ -131,8 +134,8 @@ class PlotTestCase:
         # Remove all matplotlib figures
         plt.close("all")
 
-    def pass_in_axis(self, plotmethod):
-        fig, axes = plt.subplots(ncols=2)
+    def pass_in_axis(self, plotmethod, subplot_kw=None):
+        fig, axes = plt.subplots(ncols=2, subplot_kw=subplot_kw)
         plotmethod(ax=axes[0])
         assert axes[0].has_data()
 
@@ -367,6 +370,34 @@ class TestPlot(PlotTestCase):
 
         a.plot.contourf(x="time", y="depth")
         a.plot.contourf(x="depth", y="time")
+
+    def test2d_1d_2d_coordinates_pcolormesh(self):
+        # Test with equal coordinates to catch bug from #5097
+        sz = 10
+        y2d, x2d = np.meshgrid(np.arange(sz), np.arange(sz))
+        a = DataArray(
+            easy_array((sz, sz)),
+            dims=["x", "y"],
+            coords={"x2d": (["x", "y"], x2d), "y2d": (["x", "y"], y2d)},
+        )
+
+        for x, y in [
+            ("x", "y"),
+            ("y", "x"),
+            ("x2d", "y"),
+            ("y", "x2d"),
+            ("x", "y2d"),
+            ("y2d", "x"),
+            ("x2d", "y2d"),
+            ("y2d", "x2d"),
+        ]:
+            p = a.plot.pcolormesh(x=x, y=y)
+            v = p.get_paths()[0].vertices
+
+            # Check all vertices are different, except last vertex which should be the
+            # same as the first
+            _, unique_counts = np.unique(v[:-1], axis=0, return_counts=True)
+            assert np.all(unique_counts == 1)
 
     def test_contourf_cmap_set(self):
         a = DataArray(easy_array((4, 4)), dims=["z", "time"])
@@ -1078,6 +1109,9 @@ class Common2dMixin:
     Should have the same name as the method.
     """
 
+    # Needs to be overridden in TestSurface for facet grid plots
+    subplot_kws: Union[Dict[Any, Any], None] = None
+
     @pytest.fixture(autouse=True)
     def setUp(self):
         da = DataArray(
@@ -1393,7 +1427,7 @@ class Common2dMixin:
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))
         d = DataArray(a, dims=["y", "x", "z"])
-        g = xplt.FacetGrid(d, col="z")
+        g = xplt.FacetGrid(d, col="z", subplot_kws=self.subplot_kws)
         g.map_dataarray(self.plotfunc, "x", "y")
         for ax in g.axes.flat:
             assert ax.has_data()
@@ -1791,6 +1825,95 @@ class TestImshow(Common2dMixin, PlotTestCase):
             da.plot.imshow(origin="lower")
             assert plt.xlim()[0] < 0
             assert plt.ylim()[0] < 0
+
+
+class TestSurface(Common2dMixin, PlotTestCase):
+
+    plotfunc = staticmethod(xplt.surface)
+    subplot_kws = {"projection": "3d"}
+
+    def test_primitive_artist_returned(self):
+        artist = self.plotmethod()
+        assert isinstance(artist, mpl_toolkits.mplot3d.art3d.Poly3DCollection)
+
+    @pytest.mark.slow
+    def test_2d_coord_names(self):
+        self.plotmethod(x="x2d", y="y2d")
+        # make sure labels came out ok
+        ax = plt.gca()
+        assert "x2d" == ax.get_xlabel()
+        assert "y2d" == ax.get_ylabel()
+        assert f"{self.darray.long_name} [{self.darray.units}]" == ax.get_zlabel()
+
+    def test_xyincrease_false_changes_axes(self):
+        # Does not make sense for surface plots
+        pytest.skip("does not make sense for surface plots")
+
+    def test_xyincrease_true_changes_axes(self):
+        # Does not make sense for surface plots
+        pytest.skip("does not make sense for surface plots")
+
+    def test_can_pass_in_axis(self):
+        self.pass_in_axis(self.plotmethod, subplot_kw={"projection": "3d"})
+
+    def test_default_cmap(self):
+        # Does not make sense for surface plots with default arguments
+        pytest.skip("does not make sense for surface plots")
+
+    def test_diverging_color_limits(self):
+        # Does not make sense for surface plots with default arguments
+        pytest.skip("does not make sense for surface plots")
+
+    def test_colorbar_kwargs(self):
+        # Does not make sense for surface plots with default arguments
+        pytest.skip("does not make sense for surface plots")
+
+    def test_cmap_and_color_both(self):
+        # Does not make sense for surface plots with default arguments
+        pytest.skip("does not make sense for surface plots")
+
+    def test_seaborn_palette_as_cmap(self):
+        # seaborn does not work with mpl_toolkits.mplot3d
+        with pytest.raises(ValueError):
+            super().test_seaborn_palette_as_cmap()
+
+    # Need to modify this test for surface(), because all subplots should have labels,
+    # not just left and bottom
+    @pytest.mark.filterwarnings("ignore:tight_layout cannot")
+    def test_convenient_facetgrid(self):
+        a = easy_array((10, 15, 4))
+        d = DataArray(a, dims=["y", "x", "z"])
+        g = self.plotfunc(d, x="x", y="y", col="z", col_wrap=2)
+
+        assert_array_equal(g.axes.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axes):
+            assert ax.has_data()
+            assert "y" == ax.get_ylabel()
+            assert "x" == ax.get_xlabel()
+
+        # Infering labels
+        g = self.plotfunc(d, col="z", col_wrap=2)
+        assert_array_equal(g.axes.shape, [2, 2])
+        for (y, x), ax in np.ndenumerate(g.axes):
+            assert ax.has_data()
+            assert "y" == ax.get_ylabel()
+            assert "x" == ax.get_xlabel()
+
+    @requires_matplotlib_3_3_0
+    def test_viridis_cmap(self):
+        return super().test_viridis_cmap()
+
+    @requires_matplotlib_3_3_0
+    def test_can_change_default_cmap(self):
+        return super().test_can_change_default_cmap()
+
+    @requires_matplotlib_3_3_0
+    def test_colorbar_default_label(self):
+        return super().test_colorbar_default_label()
+
+    @requires_matplotlib_3_3_0
+    def test_facetgrid_map_only_appends_mappables(self):
+        return super().test_facetgrid_map_only_appends_mappables()
 
 
 class TestFacetGrid(PlotTestCase):
