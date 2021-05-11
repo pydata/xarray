@@ -881,18 +881,6 @@ def combine_by_coords(
                 join=join,
                 combine_attrs=combine_attrs,
             )
-            # Check the overall coordinates are monotonically increasing
-            # TODO (benbovy - flexible indexes): only with pandas.Index?
-            for dim in concat_dims:
-                indexes = concatenated.xindexes.get(dim)
-                if not (
-                        indexes.array.is_monotonic_increasing
-                        or indexes.array.is_monotonic_decreasing
-                    ):
-                    raise ValueError(
-                        "Resulting object does not have monotonic"
-                        " global indexes along dimension {}".format(dim)
-                    )
             concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(
