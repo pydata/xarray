@@ -391,8 +391,11 @@ a user passes `old_arg`, we would instead catch it:
     def func(new_arg, old_arg=None):
         if old_arg is not None:
             from warnings import warn
-            warn("`old_arg` has now been deprecated, and in future will raise an error.
-                  Please use `new_arg` from now on.")
+
+            warn(
+                "`old_arg` has been deprecated, and in the future will raise an error."
+                "Please use `new_arg` from now on."
+            )
 
             # Still do what the user intended here
 
