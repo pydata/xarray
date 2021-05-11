@@ -35,7 +35,7 @@ from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
-from xarray.core import indexing
+from xarray.core import indexes, indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import LooseVersion, mock
@@ -735,7 +735,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexing.PandasIndexAdapter)
+                        assert isinstance(obj, indexes.PandasIndex)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))

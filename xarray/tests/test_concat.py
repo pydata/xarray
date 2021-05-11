@@ -521,7 +521,7 @@ class TestConcatDataArray:
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument
-        stacked = concat(grouped, ds.indexes["x"])
+        stacked = concat(grouped, pd.Index(ds["x"], name="x"))
         assert_identical(foo, stacked)
 
         actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)

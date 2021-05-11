@@ -280,7 +280,7 @@ class TestDecodeCF:
         assert all(
             isinstance(var.data, da.Array)
             for name, var in decoded.variables.items()
-            if name not in decoded.indexes
+            if name not in decoded.xindexes
         )
         assert_identical(decoded, conventions.decode_cf(original).compute())
 

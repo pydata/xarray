@@ -99,7 +99,10 @@ def test_resample(freqs, closed, label, base):
             )
             .mean()
         )
-        da_cftime["time"] = da_cftime.indexes["time"].to_datetimeindex()
+        # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+        da_cftime["time"] = (
+            da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
+        )
         xr.testing.assert_identical(da_cftime, da_datetime)
 
 
@@ -145,5 +148,6 @@ def test_calendars(calendar):
         .resample(time=freq, closed=closed, label=label, base=base, loffset=loffset)
         .mean()
     )
-    da_cftime["time"] = da_cftime.indexes["time"].to_datetimeindex()
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)
