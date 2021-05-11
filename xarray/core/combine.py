@@ -629,6 +629,7 @@ def combine_by_coords(
     fill_value=dtypes.NA,
     join="outer",
     combine_attrs="no_conflicts",
+    datasets=None
 ):
     """
     Attempt to auto-magically combine the given datasets (or data arrays)
@@ -831,6 +832,15 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
+
+    # TODO remove after version 0.19, see PR4696
+    if datasets is not None:
+        warnings.warn(
+            "The datasets argument has been renamed to `data_objects`."
+            " In future passing a value for datasets will raise an error.")
+        data_objects = datasets
+
+    # TODO aijams - Check the logic of this patched combine_by_coords function.
     if not data_objects:
         return Dataset()
 
@@ -853,19 +863,37 @@ def combine_by_coords(
         )
         return DataArray()._from_temp_dataset(combined_temp_dataset)
 
-        # Check the overall coordinates are monotonically increasing
-        # TODO (benbovy - flexible indexes): only with pandas.Index?
-        for dim in concat_dims:
-            indexes = concatenated.xindexes.get(dim)
-            if not (
-                indexes.array.is_monotonic_increasing
-                or indexes.array.is_monotonic_decreasing
-            ):
-                raise ValueError(
-                    "Resulting object does not have monotonic"
-                    " global indexes along dimension {}".format(dim)
-                )
-        concatenated_grouped_by_data_vars.append(concatenated)
+    else:
+        # Group by data vars
+        sorted_datasets = sorted(data_objects, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
+
+        # Perform the multidimensional combine on each group of data variables
+        # before merging back together
+        concatenated_grouped_by_data_vars = []
+        for vars, datasets_with_same_vars in grouped_by_vars:
+            concatenated = _combine_single_variable_hypercube(
+                list(datasets_with_same_vars),
+                fill_value=fill_value,
+                data_vars=data_vars,
+                coords=coords,
+                compat=compat,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
+            # Check the overall coordinates are monotonically increasing
+            # TODO (benbovy - flexible indexes): only with pandas.Index?
+            for dim in concat_dims:
+                indexes = concatenated.xindexes.get(dim)
+                if not (
+                        indexes.array.is_monotonic_increasing
+                        or indexes.array.is_monotonic_decreasing
+                    ):
+                    raise ValueError(
+                        "Resulting object does not have monotonic"
+                        " global indexes along dimension {}".format(dim)
+                    )
+            concatenated_grouped_by_data_vars.append(concatenated)
 
     return merge(
         concatenated_grouped_by_data_vars,
