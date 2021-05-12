@@ -34,6 +34,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
+  an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
+  0.18.0.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~

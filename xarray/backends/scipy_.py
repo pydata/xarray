@@ -4,7 +4,12 @@ import os
 import numpy as np
 
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
+from ..core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    try_read_magic_number_from_file_or_path,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -235,10 +240,10 @@ class ScipyDataStore(WritableCFDataStore):
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj):
-        try:
-            return read_magic_number(filename_or_obj).startswith(b"CDF")
-        except TypeError:
-            pass
+
+        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+        if magic_number is not None:
+            return magic_number.startswith(b"CDF")
 
         try:
             _, ext = os.path.splitext(filename_or_obj)

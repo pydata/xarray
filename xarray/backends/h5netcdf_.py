@@ -6,7 +6,12 @@ from distutils.version import LooseVersion
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
+from ..core.utils import (
+    FrozenDict,
+    is_remote_uri,
+    read_magic_number_from_file,
+    try_read_magic_number_from_file_or_path,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -141,10 +146,10 @@ class H5NetCDFStore(WritableCFDataStore):
                 "try passing a path or file-like object"
             )
         elif isinstance(filename, io.IOBase):
-            magic_number = read_magic_number(filename)
+            magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    f"{magic_number} is not the signature of a valid netCDF file"
+                    f"{magic_number} is not the signature of a valid netCDF4 file"
                 )
 
         if format not in [None, "NETCDF4"]:
@@ -336,10 +341,9 @@ class H5NetCDFStore(WritableCFDataStore):
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj):
-        try:
-            return read_magic_number(filename_or_obj).startswith(b"\211HDF\r\n\032\n")
-        except TypeError:
-            pass
+        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+        if magic_number is not None:
+            return magic_number.startswith(b"\211HDF\r\n\032\n")
 
         try:
             _, ext = os.path.splitext(filename_or_obj)

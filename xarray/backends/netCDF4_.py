@@ -9,7 +9,12 @@ import numpy as np
 from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, close_on_error, is_remote_uri
+from ..core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    try_read_magic_number_from_path,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -517,6 +522,10 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
     def guess_can_open(self, filename_or_obj):
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
+        magic_number = try_read_magic_number_from_path(filename_or_obj)
+        if magic_number is not None:
+            # netcdf 3 or HDF5
+            return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
         try:
             _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
