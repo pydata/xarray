@@ -840,7 +840,6 @@ def combine_by_coords(
             " In future passing a value for datasets will raise an error.")
         data_objects = datasets
 
-    # TODO aijams - Check the logic of this patched combine_by_coords function.
     if not data_objects:
         return Dataset()
 
