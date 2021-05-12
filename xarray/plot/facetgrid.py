@@ -98,9 +98,9 @@ class FacetGrid:
         col_wrap : int, optional
             "Wrap" the column variable at this width, so that the column facets
         sharex : bool, optional
-            If true, the facets will share x axes
+            If true, the facets will share *x* axes
         sharey : bool, optional
-            If true, the facets will share y axes
+            If true, the facets will share *y* axes
         figsize : tuple, optional
             A tuple (width, height) of the figure in inches.
             If set, overrides ``size`` and ``aspect``.
@@ -110,7 +110,8 @@ class FacetGrid:
         size : scalar, optional
             Height (in inches) of each facet. See also: ``aspect``
         subplot_kws : dict, optional
-            Dictionary of keyword arguments for matplotlib subplots
+            Dictionary of keyword arguments for Matplotlib subplots
+            (:func:`matplotlib.pyplot.subplots`).
 
         """
 
