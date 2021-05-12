@@ -7,13 +7,7 @@ from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
 
-from . import (
-    IndexerMaker,
-    assert_array_equal,
-    assert_identical,
-    raises_regex,
-    requires_dask,
-)
+from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -210,7 +204,7 @@ def test_char_to_bytes_dask():
     assert actual.dtype == "S3"
     assert_array_equal(np.array(actual), expected)
 
-    with raises_regex(ValueError, "stacked dask character array"):
+    with pytest.raises(ValueError, match=r"stacked dask character array"):
         strings.char_to_bytes(array.rechunk(1))
 
 

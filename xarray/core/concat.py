@@ -142,14 +142,16 @@ def concat(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    combine_attrs : {"drop", "identical", "no_conflicts", "override"}, \
-                    default: "override"
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"}, default: "override"
         String indicating how to combine attrs of the objects being merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
         - "no_conflicts": attrs from all objects are combined, any that have
           the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
@@ -506,7 +508,7 @@ def _dataset_concat(
                 vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
                 raise ValueError("%r is not present in all datasets." % k)
-            combined = concat_vars(vars, dim, positions)
+            combined = concat_vars(vars, dim, positions, combine_attrs=combine_attrs)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
         elif k in result_vars:
@@ -570,7 +572,7 @@ def _dataarray_concat(
         positions,
         fill_value=fill_value,
         join=join,
-        combine_attrs="drop",
+        combine_attrs=combine_attrs,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)

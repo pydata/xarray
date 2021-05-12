@@ -1,20 +1,32 @@
 import logging
+import os.path
 import time
 import traceback
-from typing import Dict
+from pathlib import Path
+from typing import Any, Dict, Tuple, Type, Union
 
 import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin
+from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _normalize_path(path):
+    if isinstance(path, Path):
+        path = str(path)
+
+    if isinstance(path, str) and not is_remote_uri(path):
+        path = os.path.abspath(os.path.expanduser(path))
+
+    return path
 
 
 def _encode_variable_name(name):
@@ -344,12 +356,42 @@ class WritableCFDataStore(AbstractWritableDataStore):
 
 
 class BackendEntrypoint:
-    __slots__ = ("guess_can_open", "open_dataset", "open_dataset_parameters")
+    """
+    ``BackendEntrypoint`` is a class container and it is the main interface
+    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    It shall implement:
 
-    def __init__(self, open_dataset, open_dataset_parameters=None, guess_can_open=None):
-        self.open_dataset = open_dataset
-        self.open_dataset_parameters = open_dataset_parameters
-        self.guess_can_open = guess_can_open
+    - ``open_dataset`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~xarray.Dataset`.
+      It shall take in input at least ``filename_or_obj`` argument and
+      ``drop_variables`` keyword argument.
+      For more details see :ref:`RST open_dataset`.
+    - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
+      ``filename_or_obj``, ``False`` otherwise. The implementation of this
+      method is not mandatory.
+    """
+
+    open_dataset_parameters: Union[Tuple, None] = None
+    """list of ``open_dataset`` method parameters"""
+
+    def open_dataset(
+        self,
+        filename_or_obj: str,
+        drop_variables: Tuple[str] = None,
+        **kwargs: Any,
+    ):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        raise NotImplementedError
+
+    def guess_can_open(self, filename_or_obj):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        return False
 
 
-BACKEND_ENTRYPOINTS: Dict[str, BackendEntrypoint] = {}
+BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}

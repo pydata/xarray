@@ -5,7 +5,7 @@ import pytest
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_allclose, assert_equal, assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical
 
 
 @pytest.fixture
@@ -388,7 +388,7 @@ repr_da = xr.DataArray(
 def test_groupby_repr(obj, dim):
     actual = repr(obj.groupby(dim))
     expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over %r " % dim
+    expected += ", grouped over %r" % dim
     expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
     if dim == "x":
         expected += "1, 2, 3, 4, 5."
@@ -405,7 +405,7 @@ def test_groupby_repr(obj, dim):
 def test_groupby_repr_datetime(obj):
     actual = repr(obj.groupby("t.month"))
     expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over 'month' "
+    expected += ", grouped over 'month'"
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
@@ -479,34 +479,38 @@ def test_groupby_drops_nans():
 
 def test_groupby_grouping_errors():
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array):
     grouped = array.groupby("y")
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean()
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     grouped = array.groupby("y", squeeze=False)
@@ -547,6 +551,19 @@ def test_groupby_none_group_name():
 
     mean = da.groupby(key).mean()
     assert "group" in mean.dims
+
+
+def test_groupby_getitem(dataset):
+
+    assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
+    assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
+
+    assert_identical(dataset.foo.sel(x="a"), dataset.foo.groupby("x")["a"])
+    assert_identical(dataset.foo.sel(z=1), dataset.foo.groupby("z")[1])
+
+    actual = dataset.groupby("boo")["f"].unstack().transpose("x", "y", "z")
+    expected = dataset.sel(y=[1], z=[1, 2]).transpose("x", "y", "z")
+    assert_identical(expected, actual)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

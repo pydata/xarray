@@ -1,6 +1,6 @@
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from functools import partial
 
@@ -35,6 +35,26 @@ _NS_PER_TIME_DELTA = {
     "D": int(1e9) * 60 * 60 * 24,
 }
 
+_US_PER_TIME_DELTA = {
+    "microseconds": 1,
+    "milliseconds": 1_000,
+    "seconds": 1_000_000,
+    "minutes": 60 * 1_000_000,
+    "hours": 60 * 60 * 1_000_000,
+    "days": 24 * 60 * 60 * 1_000_000,
+}
+
+_NETCDF_TIME_UNITS_CFTIME = [
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "milliseconds",
+    "microseconds",
+]
+
+_NETCDF_TIME_UNITS_NUMPY = _NETCDF_TIME_UNITS_CFTIME + ["nanoseconds"]
+
 TIME_UNITS = frozenset(
     [
         "days",
@@ -46,6 +66,10 @@ TIME_UNITS = frozenset(
         "nanoseconds",
     ]
 )
+
+
+def _is_standard_calendar(calendar):
+    return calendar.lower() in _STANDARD_CALENDARS
 
 
 def _netcdf_to_numpy_timeunit(units):
@@ -146,7 +170,7 @@ def _decode_datetime_with_cftime(num_dates, units, calendar):
 
 
 def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
-    if calendar not in _STANDARD_CALENDARS:
+    if not _is_standard_calendar(calendar):
         raise OutOfBoundsDatetime(
             "Cannot decode times from a non-standard calendar, {!r}, using "
             "pandas.".format(calendar)
@@ -160,6 +184,11 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
         # ValueError is raised by pd.Timestamp for non-ISO timestamp
         # strings, in which case we fall back to using cftime
         raise OutOfBoundsDatetime
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
+        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
@@ -191,7 +220,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     Note that time unit in `units` must not be smaller than microseconds and
     not larger than days.
 
-    See also
+    See Also
     --------
     cftime.num2date
     """
@@ -212,7 +241,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 dates[np.nanargmin(num_dates)].year < 1678
                 or dates[np.nanargmax(num_dates)].year >= 2262
             ):
-                if calendar in _STANDARD_CALENDARS:
+                if _is_standard_calendar(calendar):
                     warnings.warn(
                         "Unable to decode time axis into full "
                         "numpy.datetime64 objects, continuing using "
@@ -222,12 +251,10 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                         stacklevel=3,
                     )
             else:
-                if calendar in _STANDARD_CALENDARS:
+                if _is_standard_calendar(calendar):
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
-        dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(float), units, calendar
-        )
+        dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
     else:
         dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
 
@@ -262,25 +289,33 @@ def decode_cf_timedelta(num_timedeltas, units):
     return result.reshape(num_timedeltas.shape)
 
 
+def _unit_timedelta_cftime(units):
+    return timedelta(microseconds=_US_PER_TIME_DELTA[units])
+
+
+def _unit_timedelta_numpy(units):
+    numpy_units = _netcdf_to_numpy_timeunit(units)
+    return np.timedelta64(_NS_PER_TIME_DELTA[numpy_units], "ns")
+
+
 def _infer_time_units_from_diff(unique_timedeltas):
-    # Note that the modulus operator was only implemented for np.timedelta64
-    # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
-    # supported is greater than or equal to this we will no longer need to cast
-    # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
-    # modulus operator works for TimedeltaIndex objects.
-    unique_deltas_as_index = pd.TimedeltaIndex(unique_timedeltas)
-    for time_unit in [
-        "days",
-        "hours",
-        "minutes",
-        "seconds",
-        "milliseconds",
-        "microseconds",
-        "nanoseconds",
-    ]:
-        delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
-        unit_delta = np.timedelta64(delta_ns, "ns")
-        if np.all(unique_deltas_as_index % unit_delta == np.timedelta64(0, "ns")):
+    if unique_timedeltas.dtype == np.dtype("O"):
+        time_units = _NETCDF_TIME_UNITS_CFTIME
+        unit_timedelta = _unit_timedelta_cftime
+        zero_timedelta = timedelta(microseconds=0)
+        timedeltas = unique_timedeltas
+    else:
+        time_units = _NETCDF_TIME_UNITS_NUMPY
+        unit_timedelta = _unit_timedelta_numpy
+        zero_timedelta = np.timedelta64(0, "ns")
+        # Note that the modulus operator was only implemented for np.timedelta64
+        # arrays as of NumPy version 1.16.0.  Once our minimum version of NumPy
+        # supported is greater than or equal to this we will no longer need to cast
+        # unique_timedeltas to a TimedeltaIndex.  In the meantime, however, the
+        # modulus operator works for TimedeltaIndex objects.
+        timedeltas = pd.TimedeltaIndex(unique_timedeltas)
+    for time_unit in time_units:
+        if np.all(timedeltas % unit_timedelta(time_unit) == zero_timedelta):
             return time_unit
     return "seconds"
 
@@ -309,10 +344,6 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else "1970-01-01"
         reference_date = format_cftime_datetime(reference_date)
     unique_timedeltas = np.unique(np.diff(dates))
-    if unique_timedeltas.dtype == np.dtype("O"):
-        # Convert to np.timedelta64 objects using pandas to work around a
-        # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
-        unique_timedeltas = to_timedelta_unboxed(unique_timedeltas)
     units = _infer_time_units_from_diff(unique_timedeltas)
     return f"{units} since {reference_date}"
 
@@ -391,7 +422,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     def encode_datetime(d):
         return np.nan if d is None else cftime.date2num(d, units, calendar)
 
-    return np.vectorize(encode_datetime)(dates)
+    return np.array([encode_datetime(d) for d in dates.ravel()]).reshape(dates.shape)
 
 
 def cast_to_int_if_safe(num):
@@ -407,7 +438,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     Unlike `date2num`, this function can handle datetime64 arrays.
 
-    See also
+    See Also
     --------
     cftime.date2num
     """
@@ -423,7 +454,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
-        if calendar not in _STANDARD_CALENDARS or dates.dtype.kind == "O":
+        if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert dates.dtype == "datetime64[ns]"

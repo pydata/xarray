@@ -4,7 +4,6 @@ import contextlib
 import functools
 import io
 import itertools
-import os.path
 import re
 import warnings
 from enum import Enum
@@ -611,7 +610,12 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r"^https?\://", path))
+    """Finds URLs of the form protocol:// or protocol::
+
+    This also matches for http[s]://, which were the only remote URLs
+    supported in <=v0.16.2.
+    """
+    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
 def read_magic_number(filename_or_obj, count=8):
@@ -630,11 +634,6 @@ def read_magic_number(filename_or_obj, count=8):
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
     return magic_number
-
-
-def is_grib_path(path: str) -> bool:
-    _, ext = os.path.splitext(path)
-    return ext in [".grib", ".grb", ".grib2", ".grb2"]
 
 
 def is_uniform_spaced(arr, **kwargs) -> bool:
@@ -659,10 +658,6 @@ def hashable(v: Any) -> bool:
     except TypeError:
         return False
     return True
-
-
-def not_implemented(*args, **kwargs):
-    return NotImplemented
 
 
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:

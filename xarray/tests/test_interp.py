@@ -190,7 +190,7 @@ def test_interpolate_vectorize(use_dask):
             "w": xdest["w"],
             "z2": xdest["z2"],
             "y": da["y"],
-            "x": (("z", "w"), xdest),
+            "x": (("z", "w"), xdest.data),
             "x2": (("z", "w"), func(da["x2"], "x", xdest)),
         },
     )
@@ -495,7 +495,7 @@ def test_dataset():
 
 @pytest.mark.parametrize("case", [0, 3])
 def test_interpolate_dimorder(case):
-    """ Make sure the resultant dimension order is consistent with .sel() """
+    """Make sure the resultant dimension order is consistent with .sel()"""
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -866,3 +866,38 @@ def test_interpolate_chunk_advanced(method):
     z = z.chunk(3)
     actual = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
     assert_identical(actual, expected)
+
+
+@requires_scipy
+def test_interp1d_bounds_error():
+    """Ensure exception on bounds error is raised if requested"""
+    da = xr.DataArray(
+        np.sin(0.3 * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    with pytest.raises(ValueError):
+        da.interp(time=3.5, kwargs=dict(bounds_error=True))
+
+    # default is to fill with nans, so this should pass
+    da.interp(time=3.5)
+
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "x, expect_same_attrs",
+    [
+        (2.5, True),
+        (np.array([2.5, 5]), True),
+        (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
+    ],
+)
+def test_coord_attrs(x, expect_same_attrs):
+    base_attrs = dict(foo="bar")
+    ds = xr.Dataset(
+        data_vars=dict(a=2 * np.arange(5)),
+        coords={"x": ("x", np.arange(5), base_attrs)},
+    )
+
+    has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
+    assert expect_same_attrs == has_same_attrs

@@ -1,0 +1,44 @@
+name: "pre-commit autoupdate CI"
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # every Sunday at 00:00 UTC
+  workflow_dispatch:
+
+
+jobs:
+  autoupdate:
+    name: 'pre-commit autoupdate'
+    runs-on: ubuntu-latest
+    if: github.repository == 'pydata/xarray'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Cache pip and pre-commit
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/pre-commit
+            ~/.cache/pip
+          key: ${{ runner.os }}-pre-commit-autoupdate
+      - name: setup python
+        uses: actions/setup-python@v2
+      - name: upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: install dependencies
+        run: python -m pip install --upgrade pre-commit pyyaml packaging
+      - name: version info
+        run: python -m pip list
+      - name: autoupdate
+        uses: technote-space/create-pr-action@837dbe469b39f08d416889369a52e2a993625c84
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXECUTE_COMMANDS: |
+            python -m pre_commit autoupdate
+            python .github/workflows/sync_linter_versions.py .pre-commit-config.yaml ci/requirements/mypy_only
+          COMMIT_MESSAGE: 'pre-commit: autoupdate hook versions'
+          COMMIT_NAME: 'github-actions[bot]'
+          COMMIT_EMAIL: 'github-actions[bot]@users.noreply.github.com'
+          PR_TITLE: 'pre-commit: autoupdate hook versions'
+          PR_BRANCH_PREFIX: 'pre-commit/'
+          PR_BRANCH_NAME: 'autoupdate-${PR_ID}'

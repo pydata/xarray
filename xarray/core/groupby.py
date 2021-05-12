@@ -1,13 +1,11 @@
 import datetime
-import functools
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
-from .arithmetic import SupportsArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import propagate_indexes
@@ -233,7 +231,7 @@ def _apply_loffset(grouper, result):
     grouper.loffset = None
 
 
-class GroupBy(SupportsArithmetic):
+class GroupBy:
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -415,10 +413,19 @@ class GroupBy(SupportsArithmetic):
 
     @property
     def groups(self):
+        """
+        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
+
+    def __getitem__(self, key):
+        """
+        Get DataArray or Dataset corresponding to a particular group label.
+        """
+        return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self):
         return self._unique_coord.size
@@ -427,7 +434,7 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return "{}, grouped over {!r} \n{!r} groups with labels {}.".format(
+        return "{}, grouped over {!r}\n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
             self._unique_coord.size,
@@ -465,16 +472,11 @@ class GroupBy(SupportsArithmetic):
             coord = None
         return coord, dim, positions
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            g = f if not reflexive else lambda x, y: f(y, x)
-            applied = self._yield_binary_applied(g, other)
-            combined = self._combine(applied)
-            return combined
-
-        return func
+    def _binary_op(self, other, f, reflexive=False):
+        g = f if not reflexive else lambda x, y: f(y, x)
+        applied = self._yield_binary_applied(g, other)
+        combined = self._combine(applied)
+        return combined
 
     def _yield_binary_applied(self, func, other):
         dummy = None
@@ -541,7 +543,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.fillna
         DataArray.fillna
@@ -590,12 +592,11 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
@@ -672,7 +673,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.where
         """
@@ -698,7 +699,7 @@ class GroupBy(SupportsArithmetic):
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
-        See also
+        See Also
         --------
         Dataset.assign_coords
         Dataset.swap_dims
@@ -716,8 +717,10 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
+class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
+
+    __slots__ = ()
 
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
@@ -883,11 +886,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-ops.inject_reduce_methods(DataArrayGroupBy)
-ops.inject_binary_ops(DataArrayGroupBy)
+class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
+    __slots__ = ()
 
-class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
@@ -996,12 +998,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def assign(self, **kwargs):
         """Assign data variables by group.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
-
-
-ops.inject_reduce_methods(DatasetGroupBy)
-ops.inject_binary_ops(DatasetGroupBy)
