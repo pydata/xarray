@@ -634,7 +634,7 @@ def combine_by_coords(
         variable names to fill values. Use a data array's name to
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact", "override"}, optional
         String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
@@ -675,9 +675,6 @@ def combine_by_coords(
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
-
-    >>> import numpy as np
-    >>> import xarray as xr
 
     >>> x1 = xr.Dataset(
     ...     {
@@ -751,6 +748,7 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
+    # FIXME
     >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
     Dimensions:        (y: 4, x: 3)
@@ -765,8 +763,8 @@ def combine_by_coords(
     <xarray.Dataset>
     Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30 40 50 60
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
