@@ -96,7 +96,8 @@ class FacetGrid:
             Dimesion names that define subsets of the data, which will be drawn
             on separate facets in the grid.
         col_wrap : int, optional
-            "Wrap" the column variable at this width, so that the column facets
+            "Wrap" the grid the for the column variable after this number of columns,
+            adding rows if ``col_wrap`` is less than the number of facets.
         sharex : bool, optional
             If true, the facets will share *x* axes
         sharey : bool, optional
