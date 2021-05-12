@@ -84,6 +84,7 @@ from .utils import (
     Default,
     Frozen,
     HybridMappingProxy,
+    OrderedSet,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
@@ -91,7 +92,6 @@ from .utils import (
     hashable,
     infix_dims,
     is_dict_like,
-    OrderedSet,
     is_scalar,
     maybe_wrap_array,
 )
@@ -6390,7 +6390,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ...         lat=(["x", "y"], lat),
         ...         time=pd.date_range("2014-09-06", periods=3),
         ...         reference_time=pd.Timestamp("2014-09-05"),
-        ...      ),
+        ...     ),
         ... )
 
         Get variables matching a specific standard_name:
