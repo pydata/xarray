@@ -703,7 +703,7 @@ def combine_by_coords(
 
     >>> x1
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 0 1
       * x              (x) int64 10 20 30

@@ -357,14 +357,14 @@ class TestDataset:
             """\
         xarray.Dataset {
         dimensions:
-        \tdim1 = 8 ;
         \tdim2 = 9 ;
-        \tdim3 = 10 ;
         \ttime = 20 ;
+        \tdim1 = 8 ;
+        \tdim3 = 10 ;
 
         variables:
-        \tdatetime64[ns] time(time) ;
         \tfloat64 dim2(dim2) ;
+        \tdatetime64[ns] time(time) ;
         \tfloat64 var1(dim1, dim2) ;
         \t\tvar1:foo = variable ;
         \tfloat64 var2(dim1, dim2) ;
@@ -566,7 +566,7 @@ class TestDataset:
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, dict)
-        assert type(ds.dims.mapping.mapping) is dict
+        assert type(ds.dims.mapping) is dict
 
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
@@ -592,7 +592,7 @@ class TestDataset:
         assert "dim2" in repr(ds.indexes)
         assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
 
-        assert list(ds.coords) == ["time", "dim2", "dim3", "numbers"]
+        assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]
         assert "dim2" in ds.coords
         assert "numbers" in ds.coords
         assert "var1" not in ds.coords
@@ -1034,14 +1034,14 @@ class TestDataset:
             ValueError,
             match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of "
-            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+            r"[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*",
         ):
             data.isel(not_a_dim=slice(0, 2))
         with pytest.warns(
             UserWarning,
             match=r"Dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of "
-            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+            r"[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*",
         ):
             data.isel(not_a_dim=slice(0, 2), missing_dims="warn")
         assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
@@ -4822,10 +4822,10 @@ class TestDataset:
         assert_equal(data.min(dim=["dim1"]), data.min(dim="dim1"))
 
         for reduct, expected in [
-            ("dim2", ["dim1", "dim3", "time"]),
-            (["dim2", "time"], ["dim1", "dim3"]),
-            (("dim2", "time"), ["dim1", "dim3"]),
-            ((), ["dim1", "dim2", "dim3", "time"]),
+            ("dim2", ["dim3", "time", "dim1"]),
+            (["dim2", "time"], ["dim3", "dim1"]),
+            (("dim2", "time"), ["dim3", "dim1"]),
+            ((), ["dim2", "dim3", "time", "dim1"]),
         ]:
             actual = list(data.min(dim=reduct).dims)
             assert actual == expected
@@ -4875,21 +4875,24 @@ class TestDataset:
         )
         assert_identical(expected, data.cumsum())
 
-    def test_reduce_cumsum_test_dims(self):
+    @pytest.mark.parametrize(
+        "reduct, expected",
+        [
+            ("dim1", ["dim2", "dim3", "time", "dim1"]),
+            ("dim2", ["dim3", "time", "dim1", "dim2"]),
+            ("dim3", ["dim2", "time", "dim1", "dim3"]),
+            ("time", ["dim2", "dim3", "dim1"]),
+        ],
+    )
+    @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
+    def test_reduce_cumsum_test_dims(self, reduct, expected, func):
         data = create_test_data()
-        for cumfunc in ["cumsum", "cumprod"]:
-            with pytest.raises(ValueError, match=r"Dataset does not contain"):
-                getattr(data, cumfunc)(dim="bad_dim")
+        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+            getattr(data, func)(dim="bad_dim")
 
-            # ensure dimensions are correct
-            for reduct, expected in [
-                ("dim1", ["dim1", "dim2", "dim3", "time"]),
-                ("dim2", ["dim1", "dim2", "dim3", "time"]),
-                ("dim3", ["dim1", "dim2", "dim3", "time"]),
-                ("time", ["dim1", "dim2", "dim3"]),
-            ]:
-                actual = getattr(data, cumfunc)(dim=reduct).dims
-                assert list(actual) == expected
+        # ensure dimensions are correct
+        actual = getattr(data, func)(dim=reduct).dims
+        assert list(actual) == expected
 
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)

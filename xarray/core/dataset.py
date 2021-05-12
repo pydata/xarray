@@ -656,7 +656,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     ... )
     >>> ds
     <xarray.Dataset>
-    Dimensions:         (time: 3, x: 2, y: 2)
+    Dimensions:         (x: 2, y: 2, time: 3)
     Coordinates:
         lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -6394,7 +6394,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         >>> # Get variables matching a specific standard_name.
         >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (y: 2, time: 3, x: 2)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -6407,7 +6407,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         >>> standard_name = lambda v: v is not None
         >>> ds.filter_by_attrs(standard_name=standard_name)
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (x: 2, time: 3, y: 2)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59

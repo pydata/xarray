@@ -636,7 +636,7 @@ class GroupBy:
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>
-        Dimensions:   (quantile: 3, y: 2)
+        Dimensions:   (y: 2, quantile: 3)
         Coordinates:
           * quantile  (quantile) float64 0.0 0.5 1.0
           * y         (y) int64 1 2
