@@ -35,13 +35,13 @@ def _nicetitle(coord, value, maxchar, template):
 
 class FacetGrid:
     """
-    Initialize the matplotlib figure and FacetGrid object.
+    Initialize the Matplotlib figure and FacetGrid object.
 
     The :class:`FacetGrid` is an object that links a xarray DataArray to
-    a matplotlib figure with a particular structure.
+    a Matplotlib figure with a particular structure.
 
     In particular, :class:`FacetGrid` is used to draw plots with multiple
-    Axes where each Axes shows the same relationship conditioned on
+    axes, where each axes shows the same relationship conditioned on
     different levels of some dimension. It's possible to condition on up to
     two variables by assigning variables to the rows and columns of the
     grid.
@@ -59,19 +59,19 @@ class FacetGrid:
 
     Attributes
     ----------
-    axes : numpy object array
-        Contains axes in corresponding position, as returned from
-        plt.subplots
+    axes : ndarray of matplotlib.axes.Axes
+        Array containing axes in corresponding position, as returned from
+        :func:`matplotlib.pyplot.subplots`.
     col_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
+        List of :class:`matplotlib.text.Text` instances corresponding to column titles.
     row_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
-    fig : matplotlib.Figure
-        The figure containing all the axes
-    name_dicts : numpy object array
-        Contains dictionaries mapping coordinate names to values. None is
-        used as a sentinel value for axes which should remain empty, ie.
-        sometimes the bottom right grid
+        List of :class:`matplotlib.text.Text` instances corresponding to row titles.
+    fig : matplotlib.figure.Figure
+        The figure containing all the axes.
+    name_dicts : ndarray of dict
+        Array containing dictionaries mapping coordinate names to values. ``None`` is
+        used as a sentinel value for axes which should remain empty, that is,
+        sometimes the rightmost grid positions in the bottom row.
     """
 
     def __init__(
