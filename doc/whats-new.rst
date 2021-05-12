@@ -38,6 +38,10 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Updated the release guide for developers. Now accounts for actions that are automated via github
+  actions. Pull (:issue:`5274`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
