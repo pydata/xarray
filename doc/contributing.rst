@@ -394,7 +394,7 @@ a user passes ``old_arg``, we would instead catch it:
 
             warn(
                 "`old_arg` has been deprecated, and in the future will raise an error."
-                "Please use `new_arg` from now on."
+                "Please use `new_arg` from now on.", DeprecationWarning
             )
 
             # Still do what the user intended here
