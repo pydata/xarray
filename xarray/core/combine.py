@@ -68,12 +68,16 @@ def _infer_concat_order_from_coords(datasets):
         if dim in ds0:
 
             # Need to read coordinate values to do ordering
-            indexes = [ds.indexes.get(dim) for ds in datasets]
+            indexes = [ds.xindexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
                 raise ValueError(
                     "Every dimension needs a coordinate for "
                     "inferring concatenation order"
                 )
+
+            # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
+            # get pd.Index objects from Index objects
+            indexes = [index.array for index in indexes]
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -800,9 +804,13 @@ def combine_by_coords(
         )
 
         # Check the overall coordinates are monotonically increasing
+        # TODO (benbovy - flexible indexes): only with pandas.Index?
         for dim in concat_dims:
-            indexes = concatenated.indexes.get(dim)
-            if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
+            indexes = concatenated.xindexes.get(dim)
+            if not (
+                indexes.array.is_monotonic_increasing
+                or indexes.array.is_monotonic_decreasing
+            ):
                 raise ValueError(
                     "Resulting object does not have monotonic"
                     " global indexes along dimension {}".format(dim)
