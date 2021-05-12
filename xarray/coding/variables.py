@@ -85,6 +85,7 @@ def lazy_elemwise_func(array, func, dtype):
         this should be a pickle-able object.
     dtype : coercible to np.dtype
         Dtype for the result of this function.
+
     Returns
     -------
     Either a dask.array.Array or _ElementwiseFunctionArray.
