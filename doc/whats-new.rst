@@ -46,6 +46,8 @@ Internal Changes
   ``Dataset.xindexes`` / ``DataArray.xindexes`` properties. Also rename
   ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
   ``xarray.Index`` (:pull:`5102`). By `Benoit Bovy <https://github.com/benbovy>`_.
+- Replace ``SortedKeysDict`` with python's ``dict``, given dicts are now sorted.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.18.0:
 
