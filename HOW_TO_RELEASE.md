@@ -78,9 +78,9 @@ upstream        https://github.com/pydata/xarray (push)
     current released version.)
 13. Add a section for the next release {0.X.Y+1} to doc/whats-new.rst:
      ```rst
-     .. _whats-new.{0.X.Y+1}:
+     .. _whats-new.0.X.Y+1:
 
-     v{0.X.Y+1} (unreleased)
+     v0.X.Y+1 (unreleased)
      ---------------------
 
      New Features
