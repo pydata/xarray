@@ -205,11 +205,11 @@ class TestDataset:
         expected = dedent(
             """\
             <xarray.Dataset>
-            Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
+            Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
-              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
               * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
