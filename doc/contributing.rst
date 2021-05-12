@@ -388,13 +388,16 @@ may require a deprecation warning. For example, if your pull request means that 
 argument ``old_arg`` to ``func`` is no longer valid, instead of simply raising an error if
 a user passes ``old_arg``, we would instead catch it:
 
+.. code-block:: python
+
     def func(new_arg, old_arg=None):
         if old_arg is not None:
             from warnings import warn
 
             warn(
                 "`old_arg` has been deprecated, and in the future will raise an error."
-                "Please use `new_arg` from now on.", DeprecationWarning
+                "Please use `new_arg` from now on.",
+                DeprecationWarning,
             )
 
             # Still do what the user intended here
