@@ -62,15 +62,15 @@ class FacetGrid:
     axes : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :func:`matplotlib.pyplot.subplots`.
-    col_labels : list
-        List of :class:`matplotlib.text.Text` instances corresponding to column titles.
-    row_labels : list
-        List of :class:`matplotlib.text.Text` instances corresponding to row titles.
+    col_labels : list of matplotlib.text.Text
+        Column titles.
+    row_labels : list of matplotlib.text.Text
+        Row titles.
     fig : matplotlib.figure.Figure
         The figure containing all the axes.
     name_dicts : ndarray of dict
         Array containing dictionaries mapping coordinate names to values. ``None`` is
-        used as a sentinel value for axes which should remain empty, that is,
+        used as a sentinel value for axes that should remain empty, i.e.,
         sometimes the rightmost grid positions in the bottom row.
     """
 
@@ -92,7 +92,7 @@ class FacetGrid:
         ----------
         data : DataArray
             xarray DataArray to be plotted
-        row, col : strings
+        row, col : str
             Dimesion names that define subsets of the data, which will be drawn
             on separate facets in the grid.
         col_wrap : int, optional
