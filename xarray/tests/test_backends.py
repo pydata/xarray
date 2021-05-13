@@ -2824,7 +2824,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open(tmp_file, "rb") as f:
                 f.seek(8)
                 with pytest.raises(ValueError, match="cannot guess the engine"):
-                    with pytest.warns(RuntimeWarning, match=re.escape("'h5netcdf' fails while guessing")):
+                    with pytest.warns(
+                        RuntimeWarning,
+                        match=re.escape("'h5netcdf' fails while guessing"),
+                    ):
                         open_dataset(f)
 
 
@@ -5223,7 +5226,7 @@ def test_scipy_entrypoint(tmp_path):
     )
 
     path = tmp_path / "foo.nc.gz"
-    with gzip.open(path, mode='wb') as f:
+    with gzip.open(path, mode="wb") as f:
         f.write(contents)
     _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
