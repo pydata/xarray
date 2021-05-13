@@ -127,7 +127,6 @@ def _unpack_netcdf_time_units(units):
     # whitespace. It also ensures that the year is padded with zeros
     # so it will be correctly understood by pandas (via dateutil).
     matches = re.match(r"(.+) since (.+)", units)
-
     if not matches:
         raise ValueError(f"invalid time units: {units}")
 

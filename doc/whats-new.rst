@@ -27,6 +27,8 @@ New Features
 - :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
   such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Raise more informative error when decoding time variables with invalid reference dates.
+  (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
