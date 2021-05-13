@@ -4601,7 +4601,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = {}
         if dim not in self.dims:
             raise ValueError(f"'{dim}' not found in dimensions")
-        indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
 
     # this needs to be at the end, or mypy will confuse with `str`
