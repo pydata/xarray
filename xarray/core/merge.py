@@ -715,7 +715,6 @@ def merge(
 
     Examples
     --------
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[1.0, 2.0], [3.0, 5.0]],
     ...     dims=("lat", "lon"),
