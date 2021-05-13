@@ -3109,10 +3109,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             values.
         kwargs : dict, optional
             Additional keyword passed to scipy's interpolator.
-        method_for_non_numerics : str, optional
-            Method for non-numerics where modifying the elements is not
-            possible. See Dataset.reindex for options. "nearest" is used by
-            default.
+        method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
+            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`. 
+            ``"nearest"`` is used by default.
 
         Returns
         -------
