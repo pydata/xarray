@@ -27,6 +27,8 @@ New Features
 - :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
   such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Allow assigning values to a subset of a dataset using positional or label-based
+  indexing (:issue:`3015`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -78,8 +80,6 @@ Xianxiang Li, Zeb Nicholls, crusaderky, dschwoerer, johnomotani, keewis
 New Features
 ~~~~~~~~~~~~
 
-- Allow assigning values to a subset of a dataset using positional or label-based
-  indexing (:issue:`3015`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
