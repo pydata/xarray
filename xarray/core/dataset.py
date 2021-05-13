@@ -3081,7 +3081,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # Get the coords that also exist in the variables:
         coord_names = obj._coord_names & variables.keys()
         # Get the indexes that are not being interpolated along:
-        indexes = {k: v for k, v in obj.indexes.items() if k not in indexers}
+        indexes = {k: v for k, v in obj.xindexes.items() if k not in indexers}
         selected = self._replace_with_new_dims(
             variables.copy(), coord_names, indexes=indexes
         )
