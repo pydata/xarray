@@ -145,25 +145,24 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
         data = as_compatible_data(obj)
         if data.ndim != 1:
             raise MissingDimensionsError(
-                "cannot set variable %r with %r-dimensional data "
+                f"cannot set variable {name!r} with {data.ndim!r}-dimensional data "
                 "without explicit dimension names. Pass a tuple of "
-                "(dims, data) instead." % (name, data.ndim)
+                "(dims, data) instead."
             )
         obj = Variable(name, data, fastpath=True)
     else:
         raise TypeError(
             "unable to convert object into a variable without an "
-            "explicit list of dimensions: %r" % obj
+            f"explicit list of dimensions: {obj!r}"
         )
 
     if name is not None and name in obj.dims:
         # convert the Variable into an Index
         if obj.ndim != 1:
             raise MissingDimensionsError(
-                "%r has more than 1-dimension and the same name as one of its "
-                "dimensions %r. xarray disallows such variables because they "
-                "conflict with the coordinates used to label "
-                "dimensions." % (name, obj.dims)
+                f"{name!r} has more than 1-dimension and the same name as one of its "
+                f"dimensions {obj.dims!r}. xarray disallows such variables because they "
+                "conflict with the coordinates used to label dimensions."
             )
         obj = obj.to_index_variable()
 
@@ -236,21 +235,14 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray):
-        if hasattr(data, "__array_function__"):
-            return data
+    if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+        return data
 
     # validate whether the data is valid data types.
     data = np.asarray(data)
 
-    if isinstance(data, np.ndarray):
-        if data.dtype.kind == "O":
-            data = _possibly_convert_objects(data)
-        elif data.dtype.kind == "M":
-            data = _possibly_convert_objects(data)
-        elif data.dtype.kind == "m":
-            data = _possibly_convert_objects(data)
-
+    if isinstance(data, np.ndarray) and data.dtype.kind in "OMm":
+        data = _possibly_convert_objects(data)
     return _maybe_wrap_data(data)
 
 
@@ -268,10 +260,7 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    if isinstance(data, cupy_array_type):
-        data = data.get()
-    else:
-        data = np.asarray(data)
+    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -584,8 +573,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dims = tuple(dims)
         if len(dims) != self.ndim:
             raise ValueError(
-                "dimensions %s must have the same length as the "
-                "number of data dimensions, ndim=%s" % (dims, self.ndim)
+                f"dimensions {dims} must have the same length as the "
+                f"number of data dimensions, ndim={self.ndim}"
             )
         return dims
 
@@ -662,9 +651,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _validate_indexers(self, key):
         """Make sanity checks"""
         for dim, k in zip(self.dims, key):
-            if isinstance(k, BASIC_INDEXING_TYPES):
-                pass
-            else:
+            if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
                     k = np.asarray(k)
                     if k.ndim > 1:
@@ -852,9 +839,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
-                    "shape mismatch: value array of shape %s could not be "
-                    "broadcast to indexing result with %s dimensions"
-                    % (value.shape, len(dims))
+                    f"shape mismatch: value array of shape {value.shape} could not be "
+                    f"broadcast to indexing result with {len(dims)} dimensions"
                 )
             if value.ndim == 0:
                 value = Variable((), value)
@@ -1462,8 +1448,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         missing_dims = set(self.dims) - set(dims)
         if missing_dims:
             raise ValueError(
-                "new dimensions %r must be a superset of "
-                "existing dimensions %r" % (dims, self.dims)
+                f"new dimensions {dims!r} must be a superset of "
+                f"existing dimensions {self.dims!r}"
             )
 
         self_dims = set(self.dims)
@@ -1487,7 +1473,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
-            raise ValueError("invalid existing dimensions: %s" % dims)
+            raise ValueError(f"invalid existing dimensions: {dims}")
 
         if new_dim in self.dims:
             raise ValueError(
@@ -1554,7 +1540,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_dim_sizes = tuple(dims.values())
 
         if old_dim not in self.dims:
-            raise ValueError("invalid existing dimension: %s" % old_dim)
+            raise ValueError(f"invalid existing dimension: {old_dim}")
 
         if set(new_dim_names).intersection(self.dims):
             raise ValueError(
@@ -2550,7 +2536,7 @@ class IndexVariable(Variable):
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
-            raise ValueError("%s objects must be 1-dimensional" % type(self).__name__)
+            raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
 
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndex):
@@ -2601,7 +2587,7 @@ class IndexVariable(Variable):
             return self._replace(dims=dims, data=data)
 
     def __setitem__(self, key, value):
-        raise TypeError("%s values cannot be modified" % type(self).__name__)
+        raise TypeError(f"{type(self).__name__} values cannot be modified")
 
     @classmethod
     def concat(
@@ -2744,7 +2730,7 @@ class IndexVariable(Variable):
     def get_level_variable(self, level):
         """Return a new IndexVariable from a given MultiIndex level."""
         if self.level_names is None:
-            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
+            raise ValueError(f"IndexVariable {self.name!r} has no MultiIndex")
         index = self.to_index()
         return type(self)(self.dims, index.get_level_values(level))
 
@@ -2769,7 +2755,7 @@ def _unified_dims(variables):
         if len(set(var_dims)) < len(var_dims):
             raise ValueError(
                 "broadcasting cannot handle duplicate "
-                "dimensions: %r" % list(var_dims)
+                f"dimensions: {list(var_dims)!r}"
             )
         for d, s in zip(var_dims, var.shape):
             if d not in all_dims:
@@ -2777,8 +2763,7 @@ def _unified_dims(variables):
             elif all_dims[d] != s:
                 raise ValueError(
                     "operands cannot be broadcast together "
-                    "with mismatched lengths for dimension %r: %s"
-                    % (d, (all_dims[d], s))
+                    f"with mismatched lengths for dimension {d!r}: {(all_dims[d], s)}"
                 )
     return all_dims
 
@@ -2900,12 +2885,12 @@ def assert_unique_multiindex_level_names(variables):
 
     for k, v in level_names.items():
         if k in variables:
-            v.append("(%s)" % k)
+            v.append(f"({k})")
 
     duplicate_names = [v for v in level_names.values() if len(v) > 1]
     if duplicate_names:
         conflict_str = "\n".join(", ".join(v) for v in duplicate_names)
-        raise ValueError("conflicting MultiIndex level name(s):\n%s" % conflict_str)
+        raise ValueError(f"conflicting MultiIndex level name(s):\n{conflict_str}")
     # Check confliction between level names and dimensions GH:2299
     for k, v in variables.items():
         for d in v.dims:
