@@ -28,6 +28,7 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
+from xarray.core.indexes import Index
 from xarray.core.pycompat import integer_types
 from xarray.core.utils import is_scalar
 
@@ -582,9 +583,15 @@ class TestDataset:
         assert "numbers" not in ds.data_vars
         assert len(ds.data_vars) == 3
 
+        assert set(ds.xindexes) == {"dim2", "dim3", "time"}
+        assert len(ds.xindexes) == 3
+        assert "dim2" in repr(ds.xindexes)
+        assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
+
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3
         assert "dim2" in repr(ds.indexes)
+        assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
 
         assert list(ds.coords) == ["time", "dim2", "dim3", "numbers"]
         assert "dim2" in ds.coords
@@ -747,12 +754,12 @@ class TestDataset:
 
         # regression test for GH3746
         del actual.coords["x"]
-        assert "x" not in actual.indexes
+        assert "x" not in actual.xindexes
 
     def test_update_index(self):
         actual = Dataset(coords={"x": [1, 2, 3]})
         actual["x"] = ["a", "b", "c"]
-        assert actual.indexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_setitem_with_new_dimension(self):
         actual = Dataset()
@@ -1044,19 +1051,19 @@ class TestDataset:
         assert {"time": 20, "dim2": 9, "dim3": 10} == ret.dims
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
-        assert set(data.indexes) == set(ret.indexes)
+        assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         assert {"time": 2, "dim2": 5, "dim3": 10} == ret.dims
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
-        assert set(data.indexes) == set(ret.indexes)
+        assert set(data.xindexes) == set(ret.xindexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         assert {"dim2": 5, "dim3": 10} == ret.dims
         assert set(data.data_vars) == set(ret.data_vars)
         assert set(data.coords) == set(ret.coords)
-        assert set(data.indexes) == set(list(ret.indexes) + ["time"])
+        assert set(data.xindexes) == set(list(ret.xindexes) + ["time"])
 
     def test_isel_fancy(self):
         # isel with fancy indexing.
@@ -1392,13 +1399,13 @@ class TestDataset:
         )
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="x"))
-        actual_sel = mds.sel(x=DataArray(mds.indexes["x"][:3], dims="x"))
+        actual_sel = mds.sel(x=DataArray(midx[:3], dims="x"))
         assert actual_isel["x"].dims == ("x",)
         assert actual_sel["x"].dims == ("x",)
         assert_identical(actual_isel, actual_sel)
 
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims="z"))
-        actual_sel = mds.sel(x=Variable("z", mds.indexes["x"][:3]))
+        actual_sel = mds.sel(x=Variable("z", midx[:3]))
         assert actual_isel["x"].dims == ("z",)
         assert actual_sel["x"].dims == ("z",)
         assert_identical(actual_isel, actual_sel)
@@ -1408,7 +1415,7 @@ class TestDataset:
             x=xr.DataArray(np.arange(3), dims="z", coords={"z": [0, 1, 2]})
         )
         actual_sel = mds.sel(
-            x=xr.DataArray(mds.indexes["x"][:3], dims="z", coords={"z": [0, 1, 2]})
+            x=xr.DataArray(midx[:3], dims="z", coords={"z": [0, 1, 2]})
         )
         assert actual_isel["x"].dims == ("z",)
         assert actual_sel["x"].dims == ("z",)
@@ -2419,7 +2426,7 @@ class TestDataset:
         with pytest.warns(FutureWarning):
             data.drop(arr.coords)
         with pytest.warns(FutureWarning):
-            data.drop(arr.indexes)
+            data.drop(arr.xindexes)
 
         assert_array_equal(ds1.coords["x"], ["b"])
         assert_array_equal(ds2.coords["x"], ["b"])
@@ -2709,21 +2716,23 @@ class TestDataset:
         orig = Dataset(coords={"time": time})
 
         renamed = orig.rename(time="time_new")
-        assert "time_new" in renamed.indexes
-        assert isinstance(renamed.indexes["time_new"], CFTimeIndex)
-        assert renamed.indexes["time_new"].name == "time_new"
+        assert "time_new" in renamed.xindexes
+        # TODO: benbovy - flexible indexes: update when CFTimeIndex
+        # inherits from xarray.Index
+        assert isinstance(renamed.xindexes["time_new"].to_pandas_index(), CFTimeIndex)
+        assert renamed.xindexes["time_new"].to_pandas_index().name == "time_new"
 
         # check original has not changed
-        assert "time" in orig.indexes
-        assert isinstance(orig.indexes["time"], CFTimeIndex)
-        assert orig.indexes["time"].name == "time"
+        assert "time" in orig.xindexes
+        assert isinstance(orig.xindexes["time"].to_pandas_index(), CFTimeIndex)
+        assert orig.xindexes["time"].to_pandas_index().name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), CFTimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.indexes["time"], CFTimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), CFTimeIndex)
 
     def test_rename_does_not_change_DatetimeIndex_type(self):
         # make sure DatetimeIndex is conderved on rename
@@ -2732,21 +2741,23 @@ class TestDataset:
         orig = Dataset(coords={"time": time})
 
         renamed = orig.rename(time="time_new")
-        assert "time_new" in renamed.indexes
-        assert isinstance(renamed.indexes["time_new"], DatetimeIndex)
-        assert renamed.indexes["time_new"].name == "time_new"
+        assert "time_new" in renamed.xindexes
+        # TODO: benbovy - flexible indexes: update when DatetimeIndex
+        # inherits from xarray.Index?
+        assert isinstance(renamed.xindexes["time_new"].to_pandas_index(), DatetimeIndex)
+        assert renamed.xindexes["time_new"].to_pandas_index().name == "time_new"
 
         # check original has not changed
-        assert "time" in orig.indexes
-        assert isinstance(orig.indexes["time"], DatetimeIndex)
-        assert orig.indexes["time"].name == "time"
+        assert "time" in orig.xindexes
+        assert isinstance(orig.xindexes["time"].to_pandas_index(), DatetimeIndex)
+        assert orig.xindexes["time"].to_pandas_index().name == "time"
 
         # note: rename_dims(time="time_new") drops "ds.indexes"
         renamed = orig.rename_dims()
-        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), DatetimeIndex)
 
         renamed = orig.rename_vars()
-        assert isinstance(renamed.indexes["time"], DatetimeIndex)
+        assert isinstance(renamed.xindexes["time"].to_pandas_index(), DatetimeIndex)
 
     def test_swap_dims(self):
         original = Dataset({"x": [1, 2, 3], "y": ("x", list("abc")), "z": 42})
@@ -2755,7 +2766,10 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
+        pd.testing.assert_index_equal(
+            actual.xindexes["y"].to_pandas_index(),
+            expected.xindexes["y"].to_pandas_index(),
+        )
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2786,7 +2800,10 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(actual.indexes["y"], expected.indexes["y"])
+        pd.testing.assert_index_equal(
+            actual.xindexes["y"].to_pandas_index(),
+            expected.xindexes["y"].to_pandas_index(),
+        )
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -3163,7 +3180,9 @@ class TestDataset:
         D = xr.Dataset({"a": a, "b": b})
         sample_dims = ["x"]
         y = D.to_stacked_array("features", sample_dims)
-        assert y.indexes["features"].levels[1].dtype == D.y.dtype
+        # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
+        # inherited from xarray.Index
+        assert y.xindexes["features"].to_pandas_index().levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
     def test_to_stacked_array_to_unstacked_dataset(self):
@@ -3996,6 +4015,11 @@ class TestDataset:
         actual = resampled_ds.attrs
         expected = ds.attrs
         assert expected == actual
+
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            ds.resample(time="1D", keep_attrs=True)
 
     def test_resample_loffset(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -5610,8 +5634,8 @@ class TestDataset:
         ds = Dataset(
             {"d1": DataArray([1, 2, 3], dims=["x"], coords={"x": [10, 20, 30]})}
         )
-        expected = ds.indexes["x"]
-        actual = (ds * 2).indexes["x"]
+        expected = ds.xindexes["x"]
+        actual = (ds * 2).xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self):
@@ -6590,6 +6614,11 @@ def test_rolling_exp_keep_attrs(ds):
         result = ds.rolling_exp(time=10).mean(keep_attrs=False)
     assert result.attrs == {}
     assert result.z1.attrs == {}
+
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        ds.rolling_exp(time=10, keep_attrs=True)
 
 
 @pytest.mark.parametrize("center", (True, False))

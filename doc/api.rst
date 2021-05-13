@@ -846,6 +846,7 @@ Faceting
    plot.FacetGrid
    plot.FacetGrid.add_colorbar
    plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
    plot.FacetGrid.map
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
