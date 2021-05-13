@@ -25,9 +25,8 @@ def short_data_repr_html(array):
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
-    else:
-        text = escape(short_data_repr(array))
-        return f"<pre>{text}</pre>"
+    text = escape(short_data_repr(array))
+    return f"<pre>{text}</pre>"
 
 
 def format_dims(dims, coord_names):
@@ -77,8 +76,7 @@ def summarize_coord(name, var):
     if is_index:
         coord = var.variable.to_index_variable()
         if coord.level_names is not None:
-            coords = {}
-            coords[name] = _summarize_coord_multiindex(name, coord)
+            coords = {name: _summarize_coord_multiindex(name, coord)}
             for lname in coord.level_names:
                 var = coord.get_level_variable(lname)
                 coords[lname] = summarize_variable(lname, var)

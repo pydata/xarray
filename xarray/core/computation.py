@@ -323,7 +323,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                "but %r != %r" % (keys, first_keys)
+                f"but {keys!r} != {first_keys!r}"
             )
     return first_keys
 
@@ -533,7 +533,7 @@ def unified_dim_sizes(
         if len(set(var.dims)) < len(var.dims):
             raise ValueError(
                 "broadcasting cannot handle duplicate "
-                "dimensions on a variable: %r" % list(var.dims)
+                f"dimensions on a variable: {list(var.dims)}"
             )
         for dim, size in zip(var.dims, var.shape):
             if dim not in exclude_dims:
@@ -543,7 +543,7 @@ def unified_dim_sizes(
                     raise ValueError(
                         "operands cannot be broadcast together "
                         "with mismatched lengths for dimension "
-                        "%r: %s vs %s" % (dim, dim_sizes[dim], size)
+                        f"{dim}: {dim_sizes[dim]} vs {size}"
                     )
     return dim_sizes
 
@@ -580,8 +580,8 @@ def broadcast_compat_data(
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "
-            "dimensions %r on an input variable: these are core "
-            "dimensions on other input or output variables" % unexpected_dims
+            f"dimensions {unexpected_dims!r} on an input variable: these are core "
+            "dimensions on other input or output variables"
         )
 
     # for consistency with numpy, keep broadcast dimensions to the left
@@ -986,51 +986,58 @@ def apply_ufunc(
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
 
-    Compute the mean (``.mean``) over one dimension::
+    Compute the mean (``.mean``) over one dimension:
 
-        def mean(obj, dim):
-            # note: apply always moves core dimensions to the end
-            return apply_ufunc(np.mean, obj,
-                               input_core_dims=[[dim]],
-                               kwargs={'axis': -1})
+    >>> def mean(obj, dim):
+    ...     # note: apply always moves core dimensions to the end
+    ...     return apply_ufunc(
+    ...         np.mean, obj, input_core_dims=[[dim]], kwargs={"axis": -1}
+    ...     )
+    ...
 
-    Inner product over a specific dimension (like ``xr.dot``)::
+    Inner product over a specific dimension (like ``xr.dot``):
 
-        def _inner(x, y):
-            result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
-            return result[..., 0, 0]
+    >>> def _inner(x, y):
+    ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
+    ...     return result[..., 0, 0]
+    ...
+    >>> def inner_product(a, b, dim):
+    ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    ...
 
-        def inner_product(a, b, dim):
-            return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    Stack objects along a new dimension (like ``xr.concat``):
 
-    Stack objects along a new dimension (like ``xr.concat``)::
-
-        def stack(objects, dim, new_coord):
-            # note: this version does not stack coordinates
-            func = lambda *x: np.stack(x, axis=-1)
-            result = apply_ufunc(func, *objects,
-                                 output_core_dims=[[dim]],
-                                 join='outer',
-                                 dataset_fill_value=np.nan)
-            result[dim] = new_coord
-            return result
+    >>> def stack(objects, dim, new_coord):
+    ...     # note: this version does not stack coordinates
+    ...     func = lambda *x: np.stack(x, axis=-1)
+    ...     result = apply_ufunc(
+    ...         func,
+    ...         *objects,
+    ...         output_core_dims=[[dim]],
+    ...         join="outer",
+    ...         dataset_fill_value=np.nan
+    ...     )
+    ...     result[dim] = new_coord
+    ...     return result
+    ...
 
     If your function is not vectorized but can be applied only to core
     dimensions, you can use ``vectorize=True`` to turn into a vectorized
     function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
     terribly fast. Here we'll use it to calculate the distance between
     empirical samples from two probability distributions, using a scipy
-    function that needs to be applied to vectors::
+    function that needs to be applied to vectors:
 
-        import scipy.stats
-
-        def earth_mover_distance(first_samples,
-                                 second_samples,
-                                 dim='ensemble'):
-            return apply_ufunc(scipy.stats.wasserstein_distance,
-                               first_samples, second_samples,
-                               input_core_dims=[[dim], [dim]],
-                               vectorize=True)
+    >>> import scipy.stats
+    >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
+    ...     return apply_ufunc(
+    ...         scipy.stats.wasserstein_distance,
+    ...         first_samples,
+    ...         second_samples,
+    ...         input_core_dims=[[dim], [dim]],
+    ...         vectorize=True,
+    ...     )
+    ...
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
