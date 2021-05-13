@@ -634,7 +634,7 @@ def combine_by_coords(
         variable names to fill values. Use a data array's name to
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
-    join : {"outer", "inner", "left", "right", "exact", "override"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
