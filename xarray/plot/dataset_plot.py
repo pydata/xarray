@@ -198,8 +198,8 @@ def _dsplot(plotfunc):
     x, y : str
         Variable names for the *x* and *y* grid positions.
     u, v : str, optional
-        Variable names for *u* and *v*
-        (*x* and *y* velocities; quiver/streamplot plots only).
+        Variable names for the *u* and *v* velocities
+        (in *x* and *y* direction, respectively; quiver/streamplot plots only).
     hue: str, optional
         Variable by which to color scatter points or arrows.
     hue_style: str, optional
@@ -474,11 +474,11 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, u, v, **kwargs):
+def scatter(ds, x, y, **kwargs):
     """
     Scatter Dataset data variables against each other.
 
-    Wraps :py:func:`matplotlib.pyplot.scatter`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
     """
 
     if "add_colorbar" in kwargs or "add_legend" in kwargs:
@@ -495,6 +495,10 @@ def scatter(ds, x, y, u, v, **kwargs):
     markersize = kwargs.pop("markersize", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+
+    # Remove `u` and `v` so they don't get passed to `ax.scatter`
+    kwargs.pop("u", None)
+    kwargs.pop("v", None)
 
     # need to infer size_mapping with full dataset
     data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
@@ -535,7 +539,7 @@ def scatter(ds, x, y, u, v, **kwargs):
 def quiver(ds, x, y, u, v, **kwargs):
     """Quiver plot of Dataset variables.
 
-    Wraps :py:func:`matplotlib.pyplot.quiver`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
     """
     import matplotlib as mpl
 
@@ -568,7 +572,7 @@ def quiver(ds, x, y, u, v, **kwargs):
 def streamplot(ds, x, y, u, v, **kwargs):
     """Plot streamlines of Dataset variables.
 
-    Wraps :py:func:`matplotlib.pyplot.streamplot`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
     """
     import matplotlib as mpl
 

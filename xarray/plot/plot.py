@@ -124,7 +124,7 @@ def plot(
     **kwargs,
 ):
     """
-    Default plot of DataArray using :py:mod:`matplotlib.pyplot`.
+    Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
     the :py:meth:`squeezed DataArray <xarray.DataArray.squeeze>`.
@@ -155,7 +155,7 @@ def plot(
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots
-        (see :py:meth:`matplotlib.figure.Figure.add_subplot`).
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
     **kwargs : optional
         Additional keyword arguments for Matplotlib.
 
@@ -234,7 +234,8 @@ def line(
     Parameters
     ----------
     darray : DataArray
-        Must be one-dimensional (1D).
+        Must be one-dimensional (1D), unless ``hue``, ``x``, or ``y`` is provided
+        (in which case it should be 2D).
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -270,7 +271,7 @@ def line(
     add_legend : bool, optional
         Add legend with *y* axis coordinates (2D inputs only).
     *args, **kwargs : optional
-        Additional arguments to :py:func:`matplotlib.pyplot.plot`.
+        Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
     """
     # Handle facetgrids first
     if row or col:
@@ -414,7 +415,7 @@ def hist(
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
-        Additional keyword arguments to :py:func:`matplotlib.pyplot.hist`.
+        Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     """
     ax = get_axis(figsize, size, aspect, ax)
@@ -573,12 +574,12 @@ def _plot2d(plotfunc):
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots. Only used
         for 2D and faceted plots.
-        (see :py:meth:`matplotlib.figure.Figure.add_subplot`).
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
     cbar_ax : matplotlib axes object, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
         Dictionary of keyword arguments to pass to the colorbar
-        (see :meth:`matplotlib.figure.Figure.colorbar`).
+        (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
     **kwargs : optional
         Additional keyword arguments to wrapped Matplotlib function.
 
@@ -902,7 +903,7 @@ def imshow(x, y, z, ax, **kwargs):
     dimension can be interpreted as RGB or RGBA color channels and
     allows this dimension to be specified via the kwarg ``rgb=``.
 
-    Unlike :py:func:`matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
+    Unlike :py:func:`matplotlib:matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
     for RGB(A) data,
     xarray *will* use ``vmin`` and ``vmax`` for RGB(A) data
     by applying a single scaling factor and offset to all bands.
@@ -913,7 +914,7 @@ def imshow(x, y, z, ax, **kwargs):
         This function needs uniformly spaced coordinates to
         properly label the axes. Call :py:meth:`DataArray.plot` to check.
 
-    The pixels are centered on the coordinates values. For example, if the coordinate
+    The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
 
@@ -1044,7 +1045,7 @@ def surface(x, y, z, ax, **kwargs):
     """
     Surface plot of 2D DataArray.
 
-    Wraps :py:func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`.
+    Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """
     primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive
