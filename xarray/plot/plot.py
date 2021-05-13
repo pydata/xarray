@@ -124,10 +124,10 @@ def plot(
     **kwargs,
 ):
     """
-    Default plot of DataArray using :mod:`matplotlib.pyplot`.
+    Default plot of DataArray using :py:mod:`matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
-    the :meth:`squeezed DataArray <xarray.DataArray.squeeze>`.
+    the :py:meth:`squeezed DataArray <xarray.DataArray.squeeze>`.
 
     =============== ===========================
     Dimensions      Plotting function
@@ -155,7 +155,7 @@ def plot(
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots
-        (see :meth:`matplotlib.figure.Figure.add_subplot`).
+        (see :py:meth:`matplotlib.figure.Figure.add_subplot`).
     **kwargs : optional
         Additional keyword arguments for Matplotlib.
 
@@ -573,7 +573,7 @@ def _plot2d(plotfunc):
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots. Only used
         for 2D and faceted plots.
-        (see :meth:`matplotlib.figure.Figure.add_subplot`).
+        (see :py:meth:`matplotlib.figure.Figure.add_subplot`).
     cbar_ax : matplotlib axes object, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
@@ -911,7 +911,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     .. note::
         This function needs uniformly spaced coordinates to
-        properly label the axes. Call :meth:`DataArray.plot` to check.
+        properly label the axes. Call :py:meth:`DataArray.plot` to check.
 
     The pixels are centered on the coordinates values. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.

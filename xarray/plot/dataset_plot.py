@@ -201,15 +201,15 @@ def _dsplot(plotfunc):
         Variable names for *u* and *v*
         (*x* and *y* velocities; quiver/streamplot plots only).
     hue: str, optional
-        Variable by which to color scattered points or arrows.
+        Variable by which to color scatter points or arrows.
     hue_style: str, optional
         Can be either ``'discrete'`` (legend) or ``'continuous'`` (colorbar).
     markersize: str, optional
-        Variable by which to vary size of scattered points (scatter plot only).
+        Variable by which to vary the size of scattered points (scatter plot only).
     size_norm: matplotlib.colors.Normalize or tuple, optional
         Used to normalize the ``markersize`` variable.
         If a tuple is passed, the values will be passed to
-        :meth:`matplotlib.colors.Normalize` as arguments.
+        :py:class:`matplotlib:matplotlib.colors.Normalize` as arguments.
         Default: no normalization (``vmin=None``, ``vmax=None``, ``clip=False``).
     scale: scalar, optional
         Quiver only. Number of data units per arrow length unit.
@@ -231,7 +231,7 @@ def _dsplot(plotfunc):
         If ``None``, use the current axes. Not applicable when using facets.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots
-        (see :meth:`matplotlib.figure.Figure.add_subplot`).
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
         Only applies to FacetGrid plotting.
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
