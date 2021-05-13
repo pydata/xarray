@@ -104,6 +104,8 @@ def _ensure_padded_year(ref_date):
     # No four-digit strings, assume the first digits are the year and pad
     # appropriately
     matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+    if not matches_start_digits:
+        raise ValueError(f"invalid reference date for time units: {ref_date}")
     ref_year, everything_else = [s for s in matches_start_digits.groups()]
     ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
 
