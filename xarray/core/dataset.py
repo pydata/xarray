@@ -3072,7 +3072,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables_reindex = alignment.reindex_variables(
                 variables=to_reindex,
                 sizes=obj.sizes,
-                indexes=obj.indexes,
+                indexes=obj.xindexes,
                 indexers={k: v[-1] for k, v in validated_indexers.items()},
                 method=method_non_numeric,
             )[0]
