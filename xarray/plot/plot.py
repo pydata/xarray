@@ -127,7 +127,7 @@ def plot(
     Default plot of DataArray using :mod:`matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
-    the :meth:`squeezed DataArray <DataArray.squeeze>`.
+    the :meth:`squeezed DataArray <xarray.DataArray.squeeze>`.
 
     =============== ===========================
     Dimensions      Plotting function
@@ -229,7 +229,7 @@ def line(
     """
     Line plot of DataArray values.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.plot`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
 
     Parameters
     ----------
@@ -270,7 +270,7 @@ def line(
     add_legend : bool, optional
         Add legend with *y* axis coordinates (2D inputs only).
     *args, **kwargs : optional
-        Additional arguments to :func:`matplotlib.pyplot.plot`.
+        Additional arguments to :py:func:`matplotlib.pyplot.plot`.
     """
     # Handle facetgrids first
     if row or col:
@@ -337,7 +337,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray values.
 
-    Similar to :func:`matplotlib:matplotlib.pyplot.step`.
+    Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
 
     Parameters
     ----------
@@ -393,7 +393,7 @@ def hist(
     """
     Histogram of DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.hist`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     Plots *N*-dimensional arrays by first flattening the array.
 
@@ -414,7 +414,7 @@ def hist(
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
-        Additional keyword arguments to :func:`matplotlib.pyplot.hist`.
+        Additional keyword arguments to :py:func:`matplotlib.pyplot.hist`.
 
     """
     ax = get_axis(figsize, size, aspect, ax)
@@ -895,14 +895,14 @@ def imshow(x, y, z, ax, **kwargs):
     """
     Image plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.imshow`.
 
     While other plot methods require the DataArray to be strictly
     two-dimensional, ``imshow`` also accepts a 3D array where some
     dimension can be interpreted as RGB or RGBA color channels and
     allows this dimension to be specified via the kwarg ``rgb=``.
 
-    Unlike :func:`matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
+    Unlike :py:func:`matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
     for RGB(A) data,
     xarray *will* use ``vmin`` and ``vmax`` for RGB(A) data
     by applying a single scaling factor and offset to all bands.
@@ -972,7 +972,7 @@ def contour(x, y, z, ax, **kwargs):
     """
     Contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contour`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.contour`.
     """
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
@@ -983,7 +983,7 @@ def contourf(x, y, z, ax, **kwargs):
     """
     Filled contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
@@ -994,7 +994,7 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
 
     # decide on a default for infer_intervals (GH781)
@@ -1044,7 +1044,7 @@ def surface(x, y, z, ax, **kwargs):
     """
     Surface plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`.
+    Wraps :py:func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`.
     """
     primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive

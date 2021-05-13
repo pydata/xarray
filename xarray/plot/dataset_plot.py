@@ -478,7 +478,7 @@ def scatter(ds, x, y, u, v, **kwargs):
     """
     Scatter Dataset data variables against each other.
 
-    Wraps :func:`matplotlib.pyplot.scatter`.
+    Wraps :py:func:`matplotlib.pyplot.scatter`.
     """
 
     if "add_colorbar" in kwargs or "add_legend" in kwargs:
@@ -535,7 +535,7 @@ def scatter(ds, x, y, u, v, **kwargs):
 def quiver(ds, x, y, u, v, **kwargs):
     """Quiver plot of Dataset variables.
 
-    Wraps :func:`matplotlib.pyplot.quiver`.
+    Wraps :py:func:`matplotlib.pyplot.quiver`.
     """
     import matplotlib as mpl
 
@@ -568,7 +568,7 @@ def quiver(ds, x, y, u, v, **kwargs):
 def streamplot(ds, x, y, u, v, **kwargs):
     """Plot streamlines of Dataset variables.
 
-    Wraps :func:`matplotlib.pyplot.streamplot`.
+    Wraps :py:func:`matplotlib.pyplot.streamplot`.
     """
     import matplotlib as mpl
 
