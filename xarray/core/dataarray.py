@@ -4491,12 +4491,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Returns a new DataArray with duplicate dimension values removed.
         Parameters
         ----------
-        dims : dimension label, optional
+        dim : dimension label, optional
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
             - ``"first"`` : Drop duplicates except for the first occurrence.
             - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.
+
         Returns
         -------
         DataArray
