@@ -2853,7 +2853,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
-        method_for_non_numerics: str = "nearest",
+        method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> "Dataset":
         """Multidimensional interpolation of Dataset.
@@ -2879,7 +2879,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
-            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`. 
+            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
@@ -3074,7 +3074,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 sizes=obj.sizes,
                 indexes=obj.indexes,
                 indexers={k: v[-1] for k, v in validated_indexers.items()},
-                method=method_for_non_numerics,
+                method=method_non_numeric,
             )[0]
             variables.update(variables_reindex)
 
@@ -3107,7 +3107,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
-        method_for_non_numerics: str = "nearest",
+        method_non_numeric: str = "nearest",
     ) -> "Dataset":
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
@@ -3130,7 +3130,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         kwargs : dict, optional
             Additional keyword passed to scipy's interpolator.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
-            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`. 
+            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
 
         Returns
@@ -3172,7 +3172,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             method=method,
             assume_sorted=assume_sorted,
             kwargs=kwargs,
-            method_for_non_numerics=method_for_non_numerics,
+            method_non_numeric=method_non_numeric,
         )
 
     # Helper methods for rename()
