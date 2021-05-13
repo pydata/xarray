@@ -128,7 +128,7 @@ class ScipyDataStore(WritableCFDataStore):
         elif format == "NETCDF3_CLASSIC":
             version = 1
         else:
-            raise ValueError("invalid format for scipy.io.netcdf backend: %r" % format)
+            raise ValueError(f"invalid format for scipy.io.netcdf backend: {format!r}")
 
         if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
@@ -174,16 +174,14 @@ class ScipyDataStore(WritableCFDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if name in self.ds.dimensions:
             raise ValueError(
-                "%s does not support modifying dimensions" % type(self).__name__
+                f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, dim_length)
@@ -204,12 +202,14 @@ class ScipyDataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
-        if check_encoding and variable.encoding:
-            if variable.encoding != {"_FillValue": None}:
-                raise ValueError(
-                    "unexpected encoding for scipy backend: %r"
-                    % list(variable.encoding)
-                )
+        if (
+            check_encoding
+            and variable.encoding
+            and variable.encoding != {"_FillValue": None}
+        ):
+            raise ValueError(
+                f"unexpected encoding for scipy backend: {list(variable.encoding)}"
+            )
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we

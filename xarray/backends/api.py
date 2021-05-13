@@ -102,12 +102,11 @@ def _get_default_engine_netcdf():
 
 def _get_default_engine(path: str, allow_remote: bool = False):
     if allow_remote and is_remote_uri(path):
-        engine = _get_default_engine_remote_uri()
+        return _get_default_engine_remote_uri()
     elif path.endswith(".gz"):
-        engine = _get_default_engine_gz()
+        return _get_default_engine_gz()
     else:
-        engine = _get_default_engine_netcdf()
-    return engine
+        return _get_default_engine_netcdf()
 
 
 def _validate_dataset_names(dataset):
@@ -282,7 +281,7 @@ def _chunk_ds(
 
     mtime = _get_mtime(filename_or_obj)
     token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
-    name_prefix = "open_dataset-%s" % token
+    name_prefix = f"open_dataset-{token}"
 
     variables = {}
     for name, var in backend_ds.variables.items():
@@ -295,8 +294,7 @@ def _chunk_ds(
             name_prefix=name_prefix,
             token=token,
         )
-    ds = backend_ds._replace(variables)
-    return ds
+    return backend_ds._replace(variables)
 
 
 def _dataset_from_backend_dataset(
@@ -308,12 +306,10 @@ def _dataset_from_backend_dataset(
     overwrite_encoded_chunks,
     **extra_tokens,
 ):
-    if not (isinstance(chunks, (int, dict)) or chunks is None):
-        if chunks != "auto":
-            raise ValueError(
-                "chunks must be an int, dict, 'auto', or None. "
-                "Instead found %s. " % chunks
-            )
+    if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
+        raise ValueError(
+            f"chunks must be an int, dict, 'auto', or None. Instead found {chunks}."
+        )
 
     _protect_dataset_variables_inplace(backend_ds, cache)
     if chunks is None:
@@ -331,9 +327,8 @@ def _dataset_from_backend_dataset(
     ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding:
-        if isinstance(filename_or_obj, str):
-            ds.encoding["source"] = filename_or_obj
+    if "source" not in ds.encoding and isinstance(filename_or_obj, str):
+        ds.encoding["source"] = filename_or_obj
 
     return ds
 
@@ -515,7 +510,6 @@ def open_dataset(
         **decoders,
         **kwargs,
     )
-
     return ds
 
 
@@ -1015,8 +1009,8 @@ def to_netcdf(
         elif engine != "scipy":
             raise ValueError(
                 "invalid engine for creating bytes with "
-                "to_netcdf: %r. Only the default engine "
-                "or engine='scipy' is supported" % engine
+                f"to_netcdf: {engine!r}. Only the default engine "
+                "or engine='scipy' is supported"
             )
         if not compute:
             raise NotImplementedError(
@@ -1037,7 +1031,7 @@ def to_netcdf(
     try:
         store_open = WRITEABLE_STORES[engine]
     except KeyError:
-        raise ValueError("unrecognized engine for to_netcdf: %r" % engine)
+        raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}")
 
     if format is not None:
         format = format.upper()
@@ -1049,9 +1043,8 @@ def to_netcdf(
     autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
     if autoclose and engine == "scipy":
         raise NotImplementedError(
-            "Writing netCDF files with the %s backend "
-            "is not currently supported with dask's %s "
-            "scheduler" % (engine, scheduler)
+            f"Writing netCDF files with the {engine} backend "
+            f"is not currently supported with dask's {scheduler} scheduler"
         )
 
     target = path_or_file if path_or_file is not None else BytesIO()
@@ -1061,7 +1054,7 @@ def to_netcdf(
             kwargs["invalid_netcdf"] = invalid_netcdf
         else:
             raise ValueError(
-                "unrecognized option 'invalid_netcdf' for engine %s" % engine
+                f"unrecognized option 'invalid_netcdf' for engine {engine}"
             )
     store = store_open(target, mode, format, group, **kwargs)
 
@@ -1203,7 +1196,7 @@ def save_mfdataset(
     Data variables:
         a        (time) float64 0.0 0.02128 0.04255 0.06383 ... 0.9574 0.9787 1.0
     >>> years, datasets = zip(*ds.groupby("time.year"))
-    >>> paths = ["%s.nc" % y for y in years]
+    >>> paths = [f"{y}.nc" for y in years]
     >>> xr.save_mfdataset(datasets, paths)
     """
     if mode == "w" and len(set(paths)) < len(paths):
@@ -1215,7 +1208,7 @@ def save_mfdataset(
         if not isinstance(obj, Dataset):
             raise TypeError(
                 "save_mfdataset only supports writing Dataset "
-                "objects, received type %s" % type(obj)
+                f"objects, received type {type(obj)}"
             )
 
     if groups is None:
