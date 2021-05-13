@@ -61,7 +61,7 @@ class FacetGrid:
     ----------
     axes : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
-        :func:`matplotlib.pyplot.subplots`.
+        :py:func:`matplotlib.pyplot.subplots`.
     col_labels : list of matplotlib.text.Text
         Column titles.
     row_labels : list of matplotlib.text.Text
@@ -91,7 +91,7 @@ class FacetGrid:
         Parameters
         ----------
         data : DataArray
-            xarray DataArray to be plotted
+            xarray DataArray to be plotted.
         row, col : str
             Dimesion names that define subsets of the data, which will be drawn
             on separate facets in the grid.
@@ -99,17 +99,17 @@ class FacetGrid:
             "Wrap" the grid the for the column variable after this number of columns,
             adding rows if ``col_wrap`` is less than the number of facets.
         sharex : bool, optional
-            If true, the facets will share *x* axes
+            If true, the facets will share *x* axes.
         sharey : bool, optional
-            If true, the facets will share *y* axes
+            If true, the facets will share *y* axes.
         figsize : tuple, optional
             A tuple (width, height) of the figure in inches.
             If set, overrides ``size`` and ``aspect``.
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
-            width of each facet in inches
+            width of each facet in inches.
         size : scalar, optional
-            Height (in inches) of each facet. See also: ``aspect``
+            Height (in inches) of each facet. See also: ``aspect``.
         subplot_kws : dict, optional
             Dictionary of keyword arguments for Matplotlib subplots
             (:py:func:`matplotlib.pyplot.subplots`).
@@ -433,7 +433,7 @@ class FacetGrid:
         self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar"""
+        """Draw a colorbar."""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)
@@ -566,7 +566,7 @@ class FacetGrid:
 
     def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
         """
-        Set and control tick behavior
+        Set and control tick behavior.
 
         Parameters
         ----------
