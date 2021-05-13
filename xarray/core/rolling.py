@@ -6,7 +6,6 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
-from .dask_array_ops import dask_rolling_wrapper
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
 
@@ -173,11 +172,10 @@ class Rolling:
         if utils.is_dict_like(arg):
             if allow_default:
                 return [arg.get(d, default) for d in self.dim]
-            else:
-                for d in self.dim:
-                    if d not in arg:
-                        raise KeyError(f"argument has no key {d}.")
-                return [arg[d] for d in self.dim]
+            for d in self.dim:
+                if d not in arg:
+                    raise KeyError(f"argument has no key {d}.")
+            return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
         elif len(self.dim) == 1:
@@ -439,7 +437,6 @@ class DataArrayRolling(Rolling):
             obj = self.obj.fillna(fillna)
         else:
             obj = self.obj
-
         windows = self._construct(
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
@@ -504,9 +501,6 @@ class DataArrayRolling(Rolling):
 
         if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
-            values = dask_rolling_wrapper(
-                func, padded.data, window=self.window[0], min_count=min_count, axis=axis
-            )
         else:
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -549,20 +543,17 @@ class DataArrayRolling(Rolling):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
-        else:
-            if rolling_agg_func:
-                return rolling_agg_func(
-                    self, keep_attrs=self._get_keep_attrs(keep_attrs)
-                )
-            if fillna is not None:
-                if fillna is dtypes.INF:
-                    fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
-                elif fillna is dtypes.NINF:
-                    fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
-                kwargs.setdefault("skipna", False)
-                kwargs.setdefault("fillna", fillna)
+        if rolling_agg_func:
+            return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+        if fillna is not None:
+            if fillna is dtypes.INF:
+                fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
+            elif fillna is dtypes.NINF:
+                fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
+            kwargs.setdefault("skipna", False)
+            kwargs.setdefault("fillna", fillna)
 
-            return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
+        return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetRolling(Rolling):
@@ -612,7 +603,7 @@ class DatasetRolling(Rolling):
                     dims.append(d)
                     center[d] = self.center[i]
 
-            if len(dims) > 0:
+            if dims:
                 w = {d: windows[d] for d in dims}
                 self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
@@ -735,7 +726,7 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
-            if len(dims) > 0:
+            if dims:
                 wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
                 st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
 

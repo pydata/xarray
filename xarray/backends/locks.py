@@ -167,7 +167,7 @@ class CombinedLock:
         return any(lock.locked for lock in self.locks)
 
     def __repr__(self):
-        return "CombinedLock(%r)" % list(self.locks)
+        return f"CombinedLock({list(self.locks)!r})"
 
 
 class DummyLock:

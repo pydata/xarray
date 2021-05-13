@@ -77,7 +77,6 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 def lazy_elemwise_func(array, func, dtype):
     """Lazily apply an element-wise function to an array.
-
     Parameters
     ----------
     array : any valid value of Variable._data
@@ -255,10 +254,10 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in encoding or "add_offset" in encoding:
             dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             data = data.astype(dtype=dtype, copy=True)
-            if "add_offset" in encoding:
-                data -= pop_to(encoding, attrs, "add_offset", name=name)
-            if "scale_factor" in encoding:
-                data /= pop_to(encoding, attrs, "scale_factor", name=name)
+        if "add_offset" in encoding:
+            data -= pop_to(encoding, attrs, "add_offset", name=name)
+        if "scale_factor" in encoding:
+            data /= pop_to(encoding, attrs, "scale_factor", name=name)
 
         return Variable(dims, data, attrs, encoding)
 
@@ -294,7 +293,7 @@ class UnsignedIntegerCoder(VariableCoder):
         #      integer data should be treated as unsigned"
         if encoding.get("_Unsigned", "false") == "true":
             pop_to(encoding, attrs, "_Unsigned")
-            signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+            signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
             if "_FillValue" in attrs:
                 new_fill = signed_dtype.type(attrs["_FillValue"])
                 attrs["_FillValue"] = new_fill
@@ -310,7 +309,7 @@ class UnsignedIntegerCoder(VariableCoder):
 
             if data.dtype.kind == "i":
                 if unsigned == "true":
-                    unsigned_dtype = np.dtype("u%s" % data.dtype.itemsize)
+                    unsigned_dtype = np.dtype(f"u{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=unsigned_dtype)
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
                     if "_FillValue" in attrs:
@@ -318,7 +317,7 @@ class UnsignedIntegerCoder(VariableCoder):
                         attrs["_FillValue"] = new_fill
             elif data.dtype.kind == "u":
                 if unsigned == "false":
-                    signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
+                    signed_dtype = np.dtype(f"i{data.dtype.itemsize}")
                     transform = partial(np.asarray, dtype=signed_dtype)
                     data = lazy_elemwise_func(data, transform, signed_dtype)
                     if "_FillValue" in attrs:
@@ -326,8 +325,8 @@ class UnsignedIntegerCoder(VariableCoder):
                         attrs["_FillValue"] = new_fill
             else:
                 warnings.warn(
-                    "variable %r has _Unsigned attribute but is not "
-                    "of integer type. Ignoring attribute." % name,
+                    f"variable {name!r} has _Unsigned attribute but is not "
+                    "of integer type. Ignoring attribute.",
                     SerializationWarning,
                     stacklevel=3,
                 )

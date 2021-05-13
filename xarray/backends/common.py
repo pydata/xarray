@@ -69,9 +69,8 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             base_delay = initial_delay * 2 ** n
             next_delay = base_delay + np.random.randint(base_delay)
             msg = (
-                "getitem failed, waiting %s ms before trying again "
-                "(%s tries remaining). Full traceback: %s"
-                % (next_delay, max_retries - n, traceback.format_exc())
+                f"getitem failed, waiting {next_delay} ms before trying again "
+                f"({max_retries - n} tries remaining). Full traceback: {traceback.format_exc()}"
             )
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
@@ -336,7 +335,7 @@ class AbstractWritableDataStore(AbstractDataStore):
             if dim in existing_dims and length != existing_dims[dim]:
                 raise ValueError(
                     "Unable to update size for existing dimension"
-                    "%r (%d != %d)" % (dim, length, existing_dims[dim])
+                    f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
             elif dim not in existing_dims:
                 is_unlimited = dim in unlimited_dims

@@ -122,13 +122,13 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             )
             cumprod_lengths = np.cumproduct(index_lengths)
 
-            if cumprod_lengths[-1] != 0:
-                # sizes of the repeats
-                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
-            else:
+            if cumprod_lengths[-1] == 0:
                 # if any factor is empty, the cartesian product is empty
                 repeat_counts = np.zeros_like(cumprod_lengths)
 
+            else:
+                # sizes of the repeats
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
             # sizes of the tiles
             tile_counts = np.roll(cumprod_lengths, 1)
             tile_counts[0] = 1
@@ -156,7 +156,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                 level_list += levels
                 names += index.names
 
-            return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(level_list, code_list, names=names)
 
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
@@ -226,10 +226,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         coords, indexes = merge_coordinates_without_align([self, other])
         coord_names = set(coords)
-        merged = Dataset._construct_direct(
+        return Dataset._construct_direct(
             variables=coords, coord_names=coord_names, indexes=indexes
         )
-        return merged
 
 
 class DatasetCoordinates(Coordinates):
@@ -364,12 +363,12 @@ class DataArrayCoordinates(Coordinates):
         return Dataset._construct_direct(coords, set(coords))
 
     def __delitem__(self, key: Hashable) -> None:
-        if key in self:
-            del self._data._coords[key]
-            if self._data._indexes is not None and key in self._data._indexes:
-                del self._data._indexes[key]
-        else:
+        if key not in self:
             raise KeyError(f"{key!r} is not a coordinate variable.")
+
+        del self._data._coords[key]
+        if self._data._indexes is not None and key in self._data._indexes:
+            del self._data._indexes[key]
 
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
@@ -386,14 +385,11 @@ def assert_coordinate_consistent(
     """
     for k in obj.dims:
         # make sure there are no conflict in dimension coordinates
-        if k in coords and k in obj.coords:
-            if not coords[k].equals(obj[k].variable):
-                raise IndexError(
-                    "dimension coordinate {!r} conflicts between "
-                    "indexed and indexing objects:\n{}\nvs.\n{}".format(
-                        k, obj[k], coords[k]
-                    )
-                )
+        if k in coords and k in obj.coords and not coords[k].equals(obj[k].variable):
+            raise IndexError(
+                f"dimension coordinate {k!r} conflicts between "
+                f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
+            )
 
 
 def remap_label_indexers(

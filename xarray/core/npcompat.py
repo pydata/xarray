@@ -46,9 +46,9 @@ def _validate_axis(axis, ndim, argname):
         axis = list(axis)
     axis = [a + ndim if a < 0 else a for a in axis]
     if not builtins.all(0 <= a < ndim for a in axis):
-        raise ValueError("invalid axis for this array in `%s` argument" % argname)
+        raise ValueError(f"invalid axis for this array in {argname} argument")
     if len(set(axis)) != len(axis):
-        raise ValueError("repeated axis in `%s` argument" % argname)
+        raise ValueError(f"repeated axis in {argname} argument")
     return axis
 
 
@@ -73,8 +73,7 @@ def moveaxis(a, source, destination):
     for dest, src in sorted(zip(destination, source)):
         order.insert(dest, src)
 
-    result = transpose(order)
-    return result
+    return transpose(order)
 
 
 # Type annotations stubs

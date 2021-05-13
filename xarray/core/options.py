@@ -166,8 +166,7 @@ class set_options:
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
-                    "argument name %r is not in the set of valid options %r"
-                    % (k, set(OPTIONS))
+                    f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 if k == ARITHMETIC_JOIN:

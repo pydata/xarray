@@ -187,7 +187,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(self.month_deltas) > 1:
             return None
 
-        if not self.month_deltas[0] % 3 == 0:
+        if self.month_deltas[0] % 3 != 0:
             return None
 
         return {"cs": "QS", "ce": "Q"}.get(month_anchor_check(self.index))
@@ -259,8 +259,7 @@ def month_anchor_check(dates):
 
         if calendar_end:
             cal = date.day == date.daysinmonth
-            if calendar_end:
-                calendar_end &= cal
+            calendar_end &= cal
         elif not calendar_start:
             break
 

@@ -81,7 +81,7 @@ def _contains_obj_type(*, pat: Any, checker: Any) -> bool:
         return True
 
     # If it is not an object array it can't contain compiled re
-    if not getattr(pat, "dtype", "no") == np.object_:
+    if getattr(pat, "dtype", "no") != np.object_:
         return False
 
     return _apply_str_ufunc(func=checker, obj=pat).all()
@@ -95,7 +95,7 @@ def _contains_str_like(pat: Any) -> bool:
     if not hasattr(pat, "dtype"):
         return False
 
-    return pat.dtype.kind == "U" or pat.dtype.kind == "S"
+    return pat.dtype.kind in ["U", "S"]
 
 
 def _contains_compiled_re(pat: Any) -> bool:

@@ -209,11 +209,11 @@ class AttrAccessMixin:
         if not hasattr(object.__new__(cls), "__dict__"):
             pass
         elif cls.__module__.startswith("xarray."):
-            raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
+            raise AttributeError(f"{cls.__name__} must explicitly define __slots__")
         else:
             cls.__setattr__ = cls._setattr_dict
             warnings.warn(
-                "xarray subclass %s should explicitly define __slots__" % cls.__name__,
+                f"xarray subclass {cls.__name__} should explicitly define __slots__",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -251,10 +251,9 @@ class AttrAccessMixin:
         if name in self.__dict__:
             # Custom, non-slotted attr, or improperly assigned variable?
             warnings.warn(
-                "Setting attribute %r on a %r object. Explicitly define __slots__ "
+                f"Setting attribute {name!r} on a {type(self).__name__!r} object. Explicitly define __slots__ "
                 "to suppress this warning for legitimate custom attributes and "
-                "raise an error when attempting variables assignments."
-                % (name, type(self).__name__),
+                "raise an error when attempting variables assignments.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -274,9 +273,8 @@ class AttrAccessMixin:
             ):
                 raise
             raise AttributeError(
-                "cannot set attribute %r on a %r object. Use __setitem__ style"
+                f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
-                % (name, type(self).__name__)
             ) from e
 
     def __dir__(self) -> List[str]:
@@ -655,7 +653,7 @@ class DataWithCoords(AttrAccessMixin):
             func, target = func
             if target in kwargs:
                 raise ValueError(
-                    "%s is both the pipe target and a keyword argument" % target
+                    f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
             return func(*args, **kwargs)
@@ -1273,8 +1271,7 @@ class DataWithCoords(AttrAccessMixin):
 
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
-                    "cond argument is %r but must be a %r or %r"
-                    % (cond, Dataset, DataArray)
+                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
                 )
 
             # align so we can use integer indexing

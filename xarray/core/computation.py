@@ -307,7 +307,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                "but %r != %r" % (keys, first_keys)
+                f"but {keys!r} != {first_keys!r}"
             )
     return first_keys
 
@@ -516,7 +516,7 @@ def unified_dim_sizes(
         if len(set(var.dims)) < len(var.dims):
             raise ValueError(
                 "broadcasting cannot handle duplicate "
-                "dimensions on a variable: %r" % list(var.dims)
+                f"dimensions on a variable: {list(var.dims)}"
             )
         for dim, size in zip(var.dims, var.shape):
             if dim not in exclude_dims:
@@ -526,7 +526,7 @@ def unified_dim_sizes(
                     raise ValueError(
                         "operands cannot be broadcast together "
                         "with mismatched lengths for dimension "
-                        "%r: %s vs %s" % (dim, dim_sizes[dim], size)
+                        f"{dim}: {dim_sizes[dim]} vs {size}"
                     )
     return dim_sizes
 
@@ -563,8 +563,8 @@ def broadcast_compat_data(
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "
-            "dimensions %r on an input variable: these are core "
-            "dimensions on other input or output variables" % unexpected_dims
+            f"dimensions {unexpected_dims!r} on an input variable: these are core "
+            "dimensions on other input or output variables"
         )
 
     # for consistency with numpy, keep broadcast dimensions to the left

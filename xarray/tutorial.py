@@ -87,10 +87,10 @@ def open_dataset(
     if name in external_urls:
         url = external_urls[name]
     else:
-        # process the name
-        default_extension = ".nc"
         path = pathlib.Path(name)
         if not path.suffix:
+            # process the name
+            default_extension = ".nc"
             path = path.with_suffix(default_extension)
 
         url = f"{base_url}/raw/{version}/{path.name}"
