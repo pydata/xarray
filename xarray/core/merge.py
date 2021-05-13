@@ -314,6 +314,7 @@ def merge_coordinates_without_align(
     objects: "List[Coordinates]",
     prioritized: Mapping[Hashable, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
+    combine_attrs: str = "override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
@@ -335,7 +336,7 @@ def merge_coordinates_without_align(
     else:
         filtered = collected
 
-    return merge_collected(filtered, prioritized)
+    return merge_collected(filtered, prioritized, combine_attrs=combine_attrs)
 
 
 def determine_coords(
