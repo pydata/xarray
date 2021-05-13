@@ -4578,7 +4578,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_duplicates(
         self,
-        dim: str,
+        dim: Hashable,
         keep: Union[
             str,
             bool,
