@@ -111,7 +111,7 @@ class CharacterArrayCoder(VariableCoder):
             if "char_dim_name" in encoding.keys():
                 char_dim_name = encoding.pop("char_dim_name")
             else:
-                char_dim_name = "string%s" % data.shape[-1]
+                char_dim_name = f"string{data.shape[-1]}"
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
@@ -140,8 +140,7 @@ def bytes_to_char(arr):
             chunks=arr.chunks + ((arr.dtype.itemsize,)),
             new_axis=[arr.ndim],
         )
-    else:
-        return _numpy_bytes_to_char(arr)
+    return _numpy_bytes_to_char(arr)
 
 
 def _numpy_bytes_to_char(arr):

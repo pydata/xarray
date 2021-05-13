@@ -37,8 +37,7 @@ except ModuleNotFoundError:
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
-        variable = ds.variables[self.variable_name]
-        return variable
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
@@ -102,7 +101,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
-                if not type(manager) is h5netcdf.File:
+                if type(manager) is not h5netcdf.File:
                     raise ValueError(
                         "must supply a h5netcdf.File if the group "
                         "argument is provided"
@@ -233,11 +232,9 @@ class H5NetCDFStore(WritableCFDataStore):
         return self.ds.dimensions
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
@@ -266,9 +263,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 "h5netcdf does not yet support setting a fill value for "
                 "variable-length strings "
                 "(https://github.com/shoyer/h5netcdf/issues/37). "
-                "Either remove '_FillValue' from encoding on variable %r "
+                f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type." % name
+                "NC_CHAR type."
             )
 
         if dtype is str:

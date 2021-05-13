@@ -63,10 +63,7 @@ def maybe_promote(dtype):
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
     elif np.issubdtype(dtype, np.integer):
-        if dtype.itemsize <= 2:
-            dtype = np.float32
-        else:
-            dtype = np.float64
+        dtype = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
     elif np.issubdtype(dtype, np.complexfloating):
         fill_value = np.nan + np.nan * 1j
