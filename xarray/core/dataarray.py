@@ -4598,7 +4598,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         -------
         DataArray
         """
-        indexes = {}
         if dim not in self.dims:
             raise ValueError(f"'{dim}' not found in dimensions")
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
