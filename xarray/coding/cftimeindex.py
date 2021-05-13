@@ -371,8 +371,6 @@ class CFTimeIndex(pd.Index):
         defining the index.  For example:
 
         >>> from cftime import DatetimeNoLeap
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
@@ -619,7 +617,6 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],

@@ -2659,8 +2659,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Create a dataset with some fictional data.
 
-        >>> import xarray as xr
-        >>> import pandas as pd
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
@@ -4581,8 +4579,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> ds = xr.Dataset(
         ...     {
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),
