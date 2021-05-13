@@ -40,6 +40,10 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Explanation of deprecation cycles and how to implement them added to contributors
+  guide. (:pull:`5289`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
