@@ -43,8 +43,6 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Updated the release guide for developers. Now accounts for actions that are automated via github
-  actions. Pull (:pull:`5274`).
 - Explanation of deprecation cycles and how to implement them added to contributors
   guide. (:pull:`5289`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -56,7 +54,11 @@ Internal Changes
 - Explicit indexes refactor: add an ``xarray.Index`` base class and
   ``Dataset.xindexes`` / ``DataArray.xindexes`` properties. Also rename
   ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
-  ``xarray.Index`` (:pull:`5102`). By `Benoit Bovy <https://github.com/benbovy>`_.
+  ``xarray.Index`` (:pull:`5102`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Updated the release guide for developers. Now accounts for actions that are automated via github
+  actions. (:pull:`5274`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.18.0:
 
