@@ -2878,10 +2878,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
-        method_for_non_numerics : str, optional
-            Method for non-numerics where modifying the elements is not
-            possible. See Dataset.reindex for options. "nearest" is used by
-            default.
+        method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
+            Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`. 
+            ``"nearest"`` is used by default.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
