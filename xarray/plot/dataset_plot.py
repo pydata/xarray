@@ -599,7 +599,27 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
 
 def _attach_to_plot_class(plotfunc):
-    """Set the function to the plot class and add common docstring."""
+    """
+    Set the function to the plot class and add a common docstring.
+
+    Use this decorator when relying on DataArray.plot methods for
+    creating the Dataset plot.
+
+    TODO: Reduce code duplication.
+
+    * The goal is to reduce code duplication by moving all Dataset
+      specific plots to the DataArray side and use this thin wrapper to
+      handle the conversion between Dataset and DataArray.
+    * Improve docstring handling, maybe reword the DataArray versions to
+      explain Datasets better.
+    * Consider automatically adding all _PlotMethods to
+      _Dataset_PlotMethods.
+
+    Parameters
+    ----------
+    plotfunc : function
+        Function that returns a finished plot primitive.
+    """
     # Build on the original docstring:
     original_doc = getattr(_PlotMethods, plotfunc.__name__, None)
     commondoc = original_doc.__doc__
