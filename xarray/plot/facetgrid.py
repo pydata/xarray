@@ -112,7 +112,7 @@ class FacetGrid:
             Height (in inches) of each facet. See also: ``aspect``
         subplot_kws : dict, optional
             Dictionary of keyword arguments for Matplotlib subplots
-            (:func:`matplotlib.pyplot.subplots`).
+            (:py:func:`matplotlib.pyplot.subplots`).
 
         """
 
