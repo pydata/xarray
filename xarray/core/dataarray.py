@@ -4482,7 +4482,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_duplicates(
         self,
-        dims: Union[Hashable, Iterable[Hashable]] = None,
+        dim: str,
         keep: Union[
             str,
             bool,
@@ -4491,9 +4491,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Returns a new DataArray with duplicate dimension values removed.
         Parameters
         ----------
-        dims : dimension label or sequence of labels, optional
-            Only consider certain dimensions for identifying duplicates, by
-            default use all dimensions.
+        dims : dimension label, optional
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
             - ``"first"`` : Drop duplicates except for the first occurrence.
@@ -4503,19 +4501,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         -------
         DataArray
         """
-        if dims is None:
-            dims = list(self.dims)
-        elif isinstance(dims, str) or not isinstance(dims, Iterable):
-            dims = [dims]
-        else:
-            dims = list(dims)
-
         indexes = {}
-        for dim in dims:
-            if dim not in self.dims:
-                raise ValueError(f"'{dim}' not found in dimensions")
-            indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
-
+        if dim not in self.dims:
+            raise ValueError(f"'{dim}' not found in dimensions")
+        indexes[dim] = ~self.get_index(dim).duplicated(keep=keep)
         return self.isel(indexes)
 
     # this needs to be at the end, or mypy will confuse with `str`

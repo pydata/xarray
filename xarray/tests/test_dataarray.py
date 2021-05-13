@@ -7437,33 +7437,3 @@ def test_drop_duplicates(keep):
     expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
     result = ds.drop_duplicates("time", keep=keep)
     assert_equal(expected, result)
-
-
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicates_multi_dim(keep):
-    base_data = np.stack([np.arange(0, 5) * i for i in np.arange(0, 5)])
-    ds = xr.DataArray(
-        base_data,
-        coords={"lat": [0, 1, 2, 2, 3], "lon": [0, 1, 3, 3, 4]},
-        dims=["lat", "lon"],
-        name="test",
-    )
-
-    if keep == "first":
-        data = base_data[[0, 1, 2, 4]][:, [0, 1, 2, 4]]
-        lat = [0, 1, 2, 3]
-        lon = [0, 1, 3, 4]
-    elif keep == "last":
-        data = base_data[[0, 1, 3, 4]][:, [0, 1, 3, 4]]
-        lat = [0, 1, 2, 3]
-        lon = [0, 1, 3, 4]
-    else:
-        data = base_data[[0, 1, 4]][:, [0, 1, 4]]
-        lat = [0, 1, 3]
-        lon = [0, 1, 4]
-
-    expected = xr.DataArray(
-        data, dims=["lat", "lon"], coords={"lat": lat, "lon": lon}, name="test"
-    )
-    result = ds.drop_duplicates(["lat", "lon"], keep=keep)
-    assert_equal(expected, result)
