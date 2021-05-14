@@ -772,6 +772,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def encoding(self, value: Mapping[Hashable, Any]) -> None:
         self.variable.encoding = value
 
+    def _get_indexes(self):
+        if self._indexes is None:
+            self._indexes = default_indexes(self._coords, self.dims)
+        return self._indexes
+
     @property
     def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing.
@@ -784,14 +789,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         DataArray.xindexes
 
         """
-        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
+        return Indexes(
+            {k: idx.to_pandas_index() for k, idx in self._get_indexes().items()}
+        )
 
     @property
     def xindexes(self) -> Indexes:
         """Mapping of xarray Index objects used for label based indexing."""
-        if self._indexes is None:
-            self._indexes = default_indexes(self._coords, self.dims)
-        return Indexes(self._indexes)
+        indexes = self._get_indexes().copy()
+
+        for level, dim in self._level_coords.items():
+            indexes[level] = indexes[dim]
+
+        return Indexes(indexes)
 
     @property
     def coords(self) -> DataArrayCoordinates:
