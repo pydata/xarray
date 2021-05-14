@@ -37,6 +37,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clean up and enhance docstrings for the :py:class:`DataArray.plot` and ``Dataset.plot.*``
+  families of methods (:pull:`5285`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 
 
 Internal Changes
