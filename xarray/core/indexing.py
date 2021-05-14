@@ -251,6 +251,40 @@ def get_dim_indexers(data_obj, indexers):
     return dim_indexers
 
 
+def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
+    # TODO: benbovy - flexible indexes: indexers are still grouped by dimension
+    # - Make xarray.Index hashable so that it can be used as key in a mapping?
+    indexes = {}
+    grouped_indexers = defaultdict(dict)
+
+    for key, label in indexers.items():
+        try:
+            index = data_obj.xindexes[key]
+            coord = data_obj.coords[key]
+            dim = coord.dims[0]
+            if dim not in indexes:
+                indexes[dim] = index
+
+            label = maybe_cast_to_coords_dtype(label, coord.dtype)
+            grouped_indexers[dim][key] = label
+
+        except KeyError:
+            if key in data_obj.coords:
+                raise KeyError(f"no index found for coordinate {key}")
+            elif key not in data_obj.dims:
+                raise KeyError(f"{key} is not a valid dimension or coordinate")
+            # key is a dimension without coordinate: we'll reuse the provided labels
+            elif method is not None or tolerance is not None:
+                raise ValueError(
+                    "cannot supply ``method`` or ``tolerance`` "
+                    "when the indexed dimension does not have "
+                    "an associated coordinate."
+                )
+            grouped_indexers[None][key] = label
+
+    return indexes, grouped_indexers
+
+
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
     of equivalent location based indexers. Also return a mapping of updated
@@ -262,26 +296,25 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     pos_indexers = {}
     new_indexes = {}
 
-    dim_indexers = get_dim_indexers(data_obj, indexers)
-    for dim, label in dim_indexers.items():
-        try:
-            index = data_obj.xindexes[dim].to_pandas_index()
-        except KeyError:
-            # no index for this dimension: reuse the provided labels
-            if method is not None or tolerance is not None:
-                raise ValueError(
-                    "cannot supply ``method`` or ``tolerance`` "
-                    "when the indexed dimension does not have "
-                    "an associated coordinate."
-                )
+    indexes, grouped_indexers = group_indexers_by_index(
+        data_obj, indexers, method, tolerance
+    )
+
+    forward_pos_indexers = grouped_indexers.pop(None, None)
+    if forward_pos_indexers is not None:
+        for dim, label in forward_pos_indexers.items():
             pos_indexers[dim] = label
-        else:
-            coords_dtype = data_obj.coords[dim].dtype
-            label = maybe_cast_to_coords_dtype(label, coords_dtype)
-            idxr, new_idx = convert_label_indexer(index, label, dim, method, tolerance)
-            pos_indexers[dim] = idxr
-            if new_idx is not None:
-                new_indexes[dim] = new_idx
+
+    for dim, index in indexes.items():
+        labels = grouped_indexers[dim]
+        idxr, new_idx = index.query(labels, method=method, tolerance=tolerance)
+        pos_indexers[dim] = idxr
+        if new_idx is not None:
+            new_indexes[dim] = new_idx
+
+    # TODO: benbovy - flexible indexes: support the following cases:
+    # - an index query returns positional indexers over multiple dimensions
+    # - check/combine positional indexers returned by multiple indexes over the same dimension
 
     return pos_indexers, new_indexes
 
