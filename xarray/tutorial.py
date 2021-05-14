@@ -80,7 +80,7 @@ def open_dataset(
     except ImportError as e:
         raise ImportError(
             "tutorial.open_dataset depends on pooch to download and manage datasets."
-            " To proceed please install it from PyPI or conda / conda-forge."
+            " To proceed please install pooch."
         ) from e
 
     logger = pooch.get_logger()
@@ -152,7 +152,7 @@ def open_rasterio(
     except ImportError as e:
         raise ImportError(
             "tutorial.open_rasterio depends on pooch to download and manage datasets."
-            " To proceed please install it from PyPI or conda / conda-forge."
+            " To proceed please install pooch."
         ) from e
 
     logger = pooch.get_logger()
