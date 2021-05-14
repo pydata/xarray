@@ -39,7 +39,7 @@ external_rasterio_urls = {
 file_formats = {
     "air_temperature": 3,
     "rasm": 3,
-    'ROMS_example': 4,
+    "ROMS_example": 4,
     "tiny": 3,
     "eraint_uvz": 3,
 }
@@ -49,10 +49,10 @@ def _check_netcdf_engine_installed(name):
     version = file_formats.get(name)
     if version == 3:
         try:
-            import scipy
+            import scipy  # noqa
         except ImportError:
             try:
-                import netCDF4
+                import netCDF4  # noqa
             except ImportError:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either scipy or "
@@ -60,10 +60,10 @@ def _check_netcdf_engine_installed(name):
                 )
     if version == 4:
         try:
-            import h5netcdf
+            import h5netcdf  # noqa
         except ImportError:
             try:
-                import netCDF4
+                import netCDF4  # noqa
             except ImportError:
                 raise ImportError(
                     f"opening tutorial dataset {name} requires either h5netcdf "
