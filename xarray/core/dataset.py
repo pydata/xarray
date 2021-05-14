@@ -4,7 +4,6 @@ import inspect
 import sys
 import warnings
 from collections import defaultdict
-from distutils.version import LooseVersion
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -4043,8 +4042,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     for v in self.variables.values()
                 )
                 or sparse
-                # numpy full_like only added `shape` in 1.17
-                or LooseVersion(np.__version__) < LooseVersion("1.17")
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
