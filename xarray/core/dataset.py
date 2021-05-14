@@ -2659,8 +2659,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Create a dataset with some fictional data.
 
-        >>> import xarray as xr
-        >>> import pandas as pd
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
@@ -4431,12 +4429,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         -------
         obj : Dataset
             The dataset without the given dimensions (or any variables
-            containing those dimensions)
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
-            any of the dimensions passed are not
-            in the dataset. If 'ignore', any given dimensions that are in the
-            dataset are dropped and no error is raised.
+            containing those dimensions).
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -4581,8 +4574,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> ds = xr.Dataset(
         ...     {
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),

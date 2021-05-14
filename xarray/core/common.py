@@ -580,8 +580,6 @@ class DataWithCoords(AttrAccessMixin):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature_c": (
@@ -1567,8 +1565,6 @@ def full_like(other, fill_value, dtype=None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],
@@ -1731,8 +1727,6 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],
@@ -1789,8 +1783,6 @@ def ones_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],

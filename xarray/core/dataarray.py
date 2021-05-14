@@ -2156,7 +2156,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> arr = xr.DataArray(
         ...     np.arange(6).reshape(2, 3),
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],

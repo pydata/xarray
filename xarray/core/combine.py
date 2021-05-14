@@ -675,8 +675,6 @@ def combine_by_coords(
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
 
-    >>> import numpy as np
-    >>> import xarray as xr
 
     >>> x1 = xr.Dataset(
     ...     {

@@ -13,6 +13,7 @@ dependencies:
   - ipykernel
   - ipython
   - iris>=2.3
+  - jinja2<3.0  # jinja=3.0 is incompatible with nbsphinx
   - jupyter_client
   - matplotlib-base
   - nbsphinx
