@@ -202,8 +202,13 @@ def _dsplot(plotfunc):
         (in *x* and *y* direction, respectively; quiver/streamplot plots only).
     hue: str, optional
         Variable by which to color scatter points or arrows.
-    hue_style: str, optional
-        Can be either ``'discrete'`` (legend) or ``'continuous'`` (colorbar).
+    hue_style: {'continuous', 'discrete'}, optional
+        How to use the ``hue`` variable:
+
+        - ``'continuous'`` -- continuous color scale
+          (default for numeric ``hue`` variables)
+        - ``'discrete'`` -- a color for each unique value, using the default color cycle
+          (default for non-numeric ``hue`` variables)
     markersize: str, optional
         Variable by which to vary the size of scattered points (scatter plot only).
     size_norm: matplotlib.colors.Normalize or tuple, optional
@@ -214,13 +219,12 @@ def _dsplot(plotfunc):
     scale: scalar, optional
         Quiver only. Number of data units per arrow length unit.
         Use this to control the length of the arrows: larger values lead to
-        smaller arrows
-    add_guide: bool, optional
+        smaller arrows.
+    add_guide: bool, optional, default: True
         Add a guide that depends on ``hue_style``:
 
-        - for ``'discrete'``, build a legend.
-          This is the default for non-numeric ``hue`` variables.
-        - for ``'continuous'``, build a colorbar
+        - ``'continuous'`` -- build a colorbar
+        - ``'discrete'`` -- build a legend
     row : str, optional
         If passed, make row faceted plots on this dimension name.
     col : str, optional
@@ -240,8 +244,9 @@ def _dsplot(plotfunc):
         If provided, create a new figure for the plot with the given size:
         *height* (in inches) of each plot. See also: ``aspect``.
     norm : matplotlib.colors.Normalize, optional
-        If the ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding kwarg
-        must be ``None``.
+        If the :py:class:`~matplotlib.colors.Normalize` instance
+        has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
     vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -474,7 +479,7 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, **kwargs):
+def scatter(ds, x, y, ax, **kwargs):
     """
     Scatter Dataset data variables against each other.
 
@@ -488,7 +493,6 @@ def scatter(ds, x, y, **kwargs):
             "Use 'add_guide' instead."
         )
 
-    ax = kwargs.pop("ax")
     cmap_params = kwargs.pop("cmap_params")
     hue = kwargs.pop("hue")
     hue_style = kwargs.pop("hue_style")
@@ -536,7 +540,7 @@ def scatter(ds, x, y, **kwargs):
 
 
 @_dsplot
-def quiver(ds, x, y, u, v, **kwargs):
+def quiver(ds, x, y, ax, u, v, **kwargs):
     """Quiver plot of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
@@ -561,7 +565,6 @@ def quiver(ds, x, y, u, v, **kwargs):
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
-    ax = kwargs.pop("ax")
     kwargs.pop("hue_style")
     kwargs.setdefault("pivot", "middle")
     hdl = ax.quiver(*args, **kwargs, **cmap_params)
@@ -569,7 +572,7 @@ def quiver(ds, x, y, u, v, **kwargs):
 
 
 @_dsplot
-def streamplot(ds, x, y, u, v, **kwargs):
+def streamplot(ds, x, y, ax, u, v, **kwargs):
     """Plot streamlines of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
@@ -615,7 +618,6 @@ def streamplot(ds, x, y, u, v, **kwargs):
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
-    ax = kwargs.pop("ax")
     kwargs.pop("hue_style")
     hdl = ax.streamplot(*args, **kwargs, **cmap_params)
 

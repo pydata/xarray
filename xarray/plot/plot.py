@@ -127,7 +127,7 @@ def plot(
     Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
-    the :py:meth:`squeezed DataArray <xarray.DataArray.squeeze>`.
+    the squeezed DataArray.
 
     =============== ===========================
     Dimensions      Plotting function
@@ -159,6 +159,9 @@ def plot(
     **kwargs : optional
         Additional keyword arguments for Matplotlib.
 
+    See Also
+    --------
+    xarray.DataArray.squeeze
     """
     darray = darray.squeeze().compute()
 
@@ -234,8 +237,7 @@ def line(
     Parameters
     ----------
     darray : DataArray
-        Must be one-dimensional (1D), unless ``hue``, ``x``, or ``y`` is provided
-        (in which case it should be 2D).
+        Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -526,7 +528,8 @@ def _plot2d(plotfunc):
     add_labels : bool, optional
         Use xarray metadata to label axes.
     norm : matplotlib.colors.Normalize, optional
-        If the ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        If the :py:class:`~matplotlib.colors.Normalize` instance
+        has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
