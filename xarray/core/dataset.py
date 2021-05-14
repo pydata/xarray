@@ -4423,7 +4423,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the
             dimensions passed are not in the dataset. If 'ignore', any given
-            labels that are in the dataset are dropped and no error is raised.
+            dimensions that are in the dataset are dropped and no error is raised.
 
         Returns
         -------
