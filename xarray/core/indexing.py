@@ -8,16 +8,10 @@ from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 
-try:
-    import dask
-
-    DASK_VERSION = LooseVersion(dask.__version__)
-except ModuleNotFoundError:
-    DASK_VERSION = LooseVersion("0")
-
 from . import duck_array_ops, nputils, utils
 from .pycompat import (
     dask_array_type,
+    dask_version,
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
@@ -1393,7 +1387,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if DASK_VERSION >= "2021.04.1":
+        if dask_version >= "2021.04.1":
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):
