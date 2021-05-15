@@ -78,7 +78,12 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array, sparse_version
+from .pycompat import (
+    dask_version,
+    is_duck_dask_array,
+    sparse_array_type,
+    sparse_version
+)
 from .utils import (
     Default,
     Frozen,
@@ -4032,10 +4037,22 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if (
                 # Dask arrays supports assignment by index,
                 # https://github.com/dask/dask/pull/7393
-                dask_version < "2021.04.0"
+                (
+                    dask_version < "2021.04.0"
+                    and any(is_duck_dask_array(v.data) for v in self.variables.values())
+                )
                 # Sparse now supports kwargs in full_like,
                 # https://github.com/pydata/sparse/issues/422
-                or sparse_version < "0.11.2"
+                or (
+                    sparse_version < "0.11.2"
+                    and (
+                        any(
+                            isinstance(v.data, sparse_array_type)
+                            for v in self.variables.values()
+                        )
+                        or sparse
+                    )
+                )
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
