@@ -4,7 +4,6 @@ import inspect
 import sys
 import warnings
 from collections import defaultdict
-from distutils.version import LooseVersion
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -2659,8 +2658,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Create a dataset with some fictional data.
 
-        >>> import xarray as xr
-        >>> import pandas as pd
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
@@ -4045,8 +4042,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     for v in self.variables.values()
                 )
                 or sparse
-                # numpy full_like only added `shape` in 1.17
-                or LooseVersion(np.__version__) < LooseVersion("1.17")
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
@@ -4422,21 +4417,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ----------
         drop_dims : hashable or iterable of hashable
             Dimension or dimensions to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the
             dimensions passed are not in the dataset. If 'ignore', any given
-            labels that are in the dataset are dropped and no error is raised.
+            dimensions that are in the dataset are dropped and no error is raised.
 
         Returns
         -------
         obj : Dataset
             The dataset without the given dimensions (or any variables
-            containing those dimensions)
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
-            any of the dimensions passed are not
-            in the dataset. If 'ignore', any given dimensions that are in the
-            dataset are dropped and no error is raised.
+            containing those dimensions).
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -4581,8 +4571,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> ds = xr.Dataset(
         ...     {
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),

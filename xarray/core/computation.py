@@ -1403,8 +1403,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
     >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2), dims=["a", "b", "c"])
     >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
@@ -1554,8 +1552,6 @@ def where(cond, x, y):
 
     Examples
     --------
-    >>> import xarray as xr
-    >>> import numpy as np
     >>> x = xr.DataArray(
     ...     0.1 * np.arange(10),
     ...     dims=["lat"],

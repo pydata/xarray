@@ -136,7 +136,6 @@ def align(
 
     Examples
     --------
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[25, 35], [10, 24]],
     ...     dims=("lat", "lon"),
