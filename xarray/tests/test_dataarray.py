@@ -7434,3 +7434,24 @@ def test_clip(da):
     # Unclear whether we want this work, OK to adjust the test when we have decided.
     with pytest.raises(ValueError, match="arguments without labels along dimension"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
+
+
+@pytest.mark.parametrize("keep", ["first", "last", False])
+def test_drop_duplicates(keep):
+    ds = xr.DataArray(
+        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
+    )
+
+    if keep == "first":
+        data = [0, 6, 7]
+        time = [0, 1, 2]
+    elif keep == "last":
+        data = [5, 6, 7]
+        time = [0, 1, 2]
+    else:
+        data = [6, 7]
+        time = [1, 2]
+
+    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+    result = ds.drop_duplicates("time", keep=keep)
+    assert_equal(expected, result)

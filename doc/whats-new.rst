@@ -21,6 +21,10 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Implement :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5239`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
 - allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
   :py:func:`apply_ufunc` (:pull:`5041`)
   By `Justus Magin <https://github.com/keewis>`_.

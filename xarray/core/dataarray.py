@@ -4572,6 +4572,33 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             kwargs=kwargs,
         )
 
+    def drop_duplicates(
+        self,
+        dim: Hashable,
+        keep: Union[
+            str,
+            bool,
+        ] = "first",
+    ):
+        """Returns a new DataArray with duplicate dimension values removed.
+        Parameters
+        ----------
+        dim : dimension label, optional
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        DataArray
+        """
+        if dim not in self.dims:
+            raise ValueError(f"'{dim}' not found in dimensions")
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
+        return self.isel(indexes)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
