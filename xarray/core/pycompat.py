@@ -8,6 +8,7 @@ integer_types = (int, np.integer)
 
 try:
     import dask
+    import dask.array
     from dask.base import is_dask_collection
 
     dask_version = LooseVersion(dask.__version__)
