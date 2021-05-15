@@ -82,7 +82,7 @@ from .pycompat import (
     dask_version,
     is_duck_dask_array,
     sparse_array_type,
-    sparse_version
+    sparse_version,
 )
 from .utils import (
     Default,
