@@ -4045,14 +4045,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 # https://github.com/pydata/sparse/issues/422
                 or (
                     sparse_version < "0.11.2"
-                    and (
-                        any(
-                            isinstance(v.data, sparse_array_type)
-                            for v in self.variables.values()
-                        )
-                        or sparse
+                    and any(
+                        isinstance(v.data, sparse_array_type)
+                        for v in self.variables.values()
                     )
                 )
+                # Shifting the arrays to sparse requires _unstack_full_reindex:
+                or sparse
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
