@@ -4062,7 +4062,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     isinstance(v.data, pint_array_type) for v in self.variables.values()
                 )
                 # or any(
-                    # not isinstance(v.data, np.ndarray) for v in self.variables.values()
+                #     not isinstance(v.data, np.ndarray) for v in self.variables.values()
                 # )
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
