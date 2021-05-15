@@ -81,7 +81,6 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     dask_version,
     is_duck_dask_array,
-    sparse_array_type,
     sparse_version,
 )
 from .utils import (
