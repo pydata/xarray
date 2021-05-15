@@ -40,7 +40,7 @@ try:
     # solely for isinstance checks
     import cupy
 
-    cupy_version = LooseVersion(sparse.__version__)
+    cupy_version = LooseVersion(cupy.__version__)
     cupy_array_type = (cupy.ndarray,)
 except ImportError:  # pragma: no cover
     cupy_version = LooseVersion("0.0.0")
