@@ -96,7 +96,9 @@ def build_engines(pkg_entrypoints):
 @functools.lru_cache(maxsize=1)
 def list_engines():
     pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    return build_engines(pkg_entrypoints)
+    engines = build_engines(pkg_entrypoints)
+    engines = {key: engines[key] for key in engines if engines[key].installed()}
+    return engines
 
 
 def guess_engine(store_spec):
@@ -104,12 +106,32 @@ def guess_engine(store_spec):
 
     for engine, backend in engines.items():
         try:
-            if backend.guess_can_open and backend.guess_can_open(store_spec):
+            if backend.guess_can_open(store_spec):
                 return engine
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    raise ValueError("cannot guess the engine, try passing one explicitly")
+    compatible_engines = []
+    for engine, backend in BACKEND_ENTRYPOINTS.items():
+        try:
+            if backend.guess_can_open(store_spec):
+                compatible_engines.append(engine)
+        except Exception:
+            warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
+
+    if len(compatible_engines):
+        error_message = (
+            f"Xarray cannot find a matching installed engine for this file in the installed engines"
+            f"{engines}. Try to pass one explicitly or consider installing one of the "
+            f"following engine which reports a match: {compatible_engines}."
+        )
+    else:
+        error_message = (
+            "Xarray cannot detect the proper engine to open this file. "
+            "Check if it is installed and try to pass it explicitly."
+        )
+
+    raise ValueError(error_message)
 
 
 def get_backend(engine):

@@ -152,6 +152,8 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    def installed(self) -> bool:
+        return has_pseudonetcdf
 
-if has_pseudonetcdf:
-    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint

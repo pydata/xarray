@@ -133,6 +133,8 @@ class PynioBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    def installed(self) -> bool:
+        return has_pynio
 
-if has_pynio:
-    BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint

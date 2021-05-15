@@ -147,6 +147,8 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    def installed(self) -> bool:
+        return has_cfgrib
 
-if has_cfgrib:
-    BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint

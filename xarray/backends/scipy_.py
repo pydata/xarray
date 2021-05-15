@@ -282,6 +282,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    def installed(self) -> bool:
+        return has_scipy
 
-if has_scipy:
-    BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint

@@ -142,6 +142,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             )
             return ds
 
+    def installed(self) -> bool:
+        return has_pydap
 
-if has_pydap:
-    BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

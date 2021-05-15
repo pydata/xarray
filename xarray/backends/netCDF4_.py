@@ -570,6 +570,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    def installed(self) -> bool:
+        return has_netcdf4
 
-if has_netcdf4:
-    BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint
+
+BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint

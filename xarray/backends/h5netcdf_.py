@@ -392,6 +392,8 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         )
         return ds
 
+    def installed(self) -> bool:
+        return has_h5netcdf
 
-if has_h5netcdf:
-    BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint

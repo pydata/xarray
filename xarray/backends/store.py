@@ -41,5 +41,8 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
         return ds
 
+    def installed(self) -> bool:
+        return True
+
 
 BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint
