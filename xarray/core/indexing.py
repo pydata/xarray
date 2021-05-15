@@ -2,7 +2,6 @@ import enum
 import functools
 import operator
 from collections import defaultdict
-from distutils.version import LooseVersion
 from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
