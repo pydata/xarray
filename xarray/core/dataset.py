@@ -81,7 +81,6 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     dask_version,
     is_duck_dask_array,
-    pint_array_type,
     sparse_array_type,
     sparse_version,
 )
@@ -4059,12 +4058,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 # # pint doesn't implement `np.full_like` in a way that's
                 # # currently compatible.
                 # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                or any(
-                    isinstance(v.data, pint_array_type) for v in self.variables.values()
-                )
                 # or any(
-                #     not isinstance(v.data, np.ndarray) for v in self.variables.values()
+                #     isinstance(v.data, pint_array_type) for v in self.variables.values()
                 # )
+                or any(
+                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
+                )
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
