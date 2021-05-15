@@ -244,8 +244,7 @@ def _dsplot(plotfunc):
         If provided, create a new figure for the plot with the given size:
         *height* (in inches) of each plot. See also: ``aspect``.
     norm : matplotlib.colors.Normalize, optional
-        If the :py:class:`~matplotlib.colors.Normalize` instance
-        has ``vmin`` or ``vmax`` specified, the corresponding
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the

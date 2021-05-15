@@ -528,8 +528,7 @@ def _plot2d(plotfunc):
     add_labels : bool, optional
         Use xarray metadata to label axes.
     norm : matplotlib.colors.Normalize, optional
-        If the :py:class:`~matplotlib.colors.Normalize` instance
-        has ``vmin`` or ``vmax`` specified, the corresponding
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
         kwarg must be ``None``.
     vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
