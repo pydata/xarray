@@ -4,7 +4,6 @@ import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
-from distutils.version import LooseVersion
 from typing import (
     Any,
     Dict,
@@ -1027,7 +1026,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         -------
         chunked : xarray.Variable
         """
-        import dask
         import dask.array as da
 
         if chunks is None:
@@ -1057,12 +1055,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = indexing.ImplicitToExplicitIndexingAdapter(
                     data, indexing.OuterIndexer
                 )
-                if LooseVersion(dask.__version__) < "2.0.0":
-                    kwargs = {}
-                else:
-                    # All of our lazily loaded backend array classes should use NumPy
-                    # array operations.
-                    kwargs = {"meta": np.ndarray}
+
+                # All of our lazily loaded backend array classes should use NumPy
+                # array operations.
+                kwargs = {"meta": np.ndarray}
             else:
                 kwargs = {}
 
