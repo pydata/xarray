@@ -1326,28 +1326,23 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-
-    def _nan_check(d):
-        if d.all():
-            return True
-        else:
-            return False
-
-    if is_duck_dask_array(valid_values.data):
-        # assign to copy - else the check is not triggered
-        _are_there_nans = valid_values.copy(
-            data=valid_values.data.map_blocks(_nan_check, dtype=valid_values.dtype),
-            deep=False,
-        )
-
-    else:
-        _are_there_nans = _nan_check(valid_values.data)
-
-    if not _are_there_nans:
-        da_a = da_a.where(valid_values)
-        da_b = da_b.where(valid_values)
-
     valid_count = valid_values.sum(dim) - ddof
+
+    def _get_valid_values(da, other):
+        """
+        Function to lazily mask da_a and da_b
+        following a similar approach to
+        https://github.com/pydata/xarray/pull/4559
+        """
+        missing_vals = np.logical_or(da.isnull(), other.isnull())
+        if missing_vals.any():
+            da = da.where(~missing_vals)
+            return da
+        else:
+            return da
+
+    da_a = da_a.map_blocks(_get_valid_values, args=[da_b])
+    da_b = da_b.map_blocks(_get_valid_values, args=[da_a])
 
     # 3. Detrend along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
