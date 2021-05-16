@@ -8,7 +8,7 @@ from .concat import concat
 from .dataarray import DataArray
 from .dataset import Dataset
 from .merge import merge
-
+from .utils import iterate_nested
 
 def _infer_concat_order_from_positions(datasets):
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
@@ -310,7 +310,6 @@ def _new_tile_id(single_id_ds_pair):
     tile_id, ds = single_id_ds_pair
     return tile_id[1:]
 
-
 def _nested_combine(
     datasets,
     concat_dims,
@@ -351,7 +350,6 @@ def _nested_combine(
         combine_attrs=combine_attrs,
     )
     return combined
-
 
 def combine_nested(
     datasets,
@@ -540,6 +538,14 @@ def combine_nested(
     concat
     merge
     """
+    mixed_datasets_and_arrays = any(
+        isinstance(obj, Dataset) for obj in iterate_nested(datasets)
+    ) and any(
+        isinstance(obj, DataArray) and obj.name is None for obj in iterate_nested(datasets)
+    )
+    if mixed_datasets_and_arrays:
+        raise ValueError("Can't combine datasets with unnamed arrays.")
+
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
@@ -839,6 +845,15 @@ def combine_by_coords(
 
     if not data_objects:
         return Dataset()
+
+    mixed_arrays_and_datasets = any(
+        isinstance(data_object, DataArray) and data_object.name is None
+        for data_object in data_objects
+    ) and any(
+        isinstance(data_object, Dataset) for data_object in data_objects
+    )
+    if mixed_arrays_and_datasets:
+        raise ValueError("Can't automatically combine datasets with unnamed arrays.")
 
     all_unnamed_data_arrays = all(
         isinstance(data_object, DataArray) and data_object.name is None

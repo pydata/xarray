@@ -679,7 +679,10 @@ class TestNestedCombine:
             DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
             Dataset({"x": [2, 3]}),
         ]
-        with pytest.raises(ValueError, match="without providing an explicit name"):
+        with pytest.raises(
+                ValueError,
+                match=r"Can't combine datasets with unnamed arrays."
+            ):
             combine_nested(objs, "x")
 
 class TestCombineAuto:
@@ -729,7 +732,10 @@ class TestCombineAuto:
             DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
             Dataset({"x": [2, 3]}),
         ]
-        with pytest.raises(ValueError, match="without providing an explicit name"):
+        with pytest.raises(
+                ValueError,
+                match=r"Can't automatically combine datasets with unnamed arrays."
+            ):
             combine_by_coords(objs)
 
     @pytest.mark.parametrize(
