@@ -673,6 +673,14 @@ class TestNestedCombine:
         actual = combine_nested(objs, concat_dim=["x", "y"])
         assert_identical(expected, actual)
 
+    # TODO aijams - Determine if this test is appropriate.
+    def test_nested_combine_mixed_datasets_arrays(self):
+        objs = [
+            DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
+            Dataset({"x": [2, 3]}),
+        ]
+        with pytest.raises(ValueError, match="without providing an explicit name"):
+            combine_nested(objs, "x")
 
 class TestCombineAuto:
     def test_combine_by_coords(self):
