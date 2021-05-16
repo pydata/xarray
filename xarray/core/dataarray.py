@@ -4581,6 +4581,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
+
         Parameters
         ----------
         dim : dimension label, optional
