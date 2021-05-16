@@ -78,10 +78,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import (
-    dask_version,
-    is_duck_dask_array,
-)
+from .pycompat import dask_version, is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
