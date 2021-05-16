@@ -204,7 +204,7 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
 
-    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -427,9 +427,7 @@ def _datetime_nanmin(array):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
-
     Convert the datetime array to a timedelta relative to an offset.
-
     Parameters
     ----------
     array : array-like
@@ -442,12 +440,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
-
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
-
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even

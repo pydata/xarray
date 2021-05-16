@@ -27,8 +27,8 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
-from .merge import merge_coordinates_without_align
-from .options import OPTIONS
+from .merge import merge_attrs, merge_coordinates_without_align
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
@@ -48,6 +48,11 @@ def _first_of_type(args, kind):
         if isinstance(arg, kind):
             return arg
     raise ValueError("This should be unreachable.")
+
+
+def _all_of_type(args, kind):
+    """Return all objects of type 'kind'"""
+    return [arg for arg in args if isinstance(arg, kind)]
 
 
 class _UFuncSignature:
@@ -202,7 +207,10 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
+    combine_attrs: str = "override",
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -230,7 +238,7 @@ def build_output_coords(
     else:
         # TODO: save these merged indexes, instead of re-computing them later
         merged_vars, unused_indexes = merge_coordinates_without_align(
-            coords_list, exclude_dims=exclude_dims
+            coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
         )
 
     output_coords = []
@@ -248,7 +256,12 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False
+    func,
+    *args,
+    signature,
+    join="inner",
+    exclude_dims=frozenset(),
+    keep_attrs="override",
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -260,12 +273,16 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs:
+    objs = _all_of_type(args, DataArray)
+
+    if keep_attrs == "drop":
+        name = result_name(args)
+    else:
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
-    else:
-        name = result_name(args)
-    result_coords = build_output_coords(args, signature, exclude_dims)
+    result_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
 
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
@@ -279,13 +296,12 @@ def apply_dataarray_vfunc(
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for da in out:
-                # This is adding attrs in place
-                da._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for da in out:
+            da.attrs = attrs
+    else:
+        out.attrs = attrs
 
     return out
 
@@ -307,7 +323,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                "but %r != %r" % (keys, first_keys)
+                f"but {keys!r} != {first_keys!r}"
             )
     return first_keys
 
@@ -400,7 +416,7 @@ def apply_dataset_vfunc(
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
-    keep_attrs=False,
+    keep_attrs="override",
 ):
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -414,15 +430,16 @@ def apply_dataset_vfunc(
             "dataset_fill_value argument."
         )
 
-    if keep_attrs:
-        first_obj = _first_of_type(args, Dataset)
+    objs = _all_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    list_of_coords = build_output_coords(args, signature, exclude_dims)
+    list_of_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
@@ -435,13 +452,13 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for ds in out:
-                # This is adding attrs in place
-                ds._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for ds in out:
+            ds.attrs = attrs
+    else:
+        out.attrs = attrs
+
     return out
 
 
@@ -516,7 +533,7 @@ def unified_dim_sizes(
         if len(set(var.dims)) < len(var.dims):
             raise ValueError(
                 "broadcasting cannot handle duplicate "
-                "dimensions on a variable: %r" % list(var.dims)
+                f"dimensions on a variable: {list(var.dims)}"
             )
         for dim, size in zip(var.dims, var.shape):
             if dim not in exclude_dims:
@@ -526,7 +543,7 @@ def unified_dim_sizes(
                     raise ValueError(
                         "operands cannot be broadcast together "
                         "with mismatched lengths for dimension "
-                        "%r: %s vs %s" % (dim, dim_sizes[dim], size)
+                        f"{dim}: {dim_sizes[dim]} vs {size}"
                     )
     return dim_sizes
 
@@ -563,8 +580,8 @@ def broadcast_compat_data(
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "
-            "dimensions %r on an input variable: these are core "
-            "dimensions on other input or output variables" % unexpected_dims
+            f"dimensions {unexpected_dims!r} on an input variable: these are core "
+            "dimensions on other input or output variables"
         )
 
     # for consistency with numpy, keep broadcast dimensions to the left
@@ -609,13 +626,11 @@ def apply_variable_ufunc(
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
-    keep_attrs=False,
+    keep_attrs="override",
     dask_gufunc_kwargs=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
-
-    first_obj = _first_of_type(args, Variable)
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
@@ -736,6 +751,12 @@ def apply_variable_ufunc(
             )
         )
 
+    objs = _all_of_type(args, Variable)
+    attrs = merge_attrs(
+        [obj.attrs for obj in objs],
+        combine_attrs=keep_attrs,
+    )
+
     output = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
@@ -758,8 +779,7 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs:
-            var.attrs.update(first_obj.attrs)
+        var.attrs = attrs
         output.append(var)
 
     if signature.num_outputs == 1:
@@ -801,7 +821,7 @@ def apply_ufunc(
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: bool = False,
+    keep_attrs: Union[bool, str] = None,
     kwargs: Mapping = None,
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
@@ -1098,6 +1118,12 @@ def apply_ufunc(
     if kwargs:
         func = functools.partial(func, **kwargs)
 
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
+
+    if isinstance(keep_attrs, bool):
+        keep_attrs = "override" if keep_attrs else "drop"
+
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
         func,
@@ -1377,8 +1403,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
     >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2), dims=["a", "b", "c"])
     >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
@@ -1528,8 +1552,6 @@ def where(cond, x, y):
 
     Examples
     --------
-    >>> import xarray as xr
-    >>> import numpy as np
     >>> x = xr.DataArray(
     ...     0.1 * np.arange(10),
     ...     dims=["lat"],

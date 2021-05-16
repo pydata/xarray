@@ -263,8 +263,6 @@ class DatetimeAccessor(Properties):
 
     Examples
     ---------
-    >>> import xarray as xr
-    >>> import pandas as pd
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
@@ -459,8 +457,6 @@ class TimedeltaAccessor(Properties):
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import xarray as xr
     >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts

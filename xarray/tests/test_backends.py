@@ -1,8 +1,10 @@
 import contextlib
+import gzip
 import itertools
 import math
 import os.path
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -30,9 +32,14 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
-from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
+from xarray.backends.netCDF4_ import (
+    NetCDF4BackendEntrypoint,
+    _extract_nc4_variable_encoding,
+)
 from xarray.backends.pydap_ import PydapDataStore
+from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexes, indexing
@@ -2771,7 +2778,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
-            ValueError, match=r"not the signature of a valid netCDF file"
+            ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
@@ -2817,7 +2824,11 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open(tmp_file, "rb") as f:
                 f.seek(8)
                 with pytest.raises(ValueError, match="cannot guess the engine"):
-                    open_dataset(f)
+                    with pytest.warns(
+                        RuntimeWarning,
+                        match=re.escape("'h5netcdf' fails while guessing"),
+                    ):
+                        open_dataset(f)
 
 
 @requires_h5netcdf
@@ -5161,3 +5172,86 @@ def test_chunking_consintency(chunks, tmp_path):
 
         with xr.open_dataset(tmp_path / "test.nc", chunks=chunks) as actual:
             xr.testing.assert_chunks_equal(actual, expected)
+
+
+def _check_guess_can_open_and_open(entrypoint, obj, engine, expected):
+    assert entrypoint.guess_can_open(obj)
+    with open_dataset(obj, engine=engine) as actual:
+        assert_identical(expected, actual)
+
+
+@requires_netCDF4
+def test_netcdf4_entrypoint(tmp_path):
+    entrypoint = NetCDF4BackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, format="netcdf3_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    path = tmp_path / "bar"
+    ds.to_netcdf(path, format="netcdf4_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    assert entrypoint.guess_can_open("http://something/remote")
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+    path = tmp_path / "baz"
+    with open(path, "wb") as f:
+        f.write(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(path)
+
+
+@requires_scipy
+def test_scipy_entrypoint(tmp_path):
+    entrypoint = ScipyBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
+
+    contents = ds.to_netcdf(engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, BytesIO(contents), engine="scipy", expected=ds
+    )
+
+    path = tmp_path / "foo.nc.gz"
+    with gzip.open(path, mode="wb") as f:
+        f.write(contents)
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc.gz")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+
+
+@requires_h5netcdf
+def test_h5netcdf_entrypoint(tmp_path):
+    entrypoint = H5netcdfBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="h5netcdf")
+    _check_guess_can_open_and_open(entrypoint, path, engine="h5netcdf", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, str(path), engine="h5netcdf", expected=ds
+    )
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="h5netcdf", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
