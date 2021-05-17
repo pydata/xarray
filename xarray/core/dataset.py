@@ -78,7 +78,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
+from .pycompat import dask_version, is_duck_dask_array
 from .utils import (
     Default,
     Frozen,
@@ -4028,36 +4028,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         result = self.copy(deep=False)
         for dim in dims:
-
-            if (
-                # Dask arrays don't support assignment by index, which the fast unstack
-                # function requires.
-                # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
-                any(is_duck_dask_array(v.data) for v in self.variables.values())
-                # Sparse doesn't currently support (though we could special-case
-                # it)
-                # https://github.com/pydata/sparse/issues/422
-                or any(
-                    isinstance(v.data, sparse_array_type)
-                    for v in self.variables.values()
-                )
-                or sparse
-                # Until https://github.com/pydata/xarray/pull/4751 is resolved,
-                # we check explicitly whether it's a numpy array. Once that is
-                # resolved, explicitly exclude pint arrays.
-                # # pint doesn't implement `np.full_like` in a way that's
-                # # currently compatible.
-                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                # # or any(
-                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
-                # # )
-                or any(
-                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
-                )
+            if not sparse and all(
+                # Dask arrays recently supports assignment by index,
+                # https://github.com/dask/dask/pull/7393
+                dask_version >= "2021.04.0" and is_duck_dask_array(v.data)
+                # Numpy arrays handles the fast path:
+                or isinstance(v.data, np.ndarray)
+                for v in self.variables.values()
             ):
-                result = result._unstack_full_reindex(dim, fill_value, sparse)
-            else:
+                # Fast unstacking path:
                 result = result._unstack_once(dim, fill_value)
+            else:
+                # Slower unstacking path, examples of array types that
+                # currently has to use this path:
+                # * sparse doesn't support item assigment,
+                #   https://github.com/pydata/sparse/issues/114
+                # * pint has some circular import issues,
+                #   https://github.com/pydata/xarray/pull/4751
+                result = result._unstack_full_reindex(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
