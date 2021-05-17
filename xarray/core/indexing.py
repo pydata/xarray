@@ -59,16 +59,6 @@ def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
 
 
-def get_indexer_nd(index, labels, method=None, tolerance=None):
-    """Wrapper around :meth:`pandas.Index.get_indexer` supporting n-dimensional
-    labels
-    """
-    flat_labels = np.ravel(labels)
-    flat_indexer = index.get_indexer(flat_labels, method=method, tolerance=tolerance)
-    indexer = flat_indexer.reshape(labels.shape)
-    return indexer
-
-
 def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
     # TODO: benbovy - flexible indexes: indexers are still grouped by dimension
     # - Make xarray.Index hashable so that it can be used as key in a mapping?

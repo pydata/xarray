@@ -18,8 +18,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes
-from .indexes import Index, PandasIndex
-from .indexing import get_indexer_nd
+from .indexes import Index, PandasIndex, get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
 from .variable import IndexVariable, Variable
 
