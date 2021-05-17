@@ -75,7 +75,7 @@ def _is_standard_calendar(calendar):
 def _is_numpy_compatible_time_range(times):
     if is_np_datetime_like(times.dtype):
         return True
-    # Cftime object
+    # times array contains cftime objects
     times = np.asarray(times)
     tmin = times.min()
     tmax = times.max()
@@ -432,7 +432,7 @@ def convert_times(times, date_type, raise_on_invalid=True):
         return cftime_to_nptime(times, raise_on_invalid=raise_on_invalid)
     new = np.empty(times.shape, dtype="O")
     if is_np_datetime_like(times.dtype):
-        # Convert datetime64 objects to Timestamps
+        # Convert datetime64 objects to Timestamps since those have year, month, day, etc. attributes
         times = pd.DatetimeIndex(times)
     for i, t in enumerate(times):
         try:

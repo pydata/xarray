@@ -47,7 +47,7 @@ def convert_calendar(
     Parameters
     ----------
     ds : DataArray or Dataset
-      Input array/dataset with a time coordinate of a valid dtype (datetime64 or a cftime.datetime).
+      Input array/dataset with a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime`).
     calendar : str
       The target calendar name.
     dim : str
@@ -58,22 +58,22 @@ def convert_calendar(
       A value to use for filling in dates in the target that were missing in the source.
       Default (None) is not to fill values, so the output time axis might be non-continuous.
     use_cftime : boolean, optional
-      Whether to use cftime objects in the output, valid if `calendar` is one of {"proleptic_gregorian", "gregorian" or "standard"}.
-      If True, the new time axis uses cftime objects. If None (default), it uses numpy objects if the date range permits it, and cftime ones if not.
-      If False, it uses numpy objects or fails.
+      Whether to use cftime objects in the output, only used if `calendar` is one of {"proleptic_gregorian", "gregorian" or "standard"}.
+      If True, the new time axis uses cftime objects. If None (default), it uses :py:class:`numpy.datetime64` values if the date range permits it, and :py:class:`cftime.datetime` objects if not.
+      If False, it uses :py:class:`numpy.datetime64`  or fails.
 
     Returns
     -------
       Copy of source with the time coordinate converted to the target calendar.
       If `missing` was None (default), invalid dates in the new calendar are dropped, but missing dates are not inserted.
-      If `missing` was given, the new data is reindexed to have a continuous time axis, filling missing datas with `missing`.
+      If `missing` was given, the new data is reindexed to have a continuous time axis, filling missing datapoints with `missing`.
 
     Notes
     -----
     If one of the source or target calendars is `360_day`, `align_on` must be specified and two options are offered.
 
     "year"
-      The dates are translated according to their rank in the year (dayofyear), ignoring their original month and day information,
+      The dates are translated according to their relative position in the year, ignoring their original month and day information,
       meaning that the missing/surplus days are added/removed at regular intervals.
 
       From a `360_day` to a standard calendar, the output will be missing the following dates (day of year in parenthesis):
@@ -124,7 +124,6 @@ def convert_calendar(
         else:
             use_cftime = True
 
-    # Get source
     source = time.dt.calendar
 
     src_cal = "default" if is_np_datetime_like(time.dtype) else source
@@ -194,7 +193,7 @@ def convert_calendar(
         out = out.isel({dim: np.unique(out[dim], return_index=True)[1]})
     elif align_on == "date":
         new_times = convert_times(
-            time.variable._data.array,
+            time.data
             get_date_type(calendar, use_cftime=use_cftime),
             raise_on_invalid=False,
         )
@@ -252,7 +251,7 @@ def interp_calendar(source, target, dim="time"):
     Parameters
     ----------
     source: Union[DataArray, Dataset]
-      The source data to interpolate, must have a time coordinate of a valid dtype (np.datetime64 or cftime objects)
+      The source data to interpolate, must have a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime` objects)
     target: DataArray
       The target time coordinate of a valid dtype (np.datetime64 or cftime objects)
     dim : str

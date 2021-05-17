@@ -1126,8 +1126,8 @@ def date_range_like(source, calendar, use_cftime=None):
     calendar : str
       New calendar name.
     use_cftime : bool, optional
-      If True, the output uses cftime objects. If None (default), numpy objects are used if possible.
-      If False, numpy objects are used or an error is raised.
+      If True, the output uses :py:class`cftime.datetime` objects. If None (default), :py:class:`numpy.datetime64` values are used if possible.
+      If False, :py:class:`numpy.datetime64` values are used or an error is raised.
 
     Returns
     -------
@@ -1156,9 +1156,7 @@ def date_range_like(source, calendar, use_cftime=None):
                 raise ValueError(
                     "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
                 )
-            # else : Default to cftime
         elif use_cftime is False:
-            # target calendar is ctime-only.
             raise ValueError(
                 f"Calendar '{calendar}' is only valid with cftime. Try using `use_cftime=True`."
             )
