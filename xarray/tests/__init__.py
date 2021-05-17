@@ -59,6 +59,9 @@ def LooseVersion(vstring):
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
+has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
+    "matplotlib", minversion="3.3.0"
+)
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -66,7 +69,6 @@ has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
-has_cftime_1_1_0, requires_cftime_1_1_0 = _importorskip("cftime", minversion="1.1.0.0")
 has_cftime_1_4_1, requires_cftime_1_4_1 = _importorskip("cftime", minversion="1.4.1")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")

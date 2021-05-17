@@ -153,6 +153,23 @@ def trapz(y, x, axis):
     return sum(integrand, axis=axis, skipna=False)
 
 
+def cumulative_trapezoid(y, x, axis):
+    if axis < 0:
+        axis = y.ndim + axis
+    x_sl1 = (slice(1, None),) + (None,) * (y.ndim - axis - 1)
+    x_sl2 = (slice(None, -1),) + (None,) * (y.ndim - axis - 1)
+    slice1 = (slice(None),) * axis + (slice(1, None),)
+    slice2 = (slice(None),) * axis + (slice(None, -1),)
+    dx = x[x_sl1] - x[x_sl2]
+    integrand = dx * 0.5 * (y[tuple(slice1)] + y[tuple(slice2)])
+
+    # Pad so that 'axis' has same length in result as it did in y
+    pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
+    integrand = pad(integrand, pads, mode="constant", constant_values=0.0)
+
+    return cumsum(integrand, axis=axis, skipna=False)
+
+
 masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
 )
@@ -187,7 +204,7 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
 
-    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -437,9 +454,7 @@ def _datetime_nanmin(array):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
-
     Convert the datetime array to a timedelta relative to an offset.
-
     Parameters
     ----------
     array : array-like
@@ -452,12 +467,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
-
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
-
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even
@@ -668,3 +681,12 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
     else:
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+
+
+def push(array, n, axis):
+    from bottleneck import push
+
+    if is_duck_dask_array(array):
+        return dask_array_ops.push(array, n, axis)
+    else:
+        return push(array, n, axis)

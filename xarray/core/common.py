@@ -209,11 +209,11 @@ class AttrAccessMixin:
         if not hasattr(object.__new__(cls), "__dict__"):
             pass
         elif cls.__module__.startswith("xarray."):
-            raise AttributeError("%s must explicitly define __slots__" % cls.__name__)
+            raise AttributeError(f"{cls.__name__} must explicitly define __slots__")
         else:
             cls.__setattr__ = cls._setattr_dict
             warnings.warn(
-                "xarray subclass %s should explicitly define __slots__" % cls.__name__,
+                f"xarray subclass {cls.__name__} should explicitly define __slots__",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -251,10 +251,9 @@ class AttrAccessMixin:
         if name in self.__dict__:
             # Custom, non-slotted attr, or improperly assigned variable?
             warnings.warn(
-                "Setting attribute %r on a %r object. Explicitly define __slots__ "
+                f"Setting attribute {name!r} on a {type(self).__name__!r} object. Explicitly define __slots__ "
                 "to suppress this warning for legitimate custom attributes and "
-                "raise an error when attempting variables assignments."
-                % (name, type(self).__name__),
+                "raise an error when attempting variables assignments.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -274,9 +273,8 @@ class AttrAccessMixin:
             ):
                 raise
             raise AttributeError(
-                "cannot set attribute %r on a %r object. Use __setitem__ style"
+                f"cannot set attribute {name!r} on a {type(self).__name__!r} object. Use __setitem__ style"
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
-                % (name, type(self).__name__)
             ) from e
 
     def __dir__(self) -> List[str]:
@@ -406,7 +404,7 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.indexes[key]
+            return self.xindexes[key].to_pandas_index()
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
@@ -582,8 +580,6 @@ class DataWithCoords(AttrAccessMixin):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature_c": (
@@ -655,7 +651,7 @@ class DataWithCoords(AttrAccessMixin):
             func, target = func
             if target in kwargs:
                 raise ValueError(
-                    "%s is both the pipe target and a keyword argument" % target
+                    f"{target} is both the pipe target and a keyword argument"
                 )
             kwargs[target] = self
             return func(*args, **kwargs)
@@ -926,6 +922,14 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
+
+        if "keep_attrs" in window_kwargs:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``rolling_exp`` has no effect. Pass"
+                " ``keep_attrs`` directly to the applied function, e.g."
+                " ``rolling_exp(...).mean(keep_attrs=False)``."
+            )
+
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
         return RollingExp(self, window, window_type)
@@ -954,10 +958,6 @@ class DataWithCoords(AttrAccessMixin):
         coord_func : str or mapping of hashable to str, default: "mean"
             function (name) that is applied to the coordinates,
             or a mapping from coordinate name to function (name).
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
 
         Returns
         -------
@@ -1001,8 +1001,6 @@ class DataWithCoords(AttrAccessMixin):
         core.rolling.DataArrayCoarsen
         core.rolling.DatasetCoarsen
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
         return self._coarsen_cls(
@@ -1051,10 +1049,6 @@ class DataWithCoords(AttrAccessMixin):
         loffset : timedelta or str, optional
             Offset used to adjust the resampled time labels. Some pandas date
             offset strings are supported.
-        keep_attrs : bool, optional
-            If True, the object's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         restore_coord_dims : bool, optional
             If True, also restore the dimension order of multi-dimensional
             coordinates.
@@ -1129,8 +1123,12 @@ class DataWithCoords(AttrAccessMixin):
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        if keep_attrs is not None:
+            warnings.warn(
+                "Passing ``keep_attrs`` to ``resample`` has no effect and will raise an"
+                " error in xarray 0.20. Pass ``keep_attrs`` directly to the applied"
+                " function, e.g. ``resample(...).mean(keep_attrs=True)``."
+            )
 
         # note: the second argument (now 'skipna') use to be 'dim'
         if (
@@ -1160,7 +1158,8 @@ class DataWithCoords(AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            if isinstance(self.indexes[dim_name], CFTimeIndex):
+            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
+            if isinstance(self.xindexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)
@@ -1270,8 +1269,7 @@ class DataWithCoords(AttrAccessMixin):
 
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
-                    "cond argument is %r but must be a %r or %r"
-                    % (cond, Dataset, DataArray)
+                    f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
                 )
 
             # align so we can use integer indexing
@@ -1567,8 +1565,6 @@ def full_like(other, fill_value, dtype=None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],
@@ -1731,8 +1727,6 @@ def zeros_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],
@@ -1789,8 +1783,6 @@ def ones_like(other, dtype: DTypeLike = None):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     np.arange(6).reshape(2, 3),
     ...     dims=["lat", "lon"],

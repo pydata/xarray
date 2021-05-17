@@ -24,7 +24,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.indexes import propagate_indexes
+from xarray.core.indexes import Index, PandasIndex, propagate_indexes
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
@@ -147,10 +147,15 @@ class TestDataArray:
 
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
-        expected = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        assert array.indexes.keys() == expected.keys()
-        for k in expected:
-            assert array.indexes[k].equals(expected[k])
+        expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
+        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        assert array.xindexes.keys() == expected_xindexes.keys()
+        assert array.indexes.keys() == expected_indexes.keys()
+        assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
+        assert all([isinstance(idx, Index) for idx in array.xindexes.values()])
+        for k in expected_indexes:
+            assert array.xindexes[k].equals(expected_xindexes[k])
+            assert array.indexes[k].equals(expected_indexes[k])
 
     def test_get_index(self):
         array = DataArray(np.zeros((2, 3)), coords={"x": ["a", "b"]}, dims=["x", "y"])
@@ -1496,7 +1501,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.indexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1516,7 +1521,7 @@ class TestDataArray:
         # regression test for GH3746
         arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
         del arr.coords["x"]
-        assert "x" not in arr.indexes
+        assert "x" not in arr.xindexes
 
     def test_broadcast_like(self):
         arr1 = DataArray(
@@ -1664,18 +1669,19 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
             )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # as kwargs
@@ -1683,9 +1689,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # multiindex case
@@ -1694,9 +1701,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": idx}, "y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
     def test_expand_dims_error(self):
@@ -3130,6 +3138,11 @@ class TestDataArray:
         expected = DataArray([1, 1, 1], [("time", times[::4])], attrs=array.attrs)
         assert_identical(result, expected)
 
+        with pytest.warns(
+            UserWarning, match="Passing ``keep_attrs`` to ``resample`` has no effect."
+        ):
+            array.resample(time="1D", keep_attrs=True)
+
     def test_resample_skipna(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
         array = DataArray(np.ones(10), [("time", times)])
@@ -4366,12 +4379,12 @@ class TestDataArray:
     def test_binary_op_propagate_indexes(self):
         # regression test for GH2227
         self.dv["x"] = np.arange(self.dv.sizes["x"])
-        expected = self.dv.indexes["x"]
+        expected = self.dv.xindexes["x"]
 
-        actual = (self.dv * 10).indexes["x"]
+        actual = (self.dv * 10).xindexes["x"]
         assert expected is actual
 
-        actual = (self.dv > 10).indexes["x"]
+        actual = (self.dv > 10).xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self):
@@ -6539,33 +6552,89 @@ def test_isin(da):
     assert_equal(result, expected)
 
 
-def test_coarsen_keep_attrs():
-    _attrs = {"units": "test", "long_name": "testing"}
+@pytest.mark.parametrize(
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
+)
+def test_coarsen_keep_attrs(funcname, argument):
+    attrs_da = {"da_attr": "test"}
+    attrs_coords = {"attrs_coords": "test"}
 
-    da = xr.DataArray(
-        np.linspace(0, 364, num=364),
-        dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
-        attrs=_attrs,
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(
+        data,
+        dims=("coord"),
+        coords={"coord": ("coord", coords, attrs_coords)},
+        attrs=attrs_da,
+        name="name",
     )
 
-    da2 = da.copy(deep=True)
+    # attrs are now kept per default
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument)
+    assert result.attrs == attrs_da
+    da.coord.attrs == attrs_coords
+    assert result.name == "name"
 
-    # Test dropped attrs
-    dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == {}
+    # discard attrs
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using dataset keyword
-    dat = da.coarsen(time=3, boundary="trim", keep_attrs=True).mean()
-    assert dat.attrs == _attrs
+    # test discard attrs using global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs using global option
-    with xr.set_options(keep_attrs=True):
-        dat = da.coarsen(time=3, boundary="trim").mean()
-    assert dat.attrs == _attrs
+    # keyword takes precedence over global option
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=False):
+        result = func(*argument, keep_attrs=True)
+    assert result.attrs == attrs_da
+    da.coord.attrs == {}
+    assert result.name == "name"
 
-    # Test kept attrs in original object
-    xr.testing.assert_identical(da, da2)
+    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
+    with set_options(keep_attrs=True):
+        result = func(*argument, keep_attrs=False)
+    assert result.attrs == {}
+    da.coord.attrs == {}
+    assert result.name == "name"
+
+
+def test_coarsen_keep_attrs_deprecated():
+    attrs_da = {"da_attr": "test"}
+
+    data = np.linspace(10, 15, 100)
+    coords = np.linspace(1, 10, 100)
+
+    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
+
+    # deprecated option
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
+
+    assert result.attrs == {}
+
+    # the keep_attrs in the reduction function takes precedence
+    with pytest.warns(
+        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
+    ):
+        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
+
+    assert result.attrs == {}
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
@@ -7303,6 +7372,11 @@ def test_rolling_exp_keep_attrs(da):
         result = da.rolling_exp(time=10).mean(keep_attrs=False)
     assert result.attrs == {}
 
+    with pytest.warns(
+        UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
+    ):
+        da.rolling_exp(time=10, keep_attrs=True)
+
 
 def test_no_dict():
     d = DataArray()
@@ -7397,3 +7471,24 @@ def test_clip(da):
     # Unclear whether we want this work, OK to adjust the test when we have decided.
     with pytest.raises(ValueError, match="arguments without labels along dimension"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
+
+
+@pytest.mark.parametrize("keep", ["first", "last", False])
+def test_drop_duplicates(keep):
+    ds = xr.DataArray(
+        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
+    )
+
+    if keep == "first":
+        data = [0, 6, 7]
+        time = [0, 1, 2]
+    elif keep == "last":
+        data = [5, 6, 7]
+        time = [0, 1, 2]
+    else:
+        data = [6, 7]
+        time = [1, 2]
+
+    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+    result = ds.drop_duplicates("time", keep=keep)
+    assert_equal(expected, result)
