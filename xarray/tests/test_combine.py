@@ -531,9 +531,9 @@ class TestNestedCombine:
         }
         expected_dict["override"] = expected.copy(deep=True)
         expected_dict["override"].attrs = {"a": 1}
-        f = lambda _: {"a": -1, "b": 1}
+        f = lambda attrs, context: attrs[0]
         expected_dict[f] = expected.copy(deep=True)
-        expected_dict[f].attrs = f(None)
+        expected_dict[f].attrs = f([{"a": 1}], None)
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
 
@@ -718,7 +718,7 @@ class TestCombineAuto:
             ),
             ("override", Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1})),
             (
-                lambda _: {"a": 1, "b": 2},
+                lambda attrs, context: attrs[1],
                 Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "b": 2}),
             ),
         ],
