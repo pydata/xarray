@@ -4030,17 +4030,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         for dim in dims:
             if (
                 not sparse
-                # Dask arrays supports assignment by index,
-                # https://github.com/dask/dask/pull/7393
                 and all(
+                    # Dask arrays recently supports assignment by index,
+                    # https://github.com/dask/dask/pull/7393
                     dask_version >= "2021.04.0"
                     and is_duck_dask_array(v.data)
+                    # Numpy arrays handles the fast path:
                     or isinstance(v.data, np.ndarray)
                     for v in self.variables.values()
                 )
             ):
+                # Fast unstacking path:
                 result = result._unstack_once(dim, fill_value)
             else:
+                # Slower unstacking path, examples of array types that
+                # currently has to use this path:
+                # * sparse doesn't support item assigment,
+                #   https://github.com/pydata/sparse/issues/114
+                # * pint has some circular import issues,
+                #   https://github.com/pydata/xarray/pull/4751
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
         return result
 
