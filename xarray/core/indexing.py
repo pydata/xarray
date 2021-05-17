@@ -257,9 +257,15 @@ def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
     indexes = {}
     grouped_indexers = defaultdict(dict)
 
+    # TODO: data_obj.xindexes should eventually return the PandasIndex instance
+    # for each multi-index levels
+    xindexes = dict(data_obj.xindexes)
+    for level, dim in data_obj._level_coords.items():
+        xindexes[level] = xindexes[dim]
+
     for key, label in indexers.items():
         try:
-            index = data_obj.xindexes[key]
+            index = xindexes[key]
             coord = data_obj.coords[key]
             dim = coord.dims[0]
             if dim not in indexes:

@@ -1318,7 +1318,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coordinate name.
         """
         level_coords: Dict[str, Hashable] = {}
-        for name, index in self._get_indexes().items():
+        for name, index in self.xindexes.items():
             # TODO: benbovy - flexible indexes: update when MultIndex has its own xarray class.
             pd_index = index.to_pandas_index()
             if isinstance(pd_index, pd.MultiIndex):
@@ -1607,11 +1607,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         except (TypeError, AttributeError):
             return False
 
-    def _get_indexes(self):
-        if self._indexes is None:
-            self._indexes = default_indexes(self._variables, self._dims)
-        return self._indexes
-
     @property
     def indexes(self) -> Indexes:
         """Mapping of pandas.Index objects used for label based indexing.
@@ -1624,19 +1619,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.xindexes
 
         """
-        return Indexes(
-            {k: idx.to_pandas_index() for k, idx in self._get_indexes().items()}
-        )
+        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
 
     @property
     def xindexes(self) -> Indexes:
         """Mapping of xarray Index objects used for label based indexing."""
-        indexes = self._get_indexes().copy()
-
-        for level, dim in self._level_coords.items():
-            indexes[level] = indexes[dim]
-
-        return Indexes(indexes)
+        if self._indexes is None:
+            self._indexes = default_indexes(self._variables, self._dims)
+        return Indexes(self._indexes)
 
     @property
     def coords(self) -> DatasetCoordinates:
