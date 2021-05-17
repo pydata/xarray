@@ -7622,7 +7622,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         )
 
     def interp_calendar(
-        self, target: Union[pd.DatetimeIndex, CFTimeIndex, DataArray], dim: str = "time"
+        self,
+        target: Union[pd.DatetimeIndex, CFTimeIndex, "DataArray"],
+        dim: str = "time",
     ) -> "Dataset":
         """Interpolates the Dataset to another calendar based on decimal year measure.
 
