@@ -56,6 +56,11 @@ _VALID_COMPAT = Frozen(
 )
 
 
+class Context:
+    def __init__(self, func):
+        self.func = func
+
+
 def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
@@ -492,14 +497,14 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
             )
 
 
-def merge_attrs(variable_attrs, combine_attrs):
+def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
         # no attributes to merge
         return None
 
     if callable(combine_attrs):
-        return combine_attrs(variable_attrs)
+        return combine_attrs(variable_attrs, context=context)
     elif combine_attrs == "drop":
         return {}
     elif combine_attrs == "override":
