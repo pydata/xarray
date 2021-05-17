@@ -165,14 +165,6 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
             dtype_ = np.dtype(dtype)
         self._dtype = dtype_
 
-    @classmethod
-    def from_variables(cls, variables: Dict[Hashable, "Variable"], **kwargs):
-        if len(variables) > 1:
-            raise ValueError("Cannot set a pandas.Index from more than one variable")
-
-        varname, var = list(variables.items())[0]
-        return cls(var.data, dtype=var.dtype, coord_name=varname)
-
     def to_pandas_index(self) -> pd.Index:
         return self.array
 
