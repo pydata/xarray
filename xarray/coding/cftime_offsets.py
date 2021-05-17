@@ -188,8 +188,7 @@ def _get_day_of_month(other, day_option):
     if day_option == "start":
         return 1
     elif day_option == "end":
-        days_in_month = _days_in_month(other)
-        return days_in_month
+        return _days_in_month(other)
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
@@ -301,10 +300,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
 
 def _validate_month(month, default_month):
-    if month is None:
-        result_month = default_month
-    else:
-        result_month = month
+    result_month = default_month if month is None else month
     if not isinstance(result_month, int):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
@@ -697,11 +693,7 @@ def to_offset(freq):
 
     freq = freq_data["freq"]
     multiples = freq_data["multiple"]
-    if multiples is None:
-        multiples = 1
-    else:
-        multiples = int(multiples)
-
+    multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
 
 

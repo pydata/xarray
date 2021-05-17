@@ -47,7 +47,7 @@ class PydapArrayWrapper(BackendArray):
         result = robust_getitem(array, key, catch=ValueError)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and len(axis) > 0:
+        if result.ndim + len(axis) != array.ndim and axis:
             result = np.squeeze(result, axis)
 
         return result

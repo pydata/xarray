@@ -91,7 +91,7 @@ def _is_numpy_compatible_time_range(times):
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith("s"):
-        units = "%ss" % units
+        units = f"{units}s"
     return {
         "nanoseconds": "ns",
         "microseconds": "us",
@@ -120,6 +120,8 @@ def _ensure_padded_year(ref_date):
     # No four-digit strings, assume the first digits are the year and pad
     # appropriately
     matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+    if not matches_start_digits:
+        raise ValueError(f"invalid reference date for time units: {ref_date}")
     ref_year, everything_else = [s for s in matches_start_digits.groups()]
     ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
 
@@ -163,7 +165,7 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
         result = decode_cf_datetime(example_value, units, calendar, use_cftime)
     except Exception:
         calendar_msg = (
-            "the default calendar" if calendar is None else "calendar %r" % calendar
+            "the default calendar" if calendar is None else f"calendar {calendar!r}"
         )
         msg = (
             f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
@@ -386,8 +388,7 @@ def infer_timedelta_units(deltas):
     """
     deltas = to_timedelta_unboxed(np.asarray(deltas).ravel())
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
-    units = _infer_time_units_from_diff(unique_timedeltas)
-    return units
+    return _infer_time_units_from_diff(unique_timedeltas)
 
 
 def cftime_to_nptime(times, raise_on_invalid=True):

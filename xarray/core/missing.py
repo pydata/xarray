@@ -93,7 +93,7 @@ class NumpyInterpolator(BaseInterpolator):
             self._left = fill_value
             self._right = fill_value
         else:
-            raise ValueError("%s is not a valid fill_value" % fill_value)
+            raise ValueError(f"{fill_value} is not a valid fill_value")
 
     def __call__(self, x):
         return self.f(
@@ -317,9 +317,13 @@ def interp_na(
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
 
+        # TODO: benbovy - flexible indexes: update when CFTimeIndex (and DatetimeIndex?)
+        # has its own class inheriting from xarray.Index
         if (
-            dim in self.indexes
-            and isinstance(self.indexes[dim], (pd.DatetimeIndex, CFTimeIndex))
+            dim in self.xindexes
+            and isinstance(
+                self.xindexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+            )
             and use_coordinate
         ):
             # Convert to float

@@ -24,6 +24,18 @@ New Features
 - Added calendar utilies :py:func:`convert_calendar`, :py:func:`interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar`. (:pull:`5233`).
   By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
+- Implement :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5239`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
+- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+  :py:func:`apply_ufunc` (:pull:`5041`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
+  such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Raise more informative error when decoding time variables with invalid reference dates.
+  (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
@@ -35,14 +47,30 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
+  an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
+  0.18.0.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Explanation of deprecation cycles and how to implement them added to contributors
+  guide. (:pull:`5289`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Explicit indexes refactor: add an ``xarray.Index`` base class and
+  ``Dataset.xindexes`` / ``DataArray.xindexes`` properties. Also rename
+  ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
+  ``xarray.Index`` (:pull:`5102`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Updated the release guide for developers. Now accounts for actions that are automated via github
+  actions. (:pull:`5274`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.18.0:
 
@@ -268,7 +296,6 @@ Internal Changes
   ``pytest.raises(Exception, match="foo")``;
   (:pull:`5188`), (:pull:`5191`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
 
 .. _whats-new.0.17.0:
 
