@@ -209,7 +209,22 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
             coord_name, label = next(iter(labels.items()))
 
             if is_dict_like(label):
-                indexer, new_index = self._query_multiindex(label)
+                return self._query_multiindex(label)
+
+            elif isinstance(label, slice):
+                indexer = index.slice_indexer(
+                    _sanitize_slice_element(label.start),
+                    _sanitize_slice_element(label.stop),
+                    _sanitize_slice_element(label.step),
+                )
+                if not isinstance(indexer, slice):
+                    # unlike pandas, in xarray we never want to silently convert a
+                    # slice indexer into an array indexer
+                    raise KeyError(
+                        "cannot represent labeled-based slice indexer for dimension "
+                        f"{coord_name!r} with a slice over integer positions; the index is "
+                        "unsorted or non-unique"
+                    )
 
             elif isinstance(label, tuple):
                 if _is_nested_tuple(label):
@@ -228,7 +243,7 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
                     else _asarray_tuplesafe(label)
                 )
                 if label.ndim == 0:
-                    indexer, new_index = index.get_loc_level(label, level=0)
+                    indexer, new_index = index.get_loc_level(label.item(), level=0)
                 elif label.dtype.kind == "b":
                     indexer = label
                 else:
