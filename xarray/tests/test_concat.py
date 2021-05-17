@@ -300,7 +300,7 @@ class TestConcatDataset:
                 False,
             ),
             (
-                lambda _: {"a": -1, "b": 0, "c": 1},
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
                 {"a": 41, "b": 42, "c": 43},
                 {"b": 2, "c": 43, "d": 44},
                 {"a": -1, "b": 0, "c": 1},
@@ -362,7 +362,7 @@ class TestConcatDataset:
                 False,
             ),
             (
-                lambda _: {"a": -1, "b": 0, "c": 1},
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
                 {"a": 41, "b": 42, "c": 43},
                 {"b": 2, "c": 43, "d": 44},
                 {"a": -1, "b": 0, "c": 1},
