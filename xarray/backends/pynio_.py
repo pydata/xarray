@@ -133,7 +133,8 @@ class PynioBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
-    def installed(self) -> bool:
+    @staticmethod
+    def installed() -> bool:
         return has_pynio
 
 

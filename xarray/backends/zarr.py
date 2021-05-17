@@ -756,6 +756,9 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
+    @staticmethod
+    def installed() -> bool:
+        return has_zarr
 
-if has_zarr:
-    BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint
+
+BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint

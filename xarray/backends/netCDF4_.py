@@ -348,12 +348,6 @@ class NetCDF4DataStore(WritableCFDataStore):
         if isinstance(filename, pathlib.Path):
             filename = os.fspath(filename)
 
-        if not isinstance(filename, str):
-            raise ValueError(
-                "can only read bytes or file-like objects "
-                "with engine='scipy' or 'h5netcdf'"
-            )
-
         if format is None:
             format = "NETCDF4"
 
@@ -570,7 +564,8 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
-    def installed(self) -> bool:
+    @staticmethod
+    def installed() -> bool:
         return has_netcdf4
 
 

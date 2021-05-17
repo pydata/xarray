@@ -81,7 +81,10 @@ def sort_backends(backend_entrypoints):
 
 
 def build_engines(pkg_entrypoints):
-    backend_entrypoints = BACKEND_ENTRYPOINTS.copy()
+    backend_entrypoints = {}
+    for backend_name, backend in BACKEND_ENTRYPOINTS.items():
+        if backend.installed():
+            backend_entrypoints[backend_name] = backend
     pkg_entrypoints = remove_duplicates(pkg_entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
@@ -97,7 +100,6 @@ def build_engines(pkg_entrypoints):
 def list_engines():
     pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
     engines = build_engines(pkg_entrypoints)
-    engines = {key: engines[key] for key in engines if engines[key].installed()}
     return engines
 
 

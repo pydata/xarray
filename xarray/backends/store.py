@@ -41,7 +41,8 @@ class StoreBackendEntrypoint(BackendEntrypoint):
 
         return ds
 
-    def installed(self) -> bool:
+    @staticmethod
+    def installed() -> bool:
         return True
 
 

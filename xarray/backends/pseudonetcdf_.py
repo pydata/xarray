@@ -152,7 +152,8 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
             )
         return ds
 
-    def installed(self) -> bool:
+    @staticmethod
+    def installed() -> bool:
         return has_pseudonetcdf
 
 
