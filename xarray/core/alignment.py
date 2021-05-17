@@ -47,7 +47,7 @@ def _get_joiner(join, index_cls):
         # We rewrite all indexes and then use join='left'
         return operator.itemgetter(0)
     else:
-        raise ValueError("invalid value for join: %s" % join)
+        raise ValueError(f"invalid value for join: {join}")
 
 
 def _override_indexes(objects, all_indexes, exclude):
@@ -56,16 +56,16 @@ def _override_indexes(objects, all_indexes, exclude):
             lengths = {index.size for index in dim_indexes}
             if len(lengths) != 1:
                 raise ValueError(
-                    "Indexes along dimension %r don't have the same length."
-                    " Cannot use join='override'." % dim
+                    f"Indexes along dimension {dim!r} don't have the same length."
+                    " Cannot use join='override'."
                 )
 
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
-        new_indexes = {}
-        for dim in obj.xindexes:
-            if dim not in exclude:
-                new_indexes[dim] = all_indexes[dim][0]
+        new_indexes = {
+            dim: all_indexes[dim][0] for dim in obj.xindexes if dim not in exclude
+        }
+
         objects[idx + 1] = obj._overwrite_indexes(new_indexes)
 
     return objects
@@ -135,7 +135,6 @@ def align(
 
     Examples
     --------
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[25, 35], [10, 24]],
     ...     dims=("lat", "lon"),
@@ -337,21 +336,17 @@ def align(
             labeled_size = index.size
             if len(unlabeled_sizes | {labeled_size}) > 1:
                 raise ValueError(
-                    "arguments without labels along dimension %r cannot be "
-                    "aligned because they have different dimension size(s) %r "
-                    "than the size of the aligned dimension labels: %r"
-                    % (dim, unlabeled_sizes, labeled_size)
+                    f"arguments without labels along dimension {dim!r} cannot be "
+                    f"aligned because they have different dimension size(s) {unlabeled_sizes!r} "
+                    f"than the size of the aligned dimension labels: {labeled_size!r}"
                 )
 
-    for dim in unlabeled_dim_sizes:
-        if dim not in all_indexes:
-            sizes = unlabeled_dim_sizes[dim]
-            if len(sizes) > 1:
-                raise ValueError(
-                    "arguments without labels along dimension %r cannot be "
-                    "aligned because they have different dimension sizes: %r"
-                    % (dim, sizes)
-                )
+    for dim, sizes in unlabeled_dim_sizes.items():
+        if dim not in all_indexes and len(sizes) > 1:
+            raise ValueError(
+                f"arguments without labels along dimension {dim!r} cannot be "
+                f"aligned because they have different dimension sizes: {sizes!r}"
+            )
 
     result = []
     for obj in objects:
@@ -485,8 +480,7 @@ def reindex_like_indexers(
             if other_size != target_size:
                 raise ValueError(
                     "different size for unlabeled "
-                    "dimension on argument %r: %r vs %r"
-                    % (dim, other_size, target_size)
+                    f"dimension on argument {dim!r}: {other_size!r} vs {target_size!r}"
                 )
     return indexers
 
@@ -574,8 +568,8 @@ def reindex_variables(
 
             if not index.is_unique:
                 raise ValueError(
-                    "cannot reindex or align along dimension %r because the "
-                    "index has duplicate values" % dim
+                    f"cannot reindex or align along dimension {dim!r} because the "
+                    "index has duplicate values"
                 )
 
             int_indexer = get_indexer_nd(index, target, method, tolerance)
@@ -602,9 +596,9 @@ def reindex_variables(
             new_size = indexers[dim].size
             if existing_size != new_size:
                 raise ValueError(
-                    "cannot reindex or align along dimension %r without an "
-                    "index because its size %r is different from the size of "
-                    "the new index %r" % (dim, existing_size, new_size)
+                    f"cannot reindex or align along dimension {dim!r} without an "
+                    f"index because its size {existing_size!r} is different from the size of "
+                    f"the new index {new_size!r}"
                 )
 
     for name, var in variables.items():
@@ -755,8 +749,6 @@ def broadcast(*args, exclude=None):
     args = align(*args, join="outer", copy=False, exclude=exclude)
 
     dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
-    result = []
-    for arg in args:
-        result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
+    result = [_broadcast_helper(arg, exclude, dims_map, common_coords) for arg in args]
 
     return tuple(result)

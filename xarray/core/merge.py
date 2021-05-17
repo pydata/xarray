@@ -66,7 +66,7 @@ def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     for var in variables:
         for dim, size in zip(var.dims, var.shape):
             if dim in dims and size != dims[dim]:
-                raise ValueError("index %r not aligned" % dim)
+                raise ValueError(f"index {dim!r} not aligned")
             dims[dim] = size
     return dims
 
@@ -211,17 +211,15 @@ def merge_collected(
                 for _, other_index in indexed_elements[1:]:
                     if not index.equals(other_index):
                         raise MergeError(
-                            "conflicting values for index %r on objects to be "
-                            "combined:\nfirst value: %r\nsecond value: %r"
-                            % (name, index, other_index)
+                            f"conflicting values for index {name!r} on objects to be "
+                            f"combined:\nfirst value: {index!r}\nsecond value: {other_index!r}"
                         )
                 if compat == "identical":
                     for other_variable, _ in indexed_elements[1:]:
                         if not dict_equiv(variable.attrs, other_variable.attrs):
                             raise MergeError(
                                 "conflicting attribute values on combined "
-                                "variable %r:\nfirst value: %r\nsecond value: %r"
-                                % (name, variable.attrs, other_variable.attrs)
+                                f"variable {name!r}:\nfirst value: {variable.attrs!r}\nsecond value: {other_variable.attrs!r}"
                             )
                 merged_vars[name] = variable
                 merged_vars[name].attrs = merge_attrs(
@@ -316,6 +314,7 @@ def merge_coordinates_without_align(
     objects: "List[Coordinates]",
     prioritized: Mapping[Hashable, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
+    combine_attrs: str = "override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
@@ -337,7 +336,7 @@ def merge_coordinates_without_align(
     else:
         filtered = collected
 
-    return merge_collected(filtered, prioritized)
+    return merge_collected(filtered, prioritized, combine_attrs=combine_attrs)
 
 
 def determine_coords(
@@ -497,9 +496,9 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
     for coord_name in explicit_coords:
         if coord_name in dims and variables[coord_name].dims != (coord_name,):
             raise MergeError(
-                "coordinate %s shares a name with a dataset dimension, but is "
+                f"coordinate {coord_name} shares a name with a dataset dimension, but is "
                 "not a 1D variable along that dimension. This is disallowed "
-                "by the xarray data model." % coord_name
+                "by the xarray data model."
             )
 
 
@@ -521,7 +520,7 @@ def merge_attrs(variable_attrs, combine_attrs):
             except ValueError as e:
                 raise MergeError(
                     "combine_attrs='no_conflicts', but some values are not "
-                    "the same. Merging %s with %s" % (str(result), str(attrs))
+                    f"the same. Merging {str(result)} with {str(attrs)}"
                 ) from e
         return result
     elif combine_attrs == "drop_conflicts":
@@ -547,12 +546,12 @@ def merge_attrs(variable_attrs, combine_attrs):
         for attrs in variable_attrs[1:]:
             if not dict_equiv(result, attrs):
                 raise MergeError(
-                    "combine_attrs='identical', but attrs differ. First is %s "
-                    ", other is %s." % (str(result), str(attrs))
+                    f"combine_attrs='identical', but attrs differ. First is {str(result)} "
+                    f", other is {str(attrs)}."
                 )
         return result
     else:
-        raise ValueError("Unrecognised value for combine_attrs=%s" % combine_attrs)
+        raise ValueError(f"Unrecognised value for combine_attrs={combine_attrs}")
 
 
 class _MergeResult(NamedTuple):
@@ -642,15 +641,11 @@ def merge_core(
     if ambiguous_coords:
         raise MergeError(
             "unable to determine if these variables should be "
-            "coordinates or not in the merged result: %s" % ambiguous_coords
+            f"coordinates or not in the merged result: {ambiguous_coords}"
         )
 
     attrs = merge_attrs(
-        [
-            var.attrs
-            for var in coerced
-            if isinstance(var, Dataset) or isinstance(var, DataArray)
-        ],
+        [var.attrs for var in coerced if isinstance(var, (Dataset, DataArray))],
         combine_attrs,
     )
 
@@ -720,7 +715,6 @@ def merge(
 
     Examples
     --------
-    >>> import xarray as xr
     >>> x = xr.DataArray(
     ...     [[1.0, 2.0], [3.0, 5.0]],
     ...     dims=("lat", "lon"),
@@ -895,8 +889,7 @@ def merge(
         combine_attrs=combine_attrs,
         fill_value=fill_value,
     )
-    merged = Dataset._construct_direct(**merge_result._asdict())
-    return merged
+    return Dataset._construct_direct(**merge_result._asdict())
 
 
 def dataset_merge_method(

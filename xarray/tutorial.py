@@ -77,8 +77,11 @@ def open_dataset(
     """
     try:
         import pooch
-    except ImportError:
-        raise ImportError("using the tutorial data requires pooch")
+    except ImportError as e:
+        raise ImportError(
+            "tutorial.open_dataset depends on pooch to download and manage datasets."
+            " To proceed please install pooch."
+        ) from e
 
     logger = pooch.get_logger()
     logger.setLevel("WARNING")
@@ -87,10 +90,10 @@ def open_dataset(
     if name in external_urls:
         url = external_urls[name]
     else:
-        # process the name
-        default_extension = ".nc"
         path = pathlib.Path(name)
         if not path.suffix:
+            # process the name
+            default_extension = ".nc"
             path = path.with_suffix(default_extension)
 
         url = f"{base_url}/raw/{version}/{path.name}"
@@ -146,8 +149,11 @@ def open_rasterio(
     """
     try:
         import pooch
-    except ImportError:
-        raise ImportError("using the tutorial data requires pooch")
+    except ImportError as e:
+        raise ImportError(
+            "tutorial.open_rasterio depends on pooch to download and manage datasets."
+            " To proceed please install pooch."
+        ) from e
 
     logger = pooch.get_logger()
     logger.setLevel("WARNING")
