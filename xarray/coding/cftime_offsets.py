@@ -49,12 +49,12 @@ from typing import ClassVar, Optional
 import numpy as np
 import pandas as pd
 
-from ..core.common import is_np_datetime_like
+from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import (
-    _is_numpy_compatible_time_range,
     _is_standard_calendar,
+    _should_cftime_be_used,
     convert_time_or_go_back,
     format_cftime_datetime,
 )
@@ -1138,7 +1138,18 @@ def date_range_like(source, calendar, use_cftime=None):
       Exception when the source is daily or coarser, then if the end of the input range is on
       the last day of the month, the output range will also end on the last day of the month in the new calendar.
     """
+    from ..core.dataarray import DataArray
     from .frequencies import infer_freq
+
+    # Source is a pd.DatetimeImdex or a CFTimeIndex or a DataArray that is 1D AND contains datetime objs.
+    if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
+        isinstance(source, DataArray)
+        and (source.ndim != 1)
+        or not _contains_datetime_like_objects(source)
+    ):
+        raise ValueError(
+            "'source' must be a 1D array of datetime objects for inferring its range."
+        )
 
     freq = infer_freq(source)
     if freq is None:
@@ -1146,27 +1157,12 @@ def date_range_like(source, calendar, use_cftime=None):
             "`date_range_like` was unable to generate a range as the source frequency was not inferrable."
         )
 
-    # Arguments Checks for target
-    if use_cftime is not True:
-        if _is_standard_calendar(calendar):
-            if _is_numpy_compatible_time_range(source):
-                # Conversion is possible with pandas, force False if it was None
-                use_cftime = False
-            elif use_cftime is False:
-                raise ValueError(
-                    "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
-                )
-        elif use_cftime is False:
-            raise ValueError(
-                f"Calendar '{calendar}' is only valid with cftime. Try using `use_cftime=True`."
-            )
-        else:
-            use_cftime = True
+    use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 
     src_start = source.values.min()
     src_end = source.values.max()
     if is_np_datetime_like(source.dtype):
-        src_cal = "default"
+        src_cal = "datetime64"
         # We want to use datetime fields (datetime64 object don't have them)
         src_start = pd.Timestamp(src_start)
         src_end = pd.Timestamp(src_end)
@@ -1176,7 +1172,7 @@ def date_range_like(source, calendar, use_cftime=None):
         else:  # DataArray
             src_cal = source.dt.calendar
 
-    tgt_cal = calendar if use_cftime else "default"
+    tgt_cal = calendar if use_cftime else "datetime64"
     if src_cal == tgt_cal:
         return source
 

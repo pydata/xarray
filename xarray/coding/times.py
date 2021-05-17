@@ -11,6 +11,7 @@ from pandas.errors import OutOfBoundsDatetime
 from ..core import indexing
 from ..core.common import contains_cftime_datetimes, is_np_datetime_like
 from ..core.formatting import first_n_items, format_timestamp, last_item
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     SerializationWarning,
@@ -340,10 +341,25 @@ def _infer_time_units_from_diff(unique_timedeltas):
 
 def infer_calendar_name(dates):
     """Given an array of datetimes, infer the CF calendar name"""
-    if np.asarray(dates).dtype == "datetime64[ns]":
+    if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
-    else:
-        return np.asarray(dates).ravel()[0].calendar
+    elif dates.dtype == np.dtype("O") and dates.size > 0:
+        # Logic copied from core.common.contains_cftime_datetimes.
+        try:
+            from cftime import datetime as cftime_datetime
+        except ImportError:
+            pass
+        else:
+            sample = dates.ravel()[0]
+            if is_duck_dask_array(sample):
+                sample = sample.compute()
+                if isinstance(sample, np.ndarray):
+                    sample = sample.item()
+            if isinstance(sample, cftime_datetime):
+                return sample.calendar
+
+    # Error raise if dtype is neither datetime or "O", if cftime is not importable, and if element of 'O' dtype is not cftime.
+    raise ValueError("Array does not contain datetime objects.")
 
 
 def infer_datetime_units(dates):
@@ -495,6 +511,31 @@ def convert_time_or_go_back(date, date_type):
                 date.second,
                 date.microsecond,
             )
+
+
+def _should_cftime_be_used(source, target_cal, use_cftime):
+    """Return whether conversion of the source to the target calendar should result in a cftime-backed array.
+
+    Source is a 1D datetime array, target_cal a string (calendar name) and use_cftime is a boolean or None.
+    If use_cftime is None, this returns True if the source's range and target calendar are convertible to np.datetime64 objects.
+    """
+    # Arguments Checks for target
+    if use_cftime is not True:
+        if _is_standard_calendar(target_cal):
+            if _is_numpy_compatible_time_range(source):
+                # Conversion is possible with pandas, force False if it was None
+                use_cftime = False
+            elif use_cftime is False:
+                raise ValueError(
+                    "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
+                )
+        elif use_cftime is False:
+            raise ValueError(
+                f"Calendar '{target_cal}' is only valid with cftime. Try using `use_cftime=True`."
+            )
+        else:
+            use_cftime = True
+    return use_cftime
 
 
 def _cleanup_netcdf_time_units(units):

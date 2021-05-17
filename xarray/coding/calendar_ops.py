@@ -1,10 +1,10 @@
-from datetime import timedelta
-
 import numpy as np
+import pandas as pd
 
-from ..core.common import is_np_datetime_like
+from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
 from .cftime_offsets import date_range_like, get_date_type
-from .times import _is_numpy_compatible_time_range, _is_standard_calendar, convert_times
+from .cftimeindex import CFTimeIndex
+from .times import _should_cftime_be_used, convert_times
 
 try:
     import cftime
@@ -14,14 +14,9 @@ except ImportError:
 
 def _days_in_year(year, calendar, use_cftime=True):
     """Return the number of days in the input year according to the input calendar."""
-    return (
-        (
-            get_date_type(calendar, use_cftime=use_cftime)(year + 1, 1, 1)
-            - timedelta(days=1)
-        )
-        .timetuple()
-        .tm_yday
-    )
+    date_type = get_date_type(calendar, use_cftime=use_cftime)
+    difference = date_type(year + 1, 1, 1) - date_type(year, 1, 1)
+    return difference.days
 
 
 def convert_calendar(
@@ -103,31 +98,15 @@ def convert_calendar(
     from ..core.dataarray import DataArray
 
     time = ds[dim]  # for convenience
+    if not _contains_datetime_like_objects(time):
+        raise ValueError(f"Coordinate {dim} must contain datetime objects.")
 
-    # Arguments Checks for target
-    if use_cftime is not True:
-        # Then we check is pandas is possible.
-        if _is_standard_calendar(calendar):
-            if _is_numpy_compatible_time_range(time):
-                # Conversion is possible with pandas, force False if it was None.
-                use_cftime = False
-            elif use_cftime is False:
-                raise ValueError(
-                    "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
-                )
-            # else : Default to cftime
-        elif use_cftime is False:
-            # target calendar is ctime-only.
-            raise ValueError(
-                f"Calendar '{calendar}' is only valid with cftime. Try using `use_cftime=True`."
-            )
-        else:
-            use_cftime = True
+    use_cftime = _should_cftime_be_used(time, calendar, use_cftime)
 
     source = time.dt.calendar
 
-    src_cal = "default" if is_np_datetime_like(time.dtype) else source
-    tgt_cal = calendar if use_cftime else "default"
+    src_cal = "datetime64" if is_np_datetime_like(time.dtype) else source
+    tgt_cal = calendar if use_cftime else "datetime64"
     if src_cal == tgt_cal:
         return ds
 
@@ -193,7 +172,7 @@ def convert_calendar(
         out = out.isel({dim: np.unique(out[dim], return_index=True)[1]})
     elif align_on == "date":
         new_times = convert_times(
-            time.data
+            time.data,
             get_date_type(calendar, use_cftime=use_cftime),
             raise_on_invalid=False,
         )
@@ -227,7 +206,7 @@ def _datetime_to_decimal_year(times, calendar=None):
 
     def _make_index(time):
         year = int(time.dt.year[0])
-        doys = cftime.date2num(times, f"days since {year:04d}-01-01", calendar=calendar)
+        doys = cftime.date2num(time, f"days since {year:04d}-01-01", calendar=calendar)
         return DataArray(
             year + doys / _days_in_year(year, calendar),
             dims=time.dims,
@@ -246,13 +225,13 @@ def interp_calendar(source, target, dim="time"):
     years since 0001-01-01 AD.
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar or 2000.16301 in a 'noleap' calendar.
 
-    This method should be used with daily data or coarser. Sub-daily result will have a modified day cycle.
+    This method should only be used when the time (HH:MM:SS) information of time coordinate is not important.
 
     Parameters
     ----------
     source: Union[DataArray, Dataset]
       The source data to interpolate, must have a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime` objects)
-    target: DataArray
+    target: DataArray or DatetimeIndex or CFTimeIndex
       The target time coordinate of a valid dtype (np.datetime64 or cftime objects)
     dim : str
       The time coordinate name.
@@ -262,7 +241,18 @@ def interp_calendar(source, target, dim="time"):
     Union[DataArray, Dataset]
       The source interpolated on the decimal years of target,
     """
+    from ..core.dataarray import DataArray
+
+    if not _contains_datetime_like_objects(
+        source[dim]
+    ) or not _contains_datetime_like_objects(target):
+        raise ValueError(
+            f"Both 'source.{dim}' and 'target' must contain datetime objects."
+        )
+
     cal_src = source[dim].dt.calendar
+    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
+        target = DataArray(target, dims=(dim,), name=dim)
     cal_tgt = target.dt.calendar
 
     out = source.copy()

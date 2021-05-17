@@ -1236,25 +1236,22 @@ def test_cftime_range_standard_calendar_refers_to_gregorian():
 
 
 @pytest.mark.parametrize(
-    "start,calendar,use_cftime,expcf",
+    "start,calendar,use_cftime,expected_type",
     [
-        ("1990-01-01", "standard", None, False),
-        ("1990-01-01", "proleptic_gregorian", True, True),
-        ("1990-01-01", "noleap", None, True),
-        ("1990-01-01", "gregorian", False, False),
-        ("1400-01-01", "standard", None, True),
-        ("3400-01-01", "standard", None, True),
+        ("1990-01-01", "standard", None, pd.DatetimeIndex),
+        ("1990-01-01", "proleptic_gregorian", True, CFTimeIndex),
+        ("1990-01-01", "noleap", None, CFTimeIndex),
+        ("1990-01-01", "gregorian", False, pd.DatetimeIndex),
+        ("1400-01-01", "standard", None, CFTimeIndex),
+        ("3400-01-01", "standard", None, CFTimeIndex),
     ],
 )
-def test_date_range(start, calendar, use_cftime, expcf):
+def test_date_range(start, calendar, use_cftime, expected_type):
     dr = date_range(
         start, periods=14, freq="D", calendar=calendar, use_cftime=use_cftime
     )
 
-    if expcf:
-        assert isinstance(dr, CFTimeIndex)
-    else:
-        assert isinstance(dr, pd.DatetimeIndex)
+    assert isinstance(dr, expected_type)
 
 
 def test_date_range_errors():

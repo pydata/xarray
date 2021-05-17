@@ -21,9 +21,6 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Added calendar utilies :py:func:`convert_calendar`, :py:func:`interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar`. (:pull:`5233`).
-  By `Pascal Bourgault <https://github.com/aulemahal>`_.
-
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
@@ -35,6 +32,8 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
+- Added calendar utilies :py:func:`convert_calendar`, :py:func:`interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar`. (:pull:`5233`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
