@@ -227,8 +227,7 @@ def concat(
 
     if compat not in _VALID_COMPAT:
         raise ValueError(
-            "compat=%r invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
-            % compat
+            f"compat={compat!r} invalid: must be 'broadcast_equals', 'equals', 'identical', 'no_conflicts' or 'override'"
         )
 
     if isinstance(first_obj, DataArray):
@@ -238,7 +237,7 @@ def concat(
     else:
         raise TypeError(
             "can only concatenate xarray Dataset and DataArray "
-            "objects, got %s" % type(first_obj)
+            f"objects, got {type(first_obj)}"
         )
     return f(
         objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
@@ -297,18 +296,16 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
             if opt == "different":
                 if compat == "override":
                     raise ValueError(
-                        "Cannot specify both %s='different' and compat='override'."
-                        % subset
+                        f"Cannot specify both {subset}='different' and compat='override'."
                     )
                 # all nonindexes that are not the same in each dataset
                 for k in getattr(datasets[0], subset):
                     if k not in concat_over:
                         equals[k] = None
 
-                        variables = []
-                        for ds in datasets:
-                            if k in ds.variables:
-                                variables.append(ds.variables[k])
+                        variables = [
+                            ds.variables[k] for ds in datasets if k in ds.variables
+                        ]
 
                         if len(variables) == 1:
                             # coords="different" doesn't make sense when only one object
@@ -371,12 +368,12 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
                 if subset == "coords":
                     raise ValueError(
                         "some variables in coords are not coordinates on "
-                        "the first dataset: %s" % (invalid_vars,)
+                        f"the first dataset: {invalid_vars}"
                     )
                 else:
                     raise ValueError(
                         "some variables in data_vars are not data variables "
-                        "on the first dataset: %s" % (invalid_vars,)
+                        f"on the first dataset: {invalid_vars}"
                     )
             concat_over.update(opt)
 
@@ -443,7 +440,7 @@ def _dataset_concat(
     both_data_and_coords = coord_names & data_names
     if both_data_and_coords:
         raise ValueError(
-            "%r is a coordinate in some datasets but not others." % both_data_and_coords
+            f"{both_data_and_coords!r} is a coordinate in some datasets but not others."
         )
     # we don't want the concat dimension in the result dataset yet
     dim_coords.pop(dim, None)
@@ -511,8 +508,8 @@ def _dataset_concat(
             try:
                 vars = ensure_common_dims([ds[k].variable for ds in datasets])
             except KeyError:
-                raise ValueError("%r is not present in all datasets." % k)
-            combined = concat_vars(vars, dim, positions)
+                raise ValueError(f"{k!r} is not present in all datasets.")
+            combined = concat_vars(vars, dim, positions, combine_attrs=combine_attrs)
             assert isinstance(combined, Variable)
             result_vars[k] = combined
         elif k in result_vars:
@@ -523,8 +520,7 @@ def _dataset_concat(
     absent_coord_names = coord_names - set(result.variables)
     if absent_coord_names:
         raise ValueError(
-            "Variables %r are coordinates in some datasets but not others."
-            % absent_coord_names
+            f"Variables {absent_coord_names!r} are coordinates in some datasets but not others."
         )
     result = result.set_coords(coord_names)
     result.encoding = result_encoding
@@ -576,7 +572,7 @@ def _dataarray_concat(
         positions,
         fill_value=fill_value,
         join=join,
-        combine_attrs="drop",
+        combine_attrs=combine_attrs,
     )
 
     merged_attrs = merge_attrs([da.attrs for da in arrays], combine_attrs)

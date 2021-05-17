@@ -138,6 +138,7 @@ Indexing
    Dataset.set_index
    Dataset.reset_index
    Dataset.reorder_levels
+   Dataset.query
 
 Missing value handling
 ----------------------
@@ -178,6 +179,7 @@ Computation
    Dataset.integrate
    Dataset.map_blocks
    Dataset.polyfit
+   Dataset.curvefit
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -241,6 +243,8 @@ Plotting
    :template: autosummary/accessor_method.rst
 
    Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -288,6 +292,7 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
 
@@ -320,6 +325,7 @@ Indexing
    DataArray.set_index
    DataArray.reset_index
    DataArray.reorder_levels
+   DataArray.query
 
 Missing value handling
 ----------------------
@@ -371,7 +377,7 @@ Computation
    DataArray.integrate
    DataArray.polyfit
    DataArray.map_blocks
-
+   DataArray.curvefit
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -417,40 +423,60 @@ String manipulation
 
 .. autosummary::
    :toctree: generated/
+   :template: autosummary/accessor.rst
+
+   DataArray.str
+
+.. autosummary::
+   :toctree: generated/
    :template: autosummary/accessor_method.rst
 
    DataArray.str.capitalize
+   DataArray.str.casefold
+   DataArray.str.cat
    DataArray.str.center
    DataArray.str.contains
    DataArray.str.count
    DataArray.str.decode
    DataArray.str.encode
    DataArray.str.endswith
+   DataArray.str.extract
+   DataArray.str.extractall
    DataArray.str.find
+   DataArray.str.findall
+   DataArray.str.format
    DataArray.str.get
+   DataArray.str.get_dummies
    DataArray.str.index
    DataArray.str.isalnum
    DataArray.str.isalpha
    DataArray.str.isdecimal
    DataArray.str.isdigit
+   DataArray.str.islower
    DataArray.str.isnumeric
    DataArray.str.isspace
    DataArray.str.istitle
    DataArray.str.isupper
+   DataArray.str.join
    DataArray.str.len
    DataArray.str.ljust
    DataArray.str.lower
    DataArray.str.lstrip
    DataArray.str.match
+   DataArray.str.normalize
    DataArray.str.pad
+   DataArray.str.partition
    DataArray.str.repeat
    DataArray.str.replace
    DataArray.str.rfind
    DataArray.str.rindex
    DataArray.str.rjust
+   DataArray.str.rpartition
+   DataArray.str.rsplit
    DataArray.str.rstrip
    DataArray.str.slice
    DataArray.str.slice_replace
+   DataArray.str.split
    DataArray.str.startswith
    DataArray.str.strip
    DataArray.str.swapcase
@@ -486,6 +512,7 @@ Datetimelike properties
    DataArray.dt.daysinmonth
    DataArray.dt.season
    DataArray.dt.time
+   DataArray.dt.date
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
@@ -562,6 +589,7 @@ Plotting
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.surface
 
 .. _api.ufuncs:
 
@@ -656,6 +684,7 @@ Dataset methods
    open_rasterio
    open_zarr
    Dataset.to_netcdf
+   Dataset.to_pandas
    Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
@@ -818,6 +847,7 @@ Faceting
    plot.FacetGrid
    plot.FacetGrid.add_colorbar
    plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
    plot.FacetGrid.map
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
@@ -835,6 +865,7 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
+   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -870,6 +901,9 @@ Advanced API
    as_variable
    register_dataset_accessor
    register_dataarray_accessor
+   Dataset.set_close
+   backends.BackendArray
+   backends.BackendEntrypoint
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create

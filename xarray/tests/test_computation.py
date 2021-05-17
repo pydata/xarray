@@ -22,13 +22,14 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from . import has_dask, raises_regex, requires_dask
+from . import has_dask, requires_dask
 
 dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
-    """ A version of this function which accepts numpy arrays """
+    """A version of this function which accepts numpy arrays"""
+    __tracebackhide__ = True
     from xarray.testing import assert_identical as assert_identical_
 
     if hasattr(a, "identical"):
@@ -563,14 +564,409 @@ def test_keep_attrs():
     assert_identical(actual.x.attrs, a.x.attrs)
 
 
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_variable(strategy, attrs, expected, error):
+    a = xr.Variable("x", [0, 1], attrs=attrs[0])
+    b = xr.Variable("x", [0, 1], attrs=attrs[1])
+    c = xr.Variable("x", [0, 1], attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.Variable("x", [0, 3], attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
+    a = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[0])
+    b = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[1])
+    c = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.DataArray(dims="x", data=[0, 3], attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("variant", ("dim", "coord"))
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataarray_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "dim": lambda attrs, default: (attrs, default),
+        "coord": lambda attrs, default: (default, attrs),
+    }.get(variant)
+
+    dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
+    a = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[0]), "u": ("x", [0, 1], coord_attrs[0])},
+    )
+    b = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[1]), "u": ("x", [0, 1], coord_attrs[1])},
+    )
+    c = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[2]), "u": ("x", [0, 1], coord_attrs[2])},
+    )
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        dim_attrs, coord_attrs = compute_attrs(expected, {})
+        expected = xr.DataArray(
+            dims="x",
+            data=[0, 3],
+            coords={"x": ("x", [0, 1], dim_attrs), "u": ("x", [0, 1], coord_attrs)},
+        )
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
+    a = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[0])
+    b = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[1])
+    c = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.Dataset({"a": ("x", [0, 3])}, attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("variant", ("data", "dim", "coord"))
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataset_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "data": lambda attrs, default: (attrs, default, default),
+        "dim": lambda attrs, default: (default, attrs, default),
+        "coord": lambda attrs, default: (default, default, attrs),
+    }.get(variant)
+    data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
+    a = xr.Dataset(
+        {"a": ("x", [], data_attrs[0])},
+        coords={"x": ("x", [], dim_attrs[0]), "u": ("x", [], coord_attrs[0])},
+    )
+    b = xr.Dataset(
+        {"a": ("x", [], data_attrs[1])},
+        coords={"x": ("x", [], dim_attrs[1]), "u": ("x", [], coord_attrs[1])},
+    )
+    c = xr.Dataset(
+        {"a": ("x", [], data_attrs[2])},
+        coords={"x": ("x", [], dim_attrs[2]), "u": ("x", [], coord_attrs[2])},
+    )
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        data_attrs, dim_attrs, coord_attrs = compute_attrs(expected, {})
+        expected = xr.Dataset(
+            {"a": ("x", [], data_attrs)},
+            coords={"x": ("x", [], dim_attrs), "u": ("x", [], coord_attrs)},
+        )
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
 def test_dataset_join():
     ds0 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
     # by default, cannot have different labels
-    with raises_regex(ValueError, "indexes .* are not equal"):
+    with pytest.raises(ValueError, match=r"indexes .* are not equal"):
         apply_ufunc(operator.add, ds0, ds1)
-    with raises_regex(TypeError, "must supply"):
+    with pytest.raises(TypeError, match=r"must supply"):
         apply_ufunc(operator.add, ds0, ds1, dataset_join="outer")
 
     def add(a, b, join, dataset_join):
@@ -590,7 +986,7 @@ def test_dataset_join():
     actual = add(ds0, ds1, "outer", "outer")
     assert_identical(actual, expected)
 
-    with raises_regex(ValueError, "data variable names"):
+    with pytest.raises(ValueError, match=r"data variable names"):
         apply_ufunc(operator.add, ds0, xr.Dataset({"b": 1}))
 
     ds2 = xr.Dataset({"b": ("x", [99, 3]), "x": [1, 2]})
@@ -708,11 +1104,11 @@ def test_apply_dask_parallelized_errors():
     data_array = xr.DataArray(array, dims=("x", "y"))
 
     # from apply_array_ufunc
-    with raises_regex(ValueError, "at least one input is an xarray object"):
+    with pytest.raises(ValueError, match=r"at least one input is an xarray object"):
         apply_ufunc(identity, array, dask="parallelized")
 
     # formerly from _apply_blockwise, now from apply_variable_ufunc
-    with raises_regex(ValueError, "consists of multiple chunks"):
+    with pytest.raises(ValueError, match=r"consists of multiple chunks"):
         apply_ufunc(
             identity,
             data_array,
@@ -1160,7 +1556,9 @@ def test_vectorize_dask_new_output_dims():
     ).transpose(*expected.dims)
     assert_identical(expected, actual)
 
-    with raises_regex(ValueError, "dimension 'z1' in 'output_sizes' must correspond"):
+    with pytest.raises(
+        ValueError, match=r"dimension 'z1' in 'output_sizes' must correspond"
+    ):
         apply_ufunc(
             func,
             data_array.chunk({"x": 1}),
@@ -1171,8 +1569,8 @@ def test_vectorize_dask_new_output_dims():
             dask_gufunc_kwargs=dict(output_sizes={"z1": 1}),
         )
 
-    with raises_regex(
-        ValueError, "dimension 'z' in 'output_core_dims' needs corresponding"
+    with pytest.raises(
+        ValueError, match=r"dimension 'z' in 'output_core_dims' needs corresponding"
     ):
         apply_ufunc(
             func,
@@ -1193,10 +1591,10 @@ def test_output_wrong_number():
     def tuple3x(x):
         return (x, x, x)
 
-    with raises_regex(ValueError, "number of outputs"):
+    with pytest.raises(ValueError, match=r"number of outputs"):
         apply_ufunc(identity, variable, output_core_dims=[(), ()])
 
-    with raises_regex(ValueError, "number of outputs"):
+    with pytest.raises(ValueError, match=r"number of outputs"):
         apply_ufunc(tuple3x, variable, output_core_dims=[(), ()])
 
 
@@ -1209,13 +1607,13 @@ def test_output_wrong_dims():
     def remove_dim(x):
         return x[..., 0]
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(add_dim, variable, output_core_dims=[("y", "z")])
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(add_dim, variable)
 
-    with raises_regex(ValueError, "unexpected number of dimensions"):
+    with pytest.raises(ValueError, match=r"unexpected number of dimensions"):
         apply_ufunc(remove_dim, variable)
 
 
@@ -1231,11 +1629,11 @@ def test_output_wrong_dim_size():
     def apply_truncate_broadcast_invalid(obj):
         return apply_ufunc(truncate, obj)
 
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(variable)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(data_array)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_broadcast_invalid(dataset)
 
     def apply_truncate_x_x_invalid(obj):
@@ -1243,11 +1641,11 @@ def test_output_wrong_dim_size():
             truncate, obj, input_core_dims=[["x"]], output_core_dims=[["x"]]
         )
 
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(variable)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(data_array)
-    with raises_regex(ValueError, "size of dimension"):
+    with pytest.raises(ValueError, match=r"size of dimension"):
         apply_truncate_x_x_invalid(dataset)
 
     def apply_truncate_x_z(obj):
@@ -1442,7 +1840,7 @@ def test_dot_align_coords(use_dask):
     xr.testing.assert_allclose(expected, actual)
 
     with xr.set_options(arithmetic_join="exact"):
-        with raises_regex(ValueError, "indexes along dimension"):
+        with pytest.raises(ValueError, match=r"indexes along dimension"):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all

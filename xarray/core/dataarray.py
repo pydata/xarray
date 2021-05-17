@@ -1,5 +1,4 @@
 import datetime
-import functools
 import warnings
 from numbers import Number
 from typing import (
@@ -43,6 +42,7 @@ from .alignment import (
     align,
     reindex_like_indexers,
 )
+from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates,
@@ -51,7 +51,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, default_indexes, propagate_indexes
+from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -70,9 +70,9 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
+T_DataArray = TypeVar("T_DataArray", bound="DataArray")
+T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
-    T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
-
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -98,16 +98,16 @@ def _infer_coords_and_dims(
         and len(coords) != len(shape)
     ):
         raise ValueError(
-            "coords is not dict-like, but it has %s items, "
-            "which does not match the %s dimensions of the "
-            "data" % (len(coords), len(shape))
+            f"coords is not dict-like, but it has {len(coords)} items, "
+            f"which does not match the {len(shape)} dimensions of the "
+            "data"
         )
 
     if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
-        dims = ["dim_%s" % n for n in range(len(shape))]
+        dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
@@ -125,12 +125,12 @@ def _infer_coords_and_dims(
     elif len(dims) != len(shape):
         raise ValueError(
             "different number of dimensions on data "
-            "and dims: %s vs %s" % (len(shape), len(dims))
+            f"and dims: {len(shape)} vs {len(dims)}"
         )
     else:
         for d in dims:
             if not isinstance(d, str):
-                raise TypeError("dimension %s is not a string" % d)
+                raise TypeError(f"dimension {d} is not a string")
 
     new_coords: Dict[Any, Variable] = {}
 
@@ -147,24 +147,24 @@ def _infer_coords_and_dims(
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError(
-                "coordinate %s has dimensions %s, but these "
+                f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                "dimensions %s" % (k, v.dims, dims)
+                f"dimensions {dims}"
             )
 
         for d, s in zip(v.dims, v.shape):
             if s != sizes[d]:
                 raise ValueError(
-                    "conflicting sizes for dimension %r: "
-                    "length %s on the data but length %s on "
-                    "coordinate %r" % (d, sizes[d], s, k)
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
                 )
 
         if k in sizes and v.shape != (sizes[k],):
             raise ValueError(
-                "coordinate %r is a DataArray dimension, but "
-                "it has shape %r rather than expected shape %r "
-                "matching the dimension size" % (k, v.shape, (sizes[k],))
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
             )
 
     assert_unique_multiindex_level_names(new_coords)
@@ -218,7 +218,7 @@ class _LocIndexer:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class DataArray(AbstractArray, DataWithCoords):
+class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses
@@ -288,7 +288,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
     >>> np.random.seed(0)
     >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
-    >>> precipitation = 10 * np.random.rand(2, 2, 3)
     >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
     >>> lat = [[42.25, 42.21], [42.63, 42.59]]
     >>> time = pd.date_range("2014-09-06", periods=3)
@@ -345,7 +344,7 @@ class DataArray(AbstractArray, DataWithCoords):
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _indexes: Optional[Dict[Hashable, Index]]
     _name: Optional[Hashable]
     _variable: Variable
 
@@ -478,7 +477,9 @@ class DataArray(AbstractArray, DataWithCoords):
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
+            pd_idx = idx.array
+            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -496,7 +497,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -537,8 +538,7 @@ class DataArray(AbstractArray, DataWithCoords):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
-        return dataset
+        return Dataset._construct_direct(variables, coord_names, indexes=indexes)
 
     def to_dataset(
         self,
@@ -667,9 +667,8 @@ class DataArray(AbstractArray, DataWithCoords):
     def _item_key_to_dict(self, key: Any) -> Mapping[Hashable, Any]:
         if utils.is_dict_like(key):
             return key
-        else:
-            key = indexing.expanded_indexer(key, self.ndim)
-            return dict(zip(self.dims, key))
+        key = indexing.expanded_indexer(key, self.ndim)
+        return dict(zip(self.dims, key))
 
     @property
     def _level_coords(self) -> Dict[Hashable, Hashable]:
@@ -758,7 +757,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
-        self.variable.attrs = value  # type: ignore
+        self.variable.attrs = value  # type: ignore[assignment]
 
     @property
     def encoding(self) -> Dict[Hashable, Any]:
@@ -772,7 +771,21 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing"""
+        """Mapping of pandas.Index objects used for label based indexing.
+
+        Raises an error if this Dataset has indexes that cannot be coerced
+        to pandas.Index objects.
+
+        See Also
+        --------
+        DataArray.xindexes
+
+        """
+        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
+
+    @property
+    def xindexes(self) -> Indexes:
+        """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
@@ -807,13 +820,12 @@ class DataArray(AbstractArray, DataWithCoords):
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
             return self._replace(coords=dataset._variables)
-        else:
-            if self.name is None:
-                raise ValueError(
-                    "cannot reset_coords with drop=False on an unnamed DataArrray"
-                )
-            dataset[self.name] = self.variable
-            return dataset
+        if self.name is None:
+            raise ValueError(
+                "cannot reset_coords with drop=False on an unnamed DataArrray"
+            )
+        dataset[self.name] = self.variable
+        return dataset
 
     def __dask_tokenize__(self):
         from dask.base import normalize_token
@@ -839,15 +851,15 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     def __dask_postpersist__(self):
         func, args = self._to_temp_dataset().__dask_postpersist__()
-        return self._dask_finalize, (func, args, self.name)
+        return self._dask_finalize, (self.name, func) + args
 
     @staticmethod
-    def _dask_finalize(results, func, args, name):
-        ds = func(results, *args)
+    def _dask_finalize(results, name, func, *args, **kwargs):
+        ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         return DataArray(variable, coords, name=name, fastpath=True)
@@ -990,7 +1002,12 @@ class DataArray(AbstractArray, DataWithCoords):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
+            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
+            # xarray Index needs a copy method.
+            indexes = {
+                k: PandasIndex(v.to_pandas_index().copy(deep=deep))
+                for k, v in self._indexes.items()
+            }
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
@@ -1003,7 +1020,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
@@ -1094,6 +1111,26 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel
         DataArray.sel
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"))
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+
+        >>> tgt_x = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> tgt_y = xr.DataArray(np.arange(0, 5), dims="points")
+        >>> da = da.isel(x=tgt_x, y=tgt_y)
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Dimensions without coordinates: points
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
@@ -1202,6 +1239,34 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.sel
         DataArray.isel
 
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(5), "y": np.arange(5)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
+          * y        (y) int64 0 1 2 3 4
+
+        >>> tgt_x = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> tgt_y = xr.DataArray(np.linspace(0, 4, num=5), dims="points")
+        >>> da = da.sel(x=tgt_x, y=tgt_y, method="nearest")
+        >>> da
+        <xarray.DataArray (points: 5)>
+        array([ 0,  6, 12, 18, 24])
+        Coordinates:
+            x        (points) int64 0 1 2 3 4
+            y        (points) int64 0 1 2 3 4
+        Dimensions without coordinates: points
         """
         ds = self._to_temp_dataset().sel(
             indexers=indexers,
@@ -1449,6 +1514,26 @@ class DataArray(AbstractArray, DataWithCoords):
         reindexed : DataArray
             Another dataset array, with this array's data but replaced
             coordinates.
+
+        Examples
+        --------
+        Reverse latitude:
+
+        >>> da = xr.DataArray(
+        ...     np.arange(4),
+        ...     coords=[np.array([90, 89, 88, 87])],
+        ...     dims="lat",
+        ... )
+        >>> da
+        <xarray.DataArray (lat: 4)>
+        array([0, 1, 2, 3])
+        Coordinates:
+          * lat      (lat) int64 90 89 88 87
+        >>> da.reindex(lat=da.lat[::-1])
+        <xarray.DataArray (lat: 4)>
+        array([3, 2, 1, 0])
+        Coordinates:
+          * lat      (lat) int64 87 88 89 90
 
         See Also
         --------
@@ -1923,7 +2008,7 @@ class DataArray(AbstractArray, DataWithCoords):
             coord = self._coords[dim]
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
-                raise ValueError("coordinate %r has no MultiIndex" % dim)
+                raise ValueError(f"coordinate {dim!r} has no MultiIndex")
             replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
@@ -2063,9 +2148,6 @@ class DataArray(AbstractArray, DataWithCoords):
         level : int or str
             The MultiIndex level to expand to a dataset along. Can either be
             the integer index of the level or its name.
-        label : int, default: 0
-            Label of the level to expand dataset along. Overrides the label
-            argument if given.
 
         Returns
         -------
@@ -2073,7 +2155,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> arr = xr.DataArray(
         ...     np.arange(6).reshape(2, 3),
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
@@ -2104,7 +2185,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.to_stacked_array
         """
 
-        idx = self.indexes[dim]
+        # TODO: benbovy - flexible indexes: update when MultIndex has its own
+        # class inheriting from xarray.Index
+        idx = self.xindexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
@@ -2387,7 +2470,7 @@ class DataArray(AbstractArray, DataWithCoords):
             If True, the dataarray's attributes (`attrs`) will be copied from
             the original object to the new one.  If False, the new
             object will be returned without attributes.
-        kwargs : dict, optional
+        **kwargs : dict, optional
             parameters passed verbatim to the underlying interpolation function
 
         Returns
@@ -2450,7 +2533,8 @@ class DataArray(AbstractArray, DataWithCoords):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2474,7 +2558,8 @@ class DataArray(AbstractArray, DataWithCoords):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2568,8 +2653,8 @@ class DataArray(AbstractArray, DataWithCoords):
             constructor = constructors[self.ndim]
         except KeyError:
             raise ValueError(
-                "cannot convert arrays with %s dimensions into "
-                "pandas objects" % self.ndim
+                f"cannot convert arrays with {self.ndim} dimensions into "
+                "pandas objects"
             )
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)
@@ -2902,82 +2987,67 @@ class DataArray(AbstractArray, DataWithCoords):
         # compatible with matmul
         return computation.dot(other, self)
 
-    @staticmethod
-    def _unary_op(f: Callable[..., Any]) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, *args, **kwargs):
-            keep_attrs = kwargs.pop("keep_attrs", None)
-            if keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
-                warnings.filterwarnings(
-                    "ignore", r"Mean of empty slice", category=RuntimeWarning
-                )
-                with np.errstate(all="ignore"):
-                    da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
-                if keep_attrs:
-                    da.attrs = self.attrs
-                return da
-
-        return func
-
-    @staticmethod
-    def _binary_op(
-        f: Callable[..., Any],
-        reflexive: bool = False,
-        join: str = None,  # see xarray.align
-        **ignored_kwargs,
-    ) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, (Dataset, groupby.GroupBy)):
-                return NotImplemented
-            if isinstance(other, DataArray):
-                align_type = OPTIONS["arithmetic_join"] if join is None else join
-                self, other = align(self, other, join=align_type, copy=False)
-            other_variable = getattr(other, "variable", other)
-            other_coords = getattr(other, "coords", None)
-
-            variable = (
-                f(self.variable, other_variable)
-                if not reflexive
-                else f(other_variable, self.variable)
+    def _unary_op(self, f: Callable, *args, **kwargs):
+        keep_attrs = kwargs.pop("keep_attrs", None)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", r"All-NaN (slice|axis) encountered")
+            warnings.filterwarnings(
+                "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
-            coords, indexes = self.coords._merge_raw(other_coords)
-            name = self._result_name(other)
+            with np.errstate(all="ignore"):
+                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            if keep_attrs:
+                da.attrs = self.attrs
+            return da
 
-            return self._replace(variable, coords, name, indexes=indexes)
+    def _binary_op(
+        self,
+        other,
+        f: Callable,
+        reflexive: bool = False,
+    ):
+        if isinstance(other, (Dataset, groupby.GroupBy)):
+            return NotImplemented
+        if isinstance(other, DataArray):
+            align_type = OPTIONS["arithmetic_join"]
+            self, other = align(self, other, join=align_type, copy=False)
+        other_variable = getattr(other, "variable", other)
+        other_coords = getattr(other, "coords", None)
 
-        return func
+        variable = (
+            f(self.variable, other_variable)
+            if not reflexive
+            else f(other_variable, self.variable)
+        )
+        coords, indexes = self.coords._merge_raw(other_coords, reflexive)
+        name = self._result_name(other)
 
-    @staticmethod
-    def _inplace_binary_op(f: Callable) -> Callable[..., "DataArray"]:
-        @functools.wraps(f)
-        def func(self, other):
-            if isinstance(other, groupby.GroupBy):
-                raise TypeError(
-                    "in-place operations between a DataArray and "
-                    "a grouped object are not permitted"
-                )
-            # n.b. we can't align other to self (with other.reindex_like(self))
-            # because `other` may be converted into floats, which would cause
-            # in-place arithmetic to fail unpredictably. Instead, we simply
-            # don't support automatic alignment with in-place arithmetic.
-            other_coords = getattr(other, "coords", None)
-            other_variable = getattr(other, "variable", other)
-            try:
-                with self.coords._merge_inplace(other_coords):
-                    f(self.variable, other_variable)
-            except MergeError as exc:
-                raise MergeError(
-                    "Automatic alignment is not supported for in-place operations.\n"
-                    "Consider aligning the indices manually or using a not-in-place operation.\n"
-                    "See https://github.com/pydata/xarray/issues/3910 for more explanations."
-                ) from exc
-            return self
+        return self._replace(variable, coords, name, indexes=indexes)
 
-        return func
+    def _inplace_binary_op(self, other, f: Callable):
+        if isinstance(other, groupby.GroupBy):
+            raise TypeError(
+                "in-place operations between a DataArray and "
+                "a grouped object are not permitted"
+            )
+        # n.b. we can't align other to self (with other.reindex_like(self))
+        # because `other` may be converted into floats, which would cause
+        # in-place arithmetic to fail unpredictably. Instead, we simply
+        # don't support automatic alignment with in-place arithmetic.
+        other_coords = getattr(other, "coords", None)
+        other_variable = getattr(other, "variable", other)
+        try:
+            with self.coords._merge_inplace(other_coords):
+                f(self.variable, other_variable)
+        except MergeError as exc:
+            raise MergeError(
+                "Automatic alignment is not supported for in-place operations.\n"
+                "Consider aligning the indices manually or using a not-in-place operation.\n"
+                "See https://github.com/pydata/xarray/issues/3910 for more explanations."
+            ) from exc
+        return self
 
     def _copy_attrs_from(self, other: Union["DataArray", Dataset, Variable]) -> None:
         self.attrs = other.attrs
@@ -3537,6 +3607,68 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]] = None,
+        datetime_unit: str = None,
+    ) -> "DataArray":
+        """Integrate cumulatively along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral is always 0, in order to keep the
+            length of the dimension unchanged between input and output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : DataArray
+
+        See also
+        --------
+        Dataset.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.cumulative_integrate("x")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[0.  , 0.  , 0.  ],
+               [0.15, 0.25, 0.35],
+               [4.65, 5.75, 6.85],
+               [5.4 , 6.6 , 7.8 ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
+        return self._from_temp_dataset(ds)
+
     def unify_chunks(self) -> "DataArray":
         """Unify chunk size along all chunked dimensions of this DataArray.
 
@@ -3553,11 +3685,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def map_blocks(
         self,
-        func: "Callable[..., T_DSorDA]",
+        func: Callable[..., T_DSorDA],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> "T_DSorDA":
+    ) -> T_DSorDA:
         """
         Apply a function to each block of this DataArray.
 
@@ -3598,8 +3730,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Notes
         -----
         This function is designed for when ``func`` needs to manipulate a whole xarray object
-        subset to each block. In the more common case where ``func`` can work on numpy arrays, it is
-        recommended to use ``apply_ufunc``.
+        subset to each block. Each block is loaded into memory. In the more common case where
+        ``func`` can work on numpy arrays, it is recommended to use ``apply_ufunc``.
 
         If none of the variables in this object is backed by dask arrays, calling this function is
         equivalent to calling ``func(obj, *args, **kwargs)``.
@@ -3646,7 +3778,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ...     calculate_anomaly, kwargs={"groupby_type": "time.year"}, template=array
         ... )  # doctest: +ELLIPSIS
         <xarray.DataArray (time: 24)>
-        dask.array<calculate_anomaly-...-<this, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
+        dask.array<<this-array>-calculate_anomaly, shape=(24,), dtype=float64, chunksize=(24,), chunktype=numpy.ndarray>
         Coordinates:
           * time     (time) object 1990-01-31 00:00:00 ... 1991-12-31 00:00:00
             month    (time) int64 dask.array<chunksize=(24,), meta=np.ndarray>
@@ -3713,6 +3845,8 @@ class DataArray(AbstractArray, DataWithCoords):
         See Also
         --------
         numpy.polyfit
+        numpy.polyval
+        xarray.polyval
         """
         return self._to_temp_dataset().polyfit(
             dim, deg, skipna=skipna, rcond=rcond, w=w, full=full, cov=cov
@@ -4284,10 +4418,187 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace_maybe_drop_dims(result)
 
+    def query(
+        self,
+        queries: Mapping[Hashable, Any] = None,
+        parser: str = "pandas",
+        engine: str = None,
+        missing_dims: str = "raise",
+        **queries_kwargs: Any,
+    ) -> "DataArray":
+        """Return a new data array indexed along the specified
+        dimension(s), where the indexers are given as strings containing
+        Python expressions to be evaluated against the values in the array.
+
+        Parameters
+        ----------
+        queries : dict, optional
+            A dict with keys matching dimensions and values given by strings
+            containing Python expressions to be evaluated against the data variables
+            in the dataset. The expressions will be evaluated using the pandas
+            eval() function, and can contain any valid Python expressions but cannot
+            contain any Python statements.
+        parser : {"pandas", "python"}, default: "pandas"
+            The parser to use to construct the syntax tree from the expression.
+            The default of 'pandas' parses code slightly different than standard
+            Python. Alternatively, you can parse an expression using the 'python'
+            parser to retain strict Python semantics.
+        engine : {"python", "numexpr", None}, default: None
+            The engine used to evaluate the expression. Supported engines are:
+            - None: tries to use numexpr, falls back to python
+            - "numexpr": evaluates expressions using numexpr
+            - "python": performs operations as if you had eval’d in top level python
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warning": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
+        **queries_kwargs : {dim: query, ...}, optional
+            The keyword arguments form of ``queries``.
+            One of queries or queries_kwargs must be provided.
+
+        Returns
+        -------
+        obj : DataArray
+            A new DataArray with the same contents as this dataset, indexed by
+            the results of the appropriate queries.
+
+        See Also
+        --------
+        DataArray.isel
+        Dataset.query
+        pandas.eval
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
+        >>> da
+        <xarray.DataArray 'a' (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        >>> da.query(x="a > 2")
+        <xarray.DataArray 'a' (x: 2)>
+        array([3, 4])
+        Dimensions without coordinates: x
+        """
+
+        ds = self._to_dataset_whole(shallow_copy=True)
+        ds = ds.query(
+            queries=queries,
+            parser=parser,
+            engine=engine,
+            missing_dims=missing_dims,
+            **queries_kwargs,
+        )
+        return ds[self.name]
+
+    def curvefit(
+        self,
+        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
+        func: Callable[..., Any],
+        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
+        skipna: bool = True,
+        p0: Dict[str, Any] = None,
+        bounds: Dict[str, Any] = None,
+        param_names: Sequence[str] = None,
+        kwargs: Dict[str, Any] = None,
+    ):
+        """
+        Curve fitting optimization for arbitrary functions.
+
+        Wraps `scipy.optimize.curve_fit` with `apply_ufunc`.
+
+        Parameters
+        ----------
+        coords : hashable, DataArray, or sequence of DataArray or hashable
+            Independent coordinate(s) over which to perform the curve fitting. Must share
+            at least one dimension with the calling object. When fitting multi-dimensional
+            functions, supply `coords` as a sequence in the same order as arguments in
+            `func`. To fit along existing dimensions of the calling object, `coords` can
+            also be specified as a str or sequence of strs.
+        func : callable
+            User specified function in the form `f(x, *params)` which returns a numpy
+            array of length `len(x)`. `params` are the fittable parameters which are optimized
+            by scipy curve_fit. `x` can also be specified as a sequence containing multiple
+            coordinates, e.g. `f((x0, x1), *params)`.
+        reduce_dims : hashable or sequence of hashable
+            Additional dimension(s) over which to aggregate while fitting. For example,
+            calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
+            aggregate all lat and lon points and fit the specified function along the
+            time dimension.
+        skipna : bool, optional
+            Whether to skip missing values when fitting. Default is True.
+        p0 : dict-like, optional
+            Optional dictionary of parameter names to initial guesses passed to the
+            `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
+            be assigned initial values following the default scipy behavior.
+        bounds : dict-like, optional
+            Optional dictionary of parameter names to bounding values passed to the
+            `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
+            will be unbounded following the default scipy behavior.
+        param_names : sequence of hashable, optional
+            Sequence of names for the fittable parameters of `func`. If not supplied,
+            this will be automatically determined by arguments of `func`. `param_names`
+            should be manually supplied when fitting a function that takes a variable
+            number of parameters.
+        **kwargs : optional
+            Additional keyword arguments to passed to scipy curve_fit.
+
+        Returns
+        -------
+        curvefit_results : Dataset
+            A single dataset which contains:
+
+            [var]_curvefit_coefficients
+                The coefficients of the best fit.
+            [var]_curvefit_covariance
+                The covariance matrix of the coefficient estimates.
+
+        See Also
+        --------
+        DataArray.polyfit
+        scipy.optimize.curve_fit
+        """
+        return self._to_temp_dataset().curvefit(
+            coords,
+            func,
+            reduce_dims=reduce_dims,
+            skipna=skipna,
+            p0=p0,
+            bounds=bounds,
+            param_names=param_names,
+            kwargs=kwargs,
+        )
+
+    def drop_duplicates(
+        self,
+        dim: Hashable,
+        keep: Union[
+            str,
+            bool,
+        ] = "first",
+    ):
+        """Returns a new DataArray with duplicate dimension values removed.
+
+        Parameters
+        ----------
+        dim : dimension label, optional
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        DataArray
+        """
+        if dim not in self.dims:
+            raise ValueError(f"'{dim}' not found in dimensions")
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
+        return self.isel(indexes)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
-
-
-# priority most be higher than Variable to properly work with binary ufuncs
-ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
