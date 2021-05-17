@@ -209,6 +209,11 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
             coord_name, label = next(iter(labels.items()))
 
             if is_dict_like(label):
+                invalid_levels = [name for name in label if name not in index.names]
+                if invalid_levels:
+                    raise ValueError(
+                        f"invalid multi-index level names {invalid_levels}"
+                    )
                 return self._query_multiindex(label)
 
             elif isinstance(label, slice):
