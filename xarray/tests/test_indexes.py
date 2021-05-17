@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray.core.indexes import PandasIndex, _asarray_tuplesafe
+from xarray.core.indexes import PandasIndex, PandasMultiIndex, _asarray_tuplesafe
 
 
 def test_asarray_tuplesafe():
@@ -28,20 +28,6 @@ class TestPandasIndex:
         with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
             index.query({"x": {"one": 0}})
 
-        index = PandasIndex(
-            pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        )
-        with pytest.raises(KeyError, match=r"not all values found"):
-            index.query({"x": [0]})
-        with pytest.raises(KeyError):
-            index.query({"x": 0})
-        with pytest.raises(ValueError, match=r"cannot provide labels for both.*"):
-            index.query({"one": 0, "x": "a"})
-        with pytest.raises(ValueError, match=r"invalid multi-index level names"):
-            index.query({"x": {"three": 0}})
-        with pytest.raises(IndexError):
-            index.query({"x": (slice(None), 1, "no_level")})
-
     def test_query_datetime(self):
         index = PandasIndex(pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]))
         actual = index.query({"x": "2001-01-01"})
@@ -58,3 +44,20 @@ class TestPandasIndex:
             # raise instead, so we can be sure the result of indexing with a
             # slice is always a view.
             index.query({"x": slice("2001", "2002")})
+
+
+class TestPandasMultiIndex:
+    def test_query(self):
+        index = PandasMultiIndex(
+            pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        )
+        with pytest.raises(KeyError, match=r"not all values found"):
+            index.query({"x": [0]})
+        with pytest.raises(KeyError):
+            index.query({"x": 0})
+        with pytest.raises(ValueError, match=r"cannot provide labels for both.*"):
+            index.query({"one": 0, "x": "a"})
+        with pytest.raises(ValueError, match=r"invalid multi-index level names"):
+            index.query({"x": {"three": 0}})
+        with pytest.raises(IndexError):
+            index.query({"x": (slice(None), 1, "no_level")})

@@ -82,6 +82,27 @@ def _sanitize_slice_element(x):
     return x
 
 
+def _query_slice(index, label, coord_name="", method=None, tolerance=None):
+    if method is not None or tolerance is not None:
+        raise NotImplementedError(
+            "cannot use ``method`` argument if any indexers are slice objects"
+        )
+    indexer = index.slice_indexer(
+        _sanitize_slice_element(label.start),
+        _sanitize_slice_element(label.stop),
+        _sanitize_slice_element(label.step),
+    )
+    if not isinstance(indexer, slice):
+        # unlike pandas, in xarray we never want to silently convert a
+        # slice indexer into an array indexer
+        raise KeyError(
+            "cannot represent labeled-based slice indexer for coordinate "
+            f"{coord_name!r} with a slice over integer positions; the index is "
+            "unsorted or non-unique"
+        )
+    return indexer
+
+
 def _asarray_tuplesafe(values):
     """
     Convert values into a numpy array of at most 1-dimension, while preserving
@@ -173,7 +194,139 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> Tuple[int]:
         return (len(self.array),)
 
-    def _query_multiindex(self, labels):
+    def query(
+        self, labels, method=None, tolerance=None
+    ) -> Tuple[Any, Union["PandasIndex", None]]:
+        assert len(labels) == 1
+        coord_name, label = next(iter(labels.items()))
+        index = self.array
+
+        if isinstance(label, slice):
+            indexer = _query_slice(index, label, coord_name, method, tolerance)
+        elif is_dict_like(label):
+            raise ValueError(
+                "cannot use a dict-like object for selection on "
+                "a dimension that does not have a MultiIndex"
+            )
+        else:
+            label = (
+                label
+                if getattr(label, "ndim", 1) > 1  # vectorized-indexing
+                else _asarray_tuplesafe(label)
+            )
+            if label.ndim == 0:
+                # see https://github.com/pydata/xarray/pull/4292 for details
+                label_value = label[()] if label.dtype.kind in "mM" else label.item()
+                if isinstance(index, pd.CategoricalIndex):
+                    if method is not None:
+                        raise ValueError(
+                            "'method' is not a valid kwarg when indexing using a CategoricalIndex."
+                        )
+                    if tolerance is not None:
+                        raise ValueError(
+                            "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
+                        )
+                    indexer = index.get_loc(label_value)
+                else:
+                    indexer = index.get_loc(
+                        label_value, method=method, tolerance=tolerance
+                    )
+            elif label.dtype.kind == "b":
+                indexer = label
+            else:
+                indexer = get_indexer_nd(index, label, method, tolerance)
+                if np.any(indexer < 0):
+                    raise KeyError(f"not all values found in index {coord_name!r}")
+
+        return indexer, None
+
+    def equals(self, other):
+        if isinstance(other, pd.Index):
+            other = type(self)(other)
+        return isinstance(other, type(self)) and self.array.equals(other.array)
+
+    def union(self, other):
+        if isinstance(other, pd.Index):
+            other = type(self)(other)
+        return type(self)(self.array.union(other.array))
+
+    def intersection(self, other):
+        if isinstance(other, pd.Index):
+            other = PandasIndex(other)
+        return type(self)(self.array.intersection(other.array))
+
+    def __getitem__(
+        self, indexer
+    ) -> Union[
+        "PandasIndex",
+        NumpyIndexingAdapter,
+        np.ndarray,
+        np.datetime64,
+        np.timedelta64,
+    ]:
+        key = indexer.tuple
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+
+        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
+            return NumpyIndexingAdapter(self.array.values)[indexer]
+
+        result = self.array[key]
+
+        if isinstance(result, pd.Index):
+            result = type(self)(result, dtype=self.dtype)
+        else:
+            # result is a scalar
+            if result is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                result = np.datetime64("NaT", "ns")
+            elif isinstance(result, timedelta):
+                result = np.timedelta64(getattr(result, "value", result), "ns")
+            elif isinstance(result, pd.Timestamp):
+                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+                result = np.asarray(result.to_datetime64())
+            elif self.dtype != object:
+                result = np.asarray(result, dtype=self.dtype)
+
+            # as for numpy.ndarray indexing, we always want the result to be
+            # a NumPy array.
+            result = utils.to_0d_array(result)
+
+        return result
+
+    def transpose(self, order) -> pd.Index:
+        return self.array  # self.array should be always one-dimensional
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
+
+    def copy(self, deep: bool = True) -> "PandasIndex":
+        # Not the same as just writing `self.array.copy(deep=deep)`, as
+        # shallow copies of the underlying numpy.ndarrays become deep ones
+        # upon pickling
+        # >>> len(pickle.dumps((self.array, self.array)))
+        # 4000281
+        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
+        # 8000341
+        array = self.array.copy(deep=True) if deep else self.array
+        return type(self)(array, self._dtype)
+
+
+class PandasMultiIndex(PandasIndex):
+    def query(
+        self, labels, method=None, tolerance=None
+    ) -> Tuple[Any, Union["PandasIndex", None]]:
+        if method is not None or tolerance is not None:
+            raise ValueError(
+                "multi-index does not support ``method`` and ``tolerance``"
+            )
+
         index = self.array
         new_index = None
 
@@ -214,22 +367,10 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
                     raise ValueError(
                         f"invalid multi-index level names {invalid_levels}"
                     )
-                return self._query_multiindex(label)
+                return self.query(label)
 
             elif isinstance(label, slice):
-                indexer = index.slice_indexer(
-                    _sanitize_slice_element(label.start),
-                    _sanitize_slice_element(label.stop),
-                    _sanitize_slice_element(label.step),
-                )
-                if not isinstance(indexer, slice):
-                    # unlike pandas, in xarray we never want to silently convert a
-                    # slice indexer into an array indexer
-                    raise KeyError(
-                        "cannot represent labeled-based slice indexer for dimension "
-                        f"{coord_name!r} with a slice over integer positions; the index is "
-                        "unsorted or non-unique"
-                    )
+                indexer = _query_slice(index, label, coord_name)
 
             elif isinstance(label, tuple):
                 if _is_nested_tuple(label):
@@ -266,147 +407,12 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
 
         return indexer, new_index
 
-    def query(
-        self, labels, method=None, tolerance=None
-    ) -> Tuple[Any, Union["PandasIndex", None]]:
-        if isinstance(self.array, pd.MultiIndex):
-            return self._query_multiindex(labels)
 
-        assert len(labels) == 1
-        coord_name, label = next(iter(labels.items()))
-        index = self.array
-
-        if isinstance(label, slice):
-            if method is not None or tolerance is not None:
-                raise NotImplementedError(
-                    "cannot use ``method`` argument if any indexers are slice objects"
-                )
-            indexer = index.slice_indexer(
-                _sanitize_slice_element(label.start),
-                _sanitize_slice_element(label.stop),
-                _sanitize_slice_element(label.step),
-            )
-            if not isinstance(indexer, slice):
-                # unlike pandas, in xarray we never want to silently convert a
-                # slice indexer into an array indexer
-                raise KeyError(
-                    "cannot represent labeled-based slice indexer for coordinate "
-                    f"{coord_name!r} with a slice over integer positions; the index is "
-                    "unsorted or non-unique"
-                )
-        elif is_dict_like(label):
-            raise ValueError(
-                "cannot use a dict-like object for selection on "
-                "a dimension that does not have a MultiIndex"
-            )
-        else:
-            label = (
-                label
-                if getattr(label, "ndim", 1) > 1  # vectorized-indexing
-                else _asarray_tuplesafe(label)
-            )
-            if label.ndim == 0:
-                # see https://github.com/pydata/xarray/pull/4292 for details
-                label_value = label[()] if label.dtype.kind in "mM" else label.item()
-                if isinstance(index, pd.CategoricalIndex):
-                    if method is not None:
-                        raise ValueError(
-                            "'method' is not a valid kwarg when indexing using a CategoricalIndex."
-                        )
-                    if tolerance is not None:
-                        raise ValueError(
-                            "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
-                        )
-                    indexer = index.get_loc(label_value)
-                else:
-                    indexer = index.get_loc(
-                        label_value, method=method, tolerance=tolerance
-                    )
-            elif label.dtype.kind == "b":
-                indexer = label
-            else:
-                indexer = get_indexer_nd(index, label, method, tolerance)
-                if np.any(indexer < 0):
-                    raise KeyError(f"not all values found in index {coord_name!r}")
-
-        return indexer, None
-
-    def equals(self, other):
-        if isinstance(other, pd.Index):
-            other = PandasIndex(other)
-        return isinstance(other, PandasIndex) and self.array.equals(other.array)
-
-    def union(self, other):
-        if isinstance(other, pd.Index):
-            other = PandasIndex(other)
-        return PandasIndex(self.array.union(other.array))
-
-    def intersection(self, other):
-        if isinstance(other, pd.Index):
-            other = PandasIndex(other)
-        return PandasIndex(self.array.intersection(other.array))
-
-    def __getitem__(
-        self, indexer
-    ) -> Union[
-        "PandasIndex",
-        NumpyIndexingAdapter,
-        np.ndarray,
-        np.datetime64,
-        np.timedelta64,
-    ]:
-        key = indexer.tuple
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            (key,) = key
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(self.array.values)[indexer]
-
-        result = self.array[key]
-
-        if isinstance(result, pd.Index):
-            result = PandasIndex(result, dtype=self.dtype)
-        else:
-            # result is a scalar
-            if result is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                result = np.datetime64("NaT", "ns")
-            elif isinstance(result, timedelta):
-                result = np.timedelta64(getattr(result, "value", result), "ns")
-            elif isinstance(result, pd.Timestamp):
-                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
-                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
-                result = np.asarray(result.to_datetime64())
-            elif self.dtype != object:
-                result = np.asarray(result, dtype=self.dtype)
-
-            # as for numpy.ndarray indexing, we always want the result to be
-            # a NumPy array.
-            result = utils.to_0d_array(result)
-
-        return result
-
-    def transpose(self, order) -> pd.Index:
-        return self.array  # self.array should be always one-dimensional
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
-
-    def copy(self, deep: bool = True) -> "PandasIndex":
-        # Not the same as just writing `self.array.copy(deep=deep)`, as
-        # shallow copies of the underlying numpy.ndarrays become deep ones
-        # upon pickling
-        # >>> len(pickle.dumps((self.array, self.array)))
-        # 4000281
-        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
-        # 8000341
-        array = self.array.copy(deep=True) if deep else self.array
-        return PandasIndex(array, self._dtype)
+def wrap_pandas_index(index):
+    if isinstance(index, pd.MultiIndex):
+        return PandasMultiIndex(index)
+    else:
+        return PandasIndex(index)
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
@@ -517,7 +523,7 @@ def isel_variable_and_index(
     if isinstance(indexer, Variable):
         indexer = indexer.data
     pd_index = index.to_pandas_index()
-    new_index = PandasIndex(pd_index[indexer])
+    new_index = wrap_pandas_index(pd_index[indexer])
     return new_variable, new_index
 
 

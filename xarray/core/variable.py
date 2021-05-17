@@ -26,7 +26,7 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex
+from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
@@ -179,7 +179,7 @@ def _maybe_wrap_data(data):
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
-        return PandasIndex(data)
+        return wrap_pandas_index(data)
     return data
 
 
@@ -554,7 +554,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _to_xindex(self):
         # temporary function used internally as a replacement of to_index()
         # returns an xarray Index instance instead of a pd.Index instance
-        return PandasIndex(self.to_index())
+        return wrap_pandas_index(self.to_index())
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
