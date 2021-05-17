@@ -235,7 +235,7 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
     def equals(self, other):
         if isinstance(other, pd.Index):
             other = type(self)(other)
-        return isinstance(other, type(self)) and self.array.equals(other.array)
+        return self.array.equals(other.array)
 
     def union(self, other):
         if isinstance(other, pd.Index):
