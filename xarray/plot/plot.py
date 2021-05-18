@@ -29,6 +29,29 @@ from .utils import (
 )
 
 
+def _choose_x_y(darray, name, huename):
+    """Create x variable and y variable for line plots, appropriately transposed
+    based on huename."""
+    xplt = darray[name]
+    if xplt.ndim > 1:
+        if huename in darray.dims:
+            otherindex = 1 if darray.dims.index(huename) == 0 else 0
+            otherdim = darray.dims[otherindex]
+            yplt = darray.transpose(..., otherdim, huename, transpose_coords=False)
+            xplt = xplt.transpose(..., otherdim, huename, transpose_coords=False)
+        else:
+            raise ValueError(
+                f"For 2D inputs, hue must be a dimension i.e. one of {darray.dims!r}"
+            )
+
+    else:
+        (xdim,) = darray[name].dims
+        (huedim,) = darray[huename].dims
+        yplt = darray.transpose(..., xdim, huedim)
+
+    return xplt, yplt
+
+
 def _infer_line_data(darray, x, y, hue):
 
     ndims = len(darray.dims)
@@ -68,48 +91,25 @@ def _infer_line_data(darray, x, y, hue):
             if hue is not None:
                 _assert_valid_xy(darray, hue, "hue")
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
-
-            else:
-                (xdim,) = darray[xname].dims
-                (huedim,) = darray[huename].dims
-                yplt = darray.transpose(xdim, huedim)
+            xplt, yplt = _choose_x_y(darray, xname, huename)
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    xplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
-
-            else:
-                (ydim,) = darray[yname].dims
-                (huedim,) = darray[huename].dims
-                xplt = darray.transpose(ydim, huedim)
+            yplt, xplt = _choose_x_y(darray, yname, huename)
 
         huelabel = label_from_attrs(darray[huename])
         hueplt = darray[huename]
 
     return xplt, yplt, hueplt, huelabel
+
+
+def override_signature(f):
+    def wrapper(func):
+        func.__wrapped__ = f
+
+        return func
+
+    return wrapper
 
 
 def plot(
@@ -197,137 +197,6 @@ def plot(
     kwargs["ax"] = ax
 
     return plotfunc(darray, **kwargs)
-
-
-# This function signature should not change so that it can use
-# matplotlib format strings
-def line(
-    darray,
-    *args,
-    row=None,
-    col=None,
-    figsize=None,
-    aspect=None,
-    size=None,
-    ax=None,
-    hue=None,
-    x=None,
-    y=None,
-    xincrease=None,
-    yincrease=None,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-    add_legend=True,
-    _labels=True,
-    **kwargs,
-):
-    """
-    Line plot of DataArray index against values
-
-    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
-
-    Parameters
-    ----------
-    darray : DataArray
-        Must be 1 dimensional
-    figsize : tuple, optional
-        A tuple (width, height) of the figure in inches.
-        Mutually exclusive with ``size`` and ``ax``.
-    aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
-        inches. Only used if a ``size`` is provided.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib axes object, optional
-        Axis on which to plot this figure. By default, use the current axis.
-        Mutually exclusive with ``size`` and ``figsize``.
-    hue : string, optional
-        Dimension or coordinate for which you want multiple lines plotted.
-        If plotting against a 2D coordinate, ``hue`` must be a dimension.
-    x, y : string, optional
-        Dimension, coordinate or MultiIndex level for x, y axis.
-        Only one of these may be specified.
-        The other coordinate plots values from the DataArray on which this
-        plot method is called.
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
-    xincrease : None, True, or False, optional
-        Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function.
-    yincrease : None, True, or False, optional
-        Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function.
-    add_legend : bool, optional
-        Add legend with y axis coordinates (2D inputs only).
-    *args, **kwargs : optional
-        Additional arguments to matplotlib.pyplot.plot
-    """
-    # Handle facetgrids first
-    if row or col:
-        allargs = locals().copy()
-        allargs.update(allargs.pop("kwargs"))
-        allargs.pop("darray")
-        return _easy_facetgrid(darray, line, kind="line", **allargs)
-
-    ndims = len(darray.dims)
-    if ndims > 2:
-        raise ValueError(
-            "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
-        )
-
-    # The allargs dict passed to _easy_facetgrid above contains args
-    if args == ():
-        args = kwargs.pop("args", ())
-    else:
-        assert "args" not in kwargs
-
-    ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
-
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, kwargs
-    )
-    xlabel = label_from_attrs(xplt, extra=x_suffix)
-    ylabel = label_from_attrs(yplt, extra=y_suffix)
-
-    _ensure_plottable(xplt_val, yplt_val)
-
-    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
-
-    if _labels:
-        if xlabel is not None:
-            ax.set_xlabel(xlabel)
-
-        if ylabel is not None:
-            ax.set_ylabel(ylabel)
-
-        ax.set_title(darray._title_for_slice())
-
-    if darray.ndim == 2 and add_legend:
-        ax.legend(handles=primitive, labels=list(hueplt.values), title=hue_label)
-
-    # Rotate dates on xlabels
-    # Do this without calling autofmt_xdate so that x-axes ticks
-    # on other subplots (if any) are not deleted.
-    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-    if np.issubdtype(xplt.dtype, np.datetime64):
-        for xlabels in ax.get_xticklabels():
-            xlabels.set_rotation(30)
-            xlabels.set_ha("right")
-
-    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
-
-    return primitive
 
 
 def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
@@ -454,22 +323,238 @@ class _PlotMethods:
     def hist(self, ax=None, **kwargs):
         return hist(self._da, ax=ax, **kwargs)
 
-    @functools.wraps(line)
-    def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
-
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
 
 
-def override_signature(f):
-    def wrapper(func):
-        func.__wrapped__ = f
+def _plot1d(plotfunc):
+    """
+    Decorator for common 1d plotting logic.
 
-        return func
+    Also adds the 1d plot method to class _PlotMethods.
+    """
+    commondoc = """
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 2 dimensional, unless creating faceted plots
+    x : string, optional
+        Coordinate for x axis. If None use darray.dims[1]
+    y : string, optional
+        Coordinate for y axis. If None use darray.dims[0]
+    hue : string, optional
+        Dimension or coordinate for which you want multiple lines plotted.
+    figsize : tuple, optional
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib.axes.Axes, optional
+        Axis on which to plot this figure. By default, use the current axis.
+        Mutually exclusive with ``size`` and ``figsize``.
+    row : string, optional
+        If passed, make row faceted plots on this dimension name
+    col : string, optional
+        If passed, make column faceted plots on this dimension name
+    col_wrap : int, optional
+        Use together with ``col`` to wrap faceted plots
+    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
+        Specifies scaling for the x- and y-axes respectively
+    xticks, yticks : Specify tick locations for x- and y-axes
+    xlim, ylim : Specify x- and y-axes limits
+    xincrease : None, True, or False, optional
+        Should the values on the x axes be increasing from left to right?
+        if None, use the default for the matplotlib function.
+    yincrease : None, True, or False, optional
+        Should the values on the y axes be increasing from top to bottom?
+        if None, use the default for the matplotlib function.
+    add_labels : bool, optional
+        Use xarray metadata to label axes
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for FacetGrid plots.
+    **kwargs : optional
+        Additional arguments to wrapped matplotlib function
 
-    return wrapper
+    Returns
+    -------
+    artist :
+        The same type of primitive artist that the wrapped matplotlib
+        function returns
+    """
+
+    # Build on the original docstring
+    plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
+
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, *args, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, *args, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
+    @functools.wraps(plotfunc)
+    def newplotfunc(
+        darray,
+        *args,
+        x=None,
+        y=None,
+        hue=None,
+        figsize=None,
+        size=None,
+        aspect=None,
+        ax=None,
+        row=None,
+        col=None,
+        col_wrap=None,
+        xincrease=True,
+        yincrease=True,
+        add_legend=True,
+        add_labels=True,
+        subplot_kws=None,
+        xscale=None,
+        yscale=None,
+        xticks=None,
+        yticks=None,
+        xlim=None,
+        ylim=None,
+        **kwargs,
+    ):
+        # All 1d plots in xarray share this function signature.
+        # Method signature below should be consistent.
+
+        # Handle facetgrids first
+        if row or col:
+            allargs = locals().copy()
+            allargs.update(allargs.pop("kwargs"))
+            allargs.pop("darray")
+            allargs.pop("plotfunc")
+            if plotfunc.__name__ == "line":
+                return _easy_facetgrid(darray, line, kind="line", **allargs)
+            else:
+                raise ValueError(f"Faceting not implemented for {plotfunc.__name__}")
+
+        # The allargs dict passed to _easy_facetgrid above contains args
+        if args == ():
+            args = kwargs.pop("args", ())
+        else:
+            assert "args" not in kwargs
+
+        ax = get_axis(figsize, size, aspect, ax)
+        xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+
+        primitive = plotfunc(xplt, yplt, ax, *args, add_labels=add_labels, **kwargs)
+
+        if add_labels:
+            ax.set_title(darray._title_for_slice())
+
+        if hueplt is not None and add_legend:
+            if plotfunc.__name__ == "hist":
+                handles = primitive[-1]
+            else:
+                handles = primitive
+            ax.legend(
+                handles=handles,
+                labels=list(hueplt.values),
+                title=label_from_attrs(hueplt),
+            )
+
+        _update_axes(
+            ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
+        )
+
+        return primitive
+
+    # For use as DataArray.plot.plotmethod
+    @functools.wraps(newplotfunc)
+    def plotmethod(
+        _PlotMethods_obj,
+        *args,
+        x=None,
+        y=None,
+        figsize=None,
+        size=None,
+        aspect=None,
+        ax=None,
+        row=None,
+        col=None,
+        col_wrap=None,
+        xincrease=True,
+        yincrease=True,
+        add_legend=True,
+        add_labels=True,
+        subplot_kws=None,
+        xscale=None,
+        yscale=None,
+        xticks=None,
+        yticks=None,
+        xlim=None,
+        ylim=None,
+        **kwargs,
+    ):
+        """
+        The method should have the same signature as the function.
+
+        This just makes the method work on Plotmethods objects,
+        and passes all the other arguments straight through.
+        """
+        allargs = locals()
+        allargs["darray"] = _PlotMethods_obj._da
+        allargs.update(kwargs)
+        for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
+            del allargs[arg]
+        return newplotfunc(**allargs)
+
+    # Add to class _PlotMethods
+    setattr(_PlotMethods, plotmethod.__name__, plotmethod)
+
+    return newplotfunc
+
+
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def line(xplt, yplt, ax, *args, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    """
+
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, kwargs
+    )
+    _ensure_plottable(xplt_val, yplt_val)
+
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    if add_labels:
+        xlabel = label_from_attrs(xplt, extra=x_suffix)
+        ylabel = label_from_attrs(yplt, extra=y_suffix)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+    # Rotate dates on xlabels
+    # Do this without calling autofmt_xdate so that x-axes ticks
+    # on other subplots (if any) are not deleted.
+    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
+    if np.issubdtype(xplt.dtype, np.datetime64):
+        for xlabels in ax.get_xticklabels():
+            xlabels.set_rotation(30)
+            xlabels.set_ha("right")
+
+    return primitive
 
 
 def _plot2d(plotfunc):
