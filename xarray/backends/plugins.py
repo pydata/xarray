@@ -106,7 +106,24 @@ def guess_engine(store_spec):
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    raise ValueError("cannot guess the engine, try passing one explicitly")
+    installed = [k for k in engines if k != "store"]
+    if installed:
+        raise ValueError(
+            "did not find a match in any of xarray's currently installed IO "
+            f"backends {installed}. Consider explicitly selecting one of the "
+            "installed backends via the ``engine`` parameter to "
+            "xarray.open_dataset(), or installing additional IO dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html"
+        )
+    else:
+        raise ValueError(
+            "xarray is unable to open this file because it has no currently "
+            "installed IO backends. Xarray's read/write support requires "
+            "installing optional dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html"
+        )
 
 
 def get_backend(engine):
