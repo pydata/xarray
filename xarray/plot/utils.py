@@ -756,7 +756,7 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
     array([[-0.5,  0.5,  1.5],
            [ 2.5,  3.5,  4.5]])
-    >>> _infer_interval_breaks(np.logspace(-2, 2, 5), logscale=True)
+    >>> _infer_interval_breaks(np.logspace(-2, 2, 5), scale="log")
     array([3.16227766e-03, 3.16227766e-02, 3.16227766e-01, 3.16227766e+00,
            3.16227766e+01, 3.16227766e+02])
     """
