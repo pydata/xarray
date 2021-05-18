@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, indexing
-from .indexes import Indexes
+from .indexes import Index, Indexes
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
@@ -51,6 +51,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     @property
     def indexes(self) -> Indexes:
         return self._data.indexes  # type: ignore[attr-defined]
+
+    @property
+    def xindexes(self) -> Indexes:
+        return self._data.xindexes  # type: ignore[attr-defined]
 
     @property
     def variables(self):
@@ -118,13 +122,13 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             )
             cumprod_lengths = np.cumproduct(index_lengths)
 
-            if cumprod_lengths[-1] != 0:
-                # sizes of the repeats
-                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
-            else:
+            if cumprod_lengths[-1] == 0:
                 # if any factor is empty, the cartesian product is empty
                 repeat_counts = np.zeros_like(cumprod_lengths)
 
+            else:
+                # sizes of the repeats
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
             # sizes of the tiles
             tile_counts = np.roll(cumprod_lengths, 1)
             tile_counts[0] = 1
@@ -152,12 +156,12 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                 level_list += levels
                 names += index.names
 
-            return pd.MultiIndex(level_list, code_list, names=names)
+        return pd.MultiIndex(level_list, code_list, names=names)
 
     def update(self, other: Mapping[Hashable, Any]) -> None:
         other_vars = getattr(other, "variables", other)
         coords, indexes = merge_coords(
-            [self.variables, other_vars], priority_arg=1, indexes=self.indexes
+            [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
         self._update_coords(coords, indexes)
 
@@ -165,7 +169,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
-            indexes = dict(self.indexes)
+            indexes = dict(self.xindexes)
         else:
             coord_list = [self, other] if not reflexive else [other, self]
             variables, indexes = merge_coordinates_without_align(coord_list)
@@ -180,7 +184,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             # don't include indexes in prioritized, because we didn't align
             # first and we want indexes to be checked
             prioritized = {
-                k: (v, None) for k, v in self.variables.items() if k not in self.indexes
+                k: (v, None)
+                for k, v in self.variables.items()
+                if k not in self.xindexes
             }
             variables, indexes = merge_coordinates_without_align(
                 [self, other], prioritized
@@ -220,10 +226,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         coords, indexes = merge_coordinates_without_align([self, other])
         coord_names = set(coords)
-        merged = Dataset._construct_direct(
+        return Dataset._construct_direct(
             variables=coords, coord_names=coord_names, indexes=indexes
         )
-        return merged
 
 
 class DatasetCoordinates(Coordinates):
@@ -265,7 +270,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -285,7 +290,7 @@ class DatasetCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
@@ -296,7 +301,7 @@ class DatasetCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._data._ipython_key_completions_()
@@ -328,7 +333,7 @@ class DataArrayCoordinates(Coordinates):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -343,7 +348,7 @@ class DataArrayCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
@@ -358,15 +363,15 @@ class DataArrayCoordinates(Coordinates):
         return Dataset._construct_direct(coords, set(coords))
 
     def __delitem__(self, key: Hashable) -> None:
-        if key in self:
-            del self._data._coords[key]
-            if self._data._indexes is not None and key in self._data._indexes:
-                del self._data._indexes[key]
-        else:
+        if key not in self:
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
+        del self._data._coords[key]
+        if self._data._indexes is not None and key in self._data._indexes:
+            del self._data._indexes[key]
+
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
 
@@ -380,14 +385,11 @@ def assert_coordinate_consistent(
     """
     for k in obj.dims:
         # make sure there are no conflict in dimension coordinates
-        if k in coords and k in obj.coords:
-            if not coords[k].equals(obj[k].variable):
-                raise IndexError(
-                    "dimension coordinate {!r} conflicts between "
-                    "indexed and indexing objects:\n{}\nvs.\n{}".format(
-                        k, obj[k], coords[k]
-                    )
-                )
+        if k in coords and k in obj.coords and not coords[k].equals(obj[k].variable):
+            raise IndexError(
+                f"dimension coordinate {k!r} conflicts between "
+                f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
+            )
 
 
 def remap_label_indexers(

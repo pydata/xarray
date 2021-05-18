@@ -176,7 +176,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
 
         >>> from affine import Affine
         >>> da = xr.open_rasterio(
-        ...     "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif"
+        ...     "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif"
         ... )
         >>> da
         <xarray.DataArray (band: 3, y: 718, x: 791)>
@@ -389,7 +389,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
             # the filename is probably an s3 bucket rather than a regular file
             mtime = None
         token = tokenize(filename, mtime, chunks)
-        name_prefix = "open_rasterio-%s" % token
+        name_prefix = f"open_rasterio-{token}"
         result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 
     # Make the file closeable
