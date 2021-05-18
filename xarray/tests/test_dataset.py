@@ -4205,6 +4205,24 @@ class TestDataset:
         expected = pd.DataFrame([[]], index=idx)
         assert expected.equals(actual), (expected, actual)
 
+    def test_to_dataframe__attrs(self):
+        ds = Dataset(
+            {
+                "a": (
+                    "t",
+                    [1],
+                    {"long_name": "Description of data array", "_FillValue": -1},
+                )
+            },
+            attrs={"test": "test"},
+        )
+        df = ds.to_dataframe()
+        assert df.attrs == {"test": "test"}
+        assert df[df.columns[0]].attrs == {
+            "long_name": "Description of data array",
+            "_FillValue": -1,
+        }
+
     def test_from_dataframe_categorical(self):
         cat = pd.CategoricalDtype(
             categories=["foo", "bar", "baz", "qux", "quux", "corge"]

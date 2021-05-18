@@ -33,6 +33,7 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
+- Preserve attrs in `to_dataframe()` (:issue:`5327`). By `Alan Snow <https://github.com/snowman2>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
