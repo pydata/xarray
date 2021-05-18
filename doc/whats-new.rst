@@ -52,6 +52,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clean up and enhance docstrings for the :py:class:`DataArray.plot` and ``Dataset.plot.*``
+  families of methods (:pull:`5285`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 
 - Explanation of deprecation cycles and how to implement them added to contributors
   guide. (:pull:`5289`)
