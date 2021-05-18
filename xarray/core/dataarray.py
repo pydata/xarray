@@ -51,7 +51,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Indexes, default_indexes, propagate_indexes
+from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -98,16 +98,16 @@ def _infer_coords_and_dims(
         and len(coords) != len(shape)
     ):
         raise ValueError(
-            "coords is not dict-like, but it has %s items, "
-            "which does not match the %s dimensions of the "
-            "data" % (len(coords), len(shape))
+            f"coords is not dict-like, but it has {len(coords)} items, "
+            f"which does not match the {len(shape)} dimensions of the "
+            "data"
         )
 
     if isinstance(dims, str):
         dims = (dims,)
 
     if dims is None:
-        dims = ["dim_%s" % n for n in range(len(shape))]
+        dims = [f"dim_{n}" for n in range(len(shape))]
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
@@ -125,12 +125,12 @@ def _infer_coords_and_dims(
     elif len(dims) != len(shape):
         raise ValueError(
             "different number of dimensions on data "
-            "and dims: %s vs %s" % (len(shape), len(dims))
+            f"and dims: {len(shape)} vs {len(dims)}"
         )
     else:
         for d in dims:
             if not isinstance(d, str):
-                raise TypeError("dimension %s is not a string" % d)
+                raise TypeError(f"dimension {d} is not a string")
 
     new_coords: Dict[Any, Variable] = {}
 
@@ -147,24 +147,24 @@ def _infer_coords_and_dims(
     for k, v in new_coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError(
-                "coordinate %s has dimensions %s, but these "
+                f"coordinate {k} has dimensions {v.dims}, but these "
                 "are not a subset of the DataArray "
-                "dimensions %s" % (k, v.dims, dims)
+                f"dimensions {dims}"
             )
 
         for d, s in zip(v.dims, v.shape):
             if s != sizes[d]:
                 raise ValueError(
-                    "conflicting sizes for dimension %r: "
-                    "length %s on the data but length %s on "
-                    "coordinate %r" % (d, sizes[d], s, k)
+                    f"conflicting sizes for dimension {d!r}: "
+                    f"length {sizes[d]} on the data but length {s} on "
+                    f"coordinate {k!r}"
                 )
 
         if k in sizes and v.shape != (sizes[k],):
             raise ValueError(
-                "coordinate %r is a DataArray dimension, but "
-                "it has shape %r rather than expected shape %r "
-                "matching the dimension size" % (k, v.shape, (sizes[k],))
+                f"coordinate {k!r} is a DataArray dimension, but "
+                f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
+                "matching the dimension size"
             )
 
     assert_unique_multiindex_level_names(new_coords)
@@ -288,7 +288,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     >>> np.random.seed(0)
     >>> temperature = 15 + 8 * np.random.randn(2, 2, 3)
-    >>> precipitation = 10 * np.random.rand(2, 2, 3)
     >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
     >>> lat = [[42.25, 42.21], [42.63, 42.59]]
     >>> time = pd.date_range("2014-09-06", periods=3)
@@ -345,7 +344,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     _cache: Dict[str, Any]
     _coords: Dict[Any, Variable]
     _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, pd.Index]]
+    _indexes: Optional[Dict[Hashable, Index]]
     _name: Optional[Hashable]
     _variable: Variable
 
@@ -478,7 +477,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            if not isinstance(idx, pd.MultiIndex) and idx.name != dim:
+            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
+            pd_idx = idx.array
+            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -496,7 +497,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _to_dataset_split(self, dim: Hashable) -> Dataset:
-        """ splits dataarray along dimension 'dim' """
+        """splits dataarray along dimension 'dim'"""
 
         def subset(dim, label):
             array = self.loc[{dim: label}]
@@ -537,8 +538,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = self._indexes
 
         coord_names = set(self._coords)
-        dataset = Dataset._construct_direct(variables, coord_names, indexes=indexes)
-        return dataset
+        return Dataset._construct_direct(variables, coord_names, indexes=indexes)
 
     def to_dataset(
         self,
@@ -667,9 +667,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def _item_key_to_dict(self, key: Any) -> Mapping[Hashable, Any]:
         if utils.is_dict_like(key):
             return key
-        else:
-            key = indexing.expanded_indexer(key, self.ndim)
-            return dict(zip(self.dims, key))
+        key = indexing.expanded_indexer(key, self.ndim)
+        return dict(zip(self.dims, key))
 
     @property
     def _level_coords(self) -> Dict[Hashable, Hashable]:
@@ -772,7 +771,21 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def indexes(self) -> Indexes:
-        """Mapping of pandas.Index objects used for label based indexing"""
+        """Mapping of pandas.Index objects used for label based indexing.
+
+        Raises an error if this Dataset has indexes that cannot be coerced
+        to pandas.Index objects.
+
+        See Also
+        --------
+        DataArray.xindexes
+
+        """
+        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
+
+    @property
+    def xindexes(self) -> Indexes:
+        """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
@@ -807,13 +820,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
             return self._replace(coords=dataset._variables)
-        else:
-            if self.name is None:
-                raise ValueError(
-                    "cannot reset_coords with drop=False on an unnamed DataArrray"
-                )
-            dataset[self.name] = self.variable
-            return dataset
+        if self.name is None:
+            raise ValueError(
+                "cannot reset_coords with drop=False on an unnamed DataArrray"
+            )
+        dataset[self.name] = self.variable
+        return dataset
 
     def __dask_tokenize__(self):
         from dask.base import normalize_token
@@ -990,7 +1002,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
+            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
+            # xarray Index needs a copy method.
+            indexes = {
+                k: PandasIndex(v.to_pandas_index().copy(deep=deep))
+                for k, v in self._indexes.items()
+            }
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
@@ -1991,7 +2008,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             coord = self._coords[dim]
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
-                raise ValueError("coordinate %r has no MultiIndex" % dim)
+                raise ValueError(f"coordinate {dim!r} has no MultiIndex")
             replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
@@ -2138,7 +2155,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> arr = xr.DataArray(
         ...     np.arange(6).reshape(2, 3),
         ...     coords=[("x", ["a", "b"]), ("y", [0, 1, 2])],
@@ -2169,7 +2185,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset.to_stacked_array
         """
 
-        idx = self.indexes[dim]
+        # TODO: benbovy - flexible indexes: update when MultIndex has its own
+        # class inheriting from xarray.Index
+        idx = self.xindexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 
@@ -2515,7 +2533,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2539,7 +2558,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
-            than 0 or None for no limit.
+            than 0 or None for no limit. Must be None or greater than or equal
+            to axis length if filling along chunked axes (dimensions).
 
         Returns
         -------
@@ -2633,8 +2653,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             constructor = constructors[self.ndim]
         except KeyError:
             raise ValueError(
-                "cannot convert arrays with %s dimensions into "
-                "pandas objects" % self.ndim
+                f"cannot convert arrays with {self.ndim} dimensions into "
+                "pandas objects"
             )
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)
@@ -3587,6 +3607,68 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def cumulative_integrate(
+        self,
+        coord: Union[Hashable, Sequence[Hashable]] = None,
+        datetime_unit: str = None,
+    ) -> "DataArray":
+        """Integrate cumulatively along the given coordinate using the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+            The first entry of the cumulative integral is always 0, in order to keep the
+            length of the dimension unchanged between input and output.
+
+        Parameters
+        ----------
+        coord : hashable, or sequence of hashable
+            Coordinate(s) used for the integration.
+        datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
+                        'ps', 'fs', 'as'}, optional
+            Specify the unit if a datetime coordinate is used.
+
+        Returns
+        -------
+        integrated : DataArray
+
+        See also
+        --------
+        Dataset.cumulative_integrate
+        scipy.integrate.cumulative_trapezoid : corresponding scipy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     np.arange(12).reshape(4, 3),
+        ...     dims=["x", "y"],
+        ...     coords={"x": [0, 0.1, 1.1, 1.2]},
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.cumulative_integrate("x")
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[0.  , 0.  , 0.  ],
+               [0.15, 0.25, 0.35],
+               [4.65, 5.75, 6.85],
+               [5.4 , 6.6 , 7.8 ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().cumulative_integrate(coord, datetime_unit)
+        return self._from_temp_dataset(ds)
+
     def unify_chunks(self) -> "DataArray":
         """Unify chunk size along all chunked dimensions of this DataArray.
 
@@ -4388,6 +4470,17 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset.query
         pandas.eval
 
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name="a")
+        >>> da
+        <xarray.DataArray 'a' (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        >>> da.query(x="a > 2")
+        <xarray.DataArray 'a' (x: 2)>
+        array([3, 4])
+        Dimensions without coordinates: x
         """
 
         ds = self._to_dataset_whole(shallow_copy=True)
@@ -4477,6 +4570,34 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             param_names=param_names,
             kwargs=kwargs,
         )
+
+    def drop_duplicates(
+        self,
+        dim: Hashable,
+        keep: Union[
+            str,
+            bool,
+        ] = "first",
+    ):
+        """Returns a new DataArray with duplicate dimension values removed.
+
+        Parameters
+        ----------
+        dim : dimension label, optional
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        DataArray
+        """
+        if dim not in self.dims:
+            raise ValueError(f"'{dim}' not found in dimensions")
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
+        return self.isel(indexes)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

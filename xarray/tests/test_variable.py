@@ -11,6 +11,7 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.indexes import PandasIndex
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -19,7 +20,6 @@ from xarray.core.indexing import (
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
-    PandasIndexAdapter,
     VectorizedIndexer,
 )
 from xarray.core.pycompat import dask_array_type
@@ -535,7 +535,7 @@ class VariableSubclassobjects:
         v = self.cls("x", midx)
         for deep in [True, False]:
             w = v.copy(deep=deep)
-            assert isinstance(w._data, PandasIndexAdapter)
+            assert isinstance(w._data, PandasIndex)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
@@ -1182,7 +1182,7 @@ class TestVariable(VariableSubclassobjects):
         assert isinstance(v._data, LazilyIndexedArray)
 
     def test_detect_indexer_type(self):
-        """ Tests indexer type was correctly detected. """
+        """Tests indexer type was correctly detected."""
         data = np.random.random((10, 11))
         v = Variable(["x", "y"], data)
 
@@ -2145,7 +2145,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_data(self):
         x = IndexVariable("x", np.arange(3.0))
-        assert isinstance(x._data, PandasIndexAdapter)
+        assert isinstance(x._data, PandasIndex)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
@@ -2287,7 +2287,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, LazilyIndexedArray)
+        types = (np.asarray, PandasIndex, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2446,7 +2446,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 
 class TestBackendIndexing:
-    """    Make sure all the array wrappers can be indexed. """
+    """Make sure all the array wrappers can be indexed."""
 
     @pytest.fixture(autouse=True)
     def setUp(self):

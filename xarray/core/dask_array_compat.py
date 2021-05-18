@@ -1,14 +1,12 @@
 import warnings
-from distutils.version import LooseVersion
-from typing import Iterable
 
 import numpy as np
 
+from .pycompat import dask_version
+
 try:
     import dask.array as da
-    from dask import __version__ as dask_version
 except ImportError:
-    dask_version = "0.0.0"
     da = None
 
 
@@ -58,44 +56,7 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-if LooseVersion(dask_version) > LooseVersion("2.9.0"):
-    nanmedian = da.nanmedian
-else:
-
-    def nanmedian(a, axis=None, keepdims=False):
-        """
-        This works by automatically chunking the reduced axes to a single chunk
-        and then calling ``numpy.nanmedian`` function across the remaining dimensions
-        """
-
-        if axis is None:
-            raise NotImplementedError(
-                "The da.nanmedian function only works along an axis.  "
-                "The full algorithm is difficult to do in parallel"
-            )
-
-        if not isinstance(axis, Iterable):
-            axis = (axis,)
-
-        axis = [ax + a.ndim if ax < 0 else ax for ax in axis]
-
-        a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
-
-        result = da.map_blocks(
-            np.nanmedian,
-            a,
-            axis=axis,
-            keepdims=keepdims,
-            drop_axis=axis if not keepdims else None,
-            chunks=[1 if ax in axis else c for ax, c in enumerate(a.chunks)]
-            if keepdims
-            else None,
-        )
-
-        return result
-
-
-if LooseVersion(dask_version) > LooseVersion("2.30.0"):
+if dask_version > "2.30.0":
     ensure_minimum_chunksize = da.overlap.ensure_minimum_chunksize
 else:
 
@@ -152,7 +113,7 @@ else:
         return tuple(output)
 
 
-if LooseVersion(dask_version) > LooseVersion("2021.03.0"):
+if dask_version > "2021.03.0":
     sliding_window_view = da.lib.stride_tricks.sliding_window_view
 else:
 
@@ -218,7 +179,7 @@ else:
             axis=axis,
         )
         # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
-        if LooseVersion(dask_version) > "2.18.0":
+        if dask_version > "2.18.0":
             return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)
         else:
             return map_overlap(x, _np_sliding_window_view, **kwargs)

@@ -4,6 +4,7 @@ import contextlib
 import functools
 import io
 import itertools
+import os
 import re
 import warnings
 from enum import Enum
@@ -29,8 +30,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
-from . import dtypes
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -82,6 +81,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
+    from . import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -218,7 +218,7 @@ def update_safety_check(
         if k in first_dict and not compat(v, first_dict[k]):
             raise ValueError(
                 "unsafe to merge dictionaries without "
-                "overriding values; conflicting key %r" % k
+                f"overriding values; conflicting key {k!r}"
             )
 
 
@@ -254,7 +254,7 @@ def is_full_slice(value: Any) -> bool:
 
 
 def is_list_like(value: Any) -> bool:
-    return isinstance(value, list) or isinstance(value, tuple)
+    return isinstance(value, (list, tuple))
 
 
 def is_duck_array(value: Any) -> bool:
@@ -274,21 +274,18 @@ def either_dict_or_kwargs(
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
-    if pos_kwargs is not None:
-        if not is_dict_like(pos_kwargs):
-            raise ValueError(
-                "the first argument to .%s must be a dictionary" % func_name
-            )
-        if kw_kwargs:
-            raise ValueError(
-                "cannot specify both keyword and positional "
-                "arguments to .%s" % func_name
-            )
-        return pos_kwargs
-    else:
+    if pos_kwargs is None:
         # Need an explicit cast to appease mypy due to invariance; see
         # https://github.com/python/mypy/issues/6228
         return cast(Mapping[Hashable, T], kw_kwargs)
+
+    if not is_dict_like(pos_kwargs):
+        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
+    if kw_kwargs:
+        raise ValueError(
+            f"cannot specify both keyword and positional arguments to .{func_name}"
+        )
+    return pos_kwargs
 
 
 def is_scalar(value: Any, include_0d: bool = True) -> bool:
@@ -358,10 +355,7 @@ def dict_equiv(
     for k in first:
         if k not in second or not compat(first[k], second[k]):
             return False
-    for k in second:
-        if k not in first:
-            return False
-    return True
+    return all(k in first for k in second)
 
 
 def compat_dict_intersection(
@@ -652,7 +646,7 @@ def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
-def read_magic_number(filename_or_obj, count=8):
+def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
     if isinstance(filename_or_obj, bytes):
         magic_number = filename_or_obj[:count]
@@ -663,10 +657,33 @@ def read_magic_number(filename_or_obj, count=8):
                 "file-like object read/write pointer not at the start of the file, "
                 "please close and reopen, or use a context manager"
             )
-        magic_number = filename_or_obj.read(count)
+        magic_number = filename_or_obj.read(count)  # type: ignore
         filename_or_obj.seek(0)
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+    return magic_number
+
+
+def try_read_magic_number_from_path(pathlike, count=8) -> Optional[bytes]:
+    if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
+        path = os.fspath(pathlike)
+        try:
+            with open(path, "rb") as f:
+                return read_magic_number_from_file(f, count)
+        except (FileNotFoundError, TypeError):
+            pass
+    return None
+
+
+def try_read_magic_number_from_file_or_path(
+    filename_or_obj, count=8
+) -> Optional[bytes]:
+    magic_number = try_read_magic_number_from_path(filename_or_obj, count)
+    if magic_number is None:
+        try:
+            magic_number = read_magic_number_from_file(filename_or_obj, count)
+        except TypeError:
+            pass
     return magic_number
 
 
@@ -730,7 +747,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
     def _raise_if_hidden(self, key: K) -> None:
         if key in self._hidden_keys:
-            raise KeyError("Key `%r` is hidden." % key)
+            raise KeyError(f"Key `{key!r}` is hidden.")
 
     # The next five methods are requirements of the ABC.
     def __setitem__(self, key: K, value: V) -> None:
@@ -863,7 +880,7 @@ def drop_missing_dims(
     """
 
     if missing_dims == "raise":
-        supplied_dims_set = set(val for val in supplied_dims if val is not ...)
+        supplied_dims_set = {val for val in supplied_dims if val is not ...}
         invalid = supplied_dims_set - set(dims)
         if invalid:
             raise ValueError(

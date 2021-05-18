@@ -17,6 +17,7 @@ from xarray.tests import (
     assert_allclose,
     assert_array_equal,
     assert_equal,
+    raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
@@ -393,37 +394,39 @@ def test_ffill():
 
 @requires_bottleneck
 @requires_dask
-def test_ffill_dask():
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_dask(method):
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"x": 5})
-    actual = da.ffill("time")
-    expected = da.load().ffill("time")
-    assert isinstance(actual.data, dask_array_type)
+
+    dask_method = getattr(da, method)
+    numpy_method = getattr(da.compute(), method)
+    # unchunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("time")
+    expected = numpy_method("time")
+    assert_equal(actual, expected)
+
+    # chunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("x")
+    expected = numpy_method("x")
     assert_equal(actual, expected)
 
     # with limit
-    da = da.chunk({"x": 5})
-    actual = da.ffill("time", limit=3)
-    expected = da.load().ffill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    with raise_if_dask_computes():
+        actual = dask_method("time", limit=3)
+    expected = numpy_method("time", limit=3)
     assert_equal(actual, expected)
 
+    # limit < axis size
+    with pytest.raises(NotImplementedError):
+        actual = dask_method("x", limit=2)
 
-@requires_bottleneck
-@requires_dask
-def test_bfill_dask():
-    da, _ = make_interpolate_example_data((40, 40), 0.5)
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time")
-    expected = da.load().bfill("time")
-    assert isinstance(actual.data, dask_array_type)
-    assert_equal(actual, expected)
-
-    # with limit
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time", limit=3)
-    expected = da.load().bfill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    # limit > axis size
+    with raise_if_dask_computes():
+        actual = dask_method("x", limit=41)
+    expected = numpy_method("x", limit=41)
     assert_equal(actual, expected)
 
 

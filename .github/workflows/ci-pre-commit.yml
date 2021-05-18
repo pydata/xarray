@@ -10,7 +10,8 @@ jobs:
   linting:
     name: "pre-commit hooks"
     runs-on: ubuntu-latest
+    if: github.repository == 'pydata/xarray'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - uses: pre-commit/action@v2.0.2
+      - uses: pre-commit/action@v2.0.3

@@ -77,8 +77,7 @@ class _UFuncDispatcher:
             res = f(*new_args, **kwargs)
         if res is NotImplemented:
             raise TypeError(
-                "%r not implemented for types (%r, %r)"
-                % (self._name, type(args[0]), type(args[1]))
+                f"{self._name!r} not implemented for types ({type(args[0])!r}, {type(args[1])!r})"
             )
         return res
 
@@ -127,11 +126,11 @@ def _create_op(name):
     doc = _remove_unused_reference_labels(_skip_signature(_dedent(doc), name))
 
     func.__doc__ = (
-        "xarray specific variant of numpy.%s. Handles "
+        f"xarray specific variant of numpy.{name}. Handles "
         "xarray.Dataset, xarray.DataArray, xarray.Variable, "
         "numpy.ndarray and dask.array.Array objects with "
         "automatic dispatching.\n\n"
-        "Documentation from numpy:\n\n%s" % (name, doc)
+        f"Documentation from numpy:\n\n{doc}"
     )
     return func
 

@@ -1032,7 +1032,11 @@ def _plot2d(plotfunc):
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
-            add_colorbar = plotfunc.__name__ != "contour"
+            add_colorbar = True
+            if plotfunc.__name__ == "contour" or (
+                plotfunc.__name__ == "surface" and cmap is None
+            ):
+                add_colorbar = False
         imshow_rgb = plotfunc.__name__ == "imshow" and darray.ndim == (
             3 + (row is not None) + (col is not None)
         )
@@ -1045,6 +1049,25 @@ def _plot2d(plotfunc):
                 darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
+        if subplot_kws is None:
+            subplot_kws = dict()
+
+        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
+            if ax is None:
+                # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
+                # Remove when minimum requirement of matplotlib is 3.2:
+                from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
+
+                # delete so it does not end up in locals()
+                del Axes3D
+
+                # Need to create a "3d" Axes instance for surface plots
+                subplot_kws["projection"] = "3d"
+
+            # In facet grids, shared axis labels don't make sense for surface plots
+            sharex = False
+            sharey = False
+
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
@@ -1056,6 +1079,19 @@ def _plot2d(plotfunc):
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
         plt = import_matplotlib_pyplot()
+
+        if (
+            plotfunc.__name__ == "surface"
+            and not kwargs.get("_is_facetgrid", False)
+            and ax is not None
+        ):
+            import mpl_toolkits  # type: ignore
+
+            if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
+                raise ValueError(
+                    "If ax is passed to surface(), it must be created with "
+                    'projection="3d"'
+                )
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":
@@ -1073,9 +1109,10 @@ def _plot2d(plotfunc):
         xval = darray[xlab]
         yval = darray[ylab]
 
-        if xval.ndim > 1 or yval.ndim > 1:
+        if xval.ndim > 1 or yval.ndim > 1 or plotfunc.__name__ == "surface":
             # Passing 2d coordinate values, need to ensure they are transposed the same
-            # way as darray
+            # way as darray.
+            # Also surface plots always need 2d coordinates
             xval = xval.broadcast_like(darray)
             yval = yval.broadcast_like(darray)
             dims = darray.dims
@@ -1133,8 +1170,6 @@ def _plot2d(plotfunc):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
 
-        if subplot_kws is None:
-            subplot_kws = dict()
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
@@ -1154,6 +1189,8 @@ def _plot2d(plotfunc):
             ax.set_xlabel(label_from_attrs(darray[xlab], xlab_extra))
             ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
+            if plotfunc.__name__ == "surface":
+                ax.set_zlabel(label_from_attrs(darray))
 
         if add_colorbar:
             if add_labels and "label" not in cbar_kwargs:
@@ -1385,4 +1422,15 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])
 
+    return primitive
+
+
+@_plot2d
+def surface(x, y, z, ax, **kwargs):
+    """
+    Surface plot of 2d DataArray
+
+    Wraps :func:`matplotlib:mpl_toolkits.mplot3d.axes3d.plot_surface`
+    """
+    primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive

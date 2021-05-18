@@ -146,7 +146,7 @@ class Weighted(Generic[T_DataWithCoords]):
     def _sum_of_weights(
         self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
-        """ Calculate the sum of weights, accounting for missing values """
+        """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()

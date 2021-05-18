@@ -27,6 +27,8 @@ from typing import (
 
 import numpy as np
 
+from xarray.core.indexes import PandasIndex
+
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
@@ -73,7 +75,7 @@ def check_result_variables(
 
 def dataset_to_dataarray(obj: Dataset) -> DataArray:
     if not isinstance(obj, Dataset):
-        raise TypeError("Expected Dataset, got %s" % type(obj))
+        raise TypeError(f"Expected Dataset, got {type(obj)}")
 
     if len(obj.data_vars) > 1:
         raise TypeError(
@@ -291,7 +293,7 @@ def map_blocks(
             )
 
         # check that index lengths and values are as expected
-        for name, index in result.indexes.items():
+        for name, index in result.xindexes.items():
             if name in expected["shapes"]:
                 if len(index) != expected["shapes"][name]:
                     raise ValueError(
@@ -357,27 +359,27 @@ def map_blocks(
 
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
-    input_indexes = dict(npargs[0].indexes)
+    input_indexes = dict(npargs[0].xindexes)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
-        input_indexes.update(arg.indexes)
+        input_indexes.update(arg.xindexes)
 
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template.indexes)
+        template_indexes = set(template.xindexes)
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template.indexes[k] for k in new_indexes})
+        indexes.update({k: template.xindexes[k] for k in new_indexes})
         output_chunks = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = dict(template.indexes)
+        indexes = dict(template.xindexes)
         if isinstance(template, DataArray):
             output_chunks = dict(
                 zip(template.dims, template.chunks)  # type: ignore[arg-type]
@@ -501,10 +503,16 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        expected["indexes"] = {
-            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
-            for dim in indexes
-        }
+        # TODO: benbovy - flexible indexes: clean this up
+        # for now assumes pandas index (thus can be indexed) but it won't be the case for
+        # all indexes
+        expected_indexes = {}
+        for dim in indexes:
+            idx = indexes[dim].to_pandas_index()[
+                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
+            ]
+            expected_indexes[dim] = PandasIndex(idx)
+        expected["indexes"] = expected_indexes
 
         from_wrapper = (gname,) + chunk_tuple
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
@@ -540,13 +548,17 @@ def map_blocks(
         dependencies=[arg for arg in npargs if dask.is_dask_collection(arg)],
     )
 
-    for gname_l, layer in new_layers.items():
-        # This adds in the getitems for each variable in the dataset.
-        hlg.dependencies[gname_l] = {gname}
-        hlg.layers[gname_l] = layer
+    # This adds in the getitems for each variable in the dataset.
+    hlg = HighLevelGraph(
+        {**hlg.layers, **new_layers},
+        dependencies={
+            **hlg.dependencies,
+            **{name: {gname} for name in new_layers.keys()},
+        },
+    )
 
     result = Dataset(coords=indexes, attrs=template.attrs)
-    for index in result.indexes:
+    for index in result.xindexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding
 
