@@ -706,7 +706,12 @@ def scatter(
         from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
 
         subplot_kws.update(projection="3d")
-    ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+        # Using 30, 30 minimizes rotation of the plot. Making it easier to
+        # build on your intuition from 2D plots:
+        ax.view_init(azim=30, elev=30)
+    else:
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
     _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, _sizes)
 
