@@ -780,6 +780,8 @@ def _plot2d(plotfunc):
 
         if "pcolormesh" == plotfunc.__name__:
             kwargs["infer_intervals"] = infer_intervals
+            kwargs["xscale"] = xscale
+            kwargs["yscale"] = yscale
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
@@ -993,7 +995,7 @@ def contourf(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
+def pcolormesh(x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2D DataArray.
 
@@ -1016,19 +1018,19 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
     ):
         if len(x.shape) == 1:
-            x = _infer_interval_breaks(x, check_monotonic=True)
+            x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
-            x = _infer_interval_breaks(x, axis=1)
-            x = _infer_interval_breaks(x, axis=0)
+            x = _infer_interval_breaks(x, axis=1, scale=xscale)
+            x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
     if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
         if len(y.shape) == 1:
-            y = _infer_interval_breaks(y, check_monotonic=True)
+            y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes
-            y = _infer_interval_breaks(y, axis=1)
-            y = _infer_interval_breaks(y, axis=0)
+            y = _infer_interval_breaks(y, axis=1, scale=yscale)
+            y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 

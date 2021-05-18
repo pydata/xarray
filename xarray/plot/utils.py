@@ -749,13 +749,16 @@ def _is_monotonic(coord, axis=0):
         return np.all(delta_pos) or np.all(delta_neg)
 
 
-def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
+def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
     array([[-0.5,  0.5,  1.5],
            [ 2.5,  3.5,  4.5]])
+    >>> _infer_interval_breaks(np.logspace(-2, 2, 5), logscale=True)
+    array([3.16227766e-03, 3.16227766e-02, 3.16227766e-01, 3.16227766e+00,
+           3.16227766e+01, 3.16227766e+02])
     """
     coord = np.asarray(coord)
 
@@ -769,6 +772,10 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
             "the `seaborn` statistical plotting library." % axis
         )
 
+    # If logscale, compute the intervals in the logarithmic space
+    if scale == "log":
+        coord = np.log10(coord)
+
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
         deltas = np.array(0.0)
@@ -777,7 +784,13 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     trim_last = tuple(
         slice(None, -1) if n == axis else slice(None) for n in range(coord.ndim)
     )
-    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+    interval_breaks = np.concatenate(
+        [first, coord[trim_last] + deltas, last], axis=axis
+    )
+    if scale == "log":
+        # Recovert the intervals into the linear space
+        return np.power(10, interval_breaks)
+    return interval_breaks
 
 
 def _process_cmap_cbar_kwargs(
