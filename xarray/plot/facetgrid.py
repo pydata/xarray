@@ -35,13 +35,13 @@ def _nicetitle(coord, value, maxchar, template):
 
 class FacetGrid:
     """
-    Initialize the matplotlib figure and FacetGrid object.
+    Initialize the Matplotlib figure and FacetGrid object.
 
     The :class:`FacetGrid` is an object that links a xarray DataArray to
-    a matplotlib figure with a particular structure.
+    a Matplotlib figure with a particular structure.
 
     In particular, :class:`FacetGrid` is used to draw plots with multiple
-    Axes where each Axes shows the same relationship conditioned on
+    axes, where each axes shows the same relationship conditioned on
     different levels of some dimension. It's possible to condition on up to
     two variables by assigning variables to the rows and columns of the
     grid.
@@ -59,19 +59,19 @@ class FacetGrid:
 
     Attributes
     ----------
-    axes : numpy object array
-        Contains axes in corresponding position, as returned from
-        plt.subplots
-    col_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
-    row_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
-    fig : matplotlib.Figure
-        The figure containing all the axes
-    name_dicts : numpy object array
-        Contains dictionaries mapping coordinate names to values. None is
-        used as a sentinel value for axes which should remain empty, ie.
-        sometimes the bottom right grid
+    axes : ndarray of matplotlib.axes.Axes
+        Array containing axes in corresponding position, as returned from
+        :py:func:`matplotlib.pyplot.subplots`.
+    col_labels : list of matplotlib.text.Text
+        Column titles.
+    row_labels : list of matplotlib.text.Text
+        Row titles.
+    fig : matplotlib.figure.Figure
+        The figure containing all the axes.
+    name_dicts : ndarray of dict
+        Array containing dictionaries mapping coordinate names to values. ``None`` is
+        used as a sentinel value for axes that should remain empty, i.e.,
+        sometimes the rightmost grid positions in the bottom row.
     """
 
     def __init__(
@@ -91,26 +91,28 @@ class FacetGrid:
         Parameters
         ----------
         data : DataArray
-            xarray DataArray to be plotted
-        row, col : strings
+            xarray DataArray to be plotted.
+        row, col : str
             Dimesion names that define subsets of the data, which will be drawn
             on separate facets in the grid.
         col_wrap : int, optional
-            "Wrap" the column variable at this width, so that the column facets
+            "Wrap" the grid the for the column variable after this number of columns,
+            adding rows if ``col_wrap`` is less than the number of facets.
         sharex : bool, optional
-            If true, the facets will share x axes
+            If true, the facets will share *x* axes.
         sharey : bool, optional
-            If true, the facets will share y axes
+            If true, the facets will share *y* axes.
         figsize : tuple, optional
             A tuple (width, height) of the figure in inches.
             If set, overrides ``size`` and ``aspect``.
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
-            width of each facet in inches
+            width of each facet in inches.
         size : scalar, optional
-            Height (in inches) of each facet. See also: ``aspect``
+            Height (in inches) of each facet. See also: ``aspect``.
         subplot_kws : dict, optional
-            Dictionary of keyword arguments for matplotlib subplots
+            Dictionary of keyword arguments for Matplotlib subplots
+            (:py:func:`matplotlib.pyplot.subplots`).
 
         """
 
@@ -263,7 +265,9 @@ class FacetGrid:
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
-        func_kwargs.update({"add_colorbar": False, "add_labels": False})
+        func_kwargs["add_colorbar"] = False
+        if func.__name__ != "surface":
+            func_kwargs["add_labels"] = False
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(
@@ -429,7 +433,7 @@ class FacetGrid:
         self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar"""
+        """Draw a colorbar."""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)
@@ -562,7 +566,7 @@ class FacetGrid:
 
     def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
         """
-        Set and control tick behavior
+        Set and control tick behavior.
 
         Parameters
         ----------

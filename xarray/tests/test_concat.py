@@ -318,7 +318,6 @@ class TestConcatDataset:
 
             assert_identical(actual, expected)
 
-    @pytest.mark.skip(reason="not implemented, yet (see #4827)")
     @pytest.mark.parametrize(
         "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
         [
@@ -522,7 +521,7 @@ class TestConcatDataArray:
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument
-        stacked = concat(grouped, ds.indexes["x"])
+        stacked = concat(grouped, pd.Index(ds["x"], name="x"))
         assert_identical(foo, stacked)
 
         actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)

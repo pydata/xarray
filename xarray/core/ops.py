@@ -236,7 +236,7 @@ def _func_slash_method_wrapper(f, name=None):
 def inject_reduce_methods(cls):
     methods = (
         [
-            (name, getattr(duck_array_ops, "array_%s" % name), False)
+            (name, getattr(duck_array_ops, f"array_{name}"), False)
             for name in REDUCE_METHODS
         ]
         + [(name, getattr(duck_array_ops, name), True) for name in NAN_REDUCE_METHODS]
@@ -275,7 +275,7 @@ def inject_cum_methods(cls):
 
 
 def op_str(name):
-    return "__%s__" % name
+    return f"__{name}__"
 
 
 def get_op(name):

@@ -90,17 +90,13 @@ def build_engines(pkg_entrypoints):
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
-    engines = {}
-    for name, backend in backend_entrypoints.items():
-        engines[name] = backend()
-    return engines
+    return {name: backend() for name, backend in backend_entrypoints.items()}
 
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
     pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    engines = build_engines(pkg_entrypoints)
-    return engines
+    return build_engines(pkg_entrypoints)
 
 
 def guess_engine(store_spec):
@@ -112,6 +108,25 @@ def guess_engine(store_spec):
                 return engine
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
+
+    installed = [k for k in engines if k != "store"]
+    if installed:
+        raise ValueError(
+            "did not find a match in any of xarray's currently installed IO "
+            f"backends {installed}. Consider explicitly selecting one of the "
+            "installed backends via the ``engine`` parameter to "
+            "xarray.open_dataset(), or installing additional IO dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html"
+        )
+    else:
+        raise ValueError(
+            "xarray is unable to open this file because it has no currently "
+            "installed IO backends. Xarray's read/write support requires "
+            "installing optional dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html"
+        )
 
     compatible_engines = []
     for engine, backend in BACKEND_ENTRYPOINTS.items():

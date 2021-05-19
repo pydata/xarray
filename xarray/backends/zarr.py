@@ -1,5 +1,6 @@
 import os
 import pathlib
+import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -204,8 +205,8 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
         dimensions = zarr_obj.attrs[dimension_key]
     except KeyError:
         raise KeyError(
-            "Zarr object is missing the attribute `%s`, which is "
-            "required for xarray to determine variable dimensions." % (dimension_key)
+            f"Zarr object is missing the attribute `{dimension_key}`, which is "
+            "required for xarray to determine variable dimensions."
         )
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
     return dimensions, attributes
@@ -235,7 +236,7 @@ def extract_zarr_variable_encoding(
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for zarr backend:  %r" % invalid
+                f"unexpected encoding parameters for zarr backend:  {invalid!r}"
             )
     else:
         for k in list(encoding):
@@ -379,8 +380,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_attrs(self):
-        attributes = dict(self.ds.attrs.asdict())
-        return attributes
+        return dict(self.ds.attrs.asdict())
 
     def get_dimensions(self):
         dimensions = {}
@@ -389,16 +389,16 @@ class ZarrStore(AbstractWritableDataStore):
                 for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
                         raise ValueError(
-                            "found conflicting lengths for dimension %s "
-                            "(%d != %d)" % (d, s, dimensions[d])
+                            f"found conflicting lengths for dimension {d} "
+                            f"({s} != {dimensions[d]})"
                         )
                     dimensions[d] = s
 
             except KeyError:
                 raise KeyError(
-                    "Zarr object is missing the attribute `%s`, "
+                    f"Zarr object is missing the attribute `{DIMENSION_KEY}`, "
                     "which is required for xarray to determine "
-                    "variable dimensions." % (DIMENSION_KEY)
+                    "variable dimensions."
                 )
         return dimensions
 
@@ -458,7 +458,7 @@ class ZarrStore(AbstractWritableDataStore):
             variables_without_encoding, attributes
         )
 
-        if len(existing_variables) > 0:
+        if existing_variables:
             # there are variables to append
             # their encoding must be the same as in the store
             ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
@@ -699,7 +699,6 @@ def open_zarr(
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
     )
-
     return ds
 
 
@@ -728,7 +727,15 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         consolidate_on_close=False,
         chunk_store=None,
         storage_options=None,
+        lock=None,
     ):
+        # TODO remove after v0.19
+        if lock is not None:
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated for this backend, and is now "
+                "ignored. In the future passing lock will raise an error.",
+                DeprecationWarning,
+            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

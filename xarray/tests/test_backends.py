@@ -1,8 +1,10 @@
 import contextlib
+import gzip
 import itertools
 import math
 import os.path
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -30,12 +32,17 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
-from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
+from xarray.backends.netCDF4_ import (
+    NetCDF4BackendEntrypoint,
+    _extract_nc4_variable_encoding,
+)
 from xarray.backends.pydap_ import PydapDataStore
+from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
-from xarray.core import indexing
+from xarray.core import indexes, indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import LooseVersion, mock
@@ -735,7 +742,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexing.PandasIndexAdapter)
+                        assert isinstance(obj, indexes.PandasIndex)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))
@@ -2764,14 +2771,16 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with pytest.raises(ValueError, match=r"Xarray cannot detect the proper engine"):
+        with pytest.raises(
+            ValueError, match=r"match in any of xarray's currently installed IO"
+        ):
             with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
-            ValueError, match=r"not the signature of a valid netCDF file"
+            ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
@@ -2816,8 +2825,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(ValueError, match="Xarray cannot detect the proper engine"):
-                    open_dataset(f)
+                with pytest.raises(
+                    ValueError,
+                    match="match in any of xarray's currently installed IO",
+                ):
+                    with pytest.warns(
+                        RuntimeWarning,
+                        match=re.escape("'h5netcdf' fails while guessing"),
+                    ):
+                        open_dataset(f)
 
 
 @requires_h5netcdf
@@ -3012,15 +3028,17 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
 
         return ds1, ds2
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
     @pytest.mark.parametrize("join", ["outer", "inner", "left", "right"])
-    def test_open_mfdataset_does_same_as_concat(self, combine, opt, join):
+    def test_open_mfdataset_does_same_as_concat(self, combine, concat_dim, opt, join):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
             with open_mfdataset(
-                files, data_vars=opt, combine=combine, concat_dim="t", join=join
+                files, data_vars=opt, combine=combine, concat_dim=concat_dim, join=join
             ) as ds:
                 ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t", join=join)
                 assert_identical(ds, ds_expect)
@@ -3066,14 +3084,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 with pytest.raises(xr.MergeError):
                     xr.open_mfdataset(
                         files,
-                        combine="by_coords",
+                        combine="nested",
                         concat_dim="t",
                         combine_attrs=combine_attrs,
                     )
             else:
                 with xr.open_mfdataset(
                     files,
-                    combine="by_coords",
+                    combine="nested",
                     concat_dim="t",
                     combine_attrs=combine_attrs,
                 ) as ds:
@@ -3091,7 +3109,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds.test_dataset_attr == 10
 
     def test_open_mfdataset_dataarray_attr_by_coords(self):
@@ -3106,18 +3124,24 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                 ds.close()
                 ds.to_netcdf(f)
 
-            with xr.open_mfdataset(files, combine="by_coords", concat_dim="t") as ds:
+            with xr.open_mfdataset(files, combine="nested", concat_dim="t") as ds:
                 assert ds["v1"].test_dataarray_attr == 0
 
-    @pytest.mark.parametrize("combine", ["nested", "by_coords"])
+    @pytest.mark.parametrize(
+        "combine, concat_dim", [("nested", "t"), ("by_coords", None)]
+    )
     @pytest.mark.parametrize("opt", ["all", "minimal", "different"])
-    def test_open_mfdataset_exact_join_raises_error(self, combine, opt):
+    def test_open_mfdataset_exact_join_raises_error(self, combine, concat_dim, opt):
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
             with pytest.raises(ValueError, match=r"indexes along dimension"):
                 open_mfdataset(
-                    files, data_vars=opt, combine=combine, concat_dim="t", join="exact"
+                    files,
+                    data_vars=opt,
+                    combine=combine,
+                    concat_dim=concat_dim,
+                    join="exact",
                 )
 
     def test_common_coord_when_datavars_all(self):
@@ -3401,6 +3425,19 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
+    # TODO check for an error instead of a warning once deprecated
+    def test_open_mfdataset_raise_on_bad_combine_args(self):
+        # Regression test for unhelpful error shown in #5230
+        original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with pytest.warns(
+                    DeprecationWarning, match="`concat_dim` has no effect"
+                ):
+                    open_mfdataset([tmp1, tmp2], concat_dim="x")
+
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
     def test_encoding_mfdataset(self):
         original = Dataset(
@@ -3591,6 +3628,7 @@ class TestDask(DatasetIOBase):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
+    @pytest.mark.xfail
     def test_save_mfdataset_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -5139,3 +5177,86 @@ def test_chunking_consintency(chunks, tmp_path):
 
         with xr.open_dataset(tmp_path / "test.nc", chunks=chunks) as actual:
             xr.testing.assert_chunks_equal(actual, expected)
+
+
+def _check_guess_can_open_and_open(entrypoint, obj, engine, expected):
+    assert entrypoint.guess_can_open(obj)
+    with open_dataset(obj, engine=engine) as actual:
+        assert_identical(expected, actual)
+
+
+@requires_netCDF4
+def test_netcdf4_entrypoint(tmp_path):
+    entrypoint = NetCDF4BackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, format="netcdf3_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    path = tmp_path / "bar"
+    ds.to_netcdf(path, format="netcdf4_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    assert entrypoint.guess_can_open("http://something/remote")
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+    path = tmp_path / "baz"
+    with open(path, "wb") as f:
+        f.write(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(path)
+
+
+@requires_scipy
+def test_scipy_entrypoint(tmp_path):
+    entrypoint = ScipyBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
+
+    contents = ds.to_netcdf(engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, BytesIO(contents), engine="scipy", expected=ds
+    )
+
+    path = tmp_path / "foo.nc.gz"
+    with gzip.open(path, mode="wb") as f:
+        f.write(contents)
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc.gz")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+
+
+@requires_h5netcdf
+def test_h5netcdf_entrypoint(tmp_path):
+    entrypoint = H5netcdfBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="h5netcdf")
+    _check_guess_can_open_and_open(entrypoint, path, engine="h5netcdf", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, str(path), engine="h5netcdf", expected=ds
+    )
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="h5netcdf", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")

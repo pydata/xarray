@@ -90,8 +90,7 @@ class CfGribDataStore(AbstractDataStore):
 
     def get_encoding(self):
         dims = self.get_dimensions()
-        encoding = {"unlimited_dims": {k for k, v in dims.items() if v is None}}
-        return encoding
+        return {"unlimited_dims": {k for k, v in dims.items() if v is None}}
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
