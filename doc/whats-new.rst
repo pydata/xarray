@@ -21,9 +21,6 @@ v0.18.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- :py:func:`combine_by_coords` now accepts a list of unnamed ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
-
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
@@ -49,7 +46,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- :py:func:`combine_by_coords` can now handle combining a list of unnamed
+  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 - Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
   an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
   0.18.0.
