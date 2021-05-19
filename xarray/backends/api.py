@@ -453,6 +453,13 @@ def open_dataset(
     dataset : Dataset
         The newly created dataset.
 
+    Raises
+    ------
+    xarray.backends.NoMatchingEngineError
+        If ``engine`` is not provided and automatic engine detection fails,
+        either because the file-type cannot be inferred or because the necessary
+        backend dependencies are not installed.
+
     Notes
     -----
     ``open_dataset`` opens the file with read-only access. When you modify

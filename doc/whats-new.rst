@@ -26,6 +26,11 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- :py:func:`open_dataset` now raises ``xarray.backends.NoMatchingEngineError``
+  when the ``engine`` keyword is not provided and it is unable to detect the
+  correct engine to use when opening a file (:issue:`5329`).
+  Previously (in xarray 0.18.0 and 0.18.1), this was ``ValueError``.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Deprecations
 ~~~~~~~~~~~~
