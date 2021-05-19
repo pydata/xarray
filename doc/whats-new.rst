@@ -16,8 +16,19 @@ What's New
 
 .. _whats-new.0.18.1:
 
-v0.18.1 (unreleased)
---------------------
+v0.18.1 (18 May 2021)
+---------------------
+
+This release is intended as a small patch release to be compatible with the new
+2021.5.0 ``dask.distributed`` release. It also includes a new
+``drop_duplicates`` method, some documentation improvements, the beginnings of
+our internal Index refactoring, and some bug fixes.
+
+Thank you to all 16 contributors!
+
+Anderson Banihirwe, Andrew, Benoit Bovy, Brewster Malevich, Giacomo Caria,
+Illviljan, James Bourbeau, Keewis, Maximilian Roos, Ravin Kumar, Stephan Hoyer,
+Thomas Nicholas, Tom Nicholas, Zachary Moon.
 
 New Features
 ~~~~~~~~~~~~
@@ -25,7 +36,7 @@ New Features
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
-- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+- Allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
   :py:func:`apply_ufunc` (:pull:`5041`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
@@ -33,14 +44,6 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
