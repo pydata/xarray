@@ -31,8 +31,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import dtypes
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -83,6 +81,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
+    from . import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)

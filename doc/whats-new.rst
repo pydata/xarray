@@ -14,17 +14,56 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.18.2:
+
+v0.18.2 (unreleased)
+---------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.0.18.1:
 
-v0.18.1 (unreleased)
---------------------
+v0.18.1 (18 May 2021)
+---------------------
+
+This release is intended as a small patch release to be compatible with the new
+2021.5.0 ``dask.distributed`` release. It also includes a new
+``drop_duplicates`` method, some documentation improvements, the beginnings of
+our internal Index refactoring, and some bug fixes.
+
+Thank you to all 16 contributors!
+
+Anderson Banihirwe, Andrew, Benoit Bovy, Brewster Malevich, Giacomo Caria,
+Illviljan, James Bourbeau, Keewis, Maximilian Roos, Ravin Kumar, Stephan Hoyer,
+Thomas Nicholas, Tom Nicholas, Zachary Moon.
 
 New Features
 ~~~~~~~~~~~~
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
-- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+- Allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
   :py:func:`apply_ufunc` (:pull:`5041`)
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
@@ -56,6 +95,9 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+- Clean up and enhance docstrings for the :py:class:`DataArray.plot` and ``Dataset.plot.*``
+  families of methods (:pull:`5285`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 
 - Explanation of deprecation cycles and how to implement them added to contributors
   guide. (:pull:`5289`)
