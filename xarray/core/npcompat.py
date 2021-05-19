@@ -52,30 +52,6 @@ def _validate_axis(axis, ndim, argname):
     return axis
 
 
-def moveaxis(a, source, destination):
-    try:
-        # allow duck-array types if they define transpose
-        transpose = a.transpose
-    except AttributeError:
-        a = np.asarray(a)
-        transpose = a.transpose
-
-    source = _validate_axis(source, a.ndim, "source")
-    destination = _validate_axis(destination, a.ndim, "destination")
-    if len(source) != len(destination):
-        raise ValueError(
-            "`source` and `destination` arguments must have "
-            "the same number of elements"
-        )
-
-    order = [n for n in range(a.ndim) if n not in source]
-
-    for dest, src in sorted(zip(destination, source)):
-        order.insert(dest, src)
-
-    return transpose(order)
-
-
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
