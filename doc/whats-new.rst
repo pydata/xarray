@@ -17,7 +17,7 @@ What's New
 .. _whats-new.0.18.1:
 
 v0.18.1 (18 May 2021)
---------------------
+---------------------
 
 This release is intended as a small patch release to be compatible with the new
 2021.5.0 ``dask.distributed`` release. It also includes a new
