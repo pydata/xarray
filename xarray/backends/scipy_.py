@@ -290,7 +290,8 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         return ds
 
     @staticmethod
-    def installed() -> bool:        return has_scipy
+    def installed() -> bool:
+        return has_scipy
 
 
 BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint

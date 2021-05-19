@@ -109,46 +109,37 @@ def guess_engine(store_spec):
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    installed = [k for k in engines if k != "store"]
-    if installed:
-        raise ValueError(
-            "did not find a match in any of xarray's currently installed IO "
-            f"backends {installed}. Consider explicitly selecting one of the "
-            "installed backends via the ``engine`` parameter to "
-            "xarray.open_dataset(), or installing additional IO dependencies:\n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html"
-        )
-    else:
-        raise ValueError(
-            "xarray is unable to open this file because it has no currently "
-            "installed IO backends. Xarray's read/write support requires "
-            "installing optional dependencies:\n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html"
-        )
-
-    compatible_engines = []
+    compatible = []
     for engine, backend in BACKEND_ENTRYPOINTS.items():
         try:
             if backend.guess_can_open(store_spec):
-                compatible_engines.append(engine)
+                compatible.append(engine)
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    if len(compatible_engines):
-        error_message = (
-            f"Xarray cannot find a matching installed engine for this file in the installed engines"
-            f"{engines}. Try to pass one explicitly or consider installing one of the "
-            f"following engine which reports a match: {compatible_engines}."
+    installed = [k for k in engines if k != "store"]
+    if installed:
+        error_msg = (
+            "did not find a match in any of xarray's currently installed IO "
+            f"backends {installed}. Consider explicitly selecting one of the "
+            "installed engines via the ``engine`` parameter, or installing " 
+            "additional IO dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html"
         )
     else:
-        error_message = (
-            "Xarray cannot detect the proper engine to open this file. "
-            "Check if it is installed and try to pass it explicitly."
+        error_msg = (
+            "xarray is unable to open this file because it has no currently "
+            "installed IO engines. Xarray's read/write support requires "
+            "optional dependencies:\n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io"
         )
 
-    raise ValueError(error_message)
+    if compatible:
+        error_msg = error_msg + "\nThe following engines reports a match with the input file: {compatible}."
+
+    raise ValueError(error_msg)
 
 
 def get_backend(engine):
