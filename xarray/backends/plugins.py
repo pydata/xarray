@@ -110,8 +110,9 @@ def guess_engine(store_spec):
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     compatible = []
-    for engine, backend in BACKEND_ENTRYPOINTS.items():
+    for engine, backend_cls in BACKEND_ENTRYPOINTS.items():
         try:
+            backend = backend_cls()
             if backend.guess_can_open(store_spec):
                 compatible.append(engine)
         except Exception:
