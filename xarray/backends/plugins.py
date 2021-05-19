@@ -127,6 +127,10 @@ def guess_engine(store_spec):
             "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
             "http://xarray.pydata.org/en/stable/user-guide/io.html"
         )
+        if compatible:
+            error_msg = \
+                error_msg + \
+                "\nThe following engines reports a match with the input file: {compatible}."
     else:
         error_msg = (
             "xarray is unable to open this file because it has no currently "
@@ -135,9 +139,11 @@ def guess_engine(store_spec):
             "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
             "http://xarray.pydata.org/en/stable/user-guide/io"
         )
-
-    if compatible:
-        error_msg = error_msg + "\nThe following engines reports a match with the input file: {compatible}."
+        if compatible:
+            error_msg = \
+                error_msg + \
+                "\nConsider to install the dependencies of following engines that reports "\
+                "a match with the input file: {compatible}."
 
     raise ValueError(error_msg)
 
