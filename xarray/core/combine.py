@@ -630,6 +630,7 @@ def _combine_single_variable_hypercube(
 
     return concatenated
 
+
 # TODO remove empty list default param after version 0.19, see PR4696
 def combine_by_coords(
     data_objects=[],
