@@ -680,10 +680,10 @@ class TestNestedCombine:
             Dataset({"x": [2, 3]}),
         ]
         with pytest.raises(
-                ValueError,
-                match=r"Can't combine datasets with unnamed arrays."
-            ):
+            ValueError, match=r"Can't combine datasets with unnamed arrays."
+        ):
             combine_nested(objs, "x")
+
 
 class TestCombineAuto:
     def test_combine_by_coords(self):
@@ -733,9 +733,9 @@ class TestCombineAuto:
             Dataset({"x": [2, 3]}),
         ]
         with pytest.raises(
-                ValueError,
-                match=r"Can't automatically combine datasets with unnamed arrays."
-            ):
+            ValueError,
+            match=r"Can't automatically combine datasets with unnamed arrays.",
+        ):
             combine_by_coords(objs)
 
     @pytest.mark.parametrize(

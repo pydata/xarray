@@ -322,6 +322,7 @@ def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
         list(utils.infix_dims(supplied, all_))
 
+
 @pytest.mark.parametrize(
     "nested_list, expected",
     [
@@ -330,8 +331,8 @@ def test_infix_dims_errors(supplied, all_):
         ([1, 2, 3], [1, 2, 3]),
         ([[1]], [1]),
         ([[1, 2], [3, 4]], [1, 2, 3, 4]),
-        ([[[1, 2, 3], [4]], [5, 6]], [1, 2, 3, 4, 5, 6])
-    ]
+        ([[[1, 2, 3], [4]], [5, 6]], [1, 2, 3, 4, 5, 6]),
+    ],
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected

@@ -1,4 +1,5 @@
 import itertools
+import warnings
 from collections import Counter
 
 import pandas as pd
@@ -9,6 +10,7 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .merge import merge
 from .utils import iterate_nested
+
 
 def _infer_concat_order_from_positions(datasets):
     return dict(_infer_tile_ids_from_nested_list(datasets, ()))
@@ -310,6 +312,7 @@ def _new_tile_id(single_id_ds_pair):
     tile_id, ds = single_id_ds_pair
     return tile_id[1:]
 
+
 def _nested_combine(
     datasets,
     concat_dims,
@@ -350,6 +353,7 @@ def _nested_combine(
         combine_attrs=combine_attrs,
     )
     return combined
+
 
 def combine_nested(
     datasets,
@@ -541,7 +545,8 @@ def combine_nested(
     mixed_datasets_and_arrays = any(
         isinstance(obj, Dataset) for obj in iterate_nested(datasets)
     ) and any(
-        isinstance(obj, DataArray) and obj.name is None for obj in iterate_nested(datasets)
+        isinstance(obj, DataArray) and obj.name is None
+        for obj in iterate_nested(datasets)
     )
     if mixed_datasets_and_arrays:
         raise ValueError("Can't combine datasets with unnamed arrays.")
@@ -625,16 +630,16 @@ def _combine_single_variable_hypercube(
 
     return concatenated
 
-
+# TODO remove empty list default param after version 0.19, see PR4696
 def combine_by_coords(
-    data_objects,
+    data_objects=[],
     compat="no_conflicts",
     data_vars="all",
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
     combine_attrs="no_conflicts",
-    datasets=None
+    datasets=None,
 ):
     """
     Attempt to auto-magically combine the given datasets (or data arrays)
@@ -840,7 +845,8 @@ def combine_by_coords(
     if datasets is not None:
         warnings.warn(
             "The datasets argument has been renamed to `data_objects`."
-            " In future passing a value for datasets will raise an error.")
+            " In future passing a value for datasets will raise an error."
+        )
         data_objects = datasets
 
     if not data_objects:
@@ -849,9 +855,7 @@ def combine_by_coords(
     mixed_arrays_and_datasets = any(
         isinstance(data_object, DataArray) and data_object.name is None
         for data_object in data_objects
-    ) and any(
-        isinstance(data_object, Dataset) for data_object in data_objects
-    )
+    ) and any(isinstance(data_object, Dataset) for data_object in data_objects)
     if mixed_arrays_and_datasets:
         raise ValueError("Can't automatically combine datasets with unnamed arrays.")
 

@@ -933,6 +933,7 @@ class Default(Enum):
 
 _default = Default.token
 
+
 def iterate_nested(nested_list):
     for item in nested_list:
         if isinstance(item, list):
