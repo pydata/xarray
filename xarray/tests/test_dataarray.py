@@ -3690,7 +3690,8 @@ class TestDataArray:
             attrs={"long_name": "Description of data array", "_FillValue": -1},
         )
         df = arr.to_dataframe()
-        assert df[df.columns[0]].attrs == {
+        assert df.attrs == {}
+        assert df.test.attrs == {
             "long_name": "Description of data array",
             "_FillValue": -1,
         }

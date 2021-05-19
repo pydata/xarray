@@ -4212,16 +4212,21 @@ class TestDataset:
                     "t",
                     [1],
                     {"long_name": "Description of data array", "_FillValue": -1},
-                )
+                ),
+                "b": (
+                    "t",
+                    [1],
+                ),
             },
             attrs={"test": "test"},
         )
         df = ds.to_dataframe()
         assert df.attrs == {"test": "test"}
-        assert df[df.columns[0]].attrs == {
+        assert df.a.attrs == {
             "long_name": "Description of data array",
             "_FillValue": -1,
         }
+        assert df.b.attrs == {}
 
     def test_from_dataframe_categorical(self):
         cat = pd.CategoricalDtype(
