@@ -14,13 +14,40 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.18.3:
+
+v0.18.3 (unreleased)
+---------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.0.18.2:
 
 v0.18.2 (19 May 2021)
 ---------------------
 
 This release reverts a regression in xarray's unstacking of dask-backed arrays.
-
 .. _whats-new.0.18.1:
 
 v0.18.1 (18 May 2021)
@@ -79,6 +106,8 @@ Internal Changes
   ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
   ``xarray.Index`` (:pull:`5102`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Replace ``SortedKeysDict`` with python's ``dict``, given dicts are now ordered.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Updated the release guide for developers. Now accounts for actions that are automated via github
   actions. (:pull:`5274`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
