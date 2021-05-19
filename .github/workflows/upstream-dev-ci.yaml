@@ -33,8 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        || needs.detect-ci-trigger.outputs.triggered == 'true'
+        always()
+        && (
+            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+            || needs.detect-ci-trigger.outputs.triggered == 'true'
+        )
     defaults:
       run:
         shell: bash -l {0}
