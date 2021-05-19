@@ -6706,9 +6706,7 @@ def test_rolling_wrapped_dask(da, name, center, min_periods, window):
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = da.load().rolling(
-        time=window, min_periods=min_periods, center=center
-    )
+    rolling_obj = da.load().rolling(time=window, min_periods=min_periods, center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
