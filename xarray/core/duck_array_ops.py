@@ -72,8 +72,6 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
         raise NotImplementedError(msg % func_name)
 
 
-moveaxis = _dask_or_eager_func("moveaxis")
-
 around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
 
