@@ -98,7 +98,8 @@ jobs:
     name: report
     needs: upstream-dev
     if: |
-      github.event_name == 'schedule'
+      always()
+      && github.event_name == 'schedule'
       && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
     defaults:
