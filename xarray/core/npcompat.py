@@ -34,7 +34,6 @@ from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
 
-
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
