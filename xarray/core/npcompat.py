@@ -37,21 +37,6 @@ from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 import numpy as np
 
 
-# Vendored from NumPy 1.12; we need a version that support duck typing, even
-# on dask arrays with __array_function__ enabled.
-def _validate_axis(axis, ndim, argname):
-    try:
-        axis = [operator.index(axis)]
-    except TypeError:
-        axis = list(axis)
-    axis = [a + ndim if a < 0 else a for a in axis]
-    if not builtins.all(0 <= a < ndim for a in axis):
-        raise ValueError(f"invalid axis for this array in {argname} argument")
-    if len(set(axis)) != len(axis):
-        raise ValueError(f"repeated axis in {argname} argument")
-    return axis
-
-
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
