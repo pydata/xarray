@@ -157,3 +157,23 @@ def test_build_engines_sorted():
 
     assert set(indices) < {0, -1}
     assert list(backend_entrypoints) == sorted(backend_entrypoints)
+
+
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
+)
+def test_no_matching_engine_found():
+    with pytest.raises(
+        ValueError, match="match in any of xarray's currently installed IO"
+    ):
+        plugins.guess_engine("not-valid")
+
+
+@mock.patch(
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={}),
+)
+def test_no_engines_installed():
+    with pytest.raises(ValueError, match="no currently installed IO backends."):
+        plugins.guess_engine("not-valid")

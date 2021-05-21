@@ -24,7 +24,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.indexes import propagate_indexes
+from xarray.core.indexes import Index, PandasIndex, propagate_indexes
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
@@ -147,10 +147,15 @@ class TestDataArray:
 
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
-        expected = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        assert array.indexes.keys() == expected.keys()
-        for k in expected:
-            assert array.indexes[k].equals(expected[k])
+        expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
+        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        assert array.xindexes.keys() == expected_xindexes.keys()
+        assert array.indexes.keys() == expected_indexes.keys()
+        assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
+        assert all([isinstance(idx, Index) for idx in array.xindexes.values()])
+        for k in expected_indexes:
+            assert array.xindexes[k].equals(expected_xindexes[k])
+            assert array.indexes[k].equals(expected_indexes[k])
 
     def test_get_index(self):
         array = DataArray(np.zeros((2, 3)), coords={"x": ["a", "b"]}, dims=["x", "y"])
@@ -1459,7 +1464,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.indexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1479,7 +1484,7 @@ class TestDataArray:
         # regression test for GH3746
         arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
         del arr.coords["x"]
-        assert "x" not in arr.indexes
+        assert "x" not in arr.xindexes
 
     def test_broadcast_like(self):
         arr1 = DataArray(
@@ -1627,18 +1632,19 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": list("abc")}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
             )
 
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # as kwargs
@@ -1646,9 +1652,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
         # multiindex case
@@ -1657,9 +1664,10 @@ class TestDataArray:
         expected = DataArray(array.values, {"y": idx}, "y")
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
-        for dim_name in set().union(expected.indexes.keys(), actual.indexes.keys()):
+        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
             pd.testing.assert_index_equal(
-                expected.indexes[dim_name], actual.indexes[dim_name]
+                expected.xindexes[dim_name].to_pandas_index(),
+                actual.xindexes[dim_name].to_pandas_index(),
             )
 
     def test_expand_dims_error(self):
@@ -4334,12 +4342,12 @@ class TestDataArray:
     def test_binary_op_propagate_indexes(self):
         # regression test for GH2227
         self.dv["x"] = np.arange(self.dv.sizes["x"])
-        expected = self.dv.indexes["x"]
+        expected = self.dv.xindexes["x"]
 
-        actual = (self.dv * 10).indexes["x"]
+        actual = (self.dv * 10).xindexes["x"]
         assert expected is actual
 
-        actual = (self.dv > 10).indexes["x"]
+        actual = (self.dv > 10).xindexes["x"]
         assert expected is actual
 
     def test_binary_op_join_setting(self):
@@ -7426,3 +7434,24 @@ def test_clip(da):
     # Unclear whether we want this work, OK to adjust the test when we have decided.
     with pytest.raises(ValueError, match="arguments without labels along dimension"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
+
+
+@pytest.mark.parametrize("keep", ["first", "last", False])
+def test_drop_duplicates(keep):
+    ds = xr.DataArray(
+        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
+    )
+
+    if keep == "first":
+        data = [0, 6, 7]
+        time = [0, 1, 2]
+    elif keep == "last":
+        data = [5, 6, 7]
+        time = [0, 1, 2]
+    else:
+        data = [6, 7]
+        time = [1, 2]
+
+    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+    result = ds.drop_duplicates("time", keep=keep)
+    assert_equal(expected, result)

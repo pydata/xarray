@@ -110,9 +110,9 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     and "missing_value" not in var.attrs
                 ):
                     warnings.warn(
-                        "saving variable %s with floating "
+                        f"saving variable {name} with floating "
                         "point data as an integer dtype without "
-                        "any _FillValue to use for NaNs" % name,
+                        "any _FillValue to use for NaNs",
                         SerializationWarning,
                         stacklevel=10,
                     )
