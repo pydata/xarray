@@ -33,6 +33,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix a minor incompatibility between partial datetime string indexing with a
+:py:class:`CFTimeIndex` and upcoming pandas version 1.3.0 (:issue:`5356`,
+:pull:`5359`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Documentation
