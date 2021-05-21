@@ -493,6 +493,26 @@ class TestPlot(PlotTestCase):
         with pytest.raises(ValueError):
             _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
 
+    def test__infer_interval_breaks_logscale(self):
+        """
+        Check if interval breaks are defined in the logspace if scale="log"
+        """
+        # Check for 1d arrays
+        x = np.logspace(-4, 3, 8)
+        expected_interval_breaks = 10 ** np.linspace(-4.5, 3.5, 9)
+        np.testing.assert_allclose(
+            _infer_interval_breaks(x, scale="log"), expected_interval_breaks
+        )
+
+        # Check for 2d arrays
+        x = np.logspace(-4, 3, 8)
+        y = np.linspace(-5, 5, 11)
+        x, y = np.meshgrid(x, y)
+        expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
+        x = _infer_interval_breaks(x, axis=1, scale="log")
+        x = _infer_interval_breaks(x, axis=0, scale="log")
+        np.testing.assert_allclose(x, expected_interval_breaks)
+
     def test_geo_data(self):
         # Regression test for gh2250
         # Realistic coordinates taken from the example dataset
