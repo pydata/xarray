@@ -48,6 +48,7 @@ v0.18.2 (19 May 2021)
 ---------------------
 
 This release reverts a regression in xarray's unstacking of dask-backed arrays.
+
 .. _whats-new.0.18.1:
 
 v0.18.1 (18 May 2021)
