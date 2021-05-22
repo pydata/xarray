@@ -119,7 +119,7 @@ class Weighted(Generic[T_DataWithCoords]):
         self.obj: T_DataWithCoords = obj
         self.weights: "DataArray" = weights
 
-    def _check_dim(self, dim=Optional[Union[Hashable, Iterable[Hashable]]]):
+    def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
         """raise an error if any dimension is missing"""
 
         if isinstance(dim, str) or not isinstance(dim, Iterable):
