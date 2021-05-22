@@ -125,7 +125,7 @@ class Weighted(Generic[T_DataWithCoords]):
         if isinstance(dim, str) or not isinstance(dim, Iterable):
             dims = [dim] if dim else []
         else:
-            dims = dim
+            dims = list(dim)
         missing_dims = set(dims) - set(self.obj.dims) - set(self.weights.dims)
         if missing_dims:
             raise ValueError(
