@@ -2218,12 +2218,10 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
-    def test_stack_nonunique_consistency(self):
-        orig = DataArray(
-            [[0, 1], [2, 3]], dims=["x", "y"], coords={"x": [0, 1], "y": [0, 0]}
-        )
-        actual = orig.stack(z=["x", "y"])
-        expected = DataArray(orig.to_pandas().stack(), dims="z")
+    def test_stack_nonunique_consistency(self, da):
+        da = da.isel(time=0, drop=True)  # 2D
+        actual = da.stack(z=["a", "x"])
+        expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self):
