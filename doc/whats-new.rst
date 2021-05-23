@@ -22,6 +22,9 @@ v0.18.3 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
