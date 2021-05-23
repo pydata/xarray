@@ -1527,17 +1527,15 @@ def dot(*arrays, dims=None, **kwargs):
     return result.transpose(*[d for d in all_dims if d in result.dims])
 
 
-def cross(a, b, spatial_dim=None):
+def cross(a, b, dim=None):
     """
     Return the cross product of two (arrays of) vectors.
 
     Parameters
     ----------
     a, b : DataArray
-        Components of the first vector(s).
-    b : array_like
-        Components of the second vector(s).
-    spatial_dim : something
+        something
+    dim : hashable or tuple of hashable
         something
 
     Examples
@@ -1599,38 +1597,38 @@ def cross(a, b, spatial_dim=None):
                 f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
             )
 
-        if spatial_dim is None:
+        if dim is None:
             # TODO: Find spatial dim default by looking for unique
             # (3 or 2)-valued dim?
-            spatial_dim = arr.dims[-1]
-        elif spatial_dim not in arr.dims:
-            raise ValueError(f"Dimension {spatial_dim} not in {arr}.")
+            dim = arr.dims[-1]
+        elif dim not in arr.dims:
+            raise ValueError(f"Dimension {dim} not in {arr}.")
 
-        s = arr.sizes[spatial_dim]
+        s = arr.sizes[dim]
         if s < 1 or s > 3:
             raise ValueError(
                 "incompatible dimensions for cross product\n"
                 "(dimension with coords must be 1, 2 or 3)"
             )
 
-    if a.sizes[spatial_dim] == b.sizes[spatial_dim]:
+    if a.sizes[dim] == b.sizes[dim]:
         # Arrays have the same size, no need to do anything:
         pass
     else:
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
-        ind = 1 if a.sizes[spatial_dim] > b.sizes[spatial_dim] else 0
+        ind = 1 if a.sizes[dim] > b.sizes[dim] else 0
 
         if a.coords:
             # If the array has coords we know which indexes to fill
             # with zeros:
             arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
-        elif arrays[ind].sizes[spatial_dim] > 1:
+        elif arrays[ind].sizes[dim] > 1:
             # If it doesn't have coords we can can only that infer that
             # it is composite values if the size is 2.
             from .concat import concat
 
-            arrays[ind] = concat([a, DataArray([0])], dim=spatial_dim)
+            arrays[ind] = concat([a, DataArray([0])], dim=dim)
         else:
             # Size is 1, then we do not know if it is a constant or
             # composite value:
@@ -1647,8 +1645,8 @@ def cross(a, b, spatial_dim=None):
     return apply_ufunc(
         np.cross,
         *arrays,
-        input_core_dims=[[spatial_dim], [spatial_dim]],
-        output_core_dims=[[spatial_dim]],
+        input_core_dims=[[dim], [dim]],
+        output_core_dims=[[dim]],
         dask="parallelized",
         output_dtypes=[output_dtype],
     )

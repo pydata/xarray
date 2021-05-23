@@ -1901,7 +1901,7 @@ def test_polyval(use_dask, use_datetime):
 
 
 @pytest.mark.parametrize(
-    "a, b, ae, be, spatial_dim, axis",
+    "a, b, ae, be, dim, axis",
     [
         [
             xr.DataArray(np.array([1, 2, 3])),
@@ -1919,7 +1919,7 @@ def test_polyval(use_dask, use_datetime):
             None,
             -1,
         ],
-        [  # Test spatial dim in the middle:
+        [  # Test dim in the middle:
             xr.DataArray(
                 np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
                 dims=["time", "cartesian", "var"],
@@ -1977,7 +1977,7 @@ def test_polyval(use_dask, use_datetime):
         ],
     ],
 )
-def test_cross(a, b, ae, be, spatial_dim, axis):
+def test_cross(a, b, ae, be, dim, axis):
     expected = np.cross(ae, be, axis=axis)
-    actual = xr.cross(a, b, spatial_dim=spatial_dim)
+    actual = xr.cross(a, b, dim=dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
