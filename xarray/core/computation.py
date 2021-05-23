@@ -1598,6 +1598,7 @@ def cross(a, b, dim=None):
     """
     from .dataarray import DataArray
 
+    dims = []
     arrays = [a, b]
     for arr in arrays:
         if not isinstance(arr, (DataArray)):
@@ -1608,35 +1609,37 @@ def cross(a, b, dim=None):
         if dim is None:
             # TODO: Find spatial dim default by looking for unique
             # (3 or 2)-valued dim?
-            dim = arr.dims[-1]
-        elif dim not in arr.dims:
+            dims.append(arr.dims[-1])
+        elif dim in arr.dims:
+            dims.append(dim)
+        else:
             raise ValueError(f"Dimension {dim} not in {arr}.")
 
-        s = arr.sizes[dim]
+        s = arr.sizes[dims[-1]]
         if s < 1 or s > 3:
             raise ValueError(
                 "incompatible dimensions for cross product\n"
                 "(dimension with coords must be 1, 2 or 3)"
             )
 
-    if a.sizes[dim] == b.sizes[dim]:
+    if a.sizes[dims[0]] == b.sizes[dims[1]]:
         # Arrays have the same size, no need to do anything:
         pass
     else:
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
-        ind = 1 if a.sizes[dim] > b.sizes[dim] else 0
+        ind = 1 if a.sizes[dims[0]] > b.sizes[dims[1]] else 0
 
-        if a.coords:
+        if arrays[ind].coords:
             # If the array has coords we know which indexes to fill
             # with zeros:
             arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
-        elif arrays[ind].sizes[dim] > 1:
-            # If it doesn't have coords we can can only that infer that
-            # it is composite values if the size is 2.
-            arrays[ind] = arrays[ind].pad({dim: (0, 1)}, constant_values=0)
+        elif arrays[ind].sizes[dims[ind]] > 1:
+            # If the array doesn't have coords we can can only infer
+            # that it is composite values if the size is 2:
+            arrays[ind] = arrays[ind].pad({dims[ind]: (0, 1)}, constant_values=0)
         else:
-            # Size is 1, then we do not know if it is a constant or
+            # Size is 1, then we do not know if the array is a constant or
             # composite value:
             raise ValueError(
                 "incompatible dimensions for cross product\n"
@@ -1648,14 +1651,16 @@ def cross(a, b, dim=None):
         np.empty((2, 2), dtype=arrays[0].dtype), np.empty((2, 2), dtype=arrays[1].dtype)
     ).dtype
 
-    return apply_ufunc(
+    c = apply_ufunc(
         np.cross,
         *arrays,
-        input_core_dims=[[dim], [dim]],
-        output_core_dims=[[dim]],
+        input_core_dims=[[dims[0]], [dims[1]]],
+        output_core_dims=[[dims[0]]],
         dask="parallelized",
         output_dtypes=[output_dtype],
     )
+
+    return c
 
 
 def where(cond, x, y):
