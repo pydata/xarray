@@ -1552,7 +1552,7 @@ def cross(a, b, dim=None):
     >>> a = xr.DataArray(
     ...     np.array([1, 2]),
     ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "z"])))
+    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "z"]))),
     ... )
     >>> b = xr.DataArray(
     ...     np.array([4, 5, 6]),
