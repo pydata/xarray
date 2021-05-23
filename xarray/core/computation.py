@@ -1551,8 +1551,14 @@ def cross(a, b, spatial_dim=None):
 
     One vector with dimension 2.
 
-    >>> a = xr.DataArray(np.array([1, 2]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "z"]))))
-    >>> b = xr.DataArray(np.array([4, 5, 6]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "y", "z"]))))
+    >>> a = xr.DataArray(
+    ...     np.array([1, 2]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "z"])))
+    ... )
+    >>> b = xr.DataArray(
+    ...     np.array([4, 5, 6]),
+    ...     dims=["x"],
+    ...     coords=dict(x=(["x"], np.array(["x", "y", "z"]))),
+    ... )
     >>> xr.cross(a, b)
     array([12, -6, -3])
 
