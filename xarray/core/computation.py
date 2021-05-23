@@ -1533,7 +1533,7 @@ def cross(a, b, spatial_dim=None):
 
     Parameters
     ----------
-    a : array_like
+    a, b : DataArray
         Components of the first vector(s).
     b : array_like
         Components of the second vector(s).
