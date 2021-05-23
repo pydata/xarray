@@ -1552,17 +1552,17 @@ def cross(a, b, spatial_dim=None):
     One vector with dimension 2.
 
     >>> a = xr.DataArray(
-    ...     np.array([1, 2]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "z"])))
+    ...     np.array([1, 2]),
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "z"])))
     ... )
     >>> b = xr.DataArray(
     ...     np.array([4, 5, 6]),
     ...     dims=["x"],
-    ...     coords=dict(x=(["x"], np.array(["x", "y", "z"]))),
+    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
     ... )
     >>> xr.cross(a, b)
     array([12, -6, -3])
-
-
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule.
@@ -1620,6 +1620,7 @@ def cross(a, b, spatial_dim=None):
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         ind = 1 if a.sizes[spatial_dim] > b.sizes[spatial_dim] else 0
+
         if a.coords:
             # If the array has coords we know which indexes to fill
             # with zeros:
@@ -1639,17 +1640,17 @@ def cross(a, b, spatial_dim=None):
             )
 
     # Figure out the output dtype:
-    # output_dtype = np.cross(
-    #     np.empty((2, 2), dtype=arrays[0].dtype), np.empty((2, 2), dtype=arrays[1].dtype)
-    # ).dtype
+    output_dtype = np.cross(
+        np.empty((2, 2), dtype=arrays[0].dtype), np.empty((2, 2), dtype=arrays[1].dtype)
+    ).dtype
 
     return apply_ufunc(
         np.cross,
         *arrays,
-        # input_core_dims=[[spatial_dim], [spatial_dim]],
-        # output_core_dims=[[spatial_dim]],
+        input_core_dims=[[spatial_dim], [spatial_dim]],
+        output_core_dims=[[spatial_dim]],
         dask="parallelized",
-        # output_dtypes=[output_dtype],
+        output_dtypes=[output_dtype],
     )
 
 

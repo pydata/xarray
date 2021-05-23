@@ -1901,54 +1901,83 @@ def test_polyval(use_dask, use_datetime):
 
 
 @pytest.mark.parametrize(
-    "a, b, ae, be",
+    "a, b, ae, be, spatial_dim, axis",
     [
-        # Basic np.cross tests:
         [
             xr.DataArray(np.array([1, 2, 3])),
             xr.DataArray(np.array([4, 5, 6])),
             np.array([1, 2, 3]),
             np.array([4, 5, 6]),
+            None,
+            -1,
         ],
         [
             xr.DataArray(np.array([1, 2])),
             xr.DataArray(np.array([4, 5, 6])),
             np.array([1, 2]),
             np.array([4, 5, 6]),
+            None,
+            -1,
         ],
-        # Test 1 sized arrays with coords:
-        [
+        [  # Test spatial dim in the middle:
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], np.array(["x", "y", "z"])),
+                    var=(["var"], np.array([1, 1.5, 2, 2.5])),
+                ),
+            ),
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], np.array(["x", "y", "z"])),
+                    var=(["var"], np.array([1, 1.5, 2, 2.5])),
+                ),
+            ),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+            "cartesian",
+            1,
+        ],
+        [  # Test 1 sized arrays with coords:
             xr.DataArray(
                 np.array([1]),
-                dims=["axis"],
-                coords=dict(axis=(["axis"], np.array(["z"]))),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], np.array(["z"]))),
             ),
             xr.DataArray(
                 np.array([4, 5, 6]),
-                dims=["axis"],
-                coords=dict(axis=(["axis"], np.array(["x", "y", "z"]))),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
             ),
             np.array([0, 0, 1]),
             np.array([4, 5, 6]),
+            None,
+            -1,
         ],
-        # Test filling inbetween with coords:
-        [
+        [  # Test filling inbetween with coords:
             xr.DataArray(
                 np.array([1, 2]),
-                dims=["axis"],
-                coords=dict(axis=(["axis"], np.array(["x", "z"]))),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], np.array(["x", "z"]))),
             ),
             xr.DataArray(
                 np.array([4, 5, 6]),
-                dims=["axis"],
-                coords=dict(axis=(["axis"], np.array(["x", "y", "z"]))),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
             ),
             np.array([1, 0, 2]),
             np.array([4, 5, 6]),
+            None,
+            -1,
         ],
     ],
 )
-def test_cross(a, b, ae, be):
-    expected = np.cross(ae, be)
-    actual = xr.cross(a, b)
+def test_cross(a, b, ae, be, spatial_dim, axis):
+    expected = np.cross(ae, be, axis=axis)
+    actual = xr.cross(a, b, spatial_dim=spatial_dim)
     xr.testing.assert_duckarray_allclose(expected, actual)
