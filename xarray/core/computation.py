@@ -1626,9 +1626,7 @@ def cross(a, b, dim=None):
         elif arrays[ind].sizes[dim] > 1:
             # If it doesn't have coords we can can only that infer that
             # it is composite values if the size is 2.
-            from .concat import concat
-
-            arrays[ind] = concat([a, DataArray([0])], dim=dim)
+            arrays[ind] = arrays[ind].pad({dim: (0, 1)}, constant_values=0)
         else:
             # Size is 1, then we do not know if it is a constant or
             # composite value:
