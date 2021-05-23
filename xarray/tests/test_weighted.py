@@ -368,3 +368,19 @@ def test_weighted_operations_keep_attr_da_in_ds(operation):
     result = getattr(data.weighted(weights), operation)(keep_attrs=True)
 
     assert data.a.attrs == result.a.attrs
+
+
+@pytest.mark.parametrize("as_dataset", (True, False))
+def test_weighted_bad_dim(as_dataset):
+
+    data = DataArray(np.random.randn(2, 2))
+    weights = xr.ones_like(data)
+    if as_dataset:
+        data = data.to_dataset(name="data")
+
+    error_msg = (
+        f"{data.__class__.__name__}Weighted"
+        " does not contain the dimensions: {'bad_dim'}"
+    )
+    with pytest.raises(ValueError, match=error_msg):
+        data.weighted(weights).mean("bad_dim")
