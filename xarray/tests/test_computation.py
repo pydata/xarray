@@ -1903,6 +1903,7 @@ def test_polyval(use_dask, use_datetime):
 @pytest.mark.parametrize(
     "a, b, ae, be",
     [
+        # Basic np.cross tests:
         [
             xr.DataArray(np.array([1, 2, 3])),
             xr.DataArray(np.array([4, 5, 6])),
@@ -1915,6 +1916,22 @@ def test_polyval(use_dask, use_datetime):
             np.array([1, 2]),
             np.array([4, 5, 6]),
         ],
+        # Test 1 sized arrays with coords:
+        [
+            xr.DataArray(
+                np.array([1]),
+                dims=["axis"],
+                coords=dict(axis=(["axis"], np.array(["z"]))),
+            ),
+            xr.DataArray(
+                np.array([4, 5, 6]),
+                dims=["axis"],
+                coords=dict(axis=(["axis"], np.array(["x", "y", "z"]))),
+            ),
+            np.array([0, 0, 1]),
+            np.array([4, 5, 6]),
+        ],
+        # Test filling inbetween with coords:
         [
             xr.DataArray(
                 np.array([1, 2]),
