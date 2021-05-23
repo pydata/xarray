@@ -1531,6 +1531,14 @@ def cross(a, b, dim=None):
     """
     Return the cross product of two (arrays of) vectors.
 
+    The cross product of `a` and `b` in :math:`R^3` is a vector perpendicular
+    to both `a` and `b`.  If `a` and `b` are arrays of vectors, the vectors
+    are defined by the last axis of `a` and `b` by default, and these axes
+    can have dimensions 2 or 3.  Where the dimension of either `a` or `b` is
+    2, the third component of the input vector is assumed to be zero and the
+    cross product calculated accordingly.  In cases where both input vectors
+    have dimension 2, the z-component of the cross product is returned.
+
     Parameters
     ----------
     a, b : DataArray
