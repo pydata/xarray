@@ -1550,47 +1550,75 @@ def cross(a, b, dim=None):
     --------
     Vector cross-product.
 
-    >>> x = xr.DataArray(np.array([1, 2, 3]))
-    >>> y = xr.DataArray(np.array([4, 5, 6]))
-    >>> xr.cross(x, y)
+    >>> a = xr.DataArray([1, 2, 3])
+    >>> b = xr.DataArray([4, 5, 6])
+    >>> xr.cross(a, b)
+    <xarray.DataArray (dim_0: 3)>
     array([-3,  6, -3])
+    Dimensions without coordinates: dim_0
 
     One vector with dimension 2.
 
     >>> a = xr.DataArray(
-    ...     np.array([1, 2]),
+    ...     [1, 2],
     ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "z"]))),
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
     ... )
     >>> b = xr.DataArray(
-    ...     np.array([4, 5, 6]),
-    ...     dims=["x"],
-    ...     coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
+    ...     [4, 5, 6],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
     ... )
     >>> xr.cross(a, b)
+    <xarray.DataArray (cartesian: 3)>
     array([12, -6, -3])
+    Coordinates:
+      * cartesian  (cartesian) object 'x' 'y' 'z'
+
+    One vector with dimension 2 but coords in other positions.
+
+    >>> a = xr.DataArray(
+    ...     [1, 2],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
+    ... )
+    >>> b = xr.DataArray(
+    ...     [4, 5, 6],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+    ... )
+    >>> xr.cross(a, b)
+    <xarray.DataArray (cartesian: 3)>
+    array([-10,   2,   5])
+    Coordinates:
+      * cartesian  (cartesian) object 'x' 'y' 'z'
 
     Multiple vector cross-products. Note that the direction of the
     cross product vector is defined by the right-hand rule.
 
-    >>> x = xr.DataArray(np.array([[1, 2, 3], [4, 5, 6]]), dims=("a", "b"))
-    >>> y = xr.DataArray(np.array([[4, 5, 6], [1, 2, 3]]), dims=("a", "b"))
-    >>> xr.cross(x, y)
+    >>> a = xr.DataArray(
+    ...     [[1, 2, 3], [4, 5, 6]],
+    ...     dims=("time", "cartesian"),
+    ...     coords=dict(
+    ...         time=(["time"], [0, 1]),
+    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
+    ...     ),
+    ... )
+    >>> b = xr.DataArray(
+    ...     [[4, 5, 6], [1, 2, 3]],
+    ...     dims=("time", "cartesian"),
+    ...     coords=dict(
+    ...         time=(["time"], [0, 1]),
+    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
+    ...     ),
+    ... )
+    >>> xr.cross(a, b)
+    <xarray.DataArray (time: 2, cartesian: 3)>
     array([[-3,  6, -3],
            [ 3, -6,  3]])
-
-    Change the vector definition of x and y using axisa and axisb.
-
-    >>> x = xr.DataArray(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
-    >>> y = xr.DataArray(np.array([[7, 8, 9], [4, 5, 6], [1, 2, 3]]))
-    >>> np.cross(x, y)
-    array([[ -6,  12,  -6],
-           [  0,   0,   0],
-           [  6, -12,   6]])
-    >>> np.cross(x, y, axisa=0, axisb=0)
-    array([[-24,  48, -24],
-           [-30,  60, -30],
-           [-36,  72, -36]])
+    Coordinates:
+      * time       (time) int32 0 1
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     See Also
     --------
