@@ -1934,4 +1934,4 @@ def test_polyval(use_dask, use_datetime):
 def test_cross(a, b, ae, be):
     expected = np.cross(ae, be)
     actual = xr.cross(a, b)
-    xr.testing.assert_allclose(expected, actual)
+    xr.testing.assert_duckarray_allclose(expected, actual)
