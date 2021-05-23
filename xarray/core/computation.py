@@ -1585,7 +1585,6 @@ def cross(a, b, spatial_dim=None):
     numpy.cross : Corresponding numpy function
     """
     from .dataarray import DataArray
-    from .variable import Variable
 
     arrays = [a, b]
     for arr in arrays:
