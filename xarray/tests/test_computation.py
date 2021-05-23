@@ -1918,13 +1918,13 @@ def test_polyval(use_dask, use_datetime):
         [
             xr.DataArray(
                 np.array([1, 2]),
-                dims=["ax"],
-                coords=dict(x=(["ax"], np.array(["x", "z"]))),
+                dims=["axis"],
+                coords=dict(axis=(["axis"], np.array(["x", "z"]))),
             ),
             xr.DataArray(
                 np.array([4, 5, 6]),
-                dims=["ax"],
-                coords=dict(x=(["ax"], np.array(["x", "y", "z"]))),
+                dims=["axis"],
+                coords=dict(axis=(["axis"], np.array(["x", "y", "z"]))),
             ),
             np.array([1, 0, 2]),
             np.array([4, 5, 6]),
