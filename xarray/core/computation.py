@@ -1548,13 +1548,32 @@ def cross(a, b, dim=None):
 
     Examples
     --------
-    Vector cross-product.
+    Vector cross-product with 3 dimensions.
 
     >>> a = xr.DataArray([1, 2, 3])
     >>> b = xr.DataArray([4, 5, 6])
     >>> xr.cross(a, b)
     <xarray.DataArray (dim_0: 3)>
     array([-3,  6, -3])
+    Dimensions without coordinates: dim_0
+
+    Vector cross-product with 2 dimensions, returns in the orthogonal
+    direction:
+
+    >>> a = xr.DataArray([1, 2])
+    >>> b = xr.DataArray([4, 5])
+    >>> xr.cross(a, b)
+    <xarray.DataArray ()>
+    array(-3)
+
+    Vector cross-product with 3 dimensions but zeros at the last axis
+    yields the same results as with 2 dimensions:
+
+    >>> a = xr.DataArray([1, 2, 0])
+    >>> b = xr.DataArray([4, 5, 0])
+    >>> xr.cross(a, b)
+    <xarray.DataArray (dim_0: 3)>
+    array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
 
     One vector with dimension 2.
@@ -1674,18 +1693,18 @@ def cross(a, b, dim=None):
                 "(dimension without coords must be 2 or 3)"
             )
 
-    # Figure out the output dtype:
-    output_dtype = np.cross(
-        np.empty((2, 2), dtype=arrays[0].dtype), np.empty((2, 2), dtype=arrays[1].dtype)
-    ).dtype
-
     c = apply_ufunc(
         np.cross,
         *arrays,
         input_core_dims=[[dims[0]], [dims[1]]],
-        output_core_dims=[[dims[0]]],
+        output_core_dims=[[dims[0]]] if arrays[0].sizes[dims[0]] == 3 else [[]],
         dask="parallelized",
-        output_dtypes=[output_dtype],
+        output_dtypes=[
+            np.cross(
+                np.empty((2, 2), dtype=arrays[0].dtype),
+                np.empty((2, 2), dtype=arrays[1].dtype),
+            ).dtype
+        ],
     )
 
     return c
