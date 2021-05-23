@@ -1617,7 +1617,7 @@ def cross(a, b, dim=None):
     array([[-3,  6, -3],
            [ 3, -6,  3]])
     Coordinates:
-      * time       (time) int32 0 1
+      * time       (time) int64 0 1
       * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     See Also
