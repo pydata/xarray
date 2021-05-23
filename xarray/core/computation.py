@@ -1527,6 +1527,127 @@ def dot(*arrays, dims=None, **kwargs):
     return result.transpose(*[d for d in all_dims if d in result.dims])
 
 
+def cross(a, b, spatial_dim=None):
+    """
+    Return the cross product of two (arrays of) vectors.
+
+    Parameters
+    ----------
+    a : array_like
+        Components of the first vector(s).
+    b : array_like
+        Components of the second vector(s).
+    spatial_dim : something
+        something
+
+    Examples
+    --------
+    Vector cross-product.
+
+    >>> x = xr.DataArray(np.array([1, 2, 3]))
+    >>> y = xr.DataArray(np.array([4, 5, 6]))
+    >>> xr.cross(x, y)
+    array([-3,  6, -3])
+
+    One vector with dimension 2.
+
+    >>> a = xr.DataArray(np.array([1, 2]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "z"]))))
+    >>> b = xr.DataArray(np.array([4, 5, 6]), dims=["x"], coords=dict(x=(["x"], np.array(["x", "y", "z"]))))
+    >>> xr.cross(a, b)
+    array([12, -6, -3])
+
+
+
+    Multiple vector cross-products. Note that the direction of the
+    cross product vector is defined by the right-hand rule.
+
+    >>> x = xr.DataArray(np.array([[1, 2, 3], [4, 5, 6]]), dims=("a", "b"))
+    >>> y = xr.DataArray(np.array([[4, 5, 6], [1, 2, 3]]), dims=("a", "b"))
+    >>> xr.cross(x, y)
+    array([[-3,  6, -3],
+           [ 3, -6,  3]])
+
+    Change the vector definition of x and y using axisa and axisb.
+
+    >>> x = xr.DataArray(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
+    >>> y = xr.DataArray(np.array([[7, 8, 9], [4, 5, 6], [1, 2, 3]]))
+    >>> np.cross(x, y)
+    array([[ -6,  12,  -6],
+           [  0,   0,   0],
+           [  6, -12,   6]])
+    >>> np.cross(x, y, axisa=0, axisb=0)
+    array([[-24,  48, -24],
+           [-30,  60, -30],
+           [-36,  72, -36]])
+
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
+    """
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    arrays = [a, b]
+    for arr in arrays:
+        if not isinstance(arr, (DataArray)):
+            raise TypeError(
+                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
+            )
+
+        if spatial_dim is None:
+            # TODO: Find spatial dim default by looking for unique
+            # (3 or 2)-valued dim?
+            spatial_dim = arr.dims[-1]
+        elif spatial_dim not in arr.dims:
+            raise ValueError(f"Dimension {spatial_dim} not in {arr}.")
+
+        s = arr.sizes[spatial_dim]
+        if s < 1 or s > 3:
+            raise ValueError(
+                "incompatible dimensions for cross product\n"
+                "(dimension with coords must be 1, 2 or 3)"
+            )
+
+    if a.sizes[spatial_dim] == b.sizes[spatial_dim]:
+        # Arrays have the same size, no need to do anything:
+        pass
+    else:
+        # Arrays have different sizes. Append zeros where the smaller
+        # array is missing a value, zeros will not affect np.cross:
+        ind = 1 if a.sizes[spatial_dim] > b.sizes[spatial_dim] else 0
+        if a.coords:
+            # If the array has coords we know which indexes to fill
+            # with zeros:
+            arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
+        elif arrays[ind].sizes[spatial_dim] > 1:
+            # If it doesn't have coords we can can only that infer that
+            # it is composite values if the size is 2.
+            from .concat import concat
+
+            arrays[ind] = concat([a, DataArray([0])], dim=spatial_dim)
+        else:
+            # Size is 1, then we do not know if it is a constant or
+            # composite value:
+            raise ValueError(
+                "incompatible dimensions for cross product\n"
+                "(dimension without coords must be 2 or 3)"
+            )
+
+    # Figure out the output dtype:
+    # output_dtype = np.cross(
+    #     np.empty((2, 2), dtype=arrays[0].dtype), np.empty((2, 2), dtype=arrays[1].dtype)
+    # ).dtype
+
+    return apply_ufunc(
+        np.cross,
+        *arrays,
+        # input_core_dims=[[spatial_dim], [spatial_dim]],
+        # output_core_dims=[[spatial_dim]],
+        dask="parallelized",
+        # output_dtypes=[output_dtype],
+    )
+
+
 def where(cond, x, y):
     """Return elements from `x` or `y` depending on `cond`.
 

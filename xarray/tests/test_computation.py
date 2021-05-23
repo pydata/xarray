@@ -1898,3 +1898,40 @@ def test_polyval(use_dask, use_datetime):
     da_pv = xr.polyval(da.x, coeffs)
 
     xr.testing.assert_allclose(da, da_pv.T)
+
+
+@pytest.mark.parametrize(
+    "a, b, ae, be",
+    [
+        [
+            xr.DataArray(np.array([1, 2, 3])),
+            xr.DataArray(np.array([4, 5, 6])),
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
+        ],
+        [
+            xr.DataArray(np.array([1, 2])),
+            xr.DataArray(np.array([4, 5, 6])),
+            np.array([1, 2]),
+            np.array([4, 5, 6]),
+        ],
+        [
+            xr.DataArray(
+                np.array([1, 2]),
+                dims=["ax"],
+                coords=dict(x=(["ax"], np.array(["x", "z"]))),
+            ),
+            xr.DataArray(
+                np.array([4, 5, 6]),
+                dims=["ax"],
+                coords=dict(x=(["ax"], np.array(["x", "y", "z"]))),
+            ),
+            np.array([1, 0, 2]),
+            np.array([4, 5, 6]),
+        ],
+    ],
+)
+def test_cross(a, b, ae, be):
+    expected = np.cross(ae, be)
+    actual = xr.cross(a, b)
+    xr.testing.assert_allclose(expected, actual)
