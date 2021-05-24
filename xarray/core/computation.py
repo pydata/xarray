@@ -1407,7 +1407,7 @@ def cross(a, b, dim):
 
     >>> a = xr.DataArray([1, 2, 3])
     >>> b = xr.DataArray([4, 5, 6])
-    >>> xr.cross(a, b)
+    >>> xr.cross(a, b, "dim_0")
     <xarray.DataArray (dim_0: 3)>
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
@@ -1417,7 +1417,7 @@ def cross(a, b, dim):
 
     >>> a = xr.DataArray([1, 2])
     >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b)
+    >>> xr.cross(a, b, "dim_0")
     <xarray.DataArray ()>
     array(-3)
 
@@ -1528,16 +1528,16 @@ def cross(a, b, dim):
     else:
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
-        ind = 1 if a.sizes[dim] > b.sizes[dim] else 0
+        i = 1 if a.sizes[dim] > b.sizes[dim] else 0
 
         if all([arr.coords for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
-            arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
-        elif arrays[ind].sizes[dim] > 1:
+            arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)
+        elif arrays[i].sizes[dim] > 1:
             # If the array doesn't have coords we can can only infer
             # that it is composite values if the size is 2:
-            arrays[ind] = arrays[ind].pad({dim: (0, 1)}, constant_values=0)
+            arrays[i] = arrays[i].pad({dim: (0, 1)}, constant_values=0)
         else:
             # Size is 1, then we do not know if the array is a constant or
             # composite value:

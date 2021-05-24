@@ -1908,7 +1908,7 @@ def test_polyval(use_dask, use_datetime):
             xr.DataArray(np.array([4, 5, 6])),
             np.array([1, 2, 3]),
             np.array([4, 5, 6]),
-            None,
+            "dim_0",
             -1,
         ],
         [
@@ -1916,7 +1916,7 @@ def test_polyval(use_dask, use_datetime):
             xr.DataArray(np.array([4, 5, 6])),
             np.array([1, 2]),
             np.array([4, 5, 6]),
-            None,
+            "dim_0",
             -1,
         ],
         [  # Test dim in the middle:
@@ -1956,7 +1956,7 @@ def test_polyval(use_dask, use_datetime):
             ),
             np.array([0, 0, 1]),
             np.array([4, 5, 6]),
-            None,
+            "cartesian",
             -1,
         ],
         [  # Test filling inbetween with coords:
@@ -1972,7 +1972,7 @@ def test_polyval(use_dask, use_datetime):
             ),
             np.array([1, 0, 2]),
             np.array([4, 5, 6]),
-            None,
+            "cartesian",
             -1,
         ],
     ],
