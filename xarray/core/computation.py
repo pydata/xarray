@@ -1550,7 +1550,7 @@ def cross(a, b, dim):
         np.cross,
         *arrays,
         input_core_dims=[[dim], [dim]],
-        output_core_dims=[[dim] if arrays[0].sizes[dim] == 3 else [[]]],
+        output_core_dims=[[dim] if arrays[0].sizes[dim] == 3 else []],
         dask="parallelized",
         output_dtypes=[
             np.cross(
