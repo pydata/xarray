@@ -1382,6 +1382,187 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
+def cross(a, b, dim):
+    """
+    Return the cross product of two (arrays of) vectors.
+
+    The cross product of `a` and `b` in :math:`R^3` is a vector perpendicular
+    to both `a` and `b`.  If `a` and `b` are arrays of vectors, the vectors
+    are defined by the last axis of `a` and `b` by default, and these axes
+    can have dimensions 2 or 3.  Where the dimension of either `a` or `b` is
+    2, the third component of the input vector is assumed to be zero and the
+    cross product calculated accordingly.  In cases where both input vectors
+    have dimension 2, the z-component of the cross product is returned.
+
+    Parameters
+    ----------
+    a, b : DataArray
+        something
+    dim : hashable or tuple of hashable
+        something
+
+    Examples
+    --------
+    Vector cross-product with 3 dimensions.
+
+    >>> a = xr.DataArray([1, 2, 3])
+    >>> b = xr.DataArray([4, 5, 6])
+    >>> xr.cross(a, b)
+    <xarray.DataArray (dim_0: 3)>
+    array([-3,  6, -3])
+    Dimensions without coordinates: dim_0
+
+    Vector cross-product with 2 dimensions, returns in the orthogonal
+    direction:
+
+    >>> a = xr.DataArray([1, 2])
+    >>> b = xr.DataArray([4, 5])
+    >>> xr.cross(a, b)
+    <xarray.DataArray ()>
+    array(-3)
+
+    Vector cross-product with 3 dimensions but zeros at the last axis
+    yields the same results as with 2 dimensions:
+
+    >>> a = xr.DataArray([1, 2, 0])
+    >>> b = xr.DataArray([4, 5, 0])
+    >>> xr.cross(a, b, "dim_0")
+    <xarray.DataArray (dim_0: 3)>
+    array([ 0,  0, -3])
+    Dimensions without coordinates: dim_0
+
+    One vector with dimension 2.
+
+    >>> a = xr.DataArray(
+    ...     [1, 2],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
+    ... )
+    >>> b = xr.DataArray(
+    ...     [4, 5, 6],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+    ... )
+    >>> xr.cross(a, b, "cartesian")
+    <xarray.DataArray (cartesian: 3)>
+    array([12, -6, -3])
+    Coordinates:
+      * cartesian  (cartesian) object 'x' 'y' 'z'
+
+    One vector with dimension 2 but coords in other positions.
+
+    >>> a = xr.DataArray(
+    ...     [1, 2],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
+    ... )
+    >>> b = xr.DataArray(
+    ...     [4, 5, 6],
+    ...     dims=["cartesian"],
+    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+    ... )
+    >>> xr.cross(a, b, "cartesian")
+    <xarray.DataArray (cartesian: 3)>
+    array([-10,   2,   5])
+    Coordinates:
+      * cartesian  (cartesian) object 'x' 'y' 'z'
+
+    Multiple vector cross-products. Note that the direction of the
+    cross product vector is defined by the right-hand rule.
+
+    >>> a = xr.DataArray(
+    ...     [[1, 2, 3], [4, 5, 6]],
+    ...     dims=("time", "cartesian"),
+    ...     coords=dict(
+    ...         time=(["time"], [0, 1]),
+    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
+    ...     ),
+    ... )
+    >>> b = xr.DataArray(
+    ...     [[4, 5, 6], [1, 2, 3]],
+    ...     dims=("time", "cartesian"),
+    ...     coords=dict(
+    ...         time=(["time"], [0, 1]),
+    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
+    ...     ),
+    ... )
+    >>> xr.cross(a, b, "cartesian")
+    <xarray.DataArray (time: 2, cartesian: 3)>
+    array([[-3,  6, -3],
+           [ 3, -6,  3]])
+    Coordinates:
+      * time       (time) int64 0 1
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
+
+    See Also
+    --------
+    numpy.cross : Corresponding numpy function
+    """
+    from .dataarray import DataArray
+
+    all_dims = []
+    arrays = [a, b]
+    for arr in arrays:
+        if not isinstance(arr, (DataArray)):
+            raise TypeError(
+                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
+            )
+
+        # TODO: Find spatial dim default by looking for unique
+        # (3 or 2)-valued dim?
+        if dim not in arr.dims:
+            raise ValueError(f"Dimension {dim} not in {arr}.")
+
+        s = arr.sizes[dim]
+        if s < 1 or s > 3:
+            raise ValueError(
+                "incompatible dimensions for cross product\n"
+                "(dimension with coords must be 1, 2 or 3)"
+            )
+
+        all_dims += [d for d in arr.dims if d not in all_dims]
+
+    if a.sizes[dim] == b.sizes[dim]:
+        # Arrays have the same size, no need to do anything:
+        pass
+    else:
+        # Arrays have different sizes. Append zeros where the smaller
+        # array is missing a value, zeros will not affect np.cross:
+        ind = 1 if a.sizes[dim] > b.sizes[dim] else 0
+
+        if all([arr.coords for arr in arrays]):
+            # If the arrays have coords we know which indexes to fill
+            # with zeros:
+            arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
+        elif arrays[ind].sizes[dim] > 1:
+            # If the array doesn't have coords we can can only infer
+            # that it is composite values if the size is 2:
+            arrays[ind] = arrays[ind].pad({dim: (0, 1)}, constant_values=0)
+        else:
+            # Size is 1, then we do not know if the array is a constant or
+            # composite value:
+            raise ValueError(
+                "incompatible dimensions for cross product\n"
+                "(dimension without coords must be 2 or 3)"
+            )
+
+    c = apply_ufunc(
+        np.cross,
+        *arrays,
+        input_core_dims=[[dim], [dim]],
+        output_core_dims=[[dim] if arrays[0].sizes[dim] == 3 else [[]]],
+        dask="parallelized",
+        output_dtypes=[
+            np.cross(
+                np.empty((2, 2), dtype=arrays[0].dtype),
+                np.empty((2, 2), dtype=arrays[1].dtype),
+            ).dtype
+        ],
+    )
+
+    return c.transpose(*[d for d in all_dims if d in c.dims])
+
+
 def dot(*arrays, dims=None, **kwargs):
     """Generalized dot product for xarray objects. Like np.einsum, but
     provides a simpler interface based on array dimensions.
@@ -1525,189 +1706,6 @@ def dot(*arrays, dims=None, **kwargs):
         dask="allowed",
     )
     return result.transpose(*[d for d in all_dims if d in result.dims])
-
-
-def cross(a, b, dim=None):
-    """
-    Return the cross product of two (arrays of) vectors.
-
-    The cross product of `a` and `b` in :math:`R^3` is a vector perpendicular
-    to both `a` and `b`.  If `a` and `b` are arrays of vectors, the vectors
-    are defined by the last axis of `a` and `b` by default, and these axes
-    can have dimensions 2 or 3.  Where the dimension of either `a` or `b` is
-    2, the third component of the input vector is assumed to be zero and the
-    cross product calculated accordingly.  In cases where both input vectors
-    have dimension 2, the z-component of the cross product is returned.
-
-    Parameters
-    ----------
-    a, b : DataArray
-        something
-    dim : hashable or tuple of hashable
-        something
-
-    Examples
-    --------
-    Vector cross-product with 3 dimensions.
-
-    >>> a = xr.DataArray([1, 2, 3])
-    >>> b = xr.DataArray([4, 5, 6])
-    >>> xr.cross(a, b)
-    <xarray.DataArray (dim_0: 3)>
-    array([-3,  6, -3])
-    Dimensions without coordinates: dim_0
-
-    Vector cross-product with 2 dimensions, returns in the orthogonal
-    direction:
-
-    >>> a = xr.DataArray([1, 2])
-    >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b)
-    <xarray.DataArray ()>
-    array(-3)
-
-    Vector cross-product with 3 dimensions but zeros at the last axis
-    yields the same results as with 2 dimensions:
-
-    >>> a = xr.DataArray([1, 2, 0])
-    >>> b = xr.DataArray([4, 5, 0])
-    >>> xr.cross(a, b)
-    <xarray.DataArray (dim_0: 3)>
-    array([ 0,  0, -3])
-    Dimensions without coordinates: dim_0
-
-    One vector with dimension 2.
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b)
-    <xarray.DataArray (cartesian: 3)>
-    array([12, -6, -3])
-    Coordinates:
-      * cartesian  (cartesian) object 'x' 'y' 'z'
-
-    One vector with dimension 2 but coords in other positions.
-
-    >>> a = xr.DataArray(
-    ...     [1, 2],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "z"])),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [4, 5, 6],
-    ...     dims=["cartesian"],
-    ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
-    ... )
-    >>> xr.cross(a, b)
-    <xarray.DataArray (cartesian: 3)>
-    array([-10,   2,   5])
-    Coordinates:
-      * cartesian  (cartesian) object 'x' 'y' 'z'
-
-    Multiple vector cross-products. Note that the direction of the
-    cross product vector is defined by the right-hand rule.
-
-    >>> a = xr.DataArray(
-    ...     [[1, 2, 3], [4, 5, 6]],
-    ...     dims=("time", "cartesian"),
-    ...     coords=dict(
-    ...         time=(["time"], [0, 1]),
-    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
-    ...     ),
-    ... )
-    >>> b = xr.DataArray(
-    ...     [[4, 5, 6], [1, 2, 3]],
-    ...     dims=("time", "cartesian"),
-    ...     coords=dict(
-    ...         time=(["time"], [0, 1]),
-    ...         cartesian=(["cartesian"], ["x", "y", "z"]),
-    ...     ),
-    ... )
-    >>> xr.cross(a, b)
-    <xarray.DataArray (time: 2, cartesian: 3)>
-    array([[-3,  6, -3],
-           [ 3, -6,  3]])
-    Coordinates:
-      * time       (time) int64 0 1
-      * cartesian  (cartesian) <U1 'x' 'y' 'z'
-
-    See Also
-    --------
-    numpy.cross : Corresponding numpy function
-    """
-    from .dataarray import DataArray
-
-    dims = []
-    arrays = [a, b]
-    for arr in arrays:
-        if not isinstance(arr, (DataArray)):
-            raise TypeError(
-                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
-            )
-
-        if dim is None:
-            # TODO: Find spatial dim default by looking for unique
-            # (3 or 2)-valued dim?
-            dims.append(arr.dims[-1])
-        elif dim in arr.dims:
-            dims.append(dim)
-        else:
-            raise ValueError(f"Dimension {dim} not in {arr}.")
-
-        s = arr.sizes[dims[-1]]
-        if s < 1 or s > 3:
-            raise ValueError(
-                "incompatible dimensions for cross product\n"
-                "(dimension with coords must be 1, 2 or 3)"
-            )
-
-    if a.sizes[dims[0]] == b.sizes[dims[1]]:
-        # Arrays have the same size, no need to do anything:
-        pass
-    else:
-        # Arrays have different sizes. Append zeros where the smaller
-        # array is missing a value, zeros will not affect np.cross:
-        ind = 1 if a.sizes[dims[0]] > b.sizes[dims[1]] else 0
-
-        if arrays[ind].coords:
-            # If the array has coords we know which indexes to fill
-            # with zeros:
-            arrays[ind] = arrays[ind].reindex_like(arrays[1 - ind], fill_value=0)
-        elif arrays[ind].sizes[dims[ind]] > 1:
-            # If the array doesn't have coords we can can only infer
-            # that it is composite values if the size is 2:
-            arrays[ind] = arrays[ind].pad({dims[ind]: (0, 1)}, constant_values=0)
-        else:
-            # Size is 1, then we do not know if the array is a constant or
-            # composite value:
-            raise ValueError(
-                "incompatible dimensions for cross product\n"
-                "(dimension without coords must be 2 or 3)"
-            )
-
-    c = apply_ufunc(
-        np.cross,
-        *arrays,
-        input_core_dims=[[dims[0]], [dims[1]]],
-        output_core_dims=[[dims[0]]] if arrays[0].sizes[dims[0]] == 3 else [[]],
-        dask="parallelized",
-        output_dtypes=[
-            np.cross(
-                np.empty((2, 2), dtype=arrays[0].dtype),
-                np.empty((2, 2), dtype=arrays[1].dtype),
-            ).dtype
-        ],
-    )
-
-    return c
 
 
 def where(cond, x, y):

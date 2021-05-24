@@ -1925,8 +1925,8 @@ def test_polyval(use_dask, use_datetime):
                 dims=["time", "cartesian", "var"],
                 coords=dict(
                     time=(["time"], np.arange(0, 5)),
-                    cartesian=(["cartesian"], np.array(["x", "y", "z"])),
-                    var=(["var"], np.array([1, 1.5, 2, 2.5])),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
                 ),
             ),
             xr.DataArray(
@@ -1934,8 +1934,8 @@ def test_polyval(use_dask, use_datetime):
                 dims=["time", "cartesian", "var"],
                 coords=dict(
                     time=(["time"], np.arange(0, 5)),
-                    cartesian=(["cartesian"], np.array(["x", "y", "z"])),
-                    var=(["var"], np.array([1, 1.5, 2, 2.5])),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
                 ),
             ),
             np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
@@ -1947,12 +1947,12 @@ def test_polyval(use_dask, use_datetime):
             xr.DataArray(
                 np.array([1]),
                 dims=["cartesian"],
-                coords=dict(cartesian=(["cartesian"], np.array(["z"]))),
+                coords=dict(cartesian=(["cartesian"], ["z"])),
             ),
             xr.DataArray(
                 np.array([4, 5, 6]),
                 dims=["cartesian"],
-                coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
             np.array([0, 0, 1]),
             np.array([4, 5, 6]),
@@ -1963,12 +1963,12 @@ def test_polyval(use_dask, use_datetime):
             xr.DataArray(
                 np.array([1, 2]),
                 dims=["cartesian"],
-                coords=dict(cartesian=(["cartesian"], np.array(["x", "z"]))),
+                coords=dict(cartesian=(["cartesian"], ["x", "z"])),
             ),
             xr.DataArray(
                 np.array([4, 5, 6]),
                 dims=["cartesian"],
-                coords=dict(cartesian=(["cartesian"], np.array(["x", "y", "z"]))),
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
             ),
             np.array([1, 0, 2]),
             np.array([4, 5, 6]),
