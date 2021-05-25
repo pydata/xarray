@@ -1550,6 +1550,7 @@ def cross(a, b, dim):
         output_core_dims=[[dim] if arrays[0].sizes[dim] == 3 else []],
         dask="parallelized",
         output_dtypes=[
+            # TODO: Is there a better way of figuring out the dtype?
             np.cross(
                 np.empty((2, 2), dtype=arrays[0].dtype),
                 np.empty((2, 2), dtype=arrays[1].dtype),
