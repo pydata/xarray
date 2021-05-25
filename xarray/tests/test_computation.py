@@ -1900,6 +1900,7 @@ def test_polyval(use_dask, use_datetime):
     xr.testing.assert_allclose(da, da_pv.T)
 
 
+@pytest.mark.parametrize("use_dask", [False, True])
 @pytest.mark.parametrize(
     "a, b, ae, be, dim, axis",
     [
@@ -1993,7 +1994,12 @@ def test_polyval(use_dask, use_datetime):
         ],
     ],
 )
-def test_cross(a, b, ae, be, dim, axis):
+def test_cross(a, b, ae, be, dim, axis, use_dask):
     expected = np.cross(ae, be, axis=axis)
     actual = xr.cross(a, b, dim=dim)
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+        actual = actual.chunk()
+
     xr.testing.assert_duckarray_allclose(expected, actual)
