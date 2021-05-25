@@ -1,4 +1,4 @@
-# How to issue an xarray release in 20 easy steps
+# How to issue an xarray release in 16 easy steps
 
 Time required: about an hour.
 
@@ -25,15 +25,11 @@ upstream        https://github.com/pydata/xarray (push)
      ```
  3. Add a list of contributors with:
     ```sh
-    git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
-    ```
-    or by substituting the _previous_ release in {0.X.Y-1}:
-    ```sh
-    git log v{0.X.Y-1}.. --format=%aN | sort -u | perl -pe 's/\n/$1, /'
+    git log "$(git tag --sort="v:refname" | tail -1).." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
     This will return the number of contributors:
     ```sh
-    git log v{0.X.Y-1}.. --format=%aN | sort -u | wc -l
+    git log $(git tag --sort="v:refname" | tail -1).. --format=%aN | sort -u | wc -l
     ```
  4. Write a release summary: ~50 words describing the high level features. This
     will be used in the release emails, tweets, GitHub release notes, etc.
@@ -57,51 +53,30 @@ upstream        https://github.com/pydata/xarray (push)
       pytest
       ```
  9. Check that the ReadTheDocs build is passing.
-10. Tag the release:
-      ```sh
-      git tag -a v{0.X.Y} -m 'v{0.X.Y}'
-      ```
-11. Ensure the dependencies for building are installed:
-      ```sh
-      pip install setuptools-scm twine wheel
-      ```
-12. Build source and binary wheels for PyPI:
-      ```sh
-      git clean -xdf  # This removes any untracked files!
-      git restore -SW .  # This removes any tracked changes!
-      python setup.py bdist_wheel sdist
-      ```
-13. Use twine to check the package build:
-      ```sh
-      twine check dist/xarray-{0.X.Y}*
-      ```
-14. Use twine to register and upload the release on PyPI. Be careful, you can't
-    take this back!
-      ```sh
-      twine upload dist/xarray-{0.X.Y}*
-      ```
-    You will need to be listed as a package owner at
-    <https://pypi.python.org/pypi/xarray> for this to work.
-15. Push your changes to master:
-      ```sh
-      git push upstream master
-      git push upstream --tags
-      ```
-16. Update the stable branch (used by ReadTheDocs) and switch back to master:
+10. Issue the release on GitHub. Click on "Draft a new release" at
+    <https://github.com/pydata/xarray/releases>. Type in the version number (with a "v")
+    and paste the release summary in the notes.
+11. This should automatically trigger an upload of the new build to PyPI via GitHub Actions.
+    Check this has run [here](https://github.com/pydata/xarray/actions/workflows/pypi-release.yaml),
+    and that the version number you expect is displayed [on PyPI](https://pypi.org/project/xarray/)
+12. Update the stable branch (used by ReadTheDocs) and switch back to master:
      ```sh
       git switch stable
       git rebase master
       git push --force upstream stable
       git switch master
      ```
+    You may need to first fetch it with `git fetch upstream`,
+    and check out a local version with `git checkout -b stable upstream/stable`.
+
     It's OK to force push to `stable` if necessary. (We also update the stable
     branch with `git cherry-pick` for documentation only fixes that apply the
     current released version.)
-17. Add a section for the next release {0.X.Y+1} to doc/whats-new.rst:
+13. Add a section for the next release {0.X.Y+1} to doc/whats-new.rst:
      ```rst
-     .. _whats-new.{0.X.Y+1}:
+     .. _whats-new.0.X.Y+1:
 
-     v{0.X.Y+1} (unreleased)
+     v0.X.Y+1 (unreleased)
      ---------------------
 
      New Features
@@ -128,19 +103,17 @@ upstream        https://github.com/pydata/xarray (push)
      ~~~~~~~~~~~~~~~~
 
      ```
-18. Commit your changes and push to master again:
+14. Commit your changes and push to master again:
       ```sh
       git commit -am 'New whatsnew section'
       git push upstream master
       ```
     You're done pushing to master!
-19. Issue the release on GitHub. Click on "Draft a new release" at
-    <https://github.com/pydata/xarray/releases>. Type in the version number
-    and paste the release summary in the notes.
-20. Update the docs. Login to <https://readthedocs.org/projects/xray/versions/>
+
+15. Update the docs. Login to <https://readthedocs.org/projects/xray/versions/>
     and switch your new release tag (at the bottom) from "Inactive" to "Active".
     It should now build automatically.
-21. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
+16. Issue the release announcement to mailing lists & Twitter. For bug fix releases, I
     usually only email xarray@googlegroups.com. For major/feature releases, I will email a broader
     list (no more than once every 3-6 months):
       - pydata@googlegroups.com
@@ -151,6 +124,7 @@ upstream        https://github.com/pydata/xarray (push)
 
     Google search will turn up examples of prior release announcements (look for
     "ANN xarray").
+    Some of these groups require you to be subscribed in order to email them.
 
 <!-- markdownlint-enable MD013 -->
 

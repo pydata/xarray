@@ -371,8 +371,6 @@ class CFTimeIndex(pd.Index):
         defining the index.  For example:
 
         >>> from cftime import DatetimeNoLeap
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
@@ -467,9 +465,14 @@ class CFTimeIndex(pd.Index):
         else:
             return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
 
-    def _maybe_cast_slice_bound(self, label, side, kind):
+    def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
-        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
+        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
+
+        Note that we have never used the kind argument in CFTimeIndex and it is
+        deprecated as of pandas version 1.3.0.  It exists only for compatibility
+        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
+        """
         if not isinstance(label, str):
             return label
 
@@ -619,7 +622,6 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],

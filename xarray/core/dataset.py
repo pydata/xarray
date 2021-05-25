@@ -4,7 +4,6 @@ import inspect
 import sys
 import warnings
 from collections import defaultdict
-from distutils.version import LooseVersion
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -84,7 +83,7 @@ from .utils import (
     Default,
     Frozen,
     HybridMappingProxy,
-    SortedKeysDict,
+    OrderedSet,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
@@ -666,7 +665,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     ... )
     >>> ds
     <xarray.Dataset>
-    Dimensions:         (time: 3, x: 2, y: 2)
+    Dimensions:         (x: 2, y: 2, time: 3)
     Coordinates:
         lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -815,7 +814,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
         properties.
         """
-        return Frozen(SortedKeysDict(self._dims))
+        return Frozen(self._dims)
 
     @property
     def sizes(self) -> Mapping[Hashable, int]:
@@ -1356,7 +1355,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if (var_name,) == var.dims:
                     indexes[var_name] = var._to_xindex()
 
-        needed_dims: Set[Hashable] = set()
+        needed_dims: OrderedSet[Hashable] = OrderedSet()
         for v in variables.values():
             needed_dims.update(v.dims)
 
@@ -2078,7 +2077,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                             "This can be fixed by calling unify_chunks()."
                         )
                     chunks[dim] = c
-        return Frozen(SortedKeysDict(chunks))
+        return Frozen(chunks)
 
     def chunk(
         self,
@@ -2744,8 +2743,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Create a dataset with some fictional data.
 
-        >>> import xarray as xr
-        >>> import pandas as pd
         >>> x = xr.Dataset(
         ...     {
         ...         "temperature": ("station", 20 * np.random.rand(4)),
@@ -4130,8 +4127,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     for v in self.variables.values()
                 )
                 or sparse
-                # numpy full_like only added `shape` in 1.17
-                or LooseVersion(np.__version__) < LooseVersion("1.17")
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
@@ -4507,21 +4502,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ----------
         drop_dims : hashable or iterable of hashable
             Dimension or dimensions to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the
             dimensions passed are not in the dataset. If 'ignore', any given
-            labels that are in the dataset are dropped and no error is raised.
+            dimensions that are in the dataset are dropped and no error is raised.
 
         Returns
         -------
         obj : Dataset
             The dataset without the given dimensions (or any variables
-            containing those dimensions)
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
-            any of the dimensions passed are not
-            in the dataset. If 'ignore', any given dimensions that are in the
-            dataset are dropped and no error is raised.
+            containing those dimensions).
         """
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
@@ -4666,8 +4656,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import xarray as xr
         >>> ds = xr.Dataset(
         ...     {
         ...         "A": ("x", [np.nan, 2, np.nan, 0]),
@@ -6493,7 +6481,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> # Create an example dataset:
         >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
@@ -6501,22 +6488,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         >>> dims = ["x", "y", "time"]
         >>> temp_attr = dict(standard_name="air_potential_temperature")
         >>> precip_attr = dict(standard_name="convective_precipitation_flux")
+
         >>> ds = xr.Dataset(
-        ...     {
-        ...         "temperature": (dims, temp, temp_attr),
-        ...         "precipitation": (dims, precip, precip_attr),
-        ...     },
-        ...     coords={
-        ...         "lon": (["x", "y"], lon),
-        ...         "lat": (["x", "y"], lat),
-        ...         "time": pd.date_range("2014-09-06", periods=3),
-        ...         "reference_time": pd.Timestamp("2014-09-05"),
-        ...     },
+        ...     dict(
+        ...         temperature=(dims, temp, temp_attr),
+        ...         precipitation=(dims, precip, precip_attr),
+        ...     ),
+        ...     coords=dict(
+        ...         lon=(["x", "y"], lon),
+        ...         lat=(["x", "y"], lat),
+        ...         time=pd.date_range("2014-09-06", periods=3),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
+        ...     ),
         ... )
-        >>> # Get variables matching a specific standard_name.
+
+        Get variables matching a specific standard_name:
+
         >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -6525,11 +6515,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
-        >>> # Get all variables that have a standard_name attribute.
+
+        Get all variables that have a standard_name attribute:
+
         >>> standard_name = lambda v: v is not None
         >>> ds.filter_by_attrs(standard_name=standard_name)
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59

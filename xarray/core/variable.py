@@ -4,7 +4,6 @@ import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
-from distutils.version import LooseVersion
 from typing import (
     Any,
     Dict,
@@ -1027,7 +1026,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         -------
         chunked : xarray.Variable
         """
-        import dask
         import dask.array as da
 
         if chunks is None:
@@ -1057,12 +1055,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = indexing.ImplicitToExplicitIndexingAdapter(
                     data, indexing.OuterIndexer
                 )
-                if LooseVersion(dask.__version__) < "2.0.0":
-                    kwargs = {}
-                else:
-                    # All of our lazily loaded backend array classes should use NumPy
-                    # array operations.
-                    kwargs = {"meta": np.ndarray}
+
+                # All of our lazily loaded backend array classes should use NumPy
+                # array operations.
+                kwargs = {"meta": np.ndarray}
             else:
                 kwargs = {}
 
@@ -1583,7 +1579,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         # Potentially we could replace `len(other_dims)` with just `-1`
         other_dims = [d for d in self.dims if d != dim]
-        new_shape = list(reordered.shape[: len(other_dims)]) + new_dim_sizes
+        new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         if fill_value is dtypes.NA:
@@ -1596,7 +1592,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             dtype = self.dtype
 
-        # Currently fails on sparse due to https://github.com/pydata/sparse/issues/422
         data = np.full_like(
             self.data,
             fill_value=fill_value,
@@ -1607,6 +1602,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # Indexer is a list of lists of locations. Each list is the locations
         # on the new dimension. This is robust to the data being sparse; in that
         # case the destinations will be NaN / zero.
+        # sparse doesn't support item assigment,
+        # https://github.com/pydata/sparse/issues/114
         data[(..., *indexer)] = reordered
 
         return self._replace(dims=new_dims, data=data)

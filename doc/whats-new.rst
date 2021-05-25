@@ -14,21 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.1:
+.. _whats-new.0.18.3:
 
-v0.18.1 (unreleased)
---------------------
+v0.18.3 (unreleased)
+---------------------
 
 New Features
 ~~~~~~~~~~~~
-- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
-  :py:func:`apply_ufunc` (:pull:`5041`)
-  By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
-  such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 - Allow assigning values to a subset of a dataset using positional or label-based
-  indexing (:issue:`3015`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+- Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,10 +37,70 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fix a minor incompatibility between partial datetime string indexing with a
+  :py:class:`CFTimeIndex` and upcoming pandas version 1.3.0 (:issue:`5356`,
+  :pull:`5359`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 
 Documentation
 ~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.0.18.2:
+
+v0.18.2 (19 May 2021)
+---------------------
+
+This release reverts a regression in xarray's unstacking of dask-backed arrays.
+
+.. _whats-new.0.18.1:
+
+v0.18.1 (18 May 2021)
+---------------------
+
+This release is intended as a small patch release to be compatible with the new
+2021.5.0 ``dask.distributed`` release. It also includes a new
+``drop_duplicates`` method, some documentation improvements, the beginnings of
+our internal Index refactoring, and some bug fixes.
+
+Thank you to all 16 contributors!
+
+Anderson Banihirwe, Andrew, Benoit Bovy, Brewster Malevich, Giacomo Caria,
+Illviljan, James Bourbeau, Keewis, Maximilian Roos, Ravin Kumar, Stephan Hoyer,
+Thomas Nicholas, Tom Nicholas, Zachary Moon.
+
+New Features
+~~~~~~~~~~~~
+
+- Implement :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5239`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
+- Allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+  :py:func:`apply_ufunc` (:pull:`5041`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
+  such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Raise more informative error when decoding time variables with invalid reference dates.
+  (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
+  an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
+  0.18.0.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+Documentation
+~~~~~~~~~~~~~
+- Clean up and enhance docstrings for the :py:class:`DataArray.plot` and ``Dataset.plot.*``
+  families of methods (:pull:`5285`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 
 - Explanation of deprecation cycles and how to implement them added to contributors
   guide. (:pull:`5289`)
@@ -56,7 +113,13 @@ Internal Changes
 - Explicit indexes refactor: add an ``xarray.Index`` base class and
   ``Dataset.xindexes`` / ``DataArray.xindexes`` properties. Also rename
   ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
-  ``xarray.Index`` (:pull:`5102`). By `Benoit Bovy <https://github.com/benbovy>`_.
+  ``xarray.Index`` (:pull:`5102`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Replace ``SortedKeysDict`` with python's ``dict``, given dicts are now ordered.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Updated the release guide for developers. Now accounts for actions that are automated via github
+  actions. (:pull:`5274`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.18.0:
 

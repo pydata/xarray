@@ -50,7 +50,7 @@ Bug reports must:
 
       ```python
       import xarray as xr
-      df = xr.Dataset(...)
+      ds = xr.Dataset(...)
 
       ...
       ```
@@ -58,8 +58,12 @@ Bug reports must:
 #. Include the full version string of *xarray* and its dependencies. You can use the
    built in function::
 
-      >>> import xarray as xr
-      >>> xr.show_versions()
+      ```python
+      import xarray as xr
+      xr.show_versions()
+
+      ...
+      ```
 
 #. Explain why the current behavior is wrong/not desired and what you expect instead.
 
@@ -93,7 +97,7 @@ Some great resources for learning Git:
 
 * the `GitHub help pages <http://help.github.com/>`_.
 * the `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_.
-* Matthew Brett's `Pydagogue <http://matthew-brett.github.com/pydagogue/>`_.
+* Matthew Brett's `Pydagogue <http://matthew-brett.github.io/pydagogue/>`_.
 
 Getting started with Git
 ------------------------

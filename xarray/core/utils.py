@@ -4,6 +4,7 @@ import contextlib
 import functools
 import io
 import itertools
+import os
 import re
 import warnings
 from enum import Enum
@@ -29,8 +30,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
-from . import dtypes
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -82,6 +81,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
+    from . import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -475,40 +475,6 @@ class HybridMappingProxy(Mapping[K, V]):
         return len(self._keys)
 
 
-class SortedKeysDict(MutableMapping[K, V]):
-    """An wrapper for dictionary-like objects that always iterates over its
-    items in sorted order by key but is otherwise equivalent to the underlying
-    mapping.
-    """
-
-    __slots__ = ("mapping",)
-
-    def __init__(self, mapping: MutableMapping[K, V] = None):
-        self.mapping = {} if mapping is None else mapping
-
-    def __getitem__(self, key: K) -> V:
-        return self.mapping[key]
-
-    def __setitem__(self, key: K, value: V) -> None:
-        self.mapping[key] = value
-
-    def __delitem__(self, key: K) -> None:
-        del self.mapping[key]
-
-    def __iter__(self) -> Iterator[K]:
-        # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore[type-var]
-
-    def __len__(self) -> int:
-        return len(self.mapping)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self.mapping
-
-    def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
-
-
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
@@ -646,7 +612,7 @@ def is_remote_uri(path: str) -> bool:
     return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
-def read_magic_number(filename_or_obj, count=8):
+def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
     if isinstance(filename_or_obj, bytes):
         magic_number = filename_or_obj[:count]
@@ -657,10 +623,33 @@ def read_magic_number(filename_or_obj, count=8):
                 "file-like object read/write pointer not at the start of the file, "
                 "please close and reopen, or use a context manager"
             )
-        magic_number = filename_or_obj.read(count)
+        magic_number = filename_or_obj.read(count)  # type: ignore
         filename_or_obj.seek(0)
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")
+    return magic_number
+
+
+def try_read_magic_number_from_path(pathlike, count=8) -> Optional[bytes]:
+    if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
+        path = os.fspath(pathlike)
+        try:
+            with open(path, "rb") as f:
+                return read_magic_number_from_file(f, count)
+        except (FileNotFoundError, TypeError):
+            pass
+    return None
+
+
+def try_read_magic_number_from_file_or_path(
+    filename_or_obj, count=8
+) -> Optional[bytes]:
+    magic_number = try_read_magic_number_from_path(filename_or_obj, count)
+    if magic_number is None:
+        try:
+            magic_number = read_magic_number_from_file(filename_or_obj, count)
+        except TypeError:
+            pass
     return magic_number
 
 
