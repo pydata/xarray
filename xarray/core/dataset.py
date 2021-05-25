@@ -561,6 +561,17 @@ class _LocIndexer:
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
+    def __setitem__(self, key, value) -> None:
+        if not utils.is_dict_like(key):
+            raise TypeError(
+                "can only set locations defined by dictionaries from Dataset.loc."
+                f" Got: {key}"
+            )
+
+        # set new values
+        pos_indexers, _ = remap_label_indexers(self.dataset, key)
+        self.dataset[pos_indexers] = value
+
 
 class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
@@ -1476,18 +1487,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
-    @overload
-    def __setitem__(self, key: List[Hashable], value) -> None:
-        ...
-
-    @overload
-    def __setitem__(self, key: Hashable, value) -> None:
-        ...
-
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
         the following operations is applied to the respective value.
+
+        If key is a dictionary, update all variables in the dataset
+        one by one with the given value at the given location.
+        If the given value is also a dataset, select corresponding variables
+        in the given value and in the dataset to be changed.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
@@ -1498,11 +1506,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variable.
         """
         if utils.is_dict_like(key):
-            raise NotImplementedError(
-                "cannot yet use a dictionary as a key to set Dataset values"
-            )
+            # check for consistency and convert value to dataset
+            value = self._setitem_check(key, value)
+            # loop over dataset variables and set new values
+            processed = []
+            for name, var in self.items():
+                try:
+                    var[key] = value[name]
+                    processed.append(name)
+                except Exception as e:
+                    if processed:
+                        raise RuntimeError(
+                            "An error occured while setting values of the"
+                            f" variable '{name}'. The following variables have"
+                            f" been successfully updated:\n{processed}"
+                        ) from e
+                    else:
+                        raise e
 
-        if isinstance(key, list):
+        elif isinstance(key, list):
             if len(key) == 0:
                 raise ValueError("Empty list of variables to be set")
             if len(key) == 1:
@@ -1523,6 +1545,69 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         else:
             self.update({key: value})
+
+    def _setitem_check(self, key, value):
+        """Consistency check for __setitem__
+
+        When assigning values to a subset of a Dataset, do consistency check beforehand
+        to avoid leaving the dataset in a partially updated state when an error occurs.
+        """
+        from .dataarray import DataArray
+
+        if isinstance(value, Dataset):
+            missing_vars = [
+                name for name in value.data_vars if name not in self.data_vars
+            ]
+            if missing_vars:
+                raise ValueError(
+                    f"Variables {missing_vars} in new values"
+                    f" not available in original dataset:\n{self}"
+                )
+        elif not any([isinstance(value, t) for t in [DataArray, Number, str]]):
+            raise TypeError(
+                "Dataset assignment only accepts DataArrays, Datasets, and scalars."
+            )
+
+        new_value = xr.Dataset()
+        for name, var in self.items():
+            # test indexing
+            try:
+                var_k = var[key]
+            except Exception as e:
+                raise ValueError(
+                    f"Variable '{name}': indexer {key} not available"
+                ) from e
+
+            if isinstance(value, Dataset):
+                val = value[name]
+            else:
+                val = value
+
+            if isinstance(val, DataArray):
+                # check consistency of dimensions
+                for dim in val.dims:
+                    if dim not in var_k.dims:
+                        raise KeyError(
+                            f"Variable '{name}': dimension '{dim}' appears in new values "
+                            f"but not in the indexed original data"
+                        )
+                dims = tuple([dim for dim in var_k.dims if dim in val.dims])
+                if dims != val.dims:
+                    raise ValueError(
+                        f"Variable '{name}': dimension order differs between"
+                        f" original and new data:\n{dims}\nvs.\n{val.dims}"
+                    )
+            else:
+                val = np.array(val)
+
+            # type conversion
+            new_value[name] = val.astype(var_k.dtype, copy=False)
+
+        # check consistency of dimension sizes and dimension coordinates
+        if isinstance(value, DataArray) or isinstance(value, Dataset):
+            xr.align(self[key], value, join="exact", copy=False)
+
+        return new_value
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""

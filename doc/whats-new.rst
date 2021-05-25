@@ -22,9 +22,10 @@ v0.18.3 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow assigning values to a subset of a dataset using positional or label-based
+  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
-
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -141,6 +142,7 @@ Xianxiang Li, Zeb Nicholls, crusaderky, dschwoerer, johnomotani, keewis
 
 New Features
 ~~~~~~~~~~~~
+
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
