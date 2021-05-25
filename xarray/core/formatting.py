@@ -258,12 +258,12 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "_repr_inline_"):
-        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
