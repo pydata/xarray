@@ -1503,7 +1503,7 @@ def cross(a, b, dim):
     all_dims = []
     arrays = [a, b]
     for arr in arrays:
-        if not isinstance(arr, (DataArray)):
+        if not isinstance(arr, (DataArray, Variable)):
             raise TypeError(
                 f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
             )
