@@ -1522,10 +1522,7 @@ def cross(a, b, dim):
 
         all_dims += [d for d in arr.dims if d not in all_dims]
 
-    if a.sizes[dim] == b.sizes[dim]:
-        # Arrays have the same size, no need to do anything:
-        pass
-    else:
+    if a.sizes[dim] != b.sizes[dim]:
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if a.sizes[dim] > b.sizes[dim] else 0
