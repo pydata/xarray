@@ -1552,7 +1552,7 @@ def cross(a, b, dim):
         dask="parallelized",
         # TODO: Is there a better way of figuring out the dtype?
         output_dtypes=[
-            np.cross(*[np.empty((2, 2), dtype=arr.dtype) for arr in arrays]).dtype
+            np.cross(*[np.empty(3, dtype=arr.dtype) for arr in arrays]).dtype
         ],
     )
 
