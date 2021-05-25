@@ -1527,7 +1527,7 @@ def cross(a, b, dim):
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if a.sizes[dim] > b.sizes[dim] else 0
 
-        if all([arr.coords for arr in arrays]):
+        if all([getattr(arr, "coords", False) for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)

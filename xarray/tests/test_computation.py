@@ -1919,6 +1919,22 @@ def test_polyval(use_dask, use_datetime):
             "dim_0",
             -1,
         ],
+        [
+            xr.Variable(dims=["dim_0"], data=np.array([1, 2, 3])),
+            xr.Variable(dims=["dim_0"], data=np.array([4, 5, 6])),
+            np.array([1, 2, 3]),
+            np.array([4, 5, 6]),
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.Variable(dims=["dim_0"], data=np.array([1, 2])),
+            xr.Variable(dims=["dim_0"], data=np.array([4, 5, 6])),
+            np.array([1, 2]),
+            np.array([4, 5, 6]),
+            "dim_0",
+            -1,
+        ],
         [  # Test dim in the middle:
             xr.DataArray(
                 np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
