@@ -1488,19 +1488,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
-    @overload
-    def __setitem__(self, key: List[Hashable], value) -> None:
-        ...
-
-    @overload
-    def __setitem__(self, key: Hashable, value) -> None:
-        ...
-
-    @overload
-    def __setitem__(self, key: Any, value) -> None:
-        ...
-
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
         the following operations is applied to the respective value.
