@@ -47,7 +47,7 @@ def test_cupy_import():
 def test_check_data_stays_on_gpu(toy_weather_data):
     """Perform some operations and check the data stays on the GPU."""
     freeze = (toy_weather_data["tmin"] <= 0).groupby("time.month").mean("time")
-    assert isinstance(freeze.data, cp.core.core.ndarray)
+    assert isinstance(freeze.data, cp.ndarray)
 
 
 def test_where():
