@@ -1396,10 +1396,10 @@ def cross(a, b, dim):
 
     Parameters
     ----------
-    a, b : DataArray
-        something
-    dim : hashable or tuple of hashable
-        something
+    a, b : DataArray or Variable
+        Components of the first and second vector(s).
+    dim : hashable
+        Dimension to calculate the cross product over.
 
     Examples
     --------
