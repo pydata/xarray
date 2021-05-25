@@ -1412,7 +1412,7 @@ def cross(a, b, dim):
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
 
-    Vector cross-product with 2 dimensions, returns in the orthogonal
+    Vector cross-product with 2 dimensions, returns in the perpendicular
     direction:
 
     >>> a = xr.DataArray([1, 2])
