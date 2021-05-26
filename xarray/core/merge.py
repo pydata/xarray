@@ -58,6 +58,8 @@ _VALID_COMPAT = Frozen(
 
 
 class Context:
+    """object carrying the information of a call"""
+
     def __init__(self, func):
         self.func = func
 
