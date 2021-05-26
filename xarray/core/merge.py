@@ -716,8 +716,8 @@ def merge(
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
 
-        If a callable, it must expect a sequence of ``attrs`` dicts as its only
-        parameter.
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
