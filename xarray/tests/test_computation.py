@@ -1000,6 +1000,7 @@ def arrays_w_tuples():
         (arrays[2], arrays[2]),
         (arrays[2], arrays[3]),
         (arrays[2], arrays[4]),
+        (arrays[4], arrays[2]),
         (arrays[3], arrays[3]),
     ]
 
