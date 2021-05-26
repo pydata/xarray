@@ -1002,6 +1002,7 @@ def arrays_w_tuples():
         (arrays[2], arrays[4]),
         (arrays[4], arrays[2]),
         (arrays[3], arrays[3]),
+        (arrays[4], arrays[4]),
     ]
 
     return arrays, array_tuples
@@ -1016,6 +1017,7 @@ def arrays_w_tuples():
         arrays_w_tuples()[1][5],
         arrays_w_tuples()[1][6],
         arrays_w_tuples()[1][7],
+        arrays_w_tuples()[1][8],
     ],
 )
 @pytest.mark.parametrize("dim", [None, "x", "time"])
