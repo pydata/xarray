@@ -1517,8 +1517,8 @@ def cross(a, b, dim):
         s = arr.sizes[dim]
         if s < 1 or s > 3:
             raise ValueError(
-                "incompatible dimensions for cross product\n"
-                "(dimension with coords must be 1, 2 or 3)"
+                "Incompatible dimensions for cross product,\n"
+                "dimension with coords must be 1, 2 or 3."
             )
 
         all_dims += [d for d in arr.dims if d not in all_dims]
@@ -1540,8 +1540,8 @@ def cross(a, b, dim):
             # Size is 1, then we do not know if the array is a constant or
             # composite value:
             raise ValueError(
-                "incompatible dimensions for cross product\n"
-                "(dimension without coords must be 2 or 3)"
+                "Incompatible dimensions for cross product,\n"
+                "dimension without coords must be 2 or 3."
             )
 
     c = apply_ufunc(
