@@ -4037,7 +4037,7 @@ class TestDataset:
         expected_ = ds.bar.to_series().resample("24H").mean()
         expected_.index += to_offset("-12H")
         expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
+        assert_allclose(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
