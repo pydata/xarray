@@ -1523,16 +1523,16 @@ def cross(a, b, dim):
 
         all_dims += [d for d in arr.dims if d not in all_dims]
 
-    if a.sizes[dim] != b.sizes[dim]:
+    if arrays[0].sizes[dim] != arrays[1].sizes[dim]:
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
-        i = 1 if a.sizes[dim] > b.sizes[dim] else 0
+        i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
 
         if all([getattr(arr, "coords", False) for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)
-        elif arrays[i].sizes[dim] > 1:
+        elif arrays[i].sizes[dim] == 2:
             # If the array doesn't have coords we can can only infer
             # that it is composite values if the size is 2:
             arrays[i] = arrays[i].pad({dim: (0, 1)}, constant_values=0)
