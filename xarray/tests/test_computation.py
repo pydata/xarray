@@ -990,6 +990,7 @@ def arrays_w_tuples():
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
+        xr.DataArray([[1, 2], [2, 1]], dims=["x", "time"]),
     ]
 
     array_tuples = [
@@ -998,6 +999,7 @@ def arrays_w_tuples():
         (arrays[1], arrays[1]),
         (arrays[2], arrays[2]),
         (arrays[2], arrays[3]),
+        (arrays[2], arrays[4]),
         (arrays[3], arrays[3]),
     ]
 
@@ -1007,7 +1009,12 @@ def arrays_w_tuples():
 @pytest.mark.parametrize("ddof", [0, 1])
 @pytest.mark.parametrize(
     "da_a, da_b",
-    [arrays_w_tuples()[1][3], arrays_w_tuples()[1][4], arrays_w_tuples()[1][5]],
+    [
+        arrays_w_tuples()[1][3],
+        arrays_w_tuples()[1][4],
+        arrays_w_tuples()[1][5],
+        arrays_w_tuples()[1][6],
+    ],
 )
 @pytest.mark.parametrize("dim", [None, "x", "time"])
 def test_lazy_corrcov(da_a, da_b, dim, ddof):
