@@ -22,7 +22,7 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from . import has_dask, requires_dask
+from . import has_dask, raise_if_dask_computes, requires_dask
 
 dask = pytest.importorskip("dask")
 
@@ -1002,6 +1002,24 @@ def arrays_w_tuples():
     ]
 
     return arrays, array_tuples
+
+
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [arrays_w_tuples()[1][3], arrays_w_tuples()[1][4], arrays_w_tuples()[1][5]],
+)
+@pytest.mark.parametrize("dim", [None, "x", "time"])
+def test_lazy_corrcov(da_a, da_b, dim, ddof):
+    # GH 5284
+    from dask import is_dask_collection
+
+    with raise_if_dask_computes():
+        cov = xr.cov(da_a.chunk(), da_b.chunk(), dim=dim, ddof=ddof)
+        assert is_dask_collection(cov)
+
+        corr = xr.corr(da_a.chunk(), da_b.chunk(), dim=dim)
+        assert is_dask_collection(corr)
 
 
 @pytest.mark.parametrize("ddof", [0, 1])
