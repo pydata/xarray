@@ -1372,7 +1372,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 3. Detrend along the given dim
     # https://github.com/pydata/xarray/issues/4804#issuecomment-760114285
-    demeaned_da_ab = (da_a * da_b).mean(dim=dim) - da_a.mean(dim=dim) * da_b.mean(dim=dim)
+    demeaned_da_ab = (da_a * da_b).mean(dim=dim) - da_a.mean(dim=dim) * da_b.mean(
+        dim=dim
+    )
 
     # 4. Compute covariance along the given dim
     # N.B. `skipna=False` is required or there is a bug when computing
