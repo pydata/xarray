@@ -824,6 +824,15 @@ def test_encode_cf_datetime_overflow(shape):
     np.testing.assert_array_equal(dates, roundtrip)
 
 
+def test_encode_expected_failures():
+
+    dates = pd.date_range("2000", periods=3)
+    with pytest.raises(ValueError, match="invalid time units"):
+        encode_cf_datetime(dates, units="days after 2000-01-01")
+    with pytest.raises(ValueError, match="invalid reference date"):
+        encode_cf_datetime(dates, units="days since NO_YEAR")
+
+
 def test_encode_cf_datetime_pandas_min():
     # GH 2623
     dates = pd.date_range("2000", periods=3)

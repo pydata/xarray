@@ -255,7 +255,7 @@ def format_times(
         indent = first_row_offset if row == 0 else offset
         row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
         times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
-        representation = representation + format_row(
+        representation += format_row(
             times_for_row, indent=indent, separator=separator, row_end=row_end
         )
 
@@ -268,8 +268,9 @@ def format_attrs(index, separator=", "):
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
+        "freq": f"'{index.freq}'" if len(index) >= 3 else None,
     }
-    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
+
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
@@ -350,14 +351,13 @@ class CFTimeIndex(pd.Index):
         attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
         full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
-        if len(full_repr_str) <= display_width:
-            return full_repr_str
-        else:
+        if len(full_repr_str) > display_width:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
                 attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
             full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
-            return full_repr_str
+
+        return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
@@ -371,8 +371,6 @@ class CFTimeIndex(pd.Index):
         defining the index.  For example:
 
         >>> from cftime import DatetimeNoLeap
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
@@ -467,17 +465,22 @@ class CFTimeIndex(pd.Index):
         else:
             return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
 
-    def _maybe_cast_slice_bound(self, label, side, kind):
+    def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
-        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
-        if isinstance(label, str):
-            parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
-            start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
-            if self.is_monotonic_decreasing and len(self) > 1:
-                return end if side == "left" else start
-            return start if side == "left" else end
-        else:
+        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
+
+        Note that we have never used the kind argument in CFTimeIndex and it is
+        deprecated as of pandas version 1.3.0.  It exists only for compatibility
+        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
+        """
+        if not isinstance(label, str):
             return label
+
+        parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
+        start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
+        if self.is_monotonic_decreasing and len(self) > 1:
+            return end if side == "left" else start
+        return start if side == "left" else end
 
     # TODO: Add ability to use integer range outside of iloc?
     # e.g. series[1:5].
@@ -619,7 +622,6 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
