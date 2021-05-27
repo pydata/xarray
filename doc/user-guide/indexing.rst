@@ -551,10 +551,9 @@ You can also assign values in all variables of a ``Dataset`` at once:
     ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
 
     # dataset as new values
-    ds.loc[dict(longitude=48, level=200, latitude=[11.25, 12])]["u"]
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = ds.loc[
-        dict(longitude=48.0, level=200, latitude=[11.25, 12])
-    ]
+    new_dat = ds.loc[dict(longitude=48, level=200, latitude=[11.25, 12])]["u"]
+    new_dat
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = new_dat
     ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
 
 The dimensions can differ between the variables in the dataset, but all variables need to possess at least the dimensions specified in the indexer dictionary.
