@@ -1514,8 +1514,7 @@ def cross(a, b, dim):
         if dim not in arr.dims:
             raise ValueError(f"Dimension {dim} not in {arr}.")
 
-        s = arr.sizes[dim]
-        if s < 1 or s > 3:
+        if not 1 <= arr.sizes[dim] <= 3:
             raise ValueError(
                 "Incompatible dimensions for cross product,\n"
                 "dimension with coords must be 1, 2 or 3."
