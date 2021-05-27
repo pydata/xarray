@@ -21,11 +21,14 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
 - Allow assigning values to a subset of a dataset using positional or label-based
   indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
+  values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
