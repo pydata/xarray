@@ -538,13 +538,18 @@ You can also assign values in all variables of a ``Dataset`` at once:
 .. ipython:: python
 
     ds = xr.tutorial.open_dataset("eraint_uvz")
+    ds
+
     # by integer
+    ds[dict(longitude=10, latitude=10)]["u"]
     ds[dict(longitude=10, latitude=10)] = 1
     ds[dict(longitude=10, latitude=10)]["u"]
-    ds[dict(longitude=10, latitude=10)]["v"]
+
     # by label
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
     ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = 100
     ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
+
     # dataset as new values
     ds.loc[dict(longitude=48, level=200, latitude=[11.25, 12])]["u"]
     ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = ds.loc[
