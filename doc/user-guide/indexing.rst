@@ -540,12 +540,17 @@ You can also assign values in all variables of a ``Dataset`` at once:
     ds = xr.tutorial.open_dataset("eraint_uvz")
     # by integer
     ds[dict(longitude=10, latitude=10)] = 1
+    ds[dict(longitude=10, latitude=10)]["u"]
+    ds[dict(longitude=10, latitude=10)]["v"]
     # by label
-    ds.loc[dict(longitude=47.25, latitude=[11.25, 12])] = 100
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = 100
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
     # dataset as new values
-    ds.loc[dict(longitude=47.25, latitude=[11.25, 12])] = ds.loc[
-        dict(longitude=48.0, latitude=[11.25, 12])
+    ds.loc[dict(longitude=48, level=200, latitude=[11.25, 12])]["u"]
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = ds.loc[
+        dict(longitude=48.0, level=200, latitude=[11.25, 12])
     ]
+    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
 
 The dimensions can differ between the variables in the dataset, but all variables need to possess at least the dimensions specified in the indexer dictionary.
 The new values must be either a scalar, a ``DataArray`` or a ``Dataset`` itself that contains all variables that also appear in the dataset to be modified.
