@@ -28,7 +28,7 @@ New Features
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
-  
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
