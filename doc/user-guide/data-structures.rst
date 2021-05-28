@@ -310,12 +310,12 @@ in the dictionary:
 
 .. ipython:: python
 
-    xr.Dataset({"bar": foo})
+    xr.Dataset(dict(bar=foo))
 
 
 .. ipython:: python
 
-    xr.Dataset({"bar": foo.to_pandas()})
+    xr.Dataset(dict(bar=foo.to_pandas()))
 
 Where a pandas object is supplied as a value, the names of its indexes are used as dimension
 names, and its data is aligned to any existing dimensions.

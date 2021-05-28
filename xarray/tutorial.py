@@ -36,6 +36,39 @@ external_rasterio_urls = {
     "RGB.byte": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
     "shade": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/shade.tif",
 }
+file_formats = {
+    "air_temperature": 3,
+    "rasm": 3,
+    "ROMS_example": 4,
+    "tiny": 3,
+    "eraint_uvz": 3,
+}
+
+
+def _check_netcdf_engine_installed(name):
+    version = file_formats.get(name)
+    if version == 3:
+        try:
+            import scipy  # noqa
+        except ImportError:
+            try:
+                import netCDF4  # noqa
+            except ImportError:
+                raise ImportError(
+                    f"opening tutorial dataset {name} requires either scipy or "
+                    "netCDF4 to be installed."
+                )
+    if version == 4:
+        try:
+            import h5netcdf  # noqa
+        except ImportError:
+            try:
+                import netCDF4  # noqa
+            except ImportError:
+                raise ImportError(
+                    f"opening tutorial dataset {name} requires either h5netcdf "
+                    "or netCDF4 to be installed."
+                )
 
 
 # idea borrowed from Seaborn
@@ -43,6 +76,8 @@ def open_dataset(
     name,
     cache=True,
     cache_dir=None,
+    *,
+    engine=None,
     **kws,
 ):
     """
@@ -94,13 +129,18 @@ def open_dataset(
         if not path.suffix:
             # process the name
             default_extension = ".nc"
+            if engine is None:
+                _check_netcdf_engine_installed(name)
             path = path.with_suffix(default_extension)
+        elif path.suffix == ".grib":
+            if engine is None:
+                engine = "cfgrib"
 
         url = f"{base_url}/raw/{version}/{path.name}"
 
     # retrieve the file
     filepath = pooch.retrieve(url=url, known_hash=None, path=cache_dir)
-    ds = _open_dataset(filepath, **kws)
+    ds = _open_dataset(filepath, engine=engine, **kws)
     if not cache:
         ds = ds.load()
         pathlib.Path(filepath).unlink()

@@ -2218,12 +2218,10 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
-    def test_stack_nonunique_consistency(self):
-        orig = DataArray(
-            [[0, 1], [2, 3]], dims=["x", "y"], coords={"x": [0, 1], "y": [0, 0]}
-        )
-        actual = orig.stack(z=["x", "y"])
-        expected = DataArray(orig.to_pandas().stack(), dims="z")
+    def test_stack_nonunique_consistency(self, da):
+        da = da.isel(time=0, drop=True)  # 2D
+        actual = da.stack(z=["a", "x"])
+        expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self):
@@ -6482,19 +6480,6 @@ def da(request, backend):
         raise ValueError
 
 
-@pytest.fixture
-def da_dask(seed=123):
-    # TODO: if possible, use the `da` fixture parameterized with backends rather than
-    # this.
-    pytest.importorskip("dask.array")
-    rs = np.random.RandomState(seed)
-    times = pd.date_range("2000-01-01", freq="1D", periods=21)
-    values = rs.normal(size=(1, 21, 1))
-    da = DataArray(values, dims=("a", "time", "x")).chunk({"time": 7})
-    da["time"] = times
-    return da
-
-
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da):
     expected = DataArray(
@@ -6710,17 +6695,16 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
-def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
+@pytest.mark.parametrize("backend", ["dask"], indirect=True)
+def test_rolling_wrapped_dask(da, name, center, min_periods, window):
     # dask version
-    rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
     if name != "count":
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = da_dask.load().rolling(
-        time=window, min_periods=min_periods, center=center
-    )
+    rolling_obj = da.load().rolling(time=window, min_periods=min_periods, center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
@@ -6728,7 +6712,7 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     assert_allclose(actual, expected)
 
     # with zero chunked array GH:2113
-    rolling_obj = da_dask.chunk().rolling(
+    rolling_obj = da.chunk().rolling(
         time=window, min_periods=min_periods, center=center
     )
     actual = getattr(rolling_obj, name)().load()
