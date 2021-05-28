@@ -35,6 +35,7 @@ from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates  # noqa
+    from .dataarray import DataArray
     from .dataset import Dataset
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
@@ -1382,7 +1383,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(a, b, dim):
+def cross(
+    a: Union["DataArray", "Variable"], b: Union["DataArray", "Variable"], dim: Hashable
+) -> Union["DataArray", "Variable"]:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1499,16 +1502,9 @@ def cross(a, b, dim):
     --------
     numpy.cross : Corresponding numpy function
     """
-    from .dataarray import DataArray
-
     all_dims = []
     arrays = [a, b]
     for arr in arrays:
-        if not isinstance(arr, (DataArray, Variable)):
-            raise TypeError(
-                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
-            )
-
         # TODO: Find spatial dim default by looking for unique
         # (3 or 2)-valued dim?
         if dim not in arr.dims:
