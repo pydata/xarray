@@ -35,7 +35,6 @@ from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates  # noqa
-    from .dataarray import DataArray
     from .dataset import Dataset
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
