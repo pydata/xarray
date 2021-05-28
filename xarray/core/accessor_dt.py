@@ -52,6 +52,8 @@ def _access_through_series(values, name):
         # isocalendar returns iso- year, week, and weekday -> reshape
         field_values = np.array(values_as_series.dt.isocalendar(), dtype=np.int64)
         return field_values.T.reshape(3, *values.shape)
+    elif name == "to_pytimedelta":
+        field_values = getattr(values_as_series.dt, name)()
     else:
         field_values = getattr(values_as_series.dt, name).values
     return field_values.reshape(values.shape)
@@ -508,6 +510,14 @@ class TimedeltaAccessor(Properties):
         "Number of nanoseconds (>= 0 and less than 1 microsecond) for each element.",
         np.int64,
     )
+
+    @property
+    def to_pytimedelta(self):
+        """Timedelta values as python timedelta objects."""
+        result = _get_date_field(self._obj.data, "to_pytimedelta", object)
+        new_obj = self._obj.copy()
+        new_obj.variable._data = result
+        return new_obj
 
 
 class CombinedDatetimelikeAccessor(DatetimeAccessor, TimedeltaAccessor):
