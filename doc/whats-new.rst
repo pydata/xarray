@@ -44,6 +44,9 @@ Bug fixes
   :py:class:`CFTimeIndex` and upcoming pandas version 1.3.0 (:issue:`5356`,
   :pull:`5359`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
+  :pull:`5385`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 
 Documentation
