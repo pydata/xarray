@@ -4947,15 +4947,16 @@ class TestDataset:
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
         data2 = create_test_data(seed=44)
-        add_vars = {"var4": ["dim1", "dim2"]}
+        add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.dims[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
-        assert "var4" not in data1.mean()
+        assert all(var not in data1.mean() for var in add_vars)
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
+        assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
