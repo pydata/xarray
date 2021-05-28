@@ -1383,7 +1383,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(a, b, dim: Hashable) -> Union["DataArray", "Variable"]:
+def cross(a, b, dim):
     """
     Return the cross product of two (arrays of) vectors.
 
