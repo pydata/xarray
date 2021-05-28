@@ -1383,9 +1383,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(
-    a: Union["DataArray", "Variable"], b: Union["DataArray", "Variable"], dim: Hashable
-) -> Union["DataArray", "Variable"]:
+def cross(a, b, dim: Hashable) -> Union["DataArray", "Variable"]:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1505,6 +1503,11 @@ def cross(
     all_dims = []
     arrays = [a, b]
     for arr in arrays:
+        if not isinstance(arr, (DataArray, Variable)):
+            raise TypeError(
+                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
+            )
+
         # TODO: Find spatial dim default by looking for unique
         # (3 or 2)-valued dim?
         if dim not in arr.dims:
