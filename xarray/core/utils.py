@@ -107,6 +107,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
         index = array
     elif hasattr(array, "to_index"):
         index = array.to_index()
+    elif hasattr(array, "to_pandas_index"):
+        index = array.to_pandas_index()
     else:
         kwargs = {}
         if hasattr(array, "dtype") and array.dtype.kind == "O":
