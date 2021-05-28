@@ -51,6 +51,9 @@ class TestPandasMultiIndex:
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
         )
+        # test tuples inside slice are considered as scalar indexer values
+        assert index.query({"x": slice(("a", 1), ("b", 2))}) == (slice(0, 4), None)
+
         with pytest.raises(KeyError, match=r"not all values found"):
             index.query({"x": [0]})
         with pytest.raises(KeyError):

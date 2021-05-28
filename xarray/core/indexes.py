@@ -69,14 +69,15 @@ def _sanitize_slice_element(x):
     from .dataarray import DataArray
     from .variable import Variable
 
+    if not isinstance(x, tuple) and len(np.shape(x)) != 0:
+        raise ValueError(
+            f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
+        )
+
     if isinstance(x, (Variable, DataArray)):
         x = x.values
 
     if isinstance(x, np.ndarray):
-        if x.ndim != 0:
-            raise ValueError(
-                f"cannot use non-scalar arrays in a slice for xarray indexing: {x}"
-            )
         x = x[()]
 
     return x
