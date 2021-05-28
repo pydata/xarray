@@ -6,6 +6,7 @@ Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
     Dataset.plot._____
 """
+from distutils.version import LooseVersion
 import functools
 
 import numpy as np
@@ -675,6 +676,8 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
+    plt = import_matplotlib_pyplot()
+
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -709,7 +712,11 @@ def scatter(
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
         # Using 30, 30 minimizes rotation of the plot. Making it easier to
         # build on your intuition from 2D plots:
-        ax.view_init(azim=30, elev=30)
+        if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+            ax.view_init(azim=30, elev=30)
+        else:
+            # https://github.com/matplotlib/matplotlib/pull/19873
+            ax.view_init(azim=30, elev=30, vertical_axis="y")
     else:
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
@@ -759,10 +766,17 @@ def scatter(
     if _data["size"] is not None:
         kwargs.update(s=_data["size"].values.ravel())
 
-    # Plot the data. 3d plots has the z value in upward direction
-    # instead of y. To make jumping between 2d and 3d easy and intuitive
-    # switch the order so that z is shown in the depthwise direction:
-    axis_order = ["x", "z", "y"]
+    if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        axis_order = ["x", "z", "y"]
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        axis_order = ["x", "y", "z"]
+
     primitive = ax.scatter(
         *[
             _data[v].values.ravel()
