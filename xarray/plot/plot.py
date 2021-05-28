@@ -9,9 +9,8 @@ Or use the methods on a DataArray or Dataset:
 import functools
 
 import numpy as np
-import pandas as pd
 
-from .facetgrid import _easy_facetgrid
+from .facetgrid import FacetGrid, _easy_facetgrid
 from .utils import (
     _add_colorbar,
     _assert_valid_xy,
@@ -379,6 +378,9 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
 
 def hist(
     darray,
+    row=None,
+    col=None,
+    col_wrap=None,
     figsize=None,
     size=None,
     aspect=None,
@@ -391,6 +393,9 @@ def hist(
     yticks=None,
     xlim=None,
     ylim=None,
+    bins=None,
+    weights=None,
+    density=False,
     **kwargs,
 ):
     """
@@ -398,12 +403,15 @@ def hist(
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
-    Plots *N*-dimensional arrays by first flattening the array.
+    Plots *N*-dimensional arrays by first flattening the array and calculating
+    the histogram via :py:func:`DataArray.hist`.
 
     Parameters
     ----------
     darray : DataArray
-        Can have any number of dimensions.
+        Can have any number of dimensions, but will be reduced to 1 dimension
+        by the histogram calculation before plotting (faceted plots will retain
+        more dimensions).
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -416,16 +424,50 @@ def hist(
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
+    bins :  int or array_like or a list of ints or arrays, or list of DataArrays, optional
+        See :py:func:DataArray.hist
+    weights : array_like, optional
+        See :py:func:DataArray.hist
+    density : bool, optional
+        See :py:func:DataArray.hist
     **kwargs : optional
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     """
+
+    # compute the dims to count over
+    reduce_dims = set(darray.dims) - set([row, col])
+
+    # Handle facetgrids first
+    if row or col:
+        allargs = locals().copy()
+        allargs.update(allargs.pop("kwargs"))
+        allargs.pop("darray")
+
+        g = FacetGrid(
+            data=darray,
+            col=col,
+            row=row,
+            col_wrap=col_wrap,
+            sharex=False,
+            sharey=False,
+            figsize=figsize,
+            aspect=aspect,
+            size=size,
+            subplot_kws=kwargs,
+        )
+
+        return g.map(hist, **kwargs)
+
     ax = get_axis(figsize, size, aspect, ax)
 
-    no_nan = np.ravel(darray.values)
-    no_nan = no_nan[pd.notnull(no_nan)]
+    h = darray.hist(bins=bins, dim=reduce_dims, weights=weights, density=density)
+    counts = h.values
+    bins = h.coords[f"{darray.name}_bins"].values
 
-    primitive = ax.hist(no_nan, **kwargs)
+    # Use the weights kwarg to avoid recomputing histogram in matplotlib
+    # (see matplotlib.pyplot.hist docstring)
+    primitive = ax.hist(bins[:-1], weights=counts, **kwargs)
 
     ax.set_title("Histogram")
     ax.set_xlabel(label_from_attrs(darray))
