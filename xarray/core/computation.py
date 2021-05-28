@@ -1500,6 +1500,8 @@ def cross(a, b, dim: Hashable) -> Union["DataArray", "Variable"]:
     --------
     numpy.cross : Corresponding numpy function
     """
+    from .dataarray import DataArray
+
     all_dims = []
     arrays = [a, b]
     for arr in arrays:
