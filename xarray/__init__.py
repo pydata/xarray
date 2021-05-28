@@ -18,7 +18,7 @@ from .conventions import SerializationWarning, decode_cf
 from .core.alignment import align, broadcast
 from .core.combine import combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
-from .core.computation import apply_ufunc, corr, cov, dot, polyval, where
+from .core.computation import apply_ufunc, corr, cov, dot, hist, polyval, where
 from .core.concat import concat
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
@@ -57,7 +57,7 @@ __all__ = (
     "cov",
     "corr",
     "full_like",
-    "infer_freq",
+    "hist" "infer_freq",
     "load_dataarray",
     "load_dataset",
     "map_blocks",

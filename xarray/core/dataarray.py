@@ -4599,6 +4599,83 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
 
+    def hist(self, dim=None, bins=None, weights=None, density=False):
+        """
+        Histogram applied along specified dimensions.
+
+        If the supplied arguments are chunked dask arrays it will use
+        `dask.array.blockwise` internally to parallelize over all chunks.
+
+        dim : tuple of strings, optional
+            Dimensions over which which the histogram is computed. The default is to
+            compute the histogram of the flattened array. i.e. over all dimensions.
+        bins :  int or array_like or a list of ints or arrays, or list of DataArrays, optional
+            If a list, there should be one entry for each item in ``args``.
+            The bin specification:
+
+              * If int, the number of bins for all arguments in ``args``.
+              * If array_like, the bin edges for all arguments in ``args``.
+              * If a list of ints, the number of bins  for every argument in ``args``.
+              * If a list arrays, the bin edges for each argument in ``args``
+                (required format for Dask inputs).
+              * A combination [int, array] or [array, int], where int
+                is the number of bins and array is the bin edges.
+              * If a list of DataArrays, the bins for each argument in ``args``
+                The DataArrays can be multidimensional, but must not have any
+                dimensions shared with the `dim` argument.
+
+            When bin edges are specified, all but the last (righthand-most) bin include
+            the left edge and exclude the right edge. The last bin includes both edges.
+
+            A ``TypeError`` will be raised if ``args`` contains dask arrays and
+            ``bins`` are not specified explicitly as a list of arrays.
+        weights : array_like, optional
+            An array of weights, of the same shape as `a`.  Each value in
+            `a` only contributes its associated weight towards the bin count
+            (instead of 1). If `density` is True, the weights are
+            normalized, so that the integral of the density over the range
+            remains 1. NaNs in the weights input will fill the entire bin with
+            NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
+            before running ``hist()``.
+        density : bool, optional
+            If ``False``, the result will contain the number of samples in
+            each bin. If ``True``, the result is the value of the
+            probability *density* function at the bin, normalized such that
+            the *integral* over the range is 1. Note that the sum of the
+            histogram values will not be equal to 1 unless bins of unit
+            width are chosen; it is not a probability *mass* function.
+
+        Returns
+        -------
+        hist : xarray.DataArray
+            A single dataarray which contains the values of the histogram. See
+            `density` and `weights` for a description of the possible semantics.
+
+            The returned dataarray will have one additional coordinate for each
+            dataarray supplied, named as `var_bins`, which contains the positions
+            of the centres of each bin.
+
+        Examples
+        --------
+
+        See Also
+        --------
+        xarray.hist
+        DataArray.hist
+        numpy.histogramdd
+        dask.array.blockwise
+        """
+
+        from .computation import hist
+
+        return hist(
+            [self],
+            dim=dim,
+            bins=bins,
+            weights=weights,
+            density=density,
+        )
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = utils.UncachedAccessor(StringAccessor)
