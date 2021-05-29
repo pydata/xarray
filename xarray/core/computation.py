@@ -1726,7 +1726,7 @@ def _calc_idxminmax(
     return res
 
 
-def hist(*datarrays, bins=None, dim=None, weights=None, density=False):
+def hist(*datarrays, dim=None, bins=None, weights=None, density=False):
     """
     Histogram applied along specified dimensions.
 

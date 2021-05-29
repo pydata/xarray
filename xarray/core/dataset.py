@@ -7628,17 +7628,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return result
 
-    def hist(self, vars=None, dim=None, bins=None, weights=None, density=False):
+    def hist(self, dim=None, bins=None, weights=None, density=False):
         """
-        Histogram applied along specified dimensions.
+        Histogram applied along specified dimensions. Will create a N-dimensional
+        histogram, where N is the number of variables in the dataset.
 
         If the supplied arguments are chunked dask arrays it will use
         `dask.array.blockwise` internally to parallelize over all chunks.
 
-        vars : list of str
-            Variables on the Dataset to use as input data. The number of variables
-            determines the dimensionality of the histogram. For example, two
-            arguments produce a 2D histogram.
         dim : tuple of strings, optional
             Dimensions over which which the histogram is computed. The default is to
             compute the histogram of the flattened array. i.e. over all dimensions.
@@ -7702,7 +7699,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         from .computation import hist
 
         return hist(
-            [self[var] for var in vars],
+            [self.data_vars.values()],
             dim=dim,
             bins=bins,
             weights=weights,
