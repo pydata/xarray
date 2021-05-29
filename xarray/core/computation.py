@@ -1726,7 +1726,7 @@ def _calc_idxminmax(
     return res
 
 
-def hist(*datarrays, dim=None, bins=None, weights=None, density=False):
+def hist(*datarrays, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
     """
     Histogram applied along specified dimensions.
 
@@ -1776,6 +1776,10 @@ def hist(*datarrays, dim=None, bins=None, weights=None, density=False):
         the *integral* over the range is 1. Note that the sum of the
         histogram values will not be equal to 1 unless bins of unit
         width are chosen; it is not a probability *mass* function.
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
 
     Returns
     -------
@@ -1797,6 +1801,9 @@ def hist(*datarrays, dim=None, bins=None, weights=None, density=False):
     numpy.histogramdd
     dask.array.blockwise
     """
+
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
 
     # TODO xhistogram code goes here
     raise NotImplementedError

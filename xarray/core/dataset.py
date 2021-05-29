@@ -7628,7 +7628,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return result
 
-    def hist(self, dim=None, bins=None, weights=None, density=False):
+    def hist(self, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
         """
         Histogram applied along specified dimensions. Will create a N-dimensional
         histogram, where N is the number of variables in the dataset.
@@ -7674,6 +7674,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             the *integral* over the range is 1. Note that the sum of the
             histogram values will not be equal to 1 unless bins of unit
             width are chosen; it is not a probability *mass* function.
+        keep_attrs : bool, optional
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
 
         Returns
         -------
@@ -7704,4 +7708,5 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             bins=bins,
             weights=weights,
             density=density,
+            keep_attrs=keep_attrs,
         )

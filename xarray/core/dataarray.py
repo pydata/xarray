@@ -4599,7 +4599,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
 
-    def hist(self, dim=None, bins=None, weights=None, density=False):
+    def hist(self, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
         """
         Histogram applied along specified dimensions.
 
@@ -4644,6 +4644,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             the *integral* over the range is 1. Note that the sum of the
             histogram values will not be equal to 1 unless bins of unit
             width are chosen; it is not a probability *mass* function.
+        keep_attrs : bool, optional
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
 
         Returns
         -------
@@ -4674,6 +4678,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             bins=bins,
             weights=weights,
             density=density,
+            keep_attrs=keep_attrs,
         )
 
     # this needs to be at the end, or mypy will confuse with `str`

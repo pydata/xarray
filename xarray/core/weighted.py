@@ -58,7 +58,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
         New {cls} object with the sum of the weights over the given dimension.
     """
 
-_WEIGHTED_HIST_DOCSTRING =  """
+_WEIGHTED_HIST_DOCSTRING = """
     Weighted histogram applied along specified dimensions.
 
     If the supplied arguments are chunked dask arrays it will use
@@ -96,6 +96,10 @@ _WEIGHTED_HIST_DOCSTRING =  """
         the *integral* over the range is 1. Note that the sum of the
         histogram values will not be equal to 1 unless bins of unit
         width are chosen; it is not a probability *mass* function.
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
 
     Returns
     -------
@@ -299,8 +303,14 @@ class Weighted(Generic[T_DataWithCoords]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    def hist(self, dim=None, bins=None, density=False):
-        return self.obj.hist(dim=dim, bins=bins, weights=self.weights, density=density)
+    def hist(self, dim=None, bins=None, density=False, keep_attrs=None):
+        return self.obj.hist(
+            dim=dim,
+            bins=bins,
+            weights=self.weights,
+            density=density,
+            keep_attrs=keep_attrs,
+        )
 
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
