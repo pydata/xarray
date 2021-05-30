@@ -1396,7 +1396,7 @@ def cross(a, b, dim):
 
     Parameters
     ----------
-    a, b : DataArray or Variable
+    a, b : DataArray, Dataset or Variable
         Components of the first and second vector(s).
     dim : hashable
         The dimension along which the cross product will be computed.
@@ -1500,13 +1500,24 @@ def cross(a, b, dim):
     numpy.cross : Corresponding numpy function
     """
     from .dataarray import DataArray
+    from .dataset import Dataset
 
     all_dims = []
     arrays = [a, b]
-    for arr in arrays:
-        if not isinstance(arr, (DataArray, Variable)):
+    for i, arr in enumerate(arrays):
+        if isinstance(arr, Dataset):
+            is_dataset = True
+            # TODO: How make sure this temporary dimension is matches
+            # the orther dataset?
+            arrays[i] = arr = arr.to_stacked_array(
+                variable_dim=dim, new_dim="variable", sample_dims=arr.dims
+            ).unstack("variable")
+        elif isinstance(arr, (DataArray, Variable)):
+            is_dataset = False
+        else:
             raise TypeError(
-                f"Only xr.DataArray and xr.Variable are supported, got {type(arr)}."
+                "Only xr.DataArray, xr.Dataset and xr.Variable are supported, "
+                f"got {type(arr)}."
             )
 
         # TODO: Find spatial dim default by looking for unique
@@ -1554,8 +1565,11 @@ def cross(a, b, dim):
             np.cross(*[np.empty(3, dtype=arr.dtype) for arr in arrays]).dtype
         ],
     )
+    c = c.transpose(*[d for d in all_dims if d in c.dims])
+    if is_dataset:
+        c = c.stack(variable=[dim]).to_unstacked_dataset("variable")
 
-    return c.transpose(*[d for d in all_dims if d in c.dims])
+    return c
 
 
 def dot(*arrays, dims=None, **kwargs):
