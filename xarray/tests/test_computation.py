@@ -488,21 +488,21 @@ def test_apply_groupby_add():
                 name="b",
             ),
             {None: {"a": 1}},
-            xr.DataArray([0, 1], dims="x", attrs={"a": 1}),
+            xr.DataArray([0, 1], dims="x", attrs={"a": 1}, name="b"),
             id="named DataArray",
         ),
         pytest.param(
             xr.Dataset(
                 {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
                 coords={
-                    "x": ("x", [-1, 1], {"d": 4, "e": 5}),
-                    "u": ("x", [2, 3], {"f": 6}),
+                    "x": ("x", [-1, 1]),
+                    "u": ("x", [2, 3]),
                 },
             ),
-            {"a": {"a": 1}},
+            {"a": {"a": 1}, "u": {"b": 2}},
             xr.Dataset(
-                {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
-                coords={"x": [-1, 1], "u": ("x", [2, 3])},
+                {"a": ("x", [1, 2], {"a": 1}), "b": ("x", [0, 1])},
+                coords={"x": [-1, 1], "u": ("x", [2, 3], {"b": 2})},
             ),
             id="Dataset",
         ),
