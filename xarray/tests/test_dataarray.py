@@ -7277,9 +7277,12 @@ class TestIrisConversion:
 def test_rolling_exp_runs(da, dim, window_type, window, func):
     import numbagg
 
-    if LooseVersion(numbagg.__version__) < "0.2.1" and func == "sum":
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
         pytest.skip(
-            reason="old versions of numpy have different printing behavior",
+            reason="rolling_exp.sum requires numbagg 0.2.1",
         )
 
     da = da.where(da > 0.2)
@@ -7318,9 +7321,12 @@ def test_rolling_exp_mean_pandas(da, dim, window_type, window):
 def test_rolling_exp_keep_attrs(da, func):
     import numbagg
 
-    if LooseVersion(numbagg.__version__) < "0.2.1" and func == "sum":
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
         pytest.skip(
-            reason="old versions of numpy have different printing behavior",
+            reason="rolling_exp.sum requires numbagg 0.2.1",
         )
 
     attrs = {"attrs": "da"}
