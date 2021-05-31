@@ -57,8 +57,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -91,6 +90,13 @@ jobs:
           python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml
+             --junitxml=junit/test-results.xml
+
+      - name: Publish unit test results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        if: always()
+        with:
+          files: junit/test-results.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v1
