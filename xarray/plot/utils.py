@@ -805,10 +805,13 @@ def _process_cmap_cbar_kwargs(
     if func.__name__ == "surface":
         # Leave user to specify cmap settings for surface plots
         kwargs["cmap"] = cmap
-        return {
-            k: kwargs.get(k, None)
-            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
-        }, {}
+        return (
+            {
+                k: kwargs.get(k, None)
+                for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+            },
+            {},
+        )
 
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 

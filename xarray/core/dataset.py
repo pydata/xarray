@@ -3297,9 +3297,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return variables, coord_names, dims, indexes
 
     def rename(
-        self,
-        name_dict: Mapping[Hashable, Hashable] = None,
-        **names: Hashable,
+        self, name_dict: Mapping[Hashable, Hashable] = None, **names: Hashable,
     ) -> "Dataset":
         """Returns a new object with renamed variables and dimensions.
 
@@ -3721,9 +3719,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reset_index(
-        self,
-        dims_or_levels: Union[Hashable, Sequence[Hashable]],
-        drop: bool = False,
+        self, dims_or_levels: Union[Hashable, Sequence[Hashable]], drop: bool = False,
     ) -> "Dataset":
         """Reset the specified index(es) or multi-index level(s).
 
@@ -6252,9 +6248,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def integrate(
-        self,
-        coord: Union[Hashable, Sequence[Hashable]],
-        datetime_unit: str = None,
+        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -6368,9 +6362,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         )
 
     def cumulative_integrate(
-        self,
-        coord: Union[Hashable, Sequence[Hashable]],
-        datetime_unit: str = None,
+        self, coord: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None,
     ) -> "Dataset":
         """Integrate along the given coordinate using the trapezoidal rule.
 

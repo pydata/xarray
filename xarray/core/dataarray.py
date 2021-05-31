@@ -1949,9 +1949,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._from_temp_dataset(ds)
 
     def reset_index(
-        self,
-        dims_or_levels: Union[Hashable, Sequence[Hashable]],
-        drop: bool = False,
+        self, dims_or_levels: Union[Hashable, Sequence[Hashable]], drop: bool = False,
     ) -> Optional["DataArray"]:
         """Reset the specified index(es) or multi-index level(s).
 
@@ -3003,10 +3001,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             return da
 
     def _binary_op(
-        self,
-        other,
-        f: Callable,
-        reflexive: bool = False,
+        self, other, f: Callable, reflexive: bool = False,
     ):
         if isinstance(other, (Dataset, groupby.GroupBy)):
             return NotImplemented
@@ -4572,12 +4567,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         )
 
     def drop_duplicates(
-        self,
-        dim: Hashable,
-        keep: Union[
-            str,
-            bool,
-        ] = "first",
+        self, dim: Hashable, keep: Union[str, bool,] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
 

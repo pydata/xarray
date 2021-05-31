@@ -752,10 +752,7 @@ def apply_variable_ufunc(
         )
 
     objs = _all_of_type(args, Variable)
-    attrs = merge_attrs(
-        [obj.attrs for obj in objs],
-        combine_attrs=keep_attrs,
-    )
+    attrs = merge_attrs([obj.attrs for obj in objs], combine_attrs=keep_attrs,)
 
     output = []
     for dims, data in zip(output_dims, result_data):

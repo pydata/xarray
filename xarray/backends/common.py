@@ -374,10 +374,7 @@ class BackendEntrypoint:
     """list of ``open_dataset`` method parameters"""
 
     def open_dataset(
-        self,
-        filename_or_obj: str,
-        drop_variables: Tuple[str] = None,
-        **kwargs: Any,
+        self, filename_or_obj: str, drop_variables: Tuple[str] = None, **kwargs: Any,
     ):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.

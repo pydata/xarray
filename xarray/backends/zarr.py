@@ -319,11 +319,7 @@ class ZarrStore(AbstractWritableDataStore):
         if isinstance(store, pathlib.Path):
             store = os.fspath(store)
 
-        open_kwargs = dict(
-            mode=mode,
-            synchronizer=synchronizer,
-            path=group,
-        )
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group,)
         if LooseVersion(zarr.__version__) >= "2.5.0":
             open_kwargs["storage_options"] = storage_options
         elif storage_options:

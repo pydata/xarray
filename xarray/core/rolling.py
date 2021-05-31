@@ -202,7 +202,9 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels", "stride")
 
-    def __init__(self, obj, windows, min_periods=None, center=False, stride=1, keep_attrs=None):
+    def __init__(
+        self, obj, windows, min_periods=None, center=False, stride=1, keep_attrs=None
+    ):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -454,7 +456,11 @@ class DataArrayRolling(Rolling):
         else:
             obj = self.obj
         windows = self._construct(
-            obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna, stride=self.stride
+            obj,
+            rolling_dim,
+            keep_attrs=keep_attrs,
+            fill_value=fillna,
+            stride=self.stride,
         )
 
         result = windows.reduce(
@@ -482,7 +488,9 @@ class DataArrayRolling(Rolling):
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
                 **{d: w for d, w in zip(self.dim, self.window)},
             )
-            .construct(rolling_dim, fill_value=False, stride=self.stride,  keep_attrs=keep_attrs)
+            .construct(
+                rolling_dim, fill_value=False, stride=self.stride, keep_attrs=keep_attrs
+            )
             .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
         )
         return counts
@@ -525,7 +533,7 @@ class DataArrayRolling(Rolling):
         if self.center[0]:
             values = values[valid]
 
-        values =  values.isel(**{self.dim: slice(None, None, self.stride)})
+        values = values.isel(**{self.dim: slice(None, None, self.stride)})
         attrs = self.obj.attrs if keep_attrs else {}
 
         return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
@@ -576,7 +584,9 @@ class DataArrayRolling(Rolling):
 class DatasetRolling(Rolling):
     __slots__ = ("rollings", "stride")
 
-    def __init__(self, obj, windows, min_periods=None, center=False, stride=1, keep_attrs=None):
+    def __init__(
+        self, obj, windows, min_periods=None, center=False, stride=1, keep_attrs=None
+    ):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -625,7 +635,9 @@ class DatasetRolling(Rolling):
 
             if dims:
                 w = {d: windows[d] for d in dims}
-                self.rollings[key] = DataArrayRolling(da, w, min_periods, center, stride=stride)
+                self.rollings[key] = DataArrayRolling(
+                    da, w, min_periods, center, stride=stride
+                )
 
     def _dataset_implementation(self, func, keep_attrs, **kwargs):
         from .dataset import Dataset

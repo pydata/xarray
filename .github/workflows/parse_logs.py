@@ -13,8 +13,7 @@ filepaths = sorted(p for p in args.filepaths if p.is_file())
 
 def extract_short_test_summary_info(lines):
     up_to_start_of_section = itertools.dropwhile(
-        lambda l: "=== short test summary info ===" not in l,
-        lines,
+        lambda l: "=== short test summary info ===" not in l, lines,
     )
     up_to_section_content = itertools.islice(up_to_start_of_section, 1, None)
     section_content = itertools.takewhile(

@@ -851,15 +851,13 @@ def test_interpolate_chunk_advanced(method):
     theta = np.linspace(0, 2 * np.pi, 5)
     w = np.linspace(-0.25, 0.25, 7)
     r = xr.DataArray(
-        data=1 + w[:, np.newaxis] * np.cos(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=1 + w[:, np.newaxis] * np.cos(theta), coords=[("w", w), ("theta", theta)],
     )
 
     x = r * np.cos(theta)
     y = r * np.sin(theta)
     z = xr.DataArray(
-        data=w[:, np.newaxis] * np.sin(theta),
-        coords=[("w", w), ("theta", theta)],
+        data=w[:, np.newaxis] * np.sin(theta), coords=[("w", w), ("theta", theta)],
     )
 
     kwargs = {"fill_value": None}
@@ -875,10 +873,7 @@ def test_interpolate_chunk_advanced(method):
 @requires_scipy
 def test_interp1d_bounds_error():
     """Ensure exception on bounds error is raised if requested"""
-    da = xr.DataArray(
-        np.sin(0.3 * np.arange(4)),
-        [("time", np.arange(4))],
-    )
+    da = xr.DataArray(np.sin(0.3 * np.arange(4)), [("time", np.arange(4))],)
 
     with pytest.raises(ValueError):
         da.interp(time=3.5, kwargs=dict(bounds_error=True))

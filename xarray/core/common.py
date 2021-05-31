@@ -893,7 +893,12 @@ class DataWithCoords(AttrAccessMixin):
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(
-            self, dim, min_periods=min_periods, center=center, stride=stride, keep_attrs=keep_attrs
+            self,
+            dim,
+            min_periods=min_periods,
+            center=center,
+            stride=stride,
+            keep_attrs=keep_attrs,
         )
 
     def rolling_exp(
@@ -1345,10 +1350,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.isnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.isnull, self, dask="allowed", keep_attrs=keep_attrs,
         )
 
     def notnull(self, keep_attrs: bool = None):
@@ -1381,10 +1383,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.notnull,
-            self,
-            dask="allowed",
-            keep_attrs=keep_attrs,
+            duck_array_ops.notnull, self, dask="allowed", keep_attrs=keep_attrs,
         )
 
     def isin(self, test_elements):
