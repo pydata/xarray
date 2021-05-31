@@ -1238,7 +1238,7 @@ def call_on_dataset(func, obj, name, *args, **kwargs):
         b        (x) int64 -1 1
     Attributes:
         attr:     value
-    >>> xr.call_on_dataset(f, ds)
+    >>> xr.call_on_dataset(f, ds, name="<this-array>")
     <xarray.Dataset>
     Dimensions:  (x: 2)
     Coordinates:
