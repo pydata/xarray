@@ -27,8 +27,8 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
-from .merge import merge_coordinates_without_align
-from .options import OPTIONS
+from .merge import merge_attrs, merge_coordinates_without_align
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
@@ -43,11 +43,16 @@ _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
 def _first_of_type(args, kind):
-    """ Return either first object of type 'kind' or raise if not found. """
+    """Return either first object of type 'kind' or raise if not found."""
     for arg in args:
         if isinstance(arg, kind):
             return arg
     raise ValueError("This should be unreachable.")
+
+
+def _all_of_type(args, kind):
+    """Return all objects of type 'kind'"""
+    return [arg for arg in args if isinstance(arg, kind)]
 
 
 class _UFuncSignature:
@@ -202,7 +207,10 @@ def _get_coords_list(args) -> List["Coordinates"]:
 
 
 def build_output_coords(
-    args: list, signature: _UFuncSignature, exclude_dims: AbstractSet = frozenset()
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
+    combine_attrs: str = "override",
 ) -> "List[Dict[Any, Variable]]":
     """Build output coordinates for an operation.
 
@@ -230,7 +238,7 @@ def build_output_coords(
     else:
         # TODO: save these merged indexes, instead of re-computing them later
         merged_vars, unused_indexes = merge_coordinates_without_align(
-            coords_list, exclude_dims=exclude_dims
+            coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
         )
 
     output_coords = []
@@ -248,7 +256,12 @@ def build_output_coords(
 
 
 def apply_dataarray_vfunc(
-    func, *args, signature, join="inner", exclude_dims=frozenset(), keep_attrs=False
+    func,
+    *args,
+    signature,
+    join="inner",
+    exclude_dims=frozenset(),
+    keep_attrs="override",
 ):
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
@@ -260,12 +273,16 @@ def apply_dataarray_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    if keep_attrs:
+    objs = _all_of_type(args, DataArray)
+
+    if keep_attrs == "drop":
+        name = result_name(args)
+    else:
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
-    else:
-        name = result_name(args)
-    result_coords = build_output_coords(args, signature, exclude_dims)
+    result_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
 
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
@@ -279,13 +296,12 @@ def apply_dataarray_vfunc(
         (coords,) = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for da in out:
-                # This is adding attrs in place
-                da._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for da in out:
+            da.attrs = attrs
+    else:
+        out.attrs = attrs
 
     return out
 
@@ -307,7 +323,7 @@ def assert_and_return_exact_match(all_keys):
         if keys != first_keys:
             raise ValueError(
                 "exact match required for all data variable names, "
-                "but %r != %r" % (keys, first_keys)
+                f"but {keys!r} != {first_keys!r}"
             )
     return first_keys
 
@@ -400,7 +416,7 @@ def apply_dataset_vfunc(
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
-    keep_attrs=False,
+    keep_attrs="override",
 ):
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
@@ -414,15 +430,16 @@ def apply_dataset_vfunc(
             "dataset_fill_value argument."
         )
 
-    if keep_attrs:
-        first_obj = _first_of_type(args, Dataset)
+    objs = _all_of_type(args, Dataset)
 
     if len(args) > 1:
         args = deep_align(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    list_of_coords = build_output_coords(args, signature, exclude_dims)
+    list_of_coords = build_output_coords(
+        args, signature, exclude_dims, combine_attrs=keep_attrs
+    )
     args = [getattr(arg, "data_vars", arg) for arg in args]
 
     result_vars = apply_dict_of_variables_vfunc(
@@ -435,13 +452,13 @@ def apply_dataset_vfunc(
         (coord_vars,) = list_of_coords
         out = _fast_dataset(result_vars, coord_vars)
 
-    if keep_attrs:
-        if isinstance(out, tuple):
-            for ds in out:
-                # This is adding attrs in place
-                ds._copy_attrs_from(first_obj)
-        else:
-            out._copy_attrs_from(first_obj)
+    attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
+    if isinstance(out, tuple):
+        for ds in out:
+            ds.attrs = attrs
+    else:
+        out.attrs = attrs
+
     return out
 
 
@@ -516,7 +533,7 @@ def unified_dim_sizes(
         if len(set(var.dims)) < len(var.dims):
             raise ValueError(
                 "broadcasting cannot handle duplicate "
-                "dimensions on a variable: %r" % list(var.dims)
+                f"dimensions on a variable: {list(var.dims)}"
             )
         for dim, size in zip(var.dims, var.shape):
             if dim not in exclude_dims:
@@ -526,7 +543,7 @@ def unified_dim_sizes(
                     raise ValueError(
                         "operands cannot be broadcast together "
                         "with mismatched lengths for dimension "
-                        "%r: %s vs %s" % (dim, dim_sizes[dim], size)
+                        f"{dim}: {dim_sizes[dim]} vs {size}"
                     )
     return dim_sizes
 
@@ -563,8 +580,8 @@ def broadcast_compat_data(
     if unexpected_dims:
         raise ValueError(
             "operand to apply_ufunc encountered unexpected "
-            "dimensions %r on an input variable: these are core "
-            "dimensions on other input or output variables" % unexpected_dims
+            f"dimensions {unexpected_dims!r} on an input variable: these are core "
+            "dimensions on other input or output variables"
         )
 
     # for consistency with numpy, keep broadcast dimensions to the left
@@ -609,13 +626,11 @@ def apply_variable_ufunc(
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
-    keep_attrs=False,
+    keep_attrs="override",
     dask_gufunc_kwargs=None,
 ):
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
-
-    first_obj = _first_of_type(args, Variable)
 
     dim_sizes = unified_dim_sizes(
         (a for a in args if hasattr(a, "dims")), exclude_dims=exclude_dims
@@ -736,6 +751,12 @@ def apply_variable_ufunc(
             )
         )
 
+    objs = _all_of_type(args, Variable)
+    attrs = merge_attrs(
+        [obj.attrs for obj in objs],
+        combine_attrs=keep_attrs,
+    )
+
     output = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
@@ -758,8 +779,7 @@ def apply_variable_ufunc(
                     )
                 )
 
-        if keep_attrs:
-            var.attrs.update(first_obj.attrs)
+        var.attrs = attrs
         output.append(var)
 
     if signature.num_outputs == 1:
@@ -801,7 +821,7 @@ def apply_ufunc(
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: bool = False,
+    keep_attrs: Union[bool, str] = None,
     kwargs: Mapping = None,
     dask: str = "forbidden",
     output_dtypes: Sequence = None,
@@ -885,11 +905,11 @@ def apply_ufunc(
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
         ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
-    keep_attrs: bool, optional
+    keep_attrs : bool, optional
         Whether to copy attributes from the first argument to the output.
-    kwargs: dict, optional
+    kwargs : dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask: {"forbidden", "allowed", "parallelized"}, default: "forbidden"
+    dask : {"forbidden", "allowed", "parallelized"}, default: "forbidden"
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
 
@@ -923,9 +943,16 @@ def apply_ufunc(
     Single value or tuple of Dataset, DataArray, Variable, dask.array.Array or
     numpy.ndarray, the first type on that list to appear on an input.
 
+    Notes
+    -----
+    This function is designed for the more common case where ``func`` can work on numpy
+    arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
+    it is possible to use :py:func:`xarray.map_blocks`.
+
+    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
+
     Examples
     --------
-
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
@@ -959,51 +986,58 @@ def apply_ufunc(
     Other examples of how you could use ``apply_ufunc`` to write functions to
     (very nearly) replicate existing xarray functionality:
 
-    Compute the mean (``.mean``) over one dimension::
+    Compute the mean (``.mean``) over one dimension:
 
-        def mean(obj, dim):
-            # note: apply always moves core dimensions to the end
-            return apply_ufunc(np.mean, obj,
-                               input_core_dims=[[dim]],
-                               kwargs={'axis': -1})
+    >>> def mean(obj, dim):
+    ...     # note: apply always moves core dimensions to the end
+    ...     return apply_ufunc(
+    ...         np.mean, obj, input_core_dims=[[dim]], kwargs={"axis": -1}
+    ...     )
+    ...
 
-    Inner product over a specific dimension (like ``xr.dot``)::
+    Inner product over a specific dimension (like ``xr.dot``):
 
-        def _inner(x, y):
-            result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
-            return result[..., 0, 0]
+    >>> def _inner(x, y):
+    ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
+    ...     return result[..., 0, 0]
+    ...
+    >>> def inner_product(a, b, dim):
+    ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    ...
 
-        def inner_product(a, b, dim):
-            return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
+    Stack objects along a new dimension (like ``xr.concat``):
 
-    Stack objects along a new dimension (like ``xr.concat``)::
-
-        def stack(objects, dim, new_coord):
-            # note: this version does not stack coordinates
-            func = lambda *x: np.stack(x, axis=-1)
-            result = apply_ufunc(func, *objects,
-                                 output_core_dims=[[dim]],
-                                 join='outer',
-                                 dataset_fill_value=np.nan)
-            result[dim] = new_coord
-            return result
+    >>> def stack(objects, dim, new_coord):
+    ...     # note: this version does not stack coordinates
+    ...     func = lambda *x: np.stack(x, axis=-1)
+    ...     result = apply_ufunc(
+    ...         func,
+    ...         *objects,
+    ...         output_core_dims=[[dim]],
+    ...         join="outer",
+    ...         dataset_fill_value=np.nan
+    ...     )
+    ...     result[dim] = new_coord
+    ...     return result
+    ...
 
     If your function is not vectorized but can be applied only to core
     dimensions, you can use ``vectorize=True`` to turn into a vectorized
     function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
     terribly fast. Here we'll use it to calculate the distance between
     empirical samples from two probability distributions, using a scipy
-    function that needs to be applied to vectors::
+    function that needs to be applied to vectors:
 
-        import scipy.stats
-
-        def earth_mover_distance(first_samples,
-                                 second_samples,
-                                 dim='ensemble'):
-            return apply_ufunc(scipy.stats.wasserstein_distance,
-                               first_samples, second_samples,
-                               input_core_dims=[[dim], [dim]],
-                               vectorize=True)
+    >>> import scipy.stats
+    >>> def earth_mover_distance(first_samples, second_samples, dim="ensemble"):
+    ...     return apply_ufunc(
+    ...         scipy.stats.wasserstein_distance,
+    ...         first_samples,
+    ...         second_samples,
+    ...         input_core_dims=[[dim], [dim]],
+    ...         vectorize=True,
+    ...     )
+    ...
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
@@ -1011,11 +1045,13 @@ def apply_ufunc(
     works well with numba's vectorize and guvectorize. Further explanation with
     examples are provided in the xarray documentation [3]_.
 
-    See also
+    See Also
     --------
     numpy.broadcast_arrays
     numba.vectorize
     numba.guvectorize
+    dask.array.apply_gufunc
+    xarray.map_blocks
 
     References
     ----------
@@ -1081,6 +1117,12 @@ def apply_ufunc(
 
     if kwargs:
         func = functools.partial(func, **kwargs)
+
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
+
+    if isinstance(keep_attrs, bool):
+        keep_attrs = "override" if keep_attrs else "drop"
 
     variables_vfunc = functools.partial(
         apply_variable_ufunc,
@@ -1162,10 +1204,10 @@ def cov(da_a, da_b, dim=None, ddof=1):
     -------
     covariance : DataArray
 
-    See also
+    See Also
     --------
     pandas.Series.cov : corresponding pandas function
-    xarray.corr: respective function to calculate correlation
+    xarray.corr : respective function to calculate correlation
 
     Examples
     --------
@@ -1240,7 +1282,7 @@ def corr(da_a, da_b, dim=None):
     -------
     correlation: DataArray
 
-    See also
+    See Also
     --------
     pandas.Series.corr : corresponding pandas function
     xarray.cov : underlying covariance function
@@ -1310,12 +1352,23 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-
-    if not valid_values.all():
-        da_a = da_a.where(valid_values)
-        da_b = da_b.where(valid_values)
-
     valid_count = valid_values.sum(dim) - ddof
+
+    def _get_valid_values(da, other):
+        """
+        Function to lazily mask da_a and da_b
+        following a similar approach to
+        https://github.com/pydata/xarray/pull/4559
+        """
+        missing_vals = np.logical_or(da.isnull(), other.isnull())
+        if missing_vals.any():
+            da = da.where(~missing_vals)
+            return da
+        else:
+            return da
+
+    da_a = da_a.map_blocks(_get_valid_values, args=[da_b])
+    da_b = da_b.map_blocks(_get_valid_values, args=[da_a])
 
     # 3. Detrend along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
@@ -1346,7 +1399,7 @@ def dot(*arrays, dims=None, **kwargs):
 
     Parameters
     ----------
-    arrays : DataArray or Variable
+    *arrays : DataArray or Variable
         Arrays to compute.
     dims : ..., str or tuple of str, optional
         Which dimensions to sum over. Ellipsis ('...') sums over all dimensions.
@@ -1361,9 +1414,6 @@ def dot(*arrays, dims=None, **kwargs):
 
     Examples
     --------
-
-    >>> import numpy as np
-    >>> import xarray as xr
     >>> da_a = xr.DataArray(np.arange(3 * 2).reshape(3, 2), dims=["a", "b"])
     >>> da_b = xr.DataArray(np.arange(3 * 2 * 2).reshape(3, 2, 2), dims=["a", "b", "c"])
     >>> da_c = xr.DataArray(np.arange(2 * 3).reshape(2, 3), dims=["c", "d"])
@@ -1496,7 +1546,6 @@ def where(cond, x, y):
     All dimension coordinates on `x` and `y`  must be aligned with each
     other and with `cond`.
 
-
     Parameters
     ----------
     cond : scalar, array, Variable, DataArray or Dataset
@@ -1514,8 +1563,6 @@ def where(cond, x, y):
 
     Examples
     --------
-    >>> import xarray as xr
-    >>> import numpy as np
     >>> x = xr.DataArray(
     ...     0.1 * np.arange(10),
     ...     dims=["lat"],
@@ -1566,10 +1613,11 @@ def where(cond, x, y):
            [0, 0]])
     Dimensions without coordinates: x, y
 
-    See also
+    See Also
     --------
     numpy.where : corresponding numpy function
-    Dataset.where, DataArray.where : equivalent methods
+    Dataset.where, DataArray.where :
+        equivalent methods
     """
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1595,7 +1643,7 @@ def polyval(coord, coeffs, degree_dim="degree"):
     degree_dim : str, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
-    See also
+    See Also
     --------
     xarray.DataArray.polyfit
     numpy.polyval

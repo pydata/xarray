@@ -3,7 +3,14 @@ import warnings
 import numpy as np
 
 from . import dtypes, nputils, utils
-from .duck_array_ops import _dask_or_eager_func, count, fillna, isnull, where_method
+from .duck_array_ops import (
+    _dask_or_eager_func,
+    count,
+    fillna,
+    isnull,
+    where,
+    where_method,
+)
 from .pycompat import dask_array_type
 
 try:
@@ -12,7 +19,7 @@ try:
     from . import dask_array_compat
 except ImportError:
     dask_array = None
-    dask_array_compat = None  # type: ignore
+    dask_array_compat = None  # type: ignore[assignment]
 
 
 def _replace_nan(a, val):
@@ -28,18 +35,14 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     """
     xarray version of pandas.core.nanops._maybe_null_out
     """
-
     if axis is not None and getattr(result, "ndim", False):
         null_mask = (np.take(mask.shape, axis).prod() - mask.sum(axis) - min_count) < 0
-        if null_mask.any():
-            dtype, fill_value = dtypes.maybe_promote(result.dtype)
-            result = result.astype(dtype)
-            result[null_mask] = fill_value
+        dtype, fill_value = dtypes.maybe_promote(result.dtype)
+        result = where(null_mask, fill_value, result.astype(dtype))
 
     elif getattr(result, "dtype", None) not in dtypes.NAT_TYPES:
         null_mask = mask.size - mask.sum()
-        if null_mask < min_count:
-            result = np.nan
+        result = where(null_mask < min_count, np.nan, result)
 
     return result
 
@@ -60,7 +63,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
 
 
 def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
-    """ In house nanmin and nanmax for object array """
+    """In house nanmin and nanmax for object array"""
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = getattr(np, func)(filled_value, axis=axis, **kwargs)
@@ -116,7 +119,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
-    """ In house nanmean. ddof argument will be used in _nanvar method """
+    """In house nanmean. ddof argument will be used in _nanvar method"""
     from .duck_array_ops import _dask_or_eager_func, count, fillna, where_method
 
     valid_count = count(value, axis=axis)
@@ -152,9 +155,7 @@ def nanmedian(a, axis=None, out=None):
     # possibly blow memory
     if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
         axis = None
-    return _dask_or_eager_func(
-        "nanmedian", dask_module=dask_array_compat, eager_module=nputils
-    )(a, axis=axis)
+    return _dask_or_eager_func("nanmedian", eager_module=nputils)(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):

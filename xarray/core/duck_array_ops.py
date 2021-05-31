@@ -27,7 +27,7 @@ try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None  # type: ignore
+    dask_array = None
 
 
 def _dask_or_eager_func(
@@ -153,6 +153,23 @@ def trapz(y, x, axis):
     return sum(integrand, axis=axis, skipna=False)
 
 
+def cumulative_trapezoid(y, x, axis):
+    if axis < 0:
+        axis = y.ndim + axis
+    x_sl1 = (slice(1, None),) + (None,) * (y.ndim - axis - 1)
+    x_sl2 = (slice(None, -1),) + (None,) * (y.ndim - axis - 1)
+    slice1 = (slice(None),) * axis + (slice(1, None),)
+    slice2 = (slice(None),) * axis + (slice(None, -1),)
+    dx = x[x_sl1] - x[x_sl2]
+    integrand = dx * 0.5 * (y[tuple(slice1)] + y[tuple(slice2)])
+
+    # Pad so that 'axis' has same length in result as it did in y
+    pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
+    integrand = pad(integrand, pads, mode="constant", constant_values=0.0)
+
+    return cumsum(integrand, axis=axis, skipna=False)
+
+
 masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
 )
@@ -187,7 +204,7 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
 
-    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -310,12 +327,20 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
+def _create_nan_agg_method(
+    name, dask_module=dask_array, coerce_strings=False, invariant_0d=False
+):
     from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop("out", None) is not None:
             raise TypeError(f"`out` is not valid for {name}")
+
+        # The data is invariant in the case of 0d data, so do not
+        # change the data (and dtype)
+        # See https://github.com/pydata/xarray/issues/4885
+        if invariant_0d and axis == ():
+            return values
 
         values = asarray(values)
 
@@ -354,28 +379,30 @@ def _create_nan_agg_method(name, dask_module=dask_array, coerce_strings=False):
 # See ops.inject_reduce_methods
 argmax = _create_nan_agg_method("argmax", coerce_strings=True)
 argmin = _create_nan_agg_method("argmin", coerce_strings=True)
-max = _create_nan_agg_method("max", coerce_strings=True)
-min = _create_nan_agg_method("min", coerce_strings=True)
-sum = _create_nan_agg_method("sum")
+max = _create_nan_agg_method("max", coerce_strings=True, invariant_0d=True)
+min = _create_nan_agg_method("min", coerce_strings=True, invariant_0d=True)
+sum = _create_nan_agg_method("sum", invariant_0d=True)
 sum.numeric_only = True
 sum.available_min_count = True
 std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
 var.numeric_only = True
-median = _create_nan_agg_method("median", dask_module=dask_array_compat)
+median = _create_nan_agg_method(
+    "median", dask_module=dask_array_compat, invariant_0d=True
+)
 median.numeric_only = True
-prod = _create_nan_agg_method("prod")
+prod = _create_nan_agg_method("prod", invariant_0d=True)
 prod.numeric_only = True
 prod.available_min_count = True
-cumprod_1d = _create_nan_agg_method("cumprod")
+cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
-cumsum_1d = _create_nan_agg_method("cumsum")
+cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
 unravel_index = _dask_or_eager_func("unravel_index")
 
 
-_mean = _create_nan_agg_method("mean")
+_mean = _create_nan_agg_method("mean", invariant_0d=True)
 
 
 def _datetime_nanmin(array):
@@ -400,27 +427,23 @@ def _datetime_nanmin(array):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
-
     Convert the datetime array to a timedelta relative to an offset.
-
     Parameters
     ----------
-    da : array-like
-      Input data
-    offset: None, datetime or cftime.datetime
-      Datetime offset. If None, this is set by default to the array's minimum
-      value to reduce round off errors.
-    datetime_unit: {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      If not None, convert output to a given datetime unit. Note that some
-      conversions are not allowed due to non-linear relationships between units.
-    dtype: dtype
-      Output dtype.
-
+    array : array-like
+        Input data
+    offset : None, datetime or cftime.datetime
+        Datetime offset. If None, this is set by default to the array's minimum
+        value to reduce round off errors.
+    datetime_unit : {None, Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
+        If not None, convert output to a given datetime unit. Note that some
+        conversions are not allowed due to non-linear relationships between units.
+    dtype : dtype
+        Output dtype.
     Returns
     -------
     array
-      Numerical representation of datetime object relative to an offset.
-
+        Numerical representation of datetime object relative to an offset.
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even
@@ -463,12 +486,12 @@ def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     Parameters
     ----------
     value : datetime.timedelta, numpy.timedelta64, pandas.Timedelta, str
-      Time delta representation.
+        Time delta representation.
     datetime_unit : {Y, M, W, D, h, m, s, ms, us, ns, ps, fs, as}
-      The time units of the output values. Note that some conversions are not allowed due to
-      non-linear relationships between units.
+        The time units of the output values. Note that some conversions are not allowed due to
+        non-linear relationships between units.
     dtype : type
-      The output data type.
+        The output data type.
 
     """
     import datetime as dt
@@ -564,7 +587,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 
-mean.numeric_only = True  # type: ignore
+mean.numeric_only = True  # type: ignore[attr-defined]
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
@@ -614,15 +637,15 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, axis, window, center, fill_value):
+def sliding_window_view(array, window_shape, axis):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_ops.rolling_window(array, axis, window, center, fill_value)
-    else:  # np.ndarray
-        return nputils.rolling_window(array, axis, window, center, fill_value)
+        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+    else:
+        return npcompat.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -631,3 +654,12 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         return dask_array_ops.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
     else:
         return nputils.least_squares(lhs, rhs, rcond=rcond, skipna=skipna)
+
+
+def push(array, n, axis):
+    from bottleneck import push
+
+    if is_duck_dask_array(array):
+        return dask_array_ops.push(array, n, axis)
+    else:
+        return push(array, n, axis)

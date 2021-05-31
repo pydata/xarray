@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar, Union
 
 import numpy as np
 
@@ -74,7 +74,7 @@ class RollingExp(Generic[T_DSorDA]):
     ----------
     obj : Dataset or DataArray
         Object to window.
-    windows : mapping of hashable to int
+    windows : mapping of hashable to int (or float for alpha type)
         A mapping from the name of the dimension to create the rolling
         exponential window along (e.g. `time`) to the size of the moving window.
     window_type : {"span", "com", "halflife", "alpha"}, default: "span"
@@ -90,7 +90,7 @@ class RollingExp(Generic[T_DSorDA]):
     def __init__(
         self,
         obj: T_DSorDA,
-        windows: Mapping[Hashable, int],
+        windows: Mapping[Hashable, Union[int, float]],
         window_type: str = "span",
     ):
         self.obj: T_DSorDA = obj

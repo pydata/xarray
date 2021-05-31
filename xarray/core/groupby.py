@@ -1,13 +1,11 @@
 import datetime
-import functools
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
-from .arithmetic import SupportsArithmetic
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import propagate_indexes
@@ -31,8 +29,8 @@ def check_reduce_dims(reduce_dims, dimensions):
             reduce_dims = [reduce_dims]
         if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
-                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
-                % (reduce_dims, dimensions)
+                f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
+                f"to reduce over all dimensions or one or more of {dimensions!r}."
             )
 
 
@@ -107,7 +105,7 @@ def _consolidate_slices(slices):
     last_slice = slice(None)
     for slice_ in slices:
         if not isinstance(slice_, slice):
-            raise ValueError("list element is not a slice: %r" % slice_)
+            raise ValueError(f"list element is not a slice: {slice_!r}")
         if (
             result
             and last_slice.stop == slice_.start
@@ -143,8 +141,7 @@ def _inverse_permutation_indices(positions):
             return None
         positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
 
-    indices = nputils.inverse_permutation(np.concatenate(positions))
-    return indices
+    return nputils.inverse_permutation(np.concatenate(positions))
 
 
 class _DummyGroup:
@@ -202,9 +199,8 @@ def _ensure_1d(group, obj):
 def _unique_and_monotonic(group):
     if isinstance(group, _DummyGroup):
         return True
-    else:
-        index = safe_cast_to_index(group)
-        return index.is_unique and index.is_monotonic
+    index = safe_cast_to_index(group)
+    return index.is_unique and index.is_monotonic
 
 
 def _apply_loffset(grouper, result):
@@ -233,7 +229,7 @@ def _apply_loffset(grouper, result):
     grouper.loffset = None
 
 
-class GroupBy(SupportsArithmetic):
+class GroupBy:
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -382,7 +378,7 @@ class GroupBy(SupportsArithmetic):
         if len(group_indices) == 0:
             if bins is not None:
                 raise ValueError(
-                    "None of the data falls within bins with edges %r" % bins
+                    f"None of the data falls within bins with edges {bins!r}"
                 )
             else:
                 raise ValueError(
@@ -415,10 +411,19 @@ class GroupBy(SupportsArithmetic):
 
     @property
     def groups(self):
+        """
+        Mapping from group labels to indices. The indices can be used to index the underlying object.
+        """
         # provided to mimic pandas.groupby
         if self._groups is None:
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
+
+    def __getitem__(self, key):
+        """
+        Get DataArray or Dataset corresponding to a particular group label.
+        """
+        return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self):
         return self._unique_coord.size
@@ -427,7 +432,7 @@ class GroupBy(SupportsArithmetic):
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
-        return "{}, grouped over {!r} \n{!r} groups with labels {}.".format(
+        return "{}, grouped over {!r}\n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
             self._unique_coord.size,
@@ -465,16 +470,10 @@ class GroupBy(SupportsArithmetic):
             coord = None
         return coord, dim, positions
 
-    @staticmethod
-    def _binary_op(f, reflexive=False, **ignored_kwargs):
-        @functools.wraps(f)
-        def func(self, other):
-            g = f if not reflexive else lambda x, y: f(y, x)
-            applied = self._yield_binary_applied(g, other)
-            combined = self._combine(applied)
-            return combined
-
-        return func
+    def _binary_op(self, other, f, reflexive=False):
+        g = f if not reflexive else lambda x, y: f(y, x)
+        applied = self._yield_binary_applied(g, other)
+        return self._combine(applied)
 
     def _yield_binary_applied(self, func, other):
         dummy = None
@@ -492,8 +491,8 @@ class GroupBy(SupportsArithmetic):
                 if self._group.name not in other.dims:
                     raise ValueError(
                         "incompatible dimensions for a grouped "
-                        "binary operation: the group variable %r "
-                        "is not a dimension on the other argument" % self._group.name
+                        f"binary operation: the group variable {self._group.name!r} "
+                        "is not a dimension on the other argument"
                     )
                 if dummy is None:
                     dummy = _dummy_copy(other)
@@ -541,13 +540,12 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.fillna
         DataArray.fillna
         """
-        out = ops.fillna(self, value)
-        return out
+        return ops.fillna(self, value)
 
     def quantile(
         self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
@@ -590,12 +588,11 @@ class GroupBy(SupportsArithmetic):
 
         See Also
         --------
-        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile,
+        numpy.nanquantile, numpy.quantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
 
         Examples
         --------
-
         >>> da = xr.DataArray(
         ...     [[1.3, 8.4, 0.7, 6.9], [0.7, 4.2, 9.4, 1.5], [6.5, 7.3, 2.6, 1.9]],
         ...     coords={"x": [0, 0, 1], "y": [1, 1, 2, 2]},
@@ -635,7 +632,7 @@ class GroupBy(SupportsArithmetic):
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>
-        Dimensions:   (quantile: 3, y: 2)
+        Dimensions:   (y: 2, quantile: 3)
         Coordinates:
           * quantile  (quantile) float64 0.0 0.5 1.0
           * y         (y) int64 1 2
@@ -654,7 +651,6 @@ class GroupBy(SupportsArithmetic):
             keep_attrs=keep_attrs,
             skipna=skipna,
         )
-
         return out
 
     def where(self, cond, other=dtypes.NA):
@@ -672,7 +668,7 @@ class GroupBy(SupportsArithmetic):
         -------
         same type as the grouped object
 
-        See also
+        See Also
         --------
         Dataset.where
         """
@@ -698,7 +694,7 @@ class GroupBy(SupportsArithmetic):
     def assign_coords(self, coords=None, **coords_kwargs):
         """Assign coordinates by group.
 
-        See also
+        See Also
         --------
         Dataset.assign_coords
         Dataset.swap_dims
@@ -716,8 +712,10 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
+class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
+
+    __slots__ = ()
 
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
@@ -734,8 +732,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         # compiled language)
         stacked = Variable.concat(applied, dim, shortcut=True)
         reordered = _maybe_reorder(stacked, dim, positions)
-        result = self._obj._replace_maybe_drop_dims(reordered)
-        return result
+        return self._obj._replace_maybe_drop_dims(reordered)
 
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
@@ -792,10 +789,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         applied : DataArray or DataArray
             The result of splitting, applying and combining this array.
         """
-        if shortcut:
-            grouped = self._iter_grouped_shortcut()
-        else:
-            grouped = self._iter_grouped()
+        grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
@@ -883,11 +877,10 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-ops.inject_reduce_methods(DataArrayGroupBy)
-ops.inject_binary_ops(DataArrayGroupBy)
+class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
+    __slots__ = ()
 
-class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
@@ -996,12 +989,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     def assign(self, **kwargs):
         """Assign data variables by group.
 
-        See also
+        See Also
         --------
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
-
-
-ops.inject_reduce_methods(DatasetGroupBy)
-ops.inject_binary_ops(DatasetGroupBy)

@@ -7,9 +7,8 @@ import pytest
 
 import xarray as xr
 from xarray.core import formatting
-from xarray.core.npcompat import IS_NEP18_ACTIVE
 
-from . import raises_regex
+from . import requires_netCDF4
 
 
 class TestFormatting:
@@ -51,7 +50,7 @@ class TestFormatting:
             expected = array.flat[:n]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_n_items(self):
@@ -61,7 +60,7 @@ class TestFormatting:
             expected = array.flat[-n:]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
@@ -394,8 +393,26 @@ class TestFormatting:
 
         assert actual == expected
 
+        with xr.set_options(display_expand_data=False):
+            actual = formatting.array_repr(ds[(1, 2)])
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)>
+            0
+            Dimensions without coordinates: test"""
+            )
 
-@pytest.mark.skipif(not IS_NEP18_ACTIVE, reason="requires __array_function__")
+            assert actual == expected
+
+    def test_array_repr_variable(self):
+        var = xr.Variable("x", [0, 1])
+
+        formatting.array_repr(var)
+
+        with xr.set_options(display_expand_data=False):
+            formatting.array_repr(var)
+
+
 def test_inline_variable_array_repr_custom_repr():
     class CustomArray:
         def __init__(self, value, attr):
@@ -465,6 +482,25 @@ def test_large_array_repr_length():
     assert len(result) < 50
 
 
+@requires_netCDF4
+def test_repr_file_collapsed(tmp_path):
+    arr = xr.DataArray(np.arange(300), dims="test")
+    arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
+
+    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
+        display_expand_data=False
+    ):
+        actual = formatting.array_repr(arr)
+        expected = dedent(
+            """\
+        <xarray.DataArray (test: 300)>
+        array([  0,   1,   2, ..., 297, 298, 299])
+        Dimensions without coordinates: test"""
+        )
+
+        assert actual == expected
+
+
 @pytest.mark.parametrize(
     "display_max_rows, n_vars, n_attr",
     [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
@@ -496,3 +532,19 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         len_summary = len(summary)
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        actual = formatting.dataset_repr(ds)
+        expected = dedent(
+            f"""\
+            <xarray.Dataset>
+            Dimensions:      (time: 2)
+            Coordinates: (1)
+            Data variables: ({n_vars})
+            Attributes: ({n_attr})"""
+        )
+        assert actual == expected

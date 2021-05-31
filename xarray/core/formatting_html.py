@@ -6,6 +6,7 @@ from html import escape
 import pkg_resources
 
 from .formatting import inline_variable_array_repr, short_data_repr
+from .options import _get_boolean_with_default
 
 STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 
@@ -24,9 +25,8 @@ def short_data_repr_html(array):
     internal_data = getattr(array, "variable", array)._data
     if hasattr(internal_data, "_repr_html_"):
         return internal_data._repr_html_()
-    else:
-        text = escape(short_data_repr(array))
-        return f"<pre>{text}</pre>"
+    text = escape(short_data_repr(array))
+    return f"<pre>{text}</pre>"
 
 
 def format_dims(dims, coord_names):
@@ -38,7 +38,7 @@ def format_dims(dims, coord_names):
     }
 
     dims_li = "".join(
-        f"<li><span{dim_css_map[dim]}>" f"{escape(dim)}</span>: {size}</li>"
+        f"<li><span{dim_css_map[dim]}>" f"{escape(str(dim))}</span>: {size}</li>"
         for dim, size in dims.items()
     )
 
@@ -47,7 +47,7 @@ def format_dims(dims, coord_names):
 
 def summarize_attrs(attrs):
     attrs_dl = "".join(
-        f"<dt><span>{escape(k)} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
+        f"<dt><span>{escape(str(k))} :</span></dt>" f"<dd>{escape(str(v))}</dd>"
         for k, v in attrs.items()
     )
 
@@ -76,8 +76,7 @@ def summarize_coord(name, var):
     if is_index:
         coord = var.variable.to_index_variable()
         if coord.level_names is not None:
-            coords = {}
-            coords[name] = _summarize_coord_multiindex(name, coord)
+            coords = {name: _summarize_coord_multiindex(name, coord)}
             for lname in coord.level_names:
                 var = coord.get_level_variable(lname)
                 coords[lname] = summarize_variable(lname, var)
@@ -164,9 +163,14 @@ def collapsible_section(
     )
 
 
-def _mapping_section(mapping, name, details_func, max_items_collapse, enabled=True):
+def _mapping_section(
+    mapping, name, details_func, max_items_collapse, expand_option_name, enabled=True
+):
     n_items = len(mapping)
-    collapsed = n_items >= max_items_collapse
+    expanded = _get_boolean_with_default(
+        expand_option_name, n_items < max_items_collapse
+    )
+    collapsed = not expanded
 
     return collapsible_section(
         name,
@@ -188,7 +192,11 @@ def dim_section(obj):
 def array_section(obj):
     # "unique" id to expand/collapse the section
     data_id = "section-" + str(uuid.uuid4())
-    collapsed = "checked"
+    collapsed = (
+        "checked"
+        if _get_boolean_with_default("display_expand_data", default=True)
+        else ""
+    )
     variable = getattr(obj, "variable", obj)
     preview = escape(inline_variable_array_repr(variable, max_width=70))
     data_repr = short_data_repr_html(obj)
@@ -209,6 +217,7 @@ coord_section = partial(
     name="Coordinates",
     details_func=summarize_coords,
     max_items_collapse=25,
+    expand_option_name="display_expand_coords",
 )
 
 
@@ -217,6 +226,7 @@ datavar_section = partial(
     name="Data variables",
     details_func=summarize_vars,
     max_items_collapse=15,
+    expand_option_name="display_expand_data_vars",
 )
 
 
@@ -225,6 +235,7 @@ attr_section = partial(
     name="Attributes",
     details_func=summarize_attrs,
     max_items_collapse=10,
+    expand_option_name="display_expand_attrs",
 )
 
 
