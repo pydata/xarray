@@ -131,7 +131,7 @@ def guess_engine(store_spec):
         if compatible:
             error_msg = \
                 error_msg + \
-                "\nThe following engines reports a match with the input file: {compatible}."
+                f"\nThe following engines reports a match with the input file: {compatible}."
     else:
         error_msg = (
             "xarray is unable to open this file because it has no currently "
@@ -143,8 +143,8 @@ def guess_engine(store_spec):
         if compatible:
             error_msg = \
                 error_msg + \
-                "\nConsider to install the dependencies of following engines that reports "\
-                "a match with the input file: {compatible}."
+                f"\nConsider to install one of the following engines that reports "\
+                f"a match with the input file: {compatible}."
 
     raise ValueError(error_msg)
 
