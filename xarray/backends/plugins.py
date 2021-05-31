@@ -120,31 +120,40 @@ def guess_engine(store_spec):
 
     installed = [k for k in engines if k != "store"]
     if installed:
-        error_msg = (
-            "did not find a match in any of xarray's currently installed IO "
-            f"backends {installed}. Consider explicitly selecting one of the "
-            "installed engines via the ``engine`` parameter, or installing " 
-            "additional IO dependencies:\n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html"
-        )
+        if not compatible:
+            error_msg = (
+                "did not find a match in any of xarray's currently installed IO "
+                f"backends {installed}. Consider explicitly selecting one of the "
+                "installed engines via the ``engine`` parameter, or installing "
+                "additional IO dependencies, see:\n"
+                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+                "http://xarray.pydata.org/en/stable/user-guide/io.html"
+            )
         if compatible:
-            error_msg = \
-                error_msg + \
-                f"\nThe following engines reports a match with the input file: {compatible}."
+            error_msg = (
+                "did not find a match in any of xarray's currently installed IO "
+                f"backends {installed}. Consider explicitly selecting one of the "
+                "installed engines via the ``engine`` parameter or to install one "
+                f"of the following engines that report a match with the input file: "
+                f"{compatible}"
+            )
     else:
-        error_msg = (
-            "xarray is unable to open this file because it has no currently "
-            "installed IO engines. Xarray's read/write support requires "
-            "optional dependencies:\n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io"
-        )
+        if not compatible:
+            error_msg = (
+                "xarray is unable to open this file because it has no currently "
+                "installed IO engines. Xarray's read/write support requires "
+                "optional IO dependencies, see:\n"
+                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
+                "http://xarray.pydata.org/en/stable/user-guide/io"
+            )
         if compatible:
-            error_msg = \
-                error_msg + \
-                f"\nConsider to install one of the following engines that reports "\
-                f"a match with the input file: {compatible}."
+            error_msg = (
+                "xarray is unable to open this file because it has no currently "
+                "installed IO engines. Xarray's read/write support requires "
+                "optional dependencies."
+                f"\nConsider to install one of the following engines that report "
+                f"a match with the input file: {compatible}"
+            )
 
     raise ValueError(error_msg)
 
