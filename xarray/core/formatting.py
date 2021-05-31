@@ -502,14 +502,18 @@ def short_data_repr(array):
 
 
 def array_repr(arr):
+    from .variable import Variable
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
     else:
         name_str = ""
 
-    if _get_boolean_with_default("display_expand_data", default=True) or isinstance(
-        arr.variable._data, MemoryCachedArray
+    if (
+        isinstance(arr, Variable)
+        or _get_boolean_with_default("display_expand_data", default=True)
+        or isinstance(arr.variable._data, MemoryCachedArray)
     ):
         data_repr = short_data_repr(arr)
     else:
