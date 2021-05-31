@@ -7275,6 +7275,13 @@ class TestIrisConversion:
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
 def test_rolling_exp_runs(da, dim, window_type, window, func):
+    import numbagg
+
+    if LooseVersion(numbagg.__version__) < "0.2.1" and func == "sum":
+        pytest.skip(
+            reason="old versions of numpy have different printing behavior",
+        )
+
     da = da.where(da > 0.2)
 
     rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
@@ -7309,6 +7316,13 @@ def test_rolling_exp_mean_pandas(da, dim, window_type, window):
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
 def test_rolling_exp_keep_attrs(da, func):
+    import numbagg
+
+    if LooseVersion(numbagg.__version__) < "0.2.1" and func == "sum":
+        pytest.skip(
+            reason="old versions of numpy have different printing behavior",
+        )
+
     attrs = {"attrs": "da"}
     da.attrs = attrs
 
