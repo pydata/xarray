@@ -276,8 +276,9 @@ class method:
     This is works a bit similar to using `partial(Class.method, arg, kwarg)`
     """
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, *args, fallback_func=None, **kwargs):
         self.name = name
+        self.fallback = fallback_func
         self.args = args
         self.kwargs = kwargs
 
