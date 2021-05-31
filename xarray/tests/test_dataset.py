@@ -6078,14 +6078,6 @@ class TestDataset:
 # pytest tests — new tests should go here, rather than in the class.
 
 
-@pytest.fixture(params=[None])
-def ds(request, backend):
-    ds = create_test_data(request.param)
-    if backend == "dask":
-        return ds.chunk()
-    return ds
-
-
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
 def test_isin(test_elements, backend):
     expected = Dataset(
@@ -6156,6 +6148,7 @@ def test_constructor_raises_with_invalid_coords(unaligned_coords):
         xr.DataArray([1, 2, 3], dims=["x"], coords=unaligned_coords)
 
 
+@pytest.mark.parametrize("ds", [3], indirect=True)
 def test_dir_expected_attrs(ds):
 
     some_expected_attrs = {"pipe", "mean", "isnull", "var1", "dim2", "numbers"}
@@ -6183,9 +6176,9 @@ def test_dir_unicode(ds):
 
 
 @pytest.fixture(params=[1])
-def ds(request):
+def ds(request, backend):
     if request.param == 1:
-        return Dataset(
+        ds = Dataset(
             dict(
                 z1=(["y", "x"], np.random.randn(2, 8)),
                 z2=(["time", "y"], np.random.randn(10, 2)),
@@ -6197,21 +6190,29 @@ def ds(request):
                 y=range(2),
             ),
         )
-
-    if request.param == 2:
-        return Dataset(
-            {
-                "z1": (["time", "y"], np.random.randn(10, 2)),
-                "z2": (["time"], np.random.randn(10)),
-                "z3": (["x", "time"], np.random.randn(8, 10)),
-            },
-            {
-                "x": ("x", np.linspace(0, 1.0, 8)),
-                "time": ("time", np.linspace(0, 1.0, 10)),
-                "c": ("y", ["a", "b"]),
-                "y": range(2),
-            },
+    elif request.param == 2:
+        ds = Dataset(
+            dict(
+                z1=(["time", "y"], np.random.randn(10, 2)),
+                z2=(["time"], np.random.randn(10)),
+                z3=(["x", "time"], np.random.randn(8, 10)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 8)),
+                time=("time", np.linspace(0, 1.0, 10)),
+                c=("y", ["a", "b"]),
+                y=range(2),
+            ),
         )
+    elif request.param == 3:
+        ds = create_test_data()
+    else:
+        raise ValueError
+
+    if backend == "dask":
+        return ds.chunk()
+
+    return ds
 
 
 def test_coarsen_absent_dims_error(ds):
@@ -6529,6 +6530,7 @@ def test_rolling_properties(ds):
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
@@ -6554,6 +6556,7 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
 
 
 @requires_numbagg
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp(ds):
 
     result = ds.rolling_exp(time=10, window_type="span").mean()
@@ -6561,6 +6564,7 @@ def test_rolling_exp(ds):
 
 
 @requires_numbagg
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp_keep_attrs(ds):
 
     attrs_global = {"attrs": "global"}
