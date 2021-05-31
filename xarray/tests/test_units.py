@@ -305,15 +305,14 @@ class method:
                 if key not in exclude_kwargs
             }
             if self.fallback is not None:
-                func = self.fallback
+                func = partial(self.fallback, obj)
             else:
                 func = getattr(obj, self.name, None)
 
                 if func is None or not callable(func):
                     # fall back to module level numpy functions
-                    func = getattr(np, self.name)
-
-            func = partial(func, obj)
+                    numpy_func = getattr(np, self.name)
+                    func = partial(numpy_func, obj)
         else:
             func = getattr(obj, self.name)
 
