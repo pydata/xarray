@@ -1253,8 +1253,10 @@ def call_on_dataset(func, obj, name, *args, **kwargs):
     array([1.5, 2. ])
     Coordinates:
       * x        (x) int64 0 1
+    >>> xr.call_on_dataset(lambda ds: list(ds.variables.keys()), ds.a, name="data")
+    ['x', 'data']
     """
-    from .dataarray import DataArray
+    from .dataarray import DataArray, Dataset
     from .parallel import dataset_to_dataarray
 
     if isinstance(obj, DataArray):
@@ -1264,8 +1266,8 @@ def call_on_dataset(func, obj, name, *args, **kwargs):
 
     result = func(ds, *args, **kwargs)
 
-    if isinstance(obj, DataArray):
-        result = dataset_to_dataarray(result.rename({name: obj.name}))
+    if isinstance(obj, DataArray) and isinstance(result, Dataset):
+        result = dataset_to_dataarray(result).rename(obj.name)
 
     return result
 
