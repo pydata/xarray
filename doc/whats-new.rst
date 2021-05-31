@@ -47,6 +47,9 @@ Bug fixes
 - Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
   :pull:`5385`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
+  (:pull:`5406`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Documentation
