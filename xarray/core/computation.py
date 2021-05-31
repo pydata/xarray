@@ -1255,10 +1255,10 @@ def call_on_dataset(func, obj, name, *args, **kwargs):
       * x        (x) int64 0 1
     """
     from .dataarray import DataArray
-    from .parallel import dataarray_to_dataset, dataset_to_dataarray
+    from .parallel import dataset_to_dataarray
 
     if isinstance(obj, DataArray):
-        ds = dataarray_to_dataset(obj.rename(name))
+        ds = obj.to_dataset(name=name)
     else:
         ds = obj
 
