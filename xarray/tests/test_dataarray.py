@@ -7281,9 +7281,7 @@ def test_rolling_exp_runs(da, dim, window_type, window, func):
         LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
         and func == "sum"
     ):
-        pytest.skip(
-            reason="rolling_exp.sum requires numbagg 0.2.1",
-        )
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
     da = da.where(da > 0.2)
 
@@ -7325,9 +7323,7 @@ def test_rolling_exp_keep_attrs(da, func):
         LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
         and func == "sum"
     ):
-        pytest.skip(
-            reason="rolling_exp.sum requires numbagg 0.2.1",
-        )
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
     attrs = {"attrs": "da"}
     da.attrs = attrs
