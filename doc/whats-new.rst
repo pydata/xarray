@@ -47,6 +47,9 @@ Bug fixes
 - Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
   :pull:`5385`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Don't cast a duck array in a coordinate to :py:class:`numpy.ndarray` in
+  :py:meth:`DataArray.differentiate` (:pull:``)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Documentation
