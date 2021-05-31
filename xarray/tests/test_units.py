@@ -283,7 +283,6 @@ class method:
         self.kwargs = kwargs
 
     def __call__(self, obj, *args, **kwargs):
-        from collections.abc import Callable
         from functools import partial
 
         all_args = merge_args(self.args, args)
@@ -299,21 +298,24 @@ class method:
         if not isinstance(obj, xarray_classes):
             # remove typical xarray args like "dim"
             exclude_kwargs = ("dim", "dims")
+            # TODO: figure out a way to replace dim / dims with axis
             all_kwargs = {
                 key: value
                 for key, value in all_kwargs.items()
                 if key not in exclude_kwargs
             }
-
-        func = getattr(obj, self.name, None)
-
-        if func is None or not isinstance(func, Callable):
-            # fall back to module level numpy functions if not a xarray object
-            if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
-                numpy_func = getattr(np, self.name)
-                func = partial(numpy_func, obj)
+            if self.fallback is not None:
+                func = self.fallback
             else:
-                raise AttributeError(f"{obj} has no method named '{self.name}'")
+                func = getattr(obj, self.name, None)
+
+                if func is None or not callable(func):
+                    # fall back to module level numpy functions
+                    func = getattr(np, self.name)
+
+            func = partial(func, obj)
+        else:
+            func = getattr(obj, self.name)
 
         return func(*all_args, **all_kwargs)
 
