@@ -29,8 +29,8 @@ def check_reduce_dims(reduce_dims, dimensions):
             reduce_dims = [reduce_dims]
         if any(dim not in dimensions for dim in reduce_dims):
             raise ValueError(
-                "cannot reduce over dimensions %r. expected either '...' to reduce over all dimensions or one or more of %r."
-                % (reduce_dims, dimensions)
+                f"cannot reduce over dimensions {reduce_dims!r}. expected either '...' "
+                f"to reduce over all dimensions or one or more of {dimensions!r}."
             )
 
 
@@ -105,7 +105,7 @@ def _consolidate_slices(slices):
     last_slice = slice(None)
     for slice_ in slices:
         if not isinstance(slice_, slice):
-            raise ValueError("list element is not a slice: %r" % slice_)
+            raise ValueError(f"list element is not a slice: {slice_!r}")
         if (
             result
             and last_slice.stop == slice_.start
@@ -141,8 +141,7 @@ def _inverse_permutation_indices(positions):
             return None
         positions = [np.arange(sl.start, sl.stop, sl.step) for sl in positions]
 
-    indices = nputils.inverse_permutation(np.concatenate(positions))
-    return indices
+    return nputils.inverse_permutation(np.concatenate(positions))
 
 
 class _DummyGroup:
@@ -200,9 +199,8 @@ def _ensure_1d(group, obj):
 def _unique_and_monotonic(group):
     if isinstance(group, _DummyGroup):
         return True
-    else:
-        index = safe_cast_to_index(group)
-        return index.is_unique and index.is_monotonic
+    index = safe_cast_to_index(group)
+    return index.is_unique and index.is_monotonic
 
 
 def _apply_loffset(grouper, result):
@@ -380,7 +378,7 @@ class GroupBy:
         if len(group_indices) == 0:
             if bins is not None:
                 raise ValueError(
-                    "None of the data falls within bins with edges %r" % bins
+                    f"None of the data falls within bins with edges {bins!r}"
                 )
             else:
                 raise ValueError(
@@ -475,8 +473,7 @@ class GroupBy:
     def _binary_op(self, other, f, reflexive=False):
         g = f if not reflexive else lambda x, y: f(y, x)
         applied = self._yield_binary_applied(g, other)
-        combined = self._combine(applied)
-        return combined
+        return self._combine(applied)
 
     def _yield_binary_applied(self, func, other):
         dummy = None
@@ -494,8 +491,8 @@ class GroupBy:
                 if self._group.name not in other.dims:
                     raise ValueError(
                         "incompatible dimensions for a grouped "
-                        "binary operation: the group variable %r "
-                        "is not a dimension on the other argument" % self._group.name
+                        f"binary operation: the group variable {self._group.name!r} "
+                        "is not a dimension on the other argument"
                     )
                 if dummy is None:
                     dummy = _dummy_copy(other)
@@ -548,8 +545,7 @@ class GroupBy:
         Dataset.fillna
         DataArray.fillna
         """
-        out = ops.fillna(self, value)
-        return out
+        return ops.fillna(self, value)
 
     def quantile(
         self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
@@ -636,7 +632,7 @@ class GroupBy:
           * x         (x) int64 0 1
         >>> ds.groupby("y").quantile([0, 0.5, 1], dim=...)
         <xarray.Dataset>
-        Dimensions:   (quantile: 3, y: 2)
+        Dimensions:   (y: 2, quantile: 3)
         Coordinates:
           * quantile  (quantile) float64 0.0 0.5 1.0
           * y         (y) int64 1 2
@@ -655,7 +651,6 @@ class GroupBy:
             keep_attrs=keep_attrs,
             skipna=skipna,
         )
-
         return out
 
     def where(self, cond, other=dtypes.NA):
@@ -737,8 +732,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         # compiled language)
         stacked = Variable.concat(applied, dim, shortcut=True)
         reordered = _maybe_reorder(stacked, dim, positions)
-        result = self._obj._replace_maybe_drop_dims(reordered)
-        return result
+        return self._obj._replace_maybe_drop_dims(reordered)
 
     def _restore_dim_order(self, stacked):
         def lookup_order(dimension):
@@ -795,10 +789,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         applied : DataArray or DataArray
             The result of splitting, applying and combining this array.
         """
-        if shortcut:
-            grouped = self._iter_grouped_shortcut()
-        else:
-            grouped = self._iter_grouped()
+        grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
         applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs)) for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 

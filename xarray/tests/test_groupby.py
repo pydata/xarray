@@ -387,7 +387,7 @@ repr_da = xr.DataArray(
 @pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr(obj, dim):
     actual = repr(obj.groupby(dim))
-    expected = "%sGroupBy" % obj.__class__.__name__
+    expected = f"{obj.__class__.__name__}GroupBy"
     expected += ", grouped over %r" % dim
     expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
     if dim == "x":
@@ -404,7 +404,7 @@ def test_groupby_repr(obj, dim):
 @pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr_datetime(obj):
     actual = repr(obj.groupby("t.month"))
-    expected = "%sGroupBy" % obj.__class__.__name__
+    expected = f"{obj.__class__.__name__}GroupBy"
     expected += ", grouped over 'month'"
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
