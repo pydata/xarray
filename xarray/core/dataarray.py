@@ -433,7 +433,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
-        fastpath=True,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -441,8 +440,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             coords = self._coords
         if name is _default:
             name = self.name
-        if not fastpath:
-            _check_shape_consistency(variable.shape, coords, variable.dims)
         return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
@@ -2984,7 +2981,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def __array_wrap__(self, obj, context=None) -> "DataArray":
         new_var = self.variable.__array_wrap__(obj, context)
-        return self._replace(new_var, fastpath=False)
+        if context is None:
+            _check_shape_consistency(new_var.shape, self._coords, new_var.dims)
+        return self._replace(new_var)
 
     def __matmul__(self, obj):
         return self.dot(obj)
@@ -3004,7 +3003,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             with np.errstate(all="ignore"):
-                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs), -1)
             if keep_attrs:
                 da.attrs = self.attrs
             return da
