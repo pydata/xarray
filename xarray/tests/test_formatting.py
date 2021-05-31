@@ -404,6 +404,14 @@ class TestFormatting:
 
             assert actual == expected
 
+    def test_array_repr_variable(self):
+        var = xr.Variable("x", [0, 1])
+
+        formatting.array_repr(var)
+
+        with xr.set_options(display_expand_data=False):
+            formatting.array_repr(var)
+
 
 def test_inline_variable_array_repr_custom_repr():
     class CustomArray:
