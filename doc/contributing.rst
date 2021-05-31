@@ -4,8 +4,6 @@
 Contributing to xarray
 **********************
 
-.. contents:: Table of contents:
-   :local:
 
 .. note::
 
@@ -52,7 +50,7 @@ Bug reports must:
 
       ```python
       import xarray as xr
-      df = xr.Dataset(...)
+      ds = xr.Dataset(...)
 
       ...
       ```
@@ -60,8 +58,12 @@ Bug reports must:
 #. Include the full version string of *xarray* and its dependencies. You can use the
    built in function::
 
-      >>> import xarray as xr
-      >>> xr.show_versions()
+      ```python
+      import xarray as xr
+      xr.show_versions()
+
+      ...
+      ```
 
 #. Explain why the current behavior is wrong/not desired and what you expect instead.
 
@@ -95,7 +97,7 @@ Some great resources for learning Git:
 
 * the `GitHub help pages <http://help.github.com/>`_.
 * the `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_.
-* Matthew Brett's `Pydagogue <http://matthew-brett.github.com/pydagogue/>`_.
+* Matthew Brett's `Pydagogue <http://matthew-brett.github.io/pydagogue/>`_.
 
 Getting started with Git
 ------------------------
@@ -381,10 +383,34 @@ with ``git commit --no-verify``.
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Please try to maintain backward compatibility. *xarray* has growing number of users with
+Please try to maintain backwards compatibility. *xarray* has a growing number of users with
 lots of existing code, so don't break it if at all possible.  If you think breakage is
-required, clearly state why as part of the pull request.  Also, be careful when changing
-method signatures and add deprecation warnings where needed.
+required, clearly state why as part of the pull request.
+
+Be especially careful when changing function and method signatures, because any change
+may require a deprecation warning. For example, if your pull request means that the
+argument ``old_arg`` to ``func`` is no longer valid, instead of simply raising an error if
+a user passes ``old_arg``, we would instead catch it:
+
+.. code-block:: python
+
+    def func(new_arg, old_arg=None):
+        if old_arg is not None:
+            from warnings import warn
+
+            warn(
+                "`old_arg` has been deprecated, and in the future will raise an error."
+                "Please use `new_arg` from now on.",
+                DeprecationWarning,
+            )
+
+            # Still do what the user intended here
+
+This temporary check would then be removed in a subsequent version of xarray.
+This process of first warning users before actually breaking their code is known as a
+"deprecation cycle", and makes changes significantly easier to handle both for users
+of xarray, and for developers of other libraries that depend on xarray.
+
 
 .. _contributing.ci:
 
@@ -686,8 +712,12 @@ This will display stderr from the benchmarks, and use your local
 Information on how to write a benchmark and how to use asv can be found in the
 `asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
 
-The *xarray* benchmarking suite is run remotely and the results are
-available `here <http://pandas.pydata.org/speed/xarray/>`_.
+..
+   TODO: uncomment once we have a working setup
+         see https://github.com/pydata/xarray/pull/5066
+
+   The *xarray* benchmarking suite is run remotely and the results are
+   available `here <http://pandas.pydata.org/speed/xarray/>`_.
 
 Documenting your code
 ---------------------
@@ -836,6 +866,7 @@ PR checklist
 
     - Write new tests if needed. See `"Test-driven development/code writing" <https://xarray.pydata.org/en/stable/contributing.html#test-driven-development-code-writing>`_.
     - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
+    - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a <tt>[test-upstream]</tt> tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a "[skip-ci]" tag to the first line of the commit message.
 
 - **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://xarray.pydata.org/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 

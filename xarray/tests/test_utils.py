@@ -7,9 +7,10 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
+from xarray.core.indexes import PandasIndex
 from xarray.core.utils import either_dict_or_kwargs
 
-from . import assert_array_equal, raises_regex, requires_cftime, requires_dask
+from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -28,11 +29,13 @@ def test_safe_cast_to_index():
     dates = pd.date_range("2000-01-01", periods=10)
     x = np.arange(5)
     td = x * np.timedelta64(1, "D")
+    midx = pd.MultiIndex.from_tuples([(0,)], names=["a"])
     for expected, array in [
         (dates, dates.values),
         (pd.Index(x, dtype=object), x.astype(object)),
         (pd.Index(td), td),
         (pd.Index(td, dtype=object), td.astype(object)),
+        (midx, PandasIndex(midx)),
     ]:
         actual = utils.safe_cast_to_index(array)
         assert_array_equal(expected, actual)
@@ -153,9 +156,9 @@ class TestDictionaries:
 
     def test_compat_dict_union(self):
         assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "unsafe to merge dictionaries without "
+            match=r"unsafe to merge dictionaries without "
             "overriding values; conflicting key",
         ):
             utils.compat_dict_union(self.x, self.z)
@@ -199,12 +202,6 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
-
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
@@ -231,15 +228,6 @@ def test_is_remote_uri():
     assert utils.is_remote_uri("https://example.com")
     assert not utils.is_remote_uri(" http://example.com")
     assert not utils.is_remote_uri("example.nc")
-
-
-def test_is_grib_path():
-    assert not utils.is_grib_path("example.nc")
-    assert not utils.is_grib_path("example.grib ")
-    assert utils.is_grib_path("example.grib")
-    assert utils.is_grib_path("example.grib2")
-    assert utils.is_grib_path("example.grb")
-    assert utils.is_grib_path("example.grb2")
 
 
 class Test_is_uniform_and_sorted:

@@ -12,7 +12,6 @@ from . import (
     assert_equal,
     assert_identical,
     raise_if_dask_computes,
-    raises_regex,
     requires_cftime,
     requires_dask,
 )
@@ -59,6 +58,8 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
+            "date",
+            "time",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -98,8 +99,8 @@ class TestDatetimeAccessor:
     def test_isocalendar(self, field, pandas_field):
 
         if LooseVersion(pd.__version__) < "1.1.0":
-            with raises_regex(
-                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            with pytest.raises(
+                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
             ):
                 self.data.time.dt.isocalendar()[field]
             return
@@ -122,7 +123,7 @@ class TestDatetimeAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with raises_regex(TypeError, "dt"):
+        with pytest.raises(TypeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.filterwarnings("ignore:dt.weekofyear and dt.week have been deprecated")
@@ -144,6 +145,8 @@ class TestDatetimeAccessor:
             "weekday",
             "dayofyear",
             "quarter",
+            "date",
+            "time",
             "is_month_start",
             "is_month_end",
             "is_quarter_start",
@@ -183,8 +186,8 @@ class TestDatetimeAccessor:
         import dask.array as da
 
         if LooseVersion(pd.__version__) < "1.1.0":
-            with raises_regex(
-                AttributeError, "'isocalendar' not available in pandas < 1.1.0"
+            with pytest.raises(
+                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
             ):
                 self.data.time.dt.isocalendar()[field]
             return
@@ -289,7 +292,7 @@ class TestTimedeltaAccessor:
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype("int8")
         nontime_data = nontime_data.assign_coords(time=int_data)
-        with raises_regex(TypeError, "dt"):
+        with pytest.raises(TypeError, match=r"dt"):
             nontime_data.time.dt
 
     @pytest.mark.parametrize(
@@ -424,16 +427,26 @@ def test_field_access(data, field):
 @requires_cftime
 def test_isocalendar_cftime(data):
 
-    with raises_regex(
-        AttributeError, "'CFTimeIndex' object has no attribute 'isocalendar'"
+    with pytest.raises(
+        AttributeError, match=r"'CFTimeIndex' object has no attribute 'isocalendar'"
     ):
         data.time.dt.isocalendar()
 
 
 @requires_cftime
+def test_date_cftime(data):
+
+    with pytest.raises(
+        AttributeError,
+        match=r"'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor\('D'\)`.",
+    ):
+        data.time.dt.date()
+
+
+@requires_cftime
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cftime_strftime_access(data):
-    """ compare cftime formatting against datetime formatting """
+    """compare cftime formatting against datetime formatting"""
     date_format = "%Y%m%d%H"
     result = data.time.dt.strftime(date_format)
     datetime_array = xr.DataArray(
