@@ -4953,7 +4953,7 @@ class TestDataset:
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
-        assert all(var not in data1.mean() for var in add_vars)
+        assert "var4" not in data1.mean() and "var5" not in data1.mean()
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
         assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
