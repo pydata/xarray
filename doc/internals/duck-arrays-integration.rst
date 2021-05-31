@@ -25,7 +25,7 @@ argument:
         ...
 
         def _repr_inline_(self, max_width):
-            """ format to a single line with at most max_width characters """
+            """format to a single line with at most max_width characters"""
             ...
 
         ...
@@ -48,4 +48,4 @@ To avoid duplicated information, this method must omit information about the sha
     b = sparse.COO.from_numpy(b)
     b
 
-    xr.Dataset({"a": ("x", a), "b": (("y", "z"), b)})
+    xr.Dataset(dict(a=("x", a), b=(("y", "z"), b)))

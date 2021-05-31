@@ -292,6 +292,7 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
 
@@ -422,14 +423,14 @@ String manipulation
 
 .. autosummary::
    :toctree: generated/
+   :template: autosummary/accessor.rst
+
+   DataArray.str
+
+.. autosummary::
+   :toctree: generated/
    :template: autosummary/accessor_method.rst
 
-   DataArray.str._apply
-   DataArray.str._padder
-   DataArray.str._partitioner
-   DataArray.str._re_compile
-   DataArray.str._splitter
-   DataArray.str._stringify
    DataArray.str.capitalize
    DataArray.str.casefold
    DataArray.str.cat
@@ -588,6 +589,7 @@ Plotting
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.surface
 
 .. _api.ufuncs:
 
@@ -682,6 +684,7 @@ Dataset methods
    open_rasterio
    open_zarr
    Dataset.to_netcdf
+   Dataset.to_pandas
    Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
@@ -844,6 +847,7 @@ Faceting
    plot.FacetGrid
    plot.FacetGrid.add_colorbar
    plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
    plot.FacetGrid.map
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
@@ -861,6 +865,7 @@ Tutorial
    :toctree: generated/
 
    tutorial.open_dataset
+   tutorial.open_rasterio
    tutorial.load_dataset
 
 Testing
@@ -896,6 +901,9 @@ Advanced API
    as_variable
    register_dataset_accessor
    register_dataarray_accessor
+   Dataset.set_close
+   backends.BackendArray
+   backends.BackendEntrypoint
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create

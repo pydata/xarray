@@ -2,17 +2,15 @@ import enum
 import functools
 import operator
 from collections import defaultdict
-from contextlib import suppress
-from datetime import timedelta
 from typing import Any, Callable, Iterable, List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
-from .npcompat import DTypeLike
 from .pycompat import (
     dask_array_type,
+    dask_version,
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
@@ -111,6 +109,8 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
     dimension. If `index` is a pandas.MultiIndex and depending on `label`,
     return a new pandas.Index or pandas.MultiIndex (otherwise return None).
     """
+    from .indexes import PandasIndex
+
     new_index = None
 
     if isinstance(label, slice):
@@ -200,6 +200,10 @@ def convert_label_indexer(index, label, index_name="", method=None, tolerance=No
             indexer = get_indexer_nd(index, label, method, tolerance)
             if np.any(indexer < 0):
                 raise KeyError(f"not all values found in index {index_name!r}")
+
+    if new_index is not None:
+        new_index = PandasIndex(new_index)
+
     return indexer, new_index
 
 
@@ -254,7 +258,7 @@ def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     dim_indexers = get_dim_indexers(data_obj, indexers)
     for dim, label in dim_indexers.items():
         try:
-            index = data_obj.indexes[dim]
+            index = data_obj.xindexes[dim].to_pandas_index()
         except KeyError:
             # no index for this dimension: reuse the provided labels
             if method is not None or tolerance is not None:
@@ -718,7 +722,9 @@ def as_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
-        return PandasIndexAdapter(array)
+        from .indexes import PandasIndex
+
+        return PandasIndex(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
@@ -1098,7 +1104,7 @@ def _decompose_outer_indexer(
 
 
 def _arrayize_vectorized_indexer(indexer, shape):
-    """ Return an identical vindex but slices are replaced by arrays """
+    """Return an identical vindex but slices are replaced by arrays"""
     slices = [v for v in indexer.tuple if isinstance(v, slice)]
     if len(slices) == 0:
         return indexer
@@ -1380,111 +1386,29 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        raise TypeError(
-            "this variable's data is stored in a dask array, "
-            "which does not support item assignment. To "
-            "assign to this variable, you must first load it "
-            "into memory explicitly using the .load() "
-            "method or accessing its .values attribute."
-        )
+        if dask_version >= "2021.04.1":
+            if isinstance(key, BasicIndexer):
+                self.array[key.tuple] = value
+            elif isinstance(key, VectorizedIndexer):
+                self.array.vindex[key.tuple] = value
+            elif isinstance(key, OuterIndexer):
+                num_non_slices = sum(
+                    0 if isinstance(k, slice) else 1 for k in key.tuple
+                )
+                if num_non_slices > 1:
+                    raise NotImplementedError(
+                        "xarray can't set arrays with multiple "
+                        "array indices to dask yet."
+                    )
+                self.array[key.tuple] = value
+        else:
+            raise TypeError(
+                "This variable's data is stored in a dask array, "
+                "and the installed dask version does not support item "
+                "assignment. To assign to this variable, you must either upgrade dask or"
+                "first load the variable into memory explicitly using the .load() "
+                "method or accessing its .values attribute."
+            )
 
     def transpose(self, order):
         return self.array.transpose(order)
-
-
-class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
-
-    __slots__ = ("array", "_dtype")
-
-    def __init__(self, array: Any, dtype: DTypeLike = None):
-        self.array = utils.safe_cast_to_index(array)
-        if dtype is None:
-            if isinstance(array, pd.PeriodIndex):
-                dtype_ = np.dtype("O")
-            elif hasattr(array, "categories"):
-                # category isn't a real numpy dtype
-                dtype_ = array.categories.dtype
-            elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype_ = np.dtype("O")
-            else:
-                dtype_ = array.dtype
-        else:
-            dtype_ = np.dtype(dtype)
-        self._dtype = dtype_
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self._dtype
-
-    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
-        if dtype is None:
-            dtype = self.dtype
-        array = self.array
-        if isinstance(array, pd.PeriodIndex):
-            with suppress(AttributeError):
-                # this might not be public API
-                array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype)
-
-    @property
-    def shape(self) -> Tuple[int]:
-        return (len(self.array),)
-
-    def __getitem__(
-        self, indexer
-    ) -> Union[NumpyIndexingAdapter, np.ndarray, np.datetime64, np.timedelta64]:
-        key = indexer.tuple
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            (key,) = key
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(self.array.values)[indexer]
-
-        result = self.array[key]
-
-        if isinstance(result, pd.Index):
-            result = PandasIndexAdapter(result, dtype=self.dtype)
-        else:
-            # result is a scalar
-            if result is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                result = np.datetime64("NaT", "ns")
-            elif isinstance(result, timedelta):
-                result = np.timedelta64(getattr(result, "value", result), "ns")
-            elif isinstance(result, pd.Timestamp):
-                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
-                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
-                result = np.asarray(result.to_datetime64())
-            elif self.dtype != object:
-                result = np.asarray(result, dtype=self.dtype)
-
-            # as for numpy.ndarray indexing, we always want the result to be
-            # a NumPy array.
-            result = utils.to_0d_array(result)
-
-        return result
-
-    def transpose(self, order) -> pd.Index:
-        return self.array  # self.array should be always one-dimensional
-
-    def __repr__(self) -> str:
-        return "{}(array={!r}, dtype={!r})".format(
-            type(self).__name__, self.array, self.dtype
-        )
-
-    def copy(self, deep: bool = True) -> "PandasIndexAdapter":
-        # Not the same as just writing `self.array.copy(deep=deep)`, as
-        # shallow copies of the underlying numpy.ndarrays become deep ones
-        # upon pickling
-        # >>> len(pickle.dumps((self.array, self.array)))
-        # 4000281
-        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
-        # 8000341
-        array = self.array.copy(deep=True) if deep else self.array
-        return PandasIndexAdapter(array, self._dtype)

@@ -4,12 +4,11 @@ import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
-import pandas as pd
 
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import default_indexes
+from xarray.core.indexes import Index, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -205,7 +204,7 @@ def _format_message(x, y, err_msg, verbose):
 def assert_duckarray_allclose(
     actual, desired, rtol=1e-07, atol=0, err_msg="", verbose=True
 ):
-    """ Like `np.testing.assert_allclose`, but for duckarrays. """
+    """Like `np.testing.assert_allclose`, but for duckarrays."""
     __tracebackhide__ = True
 
     allclose = duck_array_ops.allclose_or_equiv(actual, desired, rtol=rtol, atol=atol)
@@ -214,7 +213,7 @@ def assert_duckarray_allclose(
 
 @ensure_warnings
 def assert_duckarray_equal(x, y, err_msg="", verbose=True):
-    """ Like `np.testing.assert_array_equal`, but for duckarrays """
+    """Like `np.testing.assert_array_equal`, but for duckarrays"""
     __tracebackhide__ = True
 
     if not utils.is_duck_array(x) and not utils.is_scalar(x):
@@ -254,7 +253,7 @@ def assert_chunks_equal(a, b):
 
 def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     assert isinstance(indexes, dict), indexes
-    assert all(isinstance(v, pd.Index) for v in indexes.values()), {
+    assert all(isinstance(v, Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
     }
 

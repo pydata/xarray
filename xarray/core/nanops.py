@@ -63,7 +63,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
 
 
 def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
-    """ In house nanmin and nanmax for object array """
+    """In house nanmin and nanmax for object array"""
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = getattr(np, func)(filled_value, axis=axis, **kwargs)
@@ -119,7 +119,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
-    """ In house nanmean. ddof argument will be used in _nanvar method """
+    """In house nanmean. ddof argument will be used in _nanvar method"""
     from .duck_array_ops import _dask_or_eager_func, count, fillna, where_method
 
     valid_count = count(value, axis=axis)
@@ -155,9 +155,7 @@ def nanmedian(a, axis=None, out=None):
     # possibly blow memory
     if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
         axis = None
-    return _dask_or_eager_func(
-        "nanmedian", dask_module=dask_array_compat, eager_module=nputils
-    )(a, axis=axis)
+    return _dask_or_eager_func("nanmedian", eager_module=nputils)(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):

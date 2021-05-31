@@ -11,8 +11,7 @@ from .merge import merge
 
 
 def _infer_concat_order_from_positions(datasets):
-    combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
-    return combined_ids
+    return dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
 
 def _infer_tile_ids_from_nested_list(entry, current_pos):
@@ -69,12 +68,16 @@ def _infer_concat_order_from_coords(datasets):
         if dim in ds0:
 
             # Need to read coordinate values to do ordering
-            indexes = [ds.indexes.get(dim) for ds in datasets]
+            indexes = [ds.xindexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
                 raise ValueError(
                     "Every dimension needs a coordinate for "
                     "inferring concatenation order"
                 )
+
+            # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
+            # get pd.Index objects from Index objects
+            indexes = [index.array for index in indexes]
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -140,7 +143,7 @@ def _check_dimension_depth_tile_ids(combined_tile_ids):
     nesting_depths = [len(tile_id) for tile_id in tile_ids]
     if not nesting_depths:
         nesting_depths = [0]
-    if not set(nesting_depths) == {nesting_depths[0]}:
+    if set(nesting_depths) != {nesting_depths[0]}:
         raise ValueError(
             "The supplied objects do not form a hypercube because"
             " sub-lists do not have consistent depths"
@@ -372,7 +375,7 @@ def combine_nested(
 
     To concatenate along multiple dimensions the datasets must be passed as a
     nested list-of-lists, with a depth equal to the length of ``concat_dims``.
-    ``manual_combine`` will concatenate along the top-level list first.
+    ``combine_nested`` will concatenate along the top-level list first.
 
     Useful for combining datasets from a set of nested directories, or for
     collecting the output of a simulation parallelized along multiple
@@ -496,7 +499,7 @@ def combine_nested(
         temperature    (x, y) float64 1.764 0.4002 -0.1032 ... 0.04576 -0.1872
         precipitation  (x, y) float64 1.868 -0.9773 0.761 ... -0.7422 0.1549 0.3782
 
-    ``manual_combine`` can also be used to explicitly merge datasets with
+    ``combine_nested`` can also be used to explicitly merge datasets with
     different variables. For example if we have 4 datasets, which are divided
     along two times, and contain two different variables, we can pass ``None``
     to ``concat_dim`` to specify the dimension of the nested list over which
@@ -540,7 +543,7 @@ def combine_nested(
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
-    # The IDs argument tells _manual_combine that datasets aren't yet sorted
+    # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
         concat_dims=concat_dim,
@@ -583,7 +586,7 @@ def combine_by_coords(
 
     Aligns coordinates, but different variables on datasets can cause it
     to fail under some scenarios. In complex cases, you may need to clean up
-    your data and use concat/merge explicitly (also see `manual_combine`).
+    your data and use concat/merge explicitly (also see `combine_nested`).
 
     Works well if, for example, you have N years of data and M data variables,
     and each combination of a distinct time period and set of data variables is
@@ -631,8 +634,7 @@ def combine_by_coords(
         refer to its values. If None, raises a ValueError if
         the passed Datasets do not create a complete hypercube.
     join : {"outer", "inner", "left", "right", "exact"}, optional
-        String indicating how to combine differing indexes
-        (excluding concat_dim) in objects
+        String indicating how to combine differing indexes in objects
 
         - "outer": use the union of object indexes
         - "inner": use the intersection of object indexes
@@ -673,9 +675,6 @@ def combine_by_coords(
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
 
-    >>> import numpy as np
-    >>> import xarray as xr
-
     >>> x1 = xr.Dataset(
     ...     {
     ...         "temperature": (("y", "x"), 20 * np.random.rand(6).reshape(2, 3)),
@@ -700,7 +699,7 @@ def combine_by_coords(
 
     >>> x1
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 0 1
       * x              (x) int64 10 20 30
@@ -710,7 +709,7 @@ def combine_by_coords(
 
     >>> x2
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 2 3
       * x              (x) int64 10 20 30
@@ -720,7 +719,7 @@ def combine_by_coords(
 
     >>> x3
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 2 3
       * x              (x) int64 40 50 60
@@ -730,7 +729,7 @@ def combine_by_coords(
 
     >>> xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 4)
+    Dimensions:        (y: 4, x: 3)
     Coordinates:
       * y              (y) int64 0 1 2 3
       * x              (x) int64 10 20 30
@@ -740,30 +739,30 @@ def combine_by_coords(
 
     >>> xr.combine_by_coords([x3, x1])
     <xarray.Dataset>
-    Dimensions:        (x: 6, y: 4)
+    Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30 40 50 60
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 4)
+    Dimensions:        (y: 2, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30
-      * y              (y) int64 0 1 2 3
+      * y              (y) int64 0 1
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 18.89 10.44 8.293
+        temperature    (y, x) float64 10.98 14.3 12.06 2.365 ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
     <xarray.Dataset>
-    Dimensions:        (x: 6, y: 4)
+    Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30 40 50 60
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
@@ -802,9 +801,13 @@ def combine_by_coords(
         )
 
         # Check the overall coordinates are monotonically increasing
+        # TODO (benbovy - flexible indexes): only with pandas.Index?
         for dim in concat_dims:
-            indexes = concatenated.indexes.get(dim)
-            if not (indexes.is_monotonic_increasing or indexes.is_monotonic_decreasing):
+            indexes = concatenated.xindexes.get(dim)
+            if not (
+                indexes.array.is_monotonic_increasing
+                or indexes.array.is_monotonic_decreasing
+            ):
                 raise ValueError(
                     "Resulting object does not have monotonic"
                     " global indexes along dimension {}".format(dim)

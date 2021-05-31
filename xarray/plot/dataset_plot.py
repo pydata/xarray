@@ -196,46 +196,56 @@ def _dsplot(plotfunc):
 
     ds : Dataset
     x, y : str
-        Variable names for x, y axis.
+        Variable names for the *x* and *y* grid positions.
     u, v : str, optional
-        Variable names for quiver or streamplot plots only
+        Variable names for the *u* and *v* velocities
+        (in *x* and *y* direction, respectively; quiver/streamplot plots only).
     hue: str, optional
-        Variable by which to color scattered points or arrows
-    hue_style: str, optional
-        Can be either 'discrete' (legend) or 'continuous' (color bar).
+        Variable by which to color scatter points or arrows.
+    hue_style: {'continuous', 'discrete'}, optional
+        How to use the ``hue`` variable:
+
+        - ``'continuous'`` -- continuous color scale
+          (default for numeric ``hue`` variables)
+        - ``'discrete'`` -- a color for each unique value, using the default color cycle
+          (default for non-numeric ``hue`` variables)
     markersize: str, optional
-        scatter only. Variable by which to vary size of scattered points.
-    size_norm: optional
-        Either None or 'Norm' instance to normalize the 'markersize' variable.
+        Variable by which to vary the size of scattered points (scatter plot only).
+    size_norm: matplotlib.colors.Normalize or tuple, optional
+        Used to normalize the ``markersize`` variable.
+        If a tuple is passed, the values will be passed to
+        :py:class:`matplotlib:matplotlib.colors.Normalize` as arguments.
+        Default: no normalization (``vmin=None``, ``vmax=None``, ``clip=False``).
     scale: scalar, optional
         Quiver only. Number of data units per arrow length unit.
         Use this to control the length of the arrows: larger values lead to
-        smaller arrows
-    add_guide: bool, optional
-        Add a guide that depends on hue_style
-            - for "discrete", build a legend.
-              This is the default for non-numeric `hue` variables.
-            - for "continuous",  build a colorbar
+        smaller arrows.
+    add_guide: bool, optional, default: True
+        Add a guide that depends on ``hue_style``:
+
+        - ``'continuous'`` -- build a colorbar
+        - ``'discrete'`` -- build a legend
     row : str, optional
-        If passed, make row faceted plots on this dimension name
+        If passed, make row faceted plots on this dimension name.
     col : str, optional
-        If passed, make column faceted plots on this dimension name
+        If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
+        Use together with ``col`` to wrap faceted plots.
     ax : matplotlib axes object, optional
-        If None, uses the current axis. Not applicable when using facets.
+        If ``None``, use the current axes. Not applicable when using facets.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
+        Dictionary of keyword arguments for Matplotlib subplots
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
+        Only applies to FacetGrid plotting.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
-    norm : ``matplotlib.colors.Normalize`` instance, optional
-        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
-        must be None.
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
+    norm : matplotlib.colors.Normalize, optional
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
     vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -243,15 +253,20 @@ def _dsplot(plotfunc):
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : str or colormap, optional
+    cmap : matplotlib colormap name or colormap, optional
         The mapping from data values to color space. Either a
-        matplotlib colormap name or object. If not provided, this will
-        be either ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging
-        dataset).  When `Seaborn` is installed, ``cmap`` may also be a
-        `seaborn` color palette. If ``cmap`` is seaborn color palette,
+        Matplotlib colormap name or object. If not provided, this will
+        be either ``'viridis'`` (if the function infers a sequential
+        dataset) or ``'RdBu_r'`` (if the function infers a diverging
+        dataset).
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        for more information.
+
+        If *seaborn* is installed, ``cmap`` may also be a
+        `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
+        Note: if ``cmap`` is a seaborn color palette,
         ``levels`` must also be specified.
-    colors : color-like or list of color-like, optional
+    colors : str or array-like of color-like, optional
         A single color or a list of colors. The ``levels`` argument
         is required.
     center : float, optional
@@ -259,19 +274,19 @@ def _dsplot(plotfunc):
         use of a diverging colormap. Setting it to ``False`` prevents use of a
         diverging colormap.
     robust : bool, optional
-        If True and ``vmin`` or ``vmax`` are absent, the colormap range is
+        If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {"neither", "both", "min", "max"}, optional
+    extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
-        provided, extend is inferred from vmin, vmax and the data limits.
-    levels : int or list-like object, optional
-        Split the colormap (cmap) into discrete color intervals. If an integer
+        provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
+    levels : int or array-like, optional
+        Split the colormap (``cmap``) into discrete color intervals. If an integer
         is provided, "nice" levels are chosen based on the data range: this can
         imply that the final number of levels is not exactly the expected one.
         Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
         setting ``levels=np.linspace(vmin, vmax, N)``.
     **kwargs : optional
-        Additional keyword arguments to matplotlib
+        Additional keyword arguments to wrapped Matplotlib function.
     """
 
     # Build on the original docstring
@@ -463,9 +478,11 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, u, v, **kwargs):
+def scatter(ds, x, y, ax, **kwargs):
     """
     Scatter Dataset data variables against each other.
+
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
     """
 
     if "add_colorbar" in kwargs or "add_legend" in kwargs:
@@ -481,6 +498,10 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
     markersize = kwargs.pop("markersize", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+
+    # Remove `u` and `v` so they don't get passed to `ax.scatter`
+    kwargs.pop("u", None)
+    kwargs.pop("v", None)
 
     # need to infer size_mapping with full dataset
     data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
@@ -519,7 +540,10 @@ def scatter(ds, x, y, ax, u, v, **kwargs):
 
 @_dsplot
 def quiver(ds, x, y, ax, u, v, **kwargs):
-    """ Quiver plot with Dataset variables."""
+    """Quiver plot of Dataset variables.
+
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
+    """
     import matplotlib as mpl
 
     if x is None or y is None or u is None or v is None:
@@ -548,7 +572,10 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
 @_dsplot
 def streamplot(ds, x, y, ax, u, v, **kwargs):
-    """ Quiver plot with Dataset variables."""
+    """Plot streamlines of Dataset variables.
+
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
+    """
     import matplotlib as mpl
 
     if x is None or y is None or u is None or v is None:

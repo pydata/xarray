@@ -176,7 +176,7 @@ objects. You can think of it as a multi-dimensional generalization of the
 
 .. ipython:: python
 
-    ds = xr.Dataset({"foo": data, "bar": ("x", [1, 2]), "baz": np.pi})
+    ds = xr.Dataset(dict(foo=data, bar=("x", [1, 2]), baz=np.pi))
     ds
 
 

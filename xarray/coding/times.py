@@ -68,10 +68,14 @@ TIME_UNITS = frozenset(
 )
 
 
+def _is_standard_calendar(calendar):
+    return calendar.lower() in _STANDARD_CALENDARS
+
+
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith("s"):
-        units = "%ss" % units
+        units = f"{units}s"
     return {
         "nanoseconds": "ns",
         "microseconds": "us",
@@ -100,6 +104,8 @@ def _ensure_padded_year(ref_date):
     # No four-digit strings, assume the first digits are the year and pad
     # appropriately
     matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
+    if not matches_start_digits:
+        raise ValueError(f"invalid reference date for time units: {ref_date}")
     ref_year, everything_else = [s for s in matches_start_digits.groups()]
     ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
 
@@ -143,7 +149,7 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
         result = decode_cf_datetime(example_value, units, calendar, use_cftime)
     except Exception:
         calendar_msg = (
-            "the default calendar" if calendar is None else "calendar %r" % calendar
+            "the default calendar" if calendar is None else f"calendar {calendar!r}"
         )
         msg = (
             f"unable to decode time units {units!r} with {calendar_msg!r}. Try "
@@ -166,7 +172,7 @@ def _decode_datetime_with_cftime(num_dates, units, calendar):
 
 
 def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
-    if calendar not in _STANDARD_CALENDARS:
+    if not _is_standard_calendar(calendar):
         raise OutOfBoundsDatetime(
             "Cannot decode times from a non-standard calendar, {!r}, using "
             "pandas.".format(calendar)
@@ -237,7 +243,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                 dates[np.nanargmin(num_dates)].year < 1678
                 or dates[np.nanargmax(num_dates)].year >= 2262
             ):
-                if calendar in _STANDARD_CALENDARS:
+                if _is_standard_calendar(calendar):
                     warnings.warn(
                         "Unable to decode time axis into full "
                         "numpy.datetime64 objects, continuing using "
@@ -247,7 +253,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
                         stacklevel=3,
                     )
             else:
-                if calendar in _STANDARD_CALENDARS:
+                if _is_standard_calendar(calendar):
                     dates = cftime_to_nptime(dates)
     elif use_cftime:
         dates = _decode_datetime_with_cftime(flat_num_dates, units, calendar)
@@ -366,8 +372,7 @@ def infer_timedelta_units(deltas):
     """
     deltas = to_timedelta_unboxed(np.asarray(deltas).ravel())
     unique_timedeltas = np.unique(deltas[pd.notnull(deltas)])
-    units = _infer_time_units_from_diff(unique_timedeltas)
-    return units
+    return _infer_time_units_from_diff(unique_timedeltas)
 
 
 def cftime_to_nptime(times):
@@ -450,7 +455,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
-        if calendar not in _STANDARD_CALENDARS or dates.dtype.kind == "O":
+        if not _is_standard_calendar(calendar) or dates.dtype.kind == "O":
             # parse with cftime instead
             raise OutOfBoundsDatetime
         assert dates.dtype == "datetime64[ns]"

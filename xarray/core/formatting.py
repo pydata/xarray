@@ -11,7 +11,8 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
-from .options import OPTIONS
+from .indexing import MemoryCachedArray
+from .options import OPTIONS, _get_boolean_with_default
 from .pycompat import dask_array_type, sparse_array_type
 from .utils import is_duck_array
 
@@ -257,12 +258,12 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "_repr_inline_"):
-        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -371,7 +372,9 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
+def _mapping_repr(
+    mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None
+):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
@@ -379,7 +382,9 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
-        if len_mapping > max_rows:
+        if not _get_boolean_with_default(expand_option_name, default=True):
+            summary = [f"{summary[0]} ({len_mapping})"]
+        elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             items = list(mapping.items())
@@ -396,12 +401,18 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
 
 
 data_vars_repr = functools.partial(
-    _mapping_repr, title="Data variables", summarizer=summarize_datavar
+    _mapping_repr,
+    title="Data variables",
+    summarizer=summarize_datavar,
+    expand_option_name="display_expand_data_vars",
 )
 
 
 attrs_repr = functools.partial(
-    _mapping_repr, title="Attributes", summarizer=summarize_attr
+    _mapping_repr,
+    title="Attributes",
+    summarizer=summarize_attr,
+    expand_option_name="display_expand_attrs",
 )
 
 
@@ -409,7 +420,11 @@ def coords_repr(coords, col_width=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
     return _mapping_repr(
-        coords, title="Coordinates", summarizer=summarize_coord, col_width=col_width
+        coords,
+        title="Coordinates",
+        summarizer=summarize_coord,
+        expand_option_name="display_expand_coords",
+        col_width=col_width,
     )
 
 
@@ -487,15 +502,26 @@ def short_data_repr(array):
 
 
 def array_repr(arr):
+    from .variable import Variable
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
     else:
         name_str = ""
 
+    if (
+        isinstance(arr, Variable)
+        or _get_boolean_with_default("display_expand_data", default=True)
+        or isinstance(arr.variable._data, MemoryCachedArray)
+    ):
+        data_repr = short_data_repr(arr)
+    else:
+        data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
+
     summary = [
         "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
-        short_data_repr(arr),
+        data_repr,
     ]
 
     if hasattr(arr, "coords"):
