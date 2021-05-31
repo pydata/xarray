@@ -413,7 +413,7 @@ class TestDataArray:
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, 'conflicting sizes for dimension'):
+        with pytest.raises(ValueError, match="conflicting sizes for dimension"):
             np.insert(expected, 0, 0, axis=0)
 
     def test_constructor_from_0d(self):

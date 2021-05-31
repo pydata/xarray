@@ -176,7 +176,6 @@ def _check_shape_consistency(shape, coords, dims):
             )
 
 
-
 def _check_data_shape(data, coords, dims):
     if data is dtypes.NA:
         data = np.nan
@@ -434,6 +433,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
+        fastpath=True,
     ) -> "DataArray":
         if variable is None:
             variable = self.variable
@@ -441,6 +441,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             coords = self._coords
         if name is _default:
             name = self.name
+        if not fastpath:
+            _check_shape_consistency(variable.shape, coords, variable.dims)
         return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
 
     def _replace_maybe_drop_dims(
@@ -2982,9 +2984,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def __array_wrap__(self, obj, context=None) -> "DataArray":
         new_var = self.variable.__array_wrap__(obj, context)
-        if not fastpath:
-            _check_shape_consistency(new_var.shape, self._coords, new_var.dims)
-        return self._replace(new_var)
+        return self._replace(new_var, fastpath=False)
 
     def __matmul__(self, obj):
         return self.dot(obj)
