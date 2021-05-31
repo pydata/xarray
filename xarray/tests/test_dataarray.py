@@ -6501,7 +6501,11 @@ def test_isin(da):
 
 
 @pytest.mark.parametrize(
-    "funcname, argument", [("reduce", (np.mean,)), ("mean", ()),],
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
 )
 def test_coarsen_keep_attrs(funcname, argument):
     attrs_da = {"da_attr": "test"}
@@ -6839,7 +6843,8 @@ def test_rolling_stride(center, window, stride):
         assert_array_equal(actual.isnull(), expected.isnull())
         if (~actual.isnull()).sum() > 0:
             np.allclose(
-                actual.values, expected.values,
+                actual.values,
+                expected.values,
             )
 
 

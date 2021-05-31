@@ -207,7 +207,10 @@ class StringAccessor:
     def __init__(self, obj):
         self._obj = obj
 
-    def _stringify(self, invar: Any,) -> Union[str, bytes, Any]:
+    def _stringify(
+        self,
+        invar: Any,
+    ) -> Union[str, bytes, Any]:
         """
         Convert a string-like to the correct string/bytes type.
 
@@ -285,19 +288,31 @@ class StringAccessor:
         """
         return self._apply(func=len, dtype=int)
 
-    def __getitem__(self, key: Union[int, slice],) -> Any:
+    def __getitem__(
+        self,
+        key: Union[int, slice],
+    ) -> Any:
         if isinstance(key, slice):
             return self.slice(start=key.start, stop=key.stop, step=key.step)
         else:
             return self.get(key)
 
-    def __add__(self, other: Any,) -> Any:
+    def __add__(
+        self,
+        other: Any,
+    ) -> Any:
         return self.cat(other, sep="")
 
-    def __mul__(self, num: Union[int, Any],) -> Any:
+    def __mul__(
+        self,
+        num: Union[int, Any],
+    ) -> Any:
         return self.repeat(num)
 
-    def __mod__(self, other: Any,) -> Any:
+    def __mod__(
+        self,
+        other: Any,
+    ) -> Any:
         if isinstance(other, dict):
             other = {key: self._stringify(val) for key, val in other.items()}
             return self._apply(func=lambda x: x % other)
@@ -307,7 +322,11 @@ class StringAccessor:
         else:
             return self._apply(func=lambda x, y: x % y, func_args=(other,))
 
-    def get(self, i: Union[int, Any], default: Union[str, bytes] = "",) -> Any:
+    def get(
+        self,
+        i: Union[int, Any],
+        default: Union[str, bytes] = "",
+    ) -> Any:
         """
         Extract character number `i` from each string in the array.
 
@@ -414,7 +433,11 @@ class StringAccessor:
 
         return self._apply(func=func, func_args=(start, stop, repl))
 
-    def cat(self, *others, sep: Union[str, bytes, Any] = "",) -> Any:
+    def cat(
+        self,
+        *others,
+        sep: Union[str, bytes, Any] = "",
+    ) -> Any:
         """
         Concatenate strings elementwise in the DataArray with other strings.
 
@@ -489,9 +512,17 @@ class StringAccessor:
         # sep will go at the end of the input arguments.
         func = lambda *x: x[-1].join(x[:-1])
 
-        return self._apply(func=func, func_args=others, dtype=self._obj.dtype.kind,)
+        return self._apply(
+            func=func,
+            func_args=others,
+            dtype=self._obj.dtype.kind,
+        )
 
-    def join(self, dim: Hashable = None, sep: Union[str, bytes, Any] = "",) -> Any:
+    def join(
+        self,
+        dim: Hashable = None,
+        sep: Union[str, bytes, Any] = "",
+    ) -> Any:
         """
         Concatenate strings in a DataArray along a particular dimension.
 
@@ -558,7 +589,11 @@ class StringAccessor:
         # concatenate the resulting arrays
         return start.str.cat(*others, sep=sep)
 
-    def format(self, *args: Any, **kwargs: Any,) -> Any:
+    def format(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         Perform python string formatting on each element of the DataArray.
 
@@ -703,7 +738,10 @@ class StringAccessor:
         """
         return self._apply(func=lambda x: x.casefold())
 
-    def normalize(self, form: str,) -> Any:
+    def normalize(
+        self,
+        form: str,
+    ) -> Any:
         """
         Return the Unicode normal form for the strings in the datarray.
 
@@ -822,7 +860,10 @@ class StringAccessor:
         return self._apply(func=lambda x: x.isupper(), dtype=bool)
 
     def count(
-        self, pat: Union[str, bytes, Pattern, Any], flags: int = 0, case: bool = None,
+        self,
+        pat: Union[str, bytes, Pattern, Any],
+        flags: int = 0,
+        case: bool = None,
     ) -> Any:
         """
         Count occurrences of pattern in each string of the array.
@@ -859,7 +900,10 @@ class StringAccessor:
         func = lambda x, ipat: len(ipat.findall(x))
         return self._apply(func=func, func_args=(pat,), dtype=int)
 
-    def startswith(self, pat: Union[str, bytes, Any],) -> Any:
+    def startswith(
+        self,
+        pat: Union[str, bytes, Any],
+    ) -> Any:
         """
         Test if the start of each string in the array matches a pattern.
 
@@ -882,7 +926,10 @@ class StringAccessor:
         func = lambda x, y: x.startswith(y)
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
-    def endswith(self, pat: Union[str, bytes, Any],) -> Any:
+    def endswith(
+        self,
+        pat: Union[str, bytes, Any],
+    ) -> Any:
         """
         Test if the end of each string in the array matches a pattern.
 
@@ -965,7 +1012,9 @@ class StringAccessor:
         return self._apply(func=overfunc, func_args=(width, fillchar))
 
     def center(
-        self, width: Union[int, Any], fillchar: Union[str, bytes, Any] = " ",
+        self,
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad left and right side of each string in the array.
@@ -990,7 +1039,9 @@ class StringAccessor:
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def ljust(
-        self, width: Union[int, Any], fillchar: Union[str, bytes, Any] = " ",
+        self,
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad right side of each string in the array.
@@ -1015,7 +1066,9 @@ class StringAccessor:
         return self._padder(func=func, width=width, fillchar=fillchar)
 
     def rjust(
-        self, width: Union[int, Any], fillchar: Union[str, bytes, Any] = " ",
+        self,
+        width: Union[int, Any],
+        fillchar: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Pad left side of each string in the array.
@@ -1136,7 +1189,10 @@ class StringAccessor:
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def match(
-        self, pat: Union[str, bytes, Pattern, Any], case: bool = None, flags: int = 0,
+        self,
+        pat: Union[str, bytes, Pattern, Any],
+        case: bool = None,
+        flags: int = 0,
     ) -> Any:
         """
         Determine if each string in the array matches a regular expression.
@@ -1170,7 +1226,9 @@ class StringAccessor:
         return self._apply(func=func, func_args=(pat,), dtype=bool)
 
     def strip(
-        self, to_strip: Union[str, bytes, Any] = None, side: str = "both",
+        self,
+        to_strip: Union[str, bytes, Any] = None,
+        side: str = "both",
     ) -> Any:
         """
         Remove leading and trailing characters.
@@ -1208,7 +1266,10 @@ class StringAccessor:
 
         return self._apply(func=func, func_args=(to_strip,))
 
-    def lstrip(self, to_strip: Union[str, bytes, Any] = None,) -> Any:
+    def lstrip(
+        self,
+        to_strip: Union[str, bytes, Any] = None,
+    ) -> Any:
         """
         Remove leading characters.
 
@@ -1231,7 +1292,10 @@ class StringAccessor:
         """
         return self.strip(to_strip, side="left")
 
-    def rstrip(self, to_strip: Union[str, bytes, Any] = None,) -> Any:
+    def rstrip(
+        self,
+        to_strip: Union[str, bytes, Any] = None,
+    ) -> Any:
         """
         Remove trailing characters.
 
@@ -1254,7 +1318,11 @@ class StringAccessor:
         """
         return self.strip(to_strip, side="right")
 
-    def wrap(self, width: Union[int, Any], **kwargs,) -> Any:
+    def wrap(
+        self,
+        width: Union[int, Any],
+        **kwargs,
+    ) -> Any:
         """
         Wrap long strings in the array in paragraphs with length less than `width`.
 
@@ -1281,7 +1349,10 @@ class StringAccessor:
         func = lambda x, itw: "\n".join(itw.wrap(x))
         return self._apply(func=func, func_args=(tw,))
 
-    def translate(self, table: Mapping[Union[str, bytes], Union[str, bytes]],) -> Any:
+    def translate(
+        self,
+        table: Mapping[Union[str, bytes], Union[str, bytes]],
+    ) -> Any:
         """
         Map characters of each string through the given mapping table.
 
@@ -1300,7 +1371,10 @@ class StringAccessor:
         func = lambda x: x.translate(table)
         return self._apply(func=func)
 
-    def repeat(self, repeats: Union[int, Any],) -> Any:
+    def repeat(
+        self,
+        repeats: Union[int, Any],
+    ) -> Any:
         """
         Repeat each string in the array.
 
@@ -1880,7 +1954,10 @@ class StringAccessor:
         ).astype(self._obj.dtype.kind)
 
     def findall(
-        self, pat: Union[str, bytes, Pattern, Any], case: bool = None, flags: int = 0,
+        self,
+        pat: Union[str, bytes, Pattern, Any],
+        case: bool = None,
+        flags: int = 0,
     ) -> Any:
         r"""
         Find all occurrences of pattern or regular expression in the DataArray.
@@ -1970,7 +2047,11 @@ class StringAccessor:
         return self._apply(func=func, func_args=(pat,), dtype=np.object_)
 
     def _partitioner(
-        self, *, func: Callable, dim: Hashable, sep: Optional[Union[str, bytes, Any]],
+        self,
+        *,
+        func: Callable,
+        dim: Hashable,
+        sep: Optional[Union[str, bytes, Any]],
     ) -> Any:
         """
         Implements logic for `partition` and `rpartition`.
@@ -1998,7 +2079,9 @@ class StringAccessor:
         ).astype(self._obj.dtype.kind)
 
     def partition(
-        self, dim: Optional[Hashable], sep: Union[str, bytes, Any] = " ",
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Split the strings in the DataArray at the first occurrence of separator `sep`.
@@ -2034,7 +2117,9 @@ class StringAccessor:
         return self._partitioner(func=self._obj.dtype.type.partition, dim=dim, sep=sep)
 
     def rpartition(
-        self, dim: Optional[Hashable], sep: Union[str, bytes, Any] = " ",
+        self,
+        dim: Optional[Hashable],
+        sep: Union[str, bytes, Any] = " ",
     ) -> Any:
         """
         Split the strings in the DataArray at the last occurrence of separator `sep`.
@@ -2352,7 +2437,11 @@ class StringAccessor:
             maxsplit=maxsplit,
         )
 
-    def get_dummies(self, dim: Hashable, sep: Union[str, bytes, Any] = "|",) -> Any:
+    def get_dummies(
+        self,
+        dim: Hashable,
+        sep: Union[str, bytes, Any] = "|",
+    ) -> Any:
         """
         Return DataArray of dummy/indicator variables.
 
@@ -2427,7 +2516,11 @@ class StringAccessor:
         res.coords[dim] = vals
         return res
 
-    def decode(self, encoding: str, errors: str = "strict",) -> Any:
+    def decode(
+        self,
+        encoding: str,
+        errors: str = "strict",
+    ) -> Any:
         """
         Decode character string in the array using indicated encoding.
 
@@ -2453,7 +2546,11 @@ class StringAccessor:
             func = lambda x: decoder(x, errors)[0]
         return self._apply(func=func, dtype=np.str_)
 
-    def encode(self, encoding: str, errors: str = "strict",) -> Any:
+    def encode(
+        self,
+        encoding: str,
+        errors: str = "strict",
+    ) -> Any:
         """
         Encode character string in the array using indicated encoding.
 

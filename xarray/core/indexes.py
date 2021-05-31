@@ -136,7 +136,11 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
     def __getitem__(
         self, indexer
     ) -> Union[
-        "PandasIndex", NumpyIndexingAdapter, np.ndarray, np.datetime64, np.timedelta64,
+        "PandasIndex",
+        NumpyIndexingAdapter,
+        np.ndarray,
+        np.datetime64,
+        np.timedelta64,
     ]:
         key = indexer.tuple
         if isinstance(key, tuple) and len(key) == 1:

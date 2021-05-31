@@ -620,7 +620,9 @@ def test_align_dataset(value, unit, variant, error, dtype):
     units_a = extract_units(ds1)
     units_b = extract_units(ds2)
     expected_a, expected_b = func(
-        strip_units(ds1), strip_units(convert_units(ds2, units_a)), **stripped_kwargs,
+        strip_units(ds1),
+        strip_units(convert_units(ds2, units_a)),
+        **stripped_kwargs,
     )
     expected_a = attach_units(expected_a, units_a)
     if isinstance(array2, Quantity):
@@ -1731,7 +1733,10 @@ class TestVariable:
             pytest.param(1, id="no_unit"),
             pytest.param(unit_registry.dimensionless, id="dimensionless"),
             pytest.param(unit_registry.s, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, id="compatible_unit",),
+            pytest.param(
+                unit_registry.cm,
+                id="compatible_unit",
+            ),
             pytest.param(unit_registry.m, id="identical_unit"),
         ),
     )
@@ -2177,7 +2182,8 @@ class TestVariable:
         v = xr.Variable(["x", "y", "z"], data)
 
         expected = attach_units(
-            strip_units(v).pad(mode=mode, **xr_arg), extract_units(v),
+            strip_units(v).pad(mode=mode, **xr_arg),
+            extract_units(v),
         )
         actual = v.pad(mode=mode, **xr_arg)
 
@@ -2407,7 +2413,10 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(operator.eq, id="equal",),
+            pytest.param(
+                operator.eq,
+                id="equal",
+            ),
         ),
     )
     @pytest.mark.parametrize(
@@ -2899,8 +2908,16 @@ class TestDataArray:
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit",),
-            pytest.param(unit_registry.m, None, id="identical_unit",),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+            ),
+            pytest.param(
+                unit_registry.m,
+                None,
+                id="identical_unit",
+            ),
         ),
     )
     def test_combine_first(self, unit, error, dtype):
@@ -3452,7 +3469,9 @@ class TestDataArray:
         ),
     )
     @pytest.mark.parametrize(
-        "func", (method("interp"), method("reindex")), ids=repr,
+        "func",
+        (method("interp"), method("reindex")),
+        ids=repr,
     )
     def test_interp_reindex_indexing(self, func, unit, error, dtype):
         array = np.linspace(1, 2, 10).astype(dtype)
@@ -3526,7 +3545,9 @@ class TestDataArray:
         ),
     )
     @pytest.mark.parametrize(
-        "func", (method("interp_like"), method("reindex_like")), ids=repr,
+        "func",
+        (method("interp_like"), method("reindex_like")),
+        ids=repr,
     )
     def test_interp_reindex_like_indexing(self, func, unit, error, dtype):
         array = np.linspace(1, 2, 10).astype(dtype)
@@ -3912,7 +3933,8 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units"),
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
             "coords",
         ),
@@ -4148,7 +4170,11 @@ class TestDataset:
                 unit_registry.dimensionless, DimensionalityError, id="dimensionless"
             ),
             pytest.param(unit_registry.s, DimensionalityError, id="incompatible_unit"),
-            pytest.param(unit_registry.cm, None, id="compatible_unit",),
+            pytest.param(
+                unit_registry.cm,
+                None,
+                id="compatible_unit",
+            ),
             pytest.param(unit_registry.m, None, id="identical_unit"),
         ),
     )
@@ -4293,7 +4319,10 @@ class TestDataset:
             for key, value in kwargs.items()
         }
 
-        expected = attach_units(strip_units(ds).where(**kwargs_without_units), units,)
+        expected = attach_units(
+            strip_units(ds).where(**kwargs_without_units),
+            units,
+        )
         actual = ds.where(**kwargs)
 
         assert_units_equal(expected, actual)
@@ -4312,7 +4341,10 @@ class TestDataset:
         ds = xr.Dataset({"a": ("x", array1), "b": ("x", array2)})
         units = extract_units(ds)
 
-        expected = attach_units(strip_units(ds).interpolate_na(dim="x"), units,)
+        expected = attach_units(
+            strip_units(ds).interpolate_na(dim="x"),
+            units,
+        )
         actual = ds.interpolate_na(dim="x")
 
         assert_units_equal(expected, actual)
@@ -4335,7 +4367,8 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units"),
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4354,7 +4387,8 @@ class TestDataset:
         )
         x = np.arange(len(array1)) * dims_unit
         ds = xr.Dataset(
-            data_vars={"a": ("x", array1), "b": ("x", array2)}, coords={"x": x},
+            data_vars={"a": ("x", array1), "b": ("x", array2)},
+            coords={"x": x},
         )
         units = extract_units(ds)
 
@@ -4431,7 +4465,8 @@ class TestDataset:
         y = coord * coord_unit
 
         ds = xr.Dataset(
-            data_vars={"a": ("x", a), "b": ("x", b)}, coords={"x": x, "y": ("x", y)},
+            data_vars={"a": ("x", a), "b": ("x", b)},
+            coords={"x": x, "y": ("x", y)},
         )
         units = extract_units(ds)
 
@@ -4488,7 +4523,8 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units"),
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4579,7 +4615,8 @@ class TestDataset:
         (
             "data",
             pytest.param(
-                "dims", marks=pytest.mark.skip(reason="indexes don't support units"),
+                "dims",
+                marks=pytest.mark.skip(reason="indexes don't support units"),
             ),
         ),
     )
@@ -4630,7 +4667,10 @@ class TestDataset:
         func = method("to_stacked_array", "z", variable_dim="y", sample_dims=["x"])
 
         actual = func(ds).rename(None)
-        expected = attach_units(func(strip_units(ds)).rename(None), units,)
+        expected = attach_units(
+            func(strip_units(ds)).rename(None),
+            units,
+        )
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)

@@ -6291,7 +6291,11 @@ def test_coarsen_coords_cftime():
 
 
 @pytest.mark.parametrize(
-    "funcname, argument", [("reduce", (np.mean,)), ("mean", ()),],
+    "funcname, argument",
+    [
+        ("reduce", (np.mean,)),
+        ("mean", ()),
+    ],
 )
 def test_coarsen_keep_attrs(funcname, argument):
     global_attrs = {"units": "test", "long_name": "testing"}
@@ -6375,7 +6379,9 @@ def test_coarsen_keep_attrs_deprecated():
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"da": ("coord", data)}, coords={"coord": coords}, attrs=global_attrs,
+        data_vars={"da": ("coord", data)},
+        coords={"coord": coords},
+        attrs=global_attrs,
     )
     ds.da.attrs = attrs_da
 
@@ -6503,7 +6509,9 @@ def test_rolling_keep_attrs_deprecated():
     coords = np.linspace(1, 10, 100)
 
     ds = Dataset(
-        data_vars={"da": ("coord", data)}, coords={"coord": coords}, attrs=global_attrs,
+        data_vars={"da": ("coord", data)},
+        coords={"coord": coords},
+        attrs=global_attrs,
     )
     ds.da.attrs = attrs_da
 
@@ -7064,7 +7072,8 @@ def test_cumulative_integrate(dask):
     )
     assert_allclose(expected_x, actual.compute())
     assert_equal(
-        ds["var"].cumulative_integrate("x"), ds.cumulative_integrate("x")["var"],
+        ds["var"].cumulative_integrate("x"),
+        ds.cumulative_integrate("x")["var"],
     )
 
     # make sure result is also a dask array (if the source is dask array)
@@ -7073,12 +7082,15 @@ def test_cumulative_integrate(dask):
     # along y
     actual = da.cumulative_integrate("y")
     expected_y = xr.DataArray(
-        cumtrapz(da, da["y"], axis=1, initial=0.0), dims=["x", "y"], coords=da.coords,
+        cumtrapz(da, da["y"], axis=1, initial=0.0),
+        dims=["x", "y"],
+        coords=da.coords,
     )
     assert_allclose(expected_y, actual.compute())
     assert_equal(actual, ds.cumulative_integrate("y")["var"])
     assert_equal(
-        ds["var"].cumulative_integrate("y"), ds.cumulative_integrate("y")["var"],
+        ds["var"].cumulative_integrate("y"),
+        ds.cumulative_integrate("y")["var"],
     )
 
     # along x and y

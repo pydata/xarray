@@ -930,7 +930,8 @@ class VariableSubclassobjects:
     @pytest.mark.parametrize("dims", [("x", "y"), ("y", "z"), ("z", "x")])
     def test_nd_rolling(self, center, dims):
         x = self.cls(
-            ("x", "y", "z"), np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
         )
         window = [3, 3]
         actual = x.rolling_window(
@@ -961,11 +962,15 @@ class VariableSubclassobjects:
     )
     def test_rolling_window_errors(self, dim, window, window_dim, center):
         x = self.cls(
-            ("x", "y", "z"), np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
+            ("x", "y", "z"),
+            np.arange(7 * 6 * 8).reshape(7, 6, 8).astype(float),
         )
         with pytest.raises(ValueError):
             x.rolling_window(
-                dim=dim, window=window, window_dim=window_dim, center=center,
+                dim=dim,
+                window=window,
+                window_dim=window_dim,
+                center=center,
             )
 
 
@@ -2041,7 +2046,10 @@ class TestVariable(VariableSubclassobjects):
         # Test kept attrs
         with set_options(keep_attrs=True):
             new = Variable(["coord"], np.linspace(1, 10, 100), attrs=_attrs).coarsen(
-                windows={"coord": 1}, func=test_func, boundary="exact", side="left",
+                windows={"coord": 1},
+                func=test_func,
+                boundary="exact",
+                side="left",
             )
         assert new.attrs == _attrs
 
@@ -2468,7 +2476,8 @@ class TestBackendIndexing:
         self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(
-            dims=("x", "y"), data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
+            dims=("x", "y"),
+            data=LazilyIndexedArray(LazilyIndexedArray(self.d)),
         )
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping

@@ -879,7 +879,11 @@ class CFEncodedBase(DatasetIOBase):
                     np.arange(0.1, 0.9, 0.1).reshape(2, 2, 2),
                     {"standard_name": "standard_error"},
                 ),
-                det_lim=((), 0.1, {"standard_name": "detection_minimum"},),
+                det_lim=(
+                    (),
+                    0.1,
+                    {"standard_name": "detection_minimum"},
+                ),
             ),
             dict(
                 latitude=("latitude", [0, 1], {"units": "degrees_north"}),
@@ -2822,7 +2826,8 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open(tmp_file, "rb") as f:
                 f.seek(8)
                 with pytest.raises(
-                    ValueError, match="match in any of xarray's currently installed IO",
+                    ValueError,
+                    match="match in any of xarray's currently installed IO",
                 ):
                     with pytest.warns(
                         RuntimeWarning,
@@ -5121,7 +5126,14 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
-    ds = xr.Dataset({"test": xr.DataArray(dask_arr, dims=("x", "y"),)})
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
     ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
 
@@ -5144,7 +5156,14 @@ def test_chunking_consintency(chunks, tmp_path):
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
     )
-    ds = xr.Dataset({"test": xr.DataArray(dask_arr, dims=("x", "y"),)})
+    ds = xr.Dataset(
+        {
+            "test": xr.DataArray(
+                dask_arr,
+                dims=("x", "y"),
+            )
+        }
+    )
     ds["test"].encoding["chunks"] = encoded_chunks
     ds.to_zarr(tmp_path / "test.zarr")
     ds.to_netcdf(tmp_path / "test.nc")

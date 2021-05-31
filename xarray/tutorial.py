@@ -73,7 +73,12 @@ def _check_netcdf_engine_installed(name):
 
 # idea borrowed from Seaborn
 def open_dataset(
-    name, cache=True, cache_dir=None, *, engine=None, **kws,
+    name,
+    cache=True,
+    cache_dir=None,
+    *,
+    engine=None,
+    **kws,
 ):
     """
     Open a dataset from the online repository (requires internet).
@@ -144,7 +149,11 @@ def open_dataset(
 
 
 def open_rasterio(
-    name, engine=None, cache=True, cache_dir=None, **kws,
+    name,
+    engine=None,
+    cache=True,
+    cache_dir=None,
+    **kws,
 ):
     """
     Open a rasterio dataset from the online repository (requires internet).

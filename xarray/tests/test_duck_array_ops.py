@@ -889,6 +889,8 @@ def test_push_dask():
     # some chunks of size-1 with NaN
     with raise_if_dask_computes():
         actual = push(
-            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=None,
+            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
+            axis=0,
+            n=None,
         )
     np.testing.assert_equal(actual, expected)

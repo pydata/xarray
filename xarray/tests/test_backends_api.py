@@ -26,7 +26,9 @@ def test_custom_engine():
 
     class CustomBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
-            filename_or_obj, drop_variables=None, **kwargs,
+            filename_or_obj,
+            drop_variables=None,
+            **kwargs,
         ):
             return expected.copy(deep=True)
 

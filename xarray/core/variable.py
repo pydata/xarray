@@ -48,7 +48,12 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (indexing.ExplicitlyIndexed, pd.Index,) + dask_array_type + cupy_array_type
+    (
+        indexing.ExplicitlyIndexed,
+        pd.Index,
+    )
+    + dask_array_type
+    + cupy_array_type
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
@@ -1556,7 +1561,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
 
     def _unstack_once(
-        self, index: pd.MultiIndex, dim: Hashable, fill_value=dtypes.NA,
+        self,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        fill_value=dtypes.NA,
     ) -> "Variable":
         """
         Unstacks this variable given an index to unstack and the name of the
@@ -1585,7 +1593,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dtype = self.dtype
 
         data = np.full_like(
-            self.data, fill_value=fill_value, shape=new_shape, dtype=dtype,
+            self.data,
+            fill_value=fill_value,
+            shape=new_shape,
+            dtype=dtype,
         )
 
         # Indexer is a list of lists of locations. Each list is the locations
@@ -1657,7 +1668,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return apply_ufunc(np.clip, self, min, max, dask="allowed")
 
     def reduce(
-        self, func, dim=None, axis=None, keep_attrs=None, keepdims=False, **kwargs,
+        self,
+        func,
+        dim=None,
+        axis=None,
+        keep_attrs=None,
+        keepdims=False,
+        **kwargs,
     ):
         """Reduce this array by applying `func` along some dimension(s).
 
@@ -2243,7 +2260,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.isnull, self, dask="allowed", keep_attrs=keep_attrs,
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
     def notnull(self, keep_attrs: bool = None):
@@ -2274,7 +2294,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.notnull, self, dask="allowed", keep_attrs=keep_attrs,
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
     @property

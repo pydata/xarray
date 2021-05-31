@@ -134,7 +134,10 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 DeprecationWarning,
             )
 
-        store = PydapDataStore.open(filename_or_obj, session=session,)
+        store = PydapDataStore.open(
+            filename_or_obj,
+            session=session,
+        )
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):

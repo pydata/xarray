@@ -1350,7 +1350,10 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.isnull, self, dask="allowed", keep_attrs=keep_attrs,
+            duck_array_ops.isnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
     def notnull(self, keep_attrs: bool = None):
@@ -1383,7 +1386,10 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs = _get_keep_attrs(default=False)
 
         return apply_ufunc(
-            duck_array_ops.notnull, self, dask="allowed", keep_attrs=keep_attrs,
+            duck_array_ops.notnull,
+            self,
+            dask="allowed",
+            keep_attrs=keep_attrs,
         )
 
     def isin(self, test_elements):

@@ -112,10 +112,12 @@ except ImportError:
     ]
     _RecursiveSequence = Sequence[Sequence[Sequence[Sequence[Sequence[Any]]]]]
     _ArrayLike = Union[
-        _NestedSequence[_SupportsArray], _NestedSequence[_T],
+        _NestedSequence[_SupportsArray],
+        _NestedSequence[_T],
     ]
     _ArrayLikeFallback = Union[
-        _ArrayLike[Union[bool, int, float, complex, str, bytes]], _RecursiveSequence,
+        _ArrayLike[Union[bool, int, float, complex, str, bytes]],
+        _RecursiveSequence,
     ]
     # The extra step defining _ArrayLikeFallback and using ArrayLike as a type
     # alias for it works around an issue with mypy.

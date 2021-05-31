@@ -136,8 +136,12 @@ def test_build_engines():
 )
 def test_build_engines_sorted():
     dummy_pkg_entrypoints = [
-        pkg_resources.EntryPoint.parse("dummy2 = xarray.tests.test_plugins:backend_1",),
-        pkg_resources.EntryPoint.parse("dummy1 = xarray.tests.test_plugins:backend_1",),
+        pkg_resources.EntryPoint.parse(
+            "dummy2 = xarray.tests.test_plugins:backend_1",
+        ),
+        pkg_resources.EntryPoint.parse(
+            "dummy1 = xarray.tests.test_plugins:backend_1",
+        ),
     ]
     backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
     backend_entrypoints = list(backend_entrypoints)
@@ -167,7 +171,8 @@ def test_no_matching_engine_found():
 
 
 @mock.patch(
-    "xarray.backends.plugins.list_engines", mock.MagicMock(return_value={}),
+    "xarray.backends.plugins.list_engines",
+    mock.MagicMock(return_value={}),
 )
 def test_no_engines_installed():
     with pytest.raises(ValueError, match="no currently installed IO backends."):

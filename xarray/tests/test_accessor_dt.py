@@ -90,7 +90,11 @@ class TestDatetimeAccessor:
 
     @pytest.mark.parametrize(
         "field, pandas_field",
-        [("year", "year"), ("week", "week"), ("weekday", "day"),],
+        [
+            ("year", "year"),
+            ("week", "week"),
+            ("weekday", "day"),
+        ],
     )
     def test_isocalendar(self, field, pandas_field):
 
@@ -171,7 +175,12 @@ class TestDatetimeAccessor:
 
     @requires_dask
     @pytest.mark.parametrize(
-        "field", ["year", "week", "weekday",],
+        "field",
+        [
+            "year",
+            "week",
+            "weekday",
+        ],
     )
     def test_isocalendar_dask(self, field):
         import dask.array as da

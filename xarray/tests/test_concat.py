@@ -715,7 +715,8 @@ def test_concat_preserve_coordinate_order():
     )
 
     expected = Dataset(
-        {"data": (["time", "y", "x"], data)}, coords={"time": time, "y": y, "x": x},
+        {"data": (["time", "y", "x"], data)},
+        coords={"time": time, "y": y, "x": x},
     )
 
     actual = concat([ds1, ds2], dim="time")
