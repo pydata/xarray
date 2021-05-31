@@ -6079,8 +6079,11 @@ class TestDataset:
 
 
 @pytest.fixture(params=[None])
-def data_set(request):
-    return create_test_data(request.param)
+def ds(request, backend):
+    ds = create_test_data(request.param)
+    if backend == "dask":
+        return ds.chunk()
+    return ds
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
@@ -6153,17 +6156,17 @@ def test_constructor_raises_with_invalid_coords(unaligned_coords):
         xr.DataArray([1, 2, 3], dims=["x"], coords=unaligned_coords)
 
 
-def test_dir_expected_attrs(data_set):
+def test_dir_expected_attrs(ds):
 
     some_expected_attrs = {"pipe", "mean", "isnull", "var1", "dim2", "numbers"}
-    result = dir(data_set)
+    result = dir(ds)
     assert set(result) >= some_expected_attrs
 
 
-def test_dir_non_string(data_set):
+def test_dir_non_string(ds):
     # add a numbered key to ensure this doesn't break dir
-    data_set[5] = "foo"
-    result = dir(data_set)
+    ds[5] = "foo"
+    result = dir(ds)
     assert 5 not in result
 
     # GH2172
@@ -6173,9 +6176,9 @@ def test_dir_non_string(data_set):
     dir(x2)
 
 
-def test_dir_unicode(data_set):
-    data_set["unicode"] = "uni"
-    result = dir(data_set)
+def test_dir_unicode(ds):
+    ds["unicode"] = "uni"
+    result = dir(ds)
     assert "unicode" in result
 
 
