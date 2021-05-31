@@ -39,7 +39,7 @@ def move_exp_nansum(array, *, axis, alpha):
         raise TypeError("rolling_exp is not currently supported for dask-like arrays")
     import numbagg
 
-    # numbag <= 0.2.0 did not have a __version__ attribute
+    # numbagg <= 0.2.0 did not have a __version__ attribute
     if LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < LooseVersion("0.2.0"):
         raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
 
@@ -114,7 +114,7 @@ class RollingExp(Generic[T_DSorDA]):
 
     def mean(self, keep_attrs: bool = None) -> T_DSorDA:
         """
-        Exponentially weighted moving average
+        Exponentially weighted moving average.
 
         Parameters
         ----------
@@ -141,7 +141,7 @@ class RollingExp(Generic[T_DSorDA]):
 
     def sum(self, keep_attrs: bool = None) -> T_DSorDA:
         """
-        Exponentially weighted moving average
+        Exponentially weighted moving sum.
 
         Parameters
         ----------

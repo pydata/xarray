@@ -7273,9 +7273,23 @@ class TestIrisConversion:
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp(da, dim, window_type, window):
-    da = da.isel(a=0)
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_runs(da, dim, window_type, window, func):
     da = da.where(da > 0.2)
+
+    rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
+    result = getattr(rolling_exp, func)()
+    assert isinstance(result, DataArray)
+
+
+@requires_numbagg
+@pytest.mark.parametrize("dim", ["time", "x"])
+@pytest.mark.parametrize(
+    "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
+)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+def test_rolling_exp_mean_pandas(da, dim, window_type, window):
+    da = da.isel(a=0).where(lambda x: x > 0.2)
 
     result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
@@ -7293,30 +7307,34 @@ def test_rolling_exp(da, dim, window_type, window):
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_keep_attrs(da):
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_keep_attrs(da, func):
     attrs = {"attrs": "da"}
     da.attrs = attrs
 
+    # Equivalent of `da.rolling_exp(time=10).mean`
+    rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+
     # attrs are kept per default
-    result = da.rolling_exp(time=10).mean()
+    result = rolling_exp_func()
     assert result.attrs == attrs
 
     # discard attrs
-    result = da.rolling_exp(time=10).mean(keep_attrs=False)
+    result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     # test discard attrs using global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean()
+        result = rolling_exp_func()
     assert result.attrs == {}
 
     # keyword takes precedence over global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean(keep_attrs=True)
+        result = rolling_exp_func(keep_attrs=True)
     assert result.attrs == attrs
 
     with set_options(keep_attrs=True):
-        result = da.rolling_exp(time=10).mean(keep_attrs=False)
+        result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     with pytest.warns(
