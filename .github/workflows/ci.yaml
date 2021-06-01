@@ -86,11 +86,10 @@ jobs:
         run: |
           python -c "import xarray"
       - name: Run tests
-        run: |
-          python -m pytest -n 4 \
-             --cov=xarray \
-             --cov-report=xml
-             --junitxml=test-results.xml
+        run: python -m pytest -n 4
+          --cov=xarray
+          --cov-report=xml
+          --junitxml=test-results.xml
 
       - name: Publish unit test results
         uses: EnricoMi/publish-unit-test-result-action@v1
