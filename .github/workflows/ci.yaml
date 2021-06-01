@@ -89,14 +89,14 @@ jobs:
         run: python -m pytest -n 4
           --cov=xarray
           --cov-report=xml
-          --junitxml=test-results.xml
+          --junitxml=test-results/${{ runner.os }}-${{ matrix.python-version }}.xml
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: Test results ${{ matrix.python-version }}-${{ runner.os }}
-          path: test-results/${{ matrix.python-version }}-${{ runner.os }}.xml
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          path: test-results/${{ runner.os }}-${{ matrix.python-version }}.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v1
