@@ -90,13 +90,13 @@ jobs:
           python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml
-             --junitxml=junit/test-results.xml
+             --junitxml=test-results.xml
 
       - name: Publish unit test results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
         with:
-          files: junit/test-results.xml
+          files: test-results.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v1
