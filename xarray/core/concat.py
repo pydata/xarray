@@ -422,10 +422,6 @@ def _dataset_concat(
     """
     from .dataset import Dataset
 
-    datasets = list(datasets)
-    if not all(isinstance(dataset, Dataset) for dataset in datasets):
-        raise TypeError("Some elements in the input list datasets are not 'Dataset'")
-
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
@@ -545,7 +541,12 @@ def _dataarray_concat(
     join: str = "outer",
     combine_attrs: str = "override",
 ) -> "DataArray":
+    from .dataarray import DataArray
+
     arrays = list(arrays)
+
+    if not all(isinstance(array, DataArray) for array in arrays):
+        raise TypeError("Some elements in the input list datasets are not 'DataArray'")
 
     if data_vars != "all":
         raise ValueError(
