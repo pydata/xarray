@@ -422,6 +422,10 @@ def _dataset_concat(
     """
     from .dataset import Dataset
 
+    datasets = list(datasets)
+    if not all(isinstance(dataset, Dataset) for dataset in datasets):
+        raise TypeError("Some elements in the input list datasets are not 'Dataset'")
+
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
