@@ -1994,6 +1994,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
 
+        encoding:
+            The encoding attribute (if exists) of the DataArray(s) will be
+            passed on to the corresponding .zarray file.
+
         See Also
         --------
         :ref:`io.zarr`
