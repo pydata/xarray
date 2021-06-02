@@ -25,10 +25,10 @@ New Features
   indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
-- Add ``sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
+- Add ``.sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
   :py:meth:`~xarray.Dataset.rolling_exp` for exponentially weighted rolling
   sums. These require numbagg 0.2.1;
-  (:pull:`51781).
+  (:pull:`5178`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
