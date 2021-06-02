@@ -64,29 +64,31 @@ pytestmark = [
 
 def create_test_data(seed=None, add_attrs=True):
     rs = np.random.RandomState(seed)
-    _vars = {
-        "var1": ["dim1", "dim2"],
-        "var2": ["dim1", "dim2"],
-        "var3": ["dim3", "dim1"],
-    }
-    _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
 
-    obj = Dataset()
-    obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
-    obj["dim3"] = ("dim3", list("abcdefghij"))
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
-    for v, dims in sorted(_vars.items()):
-        data = rs.normal(size=tuple(_dims[d] for d in dims))
-        obj[v] = (dims, data)
-        if add_attrs:
-            obj[v].attrs = {"foo": "variable"}
-    obj.coords["numbers"] = (
-        "dim3",
-        np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
+    ds = Dataset(
+        dict(
+            var1=(("dim1", "dim2"), rs.normal(size=(8, 9))),
+            var2=(("dim1", "dim2"), rs.normal(size=(8, 9))),
+            var3=(("dim3", "dim1"), rs.normal(size=(10, 8))),
+        ),
+        coords=dict(
+            dim2=0.5 * np.arange(9),
+            dim3=list("abcdefghij"),
+            time=pd.date_range("2000-01-01", periods=20),
+            numbers=(
+                ("dim3",),
+                np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3], dtype="int64"),
+            ),
+        ),
     )
-    obj.encoding = {"foo": "bar"}
-    assert all(obj.data.flags.writeable for obj in obj.variables.values())
-    return obj
+    if add_attrs:
+        for v in ds.data_vars:
+            ds[v].attrs = {"foo": "variable"}
+    # ds = ds.transpose("dim2", "dim3", "time", "dim1")
+    ds = ds.transpose("dim1", "dim2", "dim3", "time")
+    ds.encoding = {"foo": "bar"}
+    assert all(ds.data.flags.writeable for ds in ds.variables.values())
+    return ds
 
 
 def create_append_test_data(seed=None):

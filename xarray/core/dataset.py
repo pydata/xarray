@@ -4560,17 +4560,27 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numpy.transpose
         DataArray.transpose
         """
+        if len(dims) == 0:
+            dims = tuple(self.dims)[::-1]
+
         if dims:
             if set(dims) ^ set(self.dims) and ... not in dims:
                 raise ValueError(
                     f"arguments to transpose ({dims}) must be "
                     f"permuted dataset dimensions ({tuple(self.dims)})"
                 )
+
+        variables = {}
         ds = self.copy()
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
-            ds._variables[name] = var.transpose(*var_dims)
-        return ds
+            variables[name] = var.transpose(*var_dims)
+
+        # Reorder dims — no functional purpose at the moment, but provides a way to
+        # reorder dims for presentational purposes.
+        reordered_dims = {d: self.dims[d] for d in tuple(infix_dims(dims, self._dims))}
+
+        return ds._replace(variables=variables, dims=reordered_dims)
 
     def dropna(
         self,
