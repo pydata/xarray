@@ -6447,11 +6447,6 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
-def backend(request):
-    return request.param
-
-
 @pytest.fixture(params=[1])
 def da(request, backend):
     if request.param == 1:
