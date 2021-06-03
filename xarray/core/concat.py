@@ -425,7 +425,7 @@ def _dataset_concat(
     datasets = list(datasets)
 
     if not all(isinstance(dataset, Dataset) for dataset in datasets):
-        raise TypeError("Some elements in the input list datasets are not 'Dataset'")
+        raise TypeError("The elements in the input list need to be either all 'Dataset or all 'DataArray'")
 
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
@@ -551,7 +551,7 @@ def _dataarray_concat(
     arrays = list(arrays)
 
     if not all(isinstance(array, DataArray) for array in arrays):
-        raise TypeError("Some elements in the input list datasets are not 'DataArray'")
+        raise TypeError("The elements in the input list need to be either all 'Dataset or all 'DataArray'")
 
     if data_vars != "all":
         raise ValueError(
