@@ -58,6 +58,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
+  (:pull:`5433`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.18.2:
 
