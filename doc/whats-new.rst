@@ -22,6 +22,8 @@ v0.18.3 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
+  By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
