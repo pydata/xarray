@@ -739,11 +739,11 @@ def test_concat_typing_check():
     # concatenate a list of non-homogeneous types must raise TypeError
     with pytest.raises(
         TypeError, 
-        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
         concat([ds, da], dim="foo")
     with pytest.raises(
         TypeError, 
-        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
         concat([da, ds], dim="foo")
