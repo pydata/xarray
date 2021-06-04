@@ -29,6 +29,8 @@ New Features
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
 
+- Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
+  By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
