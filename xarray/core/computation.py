@@ -26,11 +26,11 @@ from typing import (
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .alignment import align, deep_align, broadcast
+from .alignment import align, broadcast, deep_align
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .utils import is_dict_like, OrderedSet
+from .utils import OrderedSet, is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -1726,7 +1726,9 @@ def _calc_idxminmax(
     return res
 
 
-def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
+def hist(
+    *dataarrays, dim=None, bins=None, weights=None, density=False, keep_attrs=None
+):
     """
     Histogram applied along specified dimensions.
 
@@ -1806,8 +1808,7 @@ def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_att
 
     # TODO range argument
 
-    from .dataarray import DataArray
-    from .dataarray import Variable
+    from .dataarray import DataArray, Variable
 
     # Check inputs
     if any(not isinstance(arr, DataArray) for arr in dataarrays):
@@ -1822,7 +1823,8 @@ def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_att
                 "but given {type(weights)}."
             )
 
-    if len(dataarrays) == 0:
+    n_args = len(dataarrays)
+    if n_args == 0:
         raise TypeError("At least one input dataarray must be given.")
 
     for da in dataarrays:
@@ -1837,7 +1839,7 @@ def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_att
     broadcast_dims = OrderedSet(all_input_dims) - OrderedSet(reduce_dims)
 
     # create output dims
-    new_bin_dims = [da.name + '_bins' for da in dataarrays]
+    new_bin_dims = [da.name + "_bins" for da in dataarrays]
     output_dims = [broadcast_dims] + new_bin_dims
 
     # TODO deal with arrays or lists of arrays
@@ -1845,32 +1847,44 @@ def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_att
     # TODO might need to check if numpy arrays explicitly
     # Check validity of given bins, or create using np.histogram_bin_edges
     def _create_bin_coords(dataarrays, bins, range, new_bin_dims):
-        return [DataArray(np.histogram_bin_edges(a, b, r), dims=d, name=d, attrs=a.attrs)
-                for a, b, r, d in zip(dataarrays, bins, range, new_bin_dims)]
+        return [
+            DataArray(np.histogram_bin_edges(a, b, r), dims=d, name=d, attrs=a.attrs)
+            for a, b, r, d in zip(dataarrays, bins, range, new_bin_dims)
+        ]
+
+    # TODO change to allow mixed types of bins arguments
     if isinstance(bins, int):
-        bins = _create_bin_coords(dataarrays, bins, range, new_bin_dims)
+        bins = _create_bin_coords(dataarrays, [bins] * n_args, range, new_bin_dims)
     elif bins is None:
-        bins = _create_bin_coords(dataarrays, ['auto']*len(dataarrays), range, new_bin_dims)
+        bins = _create_bin_coords(dataarrays, ["auto"] * n_args, range, new_bin_dims)
     elif isinstance(bins, Iterable):
-        if len(bins) != len(dataarrays):
-            raise TypeError("If bins is an Iterable then it must have same length "
-                            "as number of input dataarrays passed, but instead has "
-                            f"length {len(bins)}")
+        if len(bins) != n_args:
+            raise TypeError(
+                "If bins is an Iterable then it must have same length "
+                "as number of input dataarrays passed, but instead has "
+                f"length {len(bins)}"
+            )
         if all(isinstance(obj, DataArray) for obj in bins):
             for da, new_bin_dim in zip(bins, new_bin_dims):
                 if not set(da.dims).issubset(broadcast_dims):
-                    raise ValueError("A bins dataarray has dimensions present that "
-                                     "will not be broadcast on the output: "
-                                     f"{da.dims} vs {broadcast_dims}")
+                    raise ValueError(
+                        "A bins dataarray has dimensions present that "
+                        "will not be broadcast on the output: "
+                        f"{da.dims} vs {tuple(*broadcast_dims)}"
+                    )
                 if new_bin_dim not in da.dims:
-                    raise ValueError("A bins dataarray does not contain the "
-                                     "corresponding output bins dimension - "
-                                     f"has dims {da.dims} but not {new_bin_dim}.")
+                    raise ValueError(
+                        "A bins dataarray does not contain the "
+                        "corresponding output bins dimension - "
+                        f"has dims {da.dims} but not {new_bin_dim}."
+                    )
         elif all(isinstance(b, (int, str)) for b in bins):
             bins = _create_bin_coords(dataarrays, bins, range, new_bin_dims)
         else:
-            TypeError("One or more of the elements in bins is not a valid argument."
-                      f"Instead found types {[type(b) for b in bins]}")
+            TypeError(
+                "One or more of the elements in bins is not a valid argument."
+                f"Instead found types {[type(b) for b in bins]}"
+            )
     else:
         raise TypeError(f"Type {type(bins)} is not a valid argument to bins")
 
@@ -1882,41 +1896,44 @@ def hist(*dataarrays, dim=None, bins=None, weights=None, density=False, keep_att
 
     # Compute histogram results
     reduce_axes = tuple(list(all_input_dims).index(d) for d in reduce_dims)
-    h_data = _calc_histogram([arr.values for arr in arrs],
-                             axis=reduce_axes,
-                             bins=[b.values for b in aligned_bins],
-                             weights=weights.values,
-                             density=density)
+    h_data = _calc_histogram(
+        [arr.values for arr in arrs],
+        axis=reduce_axes,
+        bins=[b.values for b in aligned_bins],
+        weights=weights.values,
+        density=density,
+    )
 
     # Reconstruct output dataarray
-    output_name = "_".join(["histogram"] + [a.name for a in dataarrays])
+    output_name = "_".join(["histogram"] + [da.name for da in dataarrays])
 
     # Adjust bin coords to return positions of bin centres rather than bin edges
     def _find_centers(da, dim):
-        return 0.5 * (da.isel(dim=slice(None, None, -1))
-                      + da.isel(dim=slice(1, None)))
-    bin_centers = [_find_centers(bin, new_bin_dim)
-                   for bin, new_bin_dim in zip(bins, new_bin_dims)]
+        return 0.5 * (da.isel(dim=slice(None, None, -1)) + da.isel(dim=slice(1, None)))
 
-    a0 = dataarrays[0]
-    all_coords = {}
-    new_coords = {
-        name: ((name,), bin_center, a.attrs)
-        for name, bin_center, a in zip(new_bin_dims, bin_centers, dataarrays)
-    }
-    all_coords.update(new_coords)
+    bin_centers = [
+        _find_centers(bin, new_bin_dim) for bin, new_bin_dim in zip(bins, new_bin_dims)
+    ]
 
     # Keep all old coords from any input that have not been reduced along
-    old_coords = {coord.name: coord for da in dataarrays for coord in da.coords
-                  if not any(coord.dims in reduce_dims)}
-    all_coords.update(old_coords)
+    old_coords = {
+        coord.name: coord
+        for da in dataarrays
+        for coord in da.coords
+        if not any(coord.dims in reduce_dims)
+    }
 
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
-    attrs = dataarrays[0].attrs if True else None
+    attrs = dataarrays[0].attrs if keep_attrs else None
 
-    return DataArray(h_data, dims=output_dims, coords=all_coords,
-                     name=output_name, attrs=attrs)
+    return DataArray(
+        h_data,
+        dims=output_dims,
+        coords={**old_coords, **bin_centers},
+        name=output_name,
+        attrs=attrs,
+    )
 
 
 def _calc_histogram(*arrs, axis, bins, weights, density):
@@ -1931,13 +1948,14 @@ def _calc_histogram(*arrs, axis, bins, weights, density):
 
     # TODO how does xarray normally test for dask arrays?
 
-    return ...
+    return []
 
 
 def _bincount():
     """
     Axis-aware bincounting function.
-    Acts on a single numpy array/dask chunk.
-    Works by reshaping input
+    Acts on a single numpy array (/ dask chunk).
+    Works by reshaping input to combine all broadcast dims along one axis,
+    and all reduce dims along one axis, then reshaping back.
     """
     return ...

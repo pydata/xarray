@@ -15,6 +15,7 @@ from xarray.core.computation import (
     apply_ufunc,
     broadcast_compat_data,
     collect_dict_values,
+    hist,
     join_dict_keys,
     ordered_set_intersection,
     ordered_set_union,
@@ -1927,3 +1928,41 @@ def test_polyval(use_dask, use_datetime):
     da_pv = xr.polyval(da.x, coeffs)
 
     xr.testing.assert_allclose(da, da_pv.T)
+
+
+class TestHistInputTypes:
+    def test_invalid_data(self):
+        with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
+            hist("string")
+
+    def test_invalid_weights(self):
+        with pytest.raises(TypeError, match="supported as weights"):
+            hist(xr.DataArray([], name="a"), weights="string")
+
+    def test_no_data(self):
+        with pytest.raises(TypeError, match="At least one"):
+            hist()
+
+    def test_nameless_data(self):
+        with pytest.raises(ValueError, match="must have a name"):
+            hist(xr.DataArray([]))
+
+    def test_wrong_number_of_bins(self):
+        with pytest.raises(TypeError, match="must have same length"):
+            hist(xr.DataArray([], name="a"), bins=[2, 3])
+
+    def test_invalid_bins(self):
+        with pytest.raises(TypeError, match="not a valid argument"):
+            hist(xr.DataArray([], name="a"), bins=2.7)
+
+    def test_bin_dataarrays_with_extra_dims(self):
+        data = xr.DataArray([0], dims=["x"], name="a")
+        bins = xr.DataArray([[1]], dims=["bad", "a_bins"])
+        with pytest.raises(ValueError, match="will not be broadcast"):
+            hist(data, dim="x", bins=[bins])
+
+    def test_bin_dataarrays_without_reduce_dim(self):
+        data = xr.DataArray([0], dims=["x"], name="a")
+        bins = xr.DataArray(1)
+        with pytest.raises(ValueError, match="does not contain"):
+            hist(data, dim="x", bins=[bins])
