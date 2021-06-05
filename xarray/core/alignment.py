@@ -632,21 +632,35 @@ def reindex_variables(
     return reindexed, new_indexes
 
 
-def _get_broadcast_dims_map_common_coords(args, exclude):
+def _get_chunks_map(arg):
+
+    chunks = arg.unify_chunks().chunks if hasattr(arg, "unify_chunks") else arg.chunks
+    if isinstance(chunks, tuple):
+        return dict(zip(arg.dims, chunks))
+    return chunks or {}
+
+
+def _get_broadcast_dims_map_common_coords_chunks_map(args, exclude):
 
     common_coords = {}
     dims_map = {}
+    chunks_map = {}
     for arg in args:
+        chunks_map = {**chunks_map, **_get_chunks_map(arg)}
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
                 dims_map[dim] = arg.sizes[dim]
                 if dim in arg.coords:
                     common_coords[dim] = arg.coords[dim].variable
 
-    return dims_map, common_coords
+    if chunks_map:
+        for dim in set(dims_map) - set(chunks_map):
+            chunks_map[dim] = (dims_map[dim],)
+
+    return dims_map, common_coords, chunks_map
 
 
-def _broadcast_helper(arg, exclude, dims_map, common_coords):
+def _broadcast_helper(arg, exclude, dims_map, common_coords, chunks_map):
 
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -659,7 +673,12 @@ def _broadcast_helper(arg, exclude, dims_map, common_coords):
                 # ignore dim not in var.dims
                 var_dims_map[dim] = var.shape[var.dims.index(dim)]
 
-        return var.set_dims(var_dims_map)
+        var_chunks_map = _get_chunks_map(arg)
+        for dim in set(var.dims) - set(var_dims_map):
+            var_chunks_map[dim] = (var_dims_map[dim],)
+        var_chunks_map = {**chunks_map, **var_chunks_map}
+
+        return var.set_dims(var_dims_map, chunks=var_chunks_map or None)
 
     def _broadcast_array(array):
         data = _set_dims(array.variable)
@@ -749,7 +768,14 @@ def broadcast(*args, exclude=None):
         exclude = set()
     args = align(*args, join="outer", copy=False, exclude=exclude)
 
-    dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
-    result = [_broadcast_helper(arg, exclude, dims_map, common_coords) for arg in args]
+    (
+        dims_map,
+        common_coords,
+        chunks_map,
+    ) = _get_broadcast_dims_map_common_coords_chunks_map(args, exclude)
+    result = [
+        _broadcast_helper(arg, exclude, dims_map, common_coords, chunks_map)
+        for arg in args
+    ]
 
     return tuple(result)

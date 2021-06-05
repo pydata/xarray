@@ -38,7 +38,7 @@ from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
     _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
+    _get_broadcast_dims_map_common_coords_chunks_map,
     align,
     reindex_like_indexers,
 )
@@ -1398,9 +1398,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             exclude = set(exclude)
         args = align(other, self, join="outer", copy=False, exclude=exclude)
 
-        dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
+        (
+            dims_map,
+            common_coords,
+            chunks_map,
+        ) = _get_broadcast_dims_map_common_coords_chunks_map(args, exclude)
 
-        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords, chunks_map)
 
     def reindex_like(
         self,

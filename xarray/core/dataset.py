@@ -50,7 +50,11 @@ from . import (
     utils,
     weighted,
 )
-from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
+from .alignment import (
+    _broadcast_helper,
+    _get_broadcast_dims_map_common_coords_chunks_map,
+    align,
+)
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects
 from .coordinates import (
@@ -2617,9 +2621,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             exclude = set(exclude)
         args = align(other, self, join="outer", copy=False, exclude=exclude)
 
-        dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
+        (
+            dims_map,
+            common_coords,
+            chunks_map,
+        ) = _get_broadcast_dims_map_common_coords_chunks_map(args, exclude)
 
-        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+        return _broadcast_helper(args[1], exclude, dims_map, common_coords, chunks_map)
 
     def reindex_like(
         self,

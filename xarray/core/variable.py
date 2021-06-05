@@ -1418,7 +1418,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def T(self) -> "Variable":
         return self.transpose()
 
-    def set_dims(self, dims, shape=None):
+    def set_dims(self, dims, shape=None, chunks=None):
         """Return a new variable with given set of dimensions.
         This method might be used to attach new dimension(s) to variable.
 
@@ -1458,7 +1458,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         elif shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
+            if chunks:
+                tmp_chunks = tuple(chunks[d] for d in expanded_dims)
+                expanded_data = duck_array_ops.broadcast_to(
+                    self.data, tmp_shape, tmp_chunks
+                )
+            else:
+                expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[(None,) * (len(expanded_dims) - self.ndim)]
 
