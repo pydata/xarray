@@ -1936,6 +1936,22 @@ def test_polyval(use_dask, use_datetime):
             "dim_0",
             -1,
         ],
+        [
+            xr.Dataset({0: ("dim_0", [1]), 1: ("dim_0", [2]), 2: ("dim_0", [3])})
+            .to_stacked_array(
+                variable_dim="cartesian", new_dim="variable", sample_dims=("dim_0",)
+            )
+            .unstack("variable"),
+            xr.Dataset({0: ("dim_0", [4]), 1: ("dim_0", [5]), 2: ("dim_0", [6])})
+            .to_stacked_array(
+                variable_dim="cartesian", new_dim="variable", sample_dims=("dim_0",)
+            )
+            .unstack("variable"),
+            [1, 2, 3],
+            [4, 5, 6],
+            "cartesian",
+            -1,
+        ],
         [  # Test dim in the middle:
             xr.DataArray(
                 np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
@@ -1996,10 +2012,16 @@ def test_polyval(use_dask, use_datetime):
 )
 def test_cross(a, b, ae, be, dim, axis, use_dask):
     expected = np.cross(ae, be, axis=axis)
-    actual = xr.cross(a, b, dim=dim)
+
     if use_dask:
         if not has_dask:
             pytest.skip("test for dask.")
-        actual = actual.chunk()
+        a = a.chunk()
+        b = b.chunk()
+
+    actual = xr.cross(a, b, dim=dim)
+
+    if isinstance(actual, xr.Dataset):
+        actual = actual.stack(variable=[dim]).to_unstacked_dataset("variable")
 
     xr.testing.assert_duckarray_allclose(expected, actual)
