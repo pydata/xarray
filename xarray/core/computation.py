@@ -678,7 +678,7 @@ def apply_variable_ufunc(
                                     "apply_ufunc with dask='parallelized' consists of "
                                     "multiple chunks, but is also a core dimension. To "
                                     "fix, either rechunk into a single dask array chunk along "
-                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    f"this dimension, i.e., ``.chunk(dict({dim}=-1))``, or "
                                     "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
                                     "but beware that this may significantly increase memory usage."
                                 )
