@@ -1506,10 +1506,10 @@ def cross(a, b, dim):
     arrays = [a, b]
     for i, arr in enumerate(arrays):
         if isinstance(arr, Dataset):
-            is_dataset = True
             # Turn the dataset to a stacked dataarray to follow the
             # normal code path. Then at the end turn it back to a
             # dataset.
+            is_dataset = True
             arrays[i] = arr = arr.to_stacked_array(
                 variable_dim=dim, new_dim="variable", sample_dims=arr.dims
             ).unstack("variable")
@@ -1569,7 +1569,7 @@ def cross(a, b, dim):
     if is_dataset:
         c = c.stack(variable=[dim]).to_unstacked_dataset("variable")
         c = c.expand_dims(
-            [dim for ds in arrays for dim, size in ds.sizes.items() if size == 1]
+            list({d: s for ds in arrays for d, s in ds.sizes.items() if s == 1})
         )
 
     return c
