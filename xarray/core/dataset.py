@@ -58,6 +58,7 @@ from .coordinates import (
     assert_coordinate_consistent,
     remap_label_indexers,
 )
+from .dask_array_ops import unify_chunks
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
     Index,
@@ -6559,37 +6560,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dask.array.core.unify_chunks
         """
 
-        try:
-            self.chunks
-        except ValueError:  # "inconsistent chunks"
-            pass
-        else:
-            # No variables with dask backend, or all chunks are already aligned
-            return self.copy()
-
-        # import dask is placed after the quick exit test above to allow
-        # running this method if dask isn't installed and there are no chunks
-        import dask.array
-
-        ds = self.copy()
-
-        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
-
-        dask_array_names = []
-        dask_unify_args = []
-        for name, variable in ds.variables.items():
-            if isinstance(variable.data, dask.array.Array):
-                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
-                dask_array_names.append(name)
-                dask_unify_args.append(variable.data)
-                dask_unify_args.append(dims_tuple)
-
-        _, rechunked_arrays = dask.array.core.unify_chunks(*dask_unify_args)
-
-        for name, new_array in zip(dask_array_names, rechunked_arrays):
-            ds.variables[name]._data = new_array
-
-        return ds
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,

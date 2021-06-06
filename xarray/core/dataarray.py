@@ -49,6 +49,7 @@ from .coordinates import (
     assert_coordinate_consistent,
     remap_label_indexers,
 )
+from .dask_array_ops import unify_chunks
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
@@ -3680,8 +3681,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         dask.array.core.unify_chunks
         """
-        ds = self._to_temp_dataset().unify_chunks()
-        return self._from_temp_dataset(ds)
+
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,

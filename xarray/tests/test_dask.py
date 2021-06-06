@@ -1069,11 +1069,15 @@ def test_unify_chunks(map_ds):
     with pytest.raises(ValueError, match=r"inconsistent chunks"):
         ds_copy.chunks
 
-    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
         actual_chunks = ds_copy.unify_chunks().chunks
-    expected_chunks == actual_chunks
+    assert expected_chunks == actual_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
+
+    actual = [obj.chunks for obj in xr.unify_chunks(ds_copy.cxy, ds_copy.drop("cxy"))]
+    expected = [tuple(expected_chunks.values()), expected_chunks]
+    assert expected == actual
 
 
 @pytest.mark.parametrize("obj", [make_ds(), make_da()])

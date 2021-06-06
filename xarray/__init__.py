@@ -20,6 +20,7 @@ from .core.combine import combine_by_coords, combine_nested
 from .core.common import ALL_DIMS, full_like, ones_like, zeros_like
 from .core.computation import apply_ufunc, corr, cov, dot, polyval, where
 from .core.concat import concat
+from .core.dask_array_ops import unify_chunks
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .core.extensions import register_dataarray_accessor, register_dataset_accessor
@@ -74,6 +75,7 @@ __all__ = (
     "save_mfdataset",
     "set_options",
     "show_versions",
+    "unify_chunks",
     "where",
     "zeros_like",
     # Classes
