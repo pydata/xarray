@@ -1513,6 +1513,8 @@ def cross(a, b, dim):
             arrays[i] = arr = arr.to_stacked_array(
                 variable_dim=dim, new_dim="variable", sample_dims=arr.dims
             ).unstack("variable")
+            if is_duck_dask_array(arr.data):
+                arrays[i] = arr = arr.chunk({dim: -1})
         elif isinstance(arr, (DataArray, Variable)):
             is_dataset = False
         else:
