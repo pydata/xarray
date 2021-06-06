@@ -21,7 +21,7 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- New top-level function :py:func:`~xarray.unify_chunks`.
+- New top-level function :py:func:`unify_chunks`.
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Allow assigning values to a subset of a dataset using positional or label-based
   indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.

@@ -44,12 +44,12 @@ from .alignment import (
 )
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
+from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
     remap_label_indexers,
 )
-from .dask_array_ops import unify_chunks
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
