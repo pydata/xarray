@@ -441,9 +441,23 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         raise ValueError("cannot use subplot_kws with existing ax")
 
     if ax is None:
-        ax = plt.gca(**kwargs)
+        ax = _maybe_gca(**kwargs)
 
     return ax
+
+
+def _maybe_gca(**kwargs):
+
+    import matplotlib.pyplot as plt
+
+    # only call gca if an active axes exists
+    if plt.get_fignums():
+        f = plt.gcf()
+        if f.axes:
+            # can not pass kwargs to active axes
+            return plt.gca()
+
+    return plt.axes(**kwargs)
 
 
 def label_from_attrs(da, extra=""):
