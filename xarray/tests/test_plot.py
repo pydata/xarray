@@ -2716,6 +2716,16 @@ test_da_list = [
     DataArray(easy_array((10, 3, 2))),
 ]
 
+# Define a few arrays for testing scale="log"
+test_da_list_log = [
+    DataArray(np.arange(7), dims=("x",), coords={"x": np.logspace(-3, 3, 7)}),
+    DataArray(
+        np.arange(16).reshape(4, 4),
+        dims=("y", "x"),
+        coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
+    ),
+]
+
 
 @requires_matplotlib
 class TestAxesKwargs:
@@ -2734,17 +2744,29 @@ class TestAxesKwargs:
             assert plt.gca().yaxis_inverted() == (not yincrease)
 
     @pytest.mark.parametrize("da", test_da_list)
-    @pytest.mark.parametrize("xscale", ["linear", "log", "logit", "symlog"])
+    @pytest.mark.parametrize("xscale", ["linear", "logit", "symlog"])
     def test_xscale_kwarg(self, da, xscale):
         with figure_context():
             da.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
-    @pytest.mark.parametrize(
-        "da", [DataArray(easy_array((10,))), DataArray(easy_array((10, 3)))]
-    )
-    @pytest.mark.parametrize("yscale", ["linear", "log", "logit", "symlog"])
+    @pytest.mark.parametrize("da", test_da_list)
+    @pytest.mark.parametrize("yscale", ["linear", "logit", "symlog"])
     def test_yscale_kwarg(self, da, yscale):
+        with figure_context():
+            da.plot(yscale=yscale)
+            assert plt.gca().get_yscale() == yscale
+
+    @pytest.mark.parametrize("da", test_da_list_log)
+    def test_xscale_log_kwarg(self, da):
+        xscale = "log"
+        with figure_context():
+            da.plot(xscale=xscale)
+            assert plt.gca().get_xscale() == xscale
+
+    @pytest.mark.parametrize("da", test_da_list_log)
+    def test_yscale_log_kwarg(self, da):
+        yscale = "log"
         with figure_context():
             da.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
