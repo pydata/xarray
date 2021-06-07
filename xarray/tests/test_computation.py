@@ -1313,7 +1313,8 @@ def test_vectorize_dask_dtype_meta():
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
 
-    actual = apply_ufunc(
+    func = functools.partial(
+        apply_ufunc,
         pandas_median,
         data_array.chunk({"x": 1}),
         input_core_dims=[["y"]],
@@ -1323,8 +1324,14 @@ def test_vectorize_dask_dtype_meta():
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
-    assert_identical(expected, actual)
-    assert float == actual.dtype
+    # dask/dask#7669: can no longer pass output_dtypes and meta
+    if LooseVersion(dask.__version__) >= "2021.06":
+        with pytest.raises(ValueError):
+            func()
+    else:
+        actual = func()
+        assert_identical(expected, actual)
+        assert float == actual.dtype
 
 
 def pandas_median_add(x, y):
