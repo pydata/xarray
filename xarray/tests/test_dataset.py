@@ -1721,8 +1721,6 @@ class TestDataset:
         assert_identical(expected, actual)
         with pytest.raises(TypeError, match=r"can only lookup dict"):
             data.loc["a"]
-        with pytest.raises(TypeError):
-            data.loc[dict(dim3="a")] = 0
 
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
@@ -3422,8 +3420,60 @@ class TestDataset:
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
 
-        with pytest.raises(NotImplementedError):
-            data1[{"x": 0}] = 0
+        # test assignment with positional and label-based indexing
+        data3 = data1[["var1", "var2"]]
+        data3["var3"] = data3.var1.isel(dim1=0)
+        data4 = data3.copy()
+        err_msg = (
+            "can only set locations defined by dictionaries from Dataset.loc. Got: a"
+        )
+        with pytest.raises(TypeError, match=err_msg):
+            data1.loc["a"] = 0
+        err_msg = r"Variables \['A', 'B', 'scalar'\] in new values not available in original dataset:"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": 1}] = data1[{"dim2": 2}]
+        err_msg = "Variable 'var3': indexer {'dim2': 0} not available"
+        with pytest.raises(ValueError, match=err_msg):
+            data1[{"dim2": 0}] = 0.0
+        err_msg = "Variable 'var1': indexer {'dim2': 10} not available"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": 10}] = data3[{"dim2": 2}]
+        err_msg = "Variable 'var1': dimension 'dim2' appears in new values"
+        with pytest.raises(KeyError, match=err_msg):
+            data4[{"dim2": 2}] = data3[{"dim2": [2]}]
+        err_msg = (
+            "Variable 'var2': dimension order differs between original and new data"
+        )
+        data3["var2"] = data3["var2"].T
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
+        data3["var2"] = data3["var2"].T
+        err_msg = "indexes along dimension 'dim2' are not equal"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3, 4]}]
+        err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
+        with pytest.raises(TypeError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
+        data5 = data4.astype(str)
+        data5["var4"] = data4["var1"]
+        err_msg = "could not convert string to float: 'a'"
+        with pytest.raises(ValueError, match=err_msg):
+            data5[{"dim2": 1}] = "a"
+
+        data4[{"dim2": 0}] = 0.0
+        data4[{"dim2": 1}] = data3[{"dim2": 2}]
+        data4.loc[{"dim2": 1.5}] = 1.0
+        data4.loc[{"dim2": 2.0}] = data3.loc[{"dim2": 2.5}]
+        for v, dat3 in data3.items():
+            dat4 = data4[v]
+            assert_array_equal(dat4[{"dim2": 0}], 0.0)
+            assert_array_equal(dat4[{"dim2": 1}], dat3[{"dim2": 2}])
+            assert_array_equal(dat4.loc[{"dim2": 1.5}], 1.0)
+            assert_array_equal(dat4.loc[{"dim2": 2.0}], dat3.loc[{"dim2": 2.5}])
+            unchanged = [1.0, 2.5, 3.0, 3.5, 4.0]
+            assert_identical(
+                dat4.loc[{"dim2": unchanged}], dat3.loc[{"dim2": unchanged}]
+            )
 
     def test_setitem_pandas(self):
 
@@ -3987,7 +4037,7 @@ class TestDataset:
         expected_ = ds.bar.to_series().resample("24H").mean()
         expected_.index += to_offset("-12H")
         expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
+        assert_allclose(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -6025,7 +6075,7 @@ class TestDataset:
             ds.query(x="spam > 50")  # name not present
 
 
-# Py.test tests
+# pytest tests — new tests should go here, rather than in the class.
 
 
 @pytest.fixture(params=[None])
@@ -6034,7 +6084,7 @@ def data_set(request):
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements):
+def test_isin(test_elements, backend):
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -6042,6 +6092,9 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).astype("bool")
+
+    if backend == "dask":
+        expected = expected.chunk()
 
     result = Dataset(
         data_vars={
@@ -6050,33 +6103,6 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).isin(test_elements)
-
-    assert_equal(result, expected)
-
-
-@pytest.mark.skipif(not has_dask, reason="requires dask")
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin_dask(test_elements):
-    expected = Dataset(
-        data_vars={
-            "var1": (("dim1",), [0, 1]),
-            "var2": (("dim1",), [1, 1]),
-            "var3": (("dim1",), [0, 1]),
-        }
-    ).astype("bool")
-
-    result = (
-        Dataset(
-            data_vars={
-                "var1": (("dim1",), [0, 1]),
-                "var2": (("dim1",), [1, 2]),
-                "var3": (("dim1",), [0, 1]),
-            }
-        )
-        .chunk(1)
-        .isin(test_elements)
-        .compute()
-    )
 
     assert_equal(result, expected)
 

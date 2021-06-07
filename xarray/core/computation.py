@@ -678,7 +678,7 @@ def apply_variable_ufunc(
                                     "apply_ufunc with dask='parallelized' consists of "
                                     "multiple chunks, but is also a core dimension. To "
                                     "fix, either rechunk into a single dask array chunk along "
-                                    f"this dimension, i.e., ``.chunk({dim}: -1)``, or "
+                                    f"this dimension, i.e., ``.chunk(dict({dim}=-1))``, or "
                                     "pass ``allow_rechunk=True`` in ``dask_gufunc_kwargs`` "
                                     "but beware that this may significantly increase memory usage."
                                 )
@@ -1352,12 +1352,23 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
-
-    if not valid_values.all():
-        da_a = da_a.where(valid_values)
-        da_b = da_b.where(valid_values)
-
     valid_count = valid_values.sum(dim) - ddof
+
+    def _get_valid_values(da, other):
+        """
+        Function to lazily mask da_a and da_b
+        following a similar approach to
+        https://github.com/pydata/xarray/pull/4559
+        """
+        missing_vals = np.logical_or(da.isnull(), other.isnull())
+        if missing_vals.any():
+            da = da.where(~missing_vals)
+            return da
+        else:
+            return da
+
+    da_a = da_a.map_blocks(_get_valid_values, args=[da_b])
+    da_b = da_b.map_blocks(_get_valid_values, args=[da_a])
 
     # 3. Detrend along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)

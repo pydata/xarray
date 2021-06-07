@@ -21,7 +21,21 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow assigning values to a subset of a dataset using positional or label-based
+  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+- Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Add ``.sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` for exponentially weighted rolling
+  sums. These require numbagg 0.2.1;
+  (:pull:`5178`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
+  values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
 
+- Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
+  By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,6 +51,12 @@ Bug fixes
   :py:class:`CFTimeIndex` and upcoming pandas version 1.3.0 (:issue:`5356`,
   :pull:`5359`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
+  :pull:`5385`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
+  (:pull:`5406`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Documentation
@@ -45,6 +65,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
+  (:pull:`5433`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.18.2:
 
@@ -138,6 +161,7 @@ Xianxiang Li, Zeb Nicholls, crusaderky, dschwoerer, johnomotani, keewis
 
 New Features
 ~~~~~~~~~~~~
+
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
