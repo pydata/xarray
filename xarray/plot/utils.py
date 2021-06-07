@@ -450,12 +450,13 @@ def _maybe_gca(**kwargs):
 
     import matplotlib.pyplot as plt
 
+    # can call gcf unconditionally: either it exists or would be created by plt.axes
+    f = plt.gcf()
+
     # only call gca if an active axes exists
-    if plt.get_fignums():
-        f = plt.gcf()
-        if f.axes:
-            # can not pass kwargs to active axes
-            return plt.gca()
+    if f.axes:
+        # can not pass kwargs to active axes
+        return plt.gca()
 
     return plt.axes(**kwargs)
 
