@@ -1306,7 +1306,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.skip(
+@pytest.mark.skipif(
     LooseVersion(dask.__version__) > "2021.06",
     reason="dask/dask#7669: can no longer pass output_dtypes and meta",
 )
