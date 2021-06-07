@@ -25,15 +25,11 @@ upstream        https://github.com/pydata/xarray (push)
      ```
  3. Add a list of contributors with:
     ```sh
-    git log "$(git tag --sort="v:refname" | sed -n 'x;$p').." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
-    ```
-    or by substituting the _previous_ release in {0.X.Y-1}:
-    ```sh
-    git log v{0.X.Y-1}.. --format=%aN | sort -u | perl -pe 's/\n/$1, /'
+    git log "$(git tag --sort="v:refname" | tail -1).." --format=%aN | sort -u | perl -pe 's/\n/$1, /'
     ```
     This will return the number of contributors:
     ```sh
-    git log v{0.X.Y-1}.. --format=%aN | sort -u | wc -l
+    git log $(git tag --sort="v:refname" | tail -1).. --format=%aN | sort -u | wc -l
     ```
  4. Write a release summary: ~50 words describing the high level features. This
     will be used in the release emails, tweets, GitHub release notes, etc.

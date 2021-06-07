@@ -14,25 +14,28 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.1:
+.. _whats-new.0.18.3:
 
-v0.18.1 (unreleased)
---------------------
+v0.18.3 (unreleased)
+---------------------
 
 New Features
 ~~~~~~~~~~~~
+- Allow assigning values to a subset of a dataset using positional or label-based
+  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+- Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
+  By `Mattia Almansi <https://github.com/malmans2>`_.
+- Add ``.sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` for exponentially weighted rolling
+  sums. These require numbagg 0.2.1;
+  (:pull:`5178`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
+  values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
+  By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
 
-- Implement :py:meth:`DataArray.drop_duplicates`
-  to remove duplicate dimension values (:pull:`5239`).
-  By `Andrew Huang <https://github.com/ahuang11>`_.
-- allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
-  :py:func:`apply_ufunc` (:pull:`5041`)
-  By `Justus Magin <https://github.com/keewis>`_.
-- :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
-  such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
-- Raise more informative error when decoding time variables with invalid reference dates.
-  (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
+- Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
+  By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -41,6 +44,68 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+
+Bug fixes
+~~~~~~~~~
+- Fix a minor incompatibility between partial datetime string indexing with a
+  :py:class:`CFTimeIndex` and upcoming pandas version 1.3.0 (:issue:`5356`,
+  :pull:`5359`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
+  :pull:`5385`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
+  (:pull:`5406`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
+  (:pull:`5433`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+.. _whats-new.0.18.2:
+
+v0.18.2 (19 May 2021)
+---------------------
+
+This release reverts a regression in xarray's unstacking of dask-backed arrays.
+
+.. _whats-new.0.18.1:
+
+v0.18.1 (18 May 2021)
+---------------------
+
+This release is intended as a small patch release to be compatible with the new
+2021.5.0 ``dask.distributed`` release. It also includes a new
+``drop_duplicates`` method, some documentation improvements, the beginnings of
+our internal Index refactoring, and some bug fixes.
+
+Thank you to all 16 contributors!
+
+Anderson Banihirwe, Andrew, Benoit Bovy, Brewster Malevich, Giacomo Caria,
+Illviljan, James Bourbeau, Keewis, Maximilian Roos, Ravin Kumar, Stephan Hoyer,
+Thomas Nicholas, Tom Nicholas, Zachary Moon.
+
+New Features
+~~~~~~~~~~~~
+
+- Implement :py:meth:`DataArray.drop_duplicates`
+  to remove duplicate dimension values (:pull:`5239`).
+  By `Andrew Huang <https://github.com/ahuang11>`_.
+- Allow passing ``combine_attrs`` strategy names to the ``keep_attrs`` parameter of
+  :py:func:`apply_ufunc` (:pull:`5041`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- :py:meth:`Dataset.interp` now allows interpolation with non-numerical datatypes,
+  such as booleans, instead of dropping them. (:issue:`4761` :pull:`5008`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Raise more informative error when decoding time variables with invalid reference dates.
+  (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -72,6 +137,8 @@ Internal Changes
   ``PandasIndexAdapter`` to ``PandasIndex``, which now inherits from
   ``xarray.Index`` (:pull:`5102`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Replace ``SortedKeysDict`` with python's ``dict``, given dicts are now ordered.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Updated the release guide for developers. Now accounts for actions that are automated via github
   actions. (:pull:`5274`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -97,6 +164,7 @@ Xianxiang Li, Zeb Nicholls, crusaderky, dschwoerer, johnomotani, keewis
 
 New Features
 ~~~~~~~~~~~~
+
 - apply ``combine_attrs`` on data variables and coordinate variables when concatenating
   and merging datasets and dataarrays (:pull:`4902`).
   By `Justus Magin <https://github.com/keewis>`_.
