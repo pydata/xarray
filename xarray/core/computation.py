@@ -1749,9 +1749,10 @@ def unify_chunks(*objects: "T_DSorDA") -> Tuple["T_DSorDA", ...]:
     # Convert chunked dataarrays to datasets
     datasets = []
     are_chunked = []
-    for i, obj in enumerate(objects):
-        ds = obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
-        datasets.append(ds)
+    for obj in objects:
+        datasets.append(
+            obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
+        )
         try:
             are_chunked.append(True if obj.chunks else False)
         except ValueError:  # "inconsistent chunks"
