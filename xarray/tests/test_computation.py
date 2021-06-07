@@ -1306,15 +1306,17 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
+@pytest.mark.skip(
+    LooseVersion(dask.__version__) > "2021.06",
+    reason="dask/dask#7669: can no longer pass output_dtypes and meta",
+)
 @requires_dask
 def test_vectorize_dask_dtype_meta():
     # meta dtype takes precedence
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
 
-    func = functools.partial(
-        apply_ufunc,
+    actual = apply_ufunc(
         pandas_median,
         data_array.chunk({"x": 1}),
         input_core_dims=[["y"]],
@@ -1324,14 +1326,8 @@ def test_vectorize_dask_dtype_meta():
         dask_gufunc_kwargs=dict(meta=np.ndarray((0, 0), dtype=float)),
     )
 
-    # dask/dask#7669: can no longer pass output_dtypes and meta
-    if LooseVersion(dask.__version__) >= "2021.06":
-        with pytest.raises(ValueError):
-            func()
-    else:
-        actual = func()
-        assert_identical(expected, actual)
-        assert float == actual.dtype
+    assert_identical(expected, actual)
+    assert float == actual.dtype
 
 
 def pandas_median_add(x, y):
