@@ -6244,7 +6244,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if _contains_datetime_like_objects(v):
                     v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var, edge_order=edge_order, axis=v.get_axis_num(dim)
+                    v.data,
+                    coord_var.data,
+                    edge_order=edge_order,
+                    axis=v.get_axis_num(dim),
                 )
                 variables[k] = Variable(v.dims, grad)
             else:
