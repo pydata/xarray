@@ -774,6 +774,11 @@ def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
 
     # If logscale, compute the intervals in the logarithmic space
     if scale == "log":
+        if (coord <= 0).any():
+            raise ValueError(
+                "Found negative or zero value in coordinates. "
+                + "Coordinates must be positive on logscale plots."
+            )
         coord = np.log10(coord)
 
     deltas = 0.5 * np.diff(coord, axis=axis)

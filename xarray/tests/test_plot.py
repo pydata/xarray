@@ -513,6 +513,19 @@ class TestPlot(PlotTestCase):
         x = _infer_interval_breaks(x, axis=0, scale="log")
         np.testing.assert_allclose(x, expected_interval_breaks)
 
+    def test__infer_interval_breaks_logscale_invalid_coords(self):
+        """
+        Check error is raised when passing non-positive coordinates with logscale
+        """
+        # Check if error is raised after a zero value in the array
+        x = np.linspace(0, 5, 6)
+        with pytest.raises(ValueError):
+            _infer_interval_breaks(x, scale="log")
+        # Check if error is raised after nagative values in the array
+        x = np.linspace(-5, 5, 11)
+        with pytest.raises(ValueError):
+            _infer_interval_breaks(x, scale="log")
+
     def test_geo_data(self):
         # Regression test for gh2250
         # Realistic coordinates taken from the example dataset
