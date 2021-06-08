@@ -22,7 +22,8 @@ v0.18.3 (unreleased)
 New Features
 ~~~~~~~~~~~~
 - Allow assigning values to a subset of a dataset using positional or label-based
-  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+  indexing (:issue:`3015`, :pull:`5362`).
+  By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add ``.sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
@@ -33,9 +34,10 @@ New Features
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
-
 - Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
   By `Thomas Hirtz <https://github.com/thomashirtz>`_.
+- allow passing a function to ``combine_attrs`` (:pull:`4896`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -346,13 +348,11 @@ Bug fixes
 - Ensure standard calendar dates encoded with a calendar attribute with some or
   all uppercase letters can be decoded or encoded to or from
   ``np.datetime64[ns]`` dates with or without ``cftime`` installed
-  (:issue:`5093`, :pull:`5180`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
-  to the applied function instead (:pull:`5265`).  By `Mathias Hauser <https://github.com/mathause>`_.
-
   (:issue:`5093`, :pull:`5180`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
+  to the applied function instead (:pull:`5265`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
