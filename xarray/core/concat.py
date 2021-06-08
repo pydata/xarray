@@ -143,8 +143,9 @@ def concat(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "override"
-        String indicating how to combine attrs of the objects being merged:
+                     "override"} or callable, default: "override"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
@@ -154,6 +155,9 @@ def concat(
           the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
