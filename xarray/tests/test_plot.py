@@ -2717,19 +2717,26 @@ test_da_list = [
     DataArray(easy_array((10, 3, 2))),
 ]
 
-# Define a few arrays for testing scale="log"
-test_da_list_log = [
-    DataArray(np.arange(7), dims=("x",), coords={"x": np.logspace(-3, 3, 7)}),
-    DataArray(
-        np.arange(16).reshape(4, 4),
-        dims=("y", "x"),
-        coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
-    ),
-]
-
 
 @requires_matplotlib
 class TestAxesKwargs:
+    @pytest.fixture(params=[1, 2])
+    def data_array_logspaced(self, request):
+        """
+        Return a simple DataArray with logspaced coordinates
+        """
+        dims = request.param
+        if dims == 1:
+            return DataArray(
+                np.arange(7), dims=("x",), coords={"x": np.logspace(-3, 3, 7)}
+            )
+        if dims == 2:
+            return DataArray(
+                np.arange(16).reshape(4, 4),
+                dims=("y", "x"),
+                coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
+            )
+
     @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xincrease", [True, False])
     def test_xincrease_kwarg(self, da, xincrease):
@@ -2758,18 +2765,16 @@ class TestAxesKwargs:
             da.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
-    @pytest.mark.parametrize("da", test_da_list_log)
-    def test_xscale_log_kwarg(self, da):
+    def test_xscale_log_kwarg(self, data_array_logspaced):
         xscale = "log"
         with figure_context():
-            da.plot(xscale=xscale)
+            data_array_logspaced.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
-    @pytest.mark.parametrize("da", test_da_list_log)
-    def test_yscale_log_kwarg(self, da):
+    def test_yscale_log_kwarg(self, data_array_logspaced):
         yscale = "log"
         with figure_context():
-            da.plot(yscale=yscale)
+            data_array_logspaced.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
     @pytest.mark.parametrize("da", test_da_list)
