@@ -33,9 +33,10 @@ New Features
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
-
 - Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
   By `Thomas Hirtz <https://github.com/thomashirtz>`_.
+- allow passing a function to ``combine_attrs`` (:pull:`4896`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -116,8 +117,6 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
-- allow passing a function to ``combine_attrs`` (:pull:`4896`).
-  By `Justus Magin <https://github.com/keewis>`_.
 
 Bug fixes
 ~~~~~~~~~
