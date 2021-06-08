@@ -537,24 +537,25 @@ You can also assign values in all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
 
-    ds = xr.tutorial.open_dataset("eraint_uvz")
+    ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
+        latitude=slice(56, 59), longitude=slice(255, 258), level=0
+    )
+    ds = ds_org * 0
     ds
 
     # by integer
-    ds[dict(longitude=10, latitude=10)]["u"]
-    ds[dict(longitude=10, latitude=10)] = 1
-    ds[dict(longitude=10, latitude=10)]["u"]
+    ds[dict(latitude=2, longitude=2)] = 1
+    ds["u"]
 
     # by label
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = 100
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
+    ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = 100
+    ds["u"]
 
     # dataset as new values
-    new_dat = ds.loc[dict(longitude=48, level=200, latitude=[11.25, 12])]["u"]
+    new_dat = ds_org.loc[dict(latitude=48, longitude=[11.25, 12])]
     new_dat
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])] = new_dat
-    ds.loc[dict(longitude=47.25, level=200, latitude=[11.25, 12])]["u"]
+    ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = new_dat
+    ds["u"]
 
 The dimensions can differ between the variables in the dataset, but all variables need to possess at least the dimensions specified in the indexer dictionary.
 The new values must be either a scalar, a :py:class:`DataArray` or a :py:class:`Dataset` itself that contains all variables that also appear in the dataset to be modified.
