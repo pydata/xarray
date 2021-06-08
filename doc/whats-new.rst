@@ -72,6 +72,13 @@ Internal Changes
   (:pull:`5433`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
+  one may eventually provide a custom implementation of label-based data
+  selection (not ready yet for public use). Also refactor the internal,
+  pandas-specific implementation into ``PandasIndex.query()`` and
+  ``PandasMultiIndex.query()`` (:pull:`5322`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 .. _whats-new.0.18.2:
 
 v0.18.2 (19 May 2021)

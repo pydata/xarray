@@ -1426,7 +1426,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along coordinate 'x' with a multi-index",
         ):
             mds.sel(
                 x=xr.DataArray(
