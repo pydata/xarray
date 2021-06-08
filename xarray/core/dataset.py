@@ -63,11 +63,13 @@ from .indexes import (
     Index,
     Indexes,
     PandasIndex,
+    PandasMultiIndex,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
+    wrap_pandas_index,
 )
 from .indexing import is_fancy_indexer
 from .merge import (
@@ -83,7 +85,7 @@ from .utils import (
     Default,
     Frozen,
     HybridMappingProxy,
-    SortedKeysDict,
+    OrderedSet,
     _default,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
@@ -561,6 +563,17 @@ class _LocIndexer:
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
 
+    def __setitem__(self, key, value) -> None:
+        if not utils.is_dict_like(key):
+            raise TypeError(
+                "can only set locations defined by dictionaries from Dataset.loc."
+                f" Got: {key}"
+            )
+
+        # set new values
+        pos_indexers, _ = remap_label_indexers(self.dataset, key)
+        self.dataset[pos_indexers] = value
+
 
 class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
@@ -654,7 +667,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     ... )
     >>> ds
     <xarray.Dataset>
-    Dimensions:         (time: 3, x: 2, y: 2)
+    Dimensions:         (x: 2, y: 2, time: 3)
     Coordinates:
         lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
         lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -803,7 +816,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
         properties.
         """
-        return Frozen(SortedKeysDict(self._dims))
+        return Frozen(self._dims)
 
     @property
     def sizes(self) -> Mapping[Hashable, int]:
@@ -1344,7 +1357,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if (var_name,) == var.dims:
                     indexes[var_name] = var._to_xindex()
 
-        needed_dims: Set[Hashable] = set()
+        needed_dims: OrderedSet[Hashable] = OrderedSet()
         for v in variables.values():
             needed_dims.update(v.dims)
 
@@ -1476,18 +1489,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(np.asarray(key))
 
-    @overload
-    def __setitem__(self, key: List[Hashable], value) -> None:
-        ...
-
-    @overload
-    def __setitem__(self, key: Hashable, value) -> None:
-        ...
-
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
         the following operations is applied to the respective value.
+
+        If key is a dictionary, update all variables in the dataset
+        one by one with the given value at the given location.
+        If the given value is also a dataset, select corresponding variables
+        in the given value and in the dataset to be changed.
 
         If value is a `DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
@@ -1498,11 +1508,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variable.
         """
         if utils.is_dict_like(key):
-            raise NotImplementedError(
-                "cannot yet use a dictionary as a key to set Dataset values"
-            )
+            # check for consistency and convert value to dataset
+            value = self._setitem_check(key, value)
+            # loop over dataset variables and set new values
+            processed = []
+            for name, var in self.items():
+                try:
+                    var[key] = value[name]
+                    processed.append(name)
+                except Exception as e:
+                    if processed:
+                        raise RuntimeError(
+                            "An error occured while setting values of the"
+                            f" variable '{name}'. The following variables have"
+                            f" been successfully updated:\n{processed}"
+                        ) from e
+                    else:
+                        raise e
 
-        if isinstance(key, list):
+        elif isinstance(key, list):
             if len(key) == 0:
                 raise ValueError("Empty list of variables to be set")
             if len(key) == 1:
@@ -1523,6 +1547,69 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         else:
             self.update({key: value})
+
+    def _setitem_check(self, key, value):
+        """Consistency check for __setitem__
+
+        When assigning values to a subset of a Dataset, do consistency check beforehand
+        to avoid leaving the dataset in a partially updated state when an error occurs.
+        """
+        from .dataarray import DataArray
+
+        if isinstance(value, Dataset):
+            missing_vars = [
+                name for name in value.data_vars if name not in self.data_vars
+            ]
+            if missing_vars:
+                raise ValueError(
+                    f"Variables {missing_vars} in new values"
+                    f" not available in original dataset:\n{self}"
+                )
+        elif not any([isinstance(value, t) for t in [DataArray, Number, str]]):
+            raise TypeError(
+                "Dataset assignment only accepts DataArrays, Datasets, and scalars."
+            )
+
+        new_value = xr.Dataset()
+        for name, var in self.items():
+            # test indexing
+            try:
+                var_k = var[key]
+            except Exception as e:
+                raise ValueError(
+                    f"Variable '{name}': indexer {key} not available"
+                ) from e
+
+            if isinstance(value, Dataset):
+                val = value[name]
+            else:
+                val = value
+
+            if isinstance(val, DataArray):
+                # check consistency of dimensions
+                for dim in val.dims:
+                    if dim not in var_k.dims:
+                        raise KeyError(
+                            f"Variable '{name}': dimension '{dim}' appears in new values "
+                            f"but not in the indexed original data"
+                        )
+                dims = tuple([dim for dim in var_k.dims if dim in val.dims])
+                if dims != val.dims:
+                    raise ValueError(
+                        f"Variable '{name}': dimension order differs between"
+                        f" original and new data:\n{dims}\nvs.\n{val.dims}"
+                    )
+            else:
+                val = np.array(val)
+
+            # type conversion
+            new_value[name] = val.astype(var_k.dtype, copy=False)
+
+        # check consistency of dimension sizes and dimension coordinates
+        if isinstance(value, DataArray) or isinstance(value, Dataset):
+            xr.align(self[key], value, join="exact", copy=False)
+
+        return new_value
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
@@ -1992,7 +2079,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                             "This can be fixed by calling unify_chunks()."
                         )
                     chunks[dim] = c
-        return Frozen(SortedKeysDict(chunks))
+        return Frozen(chunks)
 
     def chunk(
         self,
@@ -3199,10 +3286,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 continue
             if isinstance(index, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in index.names]
-                new_index = index.rename(names=new_names)
+                indexes[new_name] = PandasMultiIndex(index.rename(names=new_names))
             else:
-                new_index = index.rename(new_name)
-            indexes[new_name] = PandasIndex(new_index)
+                indexes[new_name] = PandasIndex(index.rename(new_name))
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3431,7 +3517,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = PandasIndex(new_index)
+                    indexes[k] = wrap_pandas_index(new_index)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3704,7 +3790,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasIndex(new_index)
+            indexes[dim] = PandasMultiIndex(new_index)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3732,7 +3818,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = PandasIndex(idx)
+        indexes[new_dim] = wrap_pandas_index(idx)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -6159,7 +6245,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if _contains_datetime_like_objects(v):
                     v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var, edge_order=edge_order, axis=v.get_axis_num(dim)
+                    v.data,
+                    coord_var.data,
+                    edge_order=edge_order,
+                    axis=v.get_axis_num(dim),
                 )
                 variables[k] = Variable(v.dims, grad)
             else:
@@ -6396,7 +6485,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> # Create an example dataset:
         >>> temp = 15 + 8 * np.random.randn(2, 2, 3)
         >>> precip = 10 * np.random.rand(2, 2, 3)
         >>> lon = [[-99.83, -99.32], [-99.79, -99.23]]
@@ -6404,22 +6492,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         >>> dims = ["x", "y", "time"]
         >>> temp_attr = dict(standard_name="air_potential_temperature")
         >>> precip_attr = dict(standard_name="convective_precipitation_flux")
+
         >>> ds = xr.Dataset(
-        ...     {
-        ...         "temperature": (dims, temp, temp_attr),
-        ...         "precipitation": (dims, precip, precip_attr),
-        ...     },
-        ...     coords={
-        ...         "lon": (["x", "y"], lon),
-        ...         "lat": (["x", "y"], lat),
-        ...         "time": pd.date_range("2014-09-06", periods=3),
-        ...         "reference_time": pd.Timestamp("2014-09-05"),
-        ...     },
+        ...     dict(
+        ...         temperature=(dims, temp, temp_attr),
+        ...         precipitation=(dims, precip, precip_attr),
+        ...     ),
+        ...     coords=dict(
+        ...         lon=(["x", "y"], lon),
+        ...         lat=(["x", "y"], lat),
+        ...         time=pd.date_range("2014-09-06", periods=3),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
+        ...     ),
         ... )
-        >>> # Get variables matching a specific standard_name.
+
+        Get variables matching a specific standard_name:
+
         >>> ds.filter_by_attrs(standard_name="convective_precipitation_flux")
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59
@@ -6428,11 +6519,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dimensions without coordinates: x, y
         Data variables:
             precipitation   (x, y, time) float64 5.68 9.256 0.7104 ... 7.992 4.615 7.805
-        >>> # Get all variables that have a standard_name attribute.
+
+        Get all variables that have a standard_name attribute:
+
         >>> standard_name = lambda v: v is not None
         >>> ds.filter_by_attrs(standard_name=standard_name)
         <xarray.Dataset>
-        Dimensions:         (time: 3, x: 2, y: 2)
+        Dimensions:         (x: 2, y: 2, time: 3)
         Coordinates:
             lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
             lat             (x, y) float64 42.25 42.21 42.63 42.59

@@ -2771,7 +2771,9 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with pytest.raises(ValueError, match=r"cannot guess the engine"):
+        with pytest.raises(
+            ValueError, match=r"match in any of xarray's currently installed IO"
+        ):
             with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
@@ -2823,7 +2825,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(ValueError, match="cannot guess the engine"):
+                with pytest.raises(
+                    ValueError,
+                    match="match in any of xarray's currently installed IO",
+                ):
                     with pytest.warns(
                         RuntimeWarning,
                         match=re.escape("'h5netcdf' fails while guessing"),

@@ -2580,6 +2580,7 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@pytest.mark.xfail(reason="recent versions of nc-time-axis and cftime are incompatible")
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
 @requires_cftime
