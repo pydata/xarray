@@ -2711,15 +2711,21 @@ class TestNcAxisNotInstalled(PlotTestCase):
             self.darray.plot.line()
 
 
-test_da_list = [
-    DataArray(easy_array((10,))),
-    DataArray(easy_array((10, 3))),
-    DataArray(easy_array((10, 3, 2))),
-]
-
-
 @requires_matplotlib
 class TestAxesKwargs:
+    @pytest.fixture(params=[1, 2, 3])
+    def data_array(self, request):
+        """
+        Return a simple DataArray
+        """
+        dims = request.param
+        if dims == 1:
+            return DataArray(easy_array((10,)))
+        if dims == 2:
+            return DataArray(easy_array((10, 3)))
+        if dims == 3:
+            return DataArray(easy_array((10, 3, 2)))
+
     @pytest.fixture(params=[1, 2])
     def data_array_logspaced(self, request):
         """
@@ -2737,32 +2743,28 @@ class TestAxesKwargs:
                 coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
             )
 
-    @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xincrease", [True, False])
-    def test_xincrease_kwarg(self, da, xincrease):
+    def test_xincrease_kwarg(self, data_array, xincrease):
         with figure_context():
-            da.plot(xincrease=xincrease)
+            data_array.plot(xincrease=xincrease)
             assert plt.gca().xaxis_inverted() == (not xincrease)
 
-    @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("yincrease", [True, False])
-    def test_yincrease_kwarg(self, da, yincrease):
+    def test_yincrease_kwarg(self, data_array, yincrease):
         with figure_context():
-            da.plot(yincrease=yincrease)
+            data_array.plot(yincrease=yincrease)
             assert plt.gca().yaxis_inverted() == (not yincrease)
 
-    @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("xscale", ["linear", "logit", "symlog"])
-    def test_xscale_kwarg(self, da, xscale):
+    def test_xscale_kwarg(self, data_array, xscale):
         with figure_context():
-            da.plot(xscale=xscale)
+            data_array.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
-    @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("yscale", ["linear", "logit", "symlog"])
-    def test_yscale_kwarg(self, da, yscale):
+    def test_yscale_kwarg(self, data_array, yscale):
         with figure_context():
-            da.plot(yscale=yscale)
+            data_array.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
     def test_xscale_log_kwarg(self, data_array_logspaced):
@@ -2777,31 +2779,27 @@ class TestAxesKwargs:
             data_array_logspaced.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_xlim_kwarg(self, da):
+    def test_xlim_kwarg(self, data_array):
         with figure_context():
             expected = (0.0, 1000.0)
-            da.plot(xlim=[0, 1000])
+            data_array.plot(xlim=[0, 1000])
             assert plt.gca().get_xlim() == expected
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_ylim_kwarg(self, da):
+    def test_ylim_kwarg(self, data_array):
         with figure_context():
-            da.plot(ylim=[0, 1000])
+            data_array.plot(ylim=[0, 1000])
             expected = (0.0, 1000.0)
             assert plt.gca().get_ylim() == expected
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_xticks_kwarg(self, da):
+    def test_xticks_kwarg(self, data_array):
         with figure_context():
-            da.plot(xticks=np.arange(5))
+            data_array.plot(xticks=np.arange(5))
             expected = np.arange(5).tolist()
             assert_array_equal(plt.gca().get_xticks(), expected)
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_yticks_kwarg(self, da):
+    def test_yticks_kwarg(self, data_array):
         with figure_context():
-            da.plot(yticks=np.arange(5))
+            data_array.plot(yticks=np.arange(5))
             expected = np.arange(5)
             assert_array_equal(plt.gca().get_yticks(), expected)
 
