@@ -1930,7 +1930,7 @@ def test_polyval(use_dask, use_datetime):
     xr.testing.assert_allclose(da, da_pv.T)
 
 
-class TestHistInputTypes:
+class TestHistInputTypeChecks:
     def test_invalid_data(self):
         with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
             hist("string")
@@ -1951,6 +1951,10 @@ class TestHistInputTypes:
         with pytest.raises(TypeError, match="must have same length"):
             hist(xr.DataArray([], name="a"), bins=[2, 3])
 
+    def test_non_1d_numpy_array(self):
+        with pytest.raises(ValueError, match="can only be 1-d"):
+            hist(xr.DataArray([], name="a"), bins=np.array([[2, 3]]))
+
     def test_invalid_bins(self):
         with pytest.raises(TypeError, match="not a valid argument"):
             hist(xr.DataArray([], name="a"), bins=2.7)
@@ -1966,3 +1970,8 @@ class TestHistInputTypes:
         bins = xr.DataArray(1)
         with pytest.raises(ValueError, match="does not contain"):
             hist(data, dim="x", bins=[bins])
+
+    def test_prevent_trigger_loading_dask(self):
+        with pytest.raises(TypeError, match="would trigger loading"):
+            hist(xr.DataArray([0], name="a").chunk(1), bins=2)
+
