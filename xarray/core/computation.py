@@ -26,11 +26,11 @@ from typing import (
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .alignment import align, deep_align
+from .alignment import align, broadcast, deep_align
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .utils import is_dict_like
+from .utils import OrderedSet, is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -1724,3 +1724,246 @@ def _calc_idxminmax(
     res.attrs = indx.attrs
 
     return res
+
+
+def hist(
+    *dataarrays, dim=None, bins=None, weights=None, density=False, keep_attrs=None
+):
+    """
+    Histogram applied along specified dimensions.
+
+    If the supplied arguments are chunked dask arrays it will use
+    `dask.array.blockwise` internally to parallelize over all chunks.
+
+    Parameters
+    ----------
+    dataarrays : xarray.DataArray objects
+        Input data. The number of input arguments determines the dimensionality of
+        the histogram. For example, two arguments produce a 2D histogram.
+    dim : str or tuple of strings, optional
+        Dimensions over which which the histogram is computed. The default is to
+        compute the histogram of the flattened array. i.e. over all dimensions.
+    bins :  int, str, numpy array or DataArray, or a list of ints, strs, arrays and/or DataArrays, optional
+        If a list, there should be one entry for each item in ``args``.
+        The bin specifications for each entry:
+
+          * If int, the number of bins.
+          * If str; the method used to automatically calculate the optimal bin
+            width, as defined by `np.histogram_bin_edges`.
+          * If a numpy array, the bin edges. Must be 1D.
+          * If a DataArray, the bin edges. The DataArray can be multidimensional,
+            but must contain the output bins dimension (named as `[var]_bins`
+            for a given input variable named `var`), and must not have any
+            dimensions shared with the `dim` argument. If supplied this DataArray
+            will be present as a coordinate on the output.
+          * If a list of ints, strs, arrays and/or DataArrays; the bin specification
+            as above for every argument in ``args``.
+          * If not supplied (or any elements of the list are `None`) then bins
+            will be automatically calculated by `np.histogram_bin_edges`.
+
+        When bin edges are specified, all but the last (righthand-most) bin include
+        the left edge and exclude the right edge. The last bin includes both edges.
+
+        A ``TypeError`` will also be raised if ``args`` contains dask arrays and
+        ``bins`` are not specified explicitly via arrays or DataArrays, because
+        other bin specifications trigger loading of the entire input data.
+    weights : array_like, optional
+        An array of weights, of the same shape as `a`.  Each value in
+        `a` only contributes its associated weight towards the bin count
+        (instead of 1). If `density` is True, the weights are
+        normalized, so that the integral of the density over the range
+        remains 1. NaNs in the weights input will fill the entire bin with
+        NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
+        before running ``hist()``.
+    density : bool, optional
+        If ``False``, the result will contain the number of samples in
+        each bin. If ``True``, the result is the value of the
+        probability *density* function at the bin, normalized such that
+        the *integral* over the range is 1. Note that the sum of the
+        histogram values will not be equal to 1 unless bins of unit
+        width are chosen; it is not a probability *mass* function.
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the first original
+        object passed to the new one.  If False (default), the new object will be
+        returned without attributes.
+
+    Returns
+    -------
+    hist : xarray.DataArray
+        A single dataarray which contains the values of the histogram. See
+        `density` and `weights` for a description of the possible semantics.
+
+        The returned dataarray will have one additional coordinate for each
+        dataarray supplied, named as `[var]_bins`, which contains the positions
+        of the centres of each bin, varing along a new dimension of the same name.
+
+        All other coordinates will be retained, unless they depend on a dimension
+        which has been reduced along, in which case they will be dropped.
+
+    Examples
+    --------
+
+    See Also
+    --------
+    DataArray.hist
+    Dataset.hist
+    numpy.histogramdd
+    dask.array.blockwise
+    """
+
+    # TODO range argument
+
+    from .dataarray import DataArray, Variable
+
+    # Check inputs
+    if any(not isinstance(arr, DataArray) for arr in dataarrays):
+        raise TypeError(
+            "Only xr.DataArray is supported as input data, but given "
+            f"{[type(arr) for arr in dataarrays]}."
+        )
+    if weights is not None:
+        if not isinstance(weights, (Variable, DataArray)):
+            raise TypeError(
+                "Only xr.DataArray and xr.Variable are supported as weights, "
+                "but given {type(weights)}."
+            )
+
+    n_args = len(dataarrays)
+    if n_args == 0:
+        raise TypeError("At least one input dataarray must be given.")
+
+    for da in dataarrays:
+        if da.name is None:
+            raise ValueError("All input dataarrays must have a name.")
+
+    if isinstance(dim, str):
+        dim = (dim,)
+    reduce_dims = dim
+
+    all_input_dims = ordered_set_union([da.dims for da in dataarrays])
+    broadcast_dims = OrderedSet(all_input_dims) - OrderedSet(reduce_dims)
+
+    # create output dims
+    new_bin_dims = [da.name + "_bins" for da in dataarrays]
+    output_dims = [broadcast_dims] + new_bin_dims
+
+    def _check_and_format_bins_into_coords(b, da, r, bin_dim):
+        # Check validity of given bins, or create using np.histogram_bin_edges
+        # Package into a coordinate DataArray before returning
+        _edges = np.histogram_bin_edges
+        if isinstance(b, (int, str)) or b is None:
+            if is_duck_dask_array(da.data):
+                raise TypeError(f"Choice of bins as {b} would trigger loading "
+                                f"of entire input array to histogram")
+            b = "auto" if b is None else b
+            return DataArray(_edges(da.values, b, r), dims=bin_dim, name=bin_dim,
+                             attrs=da.attrs)
+        elif isinstance(b, np.ndarray):
+            if b.ndim > 1:
+                raise ValueError("bins specified as numpy arrays can only be 1-dimensional")
+            return DataArray(b, dims=bin_dim, name=bin_dim, attrs=da.attrs)
+        elif isinstance(b, DataArray):
+            if bin_dim not in b.dims:
+                raise ValueError(
+                    "A bins dataarray does not contain the "
+                    "corresponding output bins dimension - "
+                    f"has dims {b.dims} but not {bin_dim}."
+                )
+            if not (set(b.dims) - set([bin_dim])).issubset(broadcast_dims):
+                raise ValueError(
+                    "A bins dataarray has dimensions present that "
+                    "will not be broadcast on the output: "
+                    f"{da.dims} vs {tuple(*broadcast_dims)}"
+                )
+            return b
+        else:
+            raise TypeError(f"Type {type(b)} is not a valid argument to bins")
+
+    # TODO check ranges are of valid type
+    ranges = [None] * n_args
+    if isinstance(bins, list):
+        if len(bins) != n_args:
+            raise TypeError(
+                "If `bins` is a list then it must have same length "
+                "as number of input dataarrays passed, but instead has "
+                f"length {len(bins)}. To manually specify bin edges for "
+                "a single input pass them as a numpy array instead."
+            )
+    else:
+        bins = [bins] * n_args
+    bins = [_check_and_format_bins_into_coords(b, da, r, d) for b, da, r, d in
+            zip(bins, dataarrays, ranges, new_bin_dims)]
+
+    # Align / broadcast all inputs (including weights and bins)
+    # TODO if this was merely alignment could blockwise handle all the broadcasting?
+    arrs = broadcast(dataarrays)
+    weights = weights.broadcast_like(arrs[0])
+    # TODO surround with try except?
+    aligned_bins = [b.broadcast_like(arrs[0]) for b in bins]
+    # TODO bins now already has the output dims included, is that correct?
+
+    # Compute histogram results
+    reduce_axes = tuple(list(all_input_dims).index(d) for d in reduce_dims)
+    h_data = _calc_histogram(
+        [arr.values for arr in arrs],
+        axis=reduce_axes,
+        bins=[b.values for b in aligned_bins],
+        weights=weights.values,
+        density=density,
+    )
+
+    # Reconstruct output dataarray
+    output_name = "_".join(["histogram"] + [da.name for da in dataarrays])
+
+    # Adjust bin coords to return positions of bin centres rather than bin edges
+    def _find_centers(da, dim):
+        return 0.5 * (da.isel(dim=slice(None, None, -1)) + da.isel(dim=slice(1, None)))
+
+    bin_centers = [
+        _find_centers(bin, new_bin_dim) for bin, new_bin_dim in zip(bins, new_bin_dims)
+    ]
+
+    # Keep all old coords from any input that have not been reduced along
+    old_coords = {
+        coord.name: coord
+        for da in dataarrays
+        for coord in da.coords
+        if not any(coord.dims in reduce_dims)
+    }
+
+    if keep_attrs is None:
+        keep_attrs = _get_keep_attrs(default=False)
+    attrs = dataarrays[0].attrs if keep_attrs else None
+
+    return DataArray(
+        h_data,
+        dims=output_dims,
+        coords={**old_coords, **bin_centers},
+        name=output_name,
+        attrs=attrs,
+    )
+
+
+def _calc_histogram(*arrs, axis, bins, weights, density):
+    """
+    Internal axis-aware histogram calculation.
+    Will map over dask arrays using blockwise if any are present.
+    Expects all numpy/dask arrays, already aligned and broadcast against one another.
+    """
+
+    # TODO xhistogram code goes here
+    # Use xhistogram.core.histogram
+
+    # TODO how does xarray normally test for dask arrays?
+
+    return []
+
+
+def _bincount():
+    """
+    Axis-aware bincounting function.
+    Acts on a single numpy array (/ dask chunk).
+    Works by reshaping input to combine all broadcast dims along one axis,
+    and all reduce dims along one axis, then reshaping back.
+    """
+    return ...

@@ -58,6 +58,71 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
         New {cls} object with the sum of the weights over the given dimension.
     """
 
+_WEIGHTED_HIST_DOCSTRING = """
+    Weighted histogram applied along specified dimensions.
+
+    If the supplied arguments are chunked dask arrays it will use
+    `dask.array.blockwise` internally to parallelize over all chunks.
+
+    Parameters
+    ----------
+    dim : tuple of strings, optional
+        Dimensions over which which the histogram is computed. The default is to
+        compute the histogram of the flattened {cls}. i.e. over all dimensions.
+    bins :  int or array_like or a list of ints or arrays, or list of DataArrays, optional
+        If a list, there should be one entry for each item in ``args``.
+        The bin specification:
+
+          * If int, the number of bins for all arguments in ``args``.
+          * If array_like, the bin edges for all arguments in ``args``.
+          * If a list of ints, the number of bins  for every argument in ``args``.
+          * If a list arrays, the bin edges for each argument in ``args``
+            (required format for Dask inputs).
+          * A combination [int, array] or [array, int], where int
+            is the number of bins and array is the bin edges.
+          * If a list of DataArrays, the bins for each argument in ``args``
+            The DataArrays can be multidimensional, but must not have any
+            dimensions shared with the `dim` argument.
+
+        When bin edges are specified, all but the last (righthand-most) bin include
+        the left edge and exclude the right edge. The last bin includes both edges.
+
+        A ``TypeError`` will be raised if ``args`` contains dask arrays and
+        ``bins`` are not specified explicitly as a list of arrays.
+    density : bool, optional
+        If ``False``, the result will contain the number of samples in
+        each bin. If ``True``, the result is the value of the
+        probability *density* function at the bin, normalized such that
+        the *integral* over the range is 1. Note that the sum of the
+        histogram values will not be equal to 1 unless bins of unit
+        width are chosen; it is not a probability *mass* function.
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
+
+    Returns
+    -------
+    hist : xarray.DataArray
+        A xarray.DataArray object which contains the values of the histogram. See
+        `density` and `weights` for a description of the possible semantics.
+
+        The returned dataarray will have one additional coordinate for each
+        variable supplied, named as `var_bins`, which contains the positions
+        of the centres of each bin.
+
+    Examples
+    --------
+
+    See Also
+    --------
+    xarray.hist
+    DataArray.hist
+    Dataset.hist
+    numpy.histogramdd
+    dask.array.blockwise
+    """
+
 
 class Weighted(Generic[T_DataWithCoords]):
     """An object that implements weighted operations.
@@ -238,6 +303,15 @@ class Weighted(Generic[T_DataWithCoords]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    def hist(self, dim=None, bins=None, density=False, keep_attrs=None):
+        return self.obj.hist(
+            dim=dim,
+            bins=bins,
+            weights=self.weights,
+            density=density,
+            keep_attrs=keep_attrs,
+        )
+
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
 
@@ -267,6 +341,8 @@ class DatasetWeighted(Weighted["Dataset"]):
 def _inject_docstring(cls, cls_name):
 
     cls.sum_of_weights.__doc__ = _SUM_OF_WEIGHTS_DOCSTRING.format(cls=cls_name)
+
+    cls.hist.__doc__ = _WEIGHTED_HIST_DOCSTRING.format(cls=cls_name)
 
     cls.sum.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
         cls=cls_name, fcn="sum", on_zero="0"

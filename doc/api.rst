@@ -32,6 +32,7 @@ Top-level functions
    cov
    corr
    dot
+   hist
    polyval
    map_blocks
    show_versions
@@ -180,6 +181,7 @@ Computation
    Dataset.map_blocks
    Dataset.polyfit
    Dataset.curvefit
+   Dataset.hist
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -378,6 +380,7 @@ Computation
    DataArray.polyfit
    DataArray.map_blocks
    DataArray.curvefit
+   DataArray.hist
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
