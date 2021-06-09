@@ -132,8 +132,8 @@ def guess_engine(store_spec):
         else:
             error_msg = (
                 "xarray is unable to open this file because it has no currently "
-                "installed IO engines. Xarray's read/write support requires "
-                "optional IO dependencies, see:\n"
+                "installed IO backends. Xarray's read/write support requires "
+                "installing optional IO dependencies, see:\n"
                 "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
                 "http://xarray.pydata.org/en/stable/user-guide/io"
             )
