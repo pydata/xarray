@@ -129,7 +129,7 @@ def guess_engine(store_spec):
                 "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
                 "http://xarray.pydata.org/en/stable/user-guide/io.html"
             )
-        if compatible:
+        else:
             error_msg = (
                 "did not find a match in any of xarray's currently installed IO "
                 f"backends {installed}. Consider explicitly selecting one of the "
@@ -146,7 +146,7 @@ def guess_engine(store_spec):
                 "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
                 "http://xarray.pydata.org/en/stable/user-guide/io"
             )
-        if compatible:
+        else:
             error_msg = (
                 "xarray is unable to open this file because it has no currently "
                 "installed IO engines. Xarray's read/write support requires "
