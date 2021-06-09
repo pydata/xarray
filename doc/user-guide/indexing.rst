@@ -533,19 +533,21 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
       da.isel(x=[0, 1, 2])[1] = -1
       da
 
-You can also assign values in all variables of a :py:class:`Dataset` at once:
+You can also assign values to all variables of a :py:class:`Dataset` at once:
 
 .. ipython:: python
 
     ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
         latitude=slice(56, 59), longitude=slice(255, 258), level=0
     )
-    ds = ds_org * 0
+    # set all values to 0
+    ds = xr.zeros_like(ds_org)
     ds
 
     # by integer
     ds[dict(latitude=2, longitude=2)] = 1
     ds["u"]
+    ds["v"]
 
     # by label
     ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = 100
@@ -557,7 +559,7 @@ You can also assign values in all variables of a :py:class:`Dataset` at once:
     ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = new_dat
     ds["u"]
 
-The dimensions can differ between the variables in the dataset, but all variables need to possess at least the dimensions specified in the indexer dictionary.
+The dimensions can differ between the variables in the dataset, but all variables need to have at least the dimensions specified in the indexer dictionary.
 The new values must be either a scalar, a :py:class:`DataArray` or a :py:class:`Dataset` itself that contains all variables that also appear in the dataset to be modified.
 
 .. _more_advanced_indexing:
