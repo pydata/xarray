@@ -717,7 +717,7 @@ def test_posify_mask_subindexer(indices, expected):
 
 def test_indexing_1d_object_array():
     items = (np.arange(3), np.arange(6))
-    arr = DataArray(np.array(items))
+    arr = DataArray(np.array(items, dtype=object))
 
     actual = arr[0]
 

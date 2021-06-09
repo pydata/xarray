@@ -4450,6 +4450,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
+    @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
