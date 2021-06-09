@@ -42,21 +42,6 @@ _DEFAULT_NAME = utils.ReprObject("<default-name>")
 _JOINS_WITHOUT_FILL_VALUES = frozenset({"inner", "exact"})
 
 
-try:
-    import dask.array as dsa
-
-    has_dask = True
-except ImportError:
-    has_dask = False
-
-
-def _any_dask_array(*args):
-    if not has_dask:
-        return False
-    else:
-        return any(isinstance(a, dsa.core.Array) for a in args)
-
-
 def _first_of_type(args, kind):
     """Return either first object of type 'kind' or raise if not found."""
     for arg in args:
@@ -1878,8 +1863,6 @@ def hist(
                 raise ValueError("bins specified as numpy arrays can only be 1-dimensional")
             return DataArray(b, dims=bin_dim, name=bin_dim, attrs=da.attrs)
         elif isinstance(b, DataArray):
-            print(b.dims)
-            print(broadcast_dims)
             if bin_dim not in b.dims:
                 raise ValueError(
                     "A bins dataarray does not contain the "
