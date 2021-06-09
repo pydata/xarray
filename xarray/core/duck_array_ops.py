@@ -7,7 +7,6 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -20,6 +19,7 @@ from .pycompat import (
     dask_array_type,
     is_duck_dask_array,
     sparse_array_type,
+    sparse_version,
 )
 from .utils import is_duck_array
 

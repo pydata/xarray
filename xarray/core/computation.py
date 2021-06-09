@@ -6,7 +6,6 @@ import itertools
 import operator
 import warnings
 from collections import Counter
-from distutils.version import LooseVersion
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
