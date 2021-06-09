@@ -154,7 +154,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             return ds
 
     @staticmethod
-    def installed() -> bool:
+    def are_dependencies_installed() -> bool:
         return has_pydap
 
 

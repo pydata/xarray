@@ -83,7 +83,7 @@ def sort_backends(backend_entrypoints):
 def build_engines(pkg_entrypoints):
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
-        if backend.installed():
+        if backend.are_dependencies_installed():
             backend_entrypoints[backend_name] = backend
     pkg_entrypoints = remove_duplicates(pkg_entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
@@ -119,8 +119,8 @@ def guess_engine(store_spec):
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
     installed = [k for k in engines if k != "store"]
-    if installed:
-        if not compatible:
+    if not compatible:
+        if installed:
             error_msg = (
                 "did not find a match in any of xarray's currently installed IO "
                 f"backends {installed}. Consider explicitly selecting one of the "
@@ -131,29 +131,19 @@ def guess_engine(store_spec):
             )
         else:
             error_msg = (
-                "did not find a match in any of xarray's currently installed IO "
-                f"backends {installed}. Consider explicitly selecting one of the "
-                "installed engines via the ``engine`` parameter or to install one "
-                f"of the following engines that report a match with the input file: "
-                f"{compatible}"
-            )
-    else:
-        if not compatible:
-            error_msg = (
                 "xarray is unable to open this file because it has no currently "
                 "installed IO engines. Xarray's read/write support requires "
                 "optional IO dependencies, see:\n"
                 "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
                 "http://xarray.pydata.org/en/stable/user-guide/io"
             )
-        else:
-            error_msg = (
-                "xarray is unable to open this file because it has no currently "
-                "installed IO engines. Xarray's read/write support requires "
-                "optional dependencies."
-                f"\nConsider to install one of the following engines that report "
-                f"a match with the input file: {compatible}"
-            )
+    else:
+        error_msg = (
+            "found the following matches with the input file in xarray's IO "
+            f"backends: {compatible}. But their dependencies may not be installed, see:\n"
+            "http://xarray.pydata.org/en/stable/user-guide/io.html \n"
+            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html"
+        )
 
     raise ValueError(error_msg)
 
