@@ -176,15 +176,9 @@ masked_invalid = _dask_or_eager_func(
 
 
 def astype(data, dtype, **kwargs):
-    try:
-        import sparse
-    except ImportError:
-        sparse = None
-
     if (
-        sparse is not None
-        and isinstance(data, sparse_array_type)
-        and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
+        isinstance(data, sparse_array_type)
+        and sparse_version < "0.11.0"
         and "casting" in kwargs
     ):
         warnings.warn(
