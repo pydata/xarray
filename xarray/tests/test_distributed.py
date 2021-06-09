@@ -171,6 +171,7 @@ def test_dask_distributed_rasterio_integration_test(loop):
 
 
 @requires_cfgrib
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_dask_distributed_cfgrib_integration_test(loop):
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):

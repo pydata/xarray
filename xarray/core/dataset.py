@@ -5320,7 +5320,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted()
+            is_sorted = idx.is_monotonic_increasing
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)

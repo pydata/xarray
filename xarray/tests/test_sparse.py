@@ -12,6 +12,7 @@ from xarray.core.pycompat import sparse_array_type
 
 from . import assert_equal, assert_identical, requires_dask
 
+filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
 
@@ -118,12 +119,18 @@ def test_variable_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
@@ -373,12 +380,18 @@ def test_dataarray_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
