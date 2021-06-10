@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Tuple, List, Optional, TypeVar, Union
 
 from . import duck_array_ops
 from .computation import dot
@@ -7,6 +7,7 @@ from .pycompat import is_duck_dask_array
 if TYPE_CHECKING:
     from .common import DataWithCoords  # noqa: F401
     from .dataarray import DataArray, Dataset
+    from .computation import _ALLOWED_BINS_TYPES
 
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
@@ -303,10 +304,18 @@ class Weighted(Generic[T_DataWithCoords]):
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    def hist(self, dim=None, bins=None, density=False, keep_attrs=None):
+    def hist(
+        self,
+        dim : Union[Hashable, Iterable[Hashable]] = None,
+        bins : Union[_ALLOWED_BINS_TYPES, List[_ALLOWED_BINS_TYPES]] = None,
+        range : Union[Tuple[float, float], List[Tuple[float, float]]] = None,
+        density : bool = False,
+        keep_attrs : bool = None,
+    ) -> T_DataWithCoords:
         return self.obj.hist(
             dim=dim,
             bins=bins,
+            range=range,
             weights=self.weights,
             density=density,
             keep_attrs=keep_attrs,

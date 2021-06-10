@@ -73,6 +73,8 @@ from .variable import (
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
+    from .computation import _ALLOWED_BINS_TYPES
+
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -4599,7 +4601,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
 
-    def hist(self, dim=None, bins=None, range=None, weights=None, density=False, keep_attrs=None):
+    def hist(
+        self,
+        dim : Union[Hashable, Iterable[Hashable]] = None,
+        bins : Union[_ALLOWED_BINS_TYPES, List[_ALLOWED_BINS_TYPES]] = None,
+        range : Tuple[float, float] = None,
+        weights : T_DataArray = None,
+        density : bool = False,
+        keep_attrs : bool = None,
+    ) -> DataArray:
         """
         Histogram applied along specified dimensions.
 
@@ -4639,11 +4649,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 optimal based on the actual data within `range`, the bin count will
                 fill the entire range including portions containing no data.
               * If not provided, range is simply ``(da.min(), da.max())``.
-        weights : array_like, optional
-            An array of weights, of the same shape as `a`.  Each value in
-            `a` only contributes its associated weight towards the bin count
-            (instead of 1). If `density` is True, the weights are
-            normalized, so that the integral of the density over the range
+        weights : xarray.DataArray, optional
+            An array of weights, able to be broadcast to match the input data.
+            If supplied each value in the input data only contributes its associated
+            weight towards the bin count (instead of 1). If `density` is True, the
+            weights are normalized, so that the integral of the density over the range
             remains 1. NaNs in the weights input will fill the entire bin with
             NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
             before running ``hist()``.
@@ -4683,7 +4693,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         from .computation import hist
 
         return hist(
-            [self],
+            self,
             dim=dim,
             bins=bins,
             range=range,

@@ -106,6 +106,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
+    from .computation import _ALLOWED_BINS_TYPES
 
     T_DSorDA = TypeVar("T_DSorDA", DataArray, "Dataset")
 
@@ -7628,7 +7629,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return result
 
-    def hist(self, dim=None, bins=None, range=None, weights=None, density=False, keep_attrs=None):
+    def hist(
+        self,
+        dim : Union[Hashable, Iterable[Hashable]] = None,
+        bins : Union[_ALLOWED_BINS_TYPES, List[_ALLOWED_BINS_TYPES]] = None,
+        range : Union[Tuple[float, float], List[Tuple[float, float]]] = None,
+        weights : DataArray = None,
+        density : bool = False,
+        keep_attrs : bool = None,
+    ) -> DataArray:
         """
         Histogram applied along specified dimensions. Will create a N-dimensional
         histogram, where N is the number of variables in the dataset.
@@ -7678,11 +7687,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 the dataset.
               * If not provided, the ranges are simply ``(ds[var].min(), ds[var].max())``
                 for each variable.
-        weights : array_like, optional
-            An array of weights, of the same shape as `a`.  Each value in
-            `a` only contributes its associated weight towards the bin count
-            (instead of 1). If `density` is True, the weights are
-            normalized, so that the integral of the density over the range
+        weights : xarray.DataArray, optional
+            An array of weights, able to be broadcast to match the input data.
+            If supplied each value in the input data only contributes its associated
+            weight towards the bin count (instead of 1). If `density` is True, the
+            weights are normalized, so that the integral of the density over the range
             remains 1. NaNs in the weights input will fill the entire bin with
             NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
             before running ``hist()``.
@@ -7723,7 +7732,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         from .computation import hist
 
         return hist(
-            [self.data_vars.values()],
+            *[self[var] for var in self],
             dim=dim,
             bins=bins,
             range=range,

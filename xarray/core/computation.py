@@ -36,6 +36,7 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .coordinates import Coordinates  # noqa
     from .dataset import Dataset
+    from .dataarray import DataArray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1726,15 +1727,18 @@ def _calc_idxminmax(
     return res
 
 
+_ALLOWED_BINS_TYPES = Union[int, str, np.ndarray, DataArray, None]
+
+
 def hist(
-    *dataarrays,
-    dim=None,
-    bins=None,
-    range=None,
-    weights=None,
-    density=False,
-    keep_attrs=None,
-):
+    *dataarrays : DataArray,
+    dim : Union[Hashable, Iterable[Hashable]] = None,
+    bins : Union[_ALLOWED_BINS_TYPES, List[_ALLOWED_BINS_TYPES]] = None,
+    range : Union[Tuple[float, float], List[Tuple[float, float]]] = None,
+    weights : DataArray = None,
+    density : bool = False,
+    keep_attrs : bool = None,
+) -> DataArray:
     """
     Histogram applied along specified dimensions.
 
@@ -1788,11 +1792,11 @@ def hist(
             ``args``.
           * If not provided, range is simply ``(arg.min(), arg.max())`` for each
             arg.
-    weights : array_like, optional
-        An array of weights, of the same shape as `a`.  Each value in
-        `a` only contributes its associated weight towards the bin count
-        (instead of 1). If `density` is True, the weights are
-        normalized, so that the integral of the density over the range
+    weights : xarray.DataArray, optional
+        An array of weights, able to be broadcast to match the input data.
+        If supplied each value in the input data only contributes its associated
+        weight towards the bin count (instead of 1). If `density` is True, the
+        weights are normalized, so that the integral of the density over the range
         remains 1. NaNs in the weights input will fill the entire bin with
         NaNs. If there are NaNs in the weights input call ``.fillna(0.)``
         before running ``hist()``.
@@ -1862,7 +1866,7 @@ def hist(
 
     # Will broadcast over all dimensions not counted along by histogram
     all_input_dims = ordered_set_union([da.dims for da in dataarrays])
-    broadcast_dims = OrderedSet(all_input_dims) - OrderedSet(reduce_dims)
+    broadcast_dims : Iterable[Hashable] = OrderedSet(*all_input_dims) - OrderedSet(*reduce_dims)
 
     # Create output dims
     new_bin_dims = [da.name + "_bins" for da in dataarrays]
@@ -1944,7 +1948,7 @@ def hist(
             )
     else:
         bins = [bins] * n_args
-    bins = [
+    bins_as_coords : List[DataArray] = [
         _check_and_format_bins_into_coords(b, da, r, d)
         for b, da, r, d in zip(bins, dataarrays, ranges, new_bin_dims)
     ]
@@ -1954,7 +1958,7 @@ def hist(
     arrs = broadcast(dataarrays)
     weights = weights.broadcast_like(arrs[0])
     # TODO surround with try except?
-    aligned_bins = [b.broadcast_like(arrs[0]) for b in bins]
+    aligned_bins = [b.broadcast_like(arrs[0]) for b in bins_as_coords]
     # TODO bins now already has the output dims included, is that correct?
 
     # Compute histogram results
