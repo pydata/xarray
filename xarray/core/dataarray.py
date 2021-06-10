@@ -4599,36 +4599,46 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
 
-    def hist(self, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
+    def hist(self, dim=None, bins=None, range=None, weights=None, density=False, keep_attrs=None):
         """
         Histogram applied along specified dimensions.
 
-        If the supplied arguments are chunked dask arrays it will use
+        If the supplied dataarray contains a chunked dask array it will use
         `dask.array.blockwise` internally to parallelize over all chunks.
 
         dim : tuple of strings, optional
             Dimensions over which which the histogram is computed. The default is to
             compute the histogram of the flattened array. i.e. over all dimensions.
-        bins :  int or array_like or a list of ints or arrays, or list of DataArrays, optional
-            If a list, there should be one entry for each item in ``args``.
-            The bin specification:
+        bins :  int, str, numpy array or DataArray, optional
+            The bin specifications:
 
-              * If int, the number of bins for all arguments in ``args``.
-              * If array_like, the bin edges for all arguments in ``args``.
-              * If a list of ints, the number of bins  for every argument in ``args``.
-              * If a list arrays, the bin edges for each argument in ``args``
-                (required format for Dask inputs).
-              * A combination [int, array] or [array, int], where int
-                is the number of bins and array is the bin edges.
-              * If a list of DataArrays, the bins for each argument in ``args``
-                The DataArrays can be multidimensional, but must not have any
-                dimensions shared with the `dim` argument.
+              * If int, the number of bins.
+              * If str; the method used to automatically calculate the optimal bin
+                width, as defined by `np.histogram_bin_edges`.
+              * If a numpy array, the bin edges. Must be 1D.
+              * If a DataArray, the bin edges. The DataArray can be multidimensional,
+                but must contain the output bins dimension (named as `[da.name]_bins`),
+                and must not have any dimensions shared with the `dim` argument.
+                If supplied this DataArray will be present as a coordinate on the output.
+              * If not supplied then bins will be automatically calculated by
+                `np.histogram_bin_edges`.
 
             When bin edges are specified, all but the last (righthand-most) bin include
             the left edge and exclude the right edge. The last bin includes both edges.
 
-            A ``TypeError`` will be raised if ``args`` contains dask arrays and
-            ``bins`` are not specified explicitly as a list of arrays.
+            A ``TypeError`` will also be raised if the dataarray contains a dask array and
+            ``bins`` are not specified explicitly via an array or DataArray, because
+            other bin specifications trigger loading of the entire input data.
+        range : (float, float), optional
+            The range specifications are as follows:
+
+              * If (float, float); the lower and upper range(s) of the bins. Values
+                outside the range are ignored. The first element of the range must be
+                less than or equal to the second. `range` affects the automatic bin
+                computation as well. In this case, while bin width is computed to be
+                optimal based on the actual data within `range`, the bin count will
+                fill the entire range including portions containing no data.
+              * If not provided, range is simply ``(da.min(), da.max())``.
         weights : array_like, optional
             An array of weights, of the same shape as `a`.  Each value in
             `a` only contributes its associated weight towards the bin count
@@ -4655,9 +4665,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             A single dataarray which contains the values of the histogram. See
             `density` and `weights` for a description of the possible semantics.
 
-            The returned dataarray will have one additional coordinate for each
-            dataarray supplied, named as `var_bins`, which contains the positions
-            of the centres of each bin.
+            The returned dataarray will have one additional coordinate, named as
+            `[da.name]_bins`, which contains the positions of the centres of each bin.
 
         Examples
         --------
@@ -4667,6 +4676,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         xarray.hist
         DataArray.hist
         numpy.histogramdd
+        numpy.histogram_bin_edges
         dask.array.blockwise
         """
 
@@ -4676,6 +4686,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             [self],
             dim=dim,
             bins=bins,
+            range=range,
             weights=weights,
             density=density,
             keep_attrs=keep_attrs,

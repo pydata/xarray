@@ -1727,7 +1727,13 @@ def _calc_idxminmax(
 
 
 def hist(
-    *dataarrays, dim=None, bins=None, weights=None, density=False, keep_attrs=None
+    *dataarrays,
+    dim=None,
+    bins=None,
+    range=None,
+    weights=None,
+    density=False,
+    keep_attrs=None,
 ):
     """
     Histogram applied along specified dimensions.
@@ -1767,6 +1773,21 @@ def hist(
         A ``TypeError`` will also be raised if ``args`` contains dask arrays and
         ``bins`` are not specified explicitly via arrays or DataArrays, because
         other bin specifications trigger loading of the entire input data.
+    range : (float, float) or a list of (float, float), optional
+        If a list, there should be one entry for each item in ``args``.
+        The range specifications are as follows:
+
+          * If (float, float); the lower and upper range(s) of the bins for all
+            arguments in ``args``. Values outside the range are ignored. The first
+            element of the range must be less than or equal to the second. `range`
+            affects the automatic bin computation as well. In this case, while bin
+            width is computed to be optimal based on the actual data within `range`,
+            the bin count will fill the entire range including portions containing
+            no data.
+          * If a list of (float, float); the ranges as above for every argument in
+            ``args``.
+          * If not provided, range is simply ``(arg.min(), arg.max())`` for each
+            arg.
     weights : array_like, optional
         An array of weights, of the same shape as `a`.  Each value in
         `a` only contributes its associated weight towards the bin count
@@ -1808,10 +1829,9 @@ def hist(
     DataArray.hist
     Dataset.hist
     numpy.histogramdd
+    numpy.histogram_bin_edges
     dask.array.blockwise
     """
-
-    # TODO range argument
 
     from .dataarray import DataArray, Variable
 
@@ -1840,27 +1860,62 @@ def hist(
         dim = (dim,)
     reduce_dims = dim
 
+    # Will broadcast over all dimensions not counted along by histogram
     all_input_dims = ordered_set_union([da.dims for da in dataarrays])
     broadcast_dims = OrderedSet(all_input_dims) - OrderedSet(reduce_dims)
 
-    # create output dims
+    # Create output dims
     new_bin_dims = [da.name + "_bins" for da in dataarrays]
     output_dims = [broadcast_dims] + new_bin_dims
 
+    # Check range kwarg
+    def _check_or_find_range(r, da):
+        if r is None:
+            lower, upper = da.min(), da.max()
+        else:
+            lower, upper = r
+            if not all(isinstance(bound, float) for bound in (lower, upper)):
+                raise TypeError(
+                    "ranges must be provided in form (float, float), "
+                    f"but found ({type(lower)}, {type(upper)})."
+                )
+            if lower > upper:
+                raise ValueError(
+                    "lower bound of range must be smaller than upper bound"
+                )
+        return lower, upper
+
+    if isinstance(range, list):
+        if len(range) != n_args:
+            raise TypeError(
+                "If `range` is a list then it must have same length "
+                "as number of input dataarrays passed, but instead has "
+                f"length {len(range)}."
+            )
+    else:
+        range = [range] * n_args
+    ranges = [_check_or_find_range(r, da) for r, da in zip(range, dataarrays)]
+
+    # Check bins kwarg
     def _check_and_format_bins_into_coords(b, da, r, bin_dim):
         # Check validity of given bins, or create using np.histogram_bin_edges
         # Package into a coordinate DataArray before returning
         _edges = np.histogram_bin_edges
         if isinstance(b, (int, str)) or b is None:
             if is_duck_dask_array(da.data):
-                raise TypeError(f"Choice of bins as {b} would trigger loading "
-                                f"of entire input array to histogram")
+                raise TypeError(
+                    f"Choice of bins as {b} would trigger loading "
+                    f"of entire input array to histogram"
+                )
             b = "auto" if b is None else b
-            return DataArray(_edges(da.values, b, r), dims=bin_dim, name=bin_dim,
-                             attrs=da.attrs)
+            return DataArray(
+                _edges(da.values, b, r), dims=bin_dim, name=bin_dim, attrs=da.attrs
+            )
         elif isinstance(b, np.ndarray):
             if b.ndim > 1:
-                raise ValueError("bins specified as numpy arrays can only be 1-dimensional")
+                raise ValueError(
+                    "bins specified as numpy arrays can only be 1-dimensional"
+                )
             return DataArray(b, dims=bin_dim, name=bin_dim, attrs=da.attrs)
         elif isinstance(b, DataArray):
             if bin_dim not in b.dims:
@@ -1879,8 +1934,6 @@ def hist(
         else:
             raise TypeError(f"Type {type(b)} is not a valid argument to bins")
 
-    # TODO check ranges are of valid type
-    ranges = [None] * n_args
     if isinstance(bins, list):
         if len(bins) != n_args:
             raise TypeError(
@@ -1891,8 +1944,10 @@ def hist(
             )
     else:
         bins = [bins] * n_args
-    bins = [_check_and_format_bins_into_coords(b, da, r, d) for b, da, r, d in
-            zip(bins, dataarrays, ranges, new_bin_dims)]
+    bins = [
+        _check_and_format_bins_into_coords(b, da, r, d)
+        for b, da, r, d in zip(bins, dataarrays, ranges, new_bin_dims)
+    ]
 
     # Align / broadcast all inputs (including weights and bins)
     # TODO if this was merely alignment could blockwise handle all the broadcasting?

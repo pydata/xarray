@@ -7628,7 +7628,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return result
 
-    def hist(self, dim=None, bins=None, weights=None, density=False, keep_attrs=None):
+    def hist(self, dim=None, bins=None, range=None, weights=None, density=False, keep_attrs=None):
         """
         Histogram applied along specified dimensions. Will create a N-dimensional
         histogram, where N is the number of variables in the dataset.
@@ -7639,26 +7639,45 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dim : tuple of strings, optional
             Dimensions over which which the histogram is computed. The default is to
             compute the histogram of the flattened array. i.e. over all dimensions.
-        bins :  int or array_like or a list of ints or arrays, or list of DataArrays, optional
-            If a list, there should be one entry for each item in ``args``.
-            The bin specification:
+        bins :  int, str, numpy array or DataArray, or a list of ints, strs, arrays and/or DataArrays, optional
+            If a list, there should be one entry for each variable in the dataset.
+            The bin specifications for each entry:
 
-              * If int, the number of bins for all arguments in ``args``.
-              * If array_like, the bin edges for all arguments in ``args``.
-              * If a list of ints, the number of bins  for every argument in ``args``.
-              * If a list arrays, the bin edges for each argument in ``args``
-                (required format for Dask inputs).
-              * A combination [int, array] or [array, int], where int
-                is the number of bins and array is the bin edges.
-              * If a list of DataArrays, the bins for each argument in ``args``
-                The DataArrays can be multidimensional, but must not have any
-                dimensions shared with the `dim` argument.
+              * If int, the number of bins.
+              * If str; the method used to automatically calculate the optimal bin
+                width, as defined by `np.histogram_bin_edges`.
+              * If a numpy array, the bin edges. Must be 1D.
+              * If a DataArray, the bin edges. The DataArray can be multidimensional,
+                but must contain the output bins dimension (named as `[var]_bins`
+                for a given input variable named `var`), and must not have any
+                dimensions shared with the `dim` argument. If supplied this DataArray
+                will be present as a coordinate on the output.
+              * If a list of ints, strs, arrays and/or DataArrays; the bin specification
+                as above for every variable in the dataset.
+              * If not supplied (or any elements of the list are `None`) then bins
+                will be automatically calculated by `np.histogram_bin_edges`.
 
             When bin edges are specified, all but the last (righthand-most) bin include
             the left edge and exclude the right edge. The last bin includes both edges.
 
-            A ``TypeError`` will be raised if ``args`` contains dask arrays and
-            ``bins`` are not specified explicitly as a list of arrays.
+            A ``TypeError`` will also be raised if the variables contain dask arrays and
+            ``bins`` are not specified explicitly via arrays or DataArrays, because
+            other bin specifications trigger loading of the entire input variable.
+        range : (float, float) or a list of (float, float), optional
+            If a list, there should be one entry for each variable in the dataset.
+            The range specifications are as follows:
+
+              * If (float, float); the lower and upper range(s) of the bins for all
+                variables in the dataset. Values outside the range are ignored. The first
+                element of the range must be less than or equal to the second. `range`
+                affects the automatic bin computation as well. In this case, while bin
+                width is computed to be optimal based on the actual data within `range`,
+                the bin count will fill the entire range including portions containing
+                no data.
+              * If a list of (float, float); the ranges as above for every variable in
+                the dataset.
+              * If not provided, the ranges are simply ``(ds[var].min(), ds[var].max())``
+                for each variable.
         weights : array_like, optional
             An array of weights, of the same shape as `a`.  Each value in
             `a` only contributes its associated weight towards the bin count
@@ -7686,8 +7705,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             `density` and `weights` for a description of the possible semantics.
 
             The returned dataarray will have one additional coordinate for each
-            dataarray supplied, named as `var_bins`, which contains the positions
-            of the centres of each bin.
+            variable in the input dataset, named as `var_bins`, which contains
+            the positions of the centres of each bin.
 
         Examples
         --------
@@ -7697,6 +7716,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         xarray.hist
         DataArray.hist
         numpy.histogramdd
+        numpy.histogram_bin_edges
         dask.array.blockwise
         """
 
@@ -7706,6 +7726,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             [self.data_vars.values()],
             dim=dim,
             bins=bins,
+            range=range,
             weights=weights,
             density=density,
             keep_attrs=keep_attrs,
