@@ -1930,14 +1930,14 @@ def test_polyval(use_dask, use_datetime):
     xr.testing.assert_allclose(da, da_pv.T)
 
 
-class TestHistInputTypeChecks:
+class TestHistInputChecks:
     def test_invalid_data(self):
         with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
             hist("string")
 
     def test_invalid_weights(self):
         with pytest.raises(TypeError, match="supported as weights"):
-            hist(xr.DataArray([], name="a"), weights="string")
+            hist(xr.DataArray([0], name="a"), weights="string")
 
     def test_no_data(self):
         with pytest.raises(TypeError, match="At least one"):
@@ -1945,19 +1945,31 @@ class TestHistInputTypeChecks:
 
     def test_nameless_data(self):
         with pytest.raises(ValueError, match="must have a name"):
-            hist(xr.DataArray([]))
+            hist(xr.DataArray([0]))
 
     def test_wrong_number_of_bins(self):
         with pytest.raises(TypeError, match="must have same length"):
-            hist(xr.DataArray([], name="a"), bins=[2, 3])
+            hist(xr.DataArray([0], name="a"), bins=[2, 3])
 
     def test_non_1d_numpy_array(self):
         with pytest.raises(ValueError, match="can only be 1-d"):
-            hist(xr.DataArray([], name="a"), bins=np.array([[2, 3]]))
+            hist(xr.DataArray([0], name="a"), bins=np.array([[2, 3]]))
 
     def test_invalid_bins(self):
         with pytest.raises(TypeError, match="not a valid argument"):
-            hist(xr.DataArray([], name="a"), bins=2.7)
+            hist(xr.DataArray([0], name="a"), bins=2.7)
+
+    def test_wrong_number_of_ranges(self):
+        with pytest.raises(TypeError, match="must have same length"):
+            hist(xr.DataArray([0], name="a"), range=[(1.0, 2.0), (2.0, 3.0)])
+
+    def test_unsorted_range(self):
+        with pytest.raises(ValueError, match="must be smaller"):
+            hist(xr.DataArray([0], name="a"), range=(6.7, 2.7))
+
+    def test_invalid_range(self):
+        with pytest.raises(TypeError, match="float, float"):
+            hist(xr.DataArray([0], name="a"), range=(2.7, [4.5, 6.7]))
 
     def test_bin_dataarrays_with_extra_dims(self):
         data = xr.DataArray([0], dims=["x"], name="a")
@@ -1974,4 +1986,5 @@ class TestHistInputTypeChecks:
     def test_prevent_trigger_loading_dask(self):
         with pytest.raises(TypeError, match="would trigger loading"):
             hist(xr.DataArray([0], name="a").chunk(1), bins=2)
+
 
