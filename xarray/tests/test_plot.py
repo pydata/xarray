@@ -17,6 +17,7 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
+    _maybe_gca,
     get_axis,
     label_from_attrs,
 )
@@ -2580,6 +2581,7 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@pytest.mark.xfail(reason="recent versions of nc-time-axis and cftime are incompatible")
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
 @requires_cftime
@@ -2776,3 +2778,31 @@ def test_get_axis_cartopy():
     with figure_context():
         ax = get_axis(**kwargs)
         assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+def test_maybe_gca():
+
+    with figure_context():
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+
+        # create figure without axes
+        plt.figure()
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+        existing_axes = plt.axes()
+        ax = _maybe_gca(aspect=1)
+
+        # re-uses the existing axes
+        assert existing_axes == ax
+        # kwargs are ignored when reusing axes
+        assert ax.get_aspect() == "auto"

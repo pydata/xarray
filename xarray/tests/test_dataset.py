@@ -72,9 +72,9 @@ def create_test_data(seed=None, add_attrs=True):
     _dims = {"dim1": 8, "dim2": 9, "dim3": 10}
 
     obj = Dataset()
-    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     obj["dim2"] = ("dim2", 0.5 * np.arange(_dims["dim2"]))
     obj["dim3"] = ("dim3", list("abcdefghij"))
+    obj["time"] = ("time", pd.date_range("2000-01-01", periods=20))
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data)
@@ -205,11 +205,11 @@ class TestDataset:
         expected = dedent(
             """\
             <xarray.Dataset>
-            Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
+            Dimensions:  (dim2: 9, dim3: 10, time: 20, dim1: 8)
             Coordinates:
-              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
               * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
               * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+              * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
                 numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
             Dimensions without coordinates: dim1
             Data variables:
@@ -357,14 +357,14 @@ class TestDataset:
             """\
         xarray.Dataset {
         dimensions:
-        \tdim1 = 8 ;
         \tdim2 = 9 ;
-        \tdim3 = 10 ;
         \ttime = 20 ;
+        \tdim1 = 8 ;
+        \tdim3 = 10 ;
 
         variables:
-        \tdatetime64[ns] time(time) ;
         \tfloat64 dim2(dim2) ;
+        \tdatetime64[ns] time(time) ;
         \tfloat64 var1(dim1, dim2) ;
         \t\tvar1:foo = variable ;
         \tfloat64 var2(dim1, dim2) ;
@@ -560,14 +560,13 @@ class TestDataset:
     def test_properties(self):
         ds = create_test_data()
         assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert list(ds.dims) == sorted(ds.dims)
         assert ds.sizes == ds.dims
 
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
-        assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
-        assert type(ds.dims.mapping.mapping) is dict
+        assert isinstance(ds.dims.mapping, dict)
+        assert type(ds.dims.mapping) is dict
 
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
@@ -593,7 +592,7 @@ class TestDataset:
         assert "dim2" in repr(ds.indexes)
         assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
 
-        assert list(ds.coords) == ["time", "dim2", "dim3", "numbers"]
+        assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]
         assert "dim2" in ds.coords
         assert "numbers" in ds.coords
         assert "var1" not in ds.coords
@@ -1035,14 +1034,14 @@ class TestDataset:
             ValueError,
             match=r"Dimensions {'not_a_dim'} do not exist. Expected "
             r"one or more of "
-            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+            r"[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*",
         ):
             data.isel(not_a_dim=slice(0, 2))
         with pytest.warns(
             UserWarning,
             match=r"Dimensions {'not_a_dim'} do not exist. "
             r"Expected one or more of "
-            r"[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*",
+            r"[\w\W]*'dim\d'[\w\W]*'dim\d'[\w\W]*'time'[\w\W]*'dim\d'[\w\W]*",
         ):
             data.isel(not_a_dim=slice(0, 2), missing_dims="warn")
         assert_identical(data, data.isel(not_a_dim=slice(0, 2), missing_dims="ignore"))
@@ -1427,7 +1426,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along coordinate 'x' with a multi-index",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -1722,8 +1721,6 @@ class TestDataset:
         assert_identical(expected, actual)
         with pytest.raises(TypeError, match=r"can only lookup dict"):
             data.loc["a"]
-        with pytest.raises(TypeError):
-            data.loc[dict(dim3="a")] = 0
 
     def test_selection_multiindex(self):
         mindex = pd.MultiIndex.from_product(
@@ -3423,8 +3420,60 @@ class TestDataset:
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
 
-        with pytest.raises(NotImplementedError):
-            data1[{"x": 0}] = 0
+        # test assignment with positional and label-based indexing
+        data3 = data1[["var1", "var2"]]
+        data3["var3"] = data3.var1.isel(dim1=0)
+        data4 = data3.copy()
+        err_msg = (
+            "can only set locations defined by dictionaries from Dataset.loc. Got: a"
+        )
+        with pytest.raises(TypeError, match=err_msg):
+            data1.loc["a"] = 0
+        err_msg = r"Variables \['A', 'B', 'scalar'\] in new values not available in original dataset:"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": 1}] = data1[{"dim2": 2}]
+        err_msg = "Variable 'var3': indexer {'dim2': 0} not available"
+        with pytest.raises(ValueError, match=err_msg):
+            data1[{"dim2": 0}] = 0.0
+        err_msg = "Variable 'var1': indexer {'dim2': 10} not available"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": 10}] = data3[{"dim2": 2}]
+        err_msg = "Variable 'var1': dimension 'dim2' appears in new values"
+        with pytest.raises(KeyError, match=err_msg):
+            data4[{"dim2": 2}] = data3[{"dim2": [2]}]
+        err_msg = (
+            "Variable 'var2': dimension order differs between original and new data"
+        )
+        data3["var2"] = data3["var2"].T
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
+        data3["var2"] = data3["var2"].T
+        err_msg = "indexes along dimension 'dim2' are not equal"
+        with pytest.raises(ValueError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3, 4]}]
+        err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
+        with pytest.raises(TypeError, match=err_msg):
+            data4[{"dim2": [2, 3]}] = data3["var1"][{"dim2": [3, 4]}].values
+        data5 = data4.astype(str)
+        data5["var4"] = data4["var1"]
+        err_msg = "could not convert string to float: 'a'"
+        with pytest.raises(ValueError, match=err_msg):
+            data5[{"dim2": 1}] = "a"
+
+        data4[{"dim2": 0}] = 0.0
+        data4[{"dim2": 1}] = data3[{"dim2": 2}]
+        data4.loc[{"dim2": 1.5}] = 1.0
+        data4.loc[{"dim2": 2.0}] = data3.loc[{"dim2": 2.5}]
+        for v, dat3 in data3.items():
+            dat4 = data4[v]
+            assert_array_equal(dat4[{"dim2": 0}], 0.0)
+            assert_array_equal(dat4[{"dim2": 1}], dat3[{"dim2": 2}])
+            assert_array_equal(dat4.loc[{"dim2": 1.5}], 1.0)
+            assert_array_equal(dat4.loc[{"dim2": 2.0}], dat3.loc[{"dim2": 2.5}])
+            unchanged = [1.0, 2.5, 3.0, 3.5, 4.0]
+            assert_identical(
+                dat4.loc[{"dim2": unchanged}], dat3.loc[{"dim2": unchanged}]
+            )
 
     def test_setitem_pandas(self):
 
@@ -3988,7 +4037,7 @@ class TestDataset:
         expected_ = ds.bar.to_series().resample("24H").mean()
         expected_.index += to_offset("-12H")
         expected = DataArray.from_series(expected_)
-        assert_identical(actual, expected)
+        assert_allclose(actual, expected)
 
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
@@ -4823,10 +4872,10 @@ class TestDataset:
         assert_equal(data.min(dim=["dim1"]), data.min(dim="dim1"))
 
         for reduct, expected in [
-            ("dim2", ["dim1", "dim3", "time"]),
-            (["dim2", "time"], ["dim1", "dim3"]),
-            (("dim2", "time"), ["dim1", "dim3"]),
-            ((), ["dim1", "dim2", "dim3", "time"]),
+            ("dim2", ["dim3", "time", "dim1"]),
+            (["dim2", "time"], ["dim3", "dim1"]),
+            (("dim2", "time"), ["dim3", "dim1"]),
+            ((), ["dim2", "dim3", "time", "dim1"]),
         ]:
             actual = list(data.min(dim=reduct).dims)
             assert actual == expected
@@ -4876,21 +4925,24 @@ class TestDataset:
         )
         assert_identical(expected, data.cumsum())
 
-    def test_reduce_cumsum_test_dims(self):
+    @pytest.mark.parametrize(
+        "reduct, expected",
+        [
+            ("dim1", ["dim2", "dim3", "time", "dim1"]),
+            ("dim2", ["dim3", "time", "dim1", "dim2"]),
+            ("dim3", ["dim2", "time", "dim1", "dim3"]),
+            ("time", ["dim2", "dim3", "dim1"]),
+        ],
+    )
+    @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
+    def test_reduce_cumsum_test_dims(self, reduct, expected, func):
         data = create_test_data()
-        for cumfunc in ["cumsum", "cumprod"]:
-            with pytest.raises(ValueError, match=r"Dataset does not contain"):
-                getattr(data, cumfunc)(dim="bad_dim")
+        with pytest.raises(ValueError, match=r"Dataset does not contain"):
+            getattr(data, func)(dim="bad_dim")
 
-            # ensure dimensions are correct
-            for reduct, expected in [
-                ("dim1", ["dim1", "dim2", "dim3", "time"]),
-                ("dim2", ["dim1", "dim2", "dim3", "time"]),
-                ("dim3", ["dim1", "dim2", "dim3", "time"]),
-                ("time", ["dim1", "dim2", "dim3"]),
-            ]:
-                actual = getattr(data, cumfunc)(dim=reduct).dims
-                assert list(actual) == expected
+        # ensure dimensions are correct
+        actual = getattr(data, func)(dim=reduct).dims
+        assert list(actual) == expected
 
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
@@ -6023,7 +6075,7 @@ class TestDataset:
             ds.query(x="spam > 50")  # name not present
 
 
-# Py.test tests
+# pytest tests — new tests should go here, rather than in the class.
 
 
 @pytest.fixture(params=[None])
@@ -6032,7 +6084,7 @@ def data_set(request):
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements):
+def test_isin(test_elements, backend):
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -6040,6 +6092,9 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).astype("bool")
+
+    if backend == "dask":
+        expected = expected.chunk()
 
     result = Dataset(
         data_vars={
@@ -6048,33 +6103,6 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).isin(test_elements)
-
-    assert_equal(result, expected)
-
-
-@pytest.mark.skipif(not has_dask, reason="requires dask")
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin_dask(test_elements):
-    expected = Dataset(
-        data_vars={
-            "var1": (("dim1",), [0, 1]),
-            "var2": (("dim1",), [1, 1]),
-            "var3": (("dim1",), [0, 1]),
-        }
-    ).astype("bool")
-
-    result = (
-        Dataset(
-            data_vars={
-                "var1": (("dim1",), [0, 1]),
-                "var2": (("dim1",), [1, 2]),
-                "var3": (("dim1",), [0, 1]),
-            }
-        )
-        .chunk(1)
-        .isin(test_elements)
-        .compute()
-    )
 
     assert_equal(result, expected)
 
@@ -7028,7 +7056,7 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da.data,
+        da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
     )
