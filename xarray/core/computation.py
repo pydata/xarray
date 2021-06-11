@@ -1753,9 +1753,17 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
 
     # Get argumets to pass into dask.array.core.unify_chunks
     unify_chunks_args = []
+    sizes: dict = {}
     for ds in datasets:
         for v in ds._variables.values():
             if v.chunks is not None:
+                # Check sizes
+                sizes = {**ds.sizes, **sizes}
+                if not all(item in sizes.items() for item in ds.sizes.items()):
+                    raise ValueError(
+                        "Dimension lenghts are not consistent across chunked objects."
+                    )
+                # Append
                 unify_chunks_args += [v._data, v._dims]
 
     # No dask arrays: Return inputs

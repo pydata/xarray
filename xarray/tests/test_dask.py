@@ -1075,14 +1075,26 @@ def test_unify_chunks(map_ds):
     assert expected_chunks == actual_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
 
-    actual = [obj.chunks for obj in xr.unify_chunks(ds_copy.cxy, ds_copy.drop("cxy"))]
+    actual = [
+        obj.chunks for obj in xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
+    ]
     expected = [tuple(expected_chunks.values()), expected_chunks]
     assert expected == actual
 
-    da = ds_copy["cxy"].copy()
+    # Test unordered dims
+    da = ds_copy["cxy"]
     da_transposed = da.transpose(*da.dims[::-1])
-    unified = xr.unify_chunks(da, da_transposed)
-    assert unified[0].chunks == unified[1].chunks[::-1]
+    unified = xr.unify_chunks(da.chunk({"x": -1}), da_transposed.chunk({"y": -1}))
+    assert (
+        unified[0].chunks == unified[1].chunks[::-1] == tuple(expected_chunks.values())
+    )
+
+    # Test mismatch
+    with pytest.raises(
+        ValueError,
+        match=r"Dimension lenghts are not consistent across chunked objects.",
+    ):
+        xr.unify_chunks(da, da.isel(x=slice(2)))
 
 
 @pytest.mark.parametrize("obj", [make_ds(), make_da()])
