@@ -1727,7 +1727,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+def unify_chunks(*objects: "T_DSorDA") -> Tuple["T_DSorDA", ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
@@ -1743,46 +1743,33 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
     """
     from .dataarray import DataArray
 
-    # Convert chunked dataarrays to datasets
-    datasets = []
-    are_chunked = []
-    for obj in objects:
-        datasets.append(
-            obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
-        )
-        try:
-            are_chunked.append(True if obj.chunks is not None else False)
-        except ValueError:  # "inconsistent chunks"
-            are_chunked.append(True)
+    # Convert all objects to datasets
+    datasets = [
+        obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
+        for obj in objects
+    ]
 
-    # Return input objects if no object is chunked
-    if not any(are_chunked):
+    # Get argumets to pass into dask.array.core.unify_chunks
+    unify_chunks_args = []
+    for ds in datasets:
+        for v in ds._variables.values():
+            if v.chunks is not None:
+                unify_chunks_args += [v._data, v._dims]
+
+    # No dask arrays: Return inputs
+    if not unify_chunks_args:
         return objects
 
-    # Unify chunks using dask.array.core.unify_chunks
-    import dask.array as da
+    # Run dask.array.core.unify_chunks
+    from dask.array.core import unify_chunks
 
-    dask_unify_args = []
-    for ds, is_chunked in zip(datasets, are_chunked):
-        if not is_chunked:
-            continue
-        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
-        for variable in ds.variables.values():
-            if isinstance(variable._data, da.Array):
-                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
-                dask_unify_args.append(variable.data)
-                dask_unify_args.append(dims_tuple)
-    _, rechunked_arrays = da.core.unify_chunks(*dask_unify_args)
+    _, dask_data = unify_chunks(*unify_chunks_args)
+    dask_data_iter = iter(dask_data)
+    out = []
+    for obj, ds in zip(objects, datasets):
+        for k, v in ds._variables.items():
+            if v.chunks is not None:
+                ds._variables[k] = v.copy(data=next(dask_data_iter))
+        out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
 
-    # Substitute rechunked variables
-    unified = []
-    rechunked_arrays = list(rechunked_arrays)
-    for obj, ds, is_chunked in zip(objects, datasets, are_chunked):
-        if is_chunked:
-            for name, variable in ds.variables.items():
-                if isinstance(variable.data, da.Array):
-                    ds.variables[name]._data = rechunked_arrays.pop(0)
-            obj = obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds
-        unified.append(obj)
-
-    return tuple(unified)
+    return tuple(out)
