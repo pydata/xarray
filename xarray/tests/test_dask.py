@@ -1079,6 +1079,11 @@ def test_unify_chunks(map_ds):
     expected = [tuple(expected_chunks.values()), expected_chunks]
     assert expected == actual
 
+    da = ds_copy["cxy"].copy()
+    da_transposed = da.transpose(*da.dims[::-1])
+    unified = xr.unify_chunks(da, da_transposed)
+    assert unified[0].chunks == unified[1].chunks[::-1]
+
 
 @pytest.mark.parametrize("obj", [make_ds(), make_da()])
 @pytest.mark.parametrize(
