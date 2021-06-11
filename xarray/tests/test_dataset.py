@@ -1426,7 +1426,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along coordinate 'x' with a multi-index",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -7056,7 +7056,7 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da.data,
+        da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
     )

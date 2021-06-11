@@ -23,7 +23,7 @@ from .core.concat import concat
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .core.extensions import register_dataarray_accessor, register_dataset_accessor
-from .core.merge import MergeError, merge
+from .core.merge import Context, MergeError, merge
 from .core.options import set_options
 from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
@@ -79,6 +79,7 @@ __all__ = (
     "zeros_like",
     # Classes
     "CFTimeIndex",
+    "Context",
     "Coordinate",
     "DataArray",
     "Dataset",

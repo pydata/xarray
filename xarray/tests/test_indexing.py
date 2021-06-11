@@ -40,17 +40,6 @@ class TestIndexers:
         with pytest.raises(IndexError, match=r"too many indices"):
             indexing.expanded_indexer(arr[1, 2, 3], 2)
 
-    def test_asarray_tuplesafe(self):
-        res = indexing._asarray_tuplesafe(("a", 1))
-        assert isinstance(res, np.ndarray)
-        assert res.ndim == 0
-        assert res.item() == ("a", 1)
-
-        res = indexing._asarray_tuplesafe([(0,), (1,)])
-        assert res.shape == (2,)
-        assert res[0] == (0,)
-        assert res[1] == (1,)
-
     def test_stacked_multiindex_min_max(self):
         data = np.random.randn(3, 23, 4)
         da = DataArray(
@@ -66,58 +55,29 @@ class TestIndexers:
         assert_array_equal(da2.loc["a", s.max()], data[2, 22, 0])
         assert_array_equal(da2.loc["b", s.min()], data[0, 0, 1])
 
-    def test_convert_label_indexer(self):
-        # TODO: add tests that aren't just for edge cases
-        index = pd.Index([1, 2, 3])
-        with pytest.raises(KeyError, match=r"not all values found"):
-            indexing.convert_label_indexer(index, [0])
-        with pytest.raises(KeyError):
-            indexing.convert_label_indexer(index, 0)
-        with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
-            indexing.convert_label_indexer(index, {"one": 0})
-
+    def test_group_indexers_by_index(self):
         mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        with pytest.raises(KeyError, match=r"not all values found"):
-            indexing.convert_label_indexer(mindex, [0])
-        with pytest.raises(KeyError):
-            indexing.convert_label_indexer(mindex, 0)
-        with pytest.raises(ValueError):
-            indexing.convert_label_indexer(index, {"three": 0})
-        with pytest.raises(IndexError):
-            indexing.convert_label_indexer(mindex, (slice(None), 1, "no_level"))
+        data = DataArray(
+            np.zeros((4, 2, 2)), coords={"x": mindex, "y": [1, 2]}, dims=("x", "y", "z")
+        )
+        data.coords["y2"] = ("y", [2.0, 3.0])
 
-    def test_convert_label_indexer_datetime(self):
-        index = pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"])
-        actual = indexing.convert_label_indexer(index, "2001-01-01")
-        expected = (1, None)
-        assert actual == expected
+        indexes, grouped_indexers = indexing.group_indexers_by_index(
+            data, {"z": 0, "one": "a", "two": 1, "y": 0}
+        )
+        assert indexes == {"x": data.xindexes["x"], "y": data.xindexes["y"]}
+        assert grouped_indexers == {
+            "x": {"one": "a", "two": 1},
+            "y": {"y": 0},
+            None: {"z": 0},
+        }
 
-        actual = indexing.convert_label_indexer(index, index.to_numpy()[1])
-        assert actual == expected
-
-    def test_convert_unsorted_datetime_index_raises(self):
-        index = pd.to_datetime(["2001", "2000", "2002"])
-        with pytest.raises(KeyError):
-            # pandas will try to convert this into an array indexer. We should
-            # raise instead, so we can be sure the result of indexing with a
-            # slice is always a view.
-            indexing.convert_label_indexer(index, slice("2001", "2002"))
-
-    def test_get_dim_indexers(self):
-        mindex = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
-        mdata = DataArray(range(4), [("x", mindex)])
-
-        dim_indexers = indexing.get_dim_indexers(mdata, {"one": "a", "two": 1})
-        assert dim_indexers == {"x": {"one": "a", "two": 1}}
-
-        with pytest.raises(ValueError, match=r"cannot combine"):
-            indexing.get_dim_indexers(mdata, {"x": "a", "two": 1})
-
-        with pytest.raises(ValueError, match=r"do not exist"):
-            indexing.get_dim_indexers(mdata, {"y": "a"})
-
-        with pytest.raises(ValueError, match=r"do not exist"):
-            indexing.get_dim_indexers(mdata, {"four": 1})
+        with pytest.raises(KeyError, match=r"no index found for coordinate y2"):
+            indexing.group_indexers_by_index(data, {"y2": 2.0})
+        with pytest.raises(KeyError, match=r"w is not a valid dimension or coordinate"):
+            indexing.group_indexers_by_index(data, {"w": "a"})
+        with pytest.raises(ValueError, match=r"cannot supply.*"):
+            indexing.group_indexers_by_index(data, {"z": 1}, method="nearest")
 
     def test_remap_label_indexers(self):
         def test_indexer(data, x, expected_pos, expected_idx=None):
@@ -757,7 +717,7 @@ def test_posify_mask_subindexer(indices, expected):
 
 def test_indexing_1d_object_array():
     items = (np.arange(3), np.arange(6))
-    arr = DataArray(np.array(items))
+    arr = DataArray(np.array(items, dtype=object))
 
     actual = arr[0]
 
