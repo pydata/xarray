@@ -1754,7 +1754,7 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
             obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
         )
         try:
-            are_chunked.append(True if obj.chunks else False)
+            are_chunked.append(True if obj.chunks is not None else False)
         except ValueError:  # "inconsistent chunks"
             are_chunked.append(True)
 
