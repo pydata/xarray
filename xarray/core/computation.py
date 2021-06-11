@@ -1771,7 +1771,7 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
             continue
         dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
         for variable in ds.variables.values():
-            if isinstance(variable.data, da.Array):
+            if isinstance(variable._data, da.Array):
                 dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
                 dask_unify_args.append(variable.data)
                 dask_unify_args.append(dims_tuple)
