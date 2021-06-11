@@ -63,11 +63,13 @@ from .indexes import (
     Index,
     Indexes,
     PandasIndex,
+    PandasMultiIndex,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
+    wrap_pandas_index,
 )
 from .indexing import is_fancy_indexer
 from .merge import (
@@ -3284,10 +3286,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 continue
             if isinstance(index, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in index.names]
-                new_index = index.rename(names=new_names)
+                indexes[new_name] = PandasMultiIndex(index.rename(names=new_names))
             else:
-                new_index = index.rename(new_name)
-            indexes[new_name] = PandasIndex(new_index)
+                indexes[new_name] = PandasIndex(index.rename(new_name))
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3516,7 +3517,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = PandasIndex(new_index)
+                    indexes[k] = wrap_pandas_index(new_index)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3789,7 +3790,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasIndex(new_index)
+            indexes[dim] = PandasMultiIndex(new_index)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3817,7 +3818,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = PandasIndex(idx)
+        indexes[new_dim] = wrap_pandas_index(idx)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -5320,7 +5321,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted()
+            is_sorted = idx.is_monotonic_increasing
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -6245,7 +6246,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if _contains_datetime_like_objects(v):
                     v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var, edge_order=edge_order, axis=v.get_axis_num(dim)
+                    v.data,
+                    coord_var.data,
+                    edge_order=edge_order,
+                    axis=v.get_axis_num(dim),
                 )
                 variables[k] = Variable(v.dims, grad)
             else:

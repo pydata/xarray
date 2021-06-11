@@ -1426,7 +1426,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along coordinate 'x' with a multi-index",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -6076,7 +6076,7 @@ class TestDataset:
             ds.query(x="spam > 50")  # name not present
 
 
-# Py.test tests
+# pytest tests — new tests should go here, rather than in the class.
 
 
 @pytest.fixture(params=[None])
@@ -6085,7 +6085,7 @@ def data_set(request):
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements):
+def test_isin(test_elements, backend):
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -6093,6 +6093,9 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).astype("bool")
+
+    if backend == "dask":
+        expected = expected.chunk()
 
     result = Dataset(
         data_vars={
@@ -6101,33 +6104,6 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).isin(test_elements)
-
-    assert_equal(result, expected)
-
-
-@pytest.mark.skipif(not has_dask, reason="requires dask")
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin_dask(test_elements):
-    expected = Dataset(
-        data_vars={
-            "var1": (("dim1",), [0, 1]),
-            "var2": (("dim1",), [1, 1]),
-            "var3": (("dim1",), [0, 1]),
-        }
-    ).astype("bool")
-
-    result = (
-        Dataset(
-            data_vars={
-                "var1": (("dim1",), [0, 1]),
-                "var2": (("dim1",), [1, 2]),
-                "var3": (("dim1",), [0, 1]),
-            }
-        )
-        .chunk(1)
-        .isin(test_elements)
-        .compute()
-    )
 
     assert_equal(result, expected)
 
@@ -7081,7 +7057,7 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da.data,
+        da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
     )
