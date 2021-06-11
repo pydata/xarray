@@ -1,6 +1,8 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
+from __future__ import annotations
+
 import functools
 import itertools
 import operator
@@ -1727,7 +1729,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: "T_DSorDA") -> Tuple["T_DSorDA", ...]:
+def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
