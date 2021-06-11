@@ -99,6 +99,8 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
+    available = has_pynio
+
     def open_dataset(
         self,
         filename_or_obj,
@@ -132,10 +134,6 @@ class PynioBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_pynio
 
 
 BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint

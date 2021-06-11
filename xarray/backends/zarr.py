@@ -703,6 +703,8 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
+    available = has_zarr
+
     def guess_can_open(self, filename_or_obj):
         try:
             _, ext = os.path.splitext(filename_or_obj)
@@ -762,10 +764,6 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_zarr
 
 
 BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint

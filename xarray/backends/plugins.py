@@ -83,7 +83,7 @@ def sort_backends(backend_entrypoints):
 def build_engines(pkg_entrypoints):
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
-        if backend.are_dependencies_installed():
+        if backend.available:
             backend_entrypoints[backend_name] = backend
     pkg_entrypoints = remove_duplicates(pkg_entrypoints)
     external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
@@ -109,21 +109,21 @@ def guess_engine(store_spec):
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    compatible = []
+    compatible_engines = []
     for engine, backend_cls in BACKEND_ENTRYPOINTS.items():
         try:
             backend = backend_cls()
             if backend.guess_can_open(store_spec):
-                compatible.append(engine)
+                compatible_engines.append(engine)
         except Exception:
             warnings.warn(f"{engine!r} fails while guessing", RuntimeWarning)
 
-    installed = [k for k in engines if k != "store"]
-    if not compatible:
-        if installed:
+    installed_engines = [k for k in engines if k != "store"]
+    if not compatible_engines:
+        if installed_engines:
             error_msg = (
                 "did not find a match in any of xarray's currently installed IO "
-                f"backends {installed}. Consider explicitly selecting one of the "
+                f"backends {installed_engines}. Consider explicitly selecting one of the "
                 "installed engines via the ``engine`` parameter, or installing "
                 "additional IO dependencies, see:\n"
                 "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
@@ -140,7 +140,7 @@ def guess_engine(store_spec):
     else:
         error_msg = (
             "found the following matches with the input file in xarray's IO "
-            f"backends: {compatible}. But their dependencies may not be installed, see:\n"
+            f"backends: {compatible_engines}. But their dependencies may not be installed, see:\n"
             "http://xarray.pydata.org/en/stable/user-guide/io.html \n"
             "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html"
         )

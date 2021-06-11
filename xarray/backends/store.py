@@ -4,6 +4,8 @@ from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
+    available = True
+
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, AbstractDataStore)
 
@@ -40,10 +42,6 @@ class StoreBackendEntrypoint(BackendEntrypoint):
         ds.encoding = encoding
 
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return True
 
 
 BACKEND_ENTRYPOINTS["store"] = StoreBackendEntrypoint

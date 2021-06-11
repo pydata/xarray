@@ -512,6 +512,8 @@ class NetCDF4DataStore(WritableCFDataStore):
 
 
 class NetCDF4BackendEntrypoint(BackendEntrypoint):
+    available = has_netcdf4
+
     def guess_can_open(self, filename_or_obj):
         if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
             return True
@@ -571,10 +573,6 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_netcdf4
 
 
 BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint

@@ -110,6 +110,8 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
+    available = has_pydap
+
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
@@ -152,10 +154,6 @@ class PydapBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
             return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_pydap
 
 
 BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

@@ -102,6 +102,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
 
 class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
+    available = has_pseudonetcdf
 
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicity defined like this:
@@ -151,10 +152,6 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_pseudonetcdf
 
 
 BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint

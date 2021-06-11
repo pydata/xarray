@@ -94,6 +94,8 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
+    available = has_cfgrib
+
     def guess_can_open(self, filename_or_obj):
         try:
             _, ext = os.path.splitext(filename_or_obj)
@@ -145,10 +147,6 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
                 decode_timedelta=decode_timedelta,
             )
         return ds
-
-    @staticmethod
-    def are_dependencies_installed() -> bool:
-        return has_cfgrib
 
 
 BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint
