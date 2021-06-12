@@ -919,7 +919,7 @@ def imshow(x, y, z, ax, **kwargs):
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
-    if any(np.issubdtyp(v.dtype, str) for v in [x, y]):
+    if any(np.issubdtype(v.dtype, str) for v in [x, y]):
         raise TypeError("ax.imshow does not support categorical data.")
 
     if x.ndim != 1 or y.ndim != 1:
@@ -1061,7 +1061,7 @@ def surface(x, y, z, ax, **kwargs):
 
     Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
     """
-    if any(np.issubdtyp(v.dtype, str) for v in [x, y]):
+    if any(np.issubdtype(v.dtype, str) for v in [x, y]):
         raise TypeError("ax.plot_surface does not support categorical data.")
 
     primitive = ax.plot_surface(x, y, z, **kwargs)
