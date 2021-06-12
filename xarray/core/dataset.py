@@ -1487,7 +1487,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if hashable(key):
             return self._construct_dataarray(key)
         else:
-            return self._copy_listed(np.asarray(key))
+            return self._copy_listed(key)
 
     def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.

@@ -3305,6 +3305,11 @@ class TestDataset:
         with pytest.raises(KeyError, match=r"('var1', 'var2')"):
             data[("var1", "var2")]
 
+    def test_getitem_multiple_dtype(self):
+        keys = ["foo", 1]
+        dataset = Dataset({key: ("dim0", range(1)) for key in keys})
+        assert_identical(dataset, dataset[keys])
+
     def test_virtual_variables_default_coords(self):
         dataset = Dataset({"foo": ("x", range(10))})
         expected = DataArray(range(10), dims="x", name="x")
