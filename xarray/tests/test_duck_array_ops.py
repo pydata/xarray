@@ -285,15 +285,15 @@ def assert_dask_array(da, dask):
 def test_datetime_mean(dask):
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
-        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8[ns]"),
         dims=["time"],
     )
     if dask:
         # Trigger use case where a chunk is full of NaT
         da = da.chunk({"time": 3})
 
-    expect = DataArray(np.array("2010-01-02", dtype="M8"))
-    expect_nat = DataArray(np.array("NaT", dtype="M8"))
+    expect = DataArray(np.array("2010-01-02", dtype="M8[ns]"))
+    expect_nat = DataArray(np.array("NaT", dtype="M8[ns]"))
 
     actual = da.mean()
     if dask:
@@ -891,6 +891,6 @@ def test_push_dask():
         actual = push(
             dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)),
             axis=0,
-            n=None,
+            n=None
         )
     np.testing.assert_equal(actual, expected)
