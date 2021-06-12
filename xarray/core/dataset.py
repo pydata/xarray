@@ -4987,7 +4987,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
             else:
                 if (
-                    not numeric_only
+                    # Some reduction functions (e.g. std, var) need to run on variables
+                    # that don't have the reduce dims: PR5393
+                    not reduce_dims
+                    or not numeric_only
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
