@@ -927,7 +927,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     def _center_pixels(x):
         if np.issubdtype(x.dtype, str):
-            return x[0], x[-1]
+            return None, None
 
         try:
             xstep = (x[1] - x[0]) / 2.0
