@@ -684,10 +684,9 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot.line)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray([1, 2, 3], {"letter": ["a", "b", "c"]}, dims="letter")
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
-            a.plot.line()
+        a.plot.line()
 
     def test_primitive_returned(self):
         p = self.darray.plot.line()
@@ -1162,10 +1161,9 @@ class Common2dMixin:
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
-            self.plotfunc(a)
+        self.plotfunc(a)
 
     def test_multiindex_raises_typeerror(self):
         a = DataArray(
