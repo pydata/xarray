@@ -1163,7 +1163,11 @@ class Common2dMixin:
 
     def test_nonnumeric_index(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
-        self.plotfunc(a)
+        if self.plotfunc.__name__ in ["imshow", "surface"]:
+            with pytest.raises(TypeError, match=r"does not support categorical data"):
+                self.plotfunc(a)
+        else:
+            self.plotfunc(a)
 
     def test_multiindex_raises_typeerror(self):
         a = DataArray(
