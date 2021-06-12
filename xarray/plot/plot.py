@@ -926,7 +926,7 @@ def imshow(x, y, z, ax, **kwargs):
         )
 
     def _center_pixels(x):
-        if np.issubclass(x.dtype, str):
+        if np.issubdtype(x.dtype, str):
             return x[0], x[-1]
 
         try:
