@@ -234,9 +234,6 @@ arrays). However, you can do normal indexing with dimension names:
     ds[dict(space=[0], time=[0])]
     ds.loc[dict(time="2000-01-01")]
 
-Using indexing to *assign* values to a subset of dataset (e.g.,
-``ds[dict(space=0)] = 1``) is not yet supported.
-
 Dropping labels and dimensions
 ------------------------------
 
@@ -536,6 +533,34 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
       da.isel(x=[0, 1, 2])[1] = -1
       da
 
+You can also assign values to all variables of a :py:class:`Dataset` at once:
+
+.. ipython:: python
+
+    ds_org = xr.tutorial.open_dataset("eraint_uvz").isel(
+        latitude=slice(56, 59), longitude=slice(255, 258), level=0
+    )
+    # set all values to 0
+    ds = xr.zeros_like(ds_org)
+    ds
+
+    # by integer
+    ds[dict(latitude=2, longitude=2)] = 1
+    ds["u"]
+    ds["v"]
+
+    # by label
+    ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = 100
+    ds["u"]
+
+    # dataset as new values
+    new_dat = ds_org.loc[dict(latitude=48, longitude=[11.25, 12])]
+    new_dat
+    ds.loc[dict(latitude=47.25, longitude=[11.25, 12])] = new_dat
+    ds["u"]
+
+The dimensions can differ between the variables in the dataset, but all variables need to have at least the dimensions specified in the indexer dictionary.
+The new values must be either a scalar, a :py:class:`DataArray` or a :py:class:`Dataset` itself that contains all variables that also appear in the dataset to be modified.
 
 .. _more_advanced_indexing:
 
