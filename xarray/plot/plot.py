@@ -932,7 +932,7 @@ def imshow(x, y, z, ax, **kwargs):
             return None, None
 
         try:
-            xstep = (x[1] - x[0]) / 2.0
+            xstep = 0.5 * (x[1] - x[0])
         except IndexError:
             # Arbitrary default value, similar to matplotlib behaviour
             xstep = 0.1
