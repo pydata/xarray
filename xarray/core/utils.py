@@ -30,6 +30,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from typing_extensions import TypeGuard
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -290,7 +291,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def is_scalar(value: Any, include_0d: bool = True) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
