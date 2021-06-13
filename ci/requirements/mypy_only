@@ -2,3 +2,7 @@
 # version must correspond to the one in .pre-commit-config.yaml
 # See https://github.com/pydata/xarray/issues/4881 for more details.
 mypy=0.902
+types-python-dateutil
+types-pkg_resources
+types-PyYAML
+types-pytz
