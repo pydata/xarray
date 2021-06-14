@@ -1766,7 +1766,6 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
                             )
                     except KeyError:
                         sizes[dim] = size
-                # Append
                 unify_chunks_args += [v._data, v._dims]
 
     # No dask arrays: Return inputs
