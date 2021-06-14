@@ -1075,11 +1075,9 @@ def test_unify_chunks(map_ds):
     assert expected_chunks == actual_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
 
-    actual = [
-        obj.chunks for obj in xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
-    ]
-    expected = [tuple(expected_chunks.values()), expected_chunks]
-    assert expected == actual
+    out_a, out_b = xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy")
+    assert out_a.chunks == expected_chunks
+    assert out_b.chunks == expected_chunks
 
     # Test unordered dims
     da = ds_copy["cxy"]
