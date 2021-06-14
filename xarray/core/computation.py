@@ -1758,11 +1758,14 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
         for v in ds._variables.values():
             if v.chunks is not None:
                 # Check sizes
-                sizes = {**ds.sizes, **sizes}
-                if not all(item in sizes.items() for item in ds.sizes.items()):
-                    raise ValueError(
-                        "Dimension lenghts are not consistent across chunked objects."
-                    )
+                for dim, size in v.sizes.items():
+                    try:
+                        if sizes[dim] != size:
+                            raise ValueError(
+                                f"Dimension {dim} size mismatch: {prev_size} != {size}"
+                            )
+                    except KeyError:
+                        sizes[dim] = size
                 # Append
                 unify_chunks_args += [v._data, v._dims]
 
