@@ -1076,7 +1076,7 @@ def test_unify_chunks(map_ds):
     assert_identical(map_ds, ds_copy.unify_chunks())
 
     out_a, out_b = xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
-    assert out_a.chunks == expected_chunks
+    assert out_a.chunks == ((4, 4, 2), (5, 5, 5, 5))
     assert out_b.chunks == expected_chunks
 
     # Test unordered dims
@@ -1087,9 +1087,7 @@ def test_unify_chunks(map_ds):
     assert out_b.chunks == ((5, 5, 5, 5), (4, 4, 2))
 
     # Test mismatch
-    with pytest.raises(
-        ValueError, match=r"Dimension 'x' size mismatch: 10 != 2"
-    ):
+    with pytest.raises(ValueError, match=r"Dimension 'x' size mismatch: 10 != 2"):
         xr.unify_chunks(da, da.isel(x=slice(2)))
 
 
