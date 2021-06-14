@@ -1753,7 +1753,7 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
 
     # Get argumets to pass into dask.array.core.unify_chunks
     unify_chunks_args = []
-    sizes: dict = {}
+    sizes: dict[Hashable, int] = {}
     for ds in datasets:
         for v in ds._variables.values():
             if v.chunks is not None:
