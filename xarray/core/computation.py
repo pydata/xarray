@@ -1762,7 +1762,7 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
                     try:
                         if sizes[dim] != size:
                             raise ValueError(
-                                f"Dimension {dim} size mismatch: {prev_size} != {size}"
+                                f"Dimension {dim!r} size mismatch: {sizes[dim]} != {size}"
                             )
                     except KeyError:
                         sizes[dim] = size

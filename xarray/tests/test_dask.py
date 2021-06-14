@@ -1092,7 +1092,7 @@ def test_unify_chunks(map_ds):
     # Test mismatch
     with pytest.raises(
         ValueError,
-        match=r"Dimension lenghts are not consistent across chunked objects.",
+        match=r"Dimension 'x' size mismatch: 10 != 2",
     ):
         xr.unify_chunks(da, da.isel(x=slice(2)))
 
