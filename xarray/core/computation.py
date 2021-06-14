@@ -1757,7 +1757,7 @@ def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
     for ds in datasets:
         for v in ds._variables.values():
             if v.chunks is not None:
-                # Check sizes
+                # Check that sizes match across different datasets
                 for dim, size in v.sizes.items():
                     try:
                         if sizes[dim] != size:
