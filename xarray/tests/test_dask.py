@@ -1072,7 +1072,7 @@ def test_unify_chunks(map_ds):
     expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
         actual_chunks = ds_copy.unify_chunks().chunks
-    assert expected_chunks == actual_chunks
+    assert actual_chunks == expected_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
 
     out_a, out_b = xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
