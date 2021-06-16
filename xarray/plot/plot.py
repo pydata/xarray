@@ -927,23 +927,18 @@ def imshow(x, y, z, ax, **kwargs):
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
-    def _maybe_center_pixels(x):
-        """Center the pixels on the coordinates."""
-        if np.issubdtype(x.dtype, str):
-            # Categorical data cannot be centered:
-            return None, None
-
-        try:
-            # Center the pixels assuming uniform spacing:
-            xstep = 0.5 * (x[1] - x[0])
-        except IndexError:
-            # Arbitrary default value, similar to matplotlib behaviour:
-            xstep = 0.1
-        return x[0] - xstep, x[-1] + xstep
-
-    # Try to center the pixels:
-    left, right = _maybe_center_pixels(x)
-    top, bottom = _maybe_center_pixels(y)
+    # Centering the pixels- Assumes uniform spacing
+    try:
+        xstep = (x[1] - x[0]) / 2.0
+    except IndexError:
+        # Arbitrary default value, similar to matplotlib behaviour
+        xstep = 0.1
+    try:
+        ystep = (y[1] - y[0]) / 2.0
+    except IndexError:
+        ystep = 0.1
+    left, right = x[0] - xstep, x[-1] + xstep
+    bottom, top = y[-1] + ystep, y[0] - ystep
 
     defaults = {"origin": "upper", "interpolation": "nearest"}
 
