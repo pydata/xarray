@@ -860,7 +860,6 @@ class Coarsen(CoarsenArithmetic):
         ----------
         window_dim: str or a mapping, optional
             A mapping from dimension name to the new window dimension names.
-            Just a string can be used for 1d-rolling.
         keep_attrs: bool, optional
             Preserve attributes if True
         **window_dim_kwargs : {dim: new_name, ...}, optional
@@ -889,8 +888,8 @@ class Coarsen(CoarsenArithmetic):
             raise ValueError(
                 f"'window_dim' must contain entries for all dimensions to coarsen. Missing {missing_dims}"
             )
-        missing_windows = set(self.windows) - set(window_dim)
-        if missing_windows:
+        extra_windows = set(self.windows) - set(window_dim)
+        if extra_windows:
             raise ValueError(
                 f"'window_dim' includes dimensions that will not be coarsened: {missing_windows}"
             )
