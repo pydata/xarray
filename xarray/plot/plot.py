@@ -919,6 +919,7 @@ def imshow(x, y, z, ax, **kwargs):
     The pixels are centered on the coordinates. For example, if the coordinate
     value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
+
     if x.ndim != 1 or y.ndim != 1:
         raise ValueError(
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
