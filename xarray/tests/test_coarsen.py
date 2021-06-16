@@ -8,6 +8,7 @@ from xarray import DataArray, Dataset, set_options
 from . import (
     assert_allclose,
     assert_equal,
+    assert_identical,
     has_dask,
     raise_if_dask_computes,
     requires_cftime,
@@ -312,9 +313,9 @@ def test_coarsen_construct(dask):
 
     ds = Dataset(
         {
-            "vart": ("time", np.arange(48)),
-            "varx": ("x", np.arange(10)),
-            "vartx": (("x", "time"), np.arange(480).reshape(10, 48)),
+            "vart": ("time", np.arange(48), {"a": "b"}),
+            "varx": ("x", np.arange(10), {"a": "b"}),
+            "vartx": (("x", "time"), np.arange(480).reshape(10, 48), {"a": "b"}),
             "vary": ("y", np.arange(12)),
         },
         coords={"time": np.arange(48), "y": np.arange(12)},
@@ -328,16 +329,24 @@ def test_coarsen_construct(dask):
         )
 
     expected = xr.Dataset()
-    expected["vart"] = (("year", "month"), ds.vart.data.reshape((-1, 12)))
-    expected["varx"] = (("x", "x_reshaped"), ds.varx.data.reshape((-1, 5)))
+    expected["vart"] = (("year", "month"), ds.vart.data.reshape((-1, 12)), {"a": "b"})
+    expected["varx"] = (("x", "x_reshaped"), ds.varx.data.reshape((-1, 5)), {"a": "b"})
     expected["vartx"] = (
         ("x", "x_reshaped", "year", "month"),
         ds.vartx.data.reshape(2, 5, 4, 12),
+        {"a": "b"},
     )
     expected["vary"] = ds.vary
     expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
 
-    assert_equal(actual, expected)
+    assert_identical(actual, expected)
+
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            {"time": ("year", "month"), "x": ("x", "x_reshaped")}, keep_attrs=False
+        )
+        for var in actual:
+            assert actual[var].attrs == {}
 
     with raise_if_dask_computes():
         actual = ds.vartx.coarsen(time=12, x=5).construct(

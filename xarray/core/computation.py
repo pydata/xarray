@@ -1,6 +1,8 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
+from __future__ import annotations
+
 import functools
 import itertools
 import operator
@@ -19,6 +21,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
 )
 
@@ -34,7 +37,10 @@ from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates  # noqa
+    from .dataarray import DataArray
     from .dataset import Dataset
+
+    T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1721,3 +1727,61 @@ def _calc_idxminmax(
     res.attrs = indx.attrs
 
     return res
+
+
+def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+    """
+    Given any number of Dataset and/or DataArray objects, returns
+    new objects with unified chunk size along all chunked dimensions.
+
+    Returns
+    -------
+    unified (DataArray or Dataset) – Tuple of objects with the same type as
+    *objects with consistent chunk sizes for all dask-array variables
+
+    See Also
+    --------
+    dask.array.core.unify_chunks
+    """
+    from .dataarray import DataArray
+
+    # Convert all objects to datasets
+    datasets = [
+        obj._to_temp_dataset() if isinstance(obj, DataArray) else obj.copy()
+        for obj in objects
+    ]
+
+    # Get argumets to pass into dask.array.core.unify_chunks
+    unify_chunks_args = []
+    sizes: dict[Hashable, int] = {}
+    for ds in datasets:
+        for v in ds._variables.values():
+            if v.chunks is not None:
+                # Check that sizes match across different datasets
+                for dim, size in v.sizes.items():
+                    try:
+                        if sizes[dim] != size:
+                            raise ValueError(
+                                f"Dimension {dim!r} size mismatch: {sizes[dim]} != {size}"
+                            )
+                    except KeyError:
+                        sizes[dim] = size
+                unify_chunks_args += [v._data, v._dims]
+
+    # No dask arrays: Return inputs
+    if not unify_chunks_args:
+        return objects
+
+    # Run dask.array.core.unify_chunks
+    from dask.array.core import unify_chunks
+
+    _, dask_data = unify_chunks(*unify_chunks_args)
+    dask_data_iter = iter(dask_data)
+    out = []
+    for obj, ds in zip(objects, datasets):
+        for k, v in ds._variables.items():
+            if v.chunks is not None:
+                ds._variables[k] = v.copy(data=next(dask_data_iter))
+        out.append(obj._from_temp_dataset(ds) if isinstance(obj, DataArray) else ds)
+
+    return tuple(out)

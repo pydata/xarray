@@ -861,8 +861,8 @@ class Coarsen(CoarsenArithmetic):
         window_dim: str or a mapping, optional
             A mapping from dimension name to the new window dimension names.
             Just a string can be used for 1d-rolling.
-        fill_value: optional. Default dtypes.NA
-            Filling value to match the dimension size.
+        keep_attrs: bool, optional
+            Preserve attributes if True
         **window_dim_kwargs : {dim: new_name, ...}, optional
             The keyword arguments form of ``window_dim``.
 

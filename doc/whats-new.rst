@@ -23,6 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- New top-level function :py:func:`unify_chunks`.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Allow assigning values to a subset of a dataset using positional or label-based
   indexing (:issue:`3015`, :pull:`5362`).
   By `Matthias Göbel <https://github.com/matzegoebel>`_.
