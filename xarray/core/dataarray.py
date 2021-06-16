@@ -44,6 +44,7 @@ from .alignment import (
 )
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
+from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
@@ -3686,8 +3687,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         dask.array.core.unify_chunks
         """
-        ds = self._to_temp_dataset().unify_chunks()
-        return self._from_temp_dataset(ds)
+
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,
