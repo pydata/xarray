@@ -779,7 +779,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
+            data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
@@ -851,7 +851,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if new_order:
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
-            value = duck_array_ops.moveaxis(value, new_order, range(len(new_order)))
+            value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value
