@@ -1906,7 +1906,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         group: str = None,
         encoding: Mapping = None,
         compute: bool = True,
-        consolidated: bool = False,
+        consolidated: Optional[bool] = None,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
         safe_chunks: bool = True,
@@ -1933,13 +1933,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in file system only for Zarr array chunks.
             Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", None}, optional
+        mode : {"w", "w-", "a", "r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist).
-            If ``append_dim`` is set, ``mode`` can be omitted as it is
-            internally set to ``"a"``. Otherwise, ``mode`` will default to
-            `w-` if not set.
+            "a" means override existing variables (create if does not exist);
+            "r+" means modify existing array *values* only (raise an error if
+            any metadata or shapes would change).
+            The default mode is "a" if ``append_dim`` is set. Otherwise, it is
+            "r+" if ``region`` is set and ``w-`` otherwise.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
@@ -1954,7 +1955,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             array data later. Metadata is always updated eagerly.
         consolidated : bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing metadata.
+            after writing metadata and read existing stores with consolidated
+            metadata; if False, do not. The default (`consolidated=None`) means
+            write consolidated metadata and attempt to read consolidated
+            metadata for existing stores (falling back to non-consolidated).
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
