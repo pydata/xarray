@@ -1398,10 +1398,10 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
 
 def cross(
-    a: T_DSorDAorVar,
-    b: T_DSorDAorVar,
+    a: "T_DSorDAorVar",
+    b: "T_DSorDAorVar",
     dim: Hashable,
-) -> T_DSorDAorVar:
+) -> "T_DSorDAorVar":
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1559,7 +1559,7 @@ def cross(
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
-        array_large, array_small = array[i], array[1 - i]
+        array_large, array_small = arrays[i], arrays[1 - i]
 
         if getattr(array_large, "coords", False) and getattr(
             array_small, "coords", False
