@@ -20,6 +20,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
 )
 
@@ -36,6 +37,8 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .coordinates import Coordinates  # noqa
     from .dataset import Dataset
+
+    T_DSorDAorVar = TypeVar("T_DSorDAorVar", Dataset, DataArray, Variable)
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1393,7 +1396,11 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(a, b, dim):
+def cross(
+    a: T_DSorDAorVar,
+    b: T_DSorDAorVar,
+    dim: Hashable,
+) -> T_DSorDAorVar:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1551,15 +1558,19 @@ def cross(a, b, dim):
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
+        array_large, array_small = array[i], array[1 - i]
 
-        if all([getattr(arr, "coords", False) for arr in arrays]):
+        if getattr(array_large, "coords", False) and getattr(
+            array_small, "coords", False
+        ):
+            # if all([getattr(arr, "coords", False) for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
-            arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)
-        elif arrays[i].sizes[dim] == 2:
+            arrays[i] = array_small.reindex_like(array_large, fill_value=0)
+        elif array_small.sizes[dim] == 2:
             # If the array doesn't have coords we can can only infer
             # that it is composite values if the size is 2:
-            arrays[i] = arrays[i].pad({dim: (0, 1)}, constant_values=0)
+            arrays[i] = array_small.pad({dim: (0, 1)}, constant_values=0)
             if is_duck_dask_array(arrays[i].data):
                 arrays[i] = arrays[i].chunk({dim: -1})
         else:
