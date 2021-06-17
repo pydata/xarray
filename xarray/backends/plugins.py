@@ -96,6 +96,10 @@ def list_engines():
     return build_engines(pkg_entrypoints)
 
 
+class NoMatchingEngineError(Exception):
+    pass
+
+
 def guess_engine(store_spec):
     engines = list_engines()
 
@@ -108,16 +112,17 @@ def guess_engine(store_spec):
 
     installed = [k for k in engines if k != "store"]
     if installed:
-        raise ValueError(
+        raise NoMatchingEngineError(
             "did not find a match in any of xarray's currently installed IO "
-            f"backends {installed}. Consider explicitly selecting one of the "
+            f"backends {installed}. The provided file may not exist: "
+            f"{store_spec}\n\nConsider explicitly selecting one of the "
             "installed backends via the ``engine`` parameter to "
             "xarray.open_dataset(), or installing additional IO dependencies:\n"
             "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
             "http://xarray.pydata.org/en/stable/user-guide/io.html"
         )
     else:
-        raise ValueError(
+        raise NoMatchingEngineError(
             "xarray is unable to open this file because it has no currently "
             "installed IO backends. Xarray's read/write support requires "
             "installing optional dependencies:\n"

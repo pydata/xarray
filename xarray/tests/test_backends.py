@@ -2772,7 +2772,8 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
         with pytest.raises(
-            ValueError, match=r"match in any of xarray's currently installed IO"
+            backends.NoMatchingEngineError,
+            match=r"match in any of xarray's currently installed IO",
         ):
             with open_dataset(b"garbage"):
                 pass
@@ -2826,7 +2827,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             with open(tmp_file, "rb") as f:
                 f.seek(8)
                 with pytest.raises(
-                    ValueError,
+                    backends.NoMatchingEngineError,
                     match="match in any of xarray's currently installed IO",
                 ):
                     with pytest.warns(

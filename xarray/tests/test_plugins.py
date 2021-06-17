@@ -3,7 +3,7 @@ from unittest import mock
 import pkg_resources
 import pytest
 
-from xarray.backends import common, plugins
+from xarray.backends import NoMatchingEngineError, common, plugins
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -165,7 +165,7 @@ def test_build_engines_sorted():
 )
 def test_no_matching_engine_found():
     with pytest.raises(
-        ValueError, match="match in any of xarray's currently installed IO"
+        NoMatchingEngineError, match="match in any of xarray's currently installed IO"
     ):
         plugins.guess_engine("not-valid")
 
@@ -175,5 +175,8 @@ def test_no_matching_engine_found():
     mock.MagicMock(return_value={}),
 )
 def test_no_engines_installed():
-    with pytest.raises(ValueError, match="no currently installed IO backends."):
+    with pytest.raises(
+        NoMatchingEngineError,
+        match="no currently installed IO backends.",
+    ):
         plugins.guess_engine("not-valid")

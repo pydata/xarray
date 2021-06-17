@@ -888,6 +888,7 @@ Exceptions
 
    MergeError
    SerializationWarning
+   backends.NoMatchingEngineError
 
 Advanced API
 ============
