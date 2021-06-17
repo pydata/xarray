@@ -905,10 +905,10 @@ class Coarsen(CoarsenArithmetic):
             raise ValueError(
                 f"'window_dim' must contain entries for all dimensions to coarsen. Missing {missing_dims}"
             )
-        missing_windows = set(self.windows) - set(window_dim)
-        if missing_windows:
+        extra_windows = set(self.windows) - set(window_dim)
+        if extra_windows:
             raise ValueError(
-                f"'window_dim' includes dimensions that will not be coarsened: {missing_windows}"
+                f"'window_dim' includes dimensions that will not be coarsened: {extra_windows}"
             )
 
         reshaped = Dataset()
