@@ -299,6 +299,13 @@ class TestConcatDataset:
                 {"a": 41, "c": 43, "d": 44},
                 False,
             ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
+                False,
+            ),
         ],
     )
     def test_concat_combine_attrs_kwarg(
@@ -352,6 +359,13 @@ class TestConcatDataset:
                 {"a": 41, "b": 42, "c": 43},
                 {"b": 2, "c": 43, "d": 44},
                 {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
                 False,
             ),
         ],

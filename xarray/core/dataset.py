@@ -53,6 +53,7 @@ from . import (
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects
+from .computation import unify_chunks
 from .coordinates import (
     DatasetCoordinates,
     assert_coordinate_consistent,
@@ -63,11 +64,13 @@ from .indexes import (
     Index,
     Indexes,
     PandasIndex,
+    PandasMultiIndex,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
+    wrap_pandas_index,
 )
 from .indexing import is_fancy_indexer
 from .merge import (
@@ -1485,7 +1488,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if hashable(key):
             return self._construct_dataarray(key)
         else:
-            return self._copy_listed(np.asarray(key))
+            return self._copy_listed(key)
 
     def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.
@@ -3284,10 +3287,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 continue
             if isinstance(index, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in index.names]
-                new_index = index.rename(names=new_names)
+                indexes[new_name] = PandasMultiIndex(index.rename(names=new_names))
             else:
-                new_index = index.rename(new_name)
-            indexes[new_name] = PandasIndex(new_index)
+                indexes[new_name] = PandasIndex(index.rename(new_name))
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3516,7 +3518,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = PandasIndex(new_index)
+                    indexes[k] = wrap_pandas_index(new_index)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3789,7 +3791,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasIndex(new_index)
+            indexes[dim] = PandasMultiIndex(new_index)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3817,7 +3819,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = PandasIndex(idx)
+        indexes[new_dim] = wrap_pandas_index(idx)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -4986,7 +4988,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
             else:
                 if (
-                    not numeric_only
+                    # Some reduction functions (e.g. std, var) need to run on variables
+                    # that don't have the reduce dims: PR5393
+                    not reduce_dims
+                    or not numeric_only
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
@@ -5319,7 +5324,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted()
+            is_sorted = idx.is_monotonic_increasing
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -6244,7 +6249,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if _contains_datetime_like_objects(v):
                     v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var, edge_order=edge_order, axis=v.get_axis_num(dim)
+                    v.data,
+                    coord_var.data,
+                    edge_order=edge_order,
+                    axis=v.get_axis_num(dim),
                 )
                 variables[k] = Variable(v.dims, grad)
             else:
@@ -6559,37 +6567,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dask.array.core.unify_chunks
         """
 
-        try:
-            self.chunks
-        except ValueError:  # "inconsistent chunks"
-            pass
-        else:
-            # No variables with dask backend, or all chunks are already aligned
-            return self.copy()
-
-        # import dask is placed after the quick exit test above to allow
-        # running this method if dask isn't installed and there are no chunks
-        import dask.array
-
-        ds = self.copy()
-
-        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
-
-        dask_array_names = []
-        dask_unify_args = []
-        for name, variable in ds.variables.items():
-            if isinstance(variable.data, dask.array.Array):
-                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
-                dask_array_names.append(name)
-                dask_unify_args.append(variable.data)
-                dask_unify_args.append(dims_tuple)
-
-        _, rechunked_arrays = dask.array.core.unify_chunks(*dask_unify_args)
-
-        for name, new_array in zip(dask_array_names, rechunked_arrays):
-            ds.variables[name]._data = new_array
-
-        return ds
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,

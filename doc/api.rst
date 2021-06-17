@@ -36,6 +36,7 @@ Top-level functions
    map_blocks
    show_versions
    set_options
+   unify_chunks
 
 Dataset
 =======
@@ -899,6 +900,7 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   Context
    register_dataset_accessor
    register_dataarray_accessor
    Dataset.set_close

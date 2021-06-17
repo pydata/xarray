@@ -5055,6 +5055,7 @@ def test_extract_zarr_variable_encoding():
 
 @requires_zarr
 @requires_fsspec
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_open_fsspec():
     import fsspec
     import zarr
