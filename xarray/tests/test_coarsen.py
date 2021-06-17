@@ -319,16 +319,13 @@ def test_coarsen_construct(dask):
             "vary": ("y", np.arange(12)),
         },
         coords={"time": np.arange(48), "y": np.arange(12)},
+        attrs={"foo": "bar"},
     )
 
     if dask and has_dask:
         ds = ds.chunk({"x": 4, "time": 10})
-    with raise_if_dask_computes():
-        actual = ds.coarsen(time=12, x=5).construct(
-            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
-        )
 
-    expected = xr.Dataset()
+    expected = xr.Dataset(attrs={"foo": "bar"})
     expected["vart"] = (("year", "month"), ds.vart.data.reshape((-1, 12)), {"a": "b"})
     expected["varx"] = (("x", "x_reshaped"), ds.varx.data.reshape((-1, 5)), {"a": "b"})
     expected["vartx"] = (
@@ -339,6 +336,16 @@ def test_coarsen_construct(dask):
     expected["vary"] = ds.vary
     expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
 
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+        )
+    assert_identical(actual, expected)
+
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            time=("year", "month"), x=("x", "x_reshaped")
+        )
     assert_identical(actual, expected)
 
     with raise_if_dask_computes():
@@ -347,6 +354,7 @@ def test_coarsen_construct(dask):
         )
         for var in actual:
             assert actual[var].attrs == {}
+        assert actual.attrs == {}
 
     with raise_if_dask_computes():
         actual = ds.vartx.coarsen(time=12, x=5).construct(

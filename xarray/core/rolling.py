@@ -853,22 +853,38 @@ class Coarsen(CoarsenArithmetic):
         **window_dim_kwargs,
     ):
         """
-        Convert this Coarsen object to a Dataset,
-        where the window dimension is reshaped to new dimensions
+        Convert this Coarsen object to a DataArray or Dataset,
+        where the coarsening dimension is split or reshaped to two
+        new dimensions.
 
         Parameters
         ----------
-        window_dim: str or a mapping, optional
-            A mapping from dimension name to the new window dimension names.
-            Just a string can be used for 1d-rolling.
+        window_dim: mapping
+            A mapping from existing dimension name to new dimension names.
+            The size of the second dimension will be the length of the
+            coarsening window.
         keep_attrs: bool, optional
             Preserve attributes if True
-        **window_dim_kwargs : {dim: new_name, ...}, optional
+        **window_dim_kwargs : {dim: new_name, ...}
             The keyword arguments form of ``window_dim``.
 
         Returns
         -------
-        Dataset with variables converted from rolling object.
+        Dataset or DataArray with reshaped dimensions
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(24), dims="time")
+        >>> da.coarsen(time=12).construct(time=("year", "month"))
+        <xarray.DataArray (year: 2, month: 12)>
+        array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+               [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
+        Dimensions without coordinates: year, month
+
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
         """
 
         from .dataarray import DataArray
@@ -879,7 +895,7 @@ class Coarsen(CoarsenArithmetic):
                 raise ValueError(
                     "Either window_dim or window_dim_kwargs need to be specified."
                 )
-            window_dim = {d: window_dim_kwargs[d] for d in self.dim}
+            window_dim = {d: window_dim_kwargs[d] for d in self.windows}
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
@@ -900,6 +916,8 @@ class Coarsen(CoarsenArithmetic):
             obj = self.obj._to_temp_dataset()
         else:
             obj = self.obj
+
+        reshaped.attrs = obj.attrs if keep_attrs else {}
 
         for key, var in obj.variables.items():
             reshaped_dims = tuple(
