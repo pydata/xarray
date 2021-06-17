@@ -143,8 +143,9 @@ def concat(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "override"
-        String indicating how to combine attrs of the objects being merged:
+                     "override"} or callable, default: "override"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
@@ -154,6 +155,9 @@ def concat(
           the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
@@ -422,6 +426,13 @@ def _dataset_concat(
     """
     from .dataset import Dataset
 
+    datasets = list(datasets)
+
+    if not all(isinstance(dataset, Dataset) for dataset in datasets):
+        raise TypeError(
+            "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
+        )
+
     dim, coord = _calc_concat_dim_coord(dim)
     # Make sure we're working on a copy (we'll be loading variables)
     datasets = [ds.copy() for ds in datasets]
@@ -541,7 +552,14 @@ def _dataarray_concat(
     join: str = "outer",
     combine_attrs: str = "override",
 ) -> "DataArray":
+    from .dataarray import DataArray
+
     arrays = list(arrays)
+
+    if not all(isinstance(array, DataArray) for array in arrays):
+        raise TypeError(
+            "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
+        )
 
     if data_vars != "all":
         raise ValueError(
