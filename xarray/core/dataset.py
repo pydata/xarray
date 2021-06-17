@@ -1996,7 +1996,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         encoding:
             The encoding attribute (if exists) of the DataArray(s) will be
-            passed on to the corresponding .zarray file.
+            used. Override any existing encodings by providing the ``encoding`` kwarg.
 
         See Also
         --------
