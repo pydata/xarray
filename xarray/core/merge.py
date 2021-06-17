@@ -880,6 +880,7 @@ def merge(
     See also
     --------
     concat
+	combine_nested
     combine_by_coords
     """
     from .dataarray import DataArray
