@@ -361,3 +361,18 @@ def test_coarsen_construct(dask):
             {"time": ("year", "month"), "x": ("x", "x_reshaped")}
         )
     assert_equal(actual, expected["vartx"])
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(foo="bar")
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12, x=2).construct(time=("year", "month"))
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct()
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(time="bar")
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(time=("bar",))

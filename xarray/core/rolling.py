@@ -9,6 +9,7 @@ from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -890,12 +891,23 @@ class Coarsen(CoarsenArithmetic):
         from .dataarray import DataArray
         from .dataset import Dataset
 
-        if window_dim is None:
-            if len(window_dim_kwargs) == 0:
-                raise ValueError(
-                    "Either window_dim or window_dim_kwargs need to be specified."
-                )
-            window_dim = {d: window_dim_kwargs[d] for d in self.windows}
+        window_dim = either_dict_or_kwargs(
+            window_dim, window_dim_kwargs, "Coarsen.construct"
+        )
+        if not window_dim:
+            raise ValueError(
+                "Either window_dim or window_dim_kwargs need to be specified."
+            )
+
+        bad_new_dims = tuple(
+            win
+            for win, dims in window_dim.items()
+            if len(dims) != 2 or isinstance(dims, str)
+        )
+        if bad_new_dims:
+            raise ValueError(
+                f"Please provide exactly two dimension names for the following coarsening dimensions: {bad_new_dims}"
+            )
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
