@@ -67,7 +67,7 @@ class ZarrArrayWrapper(BackendArray):
         self.dtype = dtype
 
     def get_array(self):
-        return self.datastore.ds[self.variable_name]
+        return self.datastore.zarr_group[self.variable_name]
 
     def __getitem__(self, key):
         array = self.get_array()
@@ -285,14 +285,43 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
+def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+    if new_var.dims != existing_var.dims:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension names {existing_var.dims} != "
+            f"{new_var.dims}, but changing variable "
+            f"dimensions is not supported by to_zarr()."
+        )
+
+    existing_sizes = {}
+    for dim, size in existing_var.sizes.items():
+        if region is not None and dim in region:
+            start, stop, stride = region[dim].indices(size)
+            assert stride == 1  # region was already validated
+            size = stop - start
+        if dim != append_dim:
+            existing_sizes[dim] = size
+
+    new_sizes = {dim: size for dim, size in new_var.sizes.items() if dim != append_dim}
+    if existing_sizes != new_sizes:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension sizes: {existing_sizes} != {new_sizes}. "
+            f"to_zarr() only supports changing dimension sizes when "
+            f"explicitly appending, but append_dim={append_dim!r}."
+        )
+
+
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "ds",
+        "zarr_group",
         "_append_dim",
         "_consolidate_on_close",
         "_group",
+        "_mode",
         "_read_only",
         "_synchronizer",
         "_write_region",
@@ -313,6 +342,7 @@ class ZarrStore(AbstractWritableDataStore):
         append_dim=None,
         write_region=None,
         safe_chunks=True,
+        stacklevel=2,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
@@ -328,34 +358,69 @@ class ZarrStore(AbstractWritableDataStore):
             open_kwargs["storage_options"] = storage_options
         elif storage_options:
             raise ValueError("Storage options only compatible with zarr>=2.5.0")
+
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
+            if consolidated is None:
+                consolidated = False
 
-        if consolidated:
+        if consolidated is None:
+            try:
+                zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            except KeyError:
+                warnings.warn(
+                    "Failed to open Zarr store with consolidated metadata, "
+                    "falling back to try reading non-consolidated metadata. "
+                    "This is typically much slower for opening a dataset. "
+                    "To silence this warning, consider:\n"
+                    "1. Consolidating metadata in this existing store with "
+                    "zarr.consolidate_metadata().\n"
+                    "2. Explicitly setting consolidated=False, to avoid trying "
+                    "to read consolidate metadata, or\n"
+                    "3. Explicitly setting consolidated=True, to raise an "
+                    "error in this case instead of falling back to try "
+                    "reading non-consolidated metadata.",
+                    RuntimeWarning,
+                    stacklevel=stacklevel,
+                )
+                zarr_group = zarr.open_group(store, **open_kwargs)
+        elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
         return cls(
-            zarr_group, consolidate_on_close, append_dim, write_region, safe_chunks
+            zarr_group,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
         )
 
     def __init__(
         self,
         zarr_group,
+        mode=None,
         consolidate_on_close=False,
         append_dim=None,
         write_region=None,
         safe_chunks=True,
     ):
-        self.ds = zarr_group
-        self._read_only = self.ds.read_only
-        self._synchronizer = self.ds.synchronizer
-        self._group = self.ds.path
+        self.zarr_group = zarr_group
+        self._read_only = self.zarr_group.read_only
+        self._synchronizer = self.zarr_group.synchronizer
+        self._group = self.zarr_group.path
+        self._mode = mode
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
         self._safe_chunks = safe_chunks
+
+    @property
+    def ds(self):
+        # TODO: consider deprecating this in favor of zarr_group
+        return self.zarr_group
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
@@ -376,15 +441,15 @@ class ZarrStore(AbstractWritableDataStore):
 
     def get_variables(self):
         return FrozenDict(
-            (k, self.open_store_variable(k, v)) for k, v in self.ds.arrays()
+            (k, self.open_store_variable(k, v)) for k, v in self.zarr_group.arrays()
         )
 
     def get_attrs(self):
-        return dict(self.ds.attrs.asdict())
+        return dict(self.zarr_group.attrs.asdict())
 
     def get_dimensions(self):
         dimensions = {}
-        for k, v in self.ds.arrays():
+        for k, v in self.zarr_group.arrays():
             try:
                 for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
@@ -409,7 +474,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
 
     def set_attributes(self, attributes):
-        self.ds.attrs.put(attributes)
+        self.zarr_group.attrs.put(attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
@@ -448,35 +513,50 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-
-        existing_variables = {
-            vn for vn in variables if _encode_variable_name(vn) in self.ds
+        existing_variable_names = {
+            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
         }
-        new_variables = set(variables) - existing_variables
+        new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
         variables_encoded, attributes = self.encode(
             variables_without_encoding, attributes
         )
 
-        if existing_variables:
-            # there are variables to append
-            # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
-            variables_with_encoding = {}
-            for vn in existing_variables:
-                variables_with_encoding[vn] = variables[vn].copy(deep=False)
-                variables_with_encoding[vn].encoding = ds[vn].encoding
-            variables_with_encoding, _ = self.encode(variables_with_encoding, {})
-            variables_encoded.update(variables_with_encoding)
+        if existing_variable_names:
+            # Decode variables directly, without going via xarray.Dataset to
+            # avoid needing to load index variables into memory.
+            # TODO: consider making loading indexes lazy again?
+            existing_vars, _, _ = conventions.decode_cf_variables(
+                self.get_variables(), self.get_attrs()
+            )
+            # Modified variables must use the same encoding as the store.
+            vars_with_encoding = {}
+            for vn in existing_variable_names:
+                vars_with_encoding[vn] = variables[vn].copy(deep=False)
+                vars_with_encoding[vn].encoding = existing_vars[vn].encoding
+            vars_with_encoding, _ = self.encode(vars_with_encoding, {})
+            variables_encoded.update(vars_with_encoding)
 
-        if self._write_region is None:
+            for var_name in existing_variable_names:
+                new_var = variables_encoded[var_name]
+                existing_var = existing_vars[var_name]
+                _validate_existing_dims(
+                    var_name,
+                    new_var,
+                    existing_var,
+                    self._write_region,
+                    self._append_dim,
+                )
+
+        if self._mode not in ["r", "r+"]:
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.ds.store)
+            zarr.consolidate_metadata(self.zarr_group.store)
 
     def sync(self):
         pass
@@ -511,9 +591,12 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.ds:
+            if name in self.zarr_group:
                 # existing variable
-                zarr_array = self.ds[name]
+                # TODO: if mode="a", consider overriding the existing variable
+                # metadata. This would need some case work properly with region
+                # and append_dim.
+                zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
@@ -527,7 +610,7 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
-                zarr_array = self.ds.create(
+                zarr_array = self.zarr_group.create(
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)
@@ -565,7 +648,7 @@ def open_zarr(
     concat_characters=True,
     decode_coords=True,
     drop_variables=None,
-    consolidated=False,
+    consolidated=None,
     overwrite_encoded_chunks=False,
     chunk_store=None,
     storage_options=None,
@@ -574,10 +657,6 @@ def open_zarr(
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
-
-    .. note:: Experimental
-              The Zarr backend is new and experimental. Please report any
-              unexpected behavior via github issues.
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
@@ -630,6 +709,8 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+        By default (`consolidate=None`), attempts to read consolidated metadata,
+        falling back to read non-consolidated metadata if that fails.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
     decode_timedelta : bool, optional
@@ -682,6 +763,7 @@ def open_zarr(
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
         "storage_options": storage_options,
+        "stacklevel": 4,
     }
 
     ds = open_dataset(
@@ -716,10 +798,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         group=None,
         mode="r",
         synchronizer=None,
-        consolidated=False,
-        consolidate_on_close=False,
+        consolidated=None,
         chunk_store=None,
         storage_options=None,
+        stacklevel=3,
         lock=None,
     ):
         # TODO remove after v0.19
@@ -737,9 +819,10 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
-            consolidate_on_close=consolidate_on_close,
+            consolidate_on_close=False,
             chunk_store=chunk_store,
             storage_options=storage_options,
+            stacklevel=stacklevel + 1,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

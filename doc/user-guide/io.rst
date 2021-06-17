@@ -954,6 +954,8 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+.. _io.zarr.consolidated_metadata:
+
 Consolidated Metadata
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -961,27 +963,27 @@ Xarray needs to read all of the zarr metadata when it opens a dataset.
 In some storage mediums, such as with cloud object storage (e.g. amazon S3),
 this can introduce significant overhead, because two separate HTTP calls to the
 object store must be made for each variable in the dataset.
-With version 2.3, zarr will support a feature called *consolidated metadata*,
-which allows all metadata for the entire dataset to be stored with a single
-key (by default called ``.zmetadata``). This can drastically speed up
-opening the store. (For more information on this feature, consult the
+As of Xarray version 0.18, Xarray by default uses a feature called
+*consolidated metadata*, storing all metadata for the entire dataset with a
+single key (by default called ``.zmetadata``). This typically drastically speeds
+up opening the store. (For more information on this feature, consult the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
-If you have zarr version 2.3 or greater, xarray can write and read stores
-with consolidated metadata. To write consolidated metadata, pass the
-``consolidated=True`` option to the
-:py:attr:`Dataset.to_zarr` method::
+By default, Xarray writes consolidated metadata and attempts to read stores
+with consolidated metadata, falling back to use non-consolidated metadata for
+reads. Because this fall-back option is so much slower, Xarray issues a
+``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
 
-    ds.to_zarr('foo.zarr', consolidated=True)
+    Failed to open Zarr store with consolidated metadata, falling back to try
+    reading non-consolidated metadata. This is typically much slower for
+    opening a dataset. To silence this warning, consider:
 
-To read a consolidated store, pass the ``consolidated=True`` option to
-:py:func:`open_zarr`::
-
-    ds = xr.open_zarr('foo.zarr', consolidated=True)
-
-Xarray can't perform consolidation on pre-existing zarr datasets. This should
-be done directly from zarr, as described in the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
+    1. Consolidating metadata in this existing store with
+       :py:func:`zarr.consolidate_metadata`.
+    2. Explicitly setting ``consolidated=False``, to avoid trying to read
+       consolidate metadata.
+    3. Explicitly setting ``consolidated=True``, to raise an error in this case
+       instead of falling back to try reading non-consolidated metadata.
 
 .. _io.zarr.appending:
 
@@ -1062,7 +1064,7 @@ and then calling ``to_zarr`` with ``compute=False`` to write only metadata
     ds = xr.Dataset({"foo": ("x", dummies)})
     path = "path/to/directory.zarr"
     # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False, consolidated=True)
+    ds.to_zarr(path, compute=False)
 
 Now, a Zarr store with the correct variable shapes and attributes exists that
 can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
@@ -1072,7 +1074,7 @@ data should be written (in index space, not coordinate space), e.g.,
 .. ipython:: python
 
     # For convenience, we'll slice a single dataset, but in the real use-case
-    # we would create them separately, possibly even from separate processes.
+    # we would create them separately possibly even from separate processes.
     ds = xr.Dataset({"foo": ("x", np.arange(30))})
     ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
     ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
