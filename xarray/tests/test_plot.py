@@ -1165,7 +1165,7 @@ class Common2dMixin:
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
         if self.plotfunc.__name__ == "surface":
             # ax.plot_surface errors with nonnumerics:
-            with pytest.raises(np.core._exceptions._UFuncNoLoopError):
+            with pytest.raises(Exception):
                 self.plotfunc(a)
         else:
             self.plotfunc(a)
