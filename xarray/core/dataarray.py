@@ -4491,16 +4491,14 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
 
         name = _THIS_ARRAY if self.name is None else self.name
-        ds = self._to_dataset_whole(name=name, shallow_copy=True)
-        ds = ds.query(
+        ds = self._to_dataset_whole(name=name, shallow_copy=True).query(
             queries=queries,
             parser=parser,
             engine=engine,
             missing_dims=missing_dims,
             **queries_kwargs,
         )
-        da = self._from_temp_dataset(ds) if name is _THIS_ARRAY else ds[name]
-        return da
+        return self._from_temp_dataset(ds) if name is _THIS_ARRAY else ds[name]
 
     def curvefit(
         self,
