@@ -4490,7 +4490,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dimensions without coordinates: x
         """
 
-        ds = self._to_dataset_whole(shallow_copy=True)
+        name = _THIS_ARRAY if self.name is None else self.name
+        ds = self._to_dataset_whole(name=name, shallow_copy=True)
         ds = ds.query(
             queries=queries,
             parser=parser,
@@ -4498,7 +4499,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             missing_dims=missing_dims,
             **queries_kwargs,
         )
-        return ds[self.name]
+        da = self._from_temp_dataset(ds) if name is _THIS_ARRAY else ds[name]
+        return da
 
     def curvefit(
         self,
