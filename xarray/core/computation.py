@@ -1569,7 +1569,7 @@ def cross(
             # with zeros:
             arrays[i] = array_small.reindex_like(array_large, fill_value=0)
         elif array_small.sizes[dim] == 2:
-            # If the array doesn't have coords we can can only infer
+            # If the array doesn't have coords we can only infer
             # that it is composite values if the size is 2:
             arrays[i] = array_small.pad({dim: (0, 1)}, constant_values=0)
             if is_duck_dask_array(arrays[i].data):
