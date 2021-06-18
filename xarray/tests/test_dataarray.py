@@ -4659,6 +4659,7 @@ class TestDataArray:
             bb = DataArray(data=b, dims=["x"], name="b")
             cc = DataArray(data=c, dims=["y"], name="c")
             dd = DataArray(data=d, dims=["z"], name="d")
+            nn = DataArray(data=a, dims=["x"], name=None)
 
         elif backend == "dask":
             import dask.array as da
@@ -4667,6 +4668,7 @@ class TestDataArray:
             bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
             cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
             dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            nn = DataArray(data=da.from_array(a, chunks=3), dims=["x"], name=None)
 
         # query single dim, single variable
         actual = aa.query(x="a > 5", engine=engine, parser=parser)
@@ -4703,6 +4705,11 @@ class TestDataArray:
             aa.query(x=(a > 5))  # must be query string
         with pytest.raises(UndefinedVariableError):
             aa.query(x="spam > 50")  # name not present
+
+        # test with nameless dataarray (GH issue 5492)
+        actual = nn.query(x="x > 5", engine=engine, parser=parser)
+        expect = nn.isel(x=(nn.x > 5))
+        assert_identical(expect, actual)
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
