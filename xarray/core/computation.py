@@ -1521,8 +1521,8 @@ def cross(
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    all_dims = []
-    arrays = [a, b]
+    all_dims: List[Hashable] = []
+    arrays: List["T_DSorDAorVar"] = [a, b]
     for i, arr in enumerate(arrays):
         if isinstance(arr, Dataset):
             # Turn the dataset to a stacked dataarray to follow the
