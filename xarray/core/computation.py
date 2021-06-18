@@ -333,7 +333,7 @@ def assert_and_return_exact_match(all_keys):
     return first_keys
 
 
-_JOINERS = {
+_JOINERS: Dict[str, Callable] = {
     "inner": ordered_set_intersection,
     "outer": ordered_set_union,
     "left": operator.itemgetter(0),
