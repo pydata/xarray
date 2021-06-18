@@ -4437,6 +4437,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dimension(s), where the indexers are given as strings containing
         Python expressions to be evaluated against the values in the array.
 
+        The values stored in unnamed dataarrays can be referenced in queries as 'self'.
+
         Parameters
         ----------
         queries : dict, optional
@@ -4488,9 +4490,20 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         <xarray.DataArray 'a' (x: 2)>
         array([3, 4])
         Dimensions without coordinates: x
+
+        >>> da = xr.DataArray(np.arange(0, 5, 1), dims="x", name=None)
+        >>> da
+        <xarray.DataArray (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        >>> da.query(x="self > 2")
+        <xarray.DataArray (x: 2)>
+        array([3, 4])
+        Dimensions without coordinates: x
         """
 
-        name = _THIS_ARRAY if self.name is None else self.name
+        # Naming unnamed dataarrays as 'self' allows querying their values still
+        name = 'self' if self.name is None else self.name
         ds = self._to_dataset_whole(name=name).query(
             queries=queries,
             parser=parser,
@@ -4498,7 +4511,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             missing_dims=missing_dims,
             **queries_kwargs,
         )
-        return self._from_temp_dataset(ds) if name is _THIS_ARRAY else ds[name]
+        da = ds[name]
+        if name == 'self':
+            da.name = None
+        return da
 
     def curvefit(
         self,
