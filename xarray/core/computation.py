@@ -1559,7 +1559,7 @@ def cross(
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
-        array_large, array_small = arrays[i], arrays[1 - i]
+        array_small, array_large = arrays[i], arrays[1 - i]
 
         if getattr(array_large, "coords", False) and getattr(
             array_small, "coords", False
