@@ -73,6 +73,9 @@ Bug fixes
 - Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
   (:pull:`5406`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Fixed :py:func:`xarray.DataArray.query` to not fail with an unnamed dataarray
+  (:issue:`5492`, :pull:`5493`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Documentation
