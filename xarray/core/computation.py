@@ -1400,7 +1400,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 def cross(
     a: "T_DSorDAorVar",
     b: "T_DSorDAorVar",
-    dim: str,
+    dim: Hashable,
 ) -> "T_DSorDAorVar":
     """
     Return the cross product of two (arrays of) vectors.
@@ -1530,8 +1530,8 @@ def cross(
             # dataset.
             is_dataset = True
             arrays[i] = arr = arr.to_stacked_array(
-                variable_dim=dim, new_dim="variable", sample_dims=arr.dims
-            ).unstack("variable")
+                variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
+            ).unstack("stacked__dim")
             if is_duck_dask_array(arr.data):
                 arrays[i] = arr = arr.chunk({dim: -1})
         elif isinstance(arr, (DataArray, Variable)):
@@ -1561,10 +1561,9 @@ def cross(
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
         array_small, array_large = arrays[i], arrays[1 - i]
 
-        if getattr(array_large, "coords", False) and getattr(
-            array_small, "coords", False
+        if getattr(array_small, "coords", False) and getattr(
+            array_large, "coords", False
         ):
-            # if all([getattr(arr, "coords", False) for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             arrays[i] = array_small.reindex_like(array_large, fill_value=0)
@@ -1592,7 +1591,7 @@ def cross(
     )
     c = c.transpose(*[d for d in all_dims if d in c.dims])
     if is_dataset:
-        c = c.stack(variable=[dim]).to_unstacked_dataset("variable")
+        c = c.stack(stacked__dim=[dim]).to_unstacked_dataset("stacked__dim")
         c = c.expand_dims(
             list({d: s for ds in arrays for d, s in ds.sizes.items() if s == 1})
         )
