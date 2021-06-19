@@ -3867,7 +3867,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         new_dim: Hashable,
         sample_dims: Mapping[Hashable, int],
-        variable_dim: str = "variable",
+        variable_dim: Hashable = "variable",
         name: Hashable = None,
     ) -> "DataArray":
         """Combine variables of differing dimensionality into a DataArray
