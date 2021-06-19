@@ -1561,8 +1561,11 @@ def cross(
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
         array_small, array_large = arrays[i], arrays[1 - i]
 
-        if getattr(array_small, "coords", False) and getattr(
-            array_large, "coords", False
+        if (
+            getattr(array_small, "coords", False)
+            and getattr(array_large, "coords", False)
+            and hasattr(array_small, "reindex_like")
+            and hasattr(array_large, "reindex_like")
         ):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
