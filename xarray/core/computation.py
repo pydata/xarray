@@ -1398,10 +1398,10 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
 
 def cross(
-    a: "T_DSorDAorVar",
-    b: "T_DSorDAorVar",
+    a: T_DSorDAorVar,
+    b: T_DSorDAorVar,
     dim: Hashable,
-) -> "T_DSorDAorVar":
+) -> T_DSorDAorVar:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1522,7 +1522,7 @@ def cross(
     from .dataset import Dataset
 
     all_dims: List[Hashable] = []
-    arrays: List["T_DSorDAorVar"] = [a, b]
+    arrays: List[T_DSorDAorVar] = [a, b]
     for i, arr in enumerate(arrays):
         if isinstance(arr, Dataset):
             # Turn the dataset to a stacked dataarray to follow the
