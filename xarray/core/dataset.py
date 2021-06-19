@@ -3870,7 +3870,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def to_stacked_array(
         self,
         new_dim: Hashable,
-        sample_dims: Mapping[Hashable, int],
+        sample_dims: Union[Sequence[Hashable], Mapping[Hashable, Any]],
         variable_dim: Hashable = "variable",
         name: Hashable = None,
     ) -> "DataArray":
