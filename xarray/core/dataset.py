@@ -3866,7 +3866,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def to_stacked_array(
         self,
         new_dim: Hashable,
-        sample_dims: Sequence[Hashable],
+        sample_dims: Mapping[Hashable, int],
         variable_dim: str = "variable",
         name: Hashable = None,
     ) -> "DataArray":
