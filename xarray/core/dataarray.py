@@ -1039,10 +1039,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def chunk(
         self,
         chunks: Union[
-            Number,
-            Tuple[Number, ...],
-            Tuple[Tuple[Number, ...], ...],
-            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+            int,
+            Tuple[int, ...],
+            Tuple[Tuple[int, ...], ...],
+            Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,

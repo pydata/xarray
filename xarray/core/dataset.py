@@ -2085,9 +2085,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def chunk(
         self,
         chunks: Union[
-            Number,
+            int,
             str,
-            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
+            Mapping[Hashable, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
