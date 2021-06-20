@@ -1,6 +1,5 @@
 import datetime
 import warnings
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
