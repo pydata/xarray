@@ -1575,7 +1575,7 @@ def cross(
             # that it is composite values if the size is 2:
             arrays[i] = array_small.pad({dim: (0, 1)}, constant_values=0)
             if is_duck_dask_array(arrays[i].data):
-                arrays[i] = arrays[i].chunk({dim: -1})
+                arrays[i] = arrays[i].chunk({dim: -1.0})
         else:
             # Size is 1, then we do not know if the array is a constant or
             # composite value:
