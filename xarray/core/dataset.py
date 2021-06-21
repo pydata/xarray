@@ -2132,7 +2132,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             )
             chunks = {}
 
-        if isinstance(chunks, (Number, str)):
+        if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         bad_dims = chunks.keys() - self.dims.keys()
