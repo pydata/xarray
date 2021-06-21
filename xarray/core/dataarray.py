@@ -4437,7 +4437,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dimension(s), where the indexers are given as strings containing
         Python expressions to be evaluated against the values in the array.
 
-        The values stored in unnamed dataarrays can be referenced in queries as 'self'.
+        The values stored in dataarrays can also be referenced in queries as 'self'.
 
         Parameters
         ----------
@@ -4502,8 +4502,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dimensions without coordinates: x
         """
 
-        # Naming unnamed dataarrays as 'self' allows querying their values still
-        name = 'self' if self.name is None else self.name
+        if self.name is None:
+            # Naming unnamed dataarrays as 'self' allows querying their values still
+            name = "self"
+        else:
+            # For consistency allow named datarrays to be referred to as 'self' also
+            name = self.name
+            queries = either_dict_or_kwargs(queries, queries_kwargs, "query")
+            queries = {
+                d: (q.replace("self", name) if isinstance(q, str) else q)
+                for d, q in queries.items()
+            }
+            queries_kwargs = {}
+
         ds = self._to_dataset_whole(name=name).query(
             queries=queries,
             parser=parser,
@@ -4511,8 +4522,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             missing_dims=missing_dims,
             **queries_kwargs,
         )
+
         da = ds[name]
-        if name == 'self':
+        if name == "self":
             da.name = None
         return da
 

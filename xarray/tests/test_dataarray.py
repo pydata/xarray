@@ -4713,6 +4713,11 @@ class TestDataArray:
         expect = nn.isel(x=(nn > 5))
         assert_identical(expect, actual)
 
+        # test referring to named dataarray as self
+        actual = aa.query(x="self > 5", engine=engine, parser=parser)
+        expect = aa.isel(x=(aa > 5))
+        assert_identical(expect, actual)
+
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
     def test_curvefit(self, use_dask):
