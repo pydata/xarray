@@ -360,7 +360,7 @@ def test_coarsen_construct(dask):
         actual = ds.vartx.coarsen(time=12, x=5).construct(
             {"time": ("year", "month"), "x": ("x", "x_reshaped")}
         )
-    assert_equal(actual, expected["vartx"])
+    assert_identical(actual, expected["vartx"])
 
     with pytest.raises(ValueError):
         ds.coarsen(time=12).construct(foo="bar")
