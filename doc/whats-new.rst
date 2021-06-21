@@ -44,6 +44,8 @@ New Features
   By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 - allow passing a function to ``combine_attrs`` (:pull:`4896`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow plotting categorical data (:pull:`5464`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
