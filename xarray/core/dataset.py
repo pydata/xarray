@@ -12,6 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Collection,
     DefaultDict,
     Dict,
     Hashable,
@@ -3870,7 +3871,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def to_stacked_array(
         self,
         new_dim: Hashable,
-        sample_dims: Mapping[Hashable, int],
+        sample_dims: Collection,
         variable_dim: Hashable = "variable",
         name: Hashable = None,
     ) -> "DataArray":
