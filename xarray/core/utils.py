@@ -32,9 +32,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-if sys.version_info >= (3, 10):
+try:
     from typing import TypeGuard
-else:
+except ImportError:
     from typing_extensions import TypeGuard
 
 
