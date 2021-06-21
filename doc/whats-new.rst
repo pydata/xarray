@@ -21,8 +21,12 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
 - Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Xarray now uses consolidated metadata by default when writing and reading Zarr
+  stores (:issue:`5251`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - New top-level function :py:func:`unify_chunks`.
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Allow assigning values to a subset of a dataset using positional or label-based
@@ -46,6 +50,11 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
+  has changed to the new ``mode="r+"``, which only allows for overriding
+  pre-existing array values. This is a safer default than the prior ``mode="a"``,
+  and allows for higher performance writes (:pull:`5252`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
