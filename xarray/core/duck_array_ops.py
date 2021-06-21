@@ -7,7 +7,6 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -20,6 +19,7 @@ from .pycompat import (
     dask_array_type,
     is_duck_dask_array,
     sparse_array_type,
+    sparse_version,
 )
 from .utils import is_duck_array
 
@@ -71,10 +71,6 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
             func_name = inspect.stack()[1][3]
         raise NotImplementedError(msg % func_name)
 
-
-# switch to use dask.array / __array_function__ version when dask supports it:
-# https://github.com/dask/dask/pull/4822
-moveaxis = npcompat.moveaxis
 
 around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
@@ -176,15 +172,9 @@ masked_invalid = _dask_or_eager_func(
 
 
 def astype(data, dtype, **kwargs):
-    try:
-        import sparse
-    except ImportError:
-        sparse = None
-
     if (
-        sparse is not None
-        and isinstance(data, sparse_array_type)
-        and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
+        isinstance(data, sparse_array_type)
+        and sparse_version < "0.11.0"
         and "casting" in kwargs
     ):
         warnings.warn(

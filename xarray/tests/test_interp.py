@@ -829,6 +829,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 @requires_scipy
 @requires_dask
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method):
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array

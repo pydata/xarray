@@ -37,7 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "3.8", "3.9"]
+        # Bookend python versions
+        python-version: ["3.7", "3.9"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -57,8 +58,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -87,10 +87,17 @@ jobs:
         run: |
           python -c "import xarray"
       - name: Run tests
-        run: |
-          python -m pytest -n 4 \
-             --cov=xarray \
-             --cov-report=xml
+        run: python -m pytest -n 4
+          --cov=xarray
+          --cov-report=xml
+          --junitxml=test-results/${{ runner.os }}-${{ matrix.python-version }}.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          path: test-results/${{ runner.os }}-${{ matrix.python-version }}.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v1
@@ -100,3 +107,20 @@ jobs:
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  publish-test-results:
+    needs: test
+    runs-on: ubuntu-latest
+    # the build-and-test job might be skipped, we don't need to run this job then
+    if: success() || failure()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: test-results
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1
+        with:
+          files: test-results/*.xml

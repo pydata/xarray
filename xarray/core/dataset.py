@@ -53,6 +53,7 @@ from . import (
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects
+from .computation import unify_chunks
 from .coordinates import (
     DatasetCoordinates,
     assert_coordinate_consistent,
@@ -63,11 +64,13 @@ from .indexes import (
     Index,
     Indexes,
     PandasIndex,
+    PandasMultiIndex,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
+    wrap_pandas_index,
 )
 from .indexing import is_fancy_indexer
 from .merge import (
@@ -1485,7 +1488,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if hashable(key):
             return self._construct_dataarray(key)
         else:
-            return self._copy_listed(np.asarray(key))
+            return self._copy_listed(key)
 
     def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
         """Add an array to this dataset.
@@ -1903,7 +1906,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         group: str = None,
         encoding: Mapping = None,
         compute: bool = True,
-        consolidated: bool = False,
+        consolidated: Optional[bool] = None,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
         safe_chunks: bool = True,
@@ -1930,13 +1933,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in file system only for Zarr array chunks.
             Requires zarr-python v2.4.0 or later.
-        mode : {"w", "w-", "a", None}, optional
+        mode : {"w", "w-", "a", "r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
-            "a" means override existing variables (create if does not exist).
-            If ``append_dim`` is set, ``mode`` can be omitted as it is
-            internally set to ``"a"``. Otherwise, ``mode`` will default to
-            `w-` if not set.
+            "a" means override existing variables (create if does not exist);
+            "r+" means modify existing array *values* only (raise an error if
+            any metadata or shapes would change).
+            The default mode is "a" if ``append_dim`` is set. Otherwise, it is
+            "r+" if ``region`` is set and ``w-`` otherwise.
         synchronizer : object, optional
             Zarr array synchronizer.
         group : str, optional
@@ -1951,7 +1955,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             array data later. Metadata is always updated eagerly.
         consolidated : bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
-            after writing metadata.
+            after writing metadata and read existing stores with consolidated
+            metadata; if False, do not. The default (`consolidated=None`) means
+            write consolidated metadata and attempt to read consolidated
+            metadata for existing stores (falling back to non-consolidated).
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
             other dimensions on overriden variables must remain the same size.
@@ -1993,6 +2000,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             If a DataArray is a dask array, it is written with those chunks.
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
+
+        encoding:
+            The encoding attribute (if exists) of the DataArray(s) will be
+            used. Override any existing encodings by providing the ``encoding`` kwarg.
 
         See Also
         --------
@@ -2082,9 +2093,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def chunk(
         self,
         chunks: Union[
-            Number,
+            int,
             str,
-            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
+            Mapping[Hashable, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -2125,7 +2136,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             )
             chunks = {}
 
-        if isinstance(chunks, (Number, str)):
+        if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         bad_dims = chunks.keys() - self.dims.keys()
@@ -3284,10 +3295,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 continue
             if isinstance(index, pd.MultiIndex):
                 new_names = [name_dict.get(k, k) for k in index.names]
-                new_index = index.rename(names=new_names)
+                indexes[new_name] = PandasMultiIndex(index.rename(names=new_names))
             else:
-                new_index = index.rename(new_name)
-            indexes[new_name] = PandasIndex(new_index)
+                indexes[new_name] = PandasIndex(index.rename(new_name))
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3516,7 +3526,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = PandasIndex(new_index)
+                    indexes[k] = wrap_pandas_index(new_index)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3789,7 +3799,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasIndex(new_index)
+            indexes[dim] = PandasMultiIndex(new_index)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3817,7 +3827,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = PandasIndex(idx)
+        indexes[new_dim] = wrap_pandas_index(idx)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -4986,7 +4996,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
             else:
                 if (
-                    not numeric_only
+                    # Some reduction functions (e.g. std, var) need to run on variables
+                    # that don't have the reduce dims: PR5393
+                    not reduce_dims
+                    or not numeric_only
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
@@ -5319,7 +5332,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if isinstance(idx, pd.MultiIndex):
             coords = np.stack([np.asarray(code) for code in idx.codes], axis=0)
-            is_sorted = idx.is_lexsorted()
+            is_sorted = idx.is_monotonic_increasing
             shape = tuple(lev.size for lev in idx.levels)
         else:
             coords = np.arange(idx.size).reshape(1, -1)
@@ -6244,7 +6257,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if _contains_datetime_like_objects(v):
                     v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var, edge_order=edge_order, axis=v.get_axis_num(dim)
+                    v.data,
+                    coord_var.data,
+                    edge_order=edge_order,
+                    axis=v.get_axis_num(dim),
                 )
                 variables[k] = Variable(v.dims, grad)
             else:
@@ -6559,37 +6575,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dask.array.core.unify_chunks
         """
 
-        try:
-            self.chunks
-        except ValueError:  # "inconsistent chunks"
-            pass
-        else:
-            # No variables with dask backend, or all chunks are already aligned
-            return self.copy()
-
-        # import dask is placed after the quick exit test above to allow
-        # running this method if dask isn't installed and there are no chunks
-        import dask.array
-
-        ds = self.copy()
-
-        dims_pos_map = {dim: index for index, dim in enumerate(ds.dims)}
-
-        dask_array_names = []
-        dask_unify_args = []
-        for name, variable in ds.variables.items():
-            if isinstance(variable.data, dask.array.Array):
-                dims_tuple = [dims_pos_map[dim] for dim in variable.dims]
-                dask_array_names.append(name)
-                dask_unify_args.append(variable.data)
-                dask_unify_args.append(dims_tuple)
-
-        _, rechunked_arrays = dask.array.core.unify_chunks(*dask_unify_args)
-
-        for name, new_array in zip(dask_array_names, rechunked_arrays):
-            ds.variables[name]._data = new_array
-
-        return ds
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,

@@ -1426,7 +1426,7 @@ class TestDataset:
 
         with pytest.raises(
             ValueError,
-            match=r"Vectorized selection is not available along MultiIndex variable: x",
+            match=r"Vectorized selection is not available along coordinate 'x' with a multi-index",
         ):
             mds.sel(
                 x=xr.DataArray(
@@ -3305,6 +3305,11 @@ class TestDataset:
         with pytest.raises(KeyError, match=r"('var1', 'var2')"):
             data[("var1", "var2")]
 
+    def test_getitem_multiple_dtype(self):
+        keys = ["foo", 1]
+        dataset = Dataset({key: ("dim0", range(1)) for key in keys})
+        assert_identical(dataset, dataset[keys])
+
     def test_virtual_variables_default_coords(self):
         dataset = Dataset({"foo": ("x", range(10))})
         expected = DataArray(range(10), dims="x", name="x")
@@ -4947,15 +4952,16 @@ class TestDataset:
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
         data2 = create_test_data(seed=44)
-        add_vars = {"var4": ["dim1", "dim2"]}
+        add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.dims[d] for d in dims)
             data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {"foo": "variable"})
 
-        assert "var4" not in data1.mean()
+        assert "var4" not in data1.mean() and "var5" not in data1.mean()
         assert_equal(data1.mean(), data2.mean())
         assert_equal(data1.mean(dim="dim1"), data2.mean(dim="dim1"))
+        assert "var4" not in data1.mean(dim="dim2") and "var5" in data1.mean(dim="dim2")
 
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
@@ -6075,16 +6081,11 @@ class TestDataset:
             ds.query(x="spam > 50")  # name not present
 
 
-# Py.test tests
-
-
-@pytest.fixture(params=[None])
-def data_set(request):
-    return create_test_data(request.param)
+# pytest tests — new tests should go here, rather than in the class.
 
 
 @pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin(test_elements):
+def test_isin(test_elements, backend):
     expected = Dataset(
         data_vars={
             "var1": (("dim1",), [0, 1]),
@@ -6092,6 +6093,9 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).astype("bool")
+
+    if backend == "dask":
+        expected = expected.chunk()
 
     result = Dataset(
         data_vars={
@@ -6100,33 +6104,6 @@ def test_isin(test_elements):
             "var3": (("dim1",), [0, 1]),
         }
     ).isin(test_elements)
-
-    assert_equal(result, expected)
-
-
-@pytest.mark.skipif(not has_dask, reason="requires dask")
-@pytest.mark.parametrize("test_elements", ([1, 2], np.array([1, 2]), DataArray([1, 2])))
-def test_isin_dask(test_elements):
-    expected = Dataset(
-        data_vars={
-            "var1": (("dim1",), [0, 1]),
-            "var2": (("dim1",), [1, 1]),
-            "var3": (("dim1",), [0, 1]),
-        }
-    ).astype("bool")
-
-    result = (
-        Dataset(
-            data_vars={
-                "var1": (("dim1",), [0, 1]),
-                "var2": (("dim1",), [1, 2]),
-                "var3": (("dim1",), [0, 1]),
-            }
-        )
-        .chunk(1)
-        .isin(test_elements)
-        .compute()
-    )
 
     assert_equal(result, expected)
 
@@ -6177,17 +6154,18 @@ def test_constructor_raises_with_invalid_coords(unaligned_coords):
         xr.DataArray([1, 2, 3], dims=["x"], coords=unaligned_coords)
 
 
-def test_dir_expected_attrs(data_set):
+@pytest.mark.parametrize("ds", [3], indirect=True)
+def test_dir_expected_attrs(ds):
 
     some_expected_attrs = {"pipe", "mean", "isnull", "var1", "dim2", "numbers"}
-    result = dir(data_set)
+    result = dir(ds)
     assert set(result) >= some_expected_attrs
 
 
-def test_dir_non_string(data_set):
+def test_dir_non_string(ds):
     # add a numbered key to ensure this doesn't break dir
-    data_set[5] = "foo"
-    result = dir(data_set)
+    ds[5] = "foo"
+    result = dir(ds)
     assert 5 not in result
 
     # GH2172
@@ -6197,16 +6175,16 @@ def test_dir_non_string(data_set):
     dir(x2)
 
 
-def test_dir_unicode(data_set):
-    data_set["unicode"] = "uni"
-    result = dir(data_set)
+def test_dir_unicode(ds):
+    ds["unicode"] = "uni"
+    result = dir(ds)
     assert "unicode" in result
 
 
 @pytest.fixture(params=[1])
-def ds(request):
+def ds(request, backend):
     if request.param == 1:
-        return Dataset(
+        ds = Dataset(
             dict(
                 z1=(["y", "x"], np.random.randn(2, 8)),
                 z2=(["time", "y"], np.random.randn(10, 2)),
@@ -6218,211 +6196,29 @@ def ds(request):
                 y=range(2),
             ),
         )
-
-    if request.param == 2:
-        return Dataset(
-            {
-                "z1": (["time", "y"], np.random.randn(10, 2)),
-                "z2": (["time"], np.random.randn(10)),
-                "z3": (["x", "time"], np.random.randn(8, 10)),
-            },
-            {
-                "x": ("x", np.linspace(0, 1.0, 8)),
-                "time": ("time", np.linspace(0, 1.0, 10)),
-                "c": ("y", ["a", "b"]),
-                "y": range(2),
-            },
+    elif request.param == 2:
+        ds = Dataset(
+            dict(
+                z1=(["time", "y"], np.random.randn(10, 2)),
+                z2=(["time"], np.random.randn(10)),
+                z3=(["x", "time"], np.random.randn(8, 10)),
+            ),
+            dict(
+                x=("x", np.linspace(0, 1.0, 8)),
+                time=("time", np.linspace(0, 1.0, 10)),
+                c=("y", ["a", "b"]),
+                y=range(2),
+            ),
         )
+    elif request.param == 3:
+        ds = create_test_data()
+    else:
+        raise ValueError
 
+    if backend == "dask":
+        return ds.chunk()
 
-def test_coarsen_absent_dims_error(ds):
-    with pytest.raises(ValueError, match=r"not found in Dataset."):
-        ds.coarsen(foo=2)
-
-
-@pytest.mark.parametrize("dask", [True, False])
-@pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen(ds, dask, boundary, side):
-    if dask and has_dask:
-        ds = ds.chunk({"x": 4})
-
-    actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
-    assert_equal(
-        actual["z1"], ds["z1"].coarsen(x=3, boundary=boundary, side=side).max()
-    )
-    # coordinate should be mean by default
-    assert_equal(
-        actual["time"], ds["time"].coarsen(time=2, boundary=boundary, side=side).mean()
-    )
-
-
-@pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(ds, dask):
-    if dask and has_dask:
-        ds = ds.chunk({"x": 4})
-
-    # check if coord_func works
-    actual = ds.coarsen(time=2, x=3, boundary="trim", coord_func={"time": "max"}).max()
-    assert_equal(actual["z1"], ds["z1"].coarsen(x=3, boundary="trim").max())
-    assert_equal(actual["time"], ds["time"].coarsen(time=2, boundary="trim").max())
-
-    # raise if exact
-    with pytest.raises(ValueError):
-        ds.coarsen(x=3).mean()
-    # should be no error
-    ds.isel(x=slice(0, 3 * (len(ds["x"]) // 3))).coarsen(x=3).mean()
-
-    # working test with pd.time
-    da = xr.DataArray(
-        np.linspace(0, 365, num=364),
-        dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
-    )
-    actual = da.coarsen(time=2).mean()
-
-
-@requires_cftime
-def test_coarsen_coords_cftime():
-    times = xr.cftime_range("2000", periods=6)
-    da = xr.DataArray(range(6), [("time", times)])
-    actual = da.coarsen(time=3).mean()
-    expected_times = xr.cftime_range("2000-01-02", freq="3D", periods=2)
-    np.testing.assert_array_equal(actual.time, expected_times)
-
-
-@pytest.mark.parametrize(
-    "funcname, argument",
-    [
-        ("reduce", (np.mean,)),
-        ("mean", ()),
-    ],
-)
-def test_coarsen_keep_attrs(funcname, argument):
-    global_attrs = {"units": "test", "long_name": "testing"}
-    da_attrs = {"da_attr": "test"}
-    attrs_coords = {"attrs_coords": "test"}
-    da_not_coarsend_attrs = {"da_not_coarsend_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={
-            "da": ("coord", data, da_attrs),
-            "da_not_coarsend": ("no_coord", data, da_not_coarsend_attrs),
-        },
-        coords={"coord": ("coord", coords, attrs_coords)},
-        attrs=global_attrs,
-    )
-
-    # attrs are now kept per default
-    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument)
-    assert result.attrs == global_attrs
-    assert result.da.attrs == da_attrs
-    assert result.da_not_coarsend.attrs == da_not_coarsend_attrs
-    assert result.coord.attrs == attrs_coords
-    assert result.da.name == "da"
-    assert result.da_not_coarsend.name == "da_not_coarsend"
-
-    # discard attrs
-    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument, keep_attrs=False)
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-    assert result.da_not_coarsend.attrs == {}
-    assert result.coord.attrs == {}
-    assert result.da.name == "da"
-    assert result.da_not_coarsend.name == "da_not_coarsend"
-
-    # test discard attrs using global option
-    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument)
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-    assert result.da_not_coarsend.attrs == {}
-    assert result.coord.attrs == {}
-    assert result.da.name == "da"
-    assert result.da_not_coarsend.name == "da_not_coarsend"
-
-    # keyword takes precedence over global option
-    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument, keep_attrs=True)
-
-    assert result.attrs == global_attrs
-    assert result.da.attrs == da_attrs
-    assert result.da_not_coarsend.attrs == da_not_coarsend_attrs
-    assert result.coord.attrs == attrs_coords
-    assert result.da.name == "da"
-    assert result.da_not_coarsend.name == "da_not_coarsend"
-
-    func = getattr(ds.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=True):
-        result = func(*argument, keep_attrs=False)
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-    assert result.da_not_coarsend.attrs == {}
-    assert result.coord.attrs == {}
-    assert result.da.name == "da"
-    assert result.da_not_coarsend.name == "da_not_coarsend"
-
-
-def test_coarsen_keep_attrs_deprecated():
-    global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={"da": ("coord", data)},
-        coords={"coord": coords},
-        attrs=global_attrs,
-    )
-    ds.da.attrs = attrs_da
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-
-@pytest.mark.slow
-@pytest.mark.parametrize("ds", (1, 2), indirect=True)
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
-@pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(ds, window, name):
-    # Use boundary="trim" to accomodate all window sizes used in tests
-    coarsen_obj = ds.coarsen(time=window, boundary="trim")
-
-    # add nan prefix to numpy methods to get similar behavior as bottleneck
-    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
-    expected = getattr(coarsen_obj, name)()
-    assert_allclose(actual, expected)
-
-    # make sure the order of data_var are not changed.
-    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
-
-    # Make sure the dimension order is restored
-    for key, src_var in ds.data_vars.items():
-        assert src_var.dims == actual[key].dims
+    return ds
 
 
 @pytest.mark.parametrize(
@@ -6550,6 +6346,7 @@ def test_rolling_properties(ds):
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
@@ -6575,6 +6372,7 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
 
 
 @requires_numbagg
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp(ds):
 
     result = ds.rolling_exp(time=10, window_type="span").mean()
@@ -6582,6 +6380,7 @@ def test_rolling_exp(ds):
 
 
 @requires_numbagg
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_exp_keep_attrs(ds):
 
     attrs_global = {"attrs": "global"}
@@ -7080,7 +6879,7 @@ def test_trapz_datetime(dask, which_datetime):
 
     actual = da.integrate("time", datetime_unit="D")
     expected_data = np.trapz(
-        da.data,
+        da.compute().data,
         duck_array_ops.datetime_to_numeric(da["time"].data, datetime_unit="D"),
         axis=0,
     )

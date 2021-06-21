@@ -1367,7 +1367,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
+@pytest.mark.skipif(
+    LooseVersion(dask.__version__) > "2021.06",
+    reason="dask/dask#7669: can no longer pass output_dtypes and meta",
+)
 @requires_dask
 def test_vectorize_dask_dtype_meta():
     # meta dtype takes precedence

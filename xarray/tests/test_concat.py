@@ -299,6 +299,13 @@ class TestConcatDataset:
                 {"a": 41, "c": 43, "d": 44},
                 False,
             ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
+                False,
+            ),
         ],
     )
     def test_concat_combine_attrs_kwarg(
@@ -352,6 +359,13 @@ class TestConcatDataset:
                 {"a": 41, "b": 42, "c": 43},
                 {"b": 2, "c": 43, "d": 44},
                 {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
                 False,
             ),
         ],
@@ -730,3 +744,20 @@ def test_concat_preserve_coordinate_order():
     for act, exp in zip(actual.coords, expected.coords):
         assert act == exp
         assert_identical(actual.coords[act], expected.coords[exp])
+
+
+def test_concat_typing_check():
+    ds = Dataset({"foo": 1}, {"bar": 2})
+    da = Dataset({"foo": 3}, {"bar": 4}).to_array(dim="foo")
+
+    # concatenate a list of non-homogeneous types must raise TypeError
+    with pytest.raises(
+        TypeError,
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
+    ):
+        concat([ds, da], dim="foo")
+    with pytest.raises(
+        TypeError,
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
+    ):
+        concat([da, ds], dim="foo")
