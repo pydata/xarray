@@ -6,6 +6,7 @@ import io
 import itertools
 import os
 import re
+import sys
 import warnings
 from enum import Enum
 from typing import (
@@ -30,6 +31,12 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
+
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -290,7 +297,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def is_scalar(value: Any, include_0d: bool = True) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
