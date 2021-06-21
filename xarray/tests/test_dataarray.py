@@ -4659,6 +4659,8 @@ class TestDataArray:
             bb = DataArray(data=b, dims=["x"], name="b")
             cc = DataArray(data=c, dims=["y"], name="c")
             dd = DataArray(data=d, dims=["z"], name="d")
+            nn = DataArray(data=a, dims=["x"])
+            nn.name = None
 
         elif backend == "dask":
             import dask.array as da
@@ -4667,6 +4669,8 @@ class TestDataArray:
             bb = DataArray(data=da.from_array(b, chunks=3), dims=["x"], name="b")
             cc = DataArray(data=da.from_array(c, chunks=7), dims=["y"], name="c")
             dd = DataArray(data=da.from_array(d, chunks=12), dims=["z"], name="d")
+            nn = DataArray(data=da.from_array(a, chunks=3), dims=["x"])
+            nn.name = None
 
         # query single dim, single variable
         actual = aa.query(x="a > 5", engine=engine, parser=parser)
@@ -4703,6 +4707,16 @@ class TestDataArray:
             aa.query(x=(a > 5))  # must be query string
         with pytest.raises(UndefinedVariableError):
             aa.query(x="spam > 50")  # name not present
+
+        # test with nameless dataarray (GH issue 5492)
+        actual = nn.query(x="self > 5", engine=engine, parser=parser)
+        expect = nn.isel(x=(nn > 5))
+        assert_identical(expect, actual)
+
+        # test referring to named dataarray as self
+        actual = aa.query(x="self > 5", engine=engine, parser=parser)
+        expect = aa.isel(x=(aa > 5))
+        assert_identical(expect, actual)
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
