@@ -1559,21 +1559,17 @@ def cross(
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
-        array_small, array_large = arrays[i], arrays[1 - i]
 
-        if (
-            getattr(array_small, "coords", False)
-            and getattr(array_large, "coords", False)
-            and hasattr(array_small, "reindex_like")
-            and hasattr(array_large, "reindex_like")
-        ):
+        if all([getattr(arr, "coords", False) for arr in arrays]):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
-            arrays[i] = array_small.reindex_like(array_large, fill_value=0)
-        elif array_small.sizes[dim] == 2:
+            arrays[i] = arrays[i].reindex_like(
+                arrays[1 - i], fill_value=0
+            )  # type: DataArray
+        elif arrays[i].sizes[dim] == 2:
             # If the array doesn't have coords we can only infer
             # that it is composite values if the size is 2:
-            arrays[i] = array_small.pad({dim: (0, 1)}, constant_values=0)
+            arrays[i] = arrays[i].pad({dim: (0, 1)}, constant_values=0)
             if is_duck_dask_array(arrays[i].data):
                 arrays[i] = arrays[i].chunk({dim: -1})
         else:
