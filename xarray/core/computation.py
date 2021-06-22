@@ -1564,14 +1564,13 @@ def cross(
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
 
         if all(
+            # The variable check is only used to make mypy happy:
             getattr(arr, "coords", False) and not isinstance(arr, Variable)
             for arr in arrays
         ):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
-            arrays[i] = arrays[i].reindex_like(
-                arrays[1 - i], fill_value=0
-            )
+            arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)
         elif arrays[i].sizes[dim] == 2:
             # If the array doesn't have coords we can only infer
             # that it is composite values if the size is 2:
