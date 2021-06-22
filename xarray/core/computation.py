@@ -1529,11 +1529,14 @@ def cross(
             # normal code path. Then at the end turn it back to a
             # dataset.
             is_dataset = True
-            arrays[i] = arr = arr.to_stacked_array(
+            arr = arr.to_stacked_array(
                 variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
             ).unstack("stacked__dim")
+
             if is_duck_dask_array(arr.data):
-                arrays[i] = arr = arr.chunk({dim: -1})
+                arr = arr.chunk({dim: -1})
+
+            arrays[i] = arr
         elif isinstance(arr, (DataArray, Variable)):
             is_dataset = False
         else:
