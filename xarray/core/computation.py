@@ -1529,9 +1529,10 @@ def cross(
             # normal code path. Then at the end turn it back to a
             # dataset.
             is_dataset = True
-            arr = arr.to_stacked_array(
+            arr_ = arr.to_stacked_array(
                 variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
             ).unstack("stacked__dim")
+            arr = arr_
 
             if is_duck_dask_array(arr.data):
                 arr = arr.chunk({dim: -1})
@@ -1568,7 +1569,7 @@ def cross(
             # with zeros:
             arrays[i] = arrays[i].reindex_like(
                 arrays[1 - i], fill_value=0
-            )  # type: DataArray
+            )  # type: ignore
         elif arrays[i].sizes[dim] == 2:
             # If the array doesn't have coords we can only infer
             # that it is composite values if the size is 2:
