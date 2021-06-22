@@ -567,7 +567,7 @@ def test_groupby_getitem(dataset):
     assert_identical(expected, actual)
 
 
-def test_dataset_groupby():
+def test_groupby_dataset():
     data = Dataset(
         {"z": (["x", "y"], np.random.randn(3, 5))},
         {"x": ("x", list("abc")), "c": ("x", [0, 1, 0]), "y": range(5)},
