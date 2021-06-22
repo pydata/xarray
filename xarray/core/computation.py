@@ -1522,17 +1522,16 @@ def cross(
     from .dataset import Dataset
 
     all_dims: List[Hashable] = []
-    arrays: List[T_DSorDAorVar] = [a, b]
+    arrays: List[Any] = [a, b]
     for i, arr in enumerate(arrays):
         if isinstance(arr, Dataset):
             # Turn the dataset to a stacked dataarray to follow the
             # normal code path. Then at the end turn it back to a
             # dataset.
             is_dataset = True
-            arr_ = arr.to_stacked_array(
+            arr = arr.to_stacked_array(
                 variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
             ).unstack("stacked__dim")
-            arr = arr_
 
             if is_duck_dask_array(arr.data):
                 arr = arr.chunk({dim: -1})
@@ -1564,12 +1563,15 @@ def cross(
         # array is missing a value, zeros will not affect np.cross:
         i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
 
-        if all([getattr(arr, "coords", False) for arr in arrays]):
+        if all(
+            getattr(arr, "coords", False) and not isinstance(arr, Variable)
+            for arr in arrays
+        ):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             arrays[i] = arrays[i].reindex_like(
                 arrays[1 - i], fill_value=0
-            )  # type: ignore
+            )
         elif arrays[i].sizes[dim] == 2:
             # If the array doesn't have coords we can only infer
             # that it is composite values if the size is 2:
