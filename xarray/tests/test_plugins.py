@@ -164,16 +164,20 @@ def test_build_engines_sorted():
     mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
 )
 def test_no_matching_engine_found():
-    with pytest.raises(
-        ValueError, match="match in any of xarray's currently installed IO"
-    ):
+    with pytest.raises(ValueError, match=r"did not find a match in any"):
         plugins.guess_engine("not-valid")
+
+    with pytest.raises(ValueError, match=r"found the following matches with the input"):
+        plugins.guess_engine("foo.nc")
 
 
 @mock.patch(
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={}),
 )
-def test_no_engines_installed():
-    with pytest.raises(ValueError, match="no currently installed IO backends."):
+def test_engines_not_installed():
+    with pytest.raises(ValueError, match=r"xarray is unable to open"):
         plugins.guess_engine("not-valid")
+
+    with pytest.raises(ValueError, match=r"found the following matches with the input"):
+        plugins.guess_engine("foo.nc")
