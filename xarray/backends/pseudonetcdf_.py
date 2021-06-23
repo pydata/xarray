@@ -102,6 +102,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
 
 class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
+    available = has_pseudonetcdf
 
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicity defined like this:
@@ -153,5 +154,4 @@ class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_pseudonetcdf:
-    BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint
+BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint

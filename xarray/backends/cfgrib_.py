@@ -94,6 +94,8 @@ class CfGribDataStore(AbstractDataStore):
 
 
 class CfgribfBackendEntrypoint(BackendEntrypoint):
+    available = has_cfgrib
+
     def guess_can_open(self, filename_or_obj):
         try:
             _, ext = os.path.splitext(filename_or_obj)
@@ -147,5 +149,4 @@ class CfgribfBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_cfgrib:
-    BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint
+BACKEND_ENTRYPOINTS["cfgrib"] = CfgribfBackendEntrypoint

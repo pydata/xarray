@@ -337,6 +337,8 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
+    available = has_h5netcdf
+
     def guess_can_open(self, filename_or_obj):
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
         if magic_number is not None:
@@ -394,5 +396,4 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_h5netcdf:
-    BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint
+BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint

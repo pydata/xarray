@@ -238,6 +238,8 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
+    available = has_scipy
+
     def guess_can_open(self, filename_or_obj):
 
         magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
@@ -290,5 +292,4 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_scipy:
-    BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
+BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
