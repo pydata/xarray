@@ -866,15 +866,5 @@ def cf_encoder(variables, attributes):
                 if attr in new_vars[bounds].attrs and attr in var.attrs:
                     if new_vars[bounds].attrs[attr] == var.attrs[attr]:
                         new_vars[bounds].attrs.pop(attr)
-            # remove _FillValue for bounds
-            if new_vars[bounds].attrs.get("_FillValue"):
-                new_vars[bounds].attrs["_FillValue"] = None
-
-    # remove _FillValue for coordinate variables as missing values are not permitted
-    # a coordinate variable is a one-dimensional variable with the same name as its dimension
-    # see coordinate variable in http://cfconventions.org/cf-conventions/cf-conventions.html#terminology
-    for var in new_vars.keys():
-        if new_vars[var].dims == (var,) and new_vars[var].attrs.get("_FillValue"):
-            new_vars[var].attrs["_FillValue"] = None
 
     return new_vars, attributes
