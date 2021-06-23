@@ -38,7 +38,7 @@ report will allow others to reproduce the bug and provide insight into fixing. S
 `this stackoverflow article <https://stackoverflow.com/help/mcve>`_ for tips on
 writing a good bug report.
 
-Trying out the bug-producing code on the *master* branch is often a worthwhile exercise
+Trying out the bug-producing code on the *main* branch is often a worthwhile exercise
 to confirm that the bug still exists. It is also worth searching existing bug reports and
 pull requests to see if the issue has already been reported and/or fixed.
 
@@ -196,7 +196,7 @@ See the full conda docs `here <http://conda.pydata.org/docs>`__.
 Creating a branch
 -----------------
 
-You want your master branch to reflect only production-ready code, so create a
+You want your ``main`` branch to reflect only production-ready code, so create a
 feature branch before making your changes. For example::
 
     git branch shiny-new-feature
@@ -211,12 +211,12 @@ changes in this branch specific to one bug or feature so it is clear
 what the branch brings to *xarray*. You can have many "shiny-new-features"
 and switch in between them using the ``git checkout`` command.
 
-To update this branch, you need to retrieve the changes from the master branch::
+To update this branch, you need to retrieve the changes from the ``main`` branch::
 
     git fetch upstream
-    git merge upstream/master
+    git merge upstream/main
 
-This will combine your commits with the latest *xarray* git master.  If this
+This will combine your commits with the latest *xarray* git ``main``.  If this
 leads to merge conflicts, you must resolve these before submitting your pull
 request.  If you have uncommitted changes, you will need to ``git stash`` them
 prior to updating.  This will effectively store your changes, which can be
@@ -663,14 +663,14 @@ To install asv::
 
 If you need to run a benchmark, change your directory to ``asv_bench/`` and run::
 
-    asv continuous -f 1.1 upstream/master HEAD
+    asv continuous -f 1.1 upstream/main HEAD
 
 You can replace ``HEAD`` with the name of the branch you are working on,
 and report benchmarks that changed by more than 10%.
 The command uses ``conda`` by default for creating the benchmark
 environments. If you want to use virtualenv instead, write::
 
-    asv continuous -f 1.1 -E virtualenv upstream/master HEAD
+    asv continuous -f 1.1 -E virtualenv upstream/main HEAD
 
 The ``-E virtualenv`` option should be added to all ``asv`` commands
 that run benchmarks. The default value is defined in ``asv.conf.json``.
@@ -682,12 +682,12 @@ regressions.  You can run specific benchmarks using the ``-b`` flag, which
 takes a regular expression.  For example, this will only run tests from a
 ``xarray/asv_bench/benchmarks/groupby.py`` file::
 
-    asv continuous -f 1.1 upstream/master HEAD -b ^groupby
+    asv continuous -f 1.1 upstream/main HEAD -b ^groupby
 
 If you want to only run a specific group of tests from a file, you can do it
 using ``.`` as a separator. For example::
 
-    asv continuous -f 1.1 upstream/master HEAD -b groupby.GroupByMethods
+    asv continuous -f 1.1 upstream/main HEAD -b groupby.GroupByMethods
 
 will only run the ``GroupByMethods`` benchmark defined in ``groupby.py``.
 
@@ -803,7 +803,7 @@ double check your branch changes against the branch it was based on:
 #. Navigate to your repository on GitHub -- https://github.com/your-user-name/xarray
 #. Click on ``Branches``
 #. Click on the ``Compare`` button for your feature branch
-#. Select the ``base`` and ``compare`` branches, if necessary. This will be ``master`` and
+#. Select the ``base`` and ``compare`` branches, if necessary. This will be ``main`` and
    ``shiny-new-feature``, respectively.
 
 Finally, make the pull request
@@ -811,8 +811,8 @@ Finally, make the pull request
 
 If everything looks good, you are ready to make a pull request.  A pull request is how
 code from a local repository becomes available to the GitHub community and can be looked
-at and eventually merged into the master version.  This pull request and its associated
-changes will eventually be committed to the master branch and available in the next
+at and eventually merged into the ``main`` version.  This pull request and its associated
+changes will eventually be committed to the ``main`` branch and available in the next
 release.  To submit a pull request:
 
 #. Navigate to your repository on GitHub
@@ -837,11 +837,11 @@ Delete your merged branch (optional)
 ------------------------------------
 
 Once your feature branch is accepted into upstream, you'll probably want to get rid of
-the branch. First, update your ``master`` branch to check that the merge was successful::
+the branch. First, update your ``main`` branch to check that the merge was successful::
 
     git fetch upstream
-    git checkout master
-    git merge upstream/master
+    git checkout main
+    git merge upstream/main
 
 Then you can do::
 
