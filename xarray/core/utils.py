@@ -6,6 +6,7 @@ import io
 import itertools
 import os
 import re
+import sys
 import warnings
 from enum import Enum
 from typing import (
@@ -30,7 +31,12 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from typing_extensions import TypeGuard
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
+
 
 K = TypeVar("K")
 V = TypeVar("V")

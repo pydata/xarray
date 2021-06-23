@@ -2002,6 +2002,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             If not other chunks are found, Zarr uses its own heuristics to
             choose automatic chunk sizes.
 
+        encoding:
+            The encoding attribute (if exists) of the DataArray(s) will be
+            used. Override any existing encodings by providing the ``encoding`` kwarg.
+
         See Also
         --------
         :ref:`io.zarr`
@@ -2090,9 +2094,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def chunk(
         self,
         chunks: Union[
-            Number,
+            int,
             str,
-            Mapping[Hashable, Union[None, Number, str, Tuple[Number, ...]]],
+            Mapping[Hashable, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -2133,7 +2137,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             )
             chunks = {}
 
-        if isinstance(chunks, (Number, str)):
+        if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
 
         bad_dims = chunks.keys() - self.dims.keys()
