@@ -751,6 +751,10 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
 
+        # if coordinates set to None, don't write coordinates attribute
+        if "coordinates" in encoding and encoding.get("coordinates") is None:
+            continue
+
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
         # after the next line, "coordinates" is never in encoding
         # we get support for attrs["coordinates"] for free.
@@ -772,6 +776,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # conventions, only do it if necessary.
     # Reference discussion:
     # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
+
     global_coordinates.difference_update(written_coords)
     if global_coordinates:
         attributes = dict(attributes)
@@ -861,5 +866,15 @@ def cf_encoder(variables, attributes):
                 if attr in new_vars[bounds].attrs and attr in var.attrs:
                     if new_vars[bounds].attrs[attr] == var.attrs[attr]:
                         new_vars[bounds].attrs.pop(attr)
+            # remove _FillValue for bounds
+            if new_vars[bounds].attrs.get("_FillValue"):
+                new_vars[bounds].attrs["_FillValue"] = None
+
+    # remove _FillValue for coordinate variables as missing values are not permitted
+    # a coordinate variable is a one-dimensional variable with the same name as its dimension
+    # see coordinate variable in http://cfconventions.org/cf-conventions/cf-conventions.html#terminology
+    for var in new_vars.keys():
+        if new_vars[var].dims == (var,) and new_vars[var].attrs.get("_FillValue"):
+            new_vars[var].attrs["_FillValue"] = None
 
     return new_vars, attributes

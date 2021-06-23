@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from xarray import (
+    DataArray,
     Dataset,
     SerializationWarning,
     Variable,
@@ -141,6 +142,25 @@ class TestEncodeCFVariable:
         orig["a"].attrs["coordinates"] = "foo"
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
+
+    def test_emit_coordinates_attribute(self):
+        data = DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
+        ds = Dataset({"foo": data, "bar": ("x", [1, 2]), "fake": 10})
+        ds = ds.assign_coords(
+            {"reftime": np.array("2004-11-01T00:00:00", dtype=np.datetime64)}
+        )
+        ds = ds.assign({"test": 1})
+
+        ds["test"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(ds)
+
+        # check coordiante attribute emitted for 'test'
+        assert enc["test"].attrs.get("coordinates") is None
+        assert enc["test"].encoding.get("coordinates") is None
+
+        # check coordinate attribute not emitted for fake
+        assert enc["fake"].attrs.get("coordinates") == "reftime"
+        assert enc["fake"].encoding.get("coordinates") is None
 
     @requires_dask
     def test_string_object_warning(self):
