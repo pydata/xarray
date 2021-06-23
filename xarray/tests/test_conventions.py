@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from xarray import (
-    DataArray,
     Dataset,
     SerializationWarning,
     Variable,
@@ -144,23 +143,29 @@ class TestEncodeCFVariable:
             conventions.encode_dataset_coordinates(orig)
 
     def test_emit_coordinates_attribute(self):
-        data = DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
-        ds = Dataset({"foo": data, "bar": ("x", [1, 2]), "fake": 10})
-        ds = ds.assign_coords(
-            {"reftime": np.array("2004-11-01T00:00:00", dtype=np.datetime64)}
+        orig = Dataset(
+            {
+                "foo": (("x", "y"), np.random.randn(2, 3)),
+                "x": [10, 20],
+                "bar": ("x", [1, 2]),
+            }
         )
-        ds = ds.assign({"test": 1})
+        orig = orig.assign_coords(
+            {"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)}
+        )
+        orig = orig.assign({"a": 1})
+        orig = orig.assign({"b": 1})
 
-        ds["test"].encoding["coordinates"] = None
-        enc, _ = conventions.encode_dataset_coordinates(ds)
+        orig["a"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
 
-        # check coordiante attribute emitted for 'test'
-        assert enc["test"].attrs.get("coordinates") is None
-        assert enc["test"].encoding.get("coordinates") is None
+        # check coordiante attribute emitted for 'a'
+        assert enc["a"].attrs.get("coordinates") is None
+        assert enc["a"].encoding.get("coordinates") is None
 
-        # check coordinate attribute not emitted for fake
-        assert enc["fake"].attrs.get("coordinates") == "reftime"
-        assert enc["fake"].encoding.get("coordinates") is None
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert enc["b"].encoding.get("coordinates") is None
 
     @requires_dask
     def test_string_object_warning(self):
