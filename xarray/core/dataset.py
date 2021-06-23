@@ -6703,7 +6703,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Parameters
         ----------
         dim : hashable
-            Coordinate along which to fit the polynomials. (Note that when dim is time in 
+            Coordinate along which to fit the polynomials. (Note that when dim is time in
             `datetime64` format then the units are nanoseconds.)
         deg : int
             Degree of the fitting polynomial.
