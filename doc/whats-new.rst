@@ -46,6 +46,9 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow plotting categorical data (:pull:`5464`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
+  (:issue:`5510`).
+  By `Elle Smith <https://github.com/ellesmith88>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

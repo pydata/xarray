@@ -156,7 +156,7 @@ class TestEncodeCFVariable:
         orig = orig.assign({"a": 1})
         orig = orig.assign({"b": 1})
 
-        orig["a"].encoding["coordinates"] = None
+        orig["a"].attrs["coordinates"] = None
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
         # check coordiante attribute emitted for 'a'
