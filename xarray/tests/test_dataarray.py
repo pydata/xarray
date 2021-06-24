@@ -332,6 +332,10 @@ class TestDataArray:
         expected = Dataset({None: (["x", "y"], data, {}, {"bar": 2})})[None]
         assert_identical(expected, actual)
 
+        actual = DataArray([1, 2, 3], coords={"x": [0, 1, 2]})
+        expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
+        assert_identical(expected, actual)
+
     def test_constructor_invalid(self):
         data = np.random.randn(3, 2)
 
