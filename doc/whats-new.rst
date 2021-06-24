@@ -724,7 +724,7 @@ Documentation
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+- Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
@@ -1282,7 +1282,7 @@ Internal Changes
 v0.15.0 (30 Jan 2020)
 ---------------------
 
-This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
 
 This release also features many API improvements such as a new
@@ -3033,7 +3033,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
-  :doc:`faq` (:issue:`1726`).
+  :doc:`getting-started-guide/faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements
