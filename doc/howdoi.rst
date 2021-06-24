@@ -24,7 +24,7 @@ How do I ...
    * - change the order of dimensions
      - :py:meth:`DataArray.transpose`, :py:meth:`Dataset.transpose`
    * - reshape dimensions
-     - :py:meth:`DataArray.stack`, :py:meth:`Dataset.stack`
+     - :py:meth:`DataArray.stack`, :py:meth:`Dataset.stack`, :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct`
    * - remove a variable from my object
      - :py:meth:`Dataset.drop_vars`, :py:meth:`DataArray.drop_vars`
    * - remove dimensions of length 1 or 0
