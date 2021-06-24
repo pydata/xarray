@@ -163,7 +163,7 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
             else:
                 dtype_ = array.dtype
         else:
-            dtype_ = np.dtype(dtype)
+            dtype_ = np.dtype(dtype)  # type: ignore[assignment]
         self._dtype = dtype_
 
     def to_pandas_index(self) -> pd.Index:
