@@ -2781,6 +2781,7 @@ def test_get_axis_cartopy():
         ax = get_axis(**kwargs)
         assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
 
+
 @requires_matplotlib
 def test_maybe_gca():
 
