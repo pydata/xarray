@@ -13,10 +13,10 @@ upstream        https://github.com/pydata/xarray (push)
 
 <!-- markdownlint-disable MD031 -->
 
- 1. Ensure your master branch is synced to upstream:
+ 1. Ensure your main branch is synced to upstream:
      ```sh
-     git switch master
-     git pull upstream master
+     git switch main
+     git pull upstream main
      ```
  2. Confirm there are no commits on stable that are not yet merged
     ([ref](https://github.com/pydata/xarray/pull/4440)):
@@ -44,9 +44,9 @@ upstream        https://github.com/pydata/xarray (push)
       release.
  6. Open a PR with the release summary and whatsnew changes; in particular the
     release headline should get feedback from the team on what's important to include.
- 7. After merging, again ensure your master branch is synced to upstream:
+ 7. After merging, again ensure your main branch is synced to upstream:
      ```sh
-     git pull upstream master
+     git pull upstream main
      ```
  8. If you have any doubts, run the full test suite one final time!
       ```sh
@@ -59,12 +59,12 @@ upstream        https://github.com/pydata/xarray (push)
 11. This should automatically trigger an upload of the new build to PyPI via GitHub Actions.
     Check this has run [here](https://github.com/pydata/xarray/actions/workflows/pypi-release.yaml),
     and that the version number you expect is displayed [on PyPI](https://pypi.org/project/xarray/)
-12. Update the stable branch (used by ReadTheDocs) and switch back to master:
+12. Update the stable branch (used by ReadTheDocs) and switch back to main:
      ```sh
       git switch stable
-      git rebase master
+      git rebase main
       git push --force upstream stable
-      git switch master
+      git switch main
      ```
     You may need to first fetch it with `git fetch upstream`,
     and check out a local version with `git checkout -b stable upstream/stable`.
@@ -103,12 +103,12 @@ upstream        https://github.com/pydata/xarray (push)
      ~~~~~~~~~~~~~~~~
 
      ```
-14. Commit your changes and push to master again:
+14. Commit your changes and push to main again:
       ```sh
       git commit -am 'New whatsnew section'
-      git push upstream master
+      git push upstream main
       ```
-    You're done pushing to master!
+    You're done pushing to main!
 
 15. Update the docs. Login to <https://readthedocs.org/projects/xray/versions/>
     and switch your new release tag (at the bottom) from "Inactive" to "Active".

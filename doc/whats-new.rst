@@ -1282,7 +1282,7 @@ Internal Changes
 v0.15.0 (30 Jan 2020)
 ---------------------
 
-This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
 
 This release also features many API improvements such as a new
