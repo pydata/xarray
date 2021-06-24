@@ -25,7 +25,7 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex
+from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
@@ -177,7 +177,7 @@ def _maybe_wrap_data(data):
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
-        return PandasIndex(data)
+        return wrap_pandas_index(data)
     return data
 
 
@@ -542,7 +542,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _to_xindex(self):
         # temporary function used internally as a replacement of to_index()
         # returns an xarray Index instance instead of a pd.Index instance
-        return PandasIndex(self.to_index())
+        return wrap_pandas_index(self.to_index())
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
@@ -779,7 +779,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
+            data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
@@ -851,7 +851,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if new_order:
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
-            value = duck_array_ops.moveaxis(value, new_order, range(len(new_order)))
+            value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value

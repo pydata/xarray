@@ -1678,6 +1678,9 @@ class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
+    def create_zarr_target(self):
+        raise NotImplementedError
+
     @contextlib.contextmanager
     def create_store(self):
         with self.create_zarr_target() as store_target:
@@ -1704,8 +1707,8 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
-    def test_roundtrip_consolidated(self):
-        pytest.importorskip("zarr", minversion="2.2.1.dev2")
+    @pytest.mark.parametrize("consolidated", [False, True, None])
+    def test_roundtrip_consolidated(self, consolidated):
         expected = create_test_data()
         with self.roundtrip(
             expected,
@@ -1714,6 +1717,17 @@ class ZarrBase(CFEncodedBase):
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
+
+    def test_read_non_consolidated_warning(self):
+        expected = create_test_data()
+        with self.create_zarr_target() as store:
+            expected.to_zarr(store, consolidated=False)
+            with pytest.warns(
+                RuntimeWarning,
+                match="Failed to open Zarr store with consolidated",
+            ):
+                with xr.open_zarr(store) as ds:
+                    assert_identical(ds, expected)
 
     def test_with_chunkstore(self):
         expected = create_test_data()
@@ -2029,6 +2043,25 @@ class ZarrBase(CFEncodedBase):
     def test_append_write(self):
         super().test_append_write()
 
+    def test_append_with_mode_rplus_success(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"foo": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            modified.to_zarr(store, mode="r+")
+            with self.open(store) as actual:
+                assert_identical(actual, modified)
+
+    def test_append_with_mode_rplus_fails(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"bar": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            with pytest.raises(
+                ValueError, match="dataset contains non-pre-existing variables"
+            ):
+                modified.to_zarr(store, mode="r+")
+
     def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
@@ -2185,31 +2218,64 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
                 region = {"x": slice(i, i + 2)}
-                nonzeros.isel(region).to_zarr(store, region=region)
+                nonzeros.isel(region).to_zarr(
+                    store, region=region, consolidated=consolidated
+                )
             with xr.open_zarr(store, consolidated=consolidated) as actual:
                 assert_identical(actual, nonzeros)
 
+    @pytest.mark.parametrize("mode", [None, "r+", "a"])
+    def test_write_region_mode(self, mode):
+        zeros = Dataset({"u": (("x",), np.zeros(10))})
+        nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
+        with self.create_zarr_target() as store:
+            zeros.to_zarr(store)
+            for region in [{"x": slice(5)}, {"x": slice(5, 10)}]:
+                nonzeros.isel(region).to_zarr(store, region=region, mode=mode)
+            with xr.open_zarr(store) as actual:
+                assert_identical(actual, nonzeros)
+
     @requires_dask
-    def test_write_region_metadata(self):
-        """Metadata should not be overwritten in "region" writes."""
-        template = Dataset(
-            {"u": (("x",), np.zeros(10), {"variable": "template"})},
-            attrs={"global": "template"},
+    def test_write_preexisting_override_metadata(self):
+        """Metadata should be overriden if mode="a" but not in mode="r+"."""
+        original = Dataset(
+            {"u": (("x",), np.zeros(10), {"variable": "original"})},
+            attrs={"global": "original"},
         )
-        data = Dataset(
-            {"u": (("x",), np.arange(1, 11), {"variable": "data"})},
-            attrs={"global": "data"},
+        both_modified = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "modified"})},
+            attrs={"global": "modified"},
         )
-        expected = Dataset(
-            {"u": (("x",), np.arange(1, 11), {"variable": "template"})},
-            attrs={"global": "template"},
+        global_modified = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "original"})},
+            attrs={"global": "modified"},
+        )
+        only_new_data = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "original"})},
+            attrs={"global": "original"},
         )
 
         with self.create_zarr_target() as store:
-            template.to_zarr(store, compute=False)
-            data.to_zarr(store, region={"x": slice(None)})
+            original.to_zarr(store, compute=False)
+            both_modified.to_zarr(store, mode="a")
             with self.open(store) as actual:
-                assert_identical(actual, expected)
+                # NOTE: this arguably incorrect -- we should probably be
+                # overriding the variable metadata, too. See the TODO note in
+                # ZarrStore.set_variables.
+                assert_identical(actual, global_modified)
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, compute=False)
+            both_modified.to_zarr(store, mode="r+")
+            with self.open(store) as actual:
+                assert_identical(actual, only_new_data)
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, compute=False)
+            # with region, the default mode becomes r+
+            both_modified.to_zarr(store, region={"x": slice(None)})
+            with self.open(store) as actual:
+                assert_identical(actual, only_new_data)
 
     def test_write_region_errors(self):
         data = Dataset({"u": (("x",), np.arange(5))})
@@ -2229,12 +2295,11 @@ class ZarrBase(CFEncodedBase):
             data2.to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with pytest.raises(ValueError, match=r"cannot use consolidated=True"):
-                data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
-
-        with setup_and_verify_store() as store:
             with pytest.raises(
-                ValueError, match=r"cannot set region unless mode='a' or mode=None"
+                ValueError,
+                match=re.escape(
+                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                ),
             ):
                 data.to_zarr(store, region={"x": slice(None)}, mode="w")
 
@@ -2308,10 +2373,10 @@ class ZarrBase(CFEncodedBase):
     def test_open_zarr_use_cftime(self):
         ds = create_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, consolidated=True)
-            ds_a = xr.open_zarr(store_target, consolidated=True)
+            ds.to_zarr(store_target)
+            ds_a = xr.open_zarr(store_target)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
+            ds_b = xr.open_zarr(store_target, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
 
@@ -2771,7 +2836,9 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with pytest.raises(ValueError, match=r"cannot guess the engine"):
+        with pytest.raises(
+            ValueError, match=r"match in any of xarray's currently installed IO"
+        ):
             with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
@@ -2823,7 +2890,10 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(ValueError, match="cannot guess the engine"):
+                with pytest.raises(
+                    ValueError,
+                    match="match in any of xarray's currently installed IO",
+                ):
                     with pytest.warns(
                         RuntimeWarning,
                         match=re.escape("'h5netcdf' fails while guessing"),
@@ -5050,6 +5120,7 @@ def test_extract_zarr_variable_encoding():
 
 @requires_zarr
 @requires_fsspec
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_open_fsspec():
     import fsspec
     import zarr

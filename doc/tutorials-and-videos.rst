@@ -19,7 +19,13 @@ Videos
   :card: text-center
 
   ---
+  Xdev Python Tutorial Seminar Series 2021 seminar introducing Xarray (1 of 2) | Anderson Banihirwe
+  ^^^
+  .. raw:: html
 
+    <iframe width="100%" src="https://www.youtube.com/embed/Ss4ryKukhi4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+  ---
   Xarray's virtual tutorial | October 2020 | Anderson Banihirwe, Deepak Cherian, and Martin Durant
   ^^^
   .. raw:: html
@@ -48,7 +54,6 @@ Videos
   .. raw:: html
 
     <iframe width="100%" src="https://www.youtube.com/embed/J9ypQOnt5l8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
 
 Books, Chapters and Articles
 -----------------------------

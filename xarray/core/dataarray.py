@@ -1,6 +1,5 @@
 import datetime
 import warnings
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -44,6 +43,7 @@ from .alignment import (
 )
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
+from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
@@ -51,7 +51,13 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import Index, Indexes, PandasIndex, default_indexes, propagate_indexes
+from .indexes import (
+    Index,
+    Indexes,
+    default_indexes,
+    propagate_indexes,
+    wrap_pandas_index,
+)
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -1005,7 +1011,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
             # xarray Index needs a copy method.
             indexes = {
-                k: PandasIndex(v.to_pandas_index().copy(deep=deep))
+                k: wrap_pandas_index(v.to_pandas_index().copy(deep=deep))
                 for k, v in self._indexes.items()
             }
         return self._replace(variable, coords, indexes=indexes)
@@ -1032,10 +1038,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def chunk(
         self,
         chunks: Union[
-            Number,
-            Tuple[Number, ...],
-            Tuple[Tuple[Number, ...], ...],
-            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+            int,
+            Tuple[int, ...],
+            Tuple[Tuple[int, ...], ...],
+            Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1102,7 +1108,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2222,7 +2228,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         Returns
@@ -3680,8 +3686,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         dask.array.core.unify_chunks
         """
-        ds = self._to_temp_dataset().unify_chunks()
-        return self._from_temp_dataset(ds)
+
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,
@@ -4452,7 +4458,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             What to do if dimensions that should be selected from are not present in the
             Dataset:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **queries_kwargs : {dim: query, ...}, optional
             The keyword arguments form of ``queries``.
