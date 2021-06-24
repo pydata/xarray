@@ -441,9 +441,24 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         raise ValueError("cannot use subplot_kws with existing ax")
 
     if ax is None:
-        ax = plt.gca(**kwargs)
+        ax = _maybe_gca(**kwargs)
 
     return ax
+
+
+def _maybe_gca(**kwargs):
+
+    import matplotlib.pyplot as plt
+
+    # can call gcf unconditionally: either it exists or would be created by plt.axes
+    f = plt.gcf()
+
+    # only call gca if an active axes exists
+    if f.axes:
+        # can not pass kwargs to active axes
+        return plt.gca()
+
+    return plt.axes(**kwargs)
 
 
 def label_from_attrs(da, extra=""):
@@ -589,7 +604,14 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
+    numpy_types = [
+        np.floating,
+        np.integer,
+        np.timedelta64,
+        np.datetime64,
+        np.bool_,
+        np.str_,
+    ]
     other_types = [datetime]
     try:
         import cftime

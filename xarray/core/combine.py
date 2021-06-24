@@ -432,8 +432,9 @@ def combine_nested(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "drop"
-        String indicating how to combine attrs of the objects being merged:
+                     "override"} or callable, default: "drop"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
@@ -443,6 +444,9 @@ def combine_nested(
           the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
@@ -646,8 +650,9 @@ def combine_by_coords(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "drop"
-        String indicating how to combine attrs of the objects being merged:
+                     "override"} or callable, default: "drop"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
@@ -657,6 +662,9 @@ def combine_by_coords(
           the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
@@ -674,7 +682,6 @@ def combine_by_coords(
     Combining two datasets using their common dimension coordinates. Notice
     they are concatenated based on the values in their dimension coordinates,
     not on their position in the list passed to `combine_by_coords`.
-
 
     >>> x1 = xr.Dataset(
     ...     {
@@ -700,7 +707,7 @@ def combine_by_coords(
 
     >>> x1
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 0 1
       * x              (x) int64 10 20 30
@@ -710,7 +717,7 @@ def combine_by_coords(
 
     >>> x2
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 2 3
       * x              (x) int64 10 20 30
@@ -720,7 +727,7 @@ def combine_by_coords(
 
     >>> x3
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 2)
+    Dimensions:        (y: 2, x: 3)
     Coordinates:
       * y              (y) int64 2 3
       * x              (x) int64 40 50 60
@@ -730,7 +737,7 @@ def combine_by_coords(
 
     >>> xr.combine_by_coords([x2, x1])
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 4)
+    Dimensions:        (y: 4, x: 3)
     Coordinates:
       * y              (y) int64 0 1 2 3
       * x              (x) int64 10 20 30
@@ -740,30 +747,30 @@ def combine_by_coords(
 
     >>> xr.combine_by_coords([x3, x1])
     <xarray.Dataset>
-    Dimensions:        (x: 6, y: 4)
+    Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30 40 50 60
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... nan 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x3, x1], join="override")
     <xarray.Dataset>
-    Dimensions:        (x: 3, y: 4)
+    Dimensions:        (y: 2, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30
-      * y              (y) int64 0 1 2 3
+      * y              (y) int64 0 1
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
-        temperature    (y, x) float64 10.98 14.3 12.06 10.9 ... 18.89 10.44 8.293
+        temperature    (y, x) float64 10.98 14.3 12.06 2.365 ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
 
     >>> xr.combine_by_coords([x1, x2, x3])
     <xarray.Dataset>
-    Dimensions:        (x: 6, y: 4)
+    Dimensions:        (y: 4, x: 6)
     Coordinates:
-      * x              (x) int64 10 20 30 40 50 60
       * y              (y) int64 0 1 2 3
+      * x              (x) int64 10 20 30 40 50 60
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176

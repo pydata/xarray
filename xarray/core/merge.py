@@ -57,6 +57,13 @@ _VALID_COMPAT = Frozen(
 )
 
 
+class Context:
+    """object carrying the information of a call"""
+
+    def __init__(self, func):
+        self.func = func
+
+
 def broadcast_dimension_size(variables: List[Variable]) -> Dict[Hashable, int]:
     """Extract dimension sizes from a dictionary of variables.
 
@@ -502,13 +509,15 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
             )
 
 
-def merge_attrs(variable_attrs, combine_attrs):
+def merge_attrs(variable_attrs, combine_attrs, context=None):
     """Combine attributes from different variables according to combine_attrs"""
     if not variable_attrs:
         # no attributes to merge
         return None
 
-    if combine_attrs == "drop":
+    if callable(combine_attrs):
+        return combine_attrs(variable_attrs, context=context)
+    elif combine_attrs == "drop":
         return {}
     elif combine_attrs == "override":
         return dict(variable_attrs[0])
@@ -585,7 +594,7 @@ def merge_core(
     join : {"outer", "inner", "left", "right"}, optional
         How to combine objects with different indexes.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, optional
+                     "override"} or callable, default: "override"
         How to combine attributes of objects
     priority_arg : int, optional
         Optional argument in `objects` that takes precedence over the others.
@@ -696,8 +705,9 @@ def merge(
         variable names to fill values. Use a data array's name to
         refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                     "override"}, default: "override"
-        String indicating how to combine attrs of the objects being merged:
+                    "override"} or callable, default: "override"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
 
         - "drop": empty attrs on returned Dataset.
         - "identical": all attrs must be the same on every object.
@@ -707,6 +717,9 @@ def merge(
           the same name but different values are dropped.
         - "override": skip comparing and copy attrs from the first dataset to
           the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
@@ -867,6 +880,8 @@ def merge(
     See also
     --------
     concat
+    combine_nested
+    combine_by_coords
     """
     from .dataarray import DataArray
     from .dataset import Dataset

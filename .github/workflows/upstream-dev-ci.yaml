@@ -2,10 +2,10 @@ name: CI Upstream
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger the workflow run manually
@@ -33,8 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-ci-trigger
     if: |
-        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        || needs.detect-ci-trigger.outputs.triggered == 'true'
+        always()
+        && (
+            (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+            || needs.detect-ci-trigger.outputs.triggered == 'true'
+        )
     defaults:
       run:
         shell: bash -l {0}
@@ -95,7 +98,8 @@ jobs:
     name: report
     needs: upstream-dev
     if: |
-      github.event_name == 'schedule'
+      failure()
+      && github.event_name == 'schedule'
       && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
     defaults:

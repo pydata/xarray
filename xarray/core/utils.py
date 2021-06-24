@@ -6,6 +6,7 @@ import io
 import itertools
 import os
 import re
+import sys
 import warnings
 from enum import Enum
 from typing import (
@@ -30,6 +31,12 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
+
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -107,6 +114,8 @@ def safe_cast_to_index(array: Any) -> pd.Index:
         index = array
     elif hasattr(array, "to_index"):
         index = array.to_index()
+    elif hasattr(array, "to_pandas_index"):
+        index = array.to_pandas_index()
     else:
         kwargs = {}
         if hasattr(array, "dtype") and array.dtype.kind == "O":
@@ -288,7 +297,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def is_scalar(value: Any, include_0d: bool = True) -> bool:
+def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
     """Whether to treat a value as a scalar.
 
     Any non-iterable, string, or 0-D array
@@ -473,40 +482,6 @@ class HybridMappingProxy(Mapping[K, V]):
 
     def __len__(self) -> int:
         return len(self._keys)
-
-
-class SortedKeysDict(MutableMapping[K, V]):
-    """An wrapper for dictionary-like objects that always iterates over its
-    items in sorted order by key but is otherwise equivalent to the underlying
-    mapping.
-    """
-
-    __slots__ = ("mapping",)
-
-    def __init__(self, mapping: MutableMapping[K, V] = None):
-        self.mapping = {} if mapping is None else mapping
-
-    def __getitem__(self, key: K) -> V:
-        return self.mapping[key]
-
-    def __setitem__(self, key: K, value: V) -> None:
-        self.mapping[key] = value
-
-    def __delitem__(self, key: K) -> None:
-        del self.mapping[key]
-
-    def __iter__(self) -> Iterator[K]:
-        # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore[type-var]
-
-    def __len__(self) -> int:
-        return len(self.mapping)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self.mapping
-
-    def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
 
 
 class OrderedSet(MutableSet[T]):
