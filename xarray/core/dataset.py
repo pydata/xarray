@@ -3889,14 +3889,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ----------
         new_dim : hashable
             Name of the new stacked coordinate
-        sample_dims : sequence of hashable
-            Dimensions that **will not** be stacked. Each array in the dataset
-            must share these dimensions. For machine learning applications,
-            these define the dimensions over which samples are drawn.
-        variable_dim : str, optional
+        sample_dims : Collection of hashables
+            List of dimensions that **will not** be stacked. Each array in the
+            dataset must share these dimensions. For machine learning
+            applications, these define the dimensions over which samples are
+            drawn.
+        variable_dim : hashable, optional
             Name of the level in the stacked coordinate which corresponds to
             the variables.
-        name : str, optional
+        name : hashable, optional
             Name of the new data array.
 
         Returns
