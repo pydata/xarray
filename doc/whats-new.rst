@@ -22,6 +22,8 @@ v0.18.3 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Xarray now uses consolidated metadata by default when writing and reading Zarr
   stores (:issue:`5251`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
