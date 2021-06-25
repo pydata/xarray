@@ -88,6 +88,9 @@ Internal Changes
 - Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
   (:pull:`5433`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Publish test results & timings on each PR.
+  (:pull:`5537`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
