@@ -877,7 +877,22 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
+class DatasetGroupByCombine(GroupBy):
+    def _combine(self, applied):
+        """Recombine the applied objects like the original."""
+        applied_example, applied = peek_at(applied)
+        coord, dim, positions = self._infer_concat_args(applied_example)
+        combined = concat(applied, dim)
+        combined = _maybe_reorder(combined, dim, positions)
+        # assign coord when the applied function does not return that coord
+        if coord is not None and dim not in applied_example.dims:
+            combined[coord.name] = coord
+        combined = self._maybe_restore_empty_groups(combined)
+        combined = self._maybe_unstack(combined)
+        return combined
+
+
+class DatasetGroupBy(DatasetGroupByCombine, DatasetGroupbyArithmetic):
 
     __slots__ = ()
 
@@ -931,19 +946,6 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         )
         return self.map(func, shortcut=shortcut, args=args, **kwargs)
 
-    def _combine(self, applied):
-        """Recombine the applied objects like the original."""
-        applied_example, applied = peek_at(applied)
-        coord, dim, positions = self._infer_concat_args(applied_example)
-        combined = concat(applied, dim)
-        combined = _maybe_reorder(combined, dim, positions)
-        # assign coord when the applied function does not return that coord
-        if coord is not None and dim not in applied_example.dims:
-            combined[coord.name] = coord
-        combined = self._maybe_restore_empty_groups(combined)
-        combined = self._maybe_unstack(combined)
-        return combined
-
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -994,3 +996,53 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
+
+
+class WeightedDatasetGroupBy(DatasetGroupByCombine):
+    def __init__(
+        self,
+        obj,
+        weights,
+        group,
+        squeeze=False,
+        restore_coord_dims=None,
+    ):
+        # Only used for repr
+
+        weights_name = weights.name
+        if weights_name:
+            name_str = f"by {weights_name!r}"
+        else:
+            name_str = ""
+        weight_dims = ", ".join(weights.dims)
+
+        self.weights_repr = f"\nweighted along dimensions: {weight_dims} " f"{name_str}"
+        super().__init__(
+            # assigning as coords means weights get sliced out like
+            # groups
+            obj=obj.assign_coords({"__weights__": weights}),
+            group=group,
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
+        )
+
+    def __repr__(self):
+        return f"{super().__repr__()}" + self.weights_repr
+
+    def _reduce(self, func, dim=None, skipna=None, keep_attrs=None):
+        if dim is None:
+            dim = self._group_dim
+
+        applied = (
+            getattr(ds.weighted(ds.__weights__), func)(
+                dim=dim, skipna=skipna, keep_attrs=keep_attrs
+            )
+            for ds in super()._iter_grouped()
+        )
+        return super()._combine(applied)
+
+    def mean(self):
+        return self._reduce("mean")
+
+    def sum(self):
+        return self._reduce("sum")
