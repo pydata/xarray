@@ -367,7 +367,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "_cache")
 
     def __init__(self, array, key=None):
         """
@@ -404,7 +404,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
             return BasicIndexer(full_key)
         return OuterIndexer(full_key)
 
-    @property
+    @pd.util.cache_readonly
     def shape(self):
         shape = []
         for size, k in zip(self.array.shape, self.key.tuple):
