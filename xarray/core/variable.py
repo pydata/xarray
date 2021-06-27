@@ -1402,11 +1402,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         numpy.transpose
         """
-        ndim = len(dims)
-        if ndim == 0:
+        if len(dims) == 0:
             dims = self.dims[::-1]
         dims = tuple(infix_dims(dims, self.dims))
-        if ndim < 2 or dims == self.dims:
+        if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
