@@ -624,7 +624,7 @@ def interp(var, indexes_coords, method, **kwargs):
         destination = broadcast_variables(*new_x)
 
         interped = interp_func(var.data, x, destination, method, kwargs)
-        result = Variable(var.dims, interped, attrs=var.attrs)
+        result = Variable(destination[0].dims, interped, attrs=var.attrs)
 
     else:
         # decompose the interpolation into a succession of independant interpolation
