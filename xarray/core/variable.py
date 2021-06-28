@@ -1405,12 +1405,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if len(dims) == 0:
             dims = self.dims[::-1]
         dims = tuple(infix_dims(dims, self.dims))
-        axes = self.get_axis_num(dims)
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
+        axes = self.get_axis_num(dims)
         data = as_indexable(self._data).transpose(axes)
         return self._replace(dims=dims, data=data)
 
@@ -2158,7 +2158,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if not windows:
             return self._replace(attrs=_attrs)
 
-        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        reshaped, axes = self.coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
@@ -2167,7 +2167,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
-    def _coarsen_reshape(self, windows, boundary, side):
+    def coarsen_reshape(self, windows, boundary, side):
         """
         Construct a reshaped-array for coarsen
         """
@@ -2183,7 +2183,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError(f"window must be > 0. Given {window}")
+                raise ValueError(
+                    f"window must be > 0. Given {window} for dimension {d}"
+                )
 
         variable = self
         for d, window in windows.items():
@@ -2193,8 +2195,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if boundary[d] == "exact":
                 if n * window != size:
                     raise ValueError(
-                        "Could not coarsen a dimension of size {} with "
-                        "window {}".format(size, window)
+                        f"Could not coarsen a dimension of size {size} with "
+                        f"window {window} and boundary='exact'. Try a different 'boundary' option."
                     )
             elif boundary[d] == "trim":
                 if side[d] == "left":

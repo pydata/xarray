@@ -41,6 +41,7 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
+   core.rolling.DatasetCoarsen.construct
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
@@ -185,6 +186,7 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
+   core.rolling.DataArrayCoarsen.construct
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean

@@ -111,9 +111,9 @@ release is guaranteed to work.
 You can see the actual minimum tested versions:
 
 - `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-nep18.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-nep18.yml>`_
 - `For everything else
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-all-deps.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
 
 .. _installation-instructions:
 
