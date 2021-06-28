@@ -21,20 +21,44 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Undeprecate passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
-  reverts :pull:`1539`). By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
+  reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions). 
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Xarray now uses consolidated metadata by default when writing and reading Zarr
+  stores (:issue:`5251`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New top-level function :py:func:`unify_chunks`.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Allow assigning values to a subset of a dataset using positional or label-based
-  indexing (:issue:`3015`, :pull:`5362`). By `Matthias Göbel <https://github.com/matzegoebel>`_.
+  indexing (:issue:`3015`, :pull:`5362`).
+  By `Matthias Göbel <https://github.com/matzegoebel>`_.
 - Attempting to reduce a weighted object over missing dimensions now raises an error (:pull:`5362`).
   By `Mattia Almansi <https://github.com/malmans2>`_.
+- Add ``.sum`` to :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` for exponentially weighted rolling
+  sums. These require numbagg 0.2.1;
+  (:pull:`5178`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - :py:func:`xarray.cov` and :py:func:`xarray.corr` now lazily check for missing
   values if inputs are dask arrays (:issue:`4804`, :pull:`5284`).
   By `Andrew Williams <https://github.com/AndrewWilliams3142>`_.
-
+- Attempting to ``concat`` list of elements that are not all ``Dataset`` or all ``DataArray`` now raises an error (:issue:`5051`, :pull:`5425`).
+  By `Thomas Hirtz <https://github.com/thomashirtz>`_.
+- allow passing a function to ``combine_attrs`` (:pull:`4896`).
+  By `Justus Magin <https://github.com/keewis>`_.
+- Allow plotting categorical data (:pull:`5464`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
+  has changed to the new ``mode="r+"``, which only allows for overriding
+  pre-existing array values. This is a safer default than the prior ``mode="a"``,
+  and allows for higher performance writes (:pull:`5252`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -49,6 +73,9 @@ Bug fixes
 - Fix 1-level multi-index incorrectly converted to single index (:issue:`5384`,
   :pull:`5385`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Don't cast a duck array in a coordinate to :py:class:`numpy.ndarray` in
+  :py:meth:`DataArray.differentiate` (:pull:`5408`)
+  By `Justus Magin <https://github.com/keewis>`_.
 - Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
   (:pull:`5406`)
   By `Justus Magin <https://github.com/keewis>`_.
@@ -60,6 +87,19 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
+  (:pull:`5433`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Publish test results & timings on each PR.
+  (:pull:`5537`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
+  one may eventually provide a custom implementation of label-based data
+  selection (not ready yet for public use). Also refactor the internal,
+  pandas-specific implementation into ``PandasIndex.query()`` and
+  ``PandasMultiIndex.query()`` (:pull:`5322`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.0.18.2:
 
@@ -328,13 +368,11 @@ Bug fixes
 - Ensure standard calendar dates encoded with a calendar attribute with some or
   all uppercase letters can be decoded or encoded to or from
   ``np.datetime64[ns]`` dates with or without ``cftime`` installed
-  (:issue:`5093`, :pull:`5180`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-- Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
-  to the applied function instead (:pull:`5265`).  By `Mathias Hauser <https://github.com/mathause>`_.
-
   (:issue:`5093`, :pull:`5180`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Warn on passing ``keep_attrs`` to ``resample`` and ``rolling_exp`` as they are ignored, pass ``keep_attrs``
+  to the applied function instead (:pull:`5265`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -693,7 +731,7 @@ Documentation
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+- Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
@@ -1251,7 +1289,7 @@ Internal Changes
 v0.15.0 (30 Jan 2020)
 ---------------------
 
-This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
 
 This release also features many API improvements such as a new
@@ -3002,7 +3040,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
-  :doc:`faq` (:issue:`1726`).
+  :doc:`getting-started-guide/faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements

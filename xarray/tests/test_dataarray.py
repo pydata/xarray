@@ -4454,6 +4454,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
+    @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
@@ -6451,11 +6452,6 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
-def backend(request):
-    return request.param
-
-
 @pytest.fixture(params=[1])
 def da(request, backend):
     if request.param == 1:
@@ -6502,107 +6498,6 @@ def test_isin(da):
     ).astype("bool")
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "funcname, argument",
-    [
-        ("reduce", (np.mean,)),
-        ("mean", ()),
-    ],
-)
-def test_coarsen_keep_attrs(funcname, argument):
-    attrs_da = {"da_attr": "test"}
-    attrs_coords = {"attrs_coords": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(
-        data,
-        dims=("coord"),
-        coords={"coord": ("coord", coords, attrs_coords)},
-        attrs=attrs_da,
-        name="name",
-    )
-
-    # attrs are now kept per default
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument)
-    assert result.attrs == attrs_da
-    da.coord.attrs == attrs_coords
-    assert result.name == "name"
-
-    # discard attrs
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument, keep_attrs=False)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    # test discard attrs using global option
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    # keyword takes precedence over global option
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument, keep_attrs=True)
-    assert result.attrs == attrs_da
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=True):
-        result = func(*argument, keep_attrs=False)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-
-def test_coarsen_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-
-
-@pytest.mark.parametrize("da", (1, 2), indirect=True)
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
-@pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_coarsen_reduce(da, window, name):
-    if da.isnull().sum() > 1 and window == 1:
-        pytest.skip("These parameters lead to all-NaN slices")
-
-    # Use boundary="trim" to accomodate all window sizes used in tests
-    coarsen_obj = da.coarsen(time=window, boundary="trim")
-
-    # add nan prefix to numpy methods to get similar # behavior as bottleneck
-    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
-    expected = getattr(coarsen_obj, name)()
-    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
@@ -7277,9 +7172,31 @@ class TestIrisConversion:
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp(da, dim, window_type, window):
-    da = da.isel(a=0)
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_runs(da, dim, window_type, window, func):
+    import numbagg
+
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
+
     da = da.where(da > 0.2)
+
+    rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
+    result = getattr(rolling_exp, func)()
+    assert isinstance(result, DataArray)
+
+
+@requires_numbagg
+@pytest.mark.parametrize("dim", ["time", "x"])
+@pytest.mark.parametrize(
+    "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
+)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+def test_rolling_exp_mean_pandas(da, dim, window_type, window):
+    da = da.isel(a=0).where(lambda x: x > 0.2)
 
     result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
@@ -7297,30 +7214,42 @@ def test_rolling_exp(da, dim, window_type, window):
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_keep_attrs(da):
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_keep_attrs(da, func):
+    import numbagg
+
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
+
     attrs = {"attrs": "da"}
     da.attrs = attrs
 
+    # Equivalent of `da.rolling_exp(time=10).mean`
+    rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+
     # attrs are kept per default
-    result = da.rolling_exp(time=10).mean()
+    result = rolling_exp_func()
     assert result.attrs == attrs
 
     # discard attrs
-    result = da.rolling_exp(time=10).mean(keep_attrs=False)
+    result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     # test discard attrs using global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean()
+        result = rolling_exp_func()
     assert result.attrs == {}
 
     # keyword takes precedence over global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean(keep_attrs=True)
+        result = rolling_exp_func(keep_attrs=True)
     assert result.attrs == attrs
 
     with set_options(keep_attrs=True):
-        result = da.rolling_exp(time=10).mean(keep_attrs=False)
+        result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     with pytest.warns(

@@ -17,6 +17,7 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
+    _maybe_gca,
     get_axis,
     label_from_attrs,
 )
@@ -683,10 +684,9 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot.line)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray([1, 2, 3], {"letter": ["a", "b", "c"]}, dims="letter")
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
-            a.plot.line()
+        a.plot.line()
 
     def test_primitive_returned(self):
         p = self.darray.plot.line()
@@ -1161,9 +1161,13 @@ class Common2dMixin:
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
+        if self.plotfunc.__name__ == "surface":
+            # ax.plot_surface errors with nonnumerics:
+            with pytest.raises(Exception):
+                self.plotfunc(a)
+        else:
             self.plotfunc(a)
 
     def test_multiindex_raises_typeerror(self):
@@ -2580,7 +2584,6 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
-@pytest.mark.xfail(reason="recent versions of nc-time-axis and cftime are incompatible")
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
 @requires_cftime
@@ -2777,3 +2780,31 @@ def test_get_axis_cartopy():
     with figure_context():
         ax = get_axis(**kwargs)
         assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+def test_maybe_gca():
+
+    with figure_context():
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+
+        # create figure without axes
+        plt.figure()
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+        existing_axes = plt.axes()
+        ax = _maybe_gca(aspect=1)
+
+        # re-uses the existing axes
+        assert existing_axes == ax
+        # kwargs are ignored when reusing axes
+        assert ax.get_aspect() == "auto"

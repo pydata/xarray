@@ -8,6 +8,7 @@ Required dependencies
 
 - Python (3.7 or later)
 - setuptools (40.4 or later)
+- typing-extensions
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
@@ -110,9 +111,9 @@ release is guaranteed to work.
 You can see the actual minimum tested versions:
 
 - `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-nep18.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-nep18.yml>`_
 - `For everything else
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-all-deps.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
 
 .. _installation-instructions:
 
