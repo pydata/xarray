@@ -102,10 +102,10 @@ nbsphinx_execute = "always"
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
 
-You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/main?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/main/doc/{{ docname }}>`_.
 
 .. |Binder| image:: https://mybinder.org/badge.svg
-   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+   :target: https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/{{ docname }}
 """
 
 autosummary_generate = True
@@ -213,7 +213,7 @@ html_title = ""
 html_context = {
     "github_user": "pydata",
     "github_repo": "xarray",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "doc",
 }
 
@@ -224,7 +224,7 @@ html_theme_options = dict(
     # analytics_id=''  this is configured in rtfd.io
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
-    repository_branch="master",
+    repository_branch="main",
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
@@ -365,7 +365,7 @@ def linkcode_resolve(domain, info):
     fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
 
     if "+" in xarray.__version__:
-        return f"https://github.com/pydata/xarray/blob/master/xarray/{fn}{linespec}"
+        return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
     else:
         return (
             f"https://github.com/pydata/xarray/blob/"
