@@ -752,7 +752,12 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             )
 
         # if coordinates set to None, don't write coordinates attribute
-        if "coordinates" in attrs and attrs.get("coordinates") is None:
+        if (
+            "coordinates" in attrs
+            and attrs.get("coordinates") is None
+            or "coordinates" in encoding
+            and encoding.get("coordinates") is None
+        ):
             continue
 
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
@@ -776,7 +781,6 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # conventions, only do it if necessary.
     # Reference discussion:
     # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
-
     global_coordinates.difference_update(written_coords)
     if global_coordinates:
         attributes = dict(attributes)

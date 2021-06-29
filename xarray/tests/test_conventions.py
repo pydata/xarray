@@ -142,24 +142,33 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
-    def test_emit_coordinates_attribute(self):
+    def test_emit_coordinates_attribute_in_attrs(self):
         orig = Dataset(
-            {
-                "foo": (("x", "y"), np.random.randn(2, 3)),
-                "x": [10, 20],
-                "bar": ("x", [1, 2]),
-            }
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
         )
-        orig = orig.assign_coords(
-            {"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)}
-        )
-        orig = orig.assign({"a": 1})
-        orig = orig.assign({"b": 1})
 
         orig["a"].attrs["coordinates"] = None
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
-        # check coordiante attribute emitted for 'a'
+        # check coordinate attribute emitted for 'a'
+        assert enc["a"].attrs.get("coordinates") is None
+        assert enc["a"].encoding.get("coordinates") is None
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert enc["b"].encoding.get("coordinates") is None
+
+    def test_emit_coordinates_attribute_in_encoding(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
         assert enc["a"].attrs.get("coordinates") is None
         assert enc["a"].encoding.get("coordinates") is None
 
