@@ -1902,7 +1902,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -1958,7 +1958,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
