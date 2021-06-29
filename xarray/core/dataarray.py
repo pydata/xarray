@@ -3950,6 +3950,8 @@ class DataArray(AbstractArray, DataWithCoords):
           * y        (y) int64 10 20 30 40
             z        (x) float64 nan 100.0 200.0 nan
 
+        Specify coordinate labels for padded values by passing a tuple of sequences
+        
         >>> da.pad(x=([-2, -1], [2]))
         <xarray.DataArray (x: 5, y: 4)>
         array([[nan, nan, nan, nan],
