@@ -2838,7 +2838,7 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
     darray = xr.DataArray(ds[y], coords=coords)
 
     with figure_context():
-        darray.plot.scatter(
+        darray.plot._scatter(
             x=x,
             z=z,
             hue=hue,

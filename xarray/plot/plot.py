@@ -883,7 +883,7 @@ class _PlotMethods:
         return step(self._da, *args, **kwargs)
 
     @functools.wraps(scatter)
-    def scatter(self, *args, **kwargs):
+    def _scatter(self, *args, **kwargs):
         return scatter(self._da, *args, **kwargs)
 
 
