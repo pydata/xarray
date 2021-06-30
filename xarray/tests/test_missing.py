@@ -23,17 +23,7 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
-
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
+from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 
 
 @pytest.fixture
@@ -552,7 +542,6 @@ def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     np.testing.assert_array_equal(gi, si)
 
 
-@requires_cftime
 def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
@@ -603,10 +592,7 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize(
-    "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
-)
+@pytest.mark.parametrize("time_range_func", [pd.date_range, xr.cftime_range])
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]
