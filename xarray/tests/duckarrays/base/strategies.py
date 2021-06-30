@@ -6,15 +6,25 @@ from xarray.core.utils import is_dict_like
 
 from . import utils
 
-dtypes = (
-    npst.integer_dtypes()
-    | npst.unsigned_integer_dtypes()
-    | npst.floating_dtypes()
-    | npst.complex_number_dtypes()
-)
+
+@st.composite
+def all_dtypes(draw, single_dtype=False):
+    dtypes = (
+        npst.integer_dtypes()
+        | npst.unsigned_integer_dtypes()
+        | npst.floating_dtypes()
+        | npst.complex_number_dtypes()
+    )
+
+    if single_dtype:
+        return st.just(draw(dtypes))
+    else:
+        return dtypes
 
 
-def numpy_array(shape):
+def numpy_array(shape, dtypes=None):
+    if dtypes is None:
+        dtypes = all_dtypes()
     return npst.arrays(dtype=dtypes, shape=shape)
 
 
@@ -30,7 +40,15 @@ def dimension_sizes(min_dims, max_dims, min_size, max_size):
 
 @st.composite
 def variable(
-    draw, create_data, *, sizes=None, min_size=1, max_size=5, min_dims=1, max_dims=4
+    draw,
+    create_data,
+    *,
+    sizes=None,
+    min_size=1,
+    max_size=5,
+    min_dims=1,
+    max_dims=4,
+    dtypes=None,
 ):
     if sizes is None:
         sizes = draw(
@@ -47,14 +65,18 @@ def variable(
         shape = ()
     else:
         dims, shape = zip(*sizes)
-    data = create_data(shape)
+    data = create_data(shape, dtypes)
 
     return xr.Variable(dims, draw(data))
 
 
 @st.composite
-def data_array(draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_size=5):
+def data_array(
+    draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_size=5, dtypes=None
+):
     name = draw(st.none() | st.text(min_size=1))
+    if dtypes is None:
+        dtypes = all_dtypes()
 
     sizes = st.lists(
         elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
@@ -65,7 +87,7 @@ def data_array(draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_siz
     drawn_sizes = draw(sizes)
     dims, shape = zip(*drawn_sizes)
 
-    data = draw(create_data(shape))
+    data = draw(create_data(shape, dtypes))
 
     return xr.DataArray(
         data=data,
@@ -86,6 +108,7 @@ def dataset(
     min_vars=1,
     max_vars=5,
 ):
+    dtypes = all_dtypes(single_dtype=True)
     names = st.text(min_size=1)
     sizes = dimension_sizes(
         min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
@@ -94,7 +117,7 @@ def dataset(
     data_vars = sizes.flatmap(
         lambda s: st.dictionaries(
             keys=names.filter(lambda n: n not in dict(s)),
-            values=variable(create_data, sizes=s),
+            values=variable(create_data, sizes=s, dtypes=dtypes),
             min_size=min_vars,
             max_size=max_vars,
         )

@@ -20,7 +20,7 @@ class VariableReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape):
+    def create(op, shape, dtypes):
         return strategies.numpy_array(shape)
 
     @pytest.mark.parametrize(
@@ -42,7 +42,11 @@ class VariableReduceTests:
     )
     @given(st.data())
     def test_reduce(self, method, data):
-        var = data.draw(strategies.variable(lambda shape: self.create(method, shape)))
+        var = data.draw(
+            strategies.variable(
+                lambda shape, dtypes: self.create(method, shape, dtypes)
+            )
+        )
 
         reduce_dims = data.draw(strategies.valid_dims(var.dims))
 
@@ -62,8 +66,8 @@ class DataArrayReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape):
-        return strategies.numpy_array(shape)
+    def create(op, shape, dtypes):
+        return strategies.numpy_array(shape, dtypes)
 
     @pytest.mark.parametrize(
         "method",
@@ -84,7 +88,11 @@ class DataArrayReduceTests:
     )
     @given(st.data())
     def test_reduce(self, method, data):
-        arr = data.draw(strategies.data_array(lambda shape: self.create(method, shape)))
+        arr = data.draw(
+            strategies.data_array(
+                lambda shape, dtypes: self.create(method, shape, dtypes)
+            )
+        )
 
         reduce_dims = data.draw(strategies.valid_dims(arr.dims))
 
@@ -104,8 +112,8 @@ class DatasetReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape):
-        return strategies.numpy_array(shape)
+    def create(op, shape, dtypes):
+        return strategies.numpy_array(shape, dtypes)
 
     @pytest.mark.parametrize(
         "method",
@@ -127,7 +135,9 @@ class DatasetReduceTests:
     @given(st.data())
     def test_reduce(self, method, data):
         ds = data.draw(
-            strategies.dataset(lambda shape: self.create(method, shape), max_size=5)
+            strategies.dataset(
+                lambda shape, dtypes: self.create(method, shape, dtypes), max_size=5
+            )
         )
 
         reduce_dims = data.draw(strategies.valid_dims(ds.dims))
