@@ -735,33 +735,25 @@ def interp_func(var, x, new_x, method, kwargs):
             dtype = var.dtype
 
         if dask_version < "2020.12":
+            # Using meta and dtype at the same doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
-            return da.blockwise(
-                _dask_aware_interpnd,
-                out_ind,
-                *args,
-                interp_func=func,
-                interp_kwargs=kwargs,
-                localize=localize,
-                concatenate=True,
-                dtype=dtype,
-                new_axes=new_axes,
-                align_arrays=False,
-            )
+            meta = None
         else:
-            return da.blockwise(
-                _dask_aware_interpnd,
-                out_ind,
-                *args,
-                interp_func=func,
-                interp_kwargs=kwargs,
-                localize=localize,
-                concatenate=True,
-                dtype=dtype,
-                new_axes=new_axes,
-                meta=var._meta,
-                align_arrays=False,
-            )
+            meta = var._meta
+
+        return da.blockwise(
+            _dask_aware_interpnd,
+            out_ind,
+            *args,
+            interp_func=func,
+            interp_kwargs=kwargs,
+            localize=localize,
+            concatenate=True,
+            dtype=dtype,
+            new_axes=new_axes,
+            meta=meta,
+            align_arrays=False,
+        )
 
     return _interpnd(var, x, new_x, func, kwargs)
 
