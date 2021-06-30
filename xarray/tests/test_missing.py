@@ -25,10 +25,11 @@ from xarray.tests import (
 )
 
 try:
-	import cftime
-	from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
+    import cftime
+
+    from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 except ImportError:
-	_CFTIME_CALENDARS = []
+    _CFTIME_CALENDARS = []
 
 
 @pytest.fixture
