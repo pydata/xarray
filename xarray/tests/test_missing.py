@@ -36,6 +36,7 @@ _CFTIME_CALENDARS = [
     "standard",
 ]
 
+
 @pytest.fixture
 def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
