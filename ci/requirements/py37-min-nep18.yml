@@ -20,4 +20,3 @@ dependencies:
   - scipy=1.3
   - setuptools=40.4
   - sparse=0.8
-  - cftime=1.1
