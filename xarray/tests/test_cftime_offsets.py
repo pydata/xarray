@@ -28,7 +28,6 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.tests import _CFTIME_CALENDARS
 
-
 cftime = pytest.importorskip("cftime")
 
 
