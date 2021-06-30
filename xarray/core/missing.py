@@ -735,7 +735,7 @@ def interp_func(var, x, new_x, method, kwargs):
             dtype = var.dtype
 
         if dask_version < "2020.12":
-            # Using meta and dtype at the same doesn't work.
+            # Using meta and dtype at the same time doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
             meta = None
         else:
