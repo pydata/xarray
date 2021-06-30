@@ -7,8 +7,8 @@ dependencies:
   # require drastically newer packages than everything else
   - python=3.7
   - coveralls
-  - dask=2.30
-  - distributed=2.30
+  - dask=2020.12
+  - distributed=2020.12
   - numpy=1.17
   - pandas=0.25
   - pint=0.15

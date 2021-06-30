@@ -15,8 +15,8 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.1
   - coveralls
-  - dask=2.30
-  - distributed=2.30
+  - dask=2020.12
+  - distributed=2020.12
   - h5netcdf=0.8
   - h5py=2.10
   - hdf5=1.10
