@@ -14,6 +14,7 @@ from xarray.core.missing import (
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
+    _CFTIME_CALENDARS,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -23,13 +24,6 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
-
-try:
-    import cftime  # type: ignore # noqa
-
-    from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
-except ImportError:
-    _CFTIME_CALENDARS = []
 
 
 @pytest.fixture
