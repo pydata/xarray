@@ -20,6 +20,14 @@ pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
 
 all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
 
+tolerances = {
+    np.float64: 1e-8,
+    np.float32: 1e-4,
+    np.float16: 1e-2,
+    np.complex128: 1e-8,
+    np.complex64: 1e-4,
+}
+
 
 def apply_func(op, var, *args, **kwargs):
     dim = kwargs.pop("dim", None)
