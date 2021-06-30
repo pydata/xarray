@@ -24,7 +24,6 @@ from xarray.tests import (
     requires_scipy,
 )
 
-
 _CFTIME_CALENDARS = [
     "365_day",
     "360_day",
