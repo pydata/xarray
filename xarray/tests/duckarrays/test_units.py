@@ -135,7 +135,8 @@ class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
             note(f"expected:\n{expected}")
 
             assert_units_equal(actual, expected)
-            assert_allclose(actual, expected)
+            tol = tolerances.get(obj.dtype.name, 1e-8)
+            assert_allclose(actual, expected, atol=tol)
 
 
 @pytest.mark.apply_marks(

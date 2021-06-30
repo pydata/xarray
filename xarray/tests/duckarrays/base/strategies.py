@@ -17,7 +17,18 @@ all_dtypes = (
 def numpy_array(shape, dtypes=None):
     if dtypes is None:
         dtypes = all_dtypes
-    return npst.arrays(dtype=dtypes, shape=shape)
+
+    def elements(dtype):
+        max_value = 100
+        min_value = 0 if dtype.kind == "u" else -max_value
+
+        return npst.from_dtype(
+            dtype, allow_infinity=False, min_value=min_value, max_value=max_value
+        )
+
+    return dtypes.flatmap(
+        lambda dtype: npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype))
+    )
 
 
 def dimension_sizes(min_dims, max_dims, min_size, max_size):
