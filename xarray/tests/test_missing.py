@@ -24,16 +24,11 @@ from xarray.tests import (
     requires_scipy,
 )
 
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
+try:
+	import cftime
+	from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
+except ImportError:
+	_CFTIME_CALENDARS = []
 
 
 @pytest.fixture
