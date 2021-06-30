@@ -758,6 +758,9 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             or "coordinates" in encoding
             and encoding.get("coordinates") is None
         ):
+            # make sure "coordinates" is removed from attrs/encoding
+            attrs.pop("coordinates", None)
+            encoding.pop("coordinates", None)
             continue
 
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs

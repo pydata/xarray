@@ -152,12 +152,12 @@ class TestEncodeCFVariable:
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
         # check coordinate attribute emitted for 'a'
-        assert enc["a"].attrs.get("coordinates") is None
-        assert enc["a"].encoding.get("coordinates") is None
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
 
         # check coordinate attribute not emitted for 'b'
         assert enc["b"].attrs.get("coordinates") == "t"
-        assert enc["b"].encoding.get("coordinates") is None
+        assert "coordinates" not in enc["b"].encoding
 
     def test_emit_coordinates_attribute_in_encoding(self):
         orig = Dataset(
@@ -169,12 +169,12 @@ class TestEncodeCFVariable:
         enc, _ = conventions.encode_dataset_coordinates(orig)
 
         # check coordinate attribute emitted for 'a'
-        assert enc["a"].attrs.get("coordinates") is None
-        assert enc["a"].encoding.get("coordinates") is None
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
 
         # check coordinate attribute not emitted for 'b'
         assert enc["b"].attrs.get("coordinates") == "t"
-        assert enc["b"].encoding.get("coordinates") is None
+        assert "coordinates" not in enc["b"].encoding
 
     @requires_dask
     def test_string_object_warning(self):
