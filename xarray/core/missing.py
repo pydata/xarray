@@ -13,7 +13,7 @@ from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import _get_keep_attrs
-from .pycompat import is_duck_dask_array
+from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -734,19 +734,34 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
-        return da.blockwise(
-            _dask_aware_interpnd,
-            out_ind,
-            *args,
-            interp_func=func,
-            interp_kwargs=kwargs,
-            localize=localize,
-            concatenate=True,
-            dtype=dtype,
-            new_axes=new_axes,
-            meta=var._meta,
-            align_arrays=False,
-        )
+        if dask_version < "2020.12":
+            # Remove this whenever the minimum requirement for dask is 2020.12:
+            return da.blockwise(
+                _dask_aware_interpnd,
+                out_ind,
+                *args,
+                interp_func=func,
+                interp_kwargs=kwargs,
+                localize=localize,
+                concatenate=True,
+                dtype=dtype,
+                new_axes=new_axes,
+                align_arrays=False,
+            )
+        else:
+            return da.blockwise(
+                _dask_aware_interpnd,
+                out_ind,
+                *args,
+                interp_func=func,
+                interp_kwargs=kwargs,
+                localize=localize,
+                concatenate=True,
+                dtype=dtype,
+                new_axes=new_axes,
+                meta=var._meta,
+                align_arrays=False,
+            )
 
     return _interpnd(var, x, new_x, func, kwargs)
 
