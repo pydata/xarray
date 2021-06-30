@@ -25,7 +25,7 @@ from xarray.tests import (
 )
 
 try:
-    import cftime
+    import cftime  # flake8: noqa
 
     from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 except ImportError:
