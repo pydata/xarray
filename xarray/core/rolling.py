@@ -535,7 +535,7 @@ class DataArrayRolling(Rolling):
             del kwargs["dim"]
 
         if (
-            OPTIONS["USE_BOTTLENECK"]
+            OPTIONS["use_bottleneck"]
             and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1

@@ -140,7 +140,7 @@ def _create_bottleneck_method(name, npmodule=np):
 
         if (
             _USE_BOTTLENECK
-            and OPTIONS["USE_BOTTLENECK"]
+            and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
             and not isinstance(axis, tuple)
