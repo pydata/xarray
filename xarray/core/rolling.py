@@ -1,4 +1,5 @@
 import functools
+import itertools
 import warnings
 from typing import Any, Callable, Dict
 
@@ -6,9 +7,9 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
-from .dask_array_ops import dask_rolling_wrapper
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -173,11 +174,10 @@ class Rolling:
         if utils.is_dict_like(arg):
             if allow_default:
                 return [arg.get(d, default) for d in self.dim]
-            else:
-                for d in self.dim:
-                    if d not in arg:
-                        raise KeyError(f"argument has no key {d}.")
-                return [arg[d] for d in self.dim]
+            for d in self.dim:
+                if d not in arg:
+                    raise KeyError(f"argument has no key {d}.")
+            return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
         elif len(self.dim) == 1:
@@ -439,7 +439,6 @@ class DataArrayRolling(Rolling):
             obj = self.obj.fillna(fillna)
         else:
             obj = self.obj
-
         windows = self._construct(
             obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
         )
@@ -504,9 +503,6 @@ class DataArrayRolling(Rolling):
 
         if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
-            values = dask_rolling_wrapper(
-                func, padded.data, window=self.window[0], min_count=min_count, axis=axis
-            )
         else:
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -549,20 +545,17 @@ class DataArrayRolling(Rolling):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
-        else:
-            if rolling_agg_func:
-                return rolling_agg_func(
-                    self, keep_attrs=self._get_keep_attrs(keep_attrs)
-                )
-            if fillna is not None:
-                if fillna is dtypes.INF:
-                    fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
-                elif fillna is dtypes.NINF:
-                    fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
-                kwargs.setdefault("skipna", False)
-                kwargs.setdefault("fillna", fillna)
+        if rolling_agg_func:
+            return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+        if fillna is not None:
+            if fillna is dtypes.INF:
+                fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
+            elif fillna is dtypes.NINF:
+                fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
+            kwargs.setdefault("skipna", False)
+            kwargs.setdefault("fillna", fillna)
 
-            return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
+        return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetRolling(Rolling):
@@ -612,7 +605,7 @@ class DatasetRolling(Rolling):
                     dims.append(d)
                     center[d] = self.center[i]
 
-            if len(dims) > 0:
+            if dims:
                 w = {d: windows[d] for d in dims}
                 self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
@@ -735,7 +728,7 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
-            if len(dims) > 0:
+            if dims:
                 wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
                 st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
 
@@ -853,6 +846,109 @@ class Coarsen(CoarsenArithmetic):
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+
+    def construct(
+        self,
+        window_dim=None,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
+        """
+        Convert this Coarsen object to a DataArray or Dataset,
+        where the coarsening dimension is split or reshaped to two
+        new dimensions.
+
+        Parameters
+        ----------
+        window_dim: mapping
+            A mapping from existing dimension name to new dimension names.
+            The size of the second dimension will be the length of the
+            coarsening window.
+        keep_attrs: bool, optional
+            Preserve attributes if True
+        **window_dim_kwargs : {dim: new_name, ...}
+            The keyword arguments form of ``window_dim``.
+
+        Returns
+        -------
+        Dataset or DataArray with reshaped dimensions
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(24), dims="time")
+        >>> da.coarsen(time=12).construct(time=("year", "month"))
+        <xarray.DataArray (year: 2, month: 12)>
+        array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+               [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
+        Dimensions without coordinates: year, month
+
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
+        """
+
+        from .dataarray import DataArray
+        from .dataset import Dataset
+
+        window_dim = either_dict_or_kwargs(
+            window_dim, window_dim_kwargs, "Coarsen.construct"
+        )
+        if not window_dim:
+            raise ValueError(
+                "Either window_dim or window_dim_kwargs need to be specified."
+            )
+
+        bad_new_dims = tuple(
+            win
+            for win, dims in window_dim.items()
+            if len(dims) != 2 or isinstance(dims, str)
+        )
+        if bad_new_dims:
+            raise ValueError(
+                f"Please provide exactly two dimension names for the following coarsening dimensions: {bad_new_dims}"
+            )
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        missing_dims = set(window_dim) - set(self.windows)
+        if missing_dims:
+            raise ValueError(
+                f"'window_dim' must contain entries for all dimensions to coarsen. Missing {missing_dims}"
+            )
+        extra_windows = set(self.windows) - set(window_dim)
+        if extra_windows:
+            raise ValueError(
+                f"'window_dim' includes dimensions that will not be coarsened: {extra_windows}"
+            )
+
+        reshaped = Dataset()
+        if isinstance(self.obj, DataArray):
+            obj = self.obj._to_temp_dataset()
+        else:
+            obj = self.obj
+
+        reshaped.attrs = obj.attrs if keep_attrs else {}
+
+        for key, var in obj.variables.items():
+            reshaped_dims = tuple(
+                itertools.chain(*[window_dim.get(dim, [dim]) for dim in list(var.dims)])
+            )
+            if reshaped_dims != var.dims:
+                windows = {w: self.windows[w] for w in window_dim if w in var.dims}
+                reshaped_var, _ = var.coarsen_reshape(windows, self.boundary, self.side)
+                attrs = var.attrs if keep_attrs else {}
+                reshaped[key] = (reshaped_dims, reshaped_var, attrs)
+            else:
+                reshaped[key] = var
+
+        should_be_coords = set(window_dim) & set(self.obj.coords)
+        result = reshaped.set_coords(should_be_coords)
+        if isinstance(self.obj, DataArray):
+            return self.obj._from_temp_dataset(result)
+        else:
+            return result
 
 
 class DataArrayCoarsen(Coarsen):

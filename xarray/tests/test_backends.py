@@ -1,8 +1,10 @@
 import contextlib
+import gzip
 import itertools
 import math
 import os.path
 import pickle
+import re
 import shutil
 import sys
 import tempfile
@@ -30,9 +32,14 @@ from xarray import (
     save_mfdataset,
 )
 from xarray.backends.common import robust_getitem
+from xarray.backends.h5netcdf_ import H5netcdfBackendEntrypoint
 from xarray.backends.netcdf3 import _nc3_dtype_coercions
-from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
+from xarray.backends.netCDF4_ import (
+    NetCDF4BackendEntrypoint,
+    _extract_nc4_variable_encoding,
+)
 from xarray.backends.pydap_ import PydapDataStore
+from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexes, indexing
@@ -1671,6 +1678,9 @@ class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
+    def create_zarr_target(self):
+        raise NotImplementedError
+
     @contextlib.contextmanager
     def create_store(self):
         with self.create_zarr_target() as store_target:
@@ -1697,8 +1707,8 @@ class ZarrBase(CFEncodedBase):
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
 
-    def test_roundtrip_consolidated(self):
-        pytest.importorskip("zarr", minversion="2.2.1.dev2")
+    @pytest.mark.parametrize("consolidated", [False, True, None])
+    def test_roundtrip_consolidated(self, consolidated):
         expected = create_test_data()
         with self.roundtrip(
             expected,
@@ -1707,6 +1717,17 @@ class ZarrBase(CFEncodedBase):
         ) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
+
+    def test_read_non_consolidated_warning(self):
+        expected = create_test_data()
+        with self.create_zarr_target() as store:
+            expected.to_zarr(store, consolidated=False)
+            with pytest.warns(
+                RuntimeWarning,
+                match="Failed to open Zarr store with consolidated",
+            ):
+                with xr.open_zarr(store) as ds:
+                    assert_identical(ds, expected)
 
     def test_with_chunkstore(self):
         expected = create_test_data()
@@ -2022,6 +2043,25 @@ class ZarrBase(CFEncodedBase):
     def test_append_write(self):
         super().test_append_write()
 
+    def test_append_with_mode_rplus_success(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"foo": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            modified.to_zarr(store, mode="r+")
+            with self.open(store) as actual:
+                assert_identical(actual, modified)
+
+    def test_append_with_mode_rplus_fails(self):
+        original = Dataset({"foo": ("x", [1])})
+        modified = Dataset({"bar": ("x", [2])})
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            with pytest.raises(
+                ValueError, match="dataset contains non-pre-existing variables"
+            ):
+                modified.to_zarr(store, mode="r+")
+
     def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
@@ -2178,31 +2218,64 @@ class ZarrBase(CFEncodedBase):
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
                 region = {"x": slice(i, i + 2)}
-                nonzeros.isel(region).to_zarr(store, region=region)
+                nonzeros.isel(region).to_zarr(
+                    store, region=region, consolidated=consolidated
+                )
             with xr.open_zarr(store, consolidated=consolidated) as actual:
                 assert_identical(actual, nonzeros)
 
+    @pytest.mark.parametrize("mode", [None, "r+", "a"])
+    def test_write_region_mode(self, mode):
+        zeros = Dataset({"u": (("x",), np.zeros(10))})
+        nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
+        with self.create_zarr_target() as store:
+            zeros.to_zarr(store)
+            for region in [{"x": slice(5)}, {"x": slice(5, 10)}]:
+                nonzeros.isel(region).to_zarr(store, region=region, mode=mode)
+            with xr.open_zarr(store) as actual:
+                assert_identical(actual, nonzeros)
+
     @requires_dask
-    def test_write_region_metadata(self):
-        """Metadata should not be overwritten in "region" writes."""
-        template = Dataset(
-            {"u": (("x",), np.zeros(10), {"variable": "template"})},
-            attrs={"global": "template"},
+    def test_write_preexisting_override_metadata(self):
+        """Metadata should be overriden if mode="a" but not in mode="r+"."""
+        original = Dataset(
+            {"u": (("x",), np.zeros(10), {"variable": "original"})},
+            attrs={"global": "original"},
         )
-        data = Dataset(
-            {"u": (("x",), np.arange(1, 11), {"variable": "data"})},
-            attrs={"global": "data"},
+        both_modified = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "modified"})},
+            attrs={"global": "modified"},
         )
-        expected = Dataset(
-            {"u": (("x",), np.arange(1, 11), {"variable": "template"})},
-            attrs={"global": "template"},
+        global_modified = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "original"})},
+            attrs={"global": "modified"},
+        )
+        only_new_data = Dataset(
+            {"u": (("x",), np.ones(10), {"variable": "original"})},
+            attrs={"global": "original"},
         )
 
         with self.create_zarr_target() as store:
-            template.to_zarr(store, compute=False)
-            data.to_zarr(store, region={"x": slice(None)})
+            original.to_zarr(store, compute=False)
+            both_modified.to_zarr(store, mode="a")
             with self.open(store) as actual:
-                assert_identical(actual, expected)
+                # NOTE: this arguably incorrect -- we should probably be
+                # overriding the variable metadata, too. See the TODO note in
+                # ZarrStore.set_variables.
+                assert_identical(actual, global_modified)
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, compute=False)
+            both_modified.to_zarr(store, mode="r+")
+            with self.open(store) as actual:
+                assert_identical(actual, only_new_data)
+
+        with self.create_zarr_target() as store:
+            original.to_zarr(store, compute=False)
+            # with region, the default mode becomes r+
+            both_modified.to_zarr(store, region={"x": slice(None)})
+            with self.open(store) as actual:
+                assert_identical(actual, only_new_data)
 
     def test_write_region_errors(self):
         data = Dataset({"u": (("x",), np.arange(5))})
@@ -2222,12 +2295,11 @@ class ZarrBase(CFEncodedBase):
             data2.to_zarr(store, region={"x": slice(2)})
 
         with setup_and_verify_store() as store:
-            with pytest.raises(ValueError, match=r"cannot use consolidated=True"):
-                data2.to_zarr(store, region={"x": slice(2)}, consolidated=True)
-
-        with setup_and_verify_store() as store:
             with pytest.raises(
-                ValueError, match=r"cannot set region unless mode='a' or mode=None"
+                ValueError,
+                match=re.escape(
+                    "cannot set region unless mode='a', mode='r+' or mode=None"
+                ),
             ):
                 data.to_zarr(store, region={"x": slice(None)}, mode="w")
 
@@ -2301,10 +2373,10 @@ class ZarrBase(CFEncodedBase):
     def test_open_zarr_use_cftime(self):
         ds = create_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, consolidated=True)
-            ds_a = xr.open_zarr(store_target, consolidated=True)
+            ds.to_zarr(store_target)
+            ds_a = xr.open_zarr(store_target)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, consolidated=True, use_cftime=True)
+            ds_b = xr.open_zarr(store_target, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
 
@@ -2764,14 +2836,16 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
         with pytest.raises(ValueError, match=r"HDF5 as bytes"):
             with open_dataset(b"\211HDF\r\n\032\n", engine="h5netcdf"):
                 pass
-        with pytest.raises(ValueError, match=r"cannot guess the engine"):
+        with pytest.raises(
+            ValueError, match=r"match in any of xarray's currently installed IO"
+        ):
             with open_dataset(b"garbage"):
                 pass
         with pytest.raises(ValueError, match=r"can only read bytes"):
             with open_dataset(b"garbage", engine="netcdf4"):
                 pass
         with pytest.raises(
-            ValueError, match=r"not the signature of a valid netCDF file"
+            ValueError, match=r"not the signature of a valid netCDF4 file"
         ):
             with open_dataset(BytesIO(b"garbage"), engine="h5netcdf"):
                 pass
@@ -2816,8 +2890,15 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
                 f.seek(8)
-                with pytest.raises(ValueError, match="cannot guess the engine"):
-                    open_dataset(f)
+                with pytest.raises(
+                    ValueError,
+                    match="match in any of xarray's currently installed IO",
+                ):
+                    with pytest.warns(
+                        RuntimeWarning,
+                        match=re.escape("'h5netcdf' fails while guessing"),
+                    ):
+                        open_dataset(f)
 
 
 @requires_h5netcdf
@@ -5039,6 +5120,7 @@ def test_extract_zarr_variable_encoding():
 
 @requires_zarr
 @requires_fsspec
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_open_fsspec():
     import fsspec
     import zarr
@@ -5161,3 +5243,86 @@ def test_chunking_consintency(chunks, tmp_path):
 
         with xr.open_dataset(tmp_path / "test.nc", chunks=chunks) as actual:
             xr.testing.assert_chunks_equal(actual, expected)
+
+
+def _check_guess_can_open_and_open(entrypoint, obj, engine, expected):
+    assert entrypoint.guess_can_open(obj)
+    with open_dataset(obj, engine=engine) as actual:
+        assert_identical(expected, actual)
+
+
+@requires_netCDF4
+def test_netcdf4_entrypoint(tmp_path):
+    entrypoint = NetCDF4BackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, format="netcdf3_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    path = tmp_path / "bar"
+    ds.to_netcdf(path, format="netcdf4_classic")
+    _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
+
+    assert entrypoint.guess_can_open("http://something/remote")
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+    path = tmp_path / "baz"
+    with open(path, "wb") as f:
+        f.write(b"not-a-netcdf-file")
+    assert not entrypoint.guess_can_open(path)
+
+
+@requires_scipy
+def test_scipy_entrypoint(tmp_path):
+    entrypoint = ScipyBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="scipy", expected=ds)
+
+    contents = ds.to_netcdf(engine="scipy")
+    _check_guess_can_open_and_open(entrypoint, contents, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, BytesIO(contents), engine="scipy", expected=ds
+    )
+
+    path = tmp_path / "foo.nc.gz"
+    with gzip.open(path, mode="wb") as f:
+        f.write(contents)
+    _check_guess_can_open_and_open(entrypoint, path, engine="scipy", expected=ds)
+    _check_guess_can_open_and_open(entrypoint, str(path), engine="scipy", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc.gz")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")
+    assert not entrypoint.guess_can_open(b"not-a-netcdf-file")
+
+
+@requires_h5netcdf
+def test_h5netcdf_entrypoint(tmp_path):
+    entrypoint = H5netcdfBackendEntrypoint()
+    ds = create_test_data()
+
+    path = tmp_path / "foo"
+    ds.to_netcdf(path, engine="h5netcdf")
+    _check_guess_can_open_and_open(entrypoint, path, engine="h5netcdf", expected=ds)
+    _check_guess_can_open_and_open(
+        entrypoint, str(path), engine="h5netcdf", expected=ds
+    )
+    with open(path, "rb") as f:
+        _check_guess_can_open_and_open(entrypoint, f, engine="h5netcdf", expected=ds)
+
+    assert entrypoint.guess_can_open("something-local.nc")
+    assert entrypoint.guess_can_open("something-local.nc4")
+    assert entrypoint.guess_can_open("something-local.cdf")
+    assert not entrypoint.guess_can_open("not-found-and-no-extension")

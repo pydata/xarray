@@ -36,6 +36,7 @@ Top-level functions
    map_blocks
    show_versions
    set_options
+   unify_chunks
 
 Dataset
 =======
@@ -292,6 +293,7 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
 
@@ -846,6 +848,7 @@ Faceting
    plot.FacetGrid
    plot.FacetGrid.add_colorbar
    plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
    plot.FacetGrid.map
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
@@ -897,6 +900,7 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   Context
    register_dataset_accessor
    register_dataarray_accessor
    Dataset.set_close

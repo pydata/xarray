@@ -7,6 +7,7 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
+from xarray.core.indexes import PandasIndex
 from xarray.core.utils import either_dict_or_kwargs
 
 from . import assert_array_equal, requires_cftime, requires_dask
@@ -28,11 +29,13 @@ def test_safe_cast_to_index():
     dates = pd.date_range("2000-01-01", periods=10)
     x = np.arange(5)
     td = x * np.timedelta64(1, "D")
+    midx = pd.MultiIndex.from_tuples([(0,)], names=["a"])
     for expected, array in [
         (dates, dates.values),
         (pd.Index(x, dtype=object), x.astype(object)),
         (pd.Index(td), td),
         (pd.Index(td, dtype=object), td.astype(object)),
+        (midx, PandasIndex(midx)),
     ]:
         actual = utils.safe_cast_to_index(array)
         assert_array_equal(expected, actual)
@@ -198,12 +201,6 @@ class TestDictionaries:
             "Frozen({'a': 'A', 'b': 'B'})",
             "Frozen({'b': 'B', 'a': 'A'})",
         )
-
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
 
 
 def test_repr_object():

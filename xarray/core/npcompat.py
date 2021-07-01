@@ -28,54 +28,11 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import builtins
-import operator
 import sys
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
-
-
-# Vendored from NumPy 1.12; we need a version that support duck typing, even
-# on dask arrays with __array_function__ enabled.
-def _validate_axis(axis, ndim, argname):
-    try:
-        axis = [operator.index(axis)]
-    except TypeError:
-        axis = list(axis)
-    axis = [a + ndim if a < 0 else a for a in axis]
-    if not builtins.all(0 <= a < ndim for a in axis):
-        raise ValueError("invalid axis for this array in `%s` argument" % argname)
-    if len(set(axis)) != len(axis):
-        raise ValueError("repeated axis in `%s` argument" % argname)
-    return axis
-
-
-def moveaxis(a, source, destination):
-    try:
-        # allow duck-array types if they define transpose
-        transpose = a.transpose
-    except AttributeError:
-        a = np.asarray(a)
-        transpose = a.transpose
-
-    source = _validate_axis(source, a.ndim, "source")
-    destination = _validate_axis(destination, a.ndim, "destination")
-    if len(source) != len(destination):
-        raise ValueError(
-            "`source` and `destination` arguments must have "
-            "the same number of elements"
-        )
-
-    order = [n for n in range(a.ndim) if n not in source]
-
-    for dest, src in sorted(zip(destination, source)):
-        order.insert(dest, src)
-
-    result = transpose(order)
-    return result
-
 
 # Type annotations stubs
 try:

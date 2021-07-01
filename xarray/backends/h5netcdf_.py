@@ -6,7 +6,12 @@ from distutils.version import LooseVersion
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri, read_magic_number
+from ..core.utils import (
+    FrozenDict,
+    is_remote_uri,
+    read_magic_number_from_file,
+    try_read_magic_number_from_file_or_path,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -37,8 +42,7 @@ except ModuleNotFoundError:
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
-        variable = ds.variables[self.variable_name]
-        return variable
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
@@ -102,7 +106,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
-                if not type(manager) is h5netcdf.File:
+                if type(manager) is not h5netcdf.File:
                     raise ValueError(
                         "must supply a h5netcdf.File if the group "
                         "argument is provided"
@@ -141,10 +145,10 @@ class H5NetCDFStore(WritableCFDataStore):
                 "try passing a path or file-like object"
             )
         elif isinstance(filename, io.IOBase):
-            magic_number = read_magic_number(filename)
+            magic_number = read_magic_number_from_file(filename)
             if not magic_number.startswith(b"\211HDF\r\n\032\n"):
                 raise ValueError(
-                    f"{magic_number} is not the signature of a valid netCDF file"
+                    f"{magic_number} is not the signature of a valid netCDF4 file"
                 )
 
         if format not in [None, "NETCDF4"]:
@@ -233,11 +237,9 @@ class H5NetCDFStore(WritableCFDataStore):
         return self.ds.dimensions
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
@@ -266,9 +268,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 "h5netcdf does not yet support setting a fill value for "
                 "variable-length strings "
                 "(https://github.com/shoyer/h5netcdf/issues/37). "
-                "Either remove '_FillValue' from encoding on variable %r "
+                f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type." % name
+                "NC_CHAR type."
             )
 
         if dtype is str:
@@ -335,11 +337,12 @@ class H5NetCDFStore(WritableCFDataStore):
 
 
 class H5netcdfBackendEntrypoint(BackendEntrypoint):
+    available = has_h5netcdf
+
     def guess_can_open(self, filename_or_obj):
-        try:
-            return read_magic_number(filename_or_obj).startswith(b"\211HDF\r\n\032\n")
-        except TypeError:
-            pass
+        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+        if magic_number is not None:
+            return magic_number.startswith(b"\211HDF\r\n\032\n")
 
         try:
             _, ext = os.path.splitext(filename_or_obj)
@@ -393,5 +396,4 @@ class H5netcdfBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_h5netcdf:
-    BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint
+BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint

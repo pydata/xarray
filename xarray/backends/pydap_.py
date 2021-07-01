@@ -47,7 +47,7 @@ class PydapArrayWrapper(BackendArray):
         result = robust_getitem(array, key, catch=ValueError)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and len(axis) > 0:
+        if result.ndim + len(axis) != array.ndim and axis:
             result = np.squeeze(result, axis)
 
         return result
@@ -110,6 +110,8 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
+    available = has_pydap
+
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
@@ -154,5 +156,4 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             return ds
 
 
-if has_pydap:
-    BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint
+BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

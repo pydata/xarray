@@ -123,7 +123,7 @@ class set_options:
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
     - ``display_style``: display style to use in jupyter for xarray objects.
-      Default: ``'text'``. Other options are ``'html'``.
+      Default: ``'html'``. Other options are ``'text'``.
     - ``display_expand_attrs``: whether to expand the attributes section for
       display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
       expand, ``False`` to always collapse, or ``default`` to expand unless over
@@ -166,8 +166,7 @@ class set_options:
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
-                    "argument name %r is not in the set of valid options %r"
-                    % (k, set(OPTIONS))
+                    f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 if k == ARITHMETIC_JOIN:

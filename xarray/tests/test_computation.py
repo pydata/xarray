@@ -22,13 +22,14 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 
-from . import has_dask, requires_dask
+from . import has_dask, raise_if_dask_computes, requires_dask
 
 dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
     """A version of this function which accepts numpy arrays"""
+    __tracebackhide__ = True
     from xarray.testing import assert_identical as assert_identical_
 
     if hasattr(a, "identical"):
@@ -563,6 +564,401 @@ def test_keep_attrs():
     assert_identical(actual.x.attrs, a.x.attrs)
 
 
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_variable(strategy, attrs, expected, error):
+    a = xr.Variable("x", [0, 1], attrs=attrs[0])
+    b = xr.Variable("x", [0, 1], attrs=attrs[1])
+    c = xr.Variable("x", [0, 1], attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.Variable("x", [0, 3], attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
+    a = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[0])
+    b = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[1])
+    c = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.DataArray(dims="x", data=[0, 3], attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("variant", ("dim", "coord"))
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataarray_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "dim": lambda attrs, default: (attrs, default),
+        "coord": lambda attrs, default: (default, attrs),
+    }.get(variant)
+
+    dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
+    a = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[0]), "u": ("x", [0, 1], coord_attrs[0])},
+    )
+    b = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[1]), "u": ("x", [0, 1], coord_attrs[1])},
+    )
+    c = xr.DataArray(
+        dims="x",
+        data=[0, 1],
+        coords={"x": ("x", [0, 1], dim_attrs[2]), "u": ("x", [0, 1], coord_attrs[2])},
+    )
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        dim_attrs, coord_attrs = compute_attrs(expected, {})
+        expected = xr.DataArray(
+            dims="x",
+            data=[0, 3],
+            coords={"x": ("x", [0, 1], dim_attrs), "u": ("x", [0, 1], coord_attrs)},
+        )
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
+    a = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[0])
+    b = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[1])
+    c = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[2])
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        expected = xr.Dataset({"a": ("x", [0, 3])}, attrs=expected)
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("variant", ("data", "dim", "coord"))
+@pytest.mark.parametrize(
+    ["strategy", "attrs", "expected", "error"],
+    (
+        pytest.param(
+            None,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="default",
+        ),
+        pytest.param(
+            False,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="False",
+        ),
+        pytest.param(
+            True,
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="True",
+        ),
+        pytest.param(
+            "override",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {"a": 1},
+            False,
+            id="override",
+        ),
+        pytest.param(
+            "drop",
+            [{"a": 1}, {"a": 2}, {"a": 3}],
+            {},
+            False,
+            id="drop",
+        ),
+        pytest.param(
+            "drop_conflicts",
+            [{"a": 1, "b": 2}, {"b": 1, "c": 3}, {"c": 3, "d": 4}],
+            {"a": 1, "c": 3, "d": 4},
+            False,
+            id="drop_conflicts",
+        ),
+        pytest.param(
+            "no_conflicts",
+            [{"a": 1}, {"b": 2}, {"b": 3}],
+            None,
+            True,
+            id="no_conflicts",
+        ),
+    ),
+)
+def test_keep_attrs_strategies_dataset_variables(
+    variant, strategy, attrs, expected, error
+):
+    compute_attrs = {
+        "data": lambda attrs, default: (attrs, default, default),
+        "dim": lambda attrs, default: (default, attrs, default),
+        "coord": lambda attrs, default: (default, default, attrs),
+    }.get(variant)
+    data_attrs, dim_attrs, coord_attrs = compute_attrs(attrs, [{}, {}, {}])
+
+    a = xr.Dataset(
+        {"a": ("x", [], data_attrs[0])},
+        coords={"x": ("x", [], dim_attrs[0]), "u": ("x", [], coord_attrs[0])},
+    )
+    b = xr.Dataset(
+        {"a": ("x", [], data_attrs[1])},
+        coords={"x": ("x", [], dim_attrs[1]), "u": ("x", [], coord_attrs[1])},
+    )
+    c = xr.Dataset(
+        {"a": ("x", [], data_attrs[2])},
+        coords={"x": ("x", [], dim_attrs[2]), "u": ("x", [], coord_attrs[2])},
+    )
+
+    if error:
+        with pytest.raises(xr.MergeError):
+            apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+    else:
+        data_attrs, dim_attrs, coord_attrs = compute_attrs(expected, {})
+        expected = xr.Dataset(
+            {"a": ("x", [], data_attrs)},
+            coords={"x": ("x", [], dim_attrs), "u": ("x", [], coord_attrs)},
+        )
+        actual = apply_ufunc(lambda *args: sum(args), a, b, c, keep_attrs=strategy)
+
+        assert_identical(actual, expected)
+
+
 def test_dataset_join():
     ds0 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
@@ -910,7 +1306,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
+@pytest.mark.skipif(
+    LooseVersion(dask.__version__) > "2021.06",
+    reason="dask/dask#7669: can no longer pass output_dtypes and meta",
+)
 @requires_dask
 def test_vectorize_dask_dtype_meta():
     # meta dtype takes precedence
@@ -990,6 +1389,7 @@ def arrays_w_tuples():
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
+        xr.DataArray([[1, 2], [2, 1]], dims=["x", "time"]),
     ]
 
     array_tuples = [
@@ -998,10 +1398,38 @@ def arrays_w_tuples():
         (arrays[1], arrays[1]),
         (arrays[2], arrays[2]),
         (arrays[2], arrays[3]),
+        (arrays[2], arrays[4]),
+        (arrays[4], arrays[2]),
         (arrays[3], arrays[3]),
+        (arrays[4], arrays[4]),
     ]
 
     return arrays, array_tuples
+
+
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [
+        arrays_w_tuples()[1][3],
+        arrays_w_tuples()[1][4],
+        arrays_w_tuples()[1][5],
+        arrays_w_tuples()[1][6],
+        arrays_w_tuples()[1][7],
+        arrays_w_tuples()[1][8],
+    ],
+)
+@pytest.mark.parametrize("dim", [None, "x", "time"])
+def test_lazy_corrcov(da_a, da_b, dim, ddof):
+    # GH 5284
+    from dask import is_dask_collection
+
+    with raise_if_dask_computes():
+        cov = xr.cov(da_a.chunk(), da_b.chunk(), dim=dim, ddof=ddof)
+        assert is_dask_collection(cov)
+
+        corr = xr.corr(da_a.chunk(), da_b.chunk(), dim=dim)
+        assert is_dask_collection(corr)
 
 
 @pytest.mark.parametrize("ddof", [0, 1])

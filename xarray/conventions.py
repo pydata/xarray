@@ -110,9 +110,9 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     and "missing_value" not in var.attrs
                 ):
                     warnings.warn(
-                        "saving variable %s with floating "
+                        f"saving variable {name} with floating "
                         "point data as an integer dtype without "
-                        "any _FillValue to use for NaNs" % name,
+                        "any _FillValue to use for NaNs",
                         SerializationWarning,
                         stacklevel=10,
                     )
@@ -750,6 +750,18 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             raise ValueError(
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
+
+        # if coordinates set to None, don't write coordinates attribute
+        if (
+            "coordinates" in attrs
+            and attrs.get("coordinates") is None
+            or "coordinates" in encoding
+            and encoding.get("coordinates") is None
+        ):
+            # make sure "coordinates" is removed from attrs/encoding
+            attrs.pop("coordinates", None)
+            encoding.pop("coordinates", None)
+            continue
 
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
         # after the next line, "coordinates" is never in encoding

@@ -7,7 +7,6 @@ import contextlib
 import datetime
 import inspect
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -20,6 +19,7 @@ from .pycompat import (
     dask_array_type,
     is_duck_dask_array,
     sparse_array_type,
+    sparse_version,
 )
 from .utils import is_duck_array
 
@@ -71,10 +71,6 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
             func_name = inspect.stack()[1][3]
         raise NotImplementedError(msg % func_name)
 
-
-# switch to use dask.array / __array_function__ version when dask supports it:
-# https://github.com/dask/dask/pull/4822
-moveaxis = npcompat.moveaxis
 
 around = _dask_or_eager_func("around")
 isclose = _dask_or_eager_func("isclose")
@@ -176,15 +172,9 @@ masked_invalid = _dask_or_eager_func(
 
 
 def astype(data, dtype, **kwargs):
-    try:
-        import sparse
-    except ImportError:
-        sparse = None
-
     if (
-        sparse is not None
-        and isinstance(data, sparse_array_type)
-        and LooseVersion(sparse.__version__) < LooseVersion("0.11.0")
+        isinstance(data, sparse_array_type)
+        and sparse_version < "0.11.0"
         and "casting" in kwargs
     ):
         warnings.warn(
@@ -204,7 +194,7 @@ def asarray(data, xp=np):
 def as_shared_dtype(scalars_or_arrays):
     """Cast a arrays to a shared dtype using xarray's type promotion rules."""
 
-    if any([isinstance(x, cupy_array_type) for x in scalars_or_arrays]):
+    if any(isinstance(x, cupy_array_type) for x in scalars_or_arrays):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
@@ -427,9 +417,7 @@ def _datetime_nanmin(array):
 
 def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to numerical values.
-
     Convert the datetime array to a timedelta relative to an offset.
-
     Parameters
     ----------
     array : array-like
@@ -442,12 +430,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         conversions are not allowed due to non-linear relationships between units.
     dtype : dtype
         Output dtype.
-
     Returns
     -------
     array
         Numerical representation of datetime object relative to an offset.
-
     Notes
     -----
     Some datetime unit conversions won't work, for example from days to years, even

@@ -416,15 +416,19 @@ def test_errors(use_dask):
 
 @requires_scipy
 def test_dtype():
-    ds = xr.Dataset(
-        {"var1": ("x", [0, 1, 2]), "var2": ("x", ["a", "b", "c"])},
-        coords={"x": [0.1, 0.2, 0.3], "z": ("x", ["a", "b", "c"])},
+    data_vars = dict(
+        a=("time", np.array([1, 1.25, 2])),
+        b=("time", np.array([True, True, False], dtype=bool)),
+        c=("time", np.array(["start", "start", "end"], dtype=str)),
     )
-    actual = ds.interp(x=[0.15, 0.25])
-    assert "var1" in actual
-    assert "var2" not in actual
-    # object array should be dropped
-    assert "z" not in actual.coords
+    time = np.array([0, 0.25, 1], dtype=float)
+    expected = xr.Dataset(data_vars, coords=dict(time=time))
+    actual = xr.Dataset(
+        {k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()},
+        coords=dict(time=time[[0, -1]]),
+    )
+    actual = actual.interp(time=time, method="linear")
+    assert_identical(expected, actual)
 
 
 @requires_scipy
@@ -825,6 +829,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 @requires_scipy
 @requires_dask
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method):
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
