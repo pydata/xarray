@@ -26,20 +26,9 @@ from xarray.coding.cftime_offsets import (
     to_cftime_datetime,
     to_offset,
 )
+from xarray.tests import _CFTIME_CALENDARS
 
 cftime = pytest.importorskip("cftime")
-
-
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
 
 
 def _id_func(param):
