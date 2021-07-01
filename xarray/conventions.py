@@ -751,6 +751,18 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
 
+        # if coordinates set to None, don't write coordinates attribute
+        if (
+            "coordinates" in attrs
+            and attrs.get("coordinates") is None
+            or "coordinates" in encoding
+            and encoding.get("coordinates") is None
+        ):
+            # make sure "coordinates" is removed from attrs/encoding
+            attrs.pop("coordinates", None)
+            encoding.pop("coordinates", None)
+            continue
+
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
         # after the next line, "coordinates" is never in encoding
         # we get support for attrs["coordinates"] for free.
