@@ -76,7 +76,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
-
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
