@@ -45,3 +45,13 @@ try:
 except ImportError:  # pragma: no cover
     cupy_version = LooseVersion("0.0.0")
     cupy_array_type = ()
+
+try:
+    # solely for isinstance checks
+    import pint
+
+    pint_version = LooseVersion(pint.__version__)
+    pint_array_type = (pint.Quantity,)
+except ImportError:  # pragma: no cover
+    pint_version = LooseVersion("0.0.0")
+    pint_array_type = ()

@@ -31,6 +31,8 @@ from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
+    pint_array_type,
+    sparse_array_type,
     integer_types,
     is_duck_dask_array,
 )
@@ -1068,6 +1070,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
         return self._replace(data=data)
+
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        data = self.data
+        try:
+            return data.to_numpy()
+        except AttributeError:
+            if isinstance(data, dask_array_type):
+                data = self.load().data
+            if isinstance(data, cupy_array_type):
+                data = data.get()
+            if isinstance(data, pint_array_type):
+                data = data.magnitude
+            if isinstance(data, sparse_array_type):
+                data = data.to_dense()
+            if type(data) != np.ndarray:
+                data = np.array(data)
+            return data
+
+    def as_numpy(self) -> VariableType:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.data.to_numpy())
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """

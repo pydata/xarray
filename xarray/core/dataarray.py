@@ -76,6 +76,7 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
+
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
@@ -627,7 +628,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def data(self) -> Any:
-        """The array's data as a dask or numpy array"""
+        """The array's data as a numpy-like array"""
         return self.variable.data
 
     @data.setter
@@ -636,12 +637,29 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def values(self) -> np.ndarray:
-        """The array's data as a numpy.ndarray"""
+        """
+        The array's data as a numpy.ndarray.
+
+        If the array's data is not a numpy.ndarray this will attempt to convert
+        it naively using np.array(), which will raise an error if the array
+        type does not support coercion like this.
+        """
         return self.variable.values
 
     @values.setter
     def values(self, value: Any) -> None:
         self.variable.values = value
+
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        return self.variable.to_numpy()
+
+    def as_numpy(self) -> T_DataArray:
+        """
+        Coerces wrapped data into a numpy array, and returns it wrapped inside
+        a DataArray.
+        """
+        return self.copy(data=self.to_numpy())
 
     @property
     def _in_memory(self) -> bool:
