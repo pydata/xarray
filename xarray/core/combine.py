@@ -655,6 +655,7 @@ def combine_by_coords(
     datasets: Sequence[Dataset] = None,
 ) -> Union[Dataset, DataArray]:
     """
+
     Attempt to auto-magically combine the given datasets (or data arrays)
     into one by using dimension coordinates.
 

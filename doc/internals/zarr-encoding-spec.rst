@@ -38,11 +38,21 @@ After decoding the ``_ARRAY_DIMENSIONS`` attribute and assigning the variable
 dimensions, Xarray proceeds to [optionally] decode each variable using its
 standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
 
+Finally, it's worth noting that Xarray writes (and attempts to read)
+"consolidated metadata" by default (the ``.zmetadata`` file), which is another
+non-standard Zarr extension, albeit one implemented upstream in Zarr-Python.
+You do not need to write consolidated metadata to make Zarr stores readable in
+Xarray, but because Xarray can open these stores much faster, users will see a
+warning about poor performance when reading non-consolidated stores unless they
+explicitly set ``consolidated=False``. See :ref:`io.zarr.consolidated_metadata`
+for more details.
+
 As a concrete example, here we write a tutorial dataset to Zarr and then
 re-open it directly with Zarr:
 
 .. ipython:: python
 
+    import os
     import xarray as xr
     import zarr
 
@@ -50,5 +60,6 @@ re-open it directly with Zarr:
     ds.to_zarr("rasm.zarr", mode="w")
 
     zgroup = zarr.open("rasm.zarr")
+    print(os.listdir("rasm.zarr"))
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)

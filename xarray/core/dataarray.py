@@ -1,6 +1,5 @@
 import datetime
 import warnings
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -44,6 +43,7 @@ from .alignment import (
 )
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
+from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
     assert_coordinate_consistent,
@@ -1038,10 +1038,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def chunk(
         self,
         chunks: Union[
-            Number,
-            Tuple[Number, ...],
-            Tuple[Tuple[Number, ...], ...],
-            Mapping[Hashable, Union[None, Number, Tuple[Number, ...]]],
+            int,
+            Tuple[int, ...],
+            Tuple[Tuple[int, ...], ...],
+            Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1902,7 +1902,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -1958,7 +1958,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -3686,8 +3686,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         dask.array.core.unify_chunks
         """
-        ds = self._to_temp_dataset().unify_chunks()
-        return self._from_temp_dataset(ds)
+
+        return unify_chunks(self)[0]
 
     def map_blocks(
         self,

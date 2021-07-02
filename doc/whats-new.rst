@@ -21,6 +21,14 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Xarray now uses consolidated metadata by default when writing and reading Zarr
+  stores (:issue:`5251`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- New top-level function :py:func:`unify_chunks`.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Allow assigning values to a subset of a dataset using positional or label-based
   indexing (:issue:`3015`, :pull:`5362`).
   By `Matthias Göbel <https://github.com/matzegoebel>`_.
@@ -38,10 +46,20 @@ New Features
   By `Thomas Hirtz <https://github.com/thomashirtz>`_.
 - allow passing a function to ``combine_attrs`` (:pull:`4896`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Allow plotting categorical data (:pull:`5464`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
+  (:issue:`5510`).
+  By `Elle Smith <https://github.com/ellesmith88>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The default ``mode`` for :py:meth:`Dataset.to_zarr` when ``region`` is set
+  has changed to the new ``mode="r+"``, which only allows for overriding
+  pre-existing array values. This is a safer default than the prior ``mode="a"``,
+  and allows for higher performance writes (:pull:`5252`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -62,6 +80,9 @@ Bug fixes
 - Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
   (:pull:`5406`)
   By `Justus Magin <https://github.com/keewis>`_.
+- Plotting a pcolormesh with ``xscale="log"`` and/or ``yscale="log"`` works as
+  expected after improving the way the interval breaks are generated (:issue:`5333`).
+  By `Santiago Soler <https://github.com/santisoler>`_
 
 
 Documentation
@@ -72,6 +93,9 @@ Internal Changes
 ~~~~~~~~~~~~~~~~
 - Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
   (:pull:`5433`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Publish test results & timings on each PR.
+  (:pull:`5537`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
@@ -723,7 +747,7 @@ Documentation
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+- Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
@@ -1281,7 +1305,7 @@ Internal Changes
 v0.15.0 (30 Jan 2020)
 ---------------------
 
-This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
 
 This release also features many API improvements such as a new
@@ -3032,7 +3056,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
-  :doc:`faq` (:issue:`1726`).
+  :doc:`getting-started-guide/faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements

@@ -780,6 +780,8 @@ def _plot2d(plotfunc):
 
         if "pcolormesh" == plotfunc.__name__:
             kwargs["infer_intervals"] = infer_intervals
+            kwargs["xscale"] = xscale
+            kwargs["yscale"] = yscale
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
@@ -925,18 +927,26 @@ def imshow(x, y, z, ax, **kwargs):
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
-    # Centering the pixels- Assumes uniform spacing
-    try:
-        xstep = (x[1] - x[0]) / 2.0
-    except IndexError:
-        # Arbitrary default value, similar to matplotlib behaviour
-        xstep = 0.1
-    try:
-        ystep = (y[1] - y[0]) / 2.0
-    except IndexError:
-        ystep = 0.1
-    left, right = x[0] - xstep, x[-1] + xstep
-    bottom, top = y[-1] + ystep, y[0] - ystep
+    def _center_pixels(x):
+        """Center the pixels on the coordinates."""
+        if np.issubdtype(x.dtype, str):
+            # When using strings as inputs imshow converts it to
+            # integers. Choose extent values which puts the indices in
+            # in the center of the pixels:
+            return 0 - 0.5, len(x) - 0.5
+
+        try:
+            # Center the pixels assuming uniform spacing:
+            xstep = 0.5 * (x[1] - x[0])
+        except IndexError:
+            # Arbitrary default value, similar to matplotlib behaviour:
+            xstep = 0.1
+
+        return x[0] - xstep, x[-1] + xstep
+
+    # Center the pixels:
+    left, right = _center_pixels(x)
+    top, bottom = _center_pixels(y)
 
     defaults = {"origin": "upper", "interpolation": "nearest"}
 
@@ -967,6 +977,13 @@ def imshow(x, y, z, ax, **kwargs):
 
     primitive = ax.imshow(z, **defaults)
 
+    # If x or y are strings the ticklabels have been replaced with
+    # integer indices. Replace them back to strings:
+    for axis, v in [("x", x), ("y", y)]:
+        if np.issubdtype(v.dtype, str):
+            getattr(ax, f"set_{axis}ticks")(np.arange(len(v)))
+            getattr(ax, f"set_{axis}ticklabels")(v)
+
     return primitive
 
 
@@ -993,7 +1010,7 @@ def contourf(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
+def pcolormesh(x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2D DataArray.
 
@@ -1011,24 +1028,32 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         else:
             infer_intervals = True
 
-    if infer_intervals and (
-        (np.shape(x)[0] == np.shape(z)[1])
-        or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
+    if (
+        infer_intervals
+        and not np.issubdtype(x.dtype, str)
+        and (
+            (np.shape(x)[0] == np.shape(z)[1])
+            or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
+        )
     ):
         if len(x.shape) == 1:
-            x = _infer_interval_breaks(x, check_monotonic=True)
+            x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
-            x = _infer_interval_breaks(x, axis=1)
-            x = _infer_interval_breaks(x, axis=0)
+            x = _infer_interval_breaks(x, axis=1, scale=xscale)
+            x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
-    if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
+    if (
+        infer_intervals
+        and not np.issubdtype(y.dtype, str)
+        and (np.shape(y)[0] == np.shape(z)[0])
+    ):
         if len(y.shape) == 1:
-            y = _infer_interval_breaks(y, check_monotonic=True)
+            y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes
-            y = _infer_interval_breaks(y, axis=1)
-            y = _infer_interval_breaks(y, axis=0)
+            y = _infer_interval_breaks(y, axis=1, scale=yscale)
+            y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 

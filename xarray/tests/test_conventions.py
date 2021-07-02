@@ -142,6 +142,40 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
+    def test_emit_coordinates_attribute_in_attrs(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].attrs["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
+
+    def test_emit_coordinates_attribute_in_encoding(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
+
     @requires_dask
     def test_string_object_warning(self):
         original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()
