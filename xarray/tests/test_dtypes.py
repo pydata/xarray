@@ -7,8 +7,8 @@ from xarray.core import dtypes
 @pytest.mark.parametrize(
     "args, expected",
     [
-        ([np.bool], np.bool),
-        ([np.bool, np.string_], np.object_),
+        ([bool], bool),
+        ([bool, np.string_], np.object_),
         ([np.float32, np.float64], np.float64),
         ([np.float32, np.string_], np.object_),
         ([np.unicode_, np.int64], np.object_),
@@ -90,3 +90,9 @@ def test_maybe_promote(kind, expected):
     actual = dtypes.maybe_promote(np.dtype(kind))
     assert actual[0] == expected[0]
     assert str(actual[1]) == expected[1]
+
+
+def test_nat_types_membership():
+    assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
+    assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
+    assert np.float64 not in dtypes.NAT_TYPES

@@ -1,21 +1,32 @@
 import logging
+import os.path
 import time
 import traceback
-import warnings
-from collections.abc import Mapping
+from pathlib import Path
+from typing import Any, Dict, Tuple, Type, Union
 
 import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type
-from ..core.utils import FrozenDict, NdimSizeLenMixin
+from ..core.pycompat import is_duck_dask_array
+from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = "__values__"
+
+
+def _normalize_path(path):
+    if isinstance(path, Path):
+        path = str(path)
+
+    if isinstance(path, str) and not is_remote_uri(path):
+        path = os.path.abspath(os.path.expanduser(path))
+
+    return path
 
 
 def _encode_variable_name(name):
@@ -58,9 +69,8 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             base_delay = initial_delay * 2 ** n
             next_delay = base_delay + np.random.randint(base_delay)
             msg = (
-                "getitem failed, waiting %s ms before trying again "
-                "(%s tries remaining). Full traceback: %s"
-                % (next_delay, max_retries - n, traceback.format_exc())
+                f"getitem failed, waiting {next_delay} ms before trying again "
+                f"({max_retries - n} tries remaining). Full traceback: {traceback.format_exc()}"
             )
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
@@ -74,17 +84,8 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-class AbstractDataStore(Mapping):
+class AbstractDataStore:
     __slots__ = ()
-
-    def __iter__(self):
-        return iter(self.variables)
-
-    def __getitem__(self, key):
-        return self.variables[key]
-
-    def __len__(self):
-        return len(self.variables)
 
     def get_dimensions(self):  # pragma: no cover
         raise NotImplementedError()
@@ -125,38 +126,6 @@ class AbstractDataStore(Mapping):
         attributes = FrozenDict(self.get_attrs())
         return variables, attributes
 
-    @property
-    def variables(self):  # pragma: no cover
-        warnings.warn(
-            "The ``variables`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        variables, _ = self.load()
-        return variables
-
-    @property
-    def attrs(self):  # pragma: no cover
-        warnings.warn(
-            "The ``attrs`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        _, attrs = self.load()
-        return attrs
-
-    @property
-    def dimensions(self):  # pragma: no cover
-        warnings.warn(
-            "The ``dimensions`` property has been deprecated and "
-            "will be removed in xarray v0.11.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.get_dimensions()
-
     def close(self):
         pass
 
@@ -177,7 +146,7 @@ class ArrayWriter:
         self.lock = lock
 
     def add(self, source, target, region=None):
-        if isinstance(source, dask_array_type):
+        if is_duck_dask_array(source):
             self.sources.append(source)
             self.targets.append(target)
             self.regions.append(region)
@@ -241,7 +210,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         """encode one attribute"""
         return a
 
-    def set_dimension(self, d, l):  # pragma: no cover
+    def set_dimension(self, dim, length):  # pragma: no cover
         raise NotImplementedError()
 
     def set_attribute(self, k, v):  # pragma: no cover
@@ -366,7 +335,7 @@ class AbstractWritableDataStore(AbstractDataStore):
             if dim in existing_dims and length != existing_dims[dim]:
                 raise ValueError(
                     "Unable to update size for existing dimension"
-                    "%r (%d != %d)" % (dim, length, existing_dims[dim])
+                    f"{dim!r} ({length} != {existing_dims[dim]})"
                 )
             elif dim not in existing_dims:
                 is_unlimited = dim in unlimited_dims
@@ -383,3 +352,45 @@ class WritableCFDataStore(AbstractWritableDataStore):
         variables = {k: self.encode_variable(v) for k, v in variables.items()}
         attributes = {k: self.encode_attribute(v) for k, v in attributes.items()}
         return variables, attributes
+
+
+class BackendEntrypoint:
+    """
+    ``BackendEntrypoint`` is a class container and it is the main interface
+    for the backend plugins, see :ref:`RST backend_entrypoint`.
+    It shall implement:
+
+    - ``open_dataset`` method: it shall implement reading from file, variables
+      decoding and it returns an instance of :py:class:`~xarray.Dataset`.
+      It shall take in input at least ``filename_or_obj`` argument and
+      ``drop_variables`` keyword argument.
+      For more details see :ref:`RST open_dataset`.
+    - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
+      ``filename_or_obj``, ``False`` otherwise. The implementation of this
+      method is not mandatory.
+    """
+
+    open_dataset_parameters: Union[Tuple, None] = None
+    """list of ``open_dataset`` method parameters"""
+
+    def open_dataset(
+        self,
+        filename_or_obj: str,
+        drop_variables: Tuple[str] = None,
+        **kwargs: Any,
+    ):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        raise NotImplementedError
+
+    def guess_can_open(self, filename_or_obj):
+        """
+        Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
+        """
+
+        return False
+
+
+BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}

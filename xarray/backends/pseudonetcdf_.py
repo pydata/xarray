@@ -1,11 +1,26 @@
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict
+from ..core.utils import Frozen, FrozenDict, close_on_error
 from ..core.variable import Variable
-from .common import AbstractDataStore, BackendArray
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    AbstractDataStore,
+    BackendArray,
+    BackendEntrypoint,
+    _normalize_path,
+)
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
+from .store import StoreBackendEntrypoint
+
+try:
+    from PseudoNetCDF import pncopen
+
+    has_pseudonetcdf = True
+except ModuleNotFoundError:
+    has_pseudonetcdf = False
+
 
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
@@ -35,12 +50,10 @@ class PncArrayWrapper(BackendArray):
 
 
 class PseudoNetCDFDataStore(AbstractDataStore):
-    """Store for accessing datasets via PseudoNetCDF
-    """
+    """Store for accessing datasets via PseudoNetCDF"""
 
     @classmethod
     def open(cls, filename, lock=None, mode=None, **format_kwargs):
-        from PseudoNetCDF import pncopen
 
         keywords = {"kwargs": format_kwargs}
         # only include mode if explicitly passed
@@ -62,7 +75,7 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
         attrs = {k: getattr(var, k) for k in var.ncattrs()}
         return Variable(var.dimensions, data, attrs)
 
@@ -86,3 +99,59 @@ class PseudoNetCDFDataStore(AbstractDataStore):
 
     def close(self):
         self._manager.close()
+
+
+class PseudoNetCDFBackendEntrypoint(BackendEntrypoint):
+    available = has_pseudonetcdf
+
+    # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
+    # unless the open_dataset_parameters are explicity defined like this:
+    open_dataset_parameters = (
+        "filename_or_obj",
+        "mask_and_scale",
+        "decode_times",
+        "concat_characters",
+        "decode_coords",
+        "drop_variables",
+        "use_cftime",
+        "decode_timedelta",
+        "mode",
+        "lock",
+    )
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=False,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        mode=None,
+        lock=None,
+        **format_kwargs,
+    ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = PseudoNetCDFDataStore.open(
+            filename_or_obj, lock=lock, mode=mode, **format_kwargs
+        )
+
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
+
+
+BACKEND_ENTRYPOINTS["pseudonetcdf"] = PseudoNetCDFBackendEntrypoint

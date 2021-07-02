@@ -6,6 +6,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _get_nice_quiver_magnitude,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
@@ -34,13 +35,13 @@ def _nicetitle(coord, value, maxchar, template):
 
 class FacetGrid:
     """
-    Initialize the matplotlib figure and FacetGrid object.
+    Initialize the Matplotlib figure and FacetGrid object.
 
     The :class:`FacetGrid` is an object that links a xarray DataArray to
-    a matplotlib figure with a particular structure.
+    a Matplotlib figure with a particular structure.
 
     In particular, :class:`FacetGrid` is used to draw plots with multiple
-    Axes where each Axes shows the same relationship conditioned on
+    axes, where each axes shows the same relationship conditioned on
     different levels of some dimension. It's possible to condition on up to
     two variables by assigning variables to the rows and columns of the
     grid.
@@ -58,19 +59,19 @@ class FacetGrid:
 
     Attributes
     ----------
-    axes : numpy object array
-        Contains axes in corresponding position, as returned from
-        plt.subplots
-    col_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to column titles.
-    row_labels : list
-        list of :class:`matplotlib.text.Text` instances corresponding to row titles.
-    fig : matplotlib.Figure
-        The figure containing all the axes
-    name_dicts : numpy object array
-        Contains dictionaries mapping coordinate names to values. None is
-        used as a sentinel value for axes which should remain empty, ie.
-        sometimes the bottom right grid
+    axes : ndarray of matplotlib.axes.Axes
+        Array containing axes in corresponding position, as returned from
+        :py:func:`matplotlib.pyplot.subplots`.
+    col_labels : list of matplotlib.text.Text
+        Column titles.
+    row_labels : list of matplotlib.text.Text
+        Row titles.
+    fig : matplotlib.figure.Figure
+        The figure containing all the axes.
+    name_dicts : ndarray of dict
+        Array containing dictionaries mapping coordinate names to values. ``None`` is
+        used as a sentinel value for axes that should remain empty, i.e.,
+        sometimes the rightmost grid positions in the bottom row.
     """
 
     def __init__(
@@ -90,26 +91,28 @@ class FacetGrid:
         Parameters
         ----------
         data : DataArray
-            xarray DataArray to be plotted
-        row, col : strings
+            xarray DataArray to be plotted.
+        row, col : str
             Dimesion names that define subsets of the data, which will be drawn
             on separate facets in the grid.
         col_wrap : int, optional
-            "Wrap" the column variable at this width, so that the column facets
+            "Wrap" the grid the for the column variable after this number of columns,
+            adding rows if ``col_wrap`` is less than the number of facets.
         sharex : bool, optional
-            If true, the facets will share x axes
+            If true, the facets will share *x* axes.
         sharey : bool, optional
-            If true, the facets will share y axes
+            If true, the facets will share *y* axes.
         figsize : tuple, optional
             A tuple (width, height) of the figure in inches.
             If set, overrides ``size`` and ``aspect``.
         aspect : scalar, optional
             Aspect ratio of each facet, so that ``aspect * size`` gives the
-            width of each facet in inches
+            width of each facet in inches.
         size : scalar, optional
-            Height (in inches) of each facet. See also: ``aspect``
+            Height (in inches) of each facet. See also: ``aspect``.
         subplot_kws : dict, optional
-            Dictionary of keyword arguments for matplotlib subplots
+            Dictionary of keyword arguments for Matplotlib subplots
+            (:py:func:`matplotlib.pyplot.subplots`).
 
         """
 
@@ -131,7 +134,7 @@ class FacetGrid:
             ncol = len(data[col])
             nfacet = nrow * ncol
             if col_wrap is not None:
-                warnings.warn("Ignoring col_wrap since both col and row " "were passed")
+                warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
         elif not row and col:
@@ -195,7 +198,11 @@ class FacetGrid:
         self.axes = axes
         self.row_names = row_names
         self.col_names = col_names
+
+        # guides
         self.figlegend = None
+        self.quiverkey = None
+        self.cbar = None
 
         # Next the private variables
         self._single_group = single_group
@@ -233,7 +240,7 @@ class FacetGrid:
             plotting method such as `xarray.plot.imshow`
         x, y : string
             Names of the coordinates to plot on x, y axes
-        kwargs :
+        **kwargs
             additional keyword arguments to func
 
         Returns
@@ -258,7 +265,9 @@ class FacetGrid:
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
-        func_kwargs.update({"add_colorbar": False, "add_labels": False})
+        func_kwargs["add_colorbar"] = False
+        if func.__name__ != "surface":
+            func_kwargs["add_labels"] = False
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(
@@ -273,7 +282,9 @@ class FacetGrid:
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                mappable = func(
+                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                )
                 self._mappables.append(mappable)
 
         self._finalize_grid(x, y)
@@ -304,9 +315,11 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+        xplt, yplt, hueplt, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
         )
+        xlabel = label_from_attrs(xplt)
+        ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
         self._hue_label = huelabel
@@ -323,14 +336,15 @@ class FacetGrid:
         from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
-        kwargs["_is_facetgrid"] = True
 
         if kwargs.get("markersize", None):
             kwargs["size_mapping"] = _parse_size(
                 self.data[kwargs["markersize"]], kwargs.pop("size_norm", None)
             )
 
-        meta_data = _infer_meta_data(self.data, x, y, hue, hue_style, add_guide)
+        meta_data = _infer_meta_data(
+            self.data, x, y, hue, hue_style, add_guide, funcname=func.__name__
+        )
         kwargs["meta_data"] = meta_data
 
         if hue and meta_data["hue_style"] == "continuous":
@@ -339,6 +353,12 @@ class FacetGrid:
             )
             kwargs["meta_data"]["cmap_params"] = cmap_params
             kwargs["meta_data"]["cbar_kwargs"] = cbar_kwargs
+
+        kwargs["_is_facetgrid"] = True
+
+        if func.__name__ == "quiver" and "scale" not in kwargs:
+            raise ValueError("Please provide scale.")
+            # TODO: come up with an algorithm for reasonable scale choice
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -361,6 +381,9 @@ class FacetGrid:
             elif meta_data["add_colorbar"]:
                 self.add_colorbar(label=self._hue_label, **cbar_kwargs)
 
+        if meta_data["add_quiverkey"]:
+            self.add_quiverkey(kwargs["u"], kwargs["v"])
+
         return self
 
     def _finalize_grid(self, *axlabels):
@@ -376,30 +399,22 @@ class FacetGrid:
 
             self._finalized = True
 
-    def add_legend(self, **kwargs):
-        figlegend = self.fig.legend(
-            handles=self._mappables[-1],
-            labels=list(self._hue_var.values),
-            title=self._hue_label,
-            loc="center right",
-            **kwargs,
-        )
-
-        self.figlegend = figlegend
+    def _adjust_fig_for_guide(self, guide):
         # Draw the plot to set the bounding boxes correctly
-        self.fig.draw(self.fig.canvas.get_renderer())
+        renderer = self.fig.canvas.get_renderer()
+        self.fig.draw(renderer)
 
         # Calculate and set the new width of the figure so the legend fits
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
         figure_width = self.fig.get_figwidth()
-        self.fig.set_figwidth(figure_width + legend_width)
+        self.fig.set_figwidth(figure_width + guide_width)
 
         # Draw the plot again to get the new transformations
-        self.fig.draw(self.fig.canvas.get_renderer())
+        self.fig.draw(renderer)
 
         # Now calculate how much space we need on the right side
-        legend_width = figlegend.get_window_extent().width / self.fig.dpi
-        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
+        space_needed = guide_width / (figure_width + guide_width) + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
@@ -407,17 +422,49 @@ class FacetGrid:
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
+    def add_legend(self, **kwargs):
+        self.figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self._hue_var.values),
+            title=self._hue_label,
+            loc="center right",
+            **kwargs,
+        )
+        self._adjust_fig_for_guide(self.figlegend)
+
     def add_colorbar(self, **kwargs):
-        """Draw a colorbar
-        """
+        """Draw a colorbar."""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault("extend", self._cmap_extend)
+        # dont pass extend as kwarg if it is in the mappable
+        if hasattr(self._mappables[-1], "extend"):
+            kwargs.pop("extend", None)
         if "label" not in kwargs:
             kwargs.setdefault("label", label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axes.flat), **kwargs
         )
+        return self
+
+    def add_quiverkey(self, u, v, **kwargs):
+        kwargs = kwargs.copy()
+
+        magnitude = _get_nice_quiver_magnitude(self.data[u], self.data[v])
+        units = self.data[u].attrs.get("units", "")
+        self.quiverkey = self.axes.flat[-1].quiverkey(
+            self._mappables[-1],
+            X=0.8,
+            Y=0.9,
+            U=magnitude,
+            label=f"{magnitude}\n{units}",
+            labelpos="E",
+            coordinates="figure",
+        )
+
+        # TODO: does not work because self.quiverkey.get_window_extent(renderer) = 0
+        # https://github.com/matplotlib/matplotlib/issues/18530
+        # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
     def set_axis_labels(self, x_var=None, y_var=None):
@@ -464,7 +511,7 @@ class FacetGrid:
             Template for plot titles containing {coord} and {value}
         maxchar : int
             Truncate titles at maxchar
-        kwargs : keyword args
+        **kwargs : keyword args
             additional arguments to matplotlib.text
 
         Returns
@@ -519,7 +566,7 @@ class FacetGrid:
 
     def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
         """
-        Set and control tick behavior
+        Set and control tick behavior.
 
         Parameters
         ----------
@@ -560,11 +607,11 @@ class FacetGrid:
             must plot to the currently active matplotlib Axes and take a
             `color` keyword argument. If faceting on the `hue` dimension,
             it must also take a `label` keyword argument.
-        args : strings
+        *args : strings
             Column names in self.data that identify variables with data to
             plot. The data for each variable is passed to `func` in the
             order the variables are specified in the call.
-        kwargs : keyword arguments
+        **kwargs : keyword arguments
             All keyword arguments are passed to the plotting function.
 
         Returns

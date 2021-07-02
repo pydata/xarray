@@ -20,20 +20,22 @@ from xarray.core.duck_array_ops import (
     mean,
     np_timedelta64_to_float,
     pd_timedelta_to_float,
+    push,
     py_timedelta_to_float,
-    rolling_window,
     stack,
     timedelta_to_numeric,
     where,
 )
 from xarray.core.pycompat import dask_array_type
-from xarray.testing import assert_allclose, assert_equal
+from xarray.testing import assert_allclose, assert_equal, assert_identical
 
 from . import (
     arm_xfail,
     assert_array_equal,
     has_dask,
-    raises_regex,
+    has_scipy,
+    raise_if_dask_computes,
+    requires_bottleneck,
     requires_cftime,
     requires_dask,
 )
@@ -71,7 +73,7 @@ class TestOps:
         actual = first(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             first(self.x, 3)
 
     def test_last(self):
@@ -92,7 +94,7 @@ class TestOps:
         actual = last(self.x, axis=-1, skipna=False)
         assert_array_equal(expected, actual)
 
-        with raises_regex(IndexError, "out of bounds"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             last(self.x, 3)
 
     def test_count(self):
@@ -119,11 +121,9 @@ class TestOps:
         result = concatenate([[1], ["b"]])
         assert_array_equal(result, np.array([1, "b"], dtype=object))
 
+    @pytest.mark.filterwarnings("error")
     def test_all_nan_arrays(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "All-NaN slice")
-            warnings.filterwarnings("ignore", "Mean of empty slice")
-            assert np.isnan(mean([np.nan, np.nan]))
+        assert np.isnan(mean([np.nan, np.nan]))
 
 
 def test_cumsum_1d():
@@ -256,7 +256,7 @@ def from_series_or_scalar(se):
 
 
 def series_reduce(da, func, dim, **kwargs):
-    """ convert DataArray to pd.Series, apply pd.func, then convert back to
+    """convert DataArray to pd.Series, apply pd.func, then convert back to
     a DataArray. Multiple dims cannot be specified."""
     if dim is None or da.ndim == 1:
         se = da.to_series()
@@ -285,15 +285,15 @@ def assert_dask_array(da, dask):
 def test_datetime_mean(dask):
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
-        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8"),
+        np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8[ns]"),
         dims=["time"],
     )
     if dask:
         # Trigger use case where a chunk is full of NaT
         da = da.chunk({"time": 3})
 
-    expect = DataArray(np.array("2010-01-02", dtype="M8"))
-    expect_nat = DataArray(np.array("NaT", dtype="M8"))
+    expect = DataArray(np.array("2010-01-02", dtype="M8[ns]"))
+    expect_nat = DataArray(np.array("NaT", dtype="M8[ns]"))
 
     actual = da.mean()
     if dask:
@@ -333,12 +333,57 @@ def test_cftime_datetime_mean():
 
 
 @requires_cftime
+def test_cftime_datetime_mean_long_time_period():
+    import cftime
+
+    times = np.array(
+        [
+            [
+                cftime.DatetimeNoLeap(400, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(520, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+            ],
+            [
+                cftime.DatetimeNoLeap(640, 12, 31, 0, 0, 0, 0),
+                cftime.DatetimeNoLeap(760, 12, 31, 0, 0, 0, 0),
+            ],
+        ]
+    )
+
+    da = DataArray(times, dims=["time", "d2"])
+    result = da.mean("d2")
+    expected = DataArray(
+        [
+            cftime.DatetimeNoLeap(460, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(580, 12, 31, 0, 0, 0, 0),
+            cftime.DatetimeNoLeap(700, 12, 31, 0, 0, 0, 0),
+        ],
+        dims=["time"],
+    )
+    assert_equal(result, expected)
+
+
+@requires_cftime
 @requires_dask
 def test_cftime_datetime_mean_dask_error():
     times = cftime_range("2000", periods=4)
     da = DataArray(times, dims=["time"]).chunk()
     with pytest.raises(NotImplementedError):
         da.mean()
+
+
+def test_empty_axis_dtype():
+    ds = Dataset()
+    ds["pos"] = [1, 2, 3]
+    ds["data"] = ("pos", "time"), [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+    ds["var"] = "pos", [2, 3, 4]
+    assert_identical(ds.mean(dim="time")["var"], ds["var"])
+    assert_identical(ds.max(dim="time")["var"], ds["var"])
+    assert_identical(ds.min(dim="time")["var"], ds["var"])
+    assert_identical(ds.sum(dim="time")["var"], ds["var"])
 
 
 @pytest.mark.parametrize("dim_num", [1, 2])
@@ -384,7 +429,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
                 actual = getattr(da, func)(skipna=skipna, dim=aggdim)
                 assert_dask_array(actual, dask)
-                assert np.allclose(
+                np.testing.assert_allclose(
                     actual.values, np.array(expected), rtol=1.0e-4, equal_nan=True
                 )
             except (TypeError, AttributeError, ZeroDivisionError):
@@ -449,9 +494,7 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
 
     if contains_nan:
         if not skipna:
-            pytest.skip(
-                "numpy's argmin (not nanargmin) does not handle " "object-dtype"
-            )
+            pytest.skip("numpy's argmin (not nanargmin) does not handle object-dtype")
         if skipna and np.dtype(dtype).kind in "iufc":
             pytest.skip("numpy's nanargmin raises ValueError for all nan axis")
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan, dask=dask)
@@ -500,32 +543,6 @@ def test_isnull_with_dask():
 
 
 @pytest.mark.skipif(not has_dask, reason="This is for dask.")
-@pytest.mark.parametrize("axis", [0, -1])
-@pytest.mark.parametrize("window", [3, 8, 11])
-@pytest.mark.parametrize("center", [True, False])
-def test_dask_rolling(axis, window, center):
-    import dask.array as da
-
-    x = np.array(np.random.randn(100, 40), dtype=float)
-    dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
-
-    expected = rolling_window(
-        x, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    actual = rolling_window(
-        dx, axis=axis, window=window, center=center, fill_value=np.nan
-    )
-    assert isinstance(actual, da.Array)
-    assert_array_equal(actual, expected)
-    assert actual.shape == expected.shape
-
-    # we need to take care of window size if chunk size is small
-    # window/2 should be smaller than the smallest chunk size.
-    with pytest.raises(ValueError):
-        rolling_window(dx, axis=axis, window=100, center=center, fill_value=np.nan)
-
-
-@pytest.mark.skipif(not has_dask, reason="This is for dask.")
 @pytest.mark.parametrize("axis", [0, -1, 1])
 @pytest.mark.parametrize("edge_order", [1, 2])
 def test_dask_gradient(axis, edge_order):
@@ -547,17 +564,88 @@ def test_dask_gradient(axis, edge_order):
 @pytest.mark.parametrize("dask", [False, True])
 @pytest.mark.parametrize("func", ["sum", "prod"])
 @pytest.mark.parametrize("aggdim", [None, "x"])
-def test_min_count(dim_num, dtype, dask, func, aggdim):
+@pytest.mark.parametrize("contains_nan", [True, False])
+@pytest.mark.parametrize("skipna", [True, False, None])
+def test_min_count(dim_num, dtype, dask, func, aggdim, contains_nan, skipna):
     if dask and not has_dask:
         pytest.skip("requires dask")
 
-    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan, dask=dask)
     min_count = 3
 
-    actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
-    expected = series_reduce(da, func, skipna=True, dim=aggdim, min_count=min_count)
+    # If using Dask, the function call should be lazy.
+    with raise_if_dask_computes():
+        actual = getattr(da, func)(dim=aggdim, skipna=skipna, min_count=min_count)
+
+    expected = series_reduce(da, func, skipna=skipna, dim=aggdim, min_count=min_count)
     assert_allclose(actual, expected)
     assert_dask_array(actual, dask)
+
+
+@pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize("dask", [False, True])
+@pytest.mark.parametrize("func", ["sum", "prod"])
+def test_min_count_nd(dtype, dask, func):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
+    min_count = 3
+    dim_num = 3
+    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+
+    # If using Dask, the function call should be lazy.
+    with raise_if_dask_computes():
+        actual = getattr(da, func)(
+            dim=["x", "y", "z"], skipna=True, min_count=min_count
+        )
+
+    # Supplying all dims is equivalent to supplying `...` or `None`
+    expected = getattr(da, func)(dim=..., skipna=True, min_count=min_count)
+
+    assert_allclose(actual, expected)
+    assert_dask_array(actual, dask)
+
+
+@pytest.mark.parametrize("dask", [False, True])
+@pytest.mark.parametrize("func", ["sum", "prod"])
+@pytest.mark.parametrize("dim", [None, "a", "b"])
+def test_min_count_specific(dask, func, dim):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
+    # Simple array with four non-NaN values.
+    da = DataArray(np.ones((6, 6), dtype=np.float64) * np.nan, dims=("a", "b"))
+    da[0][0] = 2
+    da[0][3] = 2
+    da[3][0] = 2
+    da[3][3] = 2
+    if dask:
+        da = da.chunk({"a": 3, "b": 3})
+
+    # Expected result if we set min_count to the number of non-NaNs in a
+    # row/column/the entire array.
+    if dim:
+        min_count = 2
+        expected = DataArray(
+            [4.0, np.nan, np.nan] * 2, dims=("a" if dim == "b" else "b",)
+        )
+    else:
+        min_count = 4
+        expected = DataArray(8.0 if func == "sum" else 16.0)
+
+    # Check for that min_count.
+    with raise_if_dask_computes():
+        actual = getattr(da, func)(dim, skipna=True, min_count=min_count)
+    assert_dask_array(actual, dask)
+    assert_allclose(actual, expected)
+
+    # With min_count being one higher, should get all NaN.
+    min_count += 1
+    expected *= np.nan
+    with raise_if_dask_computes():
+        actual = getattr(da, func)(dim, skipna=True, min_count=min_count)
+    assert_dask_array(actual, dask)
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("func", ["sum", "prod"])
@@ -571,14 +659,15 @@ def test_min_count_dataset(func):
 
 @pytest.mark.parametrize("dtype", [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize("dask", [False, True])
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("func", ["sum", "prod"])
-def test_multiple_dims(dtype, dask, func):
+def test_multiple_dims(dtype, dask, skipna, func):
     if dask and not has_dask:
         pytest.skip("requires dask")
     da = construct_dataarray(3, dtype, contains_nan=True, dask=dask)
 
-    actual = getattr(da, func)(("x", "y"))
-    expected = getattr(getattr(da, func)("x"), func)("y")
+    actual = getattr(da, func)(("x", "y"), skipna=skipna)
+    expected = getattr(getattr(da, func)("x", skipna=skipna), func)("y", skipna=skipna)
     assert_allclose(actual, expected)
 
 
@@ -602,10 +691,13 @@ def test_docs():
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default None
-            The required number of valid values to perform the operation.
-            If fewer than min_count non-NA values are present the result will
-            be NA. New in version 0.10.8: Added with the default being None.
+        min_count : int, default: None
+            The required number of valid values to perform the operation. If
+            fewer than min_count non-NA values are present the result will be
+            NA. Only used if skipna is set to True or defaults to True for the
+            array's dtype. New in version 0.10.8: Added with the default being
+            None. Changed in version 0.17.0: if specified on an integer array
+            and skipna=True, the result will be a float array.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -767,8 +859,8 @@ def test_timedelta_to_numeric(td):
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("skipna", [True, False])
 def test_least_squares(use_dask, skipna):
-    if use_dask and not has_dask:
-        pytest.skip("requires dask")
+    if use_dask and (not has_dask or not has_scipy):
+        pytest.skip("requires dask and scipy")
     lhs = np.array([[1, 2], [1, 2], [3, 2]])
     rhs = DataArray(np.array([3, 5, 7]), dims=("y",))
 
@@ -779,3 +871,24 @@ def test_least_squares(use_dask, skipna):
 
     np.testing.assert_allclose(coeffs, [1.5, 1.25])
     np.testing.assert_allclose(residuals, [2.0])
+
+
+@requires_dask
+@requires_bottleneck
+def test_push_dask():
+    import bottleneck
+    import dask.array
+
+    array = np.array([np.nan, np.nan, np.nan, 1, 2, 3, np.nan, np.nan, 4, 5, np.nan, 6])
+    expected = bottleneck.push(array, axis=0)
+    for c in range(1, 11):
+        with raise_if_dask_computes():
+            actual = push(dask.array.from_array(array, chunks=c), axis=0, n=None)
+        np.testing.assert_equal(actual, expected)
+
+    # some chunks of size-1 with NaN
+    with raise_if_dask_computes():
+        actual = push(
+            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=None
+        )
+    np.testing.assert_equal(actual, expected)

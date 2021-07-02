@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 from xarray.core import formatting
 
-from . import raises_regex
+from . import requires_netCDF4
 
 
 class TestFormatting:
@@ -50,7 +50,7 @@ class TestFormatting:
             expected = array.flat[:n]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_n_items(self):
@@ -60,7 +60,7 @@ class TestFormatting:
             expected = array.flat[-n:]
             assert (expected == actual).all()
 
-        with raises_regex(ValueError, "at least one item"):
+        with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
@@ -86,6 +86,9 @@ class TestFormatting:
             (b"foo", "b'foo'"),
             (1, "1"),
             (1.0, "1.0"),
+            (np.float16(1.1234), "1.123"),
+            (np.float32(1.0111111), "1.011"),
+            (np.float64(22.222222), "22.22"),
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
@@ -390,6 +393,62 @@ class TestFormatting:
 
         assert actual == expected
 
+        with xr.set_options(display_expand_data=False):
+            actual = formatting.array_repr(ds[(1, 2)])
+            expected = dedent(
+                """\
+            <xarray.DataArray (1, 2) (test: 1)>
+            0
+            Dimensions without coordinates: test"""
+            )
+
+            assert actual == expected
+
+    def test_array_repr_variable(self):
+        var = xr.Variable("x", [0, 1])
+
+        formatting.array_repr(var)
+
+        with xr.set_options(display_expand_data=False):
+            formatting.array_repr(var)
+
+
+def test_inline_variable_array_repr_custom_repr():
+    class CustomArray:
+        def __init__(self, value, attr):
+            self.value = value
+            self.attr = attr
+
+        def _repr_inline_(self, width):
+            formatted = f"({self.attr}) {self.value}"
+            if len(formatted) > width:
+                formatted = f"({self.attr}) ..."
+
+            return formatted
+
+        def __array_function__(self, *args, **kwargs):
+            return NotImplemented
+
+        @property
+        def shape(self):
+            return self.value.shape
+
+        @property
+        def dtype(self):
+            return self.value.dtype
+
+        @property
+        def ndim(self):
+            return self.value.ndim
+
+    value = CustomArray(np.array([20, 40]), "m")
+    variable = xr.Variable("x", value)
+
+    max_width = 10
+    actual = formatting.inline_variable_array_repr(variable, max_width=10)
+
+    assert actual == value._repr_inline_(max_width)
+
 
 def test_set_numpy_options():
     original_options = np.get_printoptions()
@@ -405,10 +464,87 @@ def test_short_numpy_repr():
         np.random.randn(20, 20),
         np.random.randn(5, 10, 15),
         np.random.randn(5, 10, 15, 3),
+        np.random.randn(100, 5, 1),
     ]
     # number of lines:
-    # for default numpy repr: 167, 140, 254, 248
-    # for short_numpy_repr: 1, 7, 24, 19
+    # for default numpy repr: 167, 140, 254, 248, 599
+    # for short_numpy_repr: 1, 7, 24, 19, 25
     for array in cases:
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
+
+
+def test_large_array_repr_length():
+
+    da = xr.DataArray(np.random.randn(100, 5, 1))
+
+    result = repr(da).splitlines()
+    assert len(result) < 50
+
+
+@requires_netCDF4
+def test_repr_file_collapsed(tmp_path):
+    arr = xr.DataArray(np.arange(300), dims="test")
+    arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
+
+    with xr.open_dataarray(tmp_path / "test.nc") as arr, xr.set_options(
+        display_expand_data=False
+    ):
+        actual = formatting.array_repr(arr)
+        expected = dedent(
+            """\
+        <xarray.DataArray (test: 300)>
+        array([  0,   1,   2, ..., 297, 298, 299])
+        Dimensions without coordinates: test"""
+        )
+
+        assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "display_max_rows, n_vars, n_attr",
+    [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
+)
+def test__mapping_repr(display_max_rows, n_vars, n_attr):
+    long_name = "long_name"
+    a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
+    b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    attrs = {k: 2 for k in b}
+    coords = dict(time=np.array([0, 1]))
+    data_vars = dict()
+    for v in a:
+        data_vars[v] = xr.DataArray(
+            name=v,
+            data=np.array([3, 4]),
+            dims=["time"],
+            coords=coords,
+        )
+    ds = xr.Dataset(data_vars)
+    ds.attrs = attrs
+
+    with xr.set_options(display_max_rows=display_max_rows):
+
+        # Parse the data_vars print and show only data_vars rows:
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
+
+        # The length should be less than or equal to display_max_rows:
+        len_summary = len(summary)
+        data_vars_print_size = min(display_max_rows, len_summary)
+        assert len_summary == data_vars_print_size
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        actual = formatting.dataset_repr(ds)
+        expected = dedent(
+            f"""\
+            <xarray.Dataset>
+            Dimensions:      (time: 2)
+            Coordinates: (1)
+            Data variables: ({n_vars})
+            Attributes: ({n_attr})"""
+        )
+        assert actual == expected

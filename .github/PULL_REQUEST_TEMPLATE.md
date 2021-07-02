@@ -1,6 +1,7 @@
 <!-- Feel free to remove check-list items aren't relevant to your change -->
 
- - [ ] Closes #xxxx
- - [ ] Tests added
- - [ ] Passes `isort -rc . && black . && mypy . && flake8`
- - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API
+- [ ] Closes #xxxx
+- [ ] Tests added
+- [ ] Passes `pre-commit run --all-files`
+- [ ] User visible changes (including notable bug fixes) are documented in `whats-new.rst`
+- [ ] New functions/methods are listed in `api.rst`

@@ -175,7 +175,8 @@ class CachingFileManager(FileManager):
 
         Returns
         -------
-        An open file object, as returned by ``opener(*args, **kwargs)``.
+        file-like
+            An open file object, as returned by ``opener(*args, **kwargs)``.
         """
         file, _ = self._acquire_with_cache_info(needs_lock)
         return file
@@ -313,8 +314,7 @@ class _HashedSequence(list):
 
 
 class DummyFileManager(FileManager):
-    """FileManager that simply wraps an open file in the FileManager interface.
-    """
+    """FileManager that simply wraps an open file in the FileManager interface."""
 
     def __init__(self, value):
         self._value = value

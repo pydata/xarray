@@ -1,107 +1,17 @@
 import warnings
-from distutils.version import LooseVersion
-from typing import Iterable
 
 import numpy as np
 
-from .pycompat import dask_array_type
+from .pycompat import dask_version
 
 try:
     import dask.array as da
-    from dask import __version__ as dask_version
 except ImportError:
-    dask_version = "0.0.0"
     da = None
-
-if LooseVersion(dask_version) >= LooseVersion("2.0.0"):
-    meta_from_array = da.utils.meta_from_array
-else:
-    # Copied from dask v2.4.0
-    # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
-    import numbers
-
-    def meta_from_array(x, ndim=None, dtype=None):
-        """ Normalize an array to appropriate meta object
-
-        Parameters
-        ----------
-        x: array-like, callable
-        Either an object that looks sufficiently like a Numpy array,
-        or a callable that accepts shape and dtype keywords
-        ndim: int
-        Number of dimensions of the array
-        dtype: Numpy dtype
-        A valid input for ``np.dtype``
-
-        Returns
-        -------
-        array-like with zero elements of the correct dtype
-        """
-        # If using x._meta, x must be a Dask Array, some libraries (e.g. zarr)
-        # implement a _meta attribute that are incompatible with Dask Array._meta
-        if hasattr(x, "_meta") and isinstance(x, dask_array_type):
-            x = x._meta
-
-        if dtype is None and x is None:
-            raise ValueError("You must specify the meta or dtype of the array")
-
-        if np.isscalar(x):
-            x = np.array(x)
-
-        if x is None:
-            x = np.ndarray
-
-        if isinstance(x, type):
-            x = x(shape=(0,) * (ndim or 0), dtype=dtype)
-
-        if (
-            not hasattr(x, "shape")
-            or not hasattr(x, "dtype")
-            or not isinstance(x.shape, tuple)
-        ):
-            return x
-
-        if isinstance(x, list) or isinstance(x, tuple):
-            ndims = [
-                0
-                if isinstance(a, numbers.Number)
-                else a.ndim
-                if hasattr(a, "ndim")
-                else len(a)
-                for a in x
-            ]
-            a = [a if nd == 0 else meta_from_array(a, nd) for a, nd in zip(x, ndims)]
-            return a if isinstance(x, list) else tuple(x)
-
-        if ndim is None:
-            ndim = x.ndim
-
-        try:
-            meta = x[tuple(slice(0, 0, None) for _ in range(x.ndim))]
-            if meta.ndim != ndim:
-                if ndim > x.ndim:
-                    meta = meta[
-                        (Ellipsis,) + tuple(None for _ in range(ndim - meta.ndim))
-                    ]
-                    meta = meta[tuple(slice(0, 0, None) for _ in range(meta.ndim))]
-                elif ndim == 0:
-                    meta = meta.sum()
-                else:
-                    meta = meta.reshape((0,) * ndim)
-        except Exception:
-            meta = np.empty((0,) * ndim, dtype=dtype or x.dtype)
-
-        if np.isscalar(meta):
-            meta = np.array(meta)
-
-        if dtype and meta.dtype != dtype:
-            meta = meta.astype(dtype)
-
-        return meta
 
 
 def _validate_pad_output_shape(input_shape, pad_width, output_shape):
-    """ Validates the output shape of dask.array.pad, raising a RuntimeError if they do not match.
+    """Validates the output shape of dask.array.pad, raising a RuntimeError if they do not match.
     In the current versions of dask (2.2/2.4), dask.array.pad with mode='reflect' sometimes returns
     an invalid shape.
     """
@@ -114,7 +24,7 @@ def _validate_pad_output_shape(input_shape, pad_width, output_shape):
     elif (
         len(pad_width) == len(input_shape)
         and all(map(lambda x: len(x) == 2, pad_width))
-        and all((isint(i) for p in pad_width for i in p))
+        and all(isint(i) for p in pad_width for i in p)
     ):
         pad_width = np.sum(pad_width, axis=1)
     else:
@@ -146,74 +56,130 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-if LooseVersion(dask_version) >= LooseVersion("2.8.1"):
-    median = da.median
-else:
-    # Copied from dask v2.8.1
-    # Used under the terms of Dask's license, see licenses/DASK_LICENSE.
-    def median(a, axis=None, keepdims=False):
-        """
-        This works by automatically chunking the reduced axes to a single chunk
-        and then calling ``numpy.median`` function across the remaining dimensions
-        """
-
-        if axis is None:
-            raise NotImplementedError(
-                "The da.median function only works along an axis.  "
-                "The full algorithm is difficult to do in parallel"
-            )
-
-        if not isinstance(axis, Iterable):
-            axis = (axis,)
-
-        axis = [ax + a.ndim if ax < 0 else ax for ax in axis]
-
-        a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
-
-        result = a.map_blocks(
-            np.median,
-            axis=axis,
-            keepdims=keepdims,
-            drop_axis=axis if not keepdims else None,
-            chunks=[1 if ax in axis else c for ax, c in enumerate(a.chunks)]
-            if keepdims
-            else None,
-        )
-
-        return result
-
-
-if LooseVersion(dask_version) > LooseVersion("2.9.0"):
-    nanmedian = da.nanmedian
+if dask_version > "2.30.0":
+    ensure_minimum_chunksize = da.overlap.ensure_minimum_chunksize
 else:
 
-    def nanmedian(a, axis=None, keepdims=False):
-        """
-        This works by automatically chunking the reduced axes to a single chunk
-        and then calling ``numpy.nanmedian`` function across the remaining dimensions
-        """
+    # copied from dask
+    def ensure_minimum_chunksize(size, chunks):
+        """Determine new chunks to ensure that every chunk >= size
 
-        if axis is None:
-            raise NotImplementedError(
-                "The da.nanmedian function only works along an axis.  "
-                "The full algorithm is difficult to do in parallel"
+        Parameters
+        ----------
+        size : int
+            The maximum size of any chunk.
+        chunks : tuple
+            Chunks along one axis, e.g. ``(3, 3, 2)``
+
+        Examples
+        --------
+        >>> ensure_minimum_chunksize(10, (20, 20, 1))
+        (20, 11, 10)
+        >>> ensure_minimum_chunksize(3, (1, 1, 3))
+        (5,)
+
+        See Also
+        --------
+        overlap
+        """
+        if size <= min(chunks):
+            return chunks
+
+        # add too-small chunks to chunks before them
+        output = []
+        new = 0
+        for c in chunks:
+            if c < size:
+                if new > size + (size - c):
+                    output.append(new - (size - c))
+                    new = size
+                else:
+                    new += c
+            if new >= size:
+                output.append(new)
+                new = 0
+            if c >= size:
+                new += c
+        if new >= size:
+            output.append(new)
+        elif len(output) >= 1:
+            output[-1] += new
+        else:
+            raise ValueError(
+                f"The overlapping depth {size} is larger than your "
+                f"array {sum(chunks)}."
             )
 
-        if not isinstance(axis, Iterable):
-            axis = (axis,)
+        return tuple(output)
 
-        axis = [ax + a.ndim if ax < 0 else ax for ax in axis]
 
-        a = a.rechunk({ax: -1 if ax in axis else "auto" for ax in range(a.ndim)})
+if dask_version > "2021.03.0":
+    sliding_window_view = da.lib.stride_tricks.sliding_window_view
+else:
 
-        result = a.map_blocks(
-            np.nanmedian,
-            axis=axis,
-            keepdims=keepdims,
-            drop_axis=axis if not keepdims else None,
-            chunks=[1 if ax in axis else c for ax, c in enumerate(a.chunks)]
-            if keepdims
-            else None,
+    def sliding_window_view(x, window_shape, axis=None):
+        from dask.array.overlap import map_overlap
+        from numpy.core.numeric import normalize_axis_tuple
+
+        from .npcompat import sliding_window_view as _np_sliding_window_view
+
+        window_shape = (
+            tuple(window_shape) if np.iterable(window_shape) else (window_shape,)
         )
 
-        return result
+        window_shape_array = np.array(window_shape)
+        if np.any(window_shape_array <= 0):
+            raise ValueError("`window_shape` must contain positive values")
+
+        if axis is None:
+            axis = tuple(range(x.ndim))
+            if len(window_shape) != len(axis):
+                raise ValueError(
+                    f"Since axis is `None`, must provide "
+                    f"window_shape for all dimensions of `x`; "
+                    f"got {len(window_shape)} window_shape elements "
+                    f"and `x.ndim` is {x.ndim}."
+                )
+        else:
+            axis = normalize_axis_tuple(axis, x.ndim, allow_duplicate=True)
+            if len(window_shape) != len(axis):
+                raise ValueError(
+                    f"Must provide matching length window_shape and "
+                    f"axis; got {len(window_shape)} window_shape "
+                    f"elements and {len(axis)} axes elements."
+                )
+
+        depths = [0] * x.ndim
+        for ax, window in zip(axis, window_shape):
+            depths[ax] += window - 1
+
+        # Ensure that each chunk is big enough to leave at least a size-1 chunk
+        # after windowing (this is only really necessary for the last chunk).
+        safe_chunks = tuple(
+            ensure_minimum_chunksize(d + 1, c) for d, c in zip(depths, x.chunks)
+        )
+        x = x.rechunk(safe_chunks)
+
+        # result.shape = x_shape_trimmed + window_shape,
+        # where x_shape_trimmed is x.shape with every entry
+        # reduced by one less than the corresponding window size.
+        # trim chunks to match x_shape_trimmed
+        newchunks = tuple(
+            c[:-1] + (c[-1] - d,) for d, c in zip(depths, x.chunks)
+        ) + tuple((window,) for window in window_shape)
+
+        kwargs = dict(
+            depth=tuple((0, d) for d in depths),  # Overlap on +ve side only
+            boundary="none",
+            meta=x._meta,
+            new_axis=range(x.ndim, x.ndim + len(axis)),
+            chunks=newchunks,
+            trim=False,
+            window_shape=window_shape,
+            axis=axis,
+        )
+        # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
+        if dask_version > "2.18.0":
+            return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)
+        else:
+            return map_overlap(x, _np_sliding_window_view, **kwargs)

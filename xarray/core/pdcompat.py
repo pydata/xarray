@@ -46,7 +46,7 @@ if LooseVersion(pd.__version__) < "0.25.0":
     Panel = pd.Panel
 else:
 
-    class Panel:  # type: ignore
+    class Panel:  # type: ignore[no-redef]
         pass
 
 
@@ -55,4 +55,4 @@ def count_not_none(*args) -> int:
 
     Copied from pandas.core.common.count_not_none (not part of the public API)
     """
-    return sum([arg is not None for arg in args])
+    return sum(arg is not None for arg in args)

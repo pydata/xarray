@@ -1,10 +1,15 @@
-from typing import TYPE_CHECKING, Hashable, Iterable, Optional, Union, overload
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, TypeVar, Union
 
+from . import duck_array_ops
 from .computation import dot
-from .options import _get_keep_attrs
+from .pycompat import is_duck_dask_array
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords  # noqa: F401
     from .dataarray import DataArray, Dataset
+
+T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
+
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -54,7 +59,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-class Weighted:
+class Weighted(Generic[T_DataWithCoords]):
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -68,15 +73,7 @@ class Weighted:
 
     __slots__ = ("obj", "weights")
 
-    @overload
-    def __init__(self, obj: "DataArray", weights: "DataArray") -> None:
-        ...
-
-    @overload  # noqa: F811
-    def __init__(self, obj: "Dataset", weights: "DataArray") -> None:  # noqa: F811
-        ...
-
-    def __init__(self, obj, weights):  # noqa: F811
+    def __init__(self, obj: T_DataWithCoords, weights: "DataArray"):
         """
         Create a Weighted object
 
@@ -100,14 +97,40 @@ class Weighted:
         if not isinstance(weights, DataArray):
             raise ValueError("`weights` must be a DataArray")
 
-        if weights.isnull().any():
-            raise ValueError(
-                "`weights` cannot contain missing values. "
-                "Missing values can be replaced by `weights.fillna(0)`."
+        def _weight_check(w):
+            # Ref https://github.com/pydata/xarray/pull/4559/files#r515968670
+            if duck_array_ops.isnull(w).any():
+                raise ValueError(
+                    "`weights` cannot contain missing values. "
+                    "Missing values can be replaced by `weights.fillna(0)`."
+                )
+            return w
+
+        if is_duck_dask_array(weights.data):
+            # assign to copy - else the check is not triggered
+            weights = weights.copy(
+                data=weights.data.map_blocks(_weight_check, dtype=weights.dtype),
+                deep=False,
             )
 
-        self.obj = obj
-        self.weights = weights
+        else:
+            _weight_check(weights.data)
+
+        self.obj: T_DataWithCoords = obj
+        self.weights: "DataArray" = weights
+
+    def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
+        """raise an error if any dimension is missing"""
+
+        if isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = [dim] if dim else []
+        else:
+            dims = list(dim)
+        missing_dims = set(dims) - set(self.obj.dims) - set(self.weights.dims)
+        if missing_dims:
+            raise ValueError(
+                f"{self.__class__.__name__} does not contain the dimensions: {missing_dims}"
+            )
 
     @staticmethod
     def _reduce(
@@ -118,7 +141,7 @@ class Weighted:
     ) -> "DataArray":
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
-            for internal use only
+        for internal use only
         """
 
         # need to infer dims as we use `dot`
@@ -131,18 +154,24 @@ class Weighted:
 
         # `dot` does not broadcast arrays, so this avoids creating a large
         # DataArray (if `weights` has additional dimensions)
-        # maybe add fasttrack (`(da * weights).sum(dims=dim, skipna=skipna)`)
         return dot(da, weights, dims=dim)
 
     def _sum_of_weights(
         self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
-        """ Calculate the sum of weights, accounting for missing values """
+        """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
 
-        sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
+        # bool -> int, because ``xr.dot([True, True], [True, True])`` -> True
+        # (and not 2); GH4074
+        if self.weights.dtype == bool:
+            sum_of_weights = self._reduce(
+                mask, self.weights.astype(int), dim=dim, skipna=False
+            )
+        else:
+            sum_of_weights = self._reduce(mask, self.weights, dim=dim, skipna=False)
 
         # 0-weights are not valid
         valid_weights = sum_of_weights != 0.0
@@ -181,7 +210,7 @@ class Weighted:
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> Union["DataArray", "Dataset"]:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
@@ -192,7 +221,7 @@ class Weighted:
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> Union["DataArray", "Dataset"]:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
@@ -203,7 +232,7 @@ class Weighted:
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> Union["DataArray", "Dataset"]:
+    ) -> T_DataWithCoords:
 
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
@@ -217,23 +246,20 @@ class Weighted:
         return f"{klass} with weights along dimensions: {weight_dims}"
 
 
-class DataArrayWeighted(Weighted):
-    def _implementation(self, func, dim, **kwargs):
+class DataArrayWeighted(Weighted["DataArray"]):
+    def _implementation(self, func, dim, **kwargs) -> "DataArray":
 
-        keep_attrs = kwargs.pop("keep_attrs")
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+        self._check_dim(dim)
 
-        weighted = func(self.obj, dim=dim, **kwargs)
-
-        if keep_attrs:
-            weighted.attrs = self.obj.attrs
-
-        return weighted
+        dataset = self.obj._to_temp_dataset()
+        dataset = dataset.map(func, dim=dim, **kwargs)
+        return self.obj._from_temp_dataset(dataset)
 
 
-class DatasetWeighted(Weighted):
+class DatasetWeighted(Weighted["Dataset"]):
     def _implementation(self, func, dim, **kwargs) -> "Dataset":
+
+        self._check_dim(dim)
 
         return self.obj.map(func, dim=dim, **kwargs)
 

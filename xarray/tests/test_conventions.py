@@ -18,13 +18,7 @@ from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 
-from . import (
-    assert_array_equal,
-    raises_regex,
-    requires_cftime,
-    requires_dask,
-    requires_netCDF4,
-)
+from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
 from .test_backends import CFEncodedBase
 
 
@@ -32,10 +26,8 @@ class TestBoolTypeArray:
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
         bx = conventions.BoolTypeArray(x)
-        assert bx.dtype == np.bool
-        assert_array_equal(
-            bx, np.array([True, False, True, True, False], dtype=np.bool)
-        )
+        assert bx.dtype == bool
+        assert_array_equal(bx, np.array([True, False, True, True, False], dtype=bool))
 
 
 class TestNativeEndiannessArray:
@@ -147,8 +139,42 @@ class TestEncodeCFVariable:
         assert enc["a"].attrs["coordinates"] == "y"
         assert enc["b"].attrs["coordinates"] == "z"
         orig["a"].attrs["coordinates"] = "foo"
-        with raises_regex(ValueError, "'coordinates' found in both attrs"):
+        with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
+
+    def test_emit_coordinates_attribute_in_attrs(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].attrs["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
+
+    def test_emit_coordinates_attribute_in_encoding(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
 
     @requires_dask
     def test_string_object_warning(self):
@@ -235,9 +261,10 @@ class TestDecodeCF:
         assert_identical(expected, actual)
         assert_identical(expected, actual2)
 
+    @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
     def test_invalid_time_units_raises_eagerly(self):
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
-        with raises_regex(ValueError, "unable to decode time"):
+        with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
 
     @requires_cftime
@@ -287,7 +314,7 @@ class TestDecodeCF:
         assert all(
             isinstance(var.data, da.Array)
             for name, var in decoded.variables.items()
-            if name not in decoded.indexes
+            if name not in decoded.xindexes
         )
         assert_identical(decoded, conventions.decode_cf(original).compute())
 
@@ -311,6 +338,41 @@ class TestDecodeCF:
             conventions.decode_cf(original).chunk(),
         )
 
+    def test_decode_cf_time_kwargs(self):
+        ds = Dataset.from_dict(
+            {
+                "coords": {
+                    "timedelta": {
+                        "data": np.array([1, 2, 3], dtype="int64"),
+                        "dims": "timedelta",
+                        "attrs": {"units": "days"},
+                    },
+                    "time": {
+                        "data": np.array([1, 2, 3], dtype="int64"),
+                        "dims": "time",
+                        "attrs": {"units": "days since 2000-01-01"},
+                    },
+                },
+                "dims": {"time": 3, "timedelta": 3},
+                "data_vars": {
+                    "a": {"dims": ("time", "timedelta"), "data": np.ones((3, 3))},
+                },
+            }
+        )
+
+        dsc = conventions.decode_cf(ds)
+        assert dsc.timedelta.dtype == np.dtype("m8[ns]")
+        assert dsc.time.dtype == np.dtype("M8[ns]")
+        dsc = conventions.decode_cf(ds, decode_times=False)
+        assert dsc.timedelta.dtype == np.dtype("int64")
+        assert dsc.time.dtype == np.dtype("int64")
+        dsc = conventions.decode_cf(ds, decode_times=True, decode_timedelta=False)
+        assert dsc.timedelta.dtype == np.dtype("int64")
+        assert dsc.time.dtype == np.dtype("M8[ns]")
+        dsc = conventions.decode_cf(ds, decode_times=False, decode_timedelta=True)
+        assert dsc.timedelta.dtype == np.dtype("m8[ns]")
+        assert dsc.time.dtype == np.dtype("int64")
+
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
     def encode_variable(self, var):
@@ -328,13 +390,17 @@ class TestCFEncodedDataStore(CFEncodedBase):
 
     @contextlib.contextmanager
     def roundtrip(
-        self, data, save_kwargs={}, open_kwargs={}, allow_cleanup_failure=False
+        self, data, save_kwargs=None, open_kwargs=None, allow_cleanup_failure=False
     ):
+        if save_kwargs is None:
+            save_kwargs = {}
+        if open_kwargs is None:
+            open_kwargs = {}
         store = CFEncodedInMemoryStore()
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)
 
-    @pytest.mark.skip("cannot roundtrip coordinates yet for " "CFEncodedInMemoryStore")
+    @pytest.mark.skip("cannot roundtrip coordinates yet for CFEncodedInMemoryStore")
     def test_roundtrip_coordinates(self):
         pass
 

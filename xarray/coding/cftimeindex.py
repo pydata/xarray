@@ -43,6 +43,7 @@ import re
 import warnings
 from datetime import timedelta
 from distutils.version import LooseVersion
+from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -50,7 +51,20 @@ import pandas as pd
 from xarray.core.utils import is_scalar
 
 from ..core.common import _contains_cftime_datetimes
+from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
+
+# constants for cftimeindex.repr
+CFTIME_REPR_LENGTH = 19
+ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
+REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
+
+
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
+try:
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
+except AttributeError:
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError,)
 
 
 def named(name, pattern):
@@ -85,22 +99,25 @@ def build_pattern(date_sep=r"\-", datetime_sep=r"T", time_sep=r"\:"):
 
 _BASIC_PATTERN = build_pattern(date_sep="", time_sep="")
 _EXTENDED_PATTERN = build_pattern()
-_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN]
+_CFTIME_PATTERN = build_pattern(datetime_sep=" ")
+_PATTERNS = [_BASIC_PATTERN, _EXTENDED_PATTERN, _CFTIME_PATTERN]
 
 
-def parse_iso8601(datetime_string):
+def parse_iso8601_like(datetime_string):
     for pattern in _PATTERNS:
         match = re.match(pattern, datetime_string)
         if match:
             return match.groupdict()
-    raise ValueError("no ISO-8601 match for string: %s" % datetime_string)
+    raise ValueError(
+        f"no ISO-8601 or cftime-string-like match for string: {datetime_string}"
+    )
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
     import cftime
 
     default = date_type(1, 1, 1)
-    result = parse_iso8601(timestr)
+    result = parse_iso8601_like(timestr)
     replace = {}
 
     for attr in ["year", "month", "day", "hour", "minute", "second"]:
@@ -215,6 +232,50 @@ def assert_all_valid_date_type(data):
             )
 
 
+def format_row(times, indent=0, separator=", ", row_end=",\n"):
+    """Format a single row from format_times."""
+    return indent * " " + separator.join(map(str, times)) + row_end
+
+
+def format_times(
+    index,
+    max_width,
+    offset,
+    separator=", ",
+    first_row_offset=0,
+    intermediate_row_end=",\n",
+    last_row_end="",
+):
+    """Format values of cftimeindex as pd.Index."""
+    n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
+    n_rows = int(np.ceil(len(index) / n_per_row))
+
+    representation = ""
+    for row in range(n_rows):
+        indent = first_row_offset if row == 0 else offset
+        row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
+        times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
+        representation += format_row(
+            times_for_row, indent=indent, separator=separator, row_end=row_end
+        )
+
+    return representation
+
+
+def format_attrs(index, separator=", "):
+    """Format attributes of CFTimeIndex for __repr__."""
+    attrs = {
+        "dtype": f"'{index.dtype}'",
+        "length": f"{len(index)}",
+        "calendar": f"'{index.calendar}'",
+        "freq": f"'{index.freq}'" if len(index) >= 3 else None,
+    }
+
+    attrs_str = [f"{k}={v}" for k, v in attrs.items()]
+    attrs_str = f"{separator}".join(attrs_str)
+    return attrs_str
+
+
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
@@ -224,7 +285,7 @@ class CFTimeIndex(pd.Index):
     ----------
     data : array or CFTimeIndex
         Sequence of cftime.datetime objects to use in index
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
 
     See Also
@@ -243,6 +304,9 @@ class CFTimeIndex(pd.Index):
         "dayofyr", "The ordinal day of year of the datetime", "1.0.2.1"
     )
     dayofweek = _field_accessor("dayofwk", "The day of week of the datetime", "1.0.2.1")
+    days_in_month = _field_accessor(
+        "daysinmonth", "The number of days in the month of the datetime", "1.1.0.0"
+    )
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
@@ -256,6 +320,45 @@ class CFTimeIndex(pd.Index):
         result._cache = {}
         return result
 
+    def __repr__(self):
+        """
+        Return a string representation for this object.
+        """
+        klass_name = type(self).__name__
+        display_width = OPTIONS["display_width"]
+        offset = len(klass_name) + 2
+
+        if len(self) <= ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS:
+            datastr = format_times(
+                self.values, display_width, offset=offset, first_row_offset=0
+            )
+        else:
+            front_str = format_times(
+                self.values[:REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END],
+                display_width,
+                offset=offset,
+                first_row_offset=0,
+                last_row_end=",",
+            )
+            end_str = format_times(
+                self.values[-REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END:],
+                display_width,
+                offset=offset,
+                first_row_offset=offset,
+            )
+            datastr = "\n".join([front_str, f"{' '*offset}...", end_str])
+
+        attrs_str = format_attrs(self)
+        # oneliner only if smaller than display_width
+        full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
+        if len(full_repr_str) > display_width:
+            # if attrs_str too long, one per line
+            if len(attrs_str) >= display_width - offset:
+                attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
+            full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
+
+        return full_repr_str
+
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._partial_date_slice
@@ -268,8 +371,6 @@ class CFTimeIndex(pd.Index):
         defining the index.  For example:
 
         >>> from cftime import DatetimeNoLeap
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
@@ -364,17 +465,22 @@ class CFTimeIndex(pd.Index):
         else:
             return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
 
-    def _maybe_cast_slice_bound(self, label, side, kind):
+    def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
-        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
-        if isinstance(label, str):
-            parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
-            start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
-            if self.is_monotonic_decreasing and len(self) > 1:
-                return end if side == "left" else start
-            return start if side == "left" else end
-        else:
+        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
+
+        Note that we have never used the kind argument in CFTimeIndex and it is
+        deprecated as of pandas version 1.3.0.  It exists only for compatibility
+        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
+        """
+        if not isinstance(label, str):
             return label
+
+        parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
+        start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
+        if self.is_monotonic_decreasing and len(self) > 1:
+            return end if side == "left" else start
+        return start if side == "left" else end
 
     # TODO: Add ability to use integer range outside of iloc?
     # e.g. series[1:5].
@@ -421,7 +527,7 @@ class CFTimeIndex(pd.Index):
         -------
         CFTimeIndex
 
-        See also
+        See Also
         --------
         pandas.DatetimeIndex.shift
 
@@ -429,9 +535,11 @@ class CFTimeIndex(pd.Index):
         --------
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
-        CFTimeIndex([2000-01-31 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-31 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         >>> index.shift(1, "M")
-        CFTimeIndex([2000-02-29 00:00:00], dtype='object')
+        CFTimeIndex([2000-02-29 00:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         """
         from .cftime_offsets import to_offset
 
@@ -465,7 +573,7 @@ class CFTimeIndex(pd.Index):
         elif _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
-            except OverflowError:
+            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
                 raise ValueError(
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
@@ -476,7 +584,7 @@ class CFTimeIndex(pd.Index):
     def __rsub__(self, other):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
-        except OverflowError:
+        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
             raise ValueError(
                 "The time difference exceeds the range of values "
                 "that can be expressed at the nanosecond resolution."
@@ -514,10 +622,10 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
-        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
+        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
+                    dtype='object', length=2, calendar='gregorian', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """
@@ -575,8 +683,23 @@ class CFTimeIndex(pd.Index):
             [
                 _total_microseconds(exact_cftime_datetime_difference(epoch, date))
                 for date in self.values
-            ]
+            ],
+            dtype=np.int64,
         )
+
+    @property
+    def calendar(self):
+        """The calendar used by the datetimes in the index."""
+        from .times import infer_calendar_name
+
+        return infer_calendar_name(self)
+
+    @property
+    def freq(self):
+        """The frequency used by the dates in the index."""
+        from .frequencies import infer_freq
+
+        return infer_freq(self)
 
     def _round_via_method(self, freq, method):
         """Round dates using a specified method."""
@@ -596,7 +719,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -613,7 +736,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
@@ -630,7 +753,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        freq : str or CFTimeOffset
+        freq : str
             The frequency level to round the index to.  Must be a fixed
             frequency like 'S' (second) not 'ME' (month end).  See `frequency
             aliases <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_
