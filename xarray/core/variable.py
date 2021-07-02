@@ -31,9 +31,9 @@ from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
-    pint_array_type,
     integer_types,
     is_duck_dask_array,
+    pint_array_type,
 )
 from .utils import (
     NdimSizeLenMixin,

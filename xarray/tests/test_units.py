@@ -13,8 +13,13 @@ except ImportError:
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
 
-from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
-from . import requires_matplotlib
+from . import (
+    assert_allclose,
+    assert_duckarray_allclose,
+    assert_equal,
+    assert_identical,
+    requires_matplotlib,
+)
 from .test_plot import PlotTestCase
 from .test_variable import _PAD_XR_NP_ARGS
 
@@ -5578,20 +5583,22 @@ class TestPlots(PlotTestCase):
     def test_units_in_line_plot_labels(self):
         arr = np.linspace(1, 10, 3) * unit_registry.Pa
         # TODO make coord a Quantity once unit-aware indexes supported
-        x_coord = xr.DataArray(np.linspace(1, 3, 3), dims='x', attrs={'units': 'meters'})
-        da = xr.DataArray(data=arr, dims='x', coords={'x': x_coord}, name='pressure')
+        x_coord = xr.DataArray(
+            np.linspace(1, 3, 3), dims="x", attrs={"units": "meters"}
+        )
+        da = xr.DataArray(data=arr, dims="x", coords={"x": x_coord}, name="pressure")
 
         da.plot.line()
 
         ax = plt.gca()
-        assert ax.get_ylabel() == 'pressure [pascal]'
-        assert ax.get_xlabel() == 'x [meters]'
+        assert ax.get_ylabel() == "pressure [pascal]"
+        assert ax.get_xlabel() == "x [meters]"
 
     def test_units_in_2d_plot_labels(self):
         arr = np.ones((2, 3)) * unit_registry.Pa
-        da = xr.DataArray(data=arr, dims=['x', 'y'], name='pressure')
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
         fig, (ax, cax) = plt.subplots(1, 2)
         ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
 
-        assert cax.get_ylabel() == 'pressure [pascal]'
+        assert cax.get_ylabel() == "pressure [pascal]"

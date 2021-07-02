@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
-from ..core.utils import is_scalar
 from ..core.pycompat import pint_array_type
+from ..core.utils import is_scalar
 
 try:
     import nc_time_axis  # noqa: F401
