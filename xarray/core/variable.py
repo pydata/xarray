@@ -31,6 +31,7 @@ from .options import _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
+    pint_array_type,
     integer_types,
     is_duck_dask_array,
 )
@@ -252,19 +253,28 @@ def _as_array_or_item(data):
     Importantly, this function does not copy data if it is already an ndarray -
     otherwise, it will not be possible to update Variable values in place.
 
-    This function mostly exists because 0-dimensional ndarrays with
-    dtype=datetime64 are broken :(
-    https://github.com/numpy/numpy/issues/4337
-    https://github.com/numpy/numpy/issues/7619
-
-    TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
+
+    # TODO replace this with an entrypoint to allow duck-array libraries to
+    # specify how they want to return their values?
+    if isinstance(data, cupy_array_type):
+        data = data.get()
+    elif isinstance(data, pint_array_type):
+        data = data.magnitude
+    else:
+        data = np.asarray(data)
+
+    # Exists because 0-dimensional ndarrays with
+    # dtype=datetime64 are broken :(
+    # https://github.com/numpy/numpy/issues/4337
+    # https://github.com/numpy/numpy/issues/7619
+    # TODO: remove this (replace with np.asarray) once these issues are fixed
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
         elif data.dtype.kind == "m":
             data = np.timedelta64(data, "ns")
+
     return data
 
 
