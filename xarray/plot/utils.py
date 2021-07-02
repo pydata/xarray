@@ -10,6 +10,7 @@ import pandas as pd
 
 from ..core.options import OPTIONS
 from ..core.utils import is_scalar
+from ..core.pycompat import pint_array_type
 
 try:
     import nc_time_axis  # noqa: F401
@@ -474,12 +475,19 @@ def label_from_attrs(da, extra=""):
     else:
         name = ""
 
-    if da.attrs.get("units"):
-        units = " [{}]".format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = " [{}]".format(da.attrs["unit"])
+    def _get_units_from_attrs(da):
+        if da.attrs.get("units"):
+            units = " [{}]".format(da.attrs["units"])
+        elif da.attrs.get("unit"):
+            units = " [{}]".format(da.attrs["unit"])
+        else:
+            units = ""
+        return units
+
+    if isinstance(da.data, pint_array_type):
+        units = " [{}]".format(str(da.data.units))
     else:
-        units = ""
+        units = _get_units_from_attrs(da)
 
     return "\n".join(textwrap.wrap(name + extra + units, 30))
 
