@@ -12,7 +12,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -61,6 +60,7 @@ from .indexes import (
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
+from .types import T_DSorDA
 from .utils import (
     Default,
     HybridMappingProxy,
@@ -76,8 +76,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
-T_DataArray = TypeVar("T_DataArray", bound="DataArray")
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
