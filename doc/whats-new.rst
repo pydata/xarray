@@ -130,7 +130,6 @@ Thomas Nicholas, Tom Nicholas, Zachary Moon.
 
 New Features
 ~~~~~~~~~~~~
-
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
@@ -143,9 +142,22 @@ New Features
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
+  of `datasets` so anyone calling this method using a named parameter will need to update
+  the name accordingly (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
 Bug fixes
 ~~~~~~~~~
-
+- :py:func:`combine_by_coords` can now handle combining a list of unnamed
+  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 - Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
   an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
   0.18.0.
