@@ -904,6 +904,6 @@ def _get_nice_quiver_magnitude(u, v):
     import matplotlib as mpl
 
     ticker = mpl.ticker.MaxNLocator(3)
-    mean = np.mean(np.hypot(u.values, v.values))
+    mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
