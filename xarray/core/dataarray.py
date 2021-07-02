@@ -430,12 +430,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self._close = None
 
     def _replace(
-        self,
+        self: T_DataArray,
         variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
-    ) -> "DataArray":
+    ) -> T_DataArray:
         if variable is None:
             variable = self.variable
         if coords is None:
@@ -653,7 +653,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         return self.variable.to_numpy()
 
-    def as_numpy(self) -> T_DataArray:
+    def as_numpy(self: T_DataArray) -> T_DataArray:
         """
         Coerces wrapped data into a numpy array, and returns it wrapped inside
         a DataArray.
@@ -952,7 +952,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
-    def copy(self, deep: bool = True, data: Any = None) -> "DataArray":
+    def copy(self: T_DataArray, deep: bool = True, data: Any = None) -> T_DataArray:
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.

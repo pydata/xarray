@@ -1090,7 +1090,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = np.array(data)
             return data
 
-    def as_numpy(self) -> VariableType:
+    def as_numpy(self: VariableType) -> VariableType:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.data.to_numpy())
 
