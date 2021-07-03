@@ -5584,9 +5584,6 @@ class TestPintWrappingDask:
         actual.name = None
         expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
 
-        print(actual)
-        print(expected)
-
         assert_units_equal(expected, actual)
-        assert type(expected.data) == type(actual.data)
-        assert_identical(expected, actual)
+        # Don't use isinstance b/c we don't want to allow subclasses through
+        assert type(expected.data) == type(actual.data) # noqa
