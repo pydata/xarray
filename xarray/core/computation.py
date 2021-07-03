@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -36,10 +35,8 @@ from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates  # noqa
-    from .dataarray import DataArray
+    from .coordinates import Coordinates
     from .dataset import Dataset
-
     from .types import T_DSorDA
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
@@ -199,7 +196,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> List["Coordinates"]:
+def _get_coords_list(args) -> List[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -401,7 +398,7 @@ def apply_dict_of_variables_vfunc(
 
 def _fast_dataset(
     variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
-) -> "Dataset":
+) -> Dataset:
     """Create a dataset as quickly as possible.
 
     Beware: the `variables` dict is modified INPLACE.

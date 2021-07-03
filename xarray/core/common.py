@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import warnings
 from contextlib import suppress
 from html import escape
@@ -37,10 +38,9 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import T_DataWithCoords, T_DSorDA
     from .variable import Variable
     from .weighted import Weighted
-    from .types import T_DataWithCoords
-    from .types import T_DSorDA
 
 
 C = TypeVar("C")

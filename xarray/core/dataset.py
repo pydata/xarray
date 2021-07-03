@@ -25,7 +25,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    TypeVar,
     Union,
     cast,
     overload,
@@ -110,7 +109,6 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-
     from .types import T_DSorDA
 
     try:

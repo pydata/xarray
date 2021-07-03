@@ -13,6 +13,7 @@ import collections
 import itertools
 import operator
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -22,9 +23,7 @@ from typing import (
     List,
     Mapping,
     Sequence,
-    TYPE_CHECKING,
     Tuple,
-    TypeVar,
     Union,
 )
 

@@ -1,15 +1,16 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, TypeVar, Union
 
 import numpy as np
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
     from .groupby import DataArrayGroupBy, GroupBy
     from .npcompat import ArrayLike
     from .variable import Variable
-    from .common import DataWithCoords
 
     try:
         from dask.array import Array as DaskArray

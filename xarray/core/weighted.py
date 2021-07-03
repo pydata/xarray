@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, TypeVar
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, TypeVar, Union
 
 from . import duck_array_ops
 from .computation import dot

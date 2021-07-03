@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import copy
 import itertools
 import numbers
@@ -6,6 +7,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
@@ -15,7 +17,6 @@ from typing import (
     Sequence,
     Tuple,
     Union,
-    TYPE_CHECKING,
 )
 
 import numpy as np

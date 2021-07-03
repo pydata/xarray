@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Union, TypeVar
+from typing import TYPE_CHECKING, Generic, Hashable, Mapping, TypeVar, Union
 
 import numpy as np
 
@@ -74,10 +75,10 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-# We seem to need to redefine this here, rather than in `core.types`, because it a)
-# needs to be defined (can't be a string) b) can't be behind an `if TYPE_CHECKING`
-# branch and c) we have import errors if we import it without at the module level like:
-# from .types import T_DSorDA
+# We seem to need to redefine T_DSorDA here, rather than importing `core.types`, because
+# a) it needs to be defined (can't be a string) b) it can't be behind an `if
+# TYPE_CHECKING` branch and c) we have import errors if we import it without at the
+# module level like: from .types import T_DSorDA
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
