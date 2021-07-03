@@ -12,7 +12,6 @@ try:
     from dask.array import Array as DaskArray
 except ImportError:
     DaskArray = np.ndarray
-# DatasetOpsMixin etc. are parent classes of Dataset etc.
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
