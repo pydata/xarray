@@ -9,8 +9,10 @@ import xarray as xr
 from xarray.core import dtypes, duck_array_ops
 
 from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
+from . import requires_dask
 from .test_variable import _PAD_XR_NP_ARGS
 
+dask = pytest.importorskip("dask")
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
@@ -5564,3 +5566,22 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
+
+
+@requires_dask
+class TestPintWrappingDask:
+    def test_duck_array_ops(self):
+        d = dask.array.array([1,2,3])
+        q = pint.Quantity(d, units='m')
+        da = xr.DataArray(q, dims='x')
+
+        actual = da.mean().compute()
+        actual.name = None
+        expected = xr.DataArray(pint.Quantity(np.array(2.0), units='m'))
+
+        print(actual)
+        print(expected)
+
+        assert_units_equal(expected, actual)
+        assert type(expected.data) == type(actual.data)
+        assert_identical(expected, actual)
