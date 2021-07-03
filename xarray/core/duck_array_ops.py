@@ -39,26 +39,26 @@ def _dask_or_eager_func(
     requires_dask=None,
 ):
     """Create a function that dispatches to dask for dask array inputs."""
-    if dask_module is not None:
+    # if dask_module is not None:
+    #
+    #     def f(*args, **kwargs):
+    #         if list_of_args:
+    #             dispatch_args = args[0]
+    #         else:
+    #             dispatch_args = args[array_args]
+    #         if any(is_duck_dask_array(a) for a in dispatch_args):
+    #             try:
+    #                 wrapped = getattr(dask_module, name)
+    #             except AttributeError as e:
+    #                 raise AttributeError(f"{e}: requires dask >={requires_dask}")
+    #         else:
+    #             wrapped = getattr(eager_module, name)
+    #         return wrapped(*args, **kwargs)
+    #
+    # else:
 
-        def f(*args, **kwargs):
-            if list_of_args:
-                dispatch_args = args[0]
-            else:
-                dispatch_args = args[array_args]
-            if any(is_duck_dask_array(a) for a in dispatch_args):
-                try:
-                    wrapped = getattr(dask_module, name)
-                except AttributeError as e:
-                    raise AttributeError(f"{e}: requires dask >={requires_dask}")
-            else:
-                wrapped = getattr(eager_module, name)
-            return wrapped(*args, **kwargs)
-
-    else:
-
-        def f(*args, **kwargs):
-            return getattr(eager_module, name)(*args, **kwargs)
+    def f(*args, **kwargs):
+        return getattr(eager_module, name)(*args, **kwargs)
 
     return f
 
@@ -348,8 +348,8 @@ def _create_nan_agg_method(
             def np_f(*args, **kwargs):
                 return getattr(np, name)(*args, **kwargs)
 
-            func = np_f
-            #func = _dask_or_eager_func(name, dask_module=dask_module)
+            #func = np_f
+            func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
             with warnings.catch_warnings():
