@@ -59,9 +59,15 @@ isnat = np.isnat
 isnan = _module_func("isnan")
 zeros_like = _module_func("zeros_like")
 
+# Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
+def _dask_or_eager_isnull(*args, **kwargs):
+    x, = args
+    if is_duck_dask_array(x):
+        return dask_array.isnull(*args, **kwargs)
+    else:
+        return pd.isnull(*args, **kwargs)
 
-pandas_isnull = _module_func("isnull", module=pd)
-
+pandas_isnull = _dask_or_eager_isnull
 
 def isnull(data):
     data = asarray(data)
