@@ -97,13 +97,16 @@ Internal Changes
 - Publish test results & timings on each PR.
   (:pull:`5537`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
   selection (not ready yet for public use). Also refactor the internal,
   pandas-specific implementation into ``PandasIndex.query()`` and
   ``PandasMultiIndex.query()`` (:pull:`5322`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
+  dask versions of functions when acting on dask arrays, instead relying numpy
+  and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.18.2:
 
