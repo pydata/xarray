@@ -29,17 +29,27 @@ try:
 except ImportError:
     dask_array = None
 
-
-def _module_func(
-    name,
-    module=np,
-):
-    """Create a function that dispatches to a particular module for inputs."""
-
-    def f(*args, **kwargs):
-        return getattr(module, name)(*args, **kwargs)
-
-    return f
+from numpy import (
+    around,
+    isclose,
+    isnat,
+    isnan,
+    zeros_like,
+    transpose,
+    where as _where,
+    isin,
+    take,
+    broadcast_to,
+    pad,
+    concatenate as _concatenate,
+    stack as _stack,
+    all as array_all,
+    any as array_any,
+    tensordot,
+    einsum,
+    unravel_index,
+)
+from numpy.ma import masked_invalid
 
 
 def fail_on_dask_array_input(values, msg=None, func_name=None):
@@ -51,23 +61,16 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
         raise NotImplementedError(msg % func_name)
 
 
-around = _module_func("around")
-isclose = _module_func("isclose")
-
-
-isnat = np.isnat
-isnan = _module_func("isnan")
-zeros_like = _module_func("zeros_like")
-
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
-def _dask_or_eager_isnull(*args, **kwargs):
-    x, = args
-    if is_duck_dask_array(x):
-        return dask_array.isnull(*args, **kwargs)
+def _dask_or_eager_isnull(obj):
+    if is_duck_dask_array(obj):
+        return dask_array.isnull(obj)
     else:
-        return pd.isnull(*args, **kwargs)
+        return pd.isnull(obj)
+
 
 pandas_isnull = _dask_or_eager_isnull
+
 
 def isnull(data):
     data = asarray(data)
@@ -97,23 +100,6 @@ def isnull(data):
 
 def notnull(data):
     return ~isnull(data)
-
-
-transpose = _module_func("transpose")
-_where = _module_func("where")
-isin = _module_func("isin")
-take = _module_func("take")
-broadcast_to = _module_func("broadcast_to")
-pad = _module_func("pad")
-
-_concatenate = _module_func("concatenate")
-_stack = _module_func("stack")
-
-array_all = _module_func("all")
-array_any = _module_func("any")
-
-tensordot = _module_func("tensordot")
-einsum = _module_func("einsum")
 
 
 def gradient(x, coord, axis, edge_order):
@@ -149,9 +135,6 @@ def cumulative_trapezoid(y, x, axis):
     integrand = pad(integrand, pads, mode="constant", constant_values=0.0)
 
     return cumsum(integrand, axis=axis, skipna=False)
-
-
-masked_invalid = _module_func("masked_invalid", module=np.ma)
 
 
 def astype(data, dtype, **kwargs):
@@ -326,7 +309,7 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            func = _module_func(name)
+            func = getattr(np, name)
 
         try:
             with warnings.catch_warnings():
@@ -369,7 +352,6 @@ cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
-unravel_index = _module_func("unravel_index")
 
 
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
