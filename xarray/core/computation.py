@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+    from .types import T_DSorDA
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")

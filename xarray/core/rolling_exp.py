@@ -1,17 +1,12 @@
+from __future__ import annotations
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Union, TypeVar
 
 import numpy as np
 
 from .options import _get_keep_attrs
 from .pdcompat import count_not_none
 from .pycompat import is_duck_dask_array
-
-if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
-
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -77,6 +72,17 @@ def _get_center_of_mass(comass, span, halflife, alpha):
         raise ValueError("Must pass one of comass, span, halflife, or alpha")
 
     return float(comass)
+
+
+# We seem to need to redefine this here, rather than in `core.types`, because it a)
+# needs to be defined (can't be a string) b) can't be behind an `if TYPE_CHECKING`
+# branch and c) we have import errors if we import it without at the module level like:
+# from .types import T_DSorDA
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
 
 
 class RollingExp(Generic[T_DSorDA]):

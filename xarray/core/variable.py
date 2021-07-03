@@ -1,10 +1,22 @@
+from __future__ import annotations
 import copy
 import itertools
 import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any, Dict, Hashable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+)
 
 import numpy as np
 import pandas as pd
@@ -47,7 +59,8 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
-from .types import T_Variable
+if TYPE_CHECKING:
+    from .types import T_Variable
 
 
 class MissingDimensionsError(ValueError):

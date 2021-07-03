@@ -111,7 +111,7 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .merge import CoercibleMapping
 
-    T_DSorDA = TypeVar("T_DSorDA", DataArray, "Dataset")
+    from .types import T_DSorDA
 
     try:
         from dask.delayed import Delayed

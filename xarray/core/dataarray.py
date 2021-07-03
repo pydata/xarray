@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime
 import warnings
 from typing import (
@@ -60,7 +61,6 @@ from .indexes import (
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
-from .types import T_DSorDA
 from .utils import (
     Default,
     HybridMappingProxy,
@@ -89,6 +89,8 @@ if TYPE_CHECKING:
         from iris.cube import Cube as iris_Cube
     except ImportError:
         iris_Cube = None
+
+    from .types import T_DSorDA
 
 
 def _infer_coords_and_dims(

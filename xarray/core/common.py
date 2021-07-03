@@ -1,3 +1,4 @@
+from __future__ import annotations
 import warnings
 from contextlib import suppress
 from html import escape
@@ -38,8 +39,9 @@ if TYPE_CHECKING:
     from .dataset import Dataset
     from .variable import Variable
     from .weighted import Weighted
+    from .types import T_DataWithCoords
+    from .types import T_DSorDA
 
-T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 C = TypeVar("C")
 T = TypeVar("T")
@@ -795,9 +797,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(
-        self: T_DataWithCoords, weights: "DataArray"
-    ) -> "Weighted[T_DataWithCoords]":
+    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_DSorDA]:
         """
         Weighted operations.
 

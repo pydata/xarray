@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 try:
     import dask
     import dask.array
@@ -20,6 +22,7 @@ from typing import (
     List,
     Mapping,
     Sequence,
+    TYPE_CHECKING,
     Tuple,
     TypeVar,
     Union,
@@ -33,7 +36,8 @@ from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
 
-T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+if TYPE_CHECKING:
+    from .types import T_DSorDA
 
 
 def unzip(iterable):
