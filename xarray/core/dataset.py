@@ -1198,6 +1198,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             obj = obj.rename(dim_names)
         return obj
 
+
+
     def copy(self, deep: bool = False, data: Mapping = None) -> "Dataset":
         """Returns a copy of this dataset.
 
@@ -1322,6 +1324,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
 
         return self._replace(variables, attrs=attrs)
+
+    def as_numpy(self: "Dataset") -> "Dataset":
+        """
+        Coerces wrapped data into numpy arrays, returning a Dataset.
+
+        See also
+        --------
+        DataArray.as_numpy
+        DataArray.to_numpy : Returns only the numpy.ndarray object.
+        """
+        numpy_variables = {k: v.as_numpy() for k, v in self._variables.items()}
+        return self.copy(data=numpy_variables)
 
     @property
     def _level_coords(self) -> Dict[str, Hashable]:
