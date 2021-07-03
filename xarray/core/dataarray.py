@@ -650,13 +650,25 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self.variable.values = value
 
     def to_numpy(self) -> np.ndarray:
-        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        """
+        Coerces wrapped data to numpy and returns a numpy.ndarray.
+
+        See also
+        --------
+        DataArray.as_numpy : Same but returns the surrounding DataArray instead.
+        Dataset.as_numpy
+        """
         return self.variable.to_numpy()
 
     def as_numpy(self: T_DataArray) -> T_DataArray:
         """
         Coerces wrapped data into a numpy array, and returns it wrapped inside
         a DataArray.
+
+        See also
+        --------
+        DataArray.to_numpy : Same but returns only the numpy.ndarray object.
+        Dataset.as_numpy : Converts all variables in a Dataset.
         """
         return self.copy(data=self.to_numpy())
 
