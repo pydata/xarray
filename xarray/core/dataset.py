@@ -1198,8 +1198,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             obj = obj.rename(dim_names)
         return obj
 
-
-
     def copy(self, deep: bool = False, data: Mapping = None) -> "Dataset":
         """Returns a copy of this dataset.
 
