@@ -20,7 +20,7 @@ import numpy as _np
 
 from .core.dataarray import DataArray as _DataArray
 from .core.dataset import Dataset as _Dataset
-from .core.duck_array_ops import _dask_or_eager_func
+from .core.duck_array_ops import _module_func
 from .core.groupby import GroupBy as _GroupBy
 from .core.pycompat import dask_array_type as _dask_array_type
 from .core.variable import Variable as _Variable
@@ -73,7 +73,7 @@ class _UFuncDispatcher:
                     new_args = tuple(reversed(args))
 
         if res is _UNDEFINED:
-            f = _dask_or_eager_func(self._name, array_args=slice(len(args)))
+            f = _module_func(self._name)
             res = f(*new_args, **kwargs)
         if res is NotImplemented:
             raise TypeError(

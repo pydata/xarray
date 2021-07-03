@@ -30,35 +30,14 @@ except ImportError:
     dask_array = None
 
 
-def _dask_or_eager_func(
+def _module_func(
     name,
-    eager_module=np,
-    dask_module=dask_array,
-    list_of_args=False,
-    array_args=slice(1),
-    requires_dask=None,
+    module=np,
 ):
-    """Create a function that dispatches to dask for dask array inputs."""
-    # if dask_module is not None:
-    #
-    #     def f(*args, **kwargs):
-    #         if list_of_args:
-    #             dispatch_args = args[0]
-    #         else:
-    #             dispatch_args = args[array_args]
-    #         if any(is_duck_dask_array(a) for a in dispatch_args):
-    #             try:
-    #                 wrapped = getattr(dask_module, name)
-    #             except AttributeError as e:
-    #                 raise AttributeError(f"{e}: requires dask >={requires_dask}")
-    #         else:
-    #             wrapped = getattr(eager_module, name)
-    #         return wrapped(*args, **kwargs)
-    #
-    # else:
+    """Create a function that dispatches to a particular module for inputs."""
 
     def f(*args, **kwargs):
-        return getattr(eager_module, name)(*args, **kwargs)
+        return getattr(module, name)(*args, **kwargs)
 
     return f
 
@@ -72,16 +51,16 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
         raise NotImplementedError(msg % func_name)
 
 
-around = _dask_or_eager_func("around")
-isclose = _dask_or_eager_func("isclose")
+around = _module_func("around")
+isclose = _module_func("isclose")
 
 
 isnat = np.isnat
-isnan = _dask_or_eager_func("isnan")
-zeros_like = _dask_or_eager_func("zeros_like")
+isnan = _module_func("isnan")
+zeros_like = _module_func("zeros_like")
 
 
-pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd)
+pandas_isnull = _module_func("isnull", module=pd)
 
 
 def isnull(data):
@@ -114,21 +93,21 @@ def notnull(data):
     return ~isnull(data)
 
 
-transpose = _dask_or_eager_func("transpose")
-_where = _dask_or_eager_func("where", array_args=slice(3))
-isin = _dask_or_eager_func("isin", array_args=slice(2))
-take = _dask_or_eager_func("take")
-broadcast_to = _dask_or_eager_func("broadcast_to")
-pad = _dask_or_eager_func("pad", dask_module=dask_array_compat)
+transpose = _module_func("transpose")
+_where = _module_func("where")
+isin = _module_func("isin")
+take = _module_func("take")
+broadcast_to = _module_func("broadcast_to")
+pad = _module_func("pad")
 
-_concatenate = _dask_or_eager_func("concatenate", list_of_args=True)
-_stack = _dask_or_eager_func("stack", list_of_args=True)
+_concatenate = _module_func("concatenate")
+_stack = _module_func("stack")
 
-array_all = _dask_or_eager_func("all")
-array_any = _dask_or_eager_func("any")
+array_all = _module_func("all")
+array_any = _module_func("any")
 
-tensordot = _dask_or_eager_func("tensordot", array_args=slice(2))
-einsum = _dask_or_eager_func("einsum", array_args=slice(1, None))
+tensordot = _module_func("tensordot")
+einsum = _module_func("einsum")
 
 
 def gradient(x, coord, axis, edge_order):
@@ -166,9 +145,7 @@ def cumulative_trapezoid(y, x, axis):
     return cumsum(integrand, axis=axis, skipna=False)
 
 
-masked_invalid = _dask_or_eager_func(
-    "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
-)
+masked_invalid = _module_func("masked_invalid", module=np.ma)
 
 
 def astype(data, dtype, **kwargs):
@@ -317,9 +294,7 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(
-    name, dask_module=dask_array, coerce_strings=False, invariant_0d=False
-):
+def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
     from . import nanops
 
     def f(values, axis=None, skipna=None, **kwargs):
@@ -345,11 +320,7 @@ def _create_nan_agg_method(
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            def np_f(*args, **kwargs):
-                return getattr(np, name)(*args, **kwargs)
-
-            #func = np_f
-            func = _dask_or_eager_func(name, dask_module=dask_module)
+            func = _module_func(name)
 
         try:
             with warnings.catch_warnings():
@@ -383,9 +354,7 @@ std = _create_nan_agg_method("std")
 std.numeric_only = True
 var = _create_nan_agg_method("var")
 var.numeric_only = True
-median = _create_nan_agg_method(
-    "median", dask_module=dask_array_compat, invariant_0d=True
-)
+median = _create_nan_agg_method("median", invariant_0d=True)
 median.numeric_only = True
 prod = _create_nan_agg_method("prod", invariant_0d=True)
 prod.numeric_only = True
@@ -394,7 +363,7 @@ cumprod_1d = _create_nan_agg_method("cumprod", invariant_0d=True)
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method("cumsum", invariant_0d=True)
 cumsum_1d.numeric_only = True
-unravel_index = _dask_or_eager_func("unravel_index")
+unravel_index = _module_func("unravel_index")
 
 
 _mean = _create_nan_agg_method("mean", invariant_0d=True)
