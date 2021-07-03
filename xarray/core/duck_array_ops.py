@@ -344,7 +344,12 @@ def _create_nan_agg_method(
         else:
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
-            func = _dask_or_eager_func(name, dask_module=dask_module)
+
+            def np_f(*args, **kwargs):
+                return getattr(np, name)(*args, **kwargs)
+
+            func = np_f
+            #func = _dask_or_eager_func(name, dask_module=dask_module)
 
         try:
             with warnings.catch_warnings():
