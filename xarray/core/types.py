@@ -1,12 +1,12 @@
 from typing import TypeVar, Union
 
+import numpy as np
+
 from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, GroupBy
 from .npcompat import ArrayLike
 from .variable import Variable
-
-import numpy as np
 
 try:
     from dask.array import Array as DaskArray
