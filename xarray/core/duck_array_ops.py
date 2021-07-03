@@ -29,27 +29,16 @@ try:
 except ImportError:
     dask_array = None
 
-from numpy import (
-    around,
-    isclose,
-    isnat,
-    isnan,
-    zeros_like,
-    transpose,
-    where as _where,
-    isin,
-    take,
-    broadcast_to,
-    pad,
-    concatenate as _concatenate,
-    stack as _stack,
-    all as array_all,
-    any as array_any,
-    tensordot,
-    einsum,
-    unravel_index,
-)
-from numpy.ma import masked_invalid
+from numpy import all as array_all  # noqa
+from numpy import any as array_any  # noqa
+from numpy import around, broadcast_to  # noqa
+from numpy import concatenate as _concatenate
+from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
+from numpy import stack as _stack
+from numpy import take, tensordot, transpose, unravel_index  # noqa
+from numpy import where as _where
+from numpy import zeros_like  # noqa
+from numpy.ma import masked_invalid  # noqa
 
 
 def fail_on_dask_array_input(values, msg=None, func_name=None):

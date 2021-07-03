@@ -5586,4 +5586,4 @@ class TestPintWrappingDask:
 
         assert_units_equal(expected, actual)
         # Don't use isinstance b/c we don't want to allow subclasses through
-        assert type(expected.data) == type(actual.data) # noqa
+        assert type(expected.data) == type(actual.data)  # noqa
