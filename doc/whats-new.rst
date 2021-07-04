@@ -21,7 +21,9 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
+  reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
 - Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Xarray now uses consolidated metadata by default when writing and reading Zarr

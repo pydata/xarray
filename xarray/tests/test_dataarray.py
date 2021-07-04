@@ -304,6 +304,9 @@ class TestDataArray:
         actual = DataArray(data, coords, ["x", "y"])
         assert_identical(expected, actual)
 
+        actual = DataArray(data, coords)
+        assert_identical(expected, actual)
+
         coords = [("x", ["a", "b"]), ("y", [-1, -2, -3])]
         actual = DataArray(data, coords)
         assert_identical(expected, actual)
@@ -330,6 +333,10 @@ class TestDataArray:
 
         actual = DataArray(data, dims=["x", "y"])
         expected = Dataset({None: (["x", "y"], data, {}, {"bar": 2})})[None]
+        assert_identical(expected, actual)
+
+        actual = DataArray([1, 2, 3], coords={"x": [0, 1, 2]})
+        expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
     def test_constructor_invalid(self):
