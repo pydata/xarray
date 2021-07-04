@@ -304,6 +304,9 @@ class TestDataArray:
         actual = DataArray(data, coords, ["x", "y"])
         assert_identical(expected, actual)
 
+        actual = DataArray(data, coords)
+        assert_identical(expected, actual)
+
         coords = [("x", ["a", "b"]), ("y", [-1, -2, -3])]
         actual = DataArray(data, coords)
         assert_identical(expected, actual)
