@@ -1610,8 +1610,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data=self.data.astype(dtype).ravel(),
                 fill_value=fill_value,
                 shape=new_shape,
-                has_duplicates=False,
-                sorted=True,
             )
 
         else:
