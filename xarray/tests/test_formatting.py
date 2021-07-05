@@ -509,15 +509,16 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
     long_name = "long_name"
     a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
     b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    c = np.core.defchararray.add("coord", np.arange(0, n_vars).astype(str))
     attrs = {k: 2 for k in b}
-    coords = dict(time=np.array([0, 1]))
+    coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for v in a:
+    for (v, _c) in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
-            dims=["time"],
-            coords=coords,
+            dims=[_c[0]],
+            coords=dict([_c]),
         )
     ds = xr.Dataset(data_vars)
     ds.attrs = attrs
@@ -527,11 +528,28 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         # Parse the data_vars print and show only data_vars rows:
         summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]
-
         # The length should be less than or equal to display_max_rows:
         len_summary = len(summary)
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
+
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
+        # The length should be equal to the number of data variables
+        len_summary = len(summary)
+        assert len_summary == n_vars
+
+        summary = formatting.coords_repr(ds.coords).split("\n")
+        summary = [v for v in summary if "coord" in v]
+        # The length should be equal to the number of data variables
+        len_summary = len(summary)
+        assert len_summary == n_vars
+
+        summary = formatting.attrs_repr(ds.attrs).split("\n")
+        summary = [v for v in summary if "attr_" in v]
+        # The length should be equal to the number of attributes
+        len_summary = len(summary)
+        assert len_summary == n_attr
 
     with xr.set_options(
         display_expand_coords=False,
@@ -539,11 +557,12 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         display_expand_attrs=False,
     ):
         actual = formatting.dataset_repr(ds)
+        coord_s = ", ".join([f"{c}: {len(v)}" for c, v in coords.items()])
         expected = dedent(
             f"""\
             <xarray.Dataset>
-            Dimensions:      (time: 2)
-            Coordinates: (1)
+            Dimensions:      ({coord_s})
+            Coordinates: (40)
             Data variables: ({n_vars})
             Attributes: ({n_attr})"""
         )
