@@ -1565,7 +1565,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         index: pd.MultiIndex,
         dim: Hashable,
         fill_value=dtypes.NA,
-        sparse=False,
+        sparse: bool = False,
     ) -> "Variable":
         """
         Unstacks this variable given an index to unstack and the name of the
@@ -1573,14 +1573,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
 
         reordered = self.transpose(..., dim)
-        shape = reordered.shape
+
         new_dim_sizes = [lev.size for lev in index.levels]
         new_dim_names = index.names
         indexer = index.codes
 
         # Potentially we could replace `len(other_dims)` with just `-1`
         other_dims = [d for d in self.dims if d != dim]
-        new_shape = tuple(list(shape[: len(other_dims)]) + new_dim_sizes)
+        new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         if fill_value is dtypes.NA:
@@ -1594,14 +1594,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dtype = self.dtype
 
         if sparse:
+            # unstacking a dense multitindexed array to a sparse array
+            # Use the sparse.COO constructor until sparse supports advanced indexing
+            # https://github.com/pydata/sparse/issues/114
             # TODO: how do we allow different sparse array types
             from sparse import COO
 
             codes = zip(*index.codes)
-            if not shape[:-1]:
+            if reordered.ndim == 1:
                 indexes = codes
             else:
-                sizes = itertools.product(range(*shape[:-1]))
+                sizes = itertools.product(range(*reordered.shape[:-1]))
                 tuple_indexes = itertools.product(sizes, codes)
                 indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
 

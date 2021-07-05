@@ -4133,23 +4133,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 # function requires.
                 # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
                 any(is_duck_dask_array(v.data) for v in self.variables.values())
-                # Sparse doesn't currently support (though we could special-case
-                # it)
-                # https://github.com/pydata/sparse/issues/422
+                # Sparse doesn't currently support advanced indexing
+                # https://github.com/pydata/sparse/issues/114
                 or any(
                     isinstance(v.data, sparse_array_type)
                     for v in self.variables.values()
                 )
-                # or sparse
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
-                # # pint doesn't implement `np.full_like` in a way that's
-                # # currently compatible.
-                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                # # or any(
-                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
-                # # )
+                # pint doesn't implement `np.full_like` in a way that's
+                # currently compatible.
+                # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
+                # or any(
+                #     isinstance(v.data, pint_array_type) for v in self.variables.values()
+                # )
                 or any(
                     not isinstance(v.data, np.ndarray) for v in self.variables.values()
                 )
