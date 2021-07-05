@@ -13,7 +13,7 @@ from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import _get_keep_attrs
-from .pycompat import is_duck_dask_array
+from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -744,6 +744,13 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
+        if dask_version < "2020.12":
+            # Using meta and dtype at the same time doesn't work.
+            # Remove this whenever the minimum requirement for dask is 2020.12:
+            meta = None
+        else:
+            meta = var._meta
+
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
@@ -754,8 +761,7 @@ def interp_func(var, x, new_x, method, kwargs):
             concatenate=True,
             dtype=dtype,
             new_axes=new_axes,
-            # TODO: uncomment when min dask version is > 2.15
-            # meta=var._meta,
+            meta=meta,
             align_arrays=False,
         )
 

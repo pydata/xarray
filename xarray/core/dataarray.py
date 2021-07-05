@@ -117,16 +117,11 @@ def _infer_coords_and_dims(
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                # deprecated in GH993, removed in GH1539
-                raise ValueError(
-                    "inferring DataArray dimensions from "
-                    "dictionary like ``coords`` is no longer "
-                    "supported. Use an explicit list of "
-                    "``dims`` instead."
-                )
-            for n, (dim, coord) in enumerate(zip(dims, coords)):
-                coord = as_variable(coord, name=dims[n]).to_index_variable()
-                dims[n] = coord.name
+                dims = list(coords.keys())
+            else:
+                for n, (dim, coord) in enumerate(zip(dims, coords)):
+                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    dims[n] = coord.name
         dims = tuple(dims)
     elif len(dims) != len(shape):
         raise ValueError(
@@ -281,7 +276,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Name(s) of the data dimension(s). Must be either a hashable
         (only for 1D data) or a sequence of hashables with length equal
         to the number of dimensions. If this argument is omitted,
-        dimension names default to ``['dim_0', ... 'dim_n']``.
+        dimension names are taken from ``coords`` (if possible) and
+        otherwise default to ``['dim_0', ... 'dim_n']``.
     name : str or None, optional
         Name of this array.
     attrs : dict_like or None, optional
@@ -1902,7 +1898,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -1958,7 +1954,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
