@@ -66,9 +66,15 @@ def push(array, n, axis):
         )
     if all(c == 1 for c in array.chunks[axis]):
         array = array.rechunk({axis: 2})
-    pushed = array.map_blocks(push, axis=axis, n=n)
+    pushed = array.map_blocks(push, axis=axis, n=n, dtype=array.dtype, meta=array._meta)
     if len(array.chunks[axis]) > 1:
         pushed = pushed.map_overlap(
-            push, axis=axis, n=n, depth={axis: (1, 0)}, boundary="none"
+            push,
+            axis=axis,
+            n=n,
+            depth={axis: (1, 0)},
+            boundary="none",
+            dtype=array.dtype,
+            meta=array._meta,
         )
     return pushed
