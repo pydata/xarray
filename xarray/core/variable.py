@@ -1565,6 +1565,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         index: pd.MultiIndex,
         dim: Hashable,
         fill_value=dtypes.NA,
+        sparse=False,
     ) -> "Variable":
         """
         Unstacks this variable given an index to unstack and the name of the
@@ -1572,14 +1573,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
 
         reordered = self.transpose(..., dim)
-
+        shape = reordered.shape
         new_dim_sizes = [lev.size for lev in index.levels]
         new_dim_names = index.names
         indexer = index.codes
 
         # Potentially we could replace `len(other_dims)` with just `-1`
         other_dims = [d for d in self.dims if d != dim]
-        new_shape = tuple(list(reordered.shape[: len(other_dims)]) + new_dim_sizes)
+        new_shape = tuple(list(shape[: len(other_dims)]) + new_dim_sizes)
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         if fill_value is dtypes.NA:
@@ -1592,19 +1593,41 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             dtype = self.dtype
 
-        data = np.full_like(
-            self.data,
-            fill_value=fill_value,
-            shape=new_shape,
-            dtype=dtype,
-        )
+        if sparse:
+            # TODO: how do we allow different sparse array types
+            from sparse import COO
 
-        # Indexer is a list of lists of locations. Each list is the locations
-        # on the new dimension. This is robust to the data being sparse; in that
-        # case the destinations will be NaN / zero.
-        # sparse doesn't support item assigment,
-        # https://github.com/pydata/sparse/issues/114
-        data[(..., *indexer)] = reordered
+            codes = zip(*index.codes)
+            if not shape[:-1]:
+                indexes = codes
+            else:
+                sizes = itertools.product(range(*shape[:-1]))
+                tuple_indexes = itertools.product(sizes, codes)
+                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
+
+            data = COO(
+                coords=np.array(list(indexes)).T,
+                data=self.data.astype(dtype).ravel(),
+                fill_value=fill_value,
+                shape=new_shape,
+                has_duplicates=False,
+                sorted=True,
+            )
+
+        else:
+            data = np.full_like(
+                self.data,
+                fill_value=fill_value,
+                shape=new_shape,
+                dtype=dtype,
+            )
+
+            # Indexer is a list of lists of locations. Each list is the locations
+            # on the new dimension. This is robust to the data being sparse; in that
+            # case the destinations will be NaN / zero.
+            # sparse doesn't support item assigment,
+            # https://github.com/pydata/sparse/issues/114
+            data[(..., *indexer)] = reordered
 
         return self._replace(dims=new_dims, data=data)
 

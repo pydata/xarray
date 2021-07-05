@@ -3995,7 +3995,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
+    def _unstack_once(
+        self, dim: Hashable, fill_value, sparse: bool = False
+    ) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
 
@@ -4011,7 +4013,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         fill_value_ = fill_value
 
                     variables[name] = var._unstack_once(
-                        index=index, dim=dim, fill_value=fill_value_
+                        index=index, dim=dim, fill_value=fill_value_, sparse=sparse
                     )
                 else:
                     variables[name] = var
@@ -4138,7 +4140,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     isinstance(v.data, sparse_array_type)
                     for v in self.variables.values()
                 )
-                or sparse
+                # or sparse
                 # Until https://github.com/pydata/xarray/pull/4751 is resolved,
                 # we check explicitly whether it's a numpy array. Once that is
                 # resolved, explicitly exclude pint arrays.
@@ -4154,7 +4156,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             ):
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
-                result = result._unstack_once(dim, fill_value)
+                result = result._unstack_once(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":

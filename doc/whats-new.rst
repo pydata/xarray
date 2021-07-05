@@ -66,6 +66,11 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+
+- Significantly faster unstacking to a ``sparse`` array.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
