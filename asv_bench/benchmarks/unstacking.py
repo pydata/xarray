@@ -54,5 +54,11 @@ class UnstackingSparse(Unstacking):
     def time_unstack_to_sparse_3d(self):
         self.da_eye_3d.unstack(sparse=True)
 
+    def peakmem_unstack_to_sparse_2d(self):
+        self.da_eye_2d.unstack(sparse=True)
+
+    def peakmem_unstack_to_sparse_3d(self):
+        self.da_eye_3d.unstack(sparse=True)
+
     def time_unstack_pandas_slow(self):
         pass
