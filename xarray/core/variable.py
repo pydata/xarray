@@ -1604,7 +1604,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if reordered.ndim == 1:
                 indexes = codes
             else:
-                sizes = itertools.product(range(*reordered.shape[:-1]))
+                sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
                 tuple_indexes = itertools.product(sizes, codes)
                 indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
 

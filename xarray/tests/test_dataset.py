@@ -3098,14 +3098,24 @@ class TestDataset:
             [np.arange(3), np.arange(3)], names=["a", "b"]
         )
         ds_eye = Dataset(
-            {"var": (("z", "foo"), np.ones((3, 4)))},
-            coords={"z": mindex, "foo": np.arange(4)},
+            {"var": (("z", "foo", "bar"), np.ones((3, 4, 5)))},
+            coords={"z": mindex, "foo": np.arange(4), "bar": np.arange(5)},
         )
         actual = ds_eye.unstack(sparse=True, fill_value=0)
         assert isinstance(actual["var"].data, sparse_array_type)
         expected = xr.Dataset(
-            {"var": (("foo", "a", "b"), np.broadcast_to(np.eye(3, 3), (4, 3, 3)))},
-            coords={"foo": np.arange(4), "a": np.arange(3), "b": np.arange(3)},
+            {
+                "var": (
+                    ("foo", "bar", "a", "b"),
+                    np.broadcast_to(np.eye(3, 3), (4, 5, 3, 3)),
+                )
+            },
+            coords={
+                "foo": np.arange(4),
+                "bar": np.arange(5),
+                "a": np.arange(3),
+                "b": np.arange(3),
+            },
         )
         actual["var"].data = actual["var"].data.todense()
         assert_equal(expected, actual)
