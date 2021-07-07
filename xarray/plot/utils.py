@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
-from ..core.pycompat import _get_pint_array_type
+from ..core.pycompat import DuckArrayModule
 from ..core.utils import is_scalar
 
 try:
@@ -484,7 +484,7 @@ def label_from_attrs(da, extra=""):
             units = ""
         return units
 
-    _, pint_array_type = _get_pint_array_type()
+    pint_array_type = DuckArrayModule("pint").type
     if isinstance(da.data, pint_array_type):
         units = " [{}]".format(str(da.data.units))
     else:
