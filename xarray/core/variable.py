@@ -28,14 +28,7 @@ from .common import AbstractArray
 from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
-from .pycompat import (
-    cupy_array_type,
-    dask_array_type,
-    integer_types,
-    is_duck_dask_array,
-    _get_pint_array_type,
-    sparse_array_type,
-)
+from .pycompat import DuckArrayModule, integer_types, is_duck_dask_array
 from .utils import (
     NdimSizeLenMixin,
     OrderedSet,
@@ -48,6 +41,11 @@ from .utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
+
+dask_array_type = DuckArrayModule("dask").type
+cupy_array_type = DuckArrayModule("cupy").type
+sparse_array_type = DuckArrayModule("sparse").type
+
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     (
@@ -1082,7 +1080,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = self.load().data
             if isinstance(data, cupy_array_type):
                 data = data.get()
-            _, pint_array_type = _get_pint_array_type()
+            # pint has to be imported dynamically as pint imports xarray
+            pint_array_type = DuckArrayModule("pint").type
             if isinstance(data, pint_array_type):
                 data = data.magnitude
             if isinstance(data, sparse_array_type):
