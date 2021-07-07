@@ -69,7 +69,7 @@ Deprecations
 Performance
 ~~~~~~~~~~~
 
-- Significantly faster unstacking to a ``sparse`` array.
+- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
