@@ -46,12 +46,17 @@ except ImportError:  # pragma: no cover
     cupy_version = LooseVersion("0.0.0")
     cupy_array_type = ()
 
-try:
-    # solely for isinstance checks
-    import pint
+def _get_pint_array_type():
+    # Have to only import pint when required because pint currently imports xarray
+    # https://github.com/pydata/xarray/pull/5561#discussion_r664815718
+    try:
+        # solely for isinstance checks
+        import pint
 
-    pint_version = LooseVersion(pint.__version__)
-    pint_array_type = (pint.Quantity,)
-except ImportError:  # pragma: no cover
-    pint_version = LooseVersion("0.0.0")
-    pint_array_type = ()
+        pint_version = LooseVersion(pint.__version__)
+        pint_array_type = (pint.Quantity,)
+    except ImportError:  # pragma: no cover
+        pint_version = LooseVersion("0.0.0")
+        pint_array_type = ()
+
+    return pint_version, pint_array_type
