@@ -33,7 +33,7 @@ from .pycompat import (
     dask_array_type,
     integer_types,
     is_duck_dask_array,
-    pint_array_type,
+    _get_pint_array_type,
     sparse_array_type,
 )
 from .utils import (
@@ -1082,6 +1082,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = self.load().data
             if isinstance(data, cupy_array_type):
                 data = data.get()
+            _, pint_array_type = _get_pint_array_type()
             if isinstance(data, pint_array_type):
                 data = data.magnitude
             if isinstance(data, sparse_array_type):
