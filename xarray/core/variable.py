@@ -1074,10 +1074,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         # TODO an entrypoint so array libraries can choose coercion method?
         data = self.data
         try:
-            return data.to_numpy()
+            data = data.to_numpy()
         except AttributeError:
             if isinstance(data, dask_array_type):
-                data = self.load().data
+                data = self.compute().data
             if isinstance(data, cupy_array_type):
                 data = data.get()
             # pint has to be imported dynamically as pint imports xarray
@@ -1085,10 +1085,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if isinstance(data, pint_array_type):
                 data = data.magnitude
             if isinstance(data, sparse_array_type):
-                data = data.to_dense()
-            if type(data) != np.ndarray:
+                data = data.todense()
+            if type(data) != np.ndarray:  # noqa : Don't allow subclasses
                 data = np.array(data)
-            return data
+
+        return data
 
     def as_numpy(self: VariableType) -> VariableType:
         """Coerces wrapped data into a numpy array, returning a Variable."""
