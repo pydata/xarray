@@ -36,10 +36,12 @@ from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
+    requires_cupy,
     requires_dask,
     requires_iris,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -7368,3 +7370,63 @@ def test_drop_duplicates(keep):
     expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
     result = ds.drop_duplicates("time", keep=keep)
     assert_equal(expected, result)
+
+
+class TestNumpyCoercion:
+    def test_from_numpy(self):
+        da = xr.DataArray([1, 2, 3])
+
+        assert_identical(da.as_numpy(), da)
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_dask
+    def test_from_dask(self):
+        da = xr.DataArray([1, 2, 3])
+        da_chunked = da.chunk(1)
+
+        assert_identical(da_chunked.as_numpy(), da.compute())
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(Quantity(arr, units="m"))
+
+        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        arr = np.array([1, 2, 3])
+        va = Variable(data=arr, dims="x")._as_sparse()
+        da = xr.DataArray(va, fastpath=True)
+
+        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(cp.array(arr))
+
+        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(np.array([1, 2, 3]))
+        da = xr.DataArray(Quantity(d, units="m"))
+
+        result = da.as_numpy()
+        result.name = None  # remove dask-assigned name
+        assert_identical(result, xr.DataArray(arr))
+        np.testing.assert_equal(da.to_numpy(), arr)
