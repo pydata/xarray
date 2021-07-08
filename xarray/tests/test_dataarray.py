@@ -7400,8 +7400,8 @@ class TestNumpyCoercion:
     @requires_sparse
     def test_from_sparse(self):
         arr = np.array([1, 2, 3])
-        va = Variable(data=arr, dims="x")._as_sparse()
-        da = xr.DataArray(va, fastpath=True)
+        va = Variable(data=arr, dims="dim_0")._as_sparse()
+        da = xr.DataArray(va)
 
         assert_identical(da.as_numpy(), xr.DataArray(arr))
         np.testing.assert_equal(da.to_numpy(), arr)
