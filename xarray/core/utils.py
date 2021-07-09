@@ -8,12 +8,14 @@ import os
 import re
 import sys
 import warnings
+from collections import defaultdict
 from enum import Enum
 from typing import (
     Any,
     Callable,
     Collection,
     Container,
+    DefaultDict,
     Dict,
     Hashable,
     Iterable,
@@ -915,3 +917,137 @@ def iterate_nested(nested_list):
             yield from iterate_nested(item)
         else:
             yield item
+
+
+ItemOrSequence = Union[T, Sequence[T]]
+
+
+def expand_args_to_num_dims(
+    dim: ItemOrSequence[str],
+    arg_names: Sequence[str],
+    args: Sequence[ItemOrSequence[Any]],
+) -> Tuple[Sequence[str], Sequence[Sequence[Any]]]:
+    """Expand dims and all elements in args to be arrays of the length of the number of dimensions
+
+    Parameters
+    ----------
+    dim : str or sequence of str
+        Dimension(s)
+    arg_names : sequence of str
+        Names of the arguments to expand
+    args : sequence of args, which may be individual items or lists of items
+        Arguments to expand
+
+    Raises
+    ------
+    ValueError: raised if dim is a scalar and any of the args are not scalars
+    ValueError: raised if any of the produced lists are of the wrong length
+
+    Returns
+    -------
+    list of dims, list of lists of arguments
+    """
+    if is_scalar(dim):
+        for name, arg in zip(arg_names, args):
+            if not is_scalar(arg):
+                raise ValueError(f"Expected {name}={arg!r} to be a scalar like 'dim'.")
+        assert isinstance(dim, str) or isinstance(dim, bytes)
+        dim = [dim]
+
+    # dim is now a list
+    nroll = len(dim)
+
+    def to_array(arg):
+        if is_scalar(arg):
+            return [arg] * nroll
+        return arg
+
+    arr_args = [to_array(arg) for arg in args]
+
+    if any(len(dim) != len(arg) for arg in arr_args):
+        names_vals = ", ".join(
+            f"{name}={val!r}" for name, val in zip(arg_names, arr_args)
+        )
+        raise ValueError(
+            "Arguments must all be the same length. " f"Received {names_vals}."
+        )
+
+    return dim, arr_args
+
+
+def get_pads(
+    dim: Sequence[str],
+    window: Sequence[int],
+    center: Sequence[bool],
+    pad: Sequence[bool],
+) -> Dict[str, Tuple[int, int]]:
+    """Return a mapping from dim to the amount of padding to use at the each end of that dimension
+
+    Parameters
+    ----------
+    dim : sequence of str
+        dimension(s) for pads
+    window : sequence to int
+        Size of the window along a given dimension
+    center : sequence of bool
+        Whether or not to center the window on a particular dimension
+    pad : sequence of bool
+        Whether or not to pad a particular dimension
+
+    Returns
+    -------
+    Dict[str, Tuple[int, int]]
+    """
+    pads = {}
+    for d, win, cent, p in zip(dim, window, center, pad):
+        if cent:
+            start = win // 2  # 10 -> 5,  9 -> 4
+            end = (win - 1) // 2  # 10 -> 4, 9 -> 4
+            pads[d] = (start, end) if p else (0, 0)
+        else:
+            pads[d] = (win - 1, 0) if p else (0, 0)
+
+    return pads
+
+
+def get_slice_offsets(
+    dim: Sequence[str],
+    window: Sequence[int],
+    center: Sequence[bool],
+    pad: Sequence[bool],
+) -> DefaultDict[Hashable, Tuple[Optional[int], Optional[int]]]:
+    """Return a mapping from dims to the start and ends of the output along those dimensions
+
+    The end of the input is indicated using a negative index.
+
+    Parameters
+    ----------
+    dim : sequence of str
+        dimension(s) for pads
+    window : sequence to int
+        Size of the window along a given dimension
+    center : sequence of bool
+        Whether or not to center the window on a particular dimension
+    pad : sequence of bool
+        Whether or not to pad a particular dimension
+
+    Returns
+    -------
+    Dict[str, Tuple[int, int]]
+    """
+    if pad is False:
+        pad = [True]
+    elif is_list_like(pad):
+        pad = [not p for p in pad]
+
+    pads = get_pads(dim, window, center, pad)
+
+    offsets: DefaultDict[Hashable, Tuple[Optional[int], Optional[int]]] = defaultdict(
+        lambda: (None, None)
+    )
+    for d, (start_offset, end_offset) in pads.items():
+        _start_offset = None if start_offset == 0 else start_offset
+        _end_offset = None if end_offset == 0 else -end_offset
+        offsets[d] = (_start_offset, _end_offset)
+
+    return offsets

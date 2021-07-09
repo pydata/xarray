@@ -6504,12 +6504,22 @@ def test_isin(da):
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
-def test_rolling_iter(da):
-    rolling_obj = da.rolling(time=7)
+@pytest.mark.parametrize("center", (True, False, None))
+@pytest.mark.parametrize("pad", (True, False, None))
+def test_rolling_iter(da, center, pad):
+    rolling_obj = da.rolling(time=7, center=center, pad=pad)
     rolling_obj_mean = rolling_obj.mean()
 
-    assert len(rolling_obj.window_labels) == len(da["time"])
-    assert_identical(rolling_obj.window_labels, da["time"])
+    if pad:
+        expected_times = da["time"]
+    else:
+        if center:
+            expected_times = da["time"][slice(3, -3)]
+        else:
+            expected_times = da["time"][slice(6, None)]
+
+    assert len(rolling_obj.window_labels) == len(expected_times)
+    assert_identical(rolling_obj.window_labels, expected_times)
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da["time"].isel(time=i)
@@ -6535,6 +6545,21 @@ def test_rolling_repr(da):
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center)]"
     rolling_obj = da.rolling(time=7, x=3, center=True)
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(center)]"
+
+    rolling_obj = da.rolling(time=7, pad=False)
+    assert repr(rolling_obj) == "DataArrayRolling [time->7(no pad)]"
+    rolling_obj = da.rolling(time=7, center=True, pad=False)
+    assert repr(rolling_obj) == "DataArrayRolling [time->7(center)(no pad)]"
+    rolling_obj = da.rolling(time=7, x=3, center=True, pad=False)
+    assert (
+        repr(rolling_obj)
+        == "DataArrayRolling [time->7(center)(no pad),x->3(center)(no pad)]"
+    )
+
+    rolling_obj = da.rolling(
+        time=7, x=3, center={"time": True, "x": False}, pad={"time": True, "x": False}
+    )
+    assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(no pad)]"
 
 
 @requires_dask
@@ -6567,10 +6592,9 @@ def test_rolling_properties(da):
 
 
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
-@pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
+def test_rolling_wrapped_bottleneck(da, name, min_periods):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
     # Test all bottleneck functions
@@ -6586,10 +6610,26 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     with pytest.warns(DeprecationWarning, match="Reductions are applied"):
         getattr(rolling_obj, name)(dim="time")
 
-    # Test center
-    rolling_obj = da.rolling(time=7, center=center)
+
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
+@pytest.mark.parametrize("center", (True, False, None))
+@pytest.mark.parametrize("pad", (True, False, None))
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
+    pytest.importorskip("bottleneck", minversion="1.1")
+
+    rolling_obj = da.rolling(time=7, center=center, pad=pad)
     actual = getattr(rolling_obj, name)()["time"]
-    assert_equal(actual, da["time"])
+
+    if pad:
+        expected = da["time"]
+    else:
+        if center:
+            expected = da["time"][slice(3, -3)]
+        else:
+            expected = da["time"][slice(6, None)]
+
+    assert_equal(actual, expected)
 
 
 @requires_dask

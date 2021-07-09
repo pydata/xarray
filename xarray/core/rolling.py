@@ -48,10 +48,12 @@ class Rolling:
     xarray.DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "dim", "keep_attrs")
-    _attributes = ("window", "min_periods", "center", "dim", "keep_attrs")
+    __slots__ = ("obj", "window", "min_periods", "center", "pad", "dim", "keep_attrs")
+    _attributes = ("window", "min_periods", "center", "pad", "dim", "keep_attrs")
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(
+        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
+    ):
         """
         Moving window object.
 
@@ -66,8 +68,11 @@ class Rolling:
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : bool, default: False
+        center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
+        pad : bool or mapping of hashable to bool, default: True
+            Pad the sides of the rolling window with ``NaN``.  For different
+            padding, see ``DataArray.pad`` or ``Dataset.pad``.
 
         Returns
         -------
@@ -81,6 +86,7 @@ class Rolling:
             self.window.append(w)
 
         self.center = self._mapping_to_list(center, default=False)
+        self.pad = self._mapping_to_list(pad, default=True)
         self.obj = obj
 
         # attributes
@@ -102,8 +108,10 @@ class Rolling:
         """provide a nice str repr of our rolling object"""
 
         attrs = [
-            "{k}->{v}{c}".format(k=k, v=w, c="(center)" if c else "")
-            for k, w, c in zip(self.dim, self.window, self.center)
+            "{k}->{v}{c}{p}".format(
+                k=k, v=w, c="(center)" if c else "", p="(no pad)" if not p else ""
+            )
+            for k, w, c, p in zip(self.dim, self.window, self.center, self.pad)
         ]
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
@@ -204,7 +212,9 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(
+        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
+    ):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -221,8 +231,11 @@ class DataArrayRolling(Rolling):
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : bool, default: False
+        center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
+        pad : bool or mapping of hashable to bool, default: True
+            Pad the sides of the rolling window with ``NaN``.  For different
+            padding, see ``DataArray.pad``.
 
         Returns
         -------
@@ -236,7 +249,12 @@ class DataArrayRolling(Rolling):
         xarray.Dataset.groupby
         """
         super().__init__(
-            obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+            obj,
+            windows,
+            min_periods=min_periods,
+            center=center,
+            pad=pad,
+            keep_attrs=keep_attrs,
         )
 
         # TODO legacy attribute
@@ -357,15 +375,21 @@ class DataArrayRolling(Rolling):
         stride = self._mapping_to_list(stride, default=1)
 
         window = obj.variable.rolling_window(
-            self.dim, self.window, window_dim, self.center, fill_value=fill_value
+            self.dim,
+            self.window,
+            window_dim,
+            self.center,
+            self.pad,
+            fill_value=fill_value,
         )
 
         attrs = obj.attrs if keep_attrs else {}
+        coords = self._get_rolling_dim_coords(all=True)
 
         result = DataArray(
             window,
             dims=obj.dims + tuple(window_dim),
-            coords=obj.coords,
+            coords=coords,
             attrs=attrs,
             name=obj.name,
         )
@@ -512,8 +536,11 @@ class DataArrayRolling(Rolling):
             values = values[valid]
 
         attrs = self.obj.attrs if keep_attrs else {}
+        output_dim_coords = self._get_rolling_dim_coords()
 
-        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
+        return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name).sel(
+            output_dim_coords
+        )
 
     def _numpy_or_bottleneck_reduce(
         self,
@@ -557,11 +584,51 @@ class DataArrayRolling(Rolling):
 
         return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
+    def _get_rolling_dim_coords(self, all=False) -> Dict[str, Any]:
+        # If any of the dimensions are not padded, the output size can be shorter than the input size
+        # along that dimension, so we also need to shorten the corresponding coordinates.
+
+        # Dimensions which require offsets are those which are not padded, but the logic to determine
+        # the offset is very similar to determining padding sizes.
+        # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
+
+        coords = self.obj.coords
+        dim = list(self.obj.coords.keys()) if all else self.dim
+        window = self.window
+        center = self.center
+        pad = self.pad
+
+        if pad is False:
+            pad = [True]
+        elif utils.is_list_like(pad):
+            pad = [not p for p in pad]
+
+        offset_pads = utils.get_pads(self.dim, window, center, pad)
+
+        output_coords: Dict[str, Any] = {}
+
+        for d in dim:
+            obj_coords = coords[d]
+            if d not in self.dim:
+                output_coords[d] = obj_coords
+                continue
+
+            pad_start_offset, pad_end_offset = offset_pads[d]
+
+            start_offset = None if not pad_start_offset else pad_start_offset
+            end_offset = None if not pad_end_offset else -pad_end_offset
+
+            output_coords[d] = obj_coords[slice(start_offset, end_offset)]
+
+        return output_coords
+
 
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(
+        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
+    ):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -580,6 +647,9 @@ class DatasetRolling(Rolling):
             setting min_periods equal to the size of the window.
         center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
+        pad : bool or mapping of hashable to bool, default: True
+            Pad the sides of the window with ``NaN``.  For different
+            padding, see ``Dataset.pad``.
 
         Returns
         -------
@@ -592,22 +662,23 @@ class DatasetRolling(Rolling):
         xarray.Dataset.groupby
         xarray.DataArray.groupby
         """
-        super().__init__(obj, windows, min_periods, center, keep_attrs)
+        super().__init__(obj, windows, min_periods, center, pad, keep_attrs)
         if any(d not in self.obj.dims for d in self.dim):
             raise KeyError(self.dim)
         # Keep each Rolling object as a dictionary
         self.rollings = {}
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
-            dims, center = [], {}
+            dims, center, pad = [], {}, {}
             for i, d in enumerate(self.dim):
                 if d in da.dims:
                     dims.append(d)
                     center[d] = self.center[i]
+                    pad[d] = self.pad[i]
 
             if dims:
                 w = {d: windows[d] for d in dims}
-                self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
+                self.rollings[key] = DataArrayRolling(da, w, min_periods, center, pad)
 
     def _dataset_implementation(self, func, keep_attrs, **kwargs):
         from .dataset import Dataset
@@ -625,7 +696,9 @@ class DatasetRolling(Rolling):
                     reduced[key].attrs = {}
 
         attrs = self.obj.attrs if keep_attrs else {}
-        return Dataset(reduced, coords=self.obj.coords, attrs=attrs)
+        coords = self._get_rolling_dim_coords(all_dims=True)
+
+        return Dataset(reduced, coords=coords, attrs=attrs)
 
     def reduce(self, func, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some

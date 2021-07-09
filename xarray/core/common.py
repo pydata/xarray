@@ -821,6 +821,7 @@ class DataWithCoords(AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: Union[bool, Mapping[Hashable, bool]] = False,
+        pad: Union[bool, Mapping[Hashable, bool]] = True,
         keep_attrs: bool = None,
         **window_kwargs: int,
     ):
@@ -838,6 +839,9 @@ class DataWithCoords(AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : bool or mapping, default: False
             Set the labels at the center of the window.
+        pad : bool or mapping, default: True
+            Pad the sides of the window with ``NaN``.  For different
+            padding, see ``DataArray.pad`` or ``Dataset.pad``.
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -886,11 +890,18 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
+        DataArray.pad
+        Dataset.pad
         """
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(
-            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+            self,
+            dim,
+            min_periods=min_periods,
+            center=center,
+            pad=pad,
+            keep_attrs=keep_attrs,
         )
 
     def rolling_exp(

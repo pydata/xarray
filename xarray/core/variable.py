@@ -42,6 +42,8 @@ from .utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
+    expand_args_to_num_dims,
+    get_pads,
     infix_dims,
     is_duck_array,
     maybe_coerce_to_str,
@@ -2028,7 +2030,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return Variable(self.dims, ranked)
 
     def rolling_window(
-        self, dim, window, window_dim, center=False, fill_value=dtypes.NA
+        self, dim, window, window_dim, center=False, pad=True, fill_value=dtypes.NA
     ):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
@@ -2040,14 +2042,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             For nd-rolling, should be list of dimensions.
         window : int
             Window size of the rolling
-            For nd-rolling, should be list of integers.
+            For nd-rolling, should be a list of integers.
         window_dim : str
             New name of the window dimension.
-            For nd-rolling, should be list of strings.
+            For nd-rolling, should be a list of strings.
         center : bool, default: False
             If True, pad fill_value for both ends. Otherwise, pad in the head
             of the axis.
-        fill_value
+            For nd-rolling, can be a list of bools
+        pad : bool, default: True
+            Pad the sides of the rolling_window with fill_value.
+            For nd-rolling, can be a list of bools
+        fill_value, default=NA
             value to be filled.
 
         Returns
@@ -2083,6 +2089,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 [ 4.,  5.,  6.],
                 [ 5.,  6.,  7.],
                 [ 6.,  7., nan]]])
+        >>> v.rolling_window("b", 3, "window_dim", center=True, pad=False)
+        <xarray.Variable (a: 2, b: 2, window_dim: 3)>
+        array([[[0., 1., 2.],
+                [1., 2., 3.]],
+        <BLANKLINE>
+               [[4., 5., 6.],
+                [5., 6., 7.]]])
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
@@ -2091,43 +2104,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dtype = self.dtype
             var = self
 
-        if utils.is_scalar(dim):
-            for name, arg in zip(
-                ["window", "window_dim", "center"], [window, window_dim, center]
-            ):
-                if not utils.is_scalar(arg):
-                    raise ValueError(
-                        f"Expected {name}={arg!r} to be a scalar like 'dim'."
-                    )
-            dim = [dim]
+        dim, (window, window_dim, center, pad) = expand_args_to_num_dims(
+            dim,
+            ["window", "window_dim", "center", "pad"],
+            [window, window_dim, center, pad],
+        )
 
-        # dim is now a list
-        nroll = len(dim)
-        if utils.is_scalar(window):
-            window = [window] * nroll
-        if utils.is_scalar(window_dim):
-            window_dim = [window_dim] * nroll
-        if utils.is_scalar(center):
-            center = [center] * nroll
-        if (
-            len(dim) != len(window)
-            or len(dim) != len(window_dim)
-            or len(dim) != len(center)
-        ):
-            raise ValueError(
-                "'dim', 'window', 'window_dim', and 'center' must be the same length. "
-                f"Received dim={dim!r}, window={window!r}, window_dim={window_dim!r},"
-                f" and center={center!r}."
-            )
-
-        pads = {}
-        for d, win, cent in zip(dim, window, center):
-            if cent:
-                start = win // 2  # 10 -> 5,  9 -> 4
-                end = win - 1 - start
-                pads[d] = (start, end)
-            else:
-                pads[d] = (win - 1, 0)
+        pads = get_pads(dim, window, center, pad)
 
         padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
