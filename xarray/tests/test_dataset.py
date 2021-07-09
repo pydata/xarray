@@ -6806,7 +6806,6 @@ class TestNumpyCoercion:
         import dask
         from pint import Quantity
 
-        arr = np.array([1, 2, 3])
         d = dask.array.from_array(np.array([1, 2, 3]))
         ds = xr.Dataset({"a": ("x", Quantity(d, units="m"))})
 

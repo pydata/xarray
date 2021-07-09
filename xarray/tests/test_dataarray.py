@@ -7425,7 +7425,7 @@ class TestNumpyCoercion:
         from pint import Quantity
 
         arr = np.array([1, 2, 3])
-        d = dask.array.from_array(np.array([1, 2, 3]))
+        d = dask.array.from_array(arr)
         da = xr.DataArray(Quantity(d, units="m"))
 
         result = da.as_numpy()
