@@ -33,7 +33,9 @@ from . import (
     assert_equal,
     assert_identical,
     raise_if_dask_computes,
+    requires_cupy,
     requires_dask,
+    requires_pint_0_15,
     requires_sparse,
     source_ndarray,
 )
@@ -2540,3 +2542,65 @@ def test_clip(var):
             var.mean("z").data[:, :, np.newaxis],
         ),
     )
+
+
+# parameterize over Variable and IndexVariable
+class TestNumpyCoercion:
+    def test_from_numpy(self):
+        v = Variable("x", [1, 2, 3])
+
+        assert_identical(v.as_numpy(), v)
+        np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_dask
+    def test_from_dask(self):
+        v = Variable("x", [1, 2, 3])
+        v_chunked = v.chunk(1)
+
+        assert_identical(v_chunked.as_numpy(), v.compute())
+        np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        v = Variable("x", Quantity(arr, units="m"))
+
+        assert_identical(v.as_numpy(), Variable("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
+        v = Variable(["x", "y"], sparr)
+
+        assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        v = Variable("x", cp.array(arr))
+
+        assert_identical(v.as_numpy(), Variable("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(np.array([1, 2, 3]))
+        v = Variable("x", Quantity(d, units="m"))
+
+        result = v.as_numpy()
+        assert_identical(result, Variable("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
