@@ -7399,9 +7399,11 @@ class TestNumpyCoercion:
 
     @requires_sparse
     def test_from_sparse(self):
-        arr = np.array([1, 2, 3])
-        va = Variable(data=arr, dims="dim_0")._as_sparse()
-        da = xr.DataArray(va)
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
+        da = xr.DataArray(sparr)
 
         assert_identical(da.as_numpy(), xr.DataArray(arr))
         np.testing.assert_equal(da.to_numpy(), arr)
