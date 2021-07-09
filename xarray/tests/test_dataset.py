@@ -44,9 +44,11 @@ from . import (
     has_dask,
     requires_bottleneck,
     requires_cftime,
+    requires_cupy,
     requires_dask,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -6755,3 +6757,57 @@ def test_clip(ds):
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
+
+
+class TestNumpyCoercion:
+    def test_from_numpy(self):
+        ds = xr.Dataset({'a': [1, 2, 3]})
+
+        assert_identical(ds.as_numpy(), ds)
+
+    @requires_dask
+    def test_from_dask(self):
+        ds = xr.Dataset({'a': [1, 2, 3]})
+        ds_chunked = ds.chunk(1)
+
+        assert_identical(ds_chunked.as_numpy(), ds.compute())
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset({'a': Quantity(arr, units="m")})
+
+        assert_identical(ds.as_numpy(), xr.Dataset({'a': arr}))
+
+    @requires_sparse
+    def test_from_sparse(self):
+        arr = np.array([1, 2, 3])
+        va = Variable(data=arr, dims="dim_0")._as_sparse()
+        da = xr.DataArray(va, dims='a')
+        ds = xr.DataArray({'a': va})
+
+        assert_identical(ds.as_numpy(), xr.Dataset({'a': arr}))
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset({'a': cp.array(arr)})
+
+        assert_identical(ds.as_numpy(), xr.Dataset({'a': arr}))
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(np.array([1, 2, 3]))
+        ds = xr.Dataset({'a': Quantity(arr, units="m")})
+
+        result = ds.as_numpy()
+        assert_identical(result, xr.Dataset({'a': arr}))

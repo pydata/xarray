@@ -1332,7 +1332,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         DataArray.as_numpy
         DataArray.to_numpy : Returns only the numpy.ndarray object.
         """
-        numpy_variables = {k: v.as_numpy() for k, v in self._variables.items()}
+        numpy_variables = {k: v.as_numpy() for k, v in self.data_vars.items()}
         return self.copy(data=numpy_variables)
 
     @property

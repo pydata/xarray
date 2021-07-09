@@ -1093,7 +1093,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def as_numpy(self: VariableType) -> VariableType:
         """Coerces wrapped data into a numpy array, returning a Variable."""
-        return self._replace(data=self.data.to_numpy())
+        return self._replace(data=self.to_numpy())
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
