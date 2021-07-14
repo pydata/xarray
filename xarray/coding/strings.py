@@ -17,6 +17,8 @@ from .variables import (
 
 
 def create_vlen_dtype(element_type):
+    if element_type not in (str, bytes):
+        raise TypeError("Unsupported type for vlen_dtype: `{}`".format(element_type))
     # based on h5py.special_dtype
     return np.dtype("O", metadata={"element_type": element_type})
 
@@ -29,11 +31,7 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return (
-        dtype.kind == "U"
-        or check_vlen_dtype(dtype) == str
-        or check_vlen_dtype(dtype) == np.str_
-    )
+    return dtype.kind == "U" or check_vlen_dtype(dtype) == str
 
 
 def is_bytes_dtype(dtype):

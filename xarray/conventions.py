@@ -157,8 +157,10 @@ def _infer_dtype(array, name=None):
         return np.dtype(float)
 
     element = array[(0,) * array.ndim]
-    if isinstance(element, (bytes, str)):
+    if isinstance(element, bytes):
         return strings.create_vlen_dtype(type(element))
+    elif isinstance(element, str):
+        return strings.create_vlen_dtype(str)
 
     dtype = np.array(element).dtype
     if dtype.kind != "O":
