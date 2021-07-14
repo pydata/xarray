@@ -36,18 +36,15 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
-@pytest.mark.parametrize("str_type", (str, np.str_))
-def test_numpy_str_handling(str_type) -> None:
-    dtype = strings.create_vlen_dtype(str_type)
-    assert dtype.metadata["element_type"] == str_type
-    assert strings.is_unicode_dtype(dtype)
-    assert not strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is str_type
+@pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
+def test_numpy_subclass_handling(numpy_str_type) -> None:
+    with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
+        strings.create_vlen_dtype(numpy_str_type)
 
 
 @requires_netCDF4
 @pytest.mark.parametrize("str_type", (str, np.str_))
-def test_write_file_from_np_str(str_type):
+def test_write_file_from_np_str(str_type) -> None:
     # should be moved elsewhere probably
     scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
     years = range(2015, 2100 + 1)

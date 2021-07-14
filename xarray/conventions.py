@@ -157,8 +157,10 @@ def _infer_dtype(array, name=None):
         return np.dtype(float)
 
     element = array[(0,) * array.ndim]
+    # We use the base types to avoid subclasses of bytes and str (which might
+    # not play nice with e.g. hdf5 datatypes), such as those from numpy
     if isinstance(element, bytes):
-        return strings.create_vlen_dtype(type(element))
+        return strings.create_vlen_dtype(bytes)
     elif isinstance(element, str):
         return strings.create_vlen_dtype(str)
 
