@@ -7373,39 +7373,53 @@ def test_drop_duplicates(keep):
 
 
 class TestNumpyCoercion:
+    # TODO once flexible indexes refactor complete also test coercion of dimension coords
     def test_from_numpy(self):
-        da = xr.DataArray([1, 2, 3])
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
 
         assert_identical(da.as_numpy(), da)
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
     @requires_dask
     def test_from_dask(self):
-        da = xr.DataArray([1, 2, 3])
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
         da_chunked = da.chunk(1)
 
         assert_identical(da_chunked.as_numpy(), da.compute())
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
     @requires_pint_0_15
     def test_from_pint(self):
         from pint import Quantity
 
         arr = np.array([1, 2, 3])
-        da = xr.DataArray(Quantity(arr, units="m"))
+        da = xr.DataArray(
+            Quantity(arr, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
 
-        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
         np.testing.assert_equal(da.to_numpy(), arr)
+        np.testing.assert_equal(da["lat"].to_numpy(), arr + 3)
 
     @requires_sparse
     def test_from_sparse(self):
         import sparse
 
         arr = np.diagflat([1, 2, 3])
-        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
-        da = xr.DataArray(sparr)
+        sparr = sparse.COO.from_numpy(arr)
+        da = xr.DataArray(
+            sparr, dims=["x", "y"], coords={"elev": (("x", "y"), sparr + 3)}
+        )
 
-        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        expected = xr.DataArray(
+            arr, dims=["x", "y"], coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(da.as_numpy(), expected)
         np.testing.assert_equal(da.to_numpy(), arr)
 
     @requires_cupy
@@ -7413,9 +7427,12 @@ class TestNumpyCoercion:
         import cupy as cp
 
         arr = np.array([1, 2, 3])
-        da = xr.DataArray(cp.array(arr))
+        da = xr.DataArray(
+            cp.array(arr), dims="x", coords={"lat": ("x", cp.array(arr + 3))}
+        )
 
-        assert_identical(da.as_numpy(), xr.DataArray(arr))
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
         np.testing.assert_equal(da.to_numpy(), arr)
 
     @requires_dask
@@ -7426,9 +7443,14 @@ class TestNumpyCoercion:
 
         arr = np.array([1, 2, 3])
         d = dask.array.from_array(arr)
-        da = xr.DataArray(Quantity(d, units="m"))
+        da = xr.DataArray(
+            Quantity(d, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
 
         result = da.as_numpy()
         result.name = None  # remove dask-assigned name
-        assert_identical(result, xr.DataArray(arr))
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)
         np.testing.assert_equal(da.to_numpy(), arr)

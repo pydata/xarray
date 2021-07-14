@@ -662,15 +662,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def as_numpy(self: T_DataArray) -> T_DataArray:
         """
-        Coerces wrapped data into a numpy array, and returns it wrapped inside
-        a DataArray.
+        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
         See also
         --------
-        DataArray.to_numpy : Same but returns only the numpy.ndarray object.
+        DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
         Dataset.as_numpy : Converts all variables in a Dataset.
         """
-        return self.copy(data=self.to_numpy())
+        coords = {k: v.as_numpy() for k, v in self._coords.items()}
+        return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
     @property
     def _in_memory(self) -> bool:

@@ -6761,13 +6761,13 @@ def test_clip(ds):
 
 class TestNumpyCoercion:
     def test_from_numpy(self):
-        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
 
         assert_identical(ds.as_numpy(), ds)
 
     @requires_dask
     def test_from_dask(self):
-        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
         ds_chunked = ds.chunk(1)
 
         assert_identical(ds_chunked.as_numpy(), ds.compute())
@@ -6777,28 +6777,40 @@ class TestNumpyCoercion:
         from pint import Quantity
 
         arr = np.array([1, 2, 3])
-        ds = xr.Dataset({"a": ("x", Quantity(arr, units="m"))})
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(arr, units="Pa"))},
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
 
-        assert_identical(ds.as_numpy(), xr.Dataset({"a": ("x", [1, 2, 3])}))
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
 
     @requires_sparse
     def test_from_sparse(self):
         import sparse
 
         arr = np.diagflat([1, 2, 3])
-        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
-        ds = xr.Dataset({"a": (["x", "y"], sparr)})
+        sparr = sparse.COO.from_numpy(arr)
+        ds = xr.Dataset(
+            {"a": (["x", "y"], sparr)}, coords={"elev": (("x", "y"), sparr + 3)}
+        )
 
-        assert_identical(ds.as_numpy(), xr.Dataset({"a": (["x", "y"], arr)}))
+        expected = xr.Dataset(
+            {"a": (["x", "y"], arr)}, coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(ds.as_numpy(), expected)
 
     @requires_cupy
     def test_from_cupy(self):
         import cupy as cp
 
         arr = np.array([1, 2, 3])
-        ds = xr.Dataset({"a": ("x", cp.array(arr))})
+        ds = xr.Dataset(
+            {"a": ("x", cp.array(arr))}, coords={"lat": ("x", cp.array(arr + 3))}
+        )
 
-        assert_identical(ds.as_numpy(), xr.Dataset({"a": ("x", [1, 2, 3])}))
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
 
     @requires_dask
     @requires_pint_0_15
@@ -6806,8 +6818,13 @@ class TestNumpyCoercion:
         import dask
         from pint import Quantity
 
-        d = dask.array.from_array(np.array([1, 2, 3]))
-        ds = xr.Dataset({"a": ("x", Quantity(d, units="m"))})
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(arr)
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(d, units="Pa"))},
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
 
         result = ds.as_numpy()
-        assert_identical(result, xr.Dataset({"a": ("x", [1, 2, 3])}))
+        expected = xr.Dataset({"a": ("x", arr)}, coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)
