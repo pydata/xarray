@@ -29,7 +29,7 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return dtype.kind == "U" or check_vlen_dtype(dtype) == str
+    return dtype.kind == "U" or check_vlen_dtype(dtype) == str or check_vlen_dtype(dtype) == np.str_
 
 
 def is_bytes_dtype(dtype):

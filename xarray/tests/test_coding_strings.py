@@ -1,6 +1,7 @@
 from contextlib import suppress
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from xarray import Variable
@@ -32,10 +33,30 @@ def test_vlen_dtype() -> None:
 @pytest.mark.parametrize("numpy_str_type", (np.str, np.str_))
 def test_numpy_str_handling(numpy_str_type) -> None:
     dtype = strings.create_vlen_dtype(numpy_str_type)
-    assert dtype.metadata["element_type"] == str
+    assert dtype.metadata["element_type"] == numpy_str_type
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is str
+    assert strings.check_vlen_dtype(dtype) is numpy_str_type
+
+
+@pytest.mark.parametrize("numpy_str_type", (np.str, np.str_))
+def test_write_file_from_np_str(numpy_str_type):
+    # should be moved elsewhere probably
+    scenarios = [numpy_str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
+    years = range(2015, 2100 + 1)
+    tdf = pd.DataFrame(
+        data=np.random.random((len(scenarios), len(years))),
+        columns=years,
+        index=scenarios,
+    )
+    tdf.index.name = "scenario"
+    tdf.columns.name = "year"
+    tdf = tdf.stack()
+    tdf.name = "tas"
+
+    txr = tdf.to_xarray()
+
+    txr.to_netcdf("test.nc")
 
 
 def test_EncodedStringCoder_decode() -> None:
