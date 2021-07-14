@@ -6506,23 +6506,16 @@ def test_isin(da):
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("pad", (True, False, None))
-def test_rolling_iter(da, center, pad):
-    rolling_obj = da.rolling(time=7, center=center, pad=pad)
+@pytest.mark.parametrize("min_periods", (1, 6, None))
+@pytest.mark.parametrize("window", (6, 7))
+def test_rolling_iter(da, center, pad, min_periods, window):
+    rolling_obj = da.rolling(
+        time=window, center=center, pad=pad, min_periods=min_periods
+    )
     rolling_obj_mean = rolling_obj.mean()
 
-    if pad:
-        expected_times = da["time"]
-    else:
-        if center:
-            expected_times = da["time"][slice(3, -3)]
-        else:
-            expected_times = da["time"][slice(6, None)]
-
-    assert len(rolling_obj.window_labels) == len(expected_times)
-    assert_identical(rolling_obj.window_labels, expected_times)
-
     for i, (label, window_da) in enumerate(rolling_obj):
-        assert label == da["time"].isel(time=i)
+        assert label == rolling_obj_mean["time"].isel(time=i)
 
         actual = rolling_obj_mean.isel(time=i)
         expected = window_da.mean("time")
@@ -6531,10 +6524,14 @@ def test_rolling_iter(da, center, pad):
         # as well as the closeness of the values.
         assert_array_equal(actual.isnull(), expected.isnull())
         if (~actual.isnull()).sum() > 0:
-            np.allclose(
-                actual.values[actual.values.nonzero()],
-                expected.values[expected.values.nonzero()],
-            )
+            if actual.ndim == 0:
+                actual_values = actual.values
+                expected_values = expected.values
+            else:
+                actual_values = actual.values[actual.values.nonzero()]
+                expected_values = expected.values[expected.values.nonzero()]
+
+            assert np.allclose(actual_values, expected_values)
 
 
 @pytest.mark.parametrize("da", (1,), indirect=True)

@@ -208,6 +208,54 @@ class Rolling:
 
         return keep_attrs
 
+    def _get_rolling_dim_coords(self, all_dims=False) -> Dict[str, Any]:
+        # If any of the dimensions are not padded, the output size can be shorter than the input size
+        # along that dimension, so we also need to shorten the corresponding coordinates.
+
+        # Dimensions which require offsets are those which are not padded, but the logic to determine
+        # the offset is very similar to determining padding sizes.
+        # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
+
+        coords = self.obj.coords
+        dim = list(self.obj.coords.keys()) if all_dims else self.dim
+        window = self.window
+        center = self.center
+        pad = self.pad
+
+        if pad is False:
+            pad = [True]
+        elif utils.is_list_like(pad):
+            pad = [not p for p in pad]
+
+        offset_pads = utils.get_pads(self.dim, window, center, pad)
+
+        output_coords: Dict[str, Any] = {}
+
+        def get_offsets(d: str):
+            pad_start_offset, pad_end_offset = offset_pads[d]
+
+            start_offset = None if not pad_start_offset else pad_start_offset
+            end_offset = None if not pad_end_offset else -pad_end_offset
+
+            return start_offset, end_offset
+
+        for d in dim:
+            obj_coords = coords[d]
+            if d in self.dim:
+                start_offset, end_offset = get_offsets(d)
+                obj_coords = obj_coords.isel({d: slice(start_offset, end_offset)})
+            else:
+                for obj_d in obj_coords.dims:
+                    if obj_d in self.dim:
+                        start_offset, end_offset = get_offsets(obj_d)
+                        obj_coords = obj_coords.isel(
+                            {obj_d: slice(start_offset, end_offset)}
+                        )
+
+            output_coords[d] = obj_coords
+
+        return output_coords
+
 
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
@@ -263,11 +311,47 @@ class DataArrayRolling(Rolling):
     def __iter__(self):
         if len(self.dim) > 1:
             raise ValueError("__iter__ is only supported for 1d-rolling")
-        stops = np.arange(1, len(self.window_labels) + 1)
-        starts = stops - int(self.window[0])
-        starts[: int(self.window[0])] = 0
-        for (label, start, stop) in zip(self.window_labels, starts, stops):
-            window = self.obj.isel(**{self.dim[0]: slice(start, stop)})
+        dim = self.dim[0]
+        center = self.center[0]
+        pad = self.pad[0]
+        window = self.window[0]
+        center_offset = window // 2 if center else 0
+
+        pads = utils.get_pads(self.dim, self.window, self.center, self.pad)
+        start_pad, end_pad = pads[dim]
+
+        # Select the proper subset of labels, based on whether or not to center and/or pad
+        first_label_idx = 0 if pad else center_offset if center else window - 1
+        last_label_idx = (
+            len(self.obj[dim])
+            if pad or not center
+            else len(self.obj[dim]) - center_offset
+        )
+
+        labels = (
+            self.obj[dim][slice(first_label_idx, last_label_idx)]
+            if self.obj[dim].coords
+            else np.arange(last_label_idx - first_label_idx)
+        )
+
+        padded_obj = self.obj.pad(pads, mode="constant", constant_values=dtypes.NA)
+
+        if pad and not center:
+            first_stop = 1
+            last_stop = len(self.obj[dim])
+        elif pad and center:
+            first_stop = end_pad + 1
+            last_stop = len(self.obj[dim]) + end_pad
+        elif not pad:
+            first_stop = window
+            last_stop = len(self.obj[dim])
+
+        # These are indicies into the padded array, so we need to add start_pad
+        stops = np.arange(first_stop, last_stop + 1) + start_pad
+        starts = stops - window
+
+        for (label, start, stop) in zip(labels, starts, stops):
+            window = padded_obj.isel({self.dim[0]: slice(start, stop)})
 
             counts = window.count(dim=self.dim[0])
             window = window.where(counts >= self.min_periods)
@@ -384,7 +468,7 @@ class DataArrayRolling(Rolling):
         )
 
         attrs = obj.attrs if keep_attrs else {}
-        coords = self._get_rolling_dim_coords(all=True)
+        coords = self._get_rolling_dim_coords(all_dims=True)
 
         result = DataArray(
             window,
@@ -486,15 +570,17 @@ class DataArrayRolling(Rolling):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
+        output_dim_coords = self._get_rolling_dim_coords()
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
+                pad={p: self.pad[i] for i, p in enumerate(self.pad)},
                 **{d: w for d, w in zip(self.dim, self.window)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
             .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
-        )
+        ).sel(output_dim_coords)
         return counts
 
     def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
@@ -583,44 +669,6 @@ class DataArrayRolling(Rolling):
             kwargs.setdefault("fillna", fillna)
 
         return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
-
-    def _get_rolling_dim_coords(self, all=False) -> Dict[str, Any]:
-        # If any of the dimensions are not padded, the output size can be shorter than the input size
-        # along that dimension, so we also need to shorten the corresponding coordinates.
-
-        # Dimensions which require offsets are those which are not padded, but the logic to determine
-        # the offset is very similar to determining padding sizes.
-        # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
-
-        coords = self.obj.coords
-        dim = list(self.obj.coords.keys()) if all else self.dim
-        window = self.window
-        center = self.center
-        pad = self.pad
-
-        if pad is False:
-            pad = [True]
-        elif utils.is_list_like(pad):
-            pad = [not p for p in pad]
-
-        offset_pads = utils.get_pads(self.dim, window, center, pad)
-
-        output_coords: Dict[str, Any] = {}
-
-        for d in dim:
-            obj_coords = coords[d]
-            if d not in self.dim:
-                output_coords[d] = obj_coords
-                continue
-
-            pad_start_offset, pad_end_offset = offset_pads[d]
-
-            start_offset = None if not pad_start_offset else pad_start_offset
-            end_offset = None if not pad_end_offset else -pad_end_offset
-
-            output_coords[d] = obj_coords[slice(start_offset, end_offset)]
-
-        return output_coords
 
 
 class DatasetRolling(Rolling):
@@ -820,7 +868,9 @@ class DatasetRolling(Rolling):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        return Dataset(dataset, coords=self.obj.coords, attrs=attrs).isel(
+        coords = self._get_rolling_dim_coords(all_dims=True)
+
+        return Dataset(dataset, coords=coords, attrs=attrs).isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
         )
 
