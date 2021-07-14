@@ -8,7 +8,13 @@ from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
 
-from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
+from . import (
+    IndexerMaker,
+    assert_array_equal,
+    assert_identical,
+    requires_dask,
+    requires_netCDF4,
+)
 
 with suppress(ImportError):
     import dask.array as da
@@ -30,19 +36,20 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
-@pytest.mark.parametrize("numpy_str_type", (np.str, np.str_))
-def test_numpy_str_handling(numpy_str_type) -> None:
-    dtype = strings.create_vlen_dtype(numpy_str_type)
-    assert dtype.metadata["element_type"] == numpy_str_type
+@pytest.mark.parametrize("str_type", (str, np.str_))
+def test_numpy_str_handling(str_type) -> None:
+    dtype = strings.create_vlen_dtype(str_type)
+    assert dtype.metadata["element_type"] == str_type
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is numpy_str_type
+    assert strings.check_vlen_dtype(dtype) is str_type
 
 
-@pytest.mark.parametrize("numpy_str_type", (np.str, np.str_))
-def test_write_file_from_np_str(numpy_str_type):
+@requires_netCDF4
+@pytest.mark.parametrize("str_type", (str, np.str_))
+def test_write_file_from_np_str(str_type):
     # should be moved elsewhere probably
-    scenarios = [numpy_str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
+    scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
     years = range(2015, 2100 + 1)
     tdf = pd.DataFrame(
         data=np.random.random((len(scenarios), len(years))),
