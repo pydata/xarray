@@ -40,6 +40,7 @@ from . import (
     assert_equal,
     assert_identical,
     create_test_data,
+    get_expected_rolling_indices,
     has_cftime,
     has_dask,
     requires_bottleneck,
@@ -6146,11 +6147,10 @@ def test_rolling_properties(ds):
 
 
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-@pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
+def test_rolling_wrapped_bottleneck(ds, name, min_periods, key):
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
     # Test all bottleneck functions
@@ -6168,10 +6168,23 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
         raise ValueError
     assert_array_equal(actual[key].values, expected)
 
-    # Test center
-    rolling_obj = ds.rolling(time=7, center=center)
+
+@pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
+@pytest.mark.parametrize("center", (True, False, None))
+@pytest.mark.parametrize("pad", (False,))
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+def test_rolling_wrapped_bottleneck_center_pad(ds, name, center, pad):
+    pytest.importorskip("bottleneck", minversion="1.1")
+
+    window = 7
+    count = len(ds["time"])
+    rolling_obj = ds.rolling(time=window, center=center, pad=pad)
     actual = getattr(rolling_obj, name)()["time"]
-    assert_equal(actual, ds["time"])
+
+    expected_index = get_expected_rolling_indices(count, window, center, pad)
+    expected = ds["time"][expected_index]
+
+    assert_equal(actual, expected)
 
 
 @requires_numbagg
@@ -6249,8 +6262,9 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 
 @pytest.mark.parametrize("center", (True, False))
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("window", (2, 3, 4))
 def test_rolling_construct(center, window):
+    count = 20
     df = pd.DataFrame(
         {
             "x": np.random.randn(20),
@@ -6277,6 +6291,23 @@ def test_rolling_construct(center, window):
     )
     assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim="vars").all()
     assert (ds_rolling_mean["x"] == 0.0).sum() >= 0
+
+    # with no padding
+    ds_rolling = ds.rolling(index=window, center=center, pad=False)
+    ds_rolling_mean = ds_rolling.construct("window", stride=2).mean("window")
+
+    expected_index = get_expected_rolling_indices(
+        count, window, center, pad=False, stride=2
+    )
+
+    assert ds_rolling_mean.sizes["index"] == len(expected_index)
+    assert (ds_rolling_mean.index.values == expected_index).all()
+    np.testing.assert_allclose(
+        df_rolling["x"][expected_index].values, ds_rolling_mean["x"].values
+    )
+    np.testing.assert_allclose(
+        df_rolling.index[expected_index], ds_rolling_mean["index"]
+    )
 
 
 @pytest.mark.slow

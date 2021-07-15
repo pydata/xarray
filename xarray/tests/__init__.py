@@ -231,6 +231,24 @@ def create_test_data(seed=None, add_attrs=True):
     return obj
 
 
+def get_expected_rolling_indices(count, window, center, pad, stride=1):
+    # Without padding, we lose (window-1) items from the index, either from the beginning
+    # (without centering) or from the beginning and end (with centering)
+    if pad:
+        start_index = 0
+        end_index = count
+    elif center:
+        start_index = window // 2  # 10 -> 5, 9 -> 4
+        end_index = count - (window - 1) // 2  # 10 -> 4, 9 -> 4
+    else:
+        start_index = window - 1
+        end_index = count
+
+    expected_index = np.arange(start_index, end_index, stride)
+
+    return expected_index
+
+
 _CFTIME_CALENDARS = [
     "365_day",
     "360_day",

@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    get_expected_rolling_indices,
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -6505,7 +6506,7 @@ def test_isin(da):
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False, None))
-@pytest.mark.parametrize("pad", (True, False, None))
+@pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("min_periods", (1, 6, None))
 @pytest.mark.parametrize("window", (6, 7))
 def test_rolling_iter(da, center, pad, min_periods, window):
@@ -6610,21 +6611,18 @@ def test_rolling_wrapped_bottleneck(da, name, min_periods):
 
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
-@pytest.mark.parametrize("pad", (True, False, None))
+@pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
     pytest.importorskip("bottleneck", minversion="1.1")
 
+    window = 7
+    count = len(da["time"])
     rolling_obj = da.rolling(time=7, center=center, pad=pad)
     actual = getattr(rolling_obj, name)()["time"]
 
-    if pad:
-        expected = da["time"]
-    else:
-        if center:
-            expected = da["time"][slice(3, -3)]
-        else:
-            expected = da["time"][slice(6, None)]
+    expected_index = get_expected_rolling_indices(count, window, center, pad)
+    expected = da["time"][expected_index]
 
     assert_equal(actual, expected)
 
@@ -6632,18 +6630,23 @@ def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
 @requires_dask
 @pytest.mark.parametrize("name", ("mean", "count"))
 @pytest.mark.parametrize("center", (True, False, None))
+@pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 @pytest.mark.parametrize("backend", ["dask"], indirect=True)
-def test_rolling_wrapped_dask(da, name, center, min_periods, window):
+def test_rolling_wrapped_dask(da, name, center, pad, min_periods, window):
     # dask version
-    rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da.rolling(
+        time=window, min_periods=min_periods, center=center, pad=pad
+    )
     actual = getattr(rolling_obj, name)().load()
     if name != "count":
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = da.load().rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da.load().rolling(
+        time=window, min_periods=min_periods, center=center, pad=pad
+    )
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
@@ -6652,39 +6655,52 @@ def test_rolling_wrapped_dask(da, name, center, min_periods, window):
 
     # with zero chunked array GH:2113
     rolling_obj = da.chunk().rolling(
-        time=window, min_periods=min_periods, center=center
+        time=window,
+        min_periods=min_periods,
+        center=center,
+        pad=pad,
     )
     actual = getattr(rolling_obj, name)().load()
     assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("center", (True, None))
-def test_rolling_wrapped_dask_nochunk(center):
+@pytest.mark.parametrize("pad", (True, False))
+def test_rolling_wrapped_dask_nochunk(center, pad):
     # GH:2113
     pytest.importorskip("dask.array")
 
     da_day_clim = xr.DataArray(
         np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear"
     )
-    expected = da_day_clim.rolling(dayofyear=31, center=center).mean()
-    actual = da_day_clim.chunk().rolling(dayofyear=31, center=center).mean()
+    expected = da_day_clim.rolling(dayofyear=31, center=center, pad=pad).mean()
+    actual = da_day_clim.chunk().rolling(dayofyear=31, center=center, pad=pad).mean()
     assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("pad", (False,))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
-def test_rolling_pandas_compat(center, window, min_periods):
+@pytest.mark.parametrize("window", (2, 3, 4))
+def test_rolling_pandas_compat(center, pad, window, min_periods):
     s = pd.Series(np.arange(10))
     da = DataArray.from_series(s)
 
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    s_rolling = s.rolling(window, center=center, min_periods=min_periods).mean()
-    da_rolling = da.rolling(index=window, center=center, min_periods=min_periods).mean()
+    expected_index = get_expected_rolling_indices(10, window, center, pad)
+
+    s_rolling = (
+        s.rolling(window, center=center, min_periods=min_periods)
+        .mean()
+        .iloc[expected_index]
+    )
+    da_rolling = da.rolling(
+        index=window, center=center, pad=pad, min_periods=min_periods
+    ).mean()
     da_rolling_np = da.rolling(
-        index=window, center=center, min_periods=min_periods
+        index=window, center=center, pad=pad, min_periods=min_periods
     ).reduce(np.nanmean)
 
     np.testing.assert_allclose(s_rolling.values, da_rolling.values)
@@ -6694,10 +6710,12 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 
 @pytest.mark.parametrize("center", (True, False))
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
+@pytest.mark.parametrize("window", (2, 3, 4))
 def test_rolling_construct(center, window):
-    s = pd.Series(np.arange(10))
+    count = 10
+    s = pd.Series(np.arange(count))
     da = DataArray.from_series(s)
+    da = da.assign_coords(time=("index", np.arange(1, count + 1)))
 
     s_rolling = s.rolling(window, center=center, min_periods=1).mean()
     da_rolling = da.rolling(index=window, center=center, min_periods=1)
@@ -6718,13 +6736,31 @@ def test_rolling_construct(center, window):
     assert da_rolling_mean.isnull().sum() == 0
     assert (da_rolling_mean == 0.0).sum() >= 0
 
+    # with no padding
+    da_rolling = da.rolling(index=window, center=center, min_periods=1, pad=False)
+    da_rolling_mean = da_rolling.construct("window", stride=2).mean("window")
+
+    expected_index = get_expected_rolling_indices(
+        count, window, center, pad=False, stride=2
+    )
+
+    assert da_rolling_mean.sizes["index"] == len(expected_index)
+    assert (da_rolling_mean.index.values == expected_index).all()
+    assert (da_rolling_mean.time.values == expected_index + 1).all()
+
+    np.testing.assert_allclose(s_rolling.values[expected_index], da_rolling_mean.values)
+    np.testing.assert_allclose(
+        s_rolling.index[expected_index], da_rolling_mean["index"]
+    )
+
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_rolling_reduce(da, center, min_periods, window, name):
+def test_rolling_reduce(da, center, pad, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
@@ -6732,7 +6768,9 @@ def test_rolling_reduce(da, center, min_periods, window, name):
         # this causes all nan slices
         window = 2
 
-    rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
+    rolling_obj = da.rolling(
+        time=window, center=center, pad=pad, min_periods=min_periods
+    )
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
@@ -6742,10 +6780,11 @@ def test_rolling_reduce(da, center, min_periods, window, name):
 
 
 @pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "max"))
-def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
+def test_rolling_reduce_nonnumeric(center, pad, min_periods, window, name):
     da = DataArray(
         [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time"
     ).isnull()
@@ -6753,7 +6792,9 @@ def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
+    rolling_obj = da.rolling(
+        time=window, center=center, pad=pad, min_periods=min_periods
+    )
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
@@ -6767,11 +6808,15 @@ def test_rolling_count_correct():
 
     kwargs = [
         {"time": 11, "min_periods": 1},
+        {"time": 11, "min_periods": 1, "pad": False},
         {"time": 11, "min_periods": None},
+        {"time": 11, "min_periods": None, "pad": False},
         {"time": 7, "min_periods": 2},
+        {"time": 7, "min_periods": 2, "pad": False},
     ]
     expecteds = [
         DataArray([1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims="time"),
+        DataArray([8], dims="time"),
         DataArray(
             [
                 np.nan,
@@ -6788,7 +6833,9 @@ def test_rolling_count_correct():
             ],
             dims="time",
         ),
+        DataArray([np.nan], dims="time"),
         DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
+        DataArray([5, 5, 5, 5, 5], dims="time"),
     ]
 
     for kwarg, expected in zip(kwargs, expecteds):
@@ -6800,17 +6847,20 @@ def test_rolling_count_correct():
 
 
 @pytest.mark.parametrize("da", (1,), indirect=True)
-@pytest.mark.parametrize("center", (True, False))
+@pytest.mark.parametrize("center", (True, False, {"time": True, "x": False}))
+@pytest.mark.parametrize("pad", (True, False, {"time": True, "x": False}))
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "mean", "max"))
-def test_ndrolling_reduce(da, center, min_periods, name):
-    rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
+def test_ndrolling_reduce(da, center, pad, min_periods, name):
+    rolling_obj = da.rolling(
+        time=3, x=2, center=center, pad=pad, min_periods=min_periods
+    )
 
     actual = getattr(rolling_obj, name)()
     expected = getattr(
         getattr(
-            da.rolling(time=3, center=center, min_periods=min_periods), name
-        )().rolling(x=2, center=center, min_periods=min_periods),
+            da.rolling(time=3, center=center, pad=pad, min_periods=min_periods), name
+        )().rolling(x=2, center=center, pad=pad, min_periods=min_periods),
         name,
     )()
 
@@ -6828,23 +6878,33 @@ def test_ndrolling_reduce(da, center, min_periods, name):
         assert_allclose(actual, expected.where(count >= min_periods))
 
 
-@pytest.mark.parametrize("center", (True, False, (True, False)))
+@pytest.mark.parametrize("center", (True, False, {"x": True, "z": False}))
+@pytest.mark.parametrize(
+    "pad",
+    (
+        True,
+        False,
+        {"x": True, "z": False},
+    ),
+)
 @pytest.mark.parametrize("fill_value", (np.nan, 0.0))
-def test_ndrolling_construct(center, fill_value):
+def test_ndrolling_construct(center, pad, fill_value):
     da = DataArray(
         np.arange(5 * 6 * 7).reshape(5, 6, 7).astype(float),
         dims=["x", "y", "z"],
         coords={"x": ["a", "b", "c", "d", "e"], "y": np.arange(6)},
     )
-    actual = da.rolling(x=3, z=2, center=center).construct(
+    actual = da.rolling(x=3, z=2, center=center, pad=pad).construct(
         x="x1", z="z1", fill_value=fill_value
     )
-    if not isinstance(center, tuple):
-        center = (center, center)
+    if not isinstance(center, dict):
+        center = {"x": center, "z": center}
+    if not isinstance(pad, dict):
+        pad = {"x": pad, "z": pad}
     expected = (
-        da.rolling(x=3, center=center[0])
+        da.rolling(x=3, center=center["x"], pad=pad["x"])
         .construct(x="x1", fill_value=fill_value)
-        .rolling(z=2, center=center[1])
+        .rolling(z=2, center=center["z"], pad=pad["z"])
         .construct(z="z1", fill_value=fill_value)
     )
     assert_allclose(actual, expected)
