@@ -2,7 +2,6 @@ import operator
 import pickle
 import sys
 from contextlib import suppress
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -13,6 +12,7 @@ import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
+from xarray.core.pycompat import dask_version
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
@@ -111,10 +111,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(
-        LooseVersion(dask.__version__) < LooseVersion("2021.04.1"),
-        reason="Requires dask v2021.04.1 or later",
-    )
+    @pytest.mark.skipif(dask_version < "2021.04.1", reason="Requires dask >= 2021.04.1")
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -133,10 +130,7 @@ class TestVariable(DaskTestCase):
         arr[index] = 99
         assert_identical(arr, expected)
 
-    @pytest.mark.skipif(
-        LooseVersion(dask.__version__) >= LooseVersion("2021.04.1"),
-        reason="Requires dask v2021.04.0 or earlier",
-    )
+    @pytest.mark.skipif(dask_version >= "2021.04.1", reason="Requires dask < 2021.04.1")
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
             v = self.lazy_var
@@ -1625,7 +1619,7 @@ def test_optimize():
 
 # The graph_manipulation module is in dask since 2021.2 but it became usable with
 # xarray only since 2021.3
-@pytest.mark.skipif(LooseVersion(dask.__version__) <= "2021.02.0", reason="new module")
+@pytest.mark.skipif(dask_version <= "2021.02.0", reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
