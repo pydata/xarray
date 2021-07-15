@@ -272,7 +272,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if lock is None:
         lock = RASTERIO_LOCK
 
-    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode="r",kwargs=kwargs)
+    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode="r", kwargs=kwargs)
     riods = manager.acquire()
     if vrt_params is not None:
         riods = WarpedVRT(riods, **vrt_params)
