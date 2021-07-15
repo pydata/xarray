@@ -62,6 +62,11 @@ Breaking changes
   pre-existing array values. This is a safer default than the prior ``mode="a"``,
   and allows for higher performance writes (:pull:`5252`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``__repr__`` of a :py:class:`xarray.Dataset`'s ``attrs``, ``coords``,
+  and ``data_vars`` ignore ``xarray.set_option(display_max_rows=...)`` and
+  show the full output when called directly as, e.g., ``ds.data_vars`` or
+  ``print(ds.data_vars)`` (:issue:`5545`, :pull:`5580`).
+  By `Stefan Bender <https://github.com/st-bender>`_.
 
 Deprecations
 ~~~~~~~~~~~~
