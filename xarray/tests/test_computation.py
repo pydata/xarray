@@ -1,7 +1,6 @@
 import functools
 import operator
 import pickle
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -21,6 +20,7 @@ from xarray.core.computation import (
     result_name,
     unified_dim_sizes,
 )
+from xarray.core.pycompat import dask_version
 
 from . import has_dask, raise_if_dask_computes, requires_dask
 
@@ -1307,7 +1307,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
 
 
 @pytest.mark.skipif(
-    LooseVersion(dask.__version__) > "2021.06",
+    dask_version > "2021.06",
     reason="dask/dask#7669: can no longer pass output_dtypes and meta",
 )
 @requires_dask
