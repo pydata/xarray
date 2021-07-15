@@ -421,10 +421,6 @@ class TestDataset:
             actual = Dataset({"x": arg})
             assert_identical(expected, actual)
 
-    def test_constructor_deprecated(self):
-        with pytest.raises(ValueError, match=r"DataArray dimensions"):
-            DataArray([1, 2, 3], coords={"x": [0, 1, 2]})
-
     def test_constructor_auto_align(self):
         a = DataArray([1, 2], [("x", [0, 1])])
         b = DataArray([3, 4], [("x", [1, 2])])
