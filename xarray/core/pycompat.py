@@ -40,7 +40,7 @@ class DuckArrayModule:
         self.module = duck_array_module
         self.version = duck_array_version
         self.type = duck_array_type
-        self.available = self.version > "0.0.0"
+        self.available = duck_array_module is not None
 
 
 def is_duck_dask_array(x):

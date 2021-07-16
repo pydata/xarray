@@ -623,7 +623,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def data(self) -> Any:
-        """The array's data as a numpy-like array"""
+        """
+        The DataArray's data as an array. The underlying array type 
+        (e.g. dask, sparse, pint) is preserved.
+        
+        See Also
+        --------
+        DataArray.to_numpy
+        DataArray.as_numpy
+        DataArray.values
+        """
         return self.variable.data
 
     @data.setter
@@ -637,7 +646,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         If the array's data is not a numpy.ndarray this will attempt to convert
         it naively using np.array(), which will raise an error if the array
-        type does not support coercion like this.
+        type does not support coercion like this (e.g. cupy).
         """
         return self.variable.values
 
@@ -653,6 +662,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.as_numpy : Same but returns the surrounding DataArray instead.
         Dataset.as_numpy
+        DataArray.values
+        DataArray.data
         """
         return self.variable.to_numpy()
 
@@ -664,6 +675,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
         Dataset.as_numpy : Converts all variables in a Dataset.
+        DataArray.values
+        DataArray.data
         """
         coords = {k: v.as_numpy() for k, v in self._coords.items()}
         return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
