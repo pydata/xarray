@@ -279,7 +279,10 @@ def open_rasterio(
 
     if lock is None:
         lock = RASTERIO_LOCK
-    kwargs.update(backend_kwargs)
+
+    if backend_kwargs is not None:
+        kwargs.update(backend_kwargs)
+
     manager = CachingFileManager(
         rasterio.open,
         filename,
