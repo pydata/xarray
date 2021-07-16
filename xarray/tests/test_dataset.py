@@ -44,9 +44,11 @@ from . import (
     has_dask,
     requires_bottleneck,
     requires_cftime,
+    requires_cupy,
     requires_dask,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -418,10 +420,6 @@ class TestDataset:
             expected = Dataset({"x": ([], arg)})
             actual = Dataset({"x": arg})
             assert_identical(expected, actual)
-
-    def test_constructor_deprecated(self):
-        with pytest.raises(ValueError, match=r"DataArray dimensions"):
-            DataArray([1, 2, 3], coords={"x": [0, 1, 2]})
 
     def test_constructor_auto_align(self):
         a = DataArray([1, 2], [("x", [0, 1])])
@@ -6755,3 +6753,74 @@ def test_clip(ds):
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
+
+
+class TestNumpyCoercion:
+    def test_from_numpy(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
+
+        assert_identical(ds.as_numpy(), ds)
+
+    @requires_dask
+    def test_from_dask(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
+        ds_chunked = ds.chunk(1)
+
+        assert_identical(ds_chunked.as_numpy(), ds.compute())
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(arr, units="Pa"))},
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
+
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO.from_numpy(arr)
+        ds = xr.Dataset(
+            {"a": (["x", "y"], sparr)}, coords={"elev": (("x", "y"), sparr + 3)}
+        )
+
+        expected = xr.Dataset(
+            {"a": (["x", "y"], arr)}, coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset(
+            {"a": ("x", cp.array(arr))}, coords={"lat": ("x", cp.array(arr + 3))}
+        )
+
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(arr)
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(d, units="Pa"))},
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
+
+        result = ds.as_numpy()
+        expected = xr.Dataset({"a": ("x", arr)}, coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)

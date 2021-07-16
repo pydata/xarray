@@ -1325,15 +1325,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def as_numpy(self: "Dataset") -> "Dataset":
         """
-        Coerces wrapped data into numpy arrays, returning a Dataset.
+        Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
         See also
         --------
         DataArray.as_numpy
-        DataArray.to_numpy : Returns only the numpy.ndarray object.
+        DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
         """
-        numpy_variables = {k: v.as_numpy() for k, v in self._variables.items()}
-        return self.copy(data=numpy_variables)
+        numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
+        return self._replace(variables=numpy_variables)
 
     @property
     def _level_coords(self) -> Dict[str, Hashable]:

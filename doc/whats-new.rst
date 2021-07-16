@@ -21,7 +21,9 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
+  reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
 - Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Xarray now uses consolidated metadata by default when writing and reading Zarr
@@ -64,6 +66,10 @@ Breaking changes
   pre-existing array values. This is a safer default than the prior ``mode="a"``,
   and allows for higher performance writes (:pull:`5252`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
+  of `datasets` so anyone calling this method using a named parameter will need to update
+  the name accordingly (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -87,6 +93,9 @@ Bug fixes
 - Plotting a pcolormesh with ``xscale="log"`` and/or ``yscale="log"`` works as
   expected after improving the way the interval breaks are generated (:issue:`5333`).
   By `Santiago Soler <https://github.com/santisoler>`_
+- :py:func:`combine_by_coords` can now handle combining a list of unnamed
+  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 
 Documentation
@@ -148,10 +157,7 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
-  of `datasets` so anyone calling this method using a named parameter will need to update
-  the name accordingly (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -159,9 +165,6 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- :py:func:`combine_by_coords` can now handle combining a list of unnamed
-  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
 - Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
   an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
   0.18.0.

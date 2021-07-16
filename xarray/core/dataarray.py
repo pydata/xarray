@@ -117,16 +117,11 @@ def _infer_coords_and_dims(
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                # deprecated in GH993, removed in GH1539
-                raise ValueError(
-                    "inferring DataArray dimensions from "
-                    "dictionary like ``coords`` is no longer "
-                    "supported. Use an explicit list of "
-                    "``dims`` instead."
-                )
-            for n, (dim, coord) in enumerate(zip(dims, coords)):
-                coord = as_variable(coord, name=dims[n]).to_index_variable()
-                dims[n] = coord.name
+                dims = list(coords.keys())
+            else:
+                for n, (dim, coord) in enumerate(zip(dims, coords)):
+                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    dims[n] = coord.name
         dims = tuple(dims)
     elif len(dims) != len(shape):
         raise ValueError(
@@ -281,7 +276,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Name(s) of the data dimension(s). Must be either a hashable
         (only for 1D data) or a sequence of hashables with length equal
         to the number of dimensions. If this argument is omitted,
-        dimension names default to ``['dim_0', ... 'dim_n']``.
+        dimension names are taken from ``coords`` (if possible) and
+        otherwise default to ``['dim_0', ... 'dim_n']``.
     name : str or None, optional
         Name of this array.
     attrs : dict_like or None, optional
@@ -662,15 +658,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def as_numpy(self: T_DataArray) -> T_DataArray:
         """
-        Coerces wrapped data into a numpy array, and returns it wrapped inside
-        a DataArray.
+        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
         See also
         --------
-        DataArray.to_numpy : Same but returns only the numpy.ndarray object.
+        DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
         Dataset.as_numpy : Converts all variables in a Dataset.
         """
-        return self.copy(data=self.to_numpy())
+        coords = {k: v.as_numpy() for k, v in self._coords.items()}
+        return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
     @property
     def _in_memory(self) -> bool:
