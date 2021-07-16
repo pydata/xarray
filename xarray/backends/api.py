@@ -18,7 +18,6 @@ from typing import (
 )
 
 import numpy as np
-from fsspec import get_mapper
 
 from .. import backends, coding, conventions
 from ..core import indexing
@@ -39,6 +38,10 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None
+    try:
+        from fsspec import get_mapper
+    except ImportError:
+        get_mapper = None
 
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
@@ -1337,7 +1340,7 @@ def to_zarr(
         chunk_mapper = chunk_store
     else:
         mapper = get_mapper(store, **storage_options)
-        chunk_mapper = get_mapper(chunk_store, **storage_options)
+        chunk_mapper = get_mapper(store, **storage_options)
 
     if encoding is None:
         encoding = {}
