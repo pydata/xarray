@@ -48,8 +48,6 @@ from .utils import (
     maybe_coerce_to_str,
 )
 
-
-
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     (
         indexing.ExplicitlyIndexed,
