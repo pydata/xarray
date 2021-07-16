@@ -21,6 +21,8 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added `storage_options` arg to :py:meth:`~xarray.Dataset.to_zarr` (:pull:`5615`).
+  By `Ray Bell <https://github.com/raybellwaves>`_.
 - Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
   reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
