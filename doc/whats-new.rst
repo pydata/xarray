@@ -53,7 +53,7 @@ New Features
 - Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
   (:issue:`5510`).
   By `Elle Smith <https://github.com/ellesmith88>`_.
-- Added ``kwargs`` argument to xarray.open_rasterio to access overviews (:issue:`3269`).
+- Added ``backend_kwargs`` and ``**kwargs`` arguments to xarray.open_rasterio to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 
 Breaking changes
