@@ -96,7 +96,7 @@ dependencies:
 - **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **dask and dask.distributed:** 12 months (but no older than 2.9)
+- **dask and dask.distributed:** 12 months
 - **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
