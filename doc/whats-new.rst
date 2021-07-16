@@ -54,7 +54,7 @@ New Features
   (:issue:`5510`).
   By `Elle Smith <https://github.com/ellesmith88>`_.
 - Added ``kwargs`` argument to xarray.open_rasterio to access overviews (:issue:`3269`).
-  By Pushkar Kopparla `<https://github.com/pkopparla>`_.
+  By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
