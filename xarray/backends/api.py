@@ -18,6 +18,7 @@ from typing import (
 )
 
 import numpy as np
+from fsspec import get_mapper
 
 from .. import backends, coding, conventions
 from ..core import indexing
@@ -1310,6 +1311,7 @@ def to_zarr(
     dataset: Dataset,
     store: Union[MutableMapping, str, Path] = None,
     chunk_store=None,
+    storage_options: Dict[str, str] = None,
     mode: str = None,
     synchronizer=None,
     group: str = None,
@@ -1329,6 +1331,13 @@ def to_zarr(
     # expand str and Path arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
+
+    if storage_options is None:
+        mapper = store
+        chunk_mapper = chunk_store
+    else:
+        mapper = get_mapper(store, **storage_options)
+        chunk_mapper = get_mapper(chunk_store, **storage_options)
 
     if encoding is None:
         encoding = {}
@@ -1372,13 +1381,13 @@ def to_zarr(
         already_consolidated = False
         consolidate_on_close = consolidated or consolidated is None
     zstore = backends.ZarrStore.open_group(
-        store=store,
+        store=mapper,
         mode=mode,
         synchronizer=synchronizer,
         group=group,
         consolidated=already_consolidated,
         consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_store,
+        chunk_store=chunk_mapper,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
