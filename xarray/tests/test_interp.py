@@ -727,6 +727,7 @@ def test_datetime_interp_noerror():
 
 
 @requires_cftime
+@requires_scipy
 def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
