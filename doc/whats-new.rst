@@ -21,6 +21,9 @@ v0.18.3 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Allow passing argument ``missing_dims`` to :py:meth:`Variable.transpose` and :py:meth:`Dataset.transpose`
+  (:issue:`5550`, :pull:`5586`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
 - Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
   reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
   By `Sander van Rijn <https://github.com/sjvrijn>`_.

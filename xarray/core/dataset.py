@@ -4543,7 +4543,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
         return self.drop_vars(drop_vars)
 
-    def transpose(self, *dims: Hashable) -> "Dataset":
+    def transpose(
+        self,
+        *dims: Hashable,
+        missing_dims: str = "raise",
+    ) -> "Dataset":
         """Return a new Dataset object with all array dimensions transposed.
 
         Although the order of dimensions on each array will change, the dataset
@@ -4554,6 +4558,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         *dims : hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -4572,12 +4582,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numpy.transpose
         DataArray.transpose
         """
-        if dims:
-            if set(dims) ^ set(self.dims) and ... not in dims:
-                raise ValueError(
-                    f"arguments to transpose ({dims}) must be "
-                    f"permuted dataset dimensions ({tuple(self.dims)})"
-                )
+        # Use infix_dims to check once for missing dimensions
+        if len(dims) != 0:
+            _ = list(infix_dims(dims, self.dims, missing_dims))
+
         ds = self.copy()
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
