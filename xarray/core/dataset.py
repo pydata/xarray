@@ -12,6 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Collection,
     DefaultDict,
     Dict,
     Hashable,
@@ -3874,8 +3875,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def to_stacked_array(
         self,
         new_dim: Hashable,
-        sample_dims: Sequence[Hashable],
-        variable_dim: str = "variable",
+        sample_dims: Collection,
+        variable_dim: Hashable = "variable",
         name: Hashable = None,
     ) -> "DataArray":
         """Combine variables of differing dimensionality into a DataArray
@@ -3888,14 +3889,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ----------
         new_dim : hashable
             Name of the new stacked coordinate
-        sample_dims : sequence of hashable
-            Dimensions that **will not** be stacked. Each array in the dataset
-            must share these dimensions. For machine learning applications,
-            these define the dimensions over which samples are drawn.
-        variable_dim : str, optional
+        sample_dims : Collection of hashables
+            List of dimensions that **will not** be stacked. Each array in the
+            dataset must share these dimensions. For machine learning
+            applications, these define the dimensions over which samples are
+            drawn.
+        variable_dim : hashable, optional
             Name of the level in the stacked coordinate which corresponds to
             the variables.
-        name : str, optional
+        name : hashable, optional
             Name of the new data array.
 
         Returns
@@ -4541,7 +4543,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
         return self.drop_vars(drop_vars)
 
-    def transpose(self, *dims: Hashable) -> "Dataset":
+    def transpose(
+        self,
+        *dims: Hashable,
+        missing_dims: str = "raise",
+    ) -> "Dataset":
         """Return a new Dataset object with all array dimensions transposed.
 
         Although the order of dimensions on each array will change, the dataset
@@ -4552,6 +4558,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         *dims : hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -4570,12 +4582,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numpy.transpose
         DataArray.transpose
         """
-        if dims:
-            if set(dims) ^ set(self.dims) and ... not in dims:
-                raise ValueError(
-                    f"arguments to transpose ({dims}) must be "
-                    f"permuted dataset dimensions ({tuple(self.dims)})"
-                )
+        # Use infix_dims to check once for missing dimensions
+        if len(dims) != 0:
+            _ = list(infix_dims(dims, self.dims, missing_dims))
+
         ds = self.copy()
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))

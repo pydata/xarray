@@ -771,13 +771,16 @@ def _is_monotonic(coord, axis=0):
         return np.all(delta_pos) or np.all(delta_neg)
 
 
-def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
+def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
     array([[-0.5,  0.5,  1.5],
            [ 2.5,  3.5,  4.5]])
+    >>> _infer_interval_breaks(np.logspace(-2, 2, 5), scale="log")
+    array([3.16227766e-03, 3.16227766e-02, 3.16227766e-01, 3.16227766e+00,
+           3.16227766e+01, 3.16227766e+02])
     """
     coord = np.asarray(coord)
 
@@ -791,6 +794,15 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
             "the `seaborn` statistical plotting library." % axis
         )
 
+    # If logscale, compute the intervals in the logarithmic space
+    if scale == "log":
+        if (coord <= 0).any():
+            raise ValueError(
+                "Found negative or zero value in coordinates. "
+                + "Coordinates must be positive on logscale plots."
+            )
+        coord = np.log10(coord)
+
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
         deltas = np.array(0.0)
@@ -799,7 +811,13 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     trim_last = tuple(
         slice(None, -1) if n == axis else slice(None) for n in range(coord.ndim)
     )
-    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+    interval_breaks = np.concatenate(
+        [first, coord[trim_last] + deltas, last], axis=axis
+    )
+    if scale == "log":
+        # Recovert the intervals into the linear space
+        return np.power(10, interval_breaks)
+    return interval_breaks
 
 
 def _process_cmap_cbar_kwargs(
@@ -881,3 +899,231 @@ def _get_nice_quiver_magnitude(u, v):
     mean = np.mean(np.hypot(u.values, v.values))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
+
+
+# Copied from matplotlib, tweaked so func can return strings.
+# https://github.com/matplotlib/matplotlib/issues/19555
+def legend_elements(
+    self, prop="colors", num="auto", fmt=None, func=lambda x: x, **kwargs
+):
+    """
+    Create legend handles and labels for a PathCollection.
+
+    Each legend handle is a `.Line2D` representing the Path that was drawn,
+    and each label is a string what each Path represents.
+
+    This is useful for obtaining a legend for a `~.Axes.scatter` plot;
+    e.g.::
+
+        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        plt.legend(*scatter.legend_elements())
+
+    creates three legend elements, one for each color with the numerical
+    values passed to *c* as the labels.
+
+    Also see the :ref:`automatedlegendcreation` example.
+
+
+    Parameters
+    ----------
+    prop : {"colors", "sizes"}, default: "colors"
+        If "colors", the legend handles will show the different colors of
+        the collection. If "sizes", the legend will show the different
+        sizes. To set both, use *kwargs* to directly edit the `.Line2D`
+        properties.
+    num : int, None, "auto" (default), array-like, or `~.ticker.Locator`
+        Target number of elements to create.
+        If None, use all unique elements of the mappable array. If an
+        integer, target to use *num* elements in the normed range.
+        If *"auto"*, try to determine which option better suits the nature
+        of the data.
+        The number of created elements may slightly deviate from *num* due
+        to a `~.ticker.Locator` being used to find useful locations.
+        If a list or array, use exactly those elements for the legend.
+        Finally, a `~.ticker.Locator` can be provided.
+    fmt : str, `~matplotlib.ticker.Formatter`, or None (default)
+        The format or formatter to use for the labels. If a string must be
+        a valid input for a `~.StrMethodFormatter`. If None (the default),
+        use a `~.ScalarFormatter`.
+    func : function, default: ``lambda x: x``
+        Function to calculate the labels.  Often the size (or color)
+        argument to `~.Axes.scatter` will have been pre-processed by the
+        user using a function ``s = f(x)`` to make the markers visible;
+        e.g. ``size = np.log10(x)``.  Providing the inverse of this
+        function here allows that pre-processing to be inverted, so that
+        the legend labels have the correct values; e.g. ``func = lambda
+        x: 10**x``.
+    **kwargs
+        Allowed keyword arguments are *color* and *size*. E.g. it may be
+        useful to set the color of the markers if *prop="sizes"* is used;
+        similarly to set the size of the markers if *prop="colors"* is
+        used. Any further parameters are passed onto the `.Line2D`
+        instance. This may be useful to e.g. specify a different
+        *markeredgecolor* or *alpha* for the legend handles.
+
+    Returns
+    -------
+    handles : list of `.Line2D`
+        Visual representation of each element of the legend.
+    labels : list of str
+        The string labels for elements of the legend.
+    """
+    import warnings
+
+    import matplotlib as mpl
+
+    mlines = mpl.lines
+
+    handles = []
+    labels = []
+
+    if prop == "colors":
+        arr = self.get_array()
+        if arr is None:
+            warnings.warn(
+                "Collection without array used. Make sure to "
+                "specify the values to be colormapped via the "
+                "`c` argument."
+            )
+            return handles, labels
+        _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])
+
+        def _get_color_and_size(value):
+            return self.cmap(self.norm(value)), _size
+
+    elif prop == "sizes":
+        arr = self.get_sizes()
+        _color = kwargs.pop("color", "k")
+
+        def _get_color_and_size(value):
+            return _color, np.sqrt(value)
+
+    else:
+        raise ValueError(
+            "Valid values for `prop` are 'colors' or "
+            f"'sizes'. You supplied '{prop}' instead."
+        )
+
+    # Get the unique values and their labels:
+    values = np.unique(arr)
+    label_values = np.asarray(func(values))
+    label_values_are_numeric = np.issubdtype(label_values.dtype, np.number)
+
+    # Handle the label format:
+    if fmt is None and label_values_are_numeric:
+        fmt = mpl.ticker.ScalarFormatter(useOffset=False, useMathText=True)
+    elif fmt is None and not label_values_are_numeric:
+        fmt = mpl.ticker.StrMethodFormatter("{x}")
+    elif isinstance(fmt, str):
+        fmt = mpl.ticker.StrMethodFormatter(fmt)
+    fmt.create_dummy_axis()
+
+    if num == "auto":
+        num = 9
+        if len(values) <= num:
+            num = None
+
+    if label_values_are_numeric:
+        label_values_min = label_values.min()
+        label_values_max = label_values.max()
+        fmt.set_bounds(label_values_min, label_values_max)
+
+        if num is not None:
+            # Labels are numerical but larger than the target
+            # number of elements, reduce to target using matplotlibs
+            # ticker classes:
+            if isinstance(num, mpl.ticker.Locator):
+                loc = num
+            elif np.iterable(num):
+                loc = mpl.ticker.FixedLocator(num)
+            else:
+                num = int(num)
+                loc = mpl.ticker.MaxNLocator(
+                    nbins=num, min_n_ticks=num - 1, steps=[1, 2, 2.5, 3, 5, 6, 8, 10]
+                )
+
+            # Get nicely spaced label_values:
+            label_values = loc.tick_values(label_values_min, label_values_max)
+
+            # Remove extrapolated label_values:
+            cond = (label_values >= label_values_min) & (
+                label_values <= label_values_max
+            )
+            label_values = label_values[cond]
+
+            # Get the corresponding values by creating a linear interpolant
+            # with small step size:
+            values_interp = np.linspace(values.min(), values.max(), 256)
+            label_values_interp = func(values_interp)
+            ix = np.argsort(label_values_interp)
+            values = np.interp(label_values, label_values_interp[ix], values_interp[ix])
+    elif num is not None and not label_values_are_numeric:
+        # Labels are not numerical so modifying label_values is not
+        # possible, instead filter the array with nicely distributed
+        # indexes:
+        if type(num) == int:
+            loc = mpl.ticker.LinearLocator(num)
+        else:
+            raise ValueError("`num` only supports integers for non-numeric labels.")
+
+        ind = loc.tick_values(0, len(label_values) - 1).astype(int)
+        label_values = label_values[ind]
+        values = values[ind]
+
+    # Some formatters requires set_locs:
+    if hasattr(fmt, "set_locs"):
+        fmt.set_locs(label_values)
+
+    # Default settings for handles, add or override with kwargs:
+    kw = dict(markeredgewidth=self.get_linewidths()[0], alpha=self.get_alpha())
+    kw.update(kwargs)
+
+    for val, lab in zip(values, label_values):
+        color, size = _get_color_and_size(val)
+        h = mlines.Line2D(
+            [0], [0], ls="", color=color, ms=size, marker=self.get_paths()[0], **kw
+        )
+        handles.append(h)
+        labels.append(fmt(lab))
+
+    return handles, labels
+
+
+def _legend_add_subtitle(handles, labels, text, func):
+    """Add a subtitle to legend handles."""
+    if text and len(handles) > 1:
+        # Create a blank handle that's not visible, the
+        # invisibillity will be used to discern which are subtitles
+        # or not:
+        blank_handle = func([], [], label=text)
+        blank_handle.set_visible(False)
+
+        # Subtitles are shown first:
+        handles = [blank_handle] + handles
+        labels = [text] + labels
+
+    return handles, labels
+
+
+def _adjust_legend_subtitles(legend):
+    """Make invisible-handle "subtitles" entries look more like titles."""
+    plt = import_matplotlib_pyplot()
+
+    # Legend title not in rcParams until 3.0
+    font_size = plt.rcParams.get("legend.title_fontsize", None)
+    hpackers = legend.findobj(plt.matplotlib.offsetbox.VPacker)[0].get_children()
+    for hpack in hpackers:
+        draw_area, text_area = hpack.get_children()
+        handles = draw_area.get_children()
+
+        # Assume that all artists that are not visible are
+        # subtitles:
+        if not all(artist.get_visible() for artist in handles):
+            # Remove the dummy marker which will bring the text
+            # more to the center:
+            draw_area.set_width(0)
+            for text in text_area.get_children():
+                if font_size is not None:
+                    # The sutbtitles should have the same font size
+                    # as normal legend titles:
+                    text.set_size(font_size)

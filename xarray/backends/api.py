@@ -370,7 +370,7 @@ def open_dataset(
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
-        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        chunk for all arrays. ``chunks={}`` loads the dataset with dask using
         engine preferred chunks if exposed by the backend, otherwise with
         a single chunk for all arrays.
         ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
