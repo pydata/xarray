@@ -87,12 +87,8 @@ except ImportError:
 try:
     import dask
     import dask.array as da
-
-    dask_version = dask.__version__
 except ImportError:
-    # needed for xfailed tests when dask < 2.4.0
-    # remove when min dask > 2.4.0
-    dask_version = "10.0"
+    pass
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
@@ -1961,7 +1957,6 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     @pytest.mark.parametrize("group", [None, "group1"])
     def test_write_persistence_modes(self, group):
         original = create_test_data()
@@ -2039,7 +2034,6 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
         super().test_append_write()
 
@@ -2122,7 +2116,6 @@ class ZarrBase(CFEncodedBase):
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_with_new_variable(self):
 
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
@@ -2777,6 +2770,7 @@ class TestH5NetCDFData(NetCDF4Base):
 
 
 @requires_h5netcdf
+@requires_netCDF4
 class TestH5NetCDFAlreadyOpen:
     def test_open_dataset_group(self):
         import h5netcdf
@@ -2861,6 +2855,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         with open_dataset(f, engine="h5netcdf"):
                             pass
 
+    @requires_scipy
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
         expected = create_test_data().drop_vars("dim3")
@@ -5162,11 +5157,12 @@ def test_open_fsspec():
 
 
 @requires_h5netcdf
+@requires_netCDF4
 def test_load_single_value_h5netcdf(tmp_path):
     """Test that numeric single-element vector attributes are handled fine.
 
     At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
-    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    attributes as arrays of length 1, as opposed to scalars for the NetCDF4
     backend.  This was leading to a ValueError upon loading a single value from
     a file, see #4471.  Test that loading causes no failure.
     """
