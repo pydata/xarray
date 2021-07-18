@@ -1378,7 +1378,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims) -> "Variable":
+    def transpose(
+        self,
+        *dims,
+        missing_dims: str = "raise",
+    ) -> "Variable":
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1386,6 +1390,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Variable:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1404,13 +1414,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
-        dims = tuple(infix_dims(dims, self.dims))
-        axes = self.get_axis_num(dims)
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
+        axes = self.get_axis_num(dims)
         data = as_indexable(self._data).transpose(axes)
         return self._replace(dims=dims, data=data)
 

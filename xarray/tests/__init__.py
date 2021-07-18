@@ -229,3 +229,15 @@ def create_test_data(seed=None, add_attrs=True):
     obj.encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
+
+
+_CFTIME_CALENDARS = [
+    "365_day",
+    "360_day",
+    "julian",
+    "all_leap",
+    "366_day",
+    "gregorian",
+    "proleptic_gregorian",
+    "standard",
+]
