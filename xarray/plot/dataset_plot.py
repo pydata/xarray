@@ -102,78 +102,6 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     }
 
 
-def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
-
-    broadcast_keys = ["x", "y"]
-    to_broadcast = [ds[x], ds[y]]
-    if hue:
-        to_broadcast.append(ds[hue])
-        broadcast_keys.append("hue")
-    if markersize:
-        to_broadcast.append(ds[markersize])
-        broadcast_keys.append("size")
-
-    broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
-
-    data = {"x": broadcasted["x"], "y": broadcasted["y"], "hue": None, "sizes": None}
-
-    if hue:
-        data["hue"] = broadcasted["hue"]
-
-    if markersize:
-        size = broadcasted["size"]
-
-        if size_mapping is None:
-            size_mapping = _parse_size(size, size_norm)
-
-        data["sizes"] = size.copy(
-            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
-        )
-
-    return data
-
-
-# copied from seaborn
-def _parse_size(data, norm):
-
-    import matplotlib as mpl
-
-    if data is None:
-        return None
-
-    data = data.values.flatten()
-
-    if not _is_numeric(data):
-        levels = np.unique(data)
-        numbers = np.arange(1, 1 + len(levels))[::-1]
-    else:
-        levels = numbers = np.sort(np.unique(data))
-
-    min_width, max_width = _MARKERSIZE_RANGE
-    # width_range = min_width, max_width
-
-    if norm is None:
-        norm = mpl.colors.Normalize()
-    elif isinstance(norm, tuple):
-        norm = mpl.colors.Normalize(*norm)
-    elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, or Normalize object."
-        raise ValueError(err)
-
-    norm.clip = True
-    if not norm.scaled():
-        norm(np.asarray(numbers))
-    # limits = norm.vmin, norm.vmax
-
-    scl = norm(numbers)
-    widths = np.asarray(min_width + scl * (max_width - min_width))
-    if scl.mask.any():
-        widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
-
-    return pd.Series(sizes)
-
-
 class _Dataset_PlotMethods:
     """
     Enables use of xarray.plot functions as attributes on a Dataset.
@@ -479,67 +407,6 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
-    """
-    Scatter Dataset data variables against each other.
-
-    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
-    """
-
-    if "add_colorbar" in kwargs or "add_legend" in kwargs:
-        raise ValueError(
-            "Dataset.plot.scatter does not accept "
-            "'add_colorbar' or 'add_legend'. "
-            "Use 'add_guide' instead."
-        )
-
-    cmap_params = kwargs.pop("cmap_params")
-    hue = kwargs.pop("hue")
-    hue_style = kwargs.pop("hue_style")
-    markersize = kwargs.pop("markersize", None)
-    size_norm = kwargs.pop("size_norm", None)
-    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-
-    # Remove `u` and `v` so they don't get passed to `ax.scatter`
-    kwargs.pop("u", None)
-    kwargs.pop("v", None)
-
-    # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
-
-    if hue_style == "discrete":
-        primitive = []
-        # use pd.unique instead of np.unique because that keeps the order of the labels,
-        # which is important to keep them in sync with the ones used in
-        # FacetGrid.add_legend
-        for label in pd.unique(data["hue"].values.ravel()):
-            mask = data["hue"] == label
-            if data["sizes"] is not None:
-                kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
-
-            primitive.append(
-                ax.scatter(
-                    data["x"].where(mask, drop=True).values.flatten(),
-                    data["y"].where(mask, drop=True).values.flatten(),
-                    label=label,
-                    **kwargs,
-                )
-            )
-
-    elif hue is None or hue_style == "continuous":
-        if data["sizes"] is not None:
-            kwargs.update(s=data["sizes"].values.ravel())
-        if data["hue"] is not None:
-            kwargs.update(c=data["hue"].values.ravel())
-
-        primitive = ax.scatter(
-            data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
-        )
-
-    return primitive
-
-
-@_dsplot
 def quiver(ds, x, y, ax, u, v, **kwargs):
     """Quiver plot of Dataset variables.
 
@@ -693,3 +560,10 @@ def line(ds, x=None, y=None, ax=None, **kwargs):
     da = _temp_dataarray(ds, y, extra_coords=[x])
 
     return da.plot.line(x=x, ax=ax, **kwargs)
+
+@_attach_to_plot_class
+def scatter(ds, x=None, y=None, z=None, ax=None, **kwargs):
+    """Line plot Dataset data variables against each other."""
+    da = _temp_dataarray(ds, y, extra_coords=[x, z])
+
+    return da.plot._scatter(x=x, ax=ax, **kwargs)
