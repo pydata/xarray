@@ -1,7 +1,6 @@
 import functools
 
 import numpy as np
-import pandas as pd
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -560,6 +559,7 @@ def line(ds, x=None, y=None, ax=None, **kwargs):
     da = _temp_dataarray(ds, y, extra_coords=[x])
 
     return da.plot.line(x=x, ax=ax, **kwargs)
+
 
 @_attach_to_plot_class
 def scatter(ds, x=None, y=None, z=None, ax=None, **kwargs):
