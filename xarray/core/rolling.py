@@ -223,11 +223,11 @@ class Rolling:
         pad = self.pad
 
         if pad is False:
-            pad = [True]
+            offset = [True]
         elif utils.is_list_like(pad):
-            pad = [not p for p in pad]
+            offset = [not p for p in pad]
 
-        offset_pads = utils.get_pads(self.dim, window, center, pad)
+        offset_pads = utils.get_pads(self.dim, window, center, offset)
 
         output_coords: Dict[str, Any] = {}
 
