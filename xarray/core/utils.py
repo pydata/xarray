@@ -8,14 +8,12 @@ import os
 import re
 import sys
 import warnings
-from collections import defaultdict
 from enum import Enum
 from typing import (
     Any,
     Callable,
     Collection,
     Container,
-    DefaultDict,
     Dict,
     Hashable,
     Iterable,
@@ -1008,46 +1006,3 @@ def get_pads(
             pads[d] = (win - 1, 0) if p else (0, 0)
 
     return pads
-
-
-def get_slice_offsets(
-    dim: Sequence[str],
-    window: Sequence[int],
-    center: Sequence[bool],
-    pad: Sequence[bool],
-) -> DefaultDict[Hashable, Tuple[Optional[int], Optional[int]]]:
-    """Return a mapping from dims to the start and ends of the output along those dimensions
-
-    The end of the input is indicated using a negative index.
-
-    Parameters
-    ----------
-    dim : sequence of str
-        dimension(s) for pads
-    window : sequence to int
-        Size of the window along a given dimension
-    center : sequence of bool
-        Whether or not to center the window on a particular dimension
-    pad : sequence of bool
-        Whether or not to pad a particular dimension
-
-    Returns
-    -------
-    Dict[str, Tuple[int, int]]
-    """
-    if pad is False:
-        pad = [True]
-    elif is_list_like(pad):
-        pad = [not p for p in pad]
-
-    pads = get_pads(dim, window, center, pad)
-
-    offsets: DefaultDict[Hashable, Tuple[Optional[int], Optional[int]]] = defaultdict(
-        lambda: (None, None)
-    )
-    for d, (start_offset, end_offset) in pads.items():
-        _start_offset = None if start_offset == 0 else start_offset
-        _end_offset = None if end_offset == 0 else -end_offset
-        offsets[d] = (_start_offset, _end_offset)
-
-    return offsets
