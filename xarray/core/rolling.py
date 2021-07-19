@@ -209,18 +209,28 @@ class Rolling:
         return keep_attrs
 
     def _get_output_coords(self, all_dims=False) -> Dict[str, Any]:
-        # If any of the dimensions are not padded, the output size can be shorter than the input size
-        # along that dimension, so we also need to shorten the corresponding coordinates.
+        """Get output coordinates, taking into account window size, window, centering, and padding.
 
-        # Dimensions which require offsets are those which are not padded, but the logic to determine
-        # the offset is very similar to determining padding sizes.
-        # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
+        If any of the dimensions are not padded, the output size can be shorter than the input size
+        along that dimension, so we need to shorten and properly label the corresponding coordinates.
+
+        If `all_dims` is False, returns coordinates only for the dimension(s) used for the rolling
+        window.  This is most useful if the coordinates will be used in a `da.sel()` call.
+
+        If `all_dims` is True, returns all coordinates.  This is most useful for constructing a new
+        DataArray or Dataset, where the data has already been constructed to be the correct size
+        along each dimension.
+        """
 
         coords = self.obj.coords
         dim = list(self.obj.coords) if all_dims else self.dim
         window = self.window
         center = self.center
         pad = self.pad
+
+        # Dimensions which require offsets are those which are not padded, but the logic to determine
+        # the offset is very similar to determining padding sizes.
+        # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
 
         if pad is False:
             offset = [True]
