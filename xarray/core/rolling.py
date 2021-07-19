@@ -208,7 +208,7 @@ class Rolling:
 
         return keep_attrs
 
-    def _get_rolling_dim_coords(self, all_dims=False) -> Dict[str, Any]:
+    def _get_output_coords(self, all_dims=False) -> Dict[str, Any]:
         # If any of the dimensions are not padded, the output size can be shorter than the input size
         # along that dimension, so we also need to shorten the corresponding coordinates.
 
@@ -468,7 +468,7 @@ class DataArrayRolling(Rolling):
         )
 
         attrs = obj.attrs if keep_attrs else {}
-        coords = self._get_rolling_dim_coords(all_dims=True)
+        coords = self._get_output_coords(all_dims=True)
 
         result = DataArray(
             window,
@@ -570,7 +570,7 @@ class DataArrayRolling(Rolling):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
-        output_dim_coords = self._get_rolling_dim_coords()
+        output_dim_coords = self._get_output_coords()
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
@@ -622,7 +622,7 @@ class DataArrayRolling(Rolling):
             values = values[valid]
 
         attrs = self.obj.attrs if keep_attrs else {}
-        output_dim_coords = self._get_rolling_dim_coords()
+        output_dim_coords = self._get_output_coords()
 
         return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name).sel(
             output_dim_coords
@@ -744,7 +744,7 @@ class DatasetRolling(Rolling):
                     reduced[key].attrs = {}
 
         attrs = self.obj.attrs if keep_attrs else {}
-        coords = self._get_rolling_dim_coords(all_dims=True)
+        coords = self._get_output_coords(all_dims=True)
 
         return Dataset(reduced, coords=coords, attrs=attrs)
 
@@ -868,7 +868,7 @@ class DatasetRolling(Rolling):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        coords = self._get_rolling_dim_coords(all_dims=True)
+        coords = self._get_output_coords(all_dims=True)
 
         return Dataset(dataset, coords=coords, attrs=attrs).isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
