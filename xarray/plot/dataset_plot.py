@@ -566,4 +566,4 @@ def scatter(ds, x=None, y=None, z=None, ax=None, **kwargs):
     """Line plot Dataset data variables against each other."""
     da = _temp_dataarray(ds, y, extra_coords=[x, z])
 
-    return da.plot._scatter(x=x, ax=ax, **kwargs)
+    return da.plot._scatter(x=x, z=z, ax=ax, **kwargs)
