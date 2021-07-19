@@ -208,61 +208,49 @@ class Rolling:
 
         return keep_attrs
 
-    def _get_output_coords(self, all_dims=False) -> Dict[str, Any]:
+    def _get_output_coords(self, all_coords=False) -> Dict[str, Any]:
         """Get output coordinates, taking into account window size, window, centering, and padding.
 
         If any of the dimensions are not padded, the output size can be shorter than the input size
         along that dimension, so we need to shorten and properly label the corresponding coordinates.
 
-        If `all_dims` is False, returns coordinates only for the dimension(s) used for the rolling
+        If `all_coords` is False, returns coordinates only for the dimension(s) used for the rolling
         window.  This is most useful if the coordinates will be used in a `da.sel()` call.
 
-        If `all_dims` is True, returns all coordinates.  This is most useful for constructing a new
+        If `all_coords` is True, returns all coordinates.  This is most useful for constructing a new
         DataArray or Dataset, where the data has already been constructed to be the correct size
         along each dimension.
         """
-
-        coords = self.obj.coords
-        dim = list(self.obj.coords) if all_dims else self.dim
+        # TODO: do we need to include dims without coordinates in output_coordinate_names
+        # when all_coords is True?  (The code here does not include them.)
+        output_coord_names = list(self.obj.coords) if all_coords else self.dim
         window = self.window
         center = self.center
         pad = self.pad
+
+        def offsets_to_slice(start_offset: int, end_offset: int) -> slice:
+            # Turn start and end offsets into a slice object
+            slice_start = None if not start_offset else start_offset
+            slice_end = None if not end_offset else -end_offset
+
+            return slice(slice_start, slice_end)
 
         # Dimensions which require offsets are those which are not padded, but the logic to determine
         # the offset is very similar to determining padding sizes.
         # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
 
-        if pad is False:
-            offset = [True]
-        elif utils.is_list_like(pad):
-            offset = [not p for p in pad]
+        offset = [not p for p in pad]
+        offsets = utils.get_pads(self.dim, window, center, offset)
 
-        offset_pads = utils.get_pads(self.dim, window, center, offset)
+        selector: Dict[str, slice] = {
+            dim: offsets_to_slice(start_offset, end_offset)
+            for dim, (start_offset, end_offset) in offsets.items()
+        }
 
-        output_coords: Dict[str, Any] = {}
-
-        def get_offsets(d: str):
-            pad_start_offset, pad_end_offset = offset_pads[d]
-
-            start_offset = None if not pad_start_offset else pad_start_offset
-            end_offset = None if not pad_end_offset else -pad_end_offset
-
-            return start_offset, end_offset
-
-        for d in dim:
-            obj_coords = coords[d]
-            if d in self.dim:
-                start_offset, end_offset = get_offsets(d)
-                obj_coords = obj_coords.isel({d: slice(start_offset, end_offset)})
-            else:
-                for obj_d in obj_coords.dims:
-                    if obj_d in self.dim:
-                        start_offset, end_offset = get_offsets(obj_d)
-                        obj_coords = obj_coords.isel(
-                            {obj_d: slice(start_offset, end_offset)}
-                        )
-
-            output_coords[d] = obj_coords
+        output_coords = {
+            k: self.obj.coords[k].isel(selector, missing_dims="ignore")
+            for k in output_coord_names
+        }
 
         return output_coords
 
@@ -478,7 +466,7 @@ class DataArrayRolling(Rolling):
         )
 
         attrs = obj.attrs if keep_attrs else {}
-        coords = self._get_output_coords(all_dims=True)
+        coords = self._get_output_coords(all_coords=True)
 
         result = DataArray(
             window,
@@ -754,7 +742,7 @@ class DatasetRolling(Rolling):
                     reduced[key].attrs = {}
 
         attrs = self.obj.attrs if keep_attrs else {}
-        coords = self._get_output_coords(all_dims=True)
+        coords = self._get_output_coords(all_coords=True)
 
         return Dataset(reduced, coords=coords, attrs=attrs)
 
@@ -878,7 +866,7 @@ class DatasetRolling(Rolling):
 
         attrs = self.obj.attrs if keep_attrs else {}
 
-        coords = self._get_output_coords(all_dims=True)
+        coords = self._get_output_coords(all_coords=True)
 
         return Dataset(dataset, coords=coords, attrs=attrs).isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
