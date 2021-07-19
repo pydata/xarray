@@ -217,7 +217,7 @@ class Rolling:
         # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
 
         coords = self.obj.coords
-        dim = list(self.obj.coords.keys()) if all_dims else self.dim
+        dim = list(self.obj.coords) if all_dims else self.dim
         window = self.window
         center = self.center
         pad = self.pad
