@@ -568,17 +568,16 @@ class DataArrayRolling(Rolling):
         # array is faster to be reduced than object array.
         # The use of skipna==False is also faster since it does not need to
         # copy the strided array.
-        output_dim_coords = self._get_output_coords()
         counts = (
             self.obj.notnull(keep_attrs=keep_attrs)
             .rolling(
                 center={d: self.center[i] for i, d in enumerate(self.dim)},
-                pad={p: self.pad[i] for i, p in enumerate(self.pad)},
+                pad={d: self.pad[i] for i, d in enumerate(self.dim)},
                 **{d: w for d, w in zip(self.dim, self.window)},
             )
             .construct(rolling_dim, fill_value=False, keep_attrs=keep_attrs)
             .sum(dim=list(rolling_dim.values()), skipna=False, keep_attrs=keep_attrs)
-        ).sel(output_dim_coords)
+        )
         return counts
 
     def _bottleneck_reduce(self, func, keep_attrs, **kwargs):
