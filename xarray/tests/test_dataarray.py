@@ -7358,6 +7358,11 @@ def test_rolling_exp_keep_attrs(da, func):
         da.rolling_exp(time=10, keep_attrs=True)
 
 
+def test_rolling_nonunique_coords():
+    da = xr.DataArray([1, 2, 3], coords=dict(x=[1, 1, 1])).rolling(x=3).mean()
+    assert_array_equal(da.data, [np.nan, np.nan, 2.0])
+
+
 def test_no_dict():
     d = DataArray()
     with pytest.raises(AttributeError):
