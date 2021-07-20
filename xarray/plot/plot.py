@@ -689,6 +689,7 @@ def scatter(
         allargs = locals().copy()
         allargs.update(allargs.pop("kwargs"))
         allargs.pop("darray")
+        allargs.pop("plt")
         subplot_kws = dict(projection="3d") if z is not None else None
         return _easy_facetgrid(
             darray, scatter, kind="dataarray", subplot_kws=subplot_kws, **allargs

@@ -2614,12 +2614,12 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
-        lines = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
         # should make a discrete legend
-        assert lines[0].axes.legend_ is not None
-        # and raise an error if explicitly not allowed to do so
-        with pytest.raises(ValueError):
-            ds2.plot.scatter(x="A", y="B", hue="hue", hue_style="continuous")
+        assert pc.axes.legend_ is not None
+        # # and raise an error if explicitly not allowed to do so
+        # with pytest.raises(ValueError):
+        #     ds2.plot.scatter(x="A", y="B", hue="hue", hue_style="continuous")
 
     def test_legend_labels(self):
         # regression test for #4126: incorrect legend labels
