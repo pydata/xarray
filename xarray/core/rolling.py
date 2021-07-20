@@ -1,7 +1,7 @@
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Hashable
 
 import numpy as np
 
@@ -208,7 +208,7 @@ class Rolling:
 
         return keep_attrs
 
-    def _get_output_dim_selector(self) -> Dict[str, Any]:
+    def _get_output_dim_selector(self) -> Dict[Hashable, Any]:
         """Get output dimension selector, taking into account window size, window, centering, and padding.
 
         If any of the dimensions are not padded, the output size can be shorter than the input size
@@ -229,7 +229,7 @@ class Rolling:
         offset = [not p for p in self.pad]
         offsets = utils.get_pads(self.dim, self.window, self.center, offset)
 
-        selector: Dict[str, slice] = {
+        selector: Dict[Hashable, slice] = {
             dim: offsets_to_slice(start_offset, end_offset)
             for dim, (start_offset, end_offset) in offsets.items()
         }
