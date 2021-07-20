@@ -976,16 +976,16 @@ def expand_args_to_dims(
 
 
 def get_pads(
-    dim: Sequence[str],
+    dim: Sequence[Hashable],
     window: Sequence[int],
     center: Sequence[bool],
     pad: Sequence[bool],
-) -> Dict[str, Tuple[int, int]]:
-    """Return a mapping from dim to the amount of padding to use at the each end of that dimension
+) -> Dict[Hashable, Tuple[int, int]]:
+    """The amount of padding to use at the each end of each dimension
 
     Parameters
     ----------
-    dim : sequence of str
+    dim : sequence of str (or hashable)
         dimension(s) for pads
     window : sequence to int
         Size of the window along a given dimension
@@ -996,7 +996,7 @@ def get_pads(
 
     Returns
     -------
-    Dict[str, Tuple[int, int]]
+    pads: Dict[Hashable, Tuple[int, int]]
     """
     pads = {}
     for d, win, cent, p in zip(dim, window, center, pad):
