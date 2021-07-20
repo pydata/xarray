@@ -2625,8 +2625,8 @@ class TestDatasetScatterPlots(PlotTestCase):
         # regression test for #4126: incorrect legend labels
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "a", "b", "b"]
-        lines = ds2.plot.scatter(x="A", y="B", hue="hue")
-        assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
+        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        assert [t.get_text() for t in pc.axes.get_legend().texts] == ["hue", "a", "b"]
 
     def test_legend_labels_facetgrid(self):
         ds2 = self.ds.copy()
