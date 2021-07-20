@@ -998,11 +998,15 @@ def get_pads(
     """
     pads = {}
     for d, win, cent, p in zip(dim, window, center, pad):
+        if not p:
+            pads[d] = (0, 0)
+            continue
+
         if cent:
             start = win // 2  # 10 -> 5,  9 -> 4
             end = (win - 1) // 2  # 10 -> 4, 9 -> 4
-            pads[d] = (start, end) if p else (0, 0)
+            pads[d] = (start, end)
         else:
-            pads[d] = (win - 1, 0) if p else (0, 0)
+            pads[d] = (win - 1, 0)
 
     return pads
