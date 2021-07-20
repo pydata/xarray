@@ -6617,11 +6617,11 @@ def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
     pytest.importorskip("bottleneck", minversion="1.1")
 
     window = 7
-    count = len(da["time"])
+    length = len(da["time"])
     rolling_obj = da.rolling(time=7, center=center, pad=pad)
     actual = getattr(rolling_obj, name)()["time"]
 
-    expected_index = get_expected_rolling_indices(count, window, center, pad)
+    expected_index = get_expected_rolling_indices(length, window, center, pad)
     expected = da["time"][expected_index]
 
     assert_equal(actual, expected)
@@ -6712,10 +6712,10 @@ def test_rolling_pandas_compat(center, pad, window, min_periods):
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("window", (2, 3, 4))
 def test_rolling_construct(center, window):
-    count = 10
-    s = pd.Series(np.arange(count))
+    length = 10
+    s = pd.Series(np.arange(length))
     da = DataArray.from_series(s)
-    da = da.assign_coords(time=("index", np.arange(1, count + 1)))
+    da = da.assign_coords(time=("index", np.arange(1, length + 1)))
 
     s_rolling = s.rolling(window, center=center, min_periods=1).mean()
     da_rolling = da.rolling(index=window, center=center, min_periods=1)
@@ -6741,7 +6741,7 @@ def test_rolling_construct(center, window):
     da_rolling_mean = da_rolling.construct("window", stride=2).mean("window")
 
     expected_index = get_expected_rolling_indices(
-        count, window, center, pad=False, stride=2
+        length, window, center, pad=False, stride=2
     )
 
     assert da_rolling_mean.sizes["index"] == len(expected_index)
