@@ -920,7 +920,7 @@ def iterate_nested(nested_list):
 ItemOrSequence = Union[T, Sequence[T]]
 
 
-def expand_args_to_num_dims(
+def expand_args_to_dims(
     dim: ItemOrSequence[str],
     arg_names: Sequence[str],
     args: Sequence[ItemOrSequence[Any]],

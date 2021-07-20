@@ -42,7 +42,7 @@ from .utils import (
     drop_dims_from_indexers,
     either_dict_or_kwargs,
     ensure_us_time_resolution,
-    expand_args_to_num_dims,
+    expand_args_to_dims,
     get_pads,
     infix_dims,
     is_duck_array,
@@ -2105,7 +2105,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             dtype = self.dtype
             var = self
 
-        dim, (window, window_dim, center, pad) = expand_args_to_num_dims(
+        dim, (window, window_dim, center, pad) = expand_args_to_dims(
             dim,
             ["window", "window_dim", "center", "pad"],
             [window, window_dim, center, pad],
