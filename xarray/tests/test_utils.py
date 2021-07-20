@@ -8,7 +8,7 @@ import pytest
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.indexes import PandasIndex
-from xarray.core.utils import either_dict_or_kwargs, iterate_nested
+from xarray.core.utils import either_dict_or_kwargs, expand_args_to_dims, iterate_nested
 
 from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
@@ -333,3 +333,24 @@ def test_infix_dims_errors(supplied, all_):
 )
 def test_iterate_nested(nested_list, expected):
     assert list(iterate_nested(nested_list)) == expected
+
+
+def test_expand_args_to_dims():
+    dims, (arg1, arg2, arg3, arg4) = expanded_args = expand_args_to_dims(
+        ["a", "b"],
+        ["arg1", "arg2", "arg3", "arg4"],
+        [1, ["val2.1", "val2.2"], False, [True, False]],
+    )
+
+    assert dims == ["a", "b"]
+    assert arg1 == [1, 1]
+    assert arg2 == ["val2.1", "val2.2"]
+    assert arg3 == [False, False]
+    assert arg4 == [True, False]
+
+    with pytest.raises(ValueError, match="Expected all arguments"):
+        expand_args_to_dims(
+            ["a", "b"],
+            ["arg1", "arg2", "arg3", "arg4"],
+            ["asdf", ["arg2.1", "arg2.2"], ["arg3.1"], ["arg4.1", "arg4.2", "arg4.3"]],
+        )

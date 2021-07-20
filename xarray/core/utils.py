@@ -921,10 +921,10 @@ ItemOrSequence = Union[T, Sequence[T]]
 
 
 def expand_args_to_dims(
-    dim: ItemOrSequence[str],
+    dim: ItemOrSequence[Hashable],
     arg_names: Sequence[str],
     args: Sequence[ItemOrSequence[Any]],
-) -> Tuple[Sequence[str], Sequence[Sequence[Any]]]:
+) -> Tuple[Sequence[Hashable], Sequence[Sequence[Any]]]:
     """Expand dims and all elements in args to be arrays of the length of the number of dimensions
 
     Parameters
@@ -946,31 +946,33 @@ def expand_args_to_dims(
     list of dims, list of lists of arguments
     """
     if is_scalar(dim):
-        for name, arg in zip(arg_names, args):
-            if not is_scalar(arg):
-                raise ValueError(f"Expected {name}={arg!r} to be a scalar like 'dim'.")
-        assert isinstance(dim, str) or isinstance(dim, bytes)
-        dim = [dim]
+        dim_list: Sequence[Hashable] = [dim]
+    else:
+        assert isinstance(dim, list)
+        dim_list = dim
 
     # dim is now a list
-    nroll = len(dim)
+    nroll = len(dim_list)
 
-    def to_array(arg):
+    def to_list(arg):
         if is_scalar(arg):
             return [arg] * nroll
+        elif isinstance(arg, list) and len(arg) == 1 and nroll > 1:
+            return [arg[0]] * nroll
         return arg
 
-    arr_args = [to_array(arg) for arg in args]
+    arr_args = [to_list(arg) for arg in args]
 
-    if any(len(dim) != len(arg) for arg in arr_args):
-        names_vals = ", ".join(
-            f"{name}={val!r}" for name, val in zip(arg_names, arr_args)
+    if any(len(arg) != len(dim_list) for arg in arr_args):
+        names_args_len = ", ".join(
+            f"{name}={args!r} (len={len(args)})" for name, args in zip(arg_names, arr_args)
+            if len(args) != len(dim_list)
         )
         raise ValueError(
-            "Arguments must all be the same length. " f"Received {names_vals}."
+            f"Expected all arguments to have len={len(dim_list)}.  Received: {names_args_len}"
         )
 
-    return dim, arr_args
+    return dim_list, arr_args
 
 
 def get_pads(
