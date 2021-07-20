@@ -46,6 +46,7 @@ from .utils import (
     get_pads,
     infix_dims,
     is_duck_array,
+    is_list_like,
     maybe_coerce_to_str,
 )
 
@@ -2110,9 +2111,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             [window, window_dim, center, pad],
         )
 
-        pads = get_pads(dim, window, center, pad)
+        if not pad or is_list_like(pad) and all(not p for p in pad):
+            padded = var
+        else:
+            pads = get_pads(dim, window, center, pad)
+            padded = var.pad(pads, mode="constant", constant_values=fill_value)
 
-        padded = var.pad(pads, mode="constant", constant_values=fill_value)
         axis = [self.get_axis_num(d) for d in dim]
         new_dims = self.dims + tuple(window_dim)
         return Variable(
