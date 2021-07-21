@@ -333,7 +333,8 @@ class FacetGrid:
     def map_dataset(
         self, func, x=None, y=None, hue=None, hue_style=None, add_guide=None, **kwargs
     ):
-        from .dataset_plot import _infer_meta_data, _parse_size
+        from .dataset_plot import _infer_meta_data
+        from .plot import _parse_size
 
         kwargs["add_guide"] = False
 
