@@ -56,6 +56,8 @@ New Features
 - Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
   (:issue:`5510`).
   By `Elle Smith <https://github.com/ellesmith88>`_.
+- Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
