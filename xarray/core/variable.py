@@ -1088,8 +1088,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 data = data.magnitude
             if isinstance(data, sparse_array_type):
                 data = data.todense()
-            if type(data) != np.ndarray:  # noqa : Don't allow subclasses
-                data = np.asarray(data)
+            data = np.asarray(data)
 
         return data
 
