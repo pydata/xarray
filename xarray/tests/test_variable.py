@@ -1468,6 +1468,20 @@ class TestVariable(VariableSubclassobjects):
         w3 = Variable(["b", "c", "d", "a"], np.einsum("abcd->bcda", x))
         assert_identical(w, w3.transpose("a", "b", "c", "d"))
 
+        # test missing dimension, raise error
+        with pytest.raises(ValueError):
+            v.transpose(..., "not_a_dim")
+
+        # test missing dimension, ignore error
+        actual = v.transpose(..., "not_a_dim", missing_dims="ignore")
+        expected_ell = v.transpose(...)
+        assert_identical(expected_ell, actual)
+
+        # test missing dimension, raise warning
+        with pytest.warns(UserWarning):
+            v.transpose(..., "not_a_dim", missing_dims="warn")
+            assert_identical(expected_ell, actual)
+
     def test_transpose_0d(self):
         for value in [
             3.5,

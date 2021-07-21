@@ -5197,10 +5197,19 @@ class TestDataset:
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             assert actual[k].dims == expected_dims
 
-        with pytest.raises(ValueError, match=r"permuted"):
-            ds.transpose("dim1", "dim2", "dim3")
-        with pytest.raises(ValueError, match=r"permuted"):
-            ds.transpose("dim1", "dim2", "dim3", "time", "extra_dim")
+        # test missing dimension, raise error
+        with pytest.raises(ValueError):
+            ds.transpose(..., "not_a_dim")
+
+        # test missing dimension, ignore error
+        actual = ds.transpose(..., "not_a_dim", missing_dims="ignore")
+        expected_ell = ds.transpose(...)
+        assert_identical(expected_ell, actual)
+
+        # test missing dimension, raise warning
+        with pytest.warns(UserWarning):
+            actual = ds.transpose(..., "not_a_dim", missing_dims="warn")
+            assert_identical(expected_ell, actual)
 
         assert "T" not in dir(ds)
 
