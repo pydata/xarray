@@ -566,7 +566,6 @@ def line(ds, y=None, **kwargs):
 @_attach_to_plot_class
 def scatter(ds, y=None, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, y, extra_coords=[x, z])
+    da = _temp_dataarray(ds, y, kwargs)
 
     return da.plot._scatter(**kwargs)
-    return da.plot.line(**kwargs)
