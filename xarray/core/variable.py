@@ -1075,6 +1075,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
         data = self.data
+
         # TODO first attempt to call .to_numpy() once some libraries implement it
         if isinstance(data, dask_array_type):
             data = data.compute()
