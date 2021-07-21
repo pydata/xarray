@@ -1075,20 +1075,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
         data = self.data
-        try:
-            data = data.to_numpy()
-        except AttributeError:
-            if isinstance(data, dask_array_type):
-                data = data.compute()
-            if isinstance(data, cupy_array_type):
-                data = data.get()
-            # pint has to be imported dynamically as pint imports xarray
-            pint_array_type = DuckArrayModule("pint").type
-            if isinstance(data, pint_array_type):
-                data = data.magnitude
-            if isinstance(data, sparse_array_type):
-                data = data.todense()
-            data = np.asarray(data)
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if isinstance(data, dask_array_type):
+            data = data.compute()
+        if isinstance(data, cupy_array_type):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        pint_array_type = DuckArrayModule("pint").type
+        if isinstance(data, pint_array_type):
+            data = data.magnitude
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        data = np.asarray(data)
 
         return data
 
