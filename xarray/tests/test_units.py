@@ -17,7 +17,6 @@ from . import (
 )
 from .test_variable import _PAD_XR_NP_ARGS
 
-dask = pytest.importorskip("dask")
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
 
@@ -5576,6 +5575,8 @@ class TestDataset:
 @requires_dask
 class TestPintWrappingDask:
     def test_duck_array_ops(self):
+        import dask.array
+
         d = dask.array.array([1, 2, 3])
         q = pint.Quantity(d, units="m")
         da = xr.DataArray(q, dims="x")
