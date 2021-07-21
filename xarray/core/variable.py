@@ -29,10 +29,12 @@ from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
+    DuckArrayModule,
     cupy_array_type,
     dask_array_type,
     integer_types,
     is_duck_dask_array,
+    sparse_array_type,
 )
 from .utils import (
     NdimSizeLenMixin,
@@ -259,7 +261,7 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
+    data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -1068,6 +1070,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
         return self._replace(data=data)
+
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        data = self.data
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if isinstance(data, dask_array_type):
+            data = data.compute()
+        if isinstance(data, cupy_array_type):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        pint_array_type = DuckArrayModule("pint").type
+        if isinstance(data, pint_array_type):
+            data = data.magnitude
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        data = np.asarray(data)
+
+        return data
+
+    def as_numpy(self: VariableType) -> VariableType:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
