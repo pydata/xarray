@@ -540,7 +540,7 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _temp_dataarray(ds, y, extra_coords):
+def _temp_dataarray(ds, y, kwargs):
     """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
 
@@ -548,22 +548,25 @@ def _temp_dataarray(ds, y, extra_coords):
     coords = dict(ds.coords)
 
     # Add extra coords to the DataArray:
-    coords.update({v: ds[v] for v in extra_coords})
+    coords.update(
+        {v: ds[v] for v in kwargs.values() if ds.data_vars.get(v) is not None}
+    )
 
     return DataArray(ds[y], coords=coords)
 
 
 @_attach_to_plot_class
-def line(ds, x=None, y=None, ax=None, **kwargs):
+def line(ds, y=None, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, y, extra_coords=[x])
+    da = _temp_dataarray(ds, y, kwargs)
 
-    return da.plot.line(x=x, ax=ax, **kwargs)
+    return da.plot.line(**kwargs)
 
 
 @_attach_to_plot_class
-def scatter(ds, x=None, y=None, z=None, ax=None, **kwargs):
+def scatter(ds, y=None, **kwargs):
     """Line plot Dataset data variables against each other."""
     da = _temp_dataarray(ds, y, extra_coords=[x, z])
 
-    return da.plot._scatter(x=x, z=z, ax=ax, **kwargs)
+    return da.plot._scatter(**kwargs)
+    return da.plot.line(**kwargs)
