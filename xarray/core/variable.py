@@ -29,6 +29,7 @@ from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
+    DuckArrayModule,
     cupy_array_type,
     dask_array_type,
     integer_types,
