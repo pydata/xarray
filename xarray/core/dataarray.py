@@ -624,9 +624,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     @property
     def data(self) -> Any:
         """
-        The DataArray's data as an array. The underlying array type 
+        The DataArray's data as an array. The underlying array type
         (e.g. dask, sparse, pint) is preserved.
-        
+
         See Also
         --------
         DataArray.to_numpy
