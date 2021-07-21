@@ -1,7 +1,5 @@
 import functools
 
-import numpy as np
-
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .plot import _PlotMethods
@@ -9,10 +7,8 @@ from .utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
-    _is_numeric,
     _process_cmap_cbar_kwargs,
     get_axis,
-    label_from_attrs,
 )
 
 
