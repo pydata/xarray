@@ -184,11 +184,7 @@ def test_dask_distributed_cfgrib_integration_test(loop):
                     assert_allclose(actual, expected)
 
 
-@pytest.mark.skipif(
-    distributed.__version__ <= "1.19.3",
-    reason="Need recent distributed version to clean up get",
-)
-@gen_cluster(client=True, timeout=None)
+@gen_cluster(client=True)
 async def test_async(c, s, a, b):
     x = create_test_data()
     assert not dask.is_dask_collection(x)
