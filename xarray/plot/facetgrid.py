@@ -7,7 +7,9 @@ import numpy as np
 from ..core.formatting import format_item
 from .utils import (
     _get_nice_quiver_magnitude,
+    _infer_meta_data,
     _infer_xy_labels,
+    _parse_size,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
     label_from_attrs,
@@ -333,9 +335,6 @@ class FacetGrid:
     def map_dataset(
         self, func, x=None, y=None, hue=None, hue_style=None, add_guide=None, **kwargs
     ):
-        from .dataset_plot import _infer_meta_data
-        from .plot import _parse_size
-
         kwargs["add_guide"] = False
 
         if kwargs.get("markersize", None):

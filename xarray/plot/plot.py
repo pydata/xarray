@@ -23,6 +23,7 @@ from .utils import (
     _infer_xy_labels,
     _is_numeric,
     _legend_add_subtitle,
+    _parse_size,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
@@ -74,54 +75,6 @@ def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
             out[tp], out[stl], out[lbl] = None, None, None
 
     return out
-
-
-# copied from seaborn
-def _parse_size(data, norm, width):
-    """
-    Determine what type of data it is. Then normalize it to width.
-
-    If the data is categorical, normalize it to numbers.
-    """
-    plt = import_matplotlib_pyplot()
-
-    if data is None:
-        return None
-
-    data = data.values.ravel()
-
-    if not _is_numeric(data):
-        # Data is categorical.
-        # Use pd.unique instead of np.unique because that keeps
-        # the order of the labels:
-        levels = pd.unique(data)
-        numbers = np.arange(1, 1 + len(levels))
-    else:
-        levels = numbers = np.sort(np.unique(data))
-
-    min_width, max_width = width
-    # width_range = min_width, max_width
-
-    if norm is None:
-        norm = plt.Normalize()
-    elif isinstance(norm, tuple):
-        norm = plt.Normalize(*norm)
-    elif not isinstance(norm, plt.Normalize):
-        err = "``size_norm`` must be None, tuple, or Normalize object."
-        raise ValueError(err)
-
-    norm.clip = True
-    if not norm.scaled():
-        norm(np.asarray(numbers))
-    # limits = norm.vmin, norm.vmax
-
-    scl = norm(numbers)
-    widths = np.asarray(min_width + scl * (max_width - min_width))
-    if scl.mask.any():
-        widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
-
-    return pd.Series(sizes)
 
 
 def _infer_scatter_data(
