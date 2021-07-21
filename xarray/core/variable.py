@@ -28,7 +28,14 @@ from .common import AbstractArray
 from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
-from .pycompat import DuckArrayModule, integer_types, is_duck_dask_array
+from .pycompat import (
+    DuckArrayModule,
+    cupy_array_type,
+    dask_array_type,
+    integer_types,
+    is_duck_dask_array,
+    sparse_array_type,
+)
 from .utils import (
     NdimSizeLenMixin,
     OrderedSet,
@@ -41,11 +48,6 @@ from .utils import (
     is_duck_array,
     maybe_coerce_to_str,
 )
-
-dask_array_type = DuckArrayModule("dask").type
-cupy_array_type = DuckArrayModule("cupy").type
-sparse_array_type = DuckArrayModule("sparse").type
-
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     (
@@ -1073,21 +1075,19 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Coerces wrapped data to numpy and returns a numpy.ndarray"""
         # TODO an entrypoint so array libraries can choose coercion method?
         data = self.data
-        try:
-            data = data.to_numpy()
-        except AttributeError:
-            if isinstance(data, dask_array_type):
-                data = self.compute().data
-            if isinstance(data, cupy_array_type):
-                data = data.get()
-            # pint has to be imported dynamically as pint imports xarray
-            pint_array_type = DuckArrayModule("pint").type
-            if isinstance(data, pint_array_type):
-                data = data.magnitude
-            if isinstance(data, sparse_array_type):
-                data = data.todense()
-            if type(data) != np.ndarray:  # noqa : Don't allow subclasses
-                data = np.asarray(data)
+
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if isinstance(data, dask_array_type):
+            data = data.compute()
+        if isinstance(data, cupy_array_type):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        pint_array_type = DuckArrayModule("pint").type
+        if isinstance(data, pint_array_type):
+            data = data.magnitude
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        data = np.asarray(data)
 
         return data
 
@@ -1404,7 +1404,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims) -> "Variable":
+    def transpose(
+        self,
+        *dims,
+        missing_dims: str = "raise",
+    ) -> "Variable":
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1412,6 +1416,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Variable:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1430,7 +1440,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
-        dims = tuple(infix_dims(dims, self.dims))
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
