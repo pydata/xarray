@@ -821,7 +821,6 @@ class DataWithCoords(AttrAccessMixin):
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
         center: Union[bool, Mapping[Hashable, bool]] = False,
-        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -889,9 +888,7 @@ class DataWithCoords(AttrAccessMixin):
         """
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(
-            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
-        )
+        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
 
     def rolling_exp(
         self,
