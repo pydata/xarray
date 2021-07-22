@@ -937,7 +937,6 @@ class DataWithCoords(AttrAccessMixin):
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
-        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -1006,7 +1005,6 @@ class DataWithCoords(AttrAccessMixin):
             boundary=boundary,
             side=side,
             coord_func=coord_func,
-            keep_attrs=keep_attrs,
         )
 
     def resample(
