@@ -6580,9 +6580,6 @@ def test_integrate(dask):
     with pytest.raises(ValueError):
         da.integrate("x2d")
 
-    with pytest.warns(FutureWarning):
-        da.integrate(dim="x")
-
 
 @requires_scipy
 @pytest.mark.parametrize("dask", [True, False])
