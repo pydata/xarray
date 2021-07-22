@@ -1160,7 +1160,7 @@ class TestVariable(VariableSubclassobjects):
         td = np.array([timedelta(days=x) for x in range(10)])
         assert as_variable(td, "time").dtype.kind == "m"
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
     def test_repr(self):
