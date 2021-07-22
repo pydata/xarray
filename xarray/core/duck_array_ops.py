@@ -38,7 +38,23 @@ from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
-from numpy.ma import masked_invalid  # noqa
+
+
+def _dask_or_eager_func(
+    name,
+    eager_module=np,
+    dask_module=dask_array,
+):
+    """Create a function that dispatches to dask for dask array inputs."""
+
+    def f(*args, **kwargs):
+        if any(is_duck_dask_array(a) for a in args):
+            wrapped = getattr(dask_module, name)
+        else:
+            wrapped = getattr(eager_module, name)
+        return wrapped(*args, **kwargs)
+
+    return f
 
 
 def fail_on_dask_array_input(values, msg=None, func_name=None):
@@ -51,14 +67,7 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
-def _dask_or_eager_isnull(obj):
-    if is_duck_dask_array(obj):
-        return dask_array.isnull(obj)
-    else:
-        return pd.isnull(obj)
-
-
-pandas_isnull = _dask_or_eager_isnull
+pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module=dask_array)
 
 
 def isnull(data):
@@ -89,6 +98,12 @@ def isnull(data):
 
 def notnull(data):
     return ~isnull(data)
+
+
+# TODO replace with simply np.ma.masked_invalid once numpy/numpy#16022 is fixed
+masked_invalid = _dask_or_eager_func(
+    "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
+)
 
 
 def gradient(x, coord, axis, edge_order):
