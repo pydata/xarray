@@ -383,7 +383,7 @@ def line(
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, kwargs
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
     xlabel = label_from_attrs(xplt, extra=x_suffix)
     ylabel = label_from_attrs(yplt, extra=y_suffix)
@@ -402,7 +402,7 @@ def line(
         ax.set_title(darray._title_for_slice())
 
     if darray.ndim == 2 and add_legend:
-        ax.legend(handles=primitive, labels=list(hueplt.values), title=hue_label)
+        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
     # Rotate dates on xlabels
     # Do this without calling autofmt_xdate so that x-axes ticks
@@ -504,7 +504,7 @@ def hist(
     """
     ax = get_axis(figsize, size, aspect, ax)
 
-    no_nan = np.ravel(darray.values)
+    no_nan = np.ravel(darray.to_numpy())
     no_nan = no_nan[pd.notnull(no_nan)]
 
     primitive = ax.hist(no_nan, **kwargs)
@@ -1107,8 +1107,8 @@ def _plot2d(plotfunc):
             dims = (yval.dims[0], xval.dims[0])
 
         # better to pass the ndarrays directly to plotting functions
-        xval = xval.values
-        yval = yval.values
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
