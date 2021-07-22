@@ -10,6 +10,7 @@ import sys
 import warnings
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Collection,
@@ -31,7 +32,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -307,19 +307,29 @@ def _is_scalar(value, include_0d):
     )
 
 
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
 try:
     if sys.version_info >= (3, 10):
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
 except ImportError:
-    def is_scalar(value: Any, include_0d: bool = True) -> bool:
-        """Whether to treat a value as a scalar.
+    if TYPE_CHECKING:
+        raise
+    else:
 
-        Any non-iterable, string, or 0-D array
-        """
-        return _is_scalar(value, include_0d)
+        def is_scalar(value: Any, include_0d: bool = True) -> bool:
+            """Whether to treat a value as a scalar.
+
+            Any non-iterable, string, or 0-D array
+            """
+            return _is_scalar(value, include_0d)
+
+
 else:
+
     def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
         """Whether to treat a value as a scalar.
 
