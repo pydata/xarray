@@ -32,15 +32,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-try:
-    if sys.version_info >= (3, 10):
-        from typing import TypeGuard
-    else:
-        from typing_extensions import TypeGuard
-    TypeGuardHashable = TypeGuard[Hashable]
-except ImportError:
-    TypeGuardHashable = bool
-
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -301,11 +292,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def is_scalar(value: Any, include_0d: bool = True) -> TypeGuardHashable:
-    """Whether to treat a value as a scalar.
-
-    Any non-iterable, string, or 0-D array
-    """
+def _is_scalar(value, include_0d):
     from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
@@ -318,6 +305,27 @@ def is_scalar(value: Any, include_0d: bool = True) -> TypeGuardHashable:
             or hasattr(value, "__array_function__")
         )
     )
+
+
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except ImportError:
+    def is_scalar(value: Any, include_0d: bool = True) -> bool:
+        """Whether to treat a value as a scalar.
+
+        Any non-iterable, string, or 0-D array
+        """
+        return _is_scalar(value, include_0d)
+else:
+    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+        """Whether to treat a value as a scalar.
+
+        Any non-iterable, string, or 0-D array
+        """
+        return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
