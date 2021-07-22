@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
+from ..core.pycompat import DuckArrayModule
 from ..core.utils import is_scalar
 
 try:
@@ -474,12 +475,20 @@ def label_from_attrs(da, extra=""):
     else:
         name = ""
 
-    if da.attrs.get("units"):
-        units = " [{}]".format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = " [{}]".format(da.attrs["unit"])
+    def _get_units_from_attrs(da):
+        if da.attrs.get("units"):
+            units = " [{}]".format(da.attrs["units"])
+        elif da.attrs.get("unit"):
+            units = " [{}]".format(da.attrs["unit"])
+        else:
+            units = ""
+        return units
+
+    pint_array_type = DuckArrayModule("pint").type
+    if isinstance(da.data, pint_array_type):
+        units = " [{}]".format(str(da.data.units))
     else:
-        units = ""
+        units = _get_units_from_attrs(da)
 
     return "\n".join(textwrap.wrap(name + extra + units, 30))
 
@@ -896,7 +905,7 @@ def _get_nice_quiver_magnitude(u, v):
     import matplotlib as mpl
 
     ticker = mpl.ticker.MaxNLocator(3)
-    mean = np.mean(np.hypot(u.values, v.values))
+    mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
 
