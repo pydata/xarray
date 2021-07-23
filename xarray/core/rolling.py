@@ -1,4 +1,5 @@
 import functools
+import itertools
 import warnings
 from typing import Any, Callable, Dict
 
@@ -8,6 +9,7 @@ from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
 from .options import _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -46,10 +48,10 @@ class Rolling:
     xarray.DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "dim", "keep_attrs")
-    _attributes = ("window", "min_periods", "center", "dim", "keep_attrs")
+    __slots__ = ("obj", "window", "min_periods", "center", "dim")
+    _attributes = ("window", "min_periods", "center", "dim")
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object.
 
@@ -86,15 +88,6 @@ class Rolling:
             raise ValueError("min_periods must be greater than zero or None")
 
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
-
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an"
-                " error in xarray 0.18. Please pass ``keep_attrs`` directly to the"
-                " applied function. Note that keep_attrs is now True per default.",
-                FutureWarning,
-            )
-        self.keep_attrs = keep_attrs
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -186,15 +179,8 @@ class Rolling:
             )
 
     def _get_keep_attrs(self, keep_attrs):
-
         if keep_attrs is None:
-            # TODO: uncomment the next line and remove the others after the deprecation
-            # keep_attrs = _get_keep_attrs(default=True)
-
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else:
-                keep_attrs = self.keep_attrs
+            keep_attrs = _get_keep_attrs(default=True)
 
         return keep_attrs
 
@@ -202,7 +188,7 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -233,9 +219,7 @@ class DataArrayRolling(Rolling):
         xarray.Dataset.rolling
         xarray.Dataset.groupby
         """
-        super().__init__(
-            obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
-        )
+        super().__init__(obj, windows, min_periods=min_periods, center=center)
 
         # TODO legacy attribute
         self.window_labels = self.obj[self.dim[0]]
@@ -559,7 +543,7 @@ class DataArrayRolling(Rolling):
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -590,7 +574,7 @@ class DatasetRolling(Rolling):
         xarray.Dataset.groupby
         xarray.DataArray.groupby
         """
-        super().__init__(obj, windows, min_periods, center, keep_attrs)
+        super().__init__(obj, windows, min_periods, center)
         if any(d not in self.obj.dims for d in self.dim):
             raise KeyError(self.dim)
         # Keep each Rolling object as a dictionary
@@ -766,11 +750,10 @@ class Coarsen(CoarsenArithmetic):
         "windows",
         "side",
         "trim_excess",
-        "keep_attrs",
     )
     _attributes = ("windows", "side", "trim_excess")
 
-    def __init__(self, obj, windows, boundary, side, coord_func, keep_attrs):
+    def __init__(self, obj, windows, boundary, side, coord_func):
         """
         Moving window object.
 
@@ -797,17 +780,6 @@ class Coarsen(CoarsenArithmetic):
         self.side = side
         self.boundary = boundary
 
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``coarsen`` is deprecated and will raise an"
-                " error in xarray 0.19. Please pass ``keep_attrs`` directly to the"
-                " applied function, i.e. use ``ds.coarsen(...).mean(keep_attrs=False)``"
-                " instead of ``ds.coarsen(..., keep_attrs=False).mean()``"
-                " Note that keep_attrs is now True per default.",
-                FutureWarning,
-            )
-        self.keep_attrs = keep_attrs
-
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
         if absent_dims:
             raise ValueError(
@@ -821,15 +793,8 @@ class Coarsen(CoarsenArithmetic):
         self.coord_func = coord_func
 
     def _get_keep_attrs(self, keep_attrs):
-
         if keep_attrs is None:
-            # TODO: uncomment the next line and remove the others after the deprecation
-            # keep_attrs = _get_keep_attrs(default=True)
-
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else:
-                keep_attrs = self.keep_attrs
+            keep_attrs = _get_keep_attrs(default=True)
 
         return keep_attrs
 
@@ -844,6 +809,109 @@ class Coarsen(CoarsenArithmetic):
         return "{klass} [{attrs}]".format(
             klass=self.__class__.__name__, attrs=",".join(attrs)
         )
+
+    def construct(
+        self,
+        window_dim=None,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
+        """
+        Convert this Coarsen object to a DataArray or Dataset,
+        where the coarsening dimension is split or reshaped to two
+        new dimensions.
+
+        Parameters
+        ----------
+        window_dim: mapping
+            A mapping from existing dimension name to new dimension names.
+            The size of the second dimension will be the length of the
+            coarsening window.
+        keep_attrs: bool, optional
+            Preserve attributes if True
+        **window_dim_kwargs : {dim: new_name, ...}
+            The keyword arguments form of ``window_dim``.
+
+        Returns
+        -------
+        Dataset or DataArray with reshaped dimensions
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(24), dims="time")
+        >>> da.coarsen(time=12).construct(time=("year", "month"))
+        <xarray.DataArray (year: 2, month: 12)>
+        array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+               [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
+        Dimensions without coordinates: year, month
+
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
+        """
+
+        from .dataarray import DataArray
+        from .dataset import Dataset
+
+        window_dim = either_dict_or_kwargs(
+            window_dim, window_dim_kwargs, "Coarsen.construct"
+        )
+        if not window_dim:
+            raise ValueError(
+                "Either window_dim or window_dim_kwargs need to be specified."
+            )
+
+        bad_new_dims = tuple(
+            win
+            for win, dims in window_dim.items()
+            if len(dims) != 2 or isinstance(dims, str)
+        )
+        if bad_new_dims:
+            raise ValueError(
+                f"Please provide exactly two dimension names for the following coarsening dimensions: {bad_new_dims}"
+            )
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        missing_dims = set(window_dim) - set(self.windows)
+        if missing_dims:
+            raise ValueError(
+                f"'window_dim' must contain entries for all dimensions to coarsen. Missing {missing_dims}"
+            )
+        extra_windows = set(self.windows) - set(window_dim)
+        if extra_windows:
+            raise ValueError(
+                f"'window_dim' includes dimensions that will not be coarsened: {extra_windows}"
+            )
+
+        reshaped = Dataset()
+        if isinstance(self.obj, DataArray):
+            obj = self.obj._to_temp_dataset()
+        else:
+            obj = self.obj
+
+        reshaped.attrs = obj.attrs if keep_attrs else {}
+
+        for key, var in obj.variables.items():
+            reshaped_dims = tuple(
+                itertools.chain(*[window_dim.get(dim, [dim]) for dim in list(var.dims)])
+            )
+            if reshaped_dims != var.dims:
+                windows = {w: self.windows[w] for w in window_dim if w in var.dims}
+                reshaped_var, _ = var.coarsen_reshape(windows, self.boundary, self.side)
+                attrs = var.attrs if keep_attrs else {}
+                reshaped[key] = (reshaped_dims, reshaped_var, attrs)
+            else:
+                reshaped[key] = var
+
+        should_be_coords = set(window_dim) & set(self.obj.coords)
+        result = reshaped.set_coords(should_be_coords)
+        if isinstance(self.obj, DataArray):
+            return self.obj._from_temp_dataset(result)
+        else:
+            return result
 
 
 class DataArrayCoarsen(Coarsen):

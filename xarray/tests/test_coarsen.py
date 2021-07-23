@@ -5,7 +5,14 @@ import pytest
 import xarray as xr
 from xarray import DataArray, Dataset, set_options
 
-from . import assert_allclose, assert_equal, has_dask, requires_cftime
+from . import (
+    assert_allclose,
+    assert_equal,
+    assert_identical,
+    has_dask,
+    raise_if_dask_computes,
+    requires_cftime,
+)
 from .test_dataarray import da
 from .test_dataset import ds
 
@@ -146,39 +153,6 @@ def test_coarsen_keep_attrs(funcname, argument):
     assert result.da_not_coarsend.name == "da_not_coarsend"
 
 
-def test_coarsen_keep_attrs_deprecated():
-    global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={"da": ("coord", data)},
-        coords={"coord": coords},
-        attrs=global_attrs,
-    )
-    ds.da.attrs = attrs_da
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-
 @pytest.mark.slow
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
@@ -260,31 +234,6 @@ def test_coarsen_da_keep_attrs(funcname, argument):
     assert result.name == "name"
 
 
-def test_coarsen_da_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-
-
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
@@ -299,3 +248,73 @@ def test_coarsen_da_reduce(da, window, name):
     actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
     expected = getattr(coarsen_obj, name)()
     assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("dask", [True, False])
+def test_coarsen_construct(dask):
+
+    ds = Dataset(
+        {
+            "vart": ("time", np.arange(48), {"a": "b"}),
+            "varx": ("x", np.arange(10), {"a": "b"}),
+            "vartx": (("x", "time"), np.arange(480).reshape(10, 48), {"a": "b"}),
+            "vary": ("y", np.arange(12)),
+        },
+        coords={"time": np.arange(48), "y": np.arange(12)},
+        attrs={"foo": "bar"},
+    )
+
+    if dask and has_dask:
+        ds = ds.chunk({"x": 4, "time": 10})
+
+    expected = xr.Dataset(attrs={"foo": "bar"})
+    expected["vart"] = (("year", "month"), ds.vart.data.reshape((-1, 12)), {"a": "b"})
+    expected["varx"] = (("x", "x_reshaped"), ds.varx.data.reshape((-1, 5)), {"a": "b"})
+    expected["vartx"] = (
+        ("x", "x_reshaped", "year", "month"),
+        ds.vartx.data.reshape(2, 5, 4, 12),
+        {"a": "b"},
+    )
+    expected["vary"] = ds.vary
+    expected.coords["time"] = (("year", "month"), ds.time.data.reshape((-1, 12)))
+
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+        )
+    assert_identical(actual, expected)
+
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            time=("year", "month"), x=("x", "x_reshaped")
+        )
+    assert_identical(actual, expected)
+
+    with raise_if_dask_computes():
+        actual = ds.coarsen(time=12, x=5).construct(
+            {"time": ("year", "month"), "x": ("x", "x_reshaped")}, keep_attrs=False
+        )
+        for var in actual:
+            assert actual[var].attrs == {}
+        assert actual.attrs == {}
+
+    with raise_if_dask_computes():
+        actual = ds.vartx.coarsen(time=12, x=5).construct(
+            {"time": ("year", "month"), "x": ("x", "x_reshaped")}
+        )
+    assert_identical(actual, expected["vartx"])
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(foo="bar")
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12, x=2).construct(time=("year", "month"))
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct()
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(time="bar")
+
+    with pytest.raises(ValueError):
+        ds.coarsen(time=12).construct(time=("bar",))

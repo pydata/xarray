@@ -597,7 +597,7 @@ def broadcast_compat_data(
         data = duck_array_ops.transpose(data, order)
 
     if new_dims != reordered_dims:
-        key_parts = []
+        key_parts: List[Optional[slice]] = []
         for dim in new_dims:
             if dim in set_old_dims:
                 key_parts.append(SLICE_NONE)

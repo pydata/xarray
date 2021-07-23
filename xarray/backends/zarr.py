@@ -737,6 +737,7 @@ def open_zarr(
     See Also
     --------
     open_dataset
+    open_mfdataset
 
     References
     ----------
@@ -785,6 +786,15 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
+    available = has_zarr
+
+    def guess_can_open(self, filename_or_obj):
+        try:
+            _, ext = os.path.splitext(filename_or_obj)
+        except TypeError:
+            return False
+        return ext in {".zarr"}
+
     def open_dataset(
         self,
         filename_or_obj,
@@ -840,5 +850,4 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_zarr:
-    BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint
+BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint

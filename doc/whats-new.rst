@@ -14,9 +14,10 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.3:
 
-v0.18.3 (unreleased)
+.. _whats-new.0.19.1:
+
+v0.19.1 (unreleased)
 ---------------------
 
 New Features
@@ -24,6 +25,54 @@ New Features
 - Add :py:func:`call_on_dataset` as a way to apply functions expecting
   :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
   By `Justus Magin <https://github.com/keewis>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.0.19.0:
+
+v0.19.0 (23 July 2021)
+----------------------
+
+This release brings improvements to plotting of categorical data, the ability to specify how attributes
+are combined in xarray operations, a new high-level :py:func:`unify_chunks` function, as well as various
+deprecations, bug fixes, and minor improvements.
+
+
+Many thanks to the 29 contributors to this release!:
+
+Andrew Williams, Augustus, Aureliana Barghini, Benoit Bovy, crusaderky, Deepak Cherian, ellesmith88,
+Elliott Sales de Andrade, Giacomo Caria, github-actions[bot], Illviljan, Joeperdefloep, joooeey, Julia Kent,
+Julius Busecke, keewis, Mathias Hauser, Matthias Göbel, Mattia Almansi, Maximilian Roos, Peter Andreas Entschev,
+Ray Bell, Sander, Santiago Soler, Sebastian, Spencer Clark, Stephan Hoyer, Thomas Hirtz, Thomas Nicholas.
+
+New Features
+~~~~~~~~~~~~
+- Allow passing argument ``missing_dims`` to :py:meth:`Variable.transpose` and :py:meth:`Dataset.transpose`
+  (:issue:`5550`, :pull:`5586`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
+- Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
+  reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
+  By `Sander van Rijn <https://github.com/sjvrijn>`_.
+- Added :py:meth:`Dataset.coarsen.construct`, :py:meth:`DataArray.coarsen.construct` (:issue:`5454`, :pull:`5475`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Xarray now uses consolidated metadata by default when writing and reading Zarr
   stores (:issue:`5251`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -48,6 +97,13 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Allow plotting categorical data (:pull:`5464`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
+  (:issue:`5510`).
+  By `Elle Smith <https://github.com/ellesmith88>`_.
+- Added :py:meth:`DataArray.to_numpy`, :py:meth:`DataArray.as_numpy`, and :py:meth:`Dataset.as_numpy`. (:pull:`5568`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Units in plot labels are now automatically inferred from wrapped :py:meth:`pint.Quantity` arrays. (:pull:`5561`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -57,10 +113,18 @@ Breaking changes
   pre-existing array values. This is a safer default than the prior ``mode="a"``,
   and allows for higher performance writes (:pull:`5252`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
+  of `datasets` so anyone calling this method using a named parameter will need to update
+  the name accordingly (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Deprecations
 ~~~~~~~~~~~~
 
+- Removed the deprecated ``dim`` kwarg to :py:func:`DataArray.integrate` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.rolling` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.coarsen` (:pull:`5630`)
+- Completed deprecation of passing an ``xarray.DataArray`` to :py:func:`Variable` - will now raise a ``TypeError`` (:pull:`5630`)
 
 Bug fixes
 ~~~~~~~~~
@@ -77,10 +141,12 @@ Bug fixes
 - Fix the ``repr`` of :py:class:`Variable` objects with ``display_expand_data=True``
   (:pull:`5406`)
   By `Justus Magin <https://github.com/keewis>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
+- Plotting a pcolormesh with ``xscale="log"`` and/or ``yscale="log"`` works as
+  expected after improving the way the interval breaks are generated (:issue:`5333`).
+  By `Santiago Soler <https://github.com/santisoler>`_
+- :py:func:`combine_by_coords` can now handle combining a list of unnamed
+  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 
 Internal Changes
@@ -88,7 +154,9 @@ Internal Changes
 - Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
   (:pull:`5433`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
+- Publish test results & timings on each PR.
+  (:pull:`5537`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
   selection (not ready yet for public use). Also refactor the internal,
@@ -121,7 +189,6 @@ Thomas Nicholas, Tom Nicholas, Zachary Moon.
 
 New Features
 ~~~~~~~~~~~~
-
 - Implement :py:meth:`DataArray.drop_duplicates`
   to remove duplicate dimension values (:pull:`5239`).
   By `Andrew Huang <https://github.com/ahuang11>`_.
@@ -134,9 +201,9 @@ New Features
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
 
+
 Bug fixes
 ~~~~~~~~~
-
 - Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
   an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
   0.18.0.
@@ -726,7 +793,7 @@ Documentation
   By `Pieter Gijsbers <https://github.com/pgijsbers>`_.
 - Fix grammar and typos in the :doc:`contributing` guide (:pull:`4545`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
-- Fix grammar and typos in the :doc:`io` guide (:pull:`4553`).
+- Fix grammar and typos in the :doc:`user-guide/io` guide (:pull:`4553`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
 - Update link to NumPy docstring standard in the :doc:`contributing` guide (:pull:`4558`).
   By `Sahid Velji <https://github.com/sahidvelji>`_.
@@ -1284,7 +1351,7 @@ Internal Changes
 v0.15.0 (30 Jan 2020)
 ---------------------
 
-This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
+This release brings many improvements to xarray's documentation: our examples are now binderized notebooks (`click here <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_)
 and we have new example notebooks from our SciPy 2019 sprint (many thanks to our contributors!).
 
 This release also features many API improvements such as a new
@@ -3035,7 +3102,7 @@ Documentation
 - Added apply_ufunc example to :ref:`/examples/weather-data.ipynb#Toy-weather-data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
-  :doc:`faq` (:issue:`1726`).
+  :doc:`getting-started-guide/faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements

@@ -270,7 +270,10 @@ class StringAccessor:
 
         if getattr(pat, "dtype", None) != np.object_:
             pat = self._stringify(pat)
-        func = lambda x: re.compile(x, flags=flags)
+
+        def func(x):
+            return re.compile(x, flags=flags)
+
         if isinstance(pat, np.ndarray):
             # apply_ufunc doesn't work for numpy arrays with output object dtypes
             func = np.vectorize(func)

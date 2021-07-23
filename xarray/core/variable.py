@@ -29,10 +29,12 @@ from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
 from .options import _get_keep_attrs
 from .pycompat import (
+    DuckArrayModule,
     cupy_array_type,
     dask_array_type,
     integer_types,
     is_duck_dask_array,
+    sparse_array_type,
 )
 from .utils import (
     NdimSizeLenMixin,
@@ -116,14 +118,9 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         if isinstance(obj[1], DataArray):
-            # TODO: change into TypeError
-            warnings.warn(
-                (
-                    "Using a DataArray object to construct a variable is"
-                    " ambiguous, please extract the data using the .data property."
-                    " This will raise a TypeError in 0.19.0."
-                ),
-                DeprecationWarning,
+            raise TypeError(
+                "Using a DataArray object to construct a variable is"
+                " ambiguous, please extract the data using the .data property."
             )
         try:
             obj = Variable(*obj)
@@ -259,7 +256,7 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
+    data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -1069,6 +1066,30 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return self._replace(data=data)
 
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        data = self.data
+
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if isinstance(data, dask_array_type):
+            data = data.compute()
+        if isinstance(data, cupy_array_type):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        pint_array_type = DuckArrayModule("pint").type
+        if isinstance(data, pint_array_type):
+            data = data.magnitude
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        data = np.asarray(data)
+
+        return data
+
+    def as_numpy(self: VariableType) -> VariableType:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
+
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
         use sparse-array as backend.
@@ -1378,7 +1399,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims) -> "Variable":
+    def transpose(
+        self,
+        *dims,
+        missing_dims: str = "raise",
+    ) -> "Variable":
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1386,6 +1411,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Variable:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1404,13 +1435,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
-        dims = tuple(infix_dims(dims, self.dims))
-        axes = self.get_axis_num(dims)
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
+        axes = self.get_axis_num(dims)
         data = as_indexable(self._data).transpose(axes)
         return self._replace(dims=dims, data=data)
 
@@ -2158,7 +2191,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if not windows:
             return self._replace(attrs=_attrs)
 
-        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        reshaped, axes = self.coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
@@ -2167,7 +2200,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
-    def _coarsen_reshape(self, windows, boundary, side):
+    def coarsen_reshape(self, windows, boundary, side):
         """
         Construct a reshaped-array for coarsen
         """
@@ -2183,7 +2216,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError(f"window must be > 0. Given {window}")
+                raise ValueError(
+                    f"window must be > 0. Given {window} for dimension {d}"
+                )
 
         variable = self
         for d, window in windows.items():
@@ -2193,8 +2228,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if boundary[d] == "exact":
                 if n * window != size:
                     raise ValueError(
-                        "Could not coarsen a dimension of size {} with "
-                        "window {}".format(size, window)
+                        f"Could not coarsen a dimension of size {size} with "
+                        f"window {window} and boundary='exact'. Try a different 'boundary' option."
                     )
             elif boundary[d] == "trim":
                 if side[d] == "left":
