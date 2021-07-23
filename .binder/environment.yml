@@ -26,6 +26,7 @@ dependencies:
   - pandas
   - pint
   - pip
+  - pooch
   - pydap
   - pynio
   - rasterio
