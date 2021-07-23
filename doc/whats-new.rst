@@ -75,8 +75,6 @@ Deprecations
 - Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.coarsen` (:pull:`5630`)
 - Completed deprecation of passing an ``xarray.DataArray`` to :py:func:`Variable` - will now raise a ``TypeError`` (:pull:`5630`)
 - Removed the deprecated return value of :py:func:`Dataset.update` (:pull:`5630`)
-- Removed the deprecated lock kwarg to :py:func:`DataArray.open_dataset` (:pull:`5630`)
-- Removed the deprecated datasets argument to :py:func:`combine_by_coords` (:pull:`5630`)
 
 Bug fixes
 ~~~~~~~~~
