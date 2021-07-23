@@ -153,39 +153,6 @@ def test_coarsen_keep_attrs(funcname, argument):
     assert result.da_not_coarsend.name == "da_not_coarsend"
 
 
-def test_coarsen_keep_attrs_deprecated():
-    global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={"da": ("coord", data)},
-        coords={"coord": coords},
-        attrs=global_attrs,
-    )
-    ds.da.attrs = attrs_da
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = ds.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-
 @pytest.mark.slow
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
@@ -265,31 +232,6 @@ def test_coarsen_da_keep_attrs(funcname, argument):
     assert result.attrs == {}
     da.coord.attrs == {}
     assert result.name == "name"
-
-
-def test_coarsen_da_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)

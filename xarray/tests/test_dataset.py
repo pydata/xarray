@@ -3193,13 +3193,13 @@ class TestDataset:
         data = create_test_data(seed=0)
         expected = data.copy()
         var2 = Variable("dim1", np.arange(8))
-        actual = data.update({"var2": var2})
+        actual = data
+        actual.update({"var2": var2})
         expected["var2"] = var2
         assert_identical(expected, actual)
 
         actual = data.copy()
-        actual_result = actual.update(data)
-        assert actual_result is actual
+        actual.update(data)
         assert_identical(expected, actual)
 
         other = Dataset(attrs={"new": "attr"})
@@ -6111,41 +6111,6 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.da_not_rolled.name == "da_not_rolled"
 
 
-def test_rolling_keep_attrs_deprecated():
-    global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={"da": ("coord", data)},
-        coords={"coord": coords},
-        attrs=global_attrs,
-    )
-    ds.da.attrs = attrs_da
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = ds.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = ds.rolling(dim={"coord": 5}, keep_attrs=True).construct(
-            "window_dim", keep_attrs=False
-        )
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
@@ -6590,9 +6555,6 @@ def test_integrate(dask):
 
     with pytest.raises(ValueError):
         da.integrate("x2d")
-
-    with pytest.warns(FutureWarning):
-        da.integrate(dim="x")
 
 
 @requires_scipy

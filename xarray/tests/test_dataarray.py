@@ -6867,33 +6867,6 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.name == "name"
 
 
-def test_rolling_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=True).construct(
-            "window_dim", keep_attrs=False
-        )
-
-    assert result.attrs == {}
-
-
 def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
