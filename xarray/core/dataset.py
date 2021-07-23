@@ -4161,6 +4161,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
+        For a non-inplace version, see :py:meth:`Dataset.merge`.
 
         Parameters
         ----------
@@ -4182,6 +4183,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         See Also
         --------
         Dataset.assign
+        Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
         self._replace(inplace=True, **merge_result._asdict())
@@ -4255,6 +4257,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ------
         MergeError
             If any variables conflict (see ``compat``).
+
+        See Also
+        --------
+        Dataset.update
         """
         other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
