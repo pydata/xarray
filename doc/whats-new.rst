@@ -118,10 +118,6 @@ Bug fixes
   By `Augustus Ijams <https://github.com/aijams>`_.
 
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
@@ -173,13 +169,6 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
