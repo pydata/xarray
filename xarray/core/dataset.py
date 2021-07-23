@@ -5314,7 +5314,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             for k in columns
         ]
         index = self.coords.to_index([*ordered_dims])
-        return pd.DataFrame(dict(zip(columns, data)), index=index)
+        pdf = pd.DataFrame(dict(zip(columns, data)), index=index)
+        # add attributes to dataframe
+        pdf.attrs = self.attrs
+        for column in columns:
+            pdf[column].attrs = self[column].attrs
+        return pdf
 
     def to_dataframe(self, dim_order: List[Hashable] = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.

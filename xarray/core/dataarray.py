@@ -2758,7 +2758,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             ordered_dims = ds._normalize_dim_order(dim_order=dim_order)
 
         df = ds._to_dataframe(ordered_dims)
+        attrs = df[unique_name].attrs
         df.columns = [name if c == unique_name else c for c in df.columns]
+        df[name].attrs = attrs
         return df
 
     def to_series(self) -> pd.Series:

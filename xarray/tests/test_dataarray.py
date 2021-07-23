@@ -3688,6 +3688,21 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
+    def test_to_dataframe__attrs(self):
+        arr = DataArray(
+            np.zeros((5, 5)),
+            name="test",
+            dims=("y", "x"),
+            coords={"y": np.arange(1, 6), "x": np.arange(2, 7)},
+            attrs={"long_name": "Description of data array", "_FillValue": -1},
+        )
+        df = arr.to_dataframe()
+        assert df.attrs == {}
+        assert df.test.attrs == {
+            "long_name": "Description of data array",
+            "_FillValue": -1,
+        }
+
     def test_to_pandas_name_matches_coordinate(self):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
