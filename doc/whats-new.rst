@@ -14,10 +14,23 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.3:
 
-v0.18.3 (unreleased)
+.. _whats-new.0.19.0:
+
+v0.19.0 (23 July 2021)
 ---------------------
+
+This release brings improvements to plotting of categorical data, the ability to specify how attributes
+are combined in xarray operations, a new high-level :py:func:`unify_chunks` function, as well as various
+deprecations, bug fixes, and minor improvements.
+
+
+Many thanks to the 29 contributors to this release!:
+
+Andrew Williams, Augustus, Aureliana Barghini, Benoit Bovy, crusaderky, Deepak Cherian, ellesmith88,
+Elliott Sales de Andrade, Giacomo Caria, github-actions[bot], Illviljan, Joeperdefloep, joooeey, Julia Kent,
+Julius Busecke, keewis, Mathias Hauser, Matthias Göbel, Mattia Almansi, Maximilian Roos, Peter Andreas Entschev,
+Ray Bell, Sander, Santiago Soler, Sebastian, Spencer Clark, Stephan Hoyer, Thomas Hirtz, Thomas Nicholas.
 
 New Features
 ~~~~~~~~~~~~
@@ -117,7 +130,6 @@ Internal Changes
 - Publish test results & timings on each PR.
   (:pull:`5537`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
   selection (not ready yet for public use). Also refactor the internal,
