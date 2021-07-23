@@ -1364,6 +1364,8 @@ New Features
 - Added the ``count`` reduction method to both :py:class:`~core.rolling.DatasetCoarsen`
   and :py:class:`~core.rolling.DataArrayCoarsen` objects. (:pull:`3500`)
   By `Deepak Cherian <https://github.com/dcherian>`_
+- :py:meth:`Dataset.rolling` and :py:meth:`DataArray.rolling` now have a stride option
+  By `Matthias Meyer <https://github.com/niowniow>`_.
 - Add ``meta`` kwarg to :py:func:`~xarray.apply_ufunc`;
   this is passed on to :py:func:`dask.array.blockwise`. (:pull:`3660`)
   By `Deepak Cherian <https://github.com/dcherian>`_.

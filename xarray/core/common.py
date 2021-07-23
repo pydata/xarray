@@ -820,6 +820,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Hashable, int] = None,
         min_periods: int = None,
+        stride: int = 1,
         center: Union[bool, Mapping[Hashable, bool]] = False,
         keep_attrs: bool = None,
         **window_kwargs: int,
@@ -838,6 +839,8 @@ class DataWithCoords(AttrAccessMixin):
             setting min_periods equal to the size of the window.
         center : bool or mapping, default: False
             Set the labels at the center of the window.
+        stride : int, default 1
+            Stride of the moving window
         **window_kwargs : optional
             The keyword arguments form of ``dim``.
             One of dim or window_kwargs must be provided.
@@ -890,7 +893,12 @@ class DataWithCoords(AttrAccessMixin):
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
         return self._rolling_cls(
-            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
+            self,
+            dim,
+            min_periods=min_periods,
+            center=center,
+            stride=stride,
+            keep_attrs=keep_attrs,
         )
 
     def rolling_exp(
