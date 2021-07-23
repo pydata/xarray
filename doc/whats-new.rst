@@ -18,7 +18,7 @@ What's New
 .. _whats-new.0.19.0:
 
 v0.19.0 (23 July 2021)
----------------------
+----------------------
 
 This release brings improvements to plotting of categorical data, the ability to specify how attributes
 are combined in xarray operations, a new high-level :py:func:`unify_chunks` function, as well as various
