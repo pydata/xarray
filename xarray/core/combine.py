@@ -635,16 +635,14 @@ def _combine_single_variable_hypercube(
     return concatenated
 
 
-# TODO remove empty list default param after version 0.19, see PR4696
 def combine_by_coords(
-    data_objects=[],
+    data_objects,
     compat="no_conflicts",
     data_vars="all",
     coords="different",
     fill_value=dtypes.NA,
     join="outer",
     combine_attrs="no_conflicts",
-    datasets=None,
 ):
     """
     Attempt to auto-magically combine the given datasets (or data arrays)
@@ -848,14 +846,6 @@ def combine_by_coords(
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
-
-    # TODO remove after version 0.19, see PR4696
-    if datasets is not None:
-        warnings.warn(
-            "The datasets argument has been renamed to `data_objects`."
-            " In future passing a value for datasets will raise an error."
-        )
-        data_objects = datasets
 
     if not data_objects:
         return Dataset()
