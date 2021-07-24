@@ -674,7 +674,7 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _temp_dataarray(ds, y, kwargs):
+def _temp_dataarray(ds, y, args, kwargs):
     """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
 
@@ -682,16 +682,19 @@ def _temp_dataarray(ds, y, kwargs):
     coords = dict(ds.coords)
 
     # Add extra coords to the DataArray:
-    coords.update(
-        {v: ds[v] for v in kwargs.values() if ds.data_vars.get(v) is not None}
-    )
+    all_args = args + tuple(kwargs.values())
+    coords.update({v: ds[v] for v in all_args if ds.data_vars.get(v) is not None})
 
-    return DataArray(ds[y], coords=coords)
+    # The dataarray has to include all the dims. Broadcast to that shape
+    # and add the additional coords:
+    _y = ds[y].broadcast_like(ds)
+
+    return DataArray(_y, coords=coords)
 
 
 @_attach_to_plot_class
-def line(ds, y=None, **kwargs):
+def line(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, y, kwargs)
+    da = _temp_dataarray(ds, y, args, kwargs)
 
-    return da.plot.line(**kwargs)
+    return da.plot.line(x, *args, **kwargs)
