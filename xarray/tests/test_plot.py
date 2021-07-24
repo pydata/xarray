@@ -2591,16 +2591,12 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_facetgrid_hue_style(self):
         # Can't move this to pytest.mark.parametrize because py37-bare-minimum
         # doesn't have matplotlib.
-        for hue_style, map_type in (
-            ("discrete", list),
-            ("continuous", mpl.collections.PathCollection),
-        ):
+        for hue_style in ("discrete", "continuous"):
             g = self.ds.plot.scatter(
                 x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
             )
-            # for 'discrete' a list is appended to _mappables
-            # for 'continuous', should be single PathCollection
-            assert isinstance(g._mappables[-1], map_type)
+            # 'discrete' and 'continuous', should be single PathCollection
+            assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 
     @pytest.mark.parametrize(
         "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]
@@ -2608,8 +2604,8 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_scatter(self, x, y, hue, markersize):
         self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
 
-        with pytest.raises(ValueError, match=r"u, v"):
-            self.ds.plot.scatter(x, y, u="col", v="row")
+        # with pytest.raises(ValueError, match=r"u, v"):
+        #     self.ds.plot.scatter(x, y, u="col", v="row")
 
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()

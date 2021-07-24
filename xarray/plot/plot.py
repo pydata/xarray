@@ -86,27 +86,27 @@ def _infer_scatter_data(
         {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
     )
     to_broadcast.update(
-        {k: darray[v] for k, v in dict(hue=hue, size=size).items() if v in darray.dims}
+        {
+            k: darray[v]
+            for k, v in dict(hue=hue, size=size).items()
+            if v in darray.coords
+        }
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
-    # Normalize hue and size and create lookup tables:
-    for type_, mapping, norm, width in [
-        ("hue", None, None, [0, 1]),
-        ("size", size_mapping, size_norm, size_range),
-    ]:
-        broadcasted_type = broadcasted.get(type_, None)
-        if broadcasted_type is not None:
-            if mapping is None:
-                mapping = _parse_size(broadcasted_type, norm, width)
+    # Normalize size and create lookup tables:
+    if size:
+        _size = broadcasted["size"]
 
-            broadcasted[type_] = broadcasted_type.copy(
-                data=np.reshape(
-                    mapping.loc[broadcasted_type.values.ravel()].values,
-                    broadcasted_type.shape,
-                )
-            )
-            broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
+        if size_mapping is None:
+            size_mapping = _parse_size(_size, size_norm, size_range)
+
+        broadcasted["size"] = _size.copy(
+            data=np.reshape(size_mapping.loc[_size.values.ravel()].values, _size.shape)
+        )
+        broadcasted[f"size_to_label"] = pd.Series(
+            size_mapping.index, index=size_mapping
+        )
 
     return broadcasted
 
@@ -519,17 +519,15 @@ def hist(
 
 def scatter(
     darray,
-    *args,
+    x=None,
+    ax=None,
     row=None,
     col=None,
     figsize=None,
     aspect=None,
     size=None,
-    ax=None,
     hue=None,
     hue_style=None,
-    x=None,
-    z=None,
     xincrease=None,
     yincrease=None,
     xscale=None,
@@ -552,6 +550,7 @@ def scatter(
     colors=None,
     extend=None,
     cmap=None,
+    z=None,
     _labels=True,
     **kwargs,
 ):
